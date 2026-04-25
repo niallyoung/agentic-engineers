@@ -1,0 +1,6 @@
+# Queue Processor — Process pending alerts every 15 minutes
+# Role: Alert Router
+# Input: Log queue alerts in agentic-engineers/data/logs/QUEUE/pending/
+# Output: Routes to email/voice/dashboard; moves to processed/ or failed/
+
+*/5 * * * * cd /home/user/git/ers/{service-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1
