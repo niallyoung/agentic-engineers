@@ -2,13 +2,20 @@
 
 Complete multi-agent team with 8 specialized roles, 38 skills, quality gates, real-time usage budget monitoring, and autonomous feedback loops.
 
-**This directory is self-contained.** Load `agentic-engineers/` as a unit to get the complete agent system.
+**This directory is self-contained.** Located at `~/.agents/agentic-engineers/` after installation.
 
-**⚡ At Session Start (Required):**
-```bash
-bash agentic-engineers/setup/session-init.sh
+**How to use:**
 ```
-This initializes token usage tracking, budget monitoring, and baseline metrics. Idempotent — safe to run multiple times.
+load agentic-engineers
+```
+
+Or explicitly reference: `~/.agents/agentic-engineers/SYSTEM.md`
+
+**Optional: Enable usage tracking**
+```bash
+bash ~/.agents/agentic-engineers/setup/session-init.sh
+```
+(One-time per session, idempotent — initializes token budgeting and metrics)
 
 ---
 
