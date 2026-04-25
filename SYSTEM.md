@@ -6,9 +6,11 @@ type: system
 
 # Agentic Engineers System Definition
 
-**Single source of truth for CLI harness initialization and configuration.**
+**Central reference for multi-agent orchestration.**
 
-All CLI harnesses (Claude Code, GitHub Copilot, future integrations) parse this file to initialize the agentic-engineers framework.
+CLI harnesses (Claude Code, GitHub Copilot) and users explicitly reference this file when: `load agentic-engineers` or reading from `~/.agents/agentic-engineers/SYSTEM.md`
+
+No automatic startup — explicit loading only.
 
 ---
 
@@ -27,27 +29,42 @@ All CLI harnesses (Claude Code, GitHub Copilot, future integrations) parse this 
 
 ---
 
-## Initialization Sequence
+## Loading the Framework
 
-### 1. Parse This File (SYSTEM.md)
+### Explicit Load Pattern
 
-CLI harness reads this file to understand:
-- System structure and roles
-- Initialization requirements
-- Key files and entry points
-- Configuration and state locations
+When you want to use the framework, reference it:
 
-### 2. Run Bootstrap Script
+**In Claude Code**:
+```
+load agentic-engineers
+```
+Or read: `~/.agents/agentic-engineers/SYSTEM.md`
 
+**In Copilot CLI**:
+```
+load agentic-engineers
+```
+Or read: `~/.agents/agentic-engineers/SYSTEM.md`
+
+**In your shell**:
 ```bash
-bash agentic-engineers/setup/session-init.sh
+source ~/.agents/agentic-engineers/setup/session-init.sh
 ```
 
-**What happens**:
-- ✅ Token usage tracking initialized
-- ✅ Budget status determined (GREEN/YELLOW/RED)
-- ✅ Session marker created (idempotent)
-- ✅ Usage history started
+### Optional: Session Initialization
+
+If you want usage tracking and token budgeting:
+
+```bash
+bash ~/.agents/agentic-engineers/setup/session-init.sh
+```
+
+**What happens** (idempotent, runs once per session):
+- ✅ Token usage baseline captured
+- ✅ Budget status calculated (GREEN/YELLOW/RED)
+- ✅ Session marker created (prevents re-init)
+- ✅ Usage history file initialized
 
 **Properties**:
 - Idempotent: safe to call multiple times
