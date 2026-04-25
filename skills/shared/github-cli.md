@@ -153,6 +153,97 @@ for repo in org/service-a org/service-b org/service-c; do
 done
 ```
 
+## Smart CICD Workflow Monitoring
+
+Monitor GitHub Actions workflows selectively: track only until each service shows green, then stop. Efficient approach for validating coordinated deployments without sustained overhead.
+
+### Per-Repository Monitoring (Monitor Until Green)
+
+For individual repos or focused validation:
+
+```bash
+# Monitor single repo until latest main branch run is green, then exit
+repo="{service-name}"
+until gh run list --repo "{your-org}/$repo" --branch main --limit 1 \
+  --json conclusion --template '{{range .}}{{.conclusion}}{{end}}' | grep -q "success"; do
+  status=$(gh run list --repo "{your-org}/$repo" --branch main --limit 1 \
+    --json status,conclusion,name,number --template '{{range .}}#{{.number}}: {{.status}} ({{.conclusion}}){{end}}')
+  echo "$repo: $status"
+  sleep 5
+done
+echo "✅ $repo: Latest run green"
+```
+
+### Multi-Repo Monitoring (Coordinated Deployments)
+
+For platform-wide migrations or coordinated changes across multiple services:
+
+```bash
+# Monitor all 8 services until each shows green, then exit
+repos=("{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}")
+declare -A status
+
+# Initialize: mark all as pending
+for repo in "${repos[@]}"; do status[$repo]="pending"; done
+
+# Loop until all green
+while true; do
+  all_green=true
+  for repo in "${repos[@]}"; do
+    if [ "${status[$repo]}" != "success" ]; then
+      conclusion=$(gh run list --repo "{your-org}/$repo" --branch main --limit 1 \
+        --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
+      status[$repo]=$conclusion
+      [ "$conclusion" != "success" ] && all_green=false
+    fi
+  done
+  
+  # Print status line
+  echo "Status: $(echo "${status[@]}" | tr ' ' ', ')"
+  
+  # Exit if all green
+  [ "$all_green" = true ] && break
+  sleep 10
+done
+
+echo "✅ All services green"
+```
+
+### Using Monitor Tool (Until Green)
+
+```bash
+# Monitor single repo until green, auto-stop
+Monitor(
+  description: "Watch {service-name} until latest main branch run is green",
+  command: "repo='{service-name}'; until gh run list --repo {your-org}/$repo --branch main --limit 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}' | grep -q success; do gh run list --repo {your-org}/$repo --branch main --limit 1 --json status,conclusion,name,number --template '{{range .}}$repo: #{{.number}} - {{.status}} ({{.conclusion}}){{end}}'; sleep 5; done; echo '✅ $repo green'",
+  timeout_ms: 300000,
+  persistent: false
+)
+```
+
+### When to Use Per-Repo Monitoring
+
+- Single service deployment validation
+- Quick CICD checks before/after code changes
+- Verify specific fix didn't break a service
+
+### When to Use Multi-Repo Monitoring
+
+- **Platform-wide migrations** (e.g., arm64 Lambda rollout)
+- **Coordinated feature releases** across multiple services
+- **Infrastructure changes** affecting all backends
+- **Dependency upgrades** across the platform
+
+### Responding to Failures During Monitoring
+
+When a repo fails to go green:
+
+1. **Check failure reason**: `gh run view <RUN_ID> --repo owner/repo --log | grep -A 10 "FAILED\|Error|error:"`
+2. **Investigate logs**: Review full job logs for root cause
+3. **Fix and redeploy**: Correct issue, push commit (auto-triggers cloud CI)
+4. **Resume monitoring**: Restart monitor — it will detect the new run and wait for green
+5. **Verify clean runs**: Once green, monitor auto-exits
+
 ## Quality Checklist
 
 - [ ] Use `-R owner/repo` flag when not inside the repo directory

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "~/.github/scripts/copilot-guard.sh",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
