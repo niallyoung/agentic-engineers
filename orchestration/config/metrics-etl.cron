@@ -1,0 +1,7 @@
+# Metrics ETL — Hourly data pipeline (every hour)
+# Role: Orchestrator
+# Input: Metrics from agentic-engineers/data/metrics/
+# Output: Prometheus format + JSON aggregations
+# Integration: Feeds to Grafana dashboards (no voice notification, silent background job)
+
+0 * * * * cd {workspace-root}/{service-name} && python ./agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7 2>&1 >> ./agentic-engineers/data/logs/metrics-etl.log
