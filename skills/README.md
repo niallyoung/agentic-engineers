@@ -97,9 +97,20 @@ Skills are based on production code patterns from ERS platform. Update when:
 
 See `../guides/IMPLEMENTATION_COMPLETE.md` for versioning notes.
 
+## Global Enforcement Infrastructure
+
+**Not** a skill, but essential infrastructure:
+- `../enforcement/` — Copilot CLI enforcement hooks, scripts, and global instructions
+  - Symlinked to `~/.github/` for all repos
+  - Blocks --no-verify, destructive operations, hook tampering
+  - Provides global instructions and session initialization
+
+See `../enforcement/README.md` for installation and usage.
+
 ## See Also
 
 - `../MANIFEST.md` — Complete file listing of entire system (discovery tool)
 - `../guides/INDEX.md` — Complete file catalog and quick links
 - `../orchestration/AGENTS.md` — Role definitions and skill assignments
 - `../guides/CLAUDE.md` — Team context and integration
+- `../enforcement/README.md` — Global CLI enforcement infrastructure

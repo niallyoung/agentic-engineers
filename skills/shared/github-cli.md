@@ -4,6 +4,8 @@
 **Model:** claude-sonnet-4-6
 **Effort:** low — use `gh` for all GitHub interactions; never use the web UI or REST API manually.
 
+**Updated:** Apr 2026 — Smart CICD monitoring (monitor until green, auto-stop)
+
 Use this skill when querying GitHub state, checking CI status, inspecting pull requests, or managing issues across repositories.
 
 ## What This Role Does
