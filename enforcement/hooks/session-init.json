@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "~/.github/scripts/copilot-session-init.sh",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
