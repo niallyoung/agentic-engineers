@@ -54,6 +54,16 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Who uses it**: All engineers, when starting new initiatives
 - **When to reference**: Before creating planning docs, during code review, when tracking initiative progress
 
+### 5. **plan-iterate.md** — Multi-Stage Expert Review for Plan Refinement
+- **Purpose**: Delegate plan iteration through Senior → Principal → Security engineers (or custom review chain)
+- **Pattern**: Each stage builds on prior feedback; minimizes tokens, maximizes domain expertise
+- **Stages**: Senior Engineer (feasibility), Principal Engineer (strategy), Security Engineer (risks)
+- **Handoff format**: DELEGATE with role-specific prompts for each stage
+- **Output**: Refined plan in TODO.md + REVIEW-*.md documents committed to git
+- **Who uses it**: Orchestrator (when plans need refinement before implementation)
+- **When to use**: Major features, cross-service initiatives, infrastructure redesigns, security-critical work
+- **Example**: spec-extract skill going through Senior → Principal → Security review
+
 ## Operations & Automation
 
 ### 5. **cleanup.md** — Post-Task Cleanup Automation
