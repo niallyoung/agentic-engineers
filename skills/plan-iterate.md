@@ -268,15 +268,40 @@ After all 3 reviews, Orchestrator:
 - Obvious implementation tasks
 - Emergency patches
 
+## Lessons Learned (Updated 2026-04-27)
+
+After first use on spec-extract skill:
+
+**What worked well:**
+- Three-stage chain catches different angles (feasibility → strategy → security)
+- Senior Engineer feedback on task granularity very actionable
+- Principal Engineer strategic input (pilot scope, deferral decisions) high-value
+- Security Engineer threat modeling prevents week-1 incidents
+- Phase 1.5 "spike" recommendation was critical for unblocking parallelism
+- Each review built on prior; later stages didn't re-audit earlier work
+
+**Process improvements:**
+- Schema/ADR freezing in Phase 1.5 is load-bearing decision — flag it explicitly
+- MVP scope decisions (what to defer) matter more than architectural ones
+- Security review should flag specific controls + phase to integrate them (not retrofit)
+- Adoption criteria (real usage during build) prevents over-engineering
+- UX/triage decisions (severity, suppression) belong in implementation, not just planning
+
+**Scaling the pattern:**
+- Can apply same three-stage review to implementation: Engineer → Lead → Principal/Security
+- Base Engineer fixes tasks; Lead reviews; Principal/Security escalates on blockers
+- Reuse the review prompts; they're role-specific and repeatable
+
 ## Building on This Skill Over Time
 
-This skill is a template. As we iterate more plans:
+This skill is a template. As we iterate more plans and implementations:
 
-1. **Add role-specific templates** — Create reusable review prompts per role
+1. **Add role-specific templates** — Create reusable review prompts per role (DONE for planning; add for implementation)
 2. **Track review quality** — Which feedback led to better implementations?
-3. **Refine the chain** — Maybe we add "DevOps Engineer" for infrastructure plans?
-4. **Reuse feedback** — Catalog common patterns in reviews (e.g., "missing error handling")
-5. **Automate where possible** — Can some reviews be partially automated?
+3. **Refine the chain** — Maybe we add "DevOps Engineer" for infrastructure plans; "Product Manager" for feature scope
+4. **Reuse feedback** — Catalog common patterns in reviews (e.g., "missing error handling", "scope creep on Phase X")
+5. **Automate where possible** — Can some reviews be partially automated? (lint checks, security scans)
+6. **Escalation gates** — When does Engineer work get escalated to Lead? When to involve Principal?
 
 ## FAQ
 
