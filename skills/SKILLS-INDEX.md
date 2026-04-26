@@ -1,7 +1,7 @@
 ---
 name: ERS Architecture Skills Index
 type: index
-last_updated: 2026-04-27
+last_updated: 2026-04-27 (planning & workflow skills added)
 ---
 
 # ERS Architecture & Enforcement Skills
@@ -41,6 +41,58 @@ This index catalogs architectural decision patterns and enforcement skills for t
   - HANDBACK format for completion
 - **Who uses it**: Orchestrator (delegates to QE/LE), QE/LE (executes fixes)
 - **When to use**: When CICD fails or code review finds compliance gaps
+
+## Planning & Workflow Standards
+
+### 4. **planning-standard.md** — TODO.md-Only Planning Enforcement
+- **Purpose**: Centralizes all planning documentation in TODO.md files; prevents scatter of plan.md or separate planning docs
+- **Key rules**:
+  - All planning work goes in TODO.md (service or workspace level)
+  - Never create `plan.md`, `PLAN.md`, or separate planning documents
+  - Structure: Status, Goals, Approach, Tasks, Success Criteria, Notes
+  - Link TODO.md tasks from code PRs and commits
+- **Who uses it**: All engineers, when starting new initiatives
+- **When to reference**: Before creating planning docs, during code review, when tracking initiative progress
+
+## Operations & Automation
+
+### 5. **cleanup.md** — Post-Task Cleanup Automation
+- **Purpose**: Automates cleanup of temporary files, old plans, and consolidates documentation after task completion
+- **Includes**:
+  - 4-phase cleanup (plans, temp files, docs, verification)
+  - Pre-push checklist integration
+  - Consolidation rules for orphaned .md files
+- **Who uses it**: All engineers, before every `git push`
+- **When to run**: Integrated into pre-push workflow or manual execution: `bash ~/.agents/agentic-engineers/skills/cleanup.sh`
+
+### 6. **voice-notifications.md** — Context-Aware Voice Notifications
+- **Purpose**: Provides voice cues via `osascript` with context-aware phrases (vs hardcoded commands)
+- **Includes**:
+  - When to use "watching cicd", "waiting", "hmm" phrases
+  - Integration with skill-based notifications (not settings.json)
+  - Token conservation guidance
+- **Who uses it**: CI/CD monitors, long-running task watchers
+- **When to use**: When implementing monitoring skills that need user attention signaling
+
+### 7. **cicd-monitoring.md** — Token-Conserving Build Monitoring
+- **Purpose**: Monitoring long-running CICD jobs with 120-second sleep intervals vs active polling
+- **Includes**:
+  - Why 120s (within Anthropic 5-min cache TTL)
+  - Token impact analysis (85% savings vs polling)
+  - Integration with agentic-engineers workflow
+  - Multi-service monitoring patterns
+- **Who uses it**: Orchestrator or monitoring agent
+- **When to use**: When watching GitHub Actions, long deploys, or multi-service builds
+
+## Specification & Patterns (In Planning)
+
+### 8. **spec-extract.md** — Software Specification Extraction Skill (Planned)
+- **Status**: Planning phase (see `{service-name}/TODO.md: spec-extract`)
+- **Purpose**: Scan multi-repo microservices platforms; extract and catalog reusable patterns
+- **Target output**: `{service-name}/specs/` with pattern registry, compliance audits
+- **Phases**: Research, pattern extraction, catalog generation, compliance framework, documentation
+- **Who will use it**: Lead engineers, compliance auditors, onboarding new services
+- **Complementary skill**: `spec-audit.md` (validates repos against extracted specs)
 
 ## Current Compliance Status (2026-04-27)
 
