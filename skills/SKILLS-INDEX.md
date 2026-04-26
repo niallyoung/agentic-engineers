@@ -42,7 +42,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Who uses it**: Orchestrator (delegates to QE/LE), QE/LE (executes fixes)
 - **When to use**: When CICD fails or code review finds compliance gaps
 
-## Planning & Workflow Standards
+## Planning, Execution & Implementation Workflow
 
 ### 4. **planning-standard.md** — TODO.md-Only Planning Enforcement
 - **Purpose**: Centralizes all planning documentation in TODO.md files; prevents scatter of plan.md or separate planning docs
@@ -62,7 +62,31 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Output**: Refined plan in TODO.md + REVIEW-*.md documents committed to git
 - **Who uses it**: Orchestrator (when plans need refinement before implementation)
 - **When to use**: Major features, cross-service initiatives, infrastructure redesigns, security-critical work
-- **Example**: spec-extract skill going through Senior → Principal → Security review
+- **Updated**: Lessons learned from spec-extract included; schema/ADR decisions flagged as load-bearing
+
+### 6. **engineer-execution.md** — Base-Level Engineer Task Execution & Escalation
+- **Purpose**: Enable Engineers to execute tasks with clear escalation paths (Engineer → Lead → Principal/Security)
+- **Pattern**: Reuses the multi-stage review pattern from plan-iterate; escalates only when blocked
+- **Roles**: Engineer (Sonnet) executes; Lead (Sonnet/Opus) unblocks; Principal/Security escalate for decisions
+- **Handoff format**: TASK_ASSIGNMENT with clear success criteria and effort estimate
+- **Escalation triggers**: Design ambiguity, external dependency, effort exceeded, security concern, scope unclear
+- **Metrics**: Time to completion, escalations per task, success criteria met, estimation accuracy
+- **Who uses it**: Orchestrator assigns tasks; Engineers execute with escalation as needed
+- **When to use**: Executing approved plans (Phase 1 of implementation-workflow.md)
+
+### 7. **implementation-workflow.md** — End-to-End Plan → Execute → Review → Finalize
+- **Purpose**: Complete workflow combining plan iteration, task execution, and final reviews
+- **Phases**:
+  1. Plan Iteration (3-4 hours): Senior → Principal → Security reviews, Orchestrator integrates
+  2. Task Execution (variable): Engineer executes tasks, escalates blockers to Lead/Principal/Security
+  3. Final Review (1-2 hours): Senior + Principal review implementation vs. plan intent
+  4. Security Review (0.5-1 hour, if needed): Security spot-checks threat mitigations
+  5. Finalization (15-30 min): Orchestrator archives plan, documents lessons learned
+- **Timeline**: ~1.5 weeks for typical mid-size plan (4-5 days Engineer work)
+- **Metrics**: Per-phase time, escalations, review feedback, task estimation accuracy
+- **Lessons learned template**: Documents reusable patterns and improvements for next cycle
+- **Who uses it**: Orchestrator, Engineers, Lead, Principal, Security
+- **When to use**: Any significant implementation (new feature, refactoring, infrastructure, cross-service work)
 
 ## Operations & Automation
 
