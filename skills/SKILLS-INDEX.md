@@ -128,6 +128,35 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Who will use it**: Lead engineers, compliance auditors, onboarding new services
 - **Complementary skill**: `spec-audit.md` (validates repos against extracted specs)
 
+## Security Verification (Phase 5 — Quality Engineer)
+
+### **security-semantic-scan.md** — Claude-Based Data Flow Analysis
+- **Purpose**: Semantic security scanning that traces data flows across components to find multi-component vulnerabilities that pattern matching misses (e.g., JWT scope checked in API Gateway but not in Lambda handler)
+- **Input**: `service_path`, `focus_areas` (auth, data_flow, crypto), `verify_findings`
+- **Output**: Findings with severity, data flow chain, adversarial verification status, false positive count
+- **Severity**: HIGH (privilege escalation, injection), MEDIUM (weak crypto), LOW (logging)
+- **Escalation**: ALL findings require Security Engineer review before action — never auto-fix
+- **Called by**: `quality-gate-orchestration` (security scan phase)
+- **Model**: Claude Opus recommended for analysis steps
+
+### **security-dependency-scan.md** — CVE Scanning for Go / Node / Rust
+- **Purpose**: Detect known CVEs in third-party dependencies; auto-detects language and runs appropriate scanner
+- **Scanners**: `govulncheck` (Go), `npm audit` (Node), `cargo audit` (Rust), `pip-audit` (Python)
+- **Input**: `service_path`, `fail_on_critical`, `fail_on_major`, `fix_available_only`
+- **Output**: Vulnerability list with CVE ID, package, installed version, fix version, gate result
+- **Gate**: BLOCK on critical, WARN on major, LOG on minor
+- **Escalation**: Critical blocks deployment; major requires Security Engineer review
+- **Called by**: `quality-gate-orchestration` (parallel with other security scans)
+
+### **security-secret-detection.md** — Hardcoded Secret Detection
+- **Purpose**: Detect hardcoded AWS credentials, API keys, private keys, JWT tokens before commit or deployment
+- **Input**: `scan_source` (git_diff, file, commit_range), `commit_hash`, `fail_on_found`
+- **Output**: Detections with type, file, line, redacted match, gate result
+- **Severity**: Always CRITICAL — no lower severity for secrets
+- **Gate**: BLOCK on any detection (regardless of `fail_on_found`)
+- **Integration**: Designed to run in `pre-commit` and `pre-push` git hooks
+- **Escalation**: Immediate rotation required; never delegate to Healer
+
 ## Current Compliance Status (2026-04-27)
 
 | Service | Makefile | .env Files | CDK | GitHub Actions | Status |
