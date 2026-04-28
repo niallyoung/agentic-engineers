@@ -259,6 +259,88 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Decision authority**: PROCEED/WARN/BLOCK/ESCALATE on deployments
 - **Escalation paths**: Lead (logic issues) → Principal (architecture) → Security (findings)
 
+## Monitoring & Continuous Improvement (Phase 5.10)
+
+### **PHASE-5.10-MONITORING-PLAN.md** — Comprehensive Monitoring Implementation Plan
+- **Status**: Phase 5.10 IN PROGRESS (2026-04-28)
+- **Purpose**: Build observability infrastructure for quality gates; measure Healer effectiveness; enable Level 2→Level 3 graduation
+- **5 Phases**:
+  1. Audit trail centralization (CloudWatch Logs)
+  2. CloudWatch metrics and dashboards
+  3. Healer success rate tracking
+  4. Confidence score calibration
+  5. Continuous improvement feedback loop
+- **Deliverables**: Plan document, metrics analyzer tool, graduation checklist, CloudWatch queries
+
+### **healer-metrics-analyzer.py** — Audit Log Analysis Tool
+- **Purpose**: Analyze quality gate audit logs to measure Healer success rates and readiness for Level 3
+- **Input**: Audit logs directory, days to analyze (default: 30)
+- **Output**: JSON report with:
+  - Healer success rate (% of fixes that pass re-validation)
+  - Auto-merge rate (% of successful fixes auto-merged)
+  - Escalation rate (% escalated to humans)
+  - Phase success rates by phase
+  - Failure patterns by issue type
+  - Level 3 readiness assessment (5 criteria)
+- **Usage**: `./healer-metrics-analyzer.py --days 30 --pretty`
+- **Frequency**: Run monthly or on-demand for readiness assessment
+
+### **LEVEL-3-GRADUATION-CHECKLIST.md** — Level 2→Level 3 Readiness Criteria
+- **Purpose**: Define and validate 5 success criteria for graduating from intelligent routing (Level 2) to autonomous healing (Level 3)
+- **5 Criteria**:
+  1. Healer success rate ≥ 70% (empirical, from metrics analyzer)
+  2. Auto-merge rate ≥ 50% (empirical)
+  3. Escalation rate ≤ 30% (empirical)
+  4. Confidence calibration error < 5% (predicted vs actual)
+  5. Zero critical incidents from Healer fixes (30-day monitoring)
+- **Pre-rollout validation**: Security review, process review, team sign-off
+- **Rollout plan**: Phased (1 service → 3 services → all services)
+- **Failure recovery**: Documented procedures for rollback scenarios
+
+### **cloudwatch-queries.md** — CloudWatch Logs Insights Query Reference
+- **Purpose**: Reusable CloudWatch Logs Insights queries for audit trail analysis
+- **12 Queries**:
+  - Quality gate success rate by service
+  - Phase success rates
+  - Healer intervention frequency
+  - Execution time trends
+  - Failure pattern analysis
+  - Confidence score calibration
+  - Session duration
+  - Healer success rate
+  - Issue type and confidence breakdown
+  - Daily metrics summary
+  - Anomaly detection (failure spikes)
+  - Healer PR merge rate
+  - Service reliability ranking
+- **Usage**: Copy/paste into CloudWatch Logs Insights UI or integrate into scheduled reports
+
+### **setup-cloudwatch-monitoring.sh** — CloudWatch Infrastructure Setup
+- **Purpose**: One-time setup script to create CloudWatch monitoring infrastructure
+- **Creates**:
+  - CloudWatch Logs group: `/ers/quality-gates/audit-trail`
+  - Log streams for all 7 services × 2 environments (dev, prod)
+  - 30-day retention policy
+  - CloudWatch Dashboard: "QualityGatesMonitoring" with 5 widgets
+- **Usage**: `./setup-cloudwatch-monitoring.sh {service-name} ap-southeast-2`
+- **Idempotent**: Safe to run multiple times (skips existing resources)
+
+### **PHASE-5.10-IMPLEMENTATION-SUMMARY.md** — Current Progress & Timeline
+- **Status**: Phase 5.10 (1.5 / 2-3 days complete, 50%)
+- **Completed**:
+  - Monitoring plan (5-phase breakdown)
+  - Healer metrics analyzer tool
+  - Level 3 graduation checklist
+  - CloudWatch queries reference
+  - CloudWatch integration in quality-gate-orchestration.sh
+  - CloudWatch setup automation script
+- **Pending**:
+  - AlertManager rules for escalation
+  - Scheduled weekly metrics job
+  - 2-3 weeks of empirical data collection
+  - Level 3 readiness assessment (end of May 2026)
+- **Next phase**: Phase 5.11 (Level 3 rollout) once metrics meet 5 criteria
+
 ## Current Compliance Status (2026-04-28)
 
 | Service | Makefile | .env Files | CDK | GitHub Actions | Status |
