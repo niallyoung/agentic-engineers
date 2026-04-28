@@ -399,14 +399,37 @@ Git Hook → CloudFormation Stack (invoke Bedrock Agent Pool)
 
 ---
 
+## Artifacts/ as Central Scaling Mechanism (TBD: Phase 9+)
+
+**Note**: artifacts/ directory is designed to scale from local file-based storage to distributed backend.
+
+Current (Phase 5.10-7):
+- artifacts/ = YAML files on disk
+- Agent communication via file I/O
+- Observability via local queries
+
+Future (Phase 9+):
+- artifacts/ abstraction layer
+- Backend options: DynamoDB, Redis, PostgreSQL, or Bedrock-managed state
+- Agent delegation/handoff via artifacts/ API (not direct function calls)
+- Retrieval: query artifacts/ by trace_id, task_id, agent_type, timestamp
+- This enables: distributed agents, cloud scaling, multi-region orchestration
+
+**Design Principle**: artifacts/ is the central nervous system. All agent communication flows through artifacts/, not direct APIs. This keeps orchestration decoupled from infrastructure.
+
+**Documentation**: TBD in Phase 9+ planning. For now, treat artifacts/ as file-based, scalable design will follow.
+
+---
+
 ## Summary of Deliverables by Phase
 
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
-| 5.10 | Quality Gate Orchestrator activation + audit trails | TODO |
+| 5.10 | Quality Gate Orchestrator activation + audit trails | IN PROGRESS |
 | 6 | Feedback loops + OpenTelemetry telemetry | TODO |
 | 7 | Self-sustaining optimization loop | TODO |
 | 8+ | Bedrock migration documentation | TODO (docs only) |
+| 9+ | artifacts/ backend abstraction + scaling infrastructure | TBD |
 
 ---
 
