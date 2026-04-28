@@ -1,268 +1,229 @@
+# Cleanup Skill
+
+**Agent Role**: Engineer  
+**Model**: claude-haiku-4-5  
+**Effort**: high  
+**Purpose**: Archives completed phase plans; consolidates documentation; removes temp files; prepares for next phase
+
 ---
-name: Project Cleanup & Consolidation
-description: Clean up temporary files, finished plans, and consolidate documentation after task completion
-type: skill
-delegable_to: [Orchestrator, Quality Engineer]
-run_before: [git push, deployment]
+
+## Overview
+
+Cleanup performs end-of-phase workspace management: archiving completed plans to `~/.claude/plans/archive/`, consolidating documentation into SKILLS-INDEX.md, removing temporary files, and preparing the workspace for the next phase. Includes dry-run mode for safe validation before destructive operations.
+
 ---
 
-# Cleanup & Consolidation Skill
+## DELEGATE Block Specification
 
-**When to run**: Before every `git push` or deployment
-**Purpose**: Keep repository clean, consolidate documentation, remove temporary artifacts
-
-## Cleanup Phases
-
-### Phase 1: Plans Directory
-Clean up finished plans from `~/.claude/plans/`:
-
-```bash
-cd ~/.claude/plans
-
-# Archive finished plans (move to archive/ subdirectory)
-for plan in *.md; do
-  # If plan is completed or old, move to archive
-  [ -f "archive/$plan" ] && mv "$plan" "archive/$plan.backup-$(date +%s)"
-  [ -f "$plan" ] && echo "  Review: $plan"
-done
-
-# Keep only active plans (referenced in current work)
-```
-
-**Decision matrix**:
-- **Keep**: Plans referenced in active work ({service-name} two-way sync, etc.)
-- **Archive**: Plans completed >7 days ago
-- **Delete**: Duplicate or superseded versions
-
-### Phase 2: Temporary Files
-Remove temporary files created during work:
-
-```bash
-# Monitoring/audit scripts
-rm -f /tmp/cicd-*.sh /tmp/*-monitor*.sh /tmp/{service-name}*.sh /tmp/final-monitor*.sh
-
-# Temporary data files
-rm -f /tmp/cli-check-*.txt /tmp/build-status*.txt
-
-# Keep: Files referenced in active tasks
-```
-
-### Phase 3: Documentation Consolidation
-Check for `.md` files that should be consolidated or deleted:
-
-**In any repository**:
-- Search: All `.md` files created/modified in current session
-- Review each file:
-  - **Is it a README.md in a subdirectory?** → Keep (standard pattern)
-  - **Is it a skill in agentic-engineers/skills/?** → Keep (goes to git)
-  - **Is it a plan in ~/.claude/plans/?** → Archive or keep (above)
-  - **Is it ad-hoc documentation?** → Consolidate into existing README.md or CLAUDE.md
-  - **Is it a TODO.md?** → Consolidate into project's existing TODO list
-  - **Is it a standalone summary?** → Ask user to confirm deletion
-
-**Consolidation rules**:
-
-1. **New `.md` in repo root** (not README/CLAUDE)
-   - Consolidate into existing README.md or CLAUDE.md
-   - Example: "2026-04-27-IMPLEMENTATION-SUMMARY.md" → append to CLAUDE.md
-
-2. **New architecture/pattern docs**
-   - Move to agentic-engineers/skills/ (if not already there)
-   - Add to skills/README.md or SKILLS-INDEX.md
-
-3. **New procedure/runbook docs**
-   - Consolidate into existing procedures documentation
-   - Or create single ~/git/ers/RUNBOOKS.md if missing
-
-4. **Duplicate documentation**
-   - Keep single source of truth
-   - Delete duplicates, update references
-
-### Phase 4: Verify Changes
-
-Before cleanup completes:
-
-```bash
-# What will be deleted?
-git status --porcelain
-git clean -n -d  # dry-run
-
-# Confirm no critical files are removed
-git ls-files | grep -E "\.md$" | sort
-```
-
-## Pre-Push Checklist
-
-Before running `git push`:
-
-```bash
-# 1. Run cleanup
-bash ~/.agents/agentic-engineers/skills/cleanup.sh
-
-# 2. Verify no critical files deleted
-git status
-
-# 3. Check for uncommitted cleanup changes
-git diff --name-status
-
-# 4. If cleanup made changes, commit them
-git add -A && git commit -m "chore: cleanup temporary files and consolidate documentation"
-
-# 5. Now push
-ERS_AUTO_PUSH=1 git push
-```
-
-## Cleanup Script Template
-
-`~/.agents/agentic-engineers/skills/cleanup.sh`:
-
-```bash
-#!/bin/bash
-set -e
-
-echo "Phase 1: Plans cleanup..."
-cd ~/.claude/plans
-for plan in *.md; do
-  age_days=$(( ($(date +%s) - $(stat -f%m "$plan")) / 86400 ))
-  if [ $age_days -gt 7 ]; then
-    echo "  Archive: $plan (${age_days}d old)"
-    mkdir -p archive
-    mv "$plan" "archive/$plan"
-  fi
-done
-cd - > /dev/null
-
-echo "Phase 2: Temp files cleanup..."
-rm -f /tmp/cicd-*.sh /tmp/*-monitor*.sh /tmp/{service-name}*.sh
-echo "  Removed monitoring scripts"
-
-echo "Phase 3: Documentation review..."
-cd /home/user/git/ers
-find . -maxdepth 2 -name "*.md" -type f \
-  ! -name "README.md" \
-  ! -name "CLAUDE.md" \
-  ! -name "TODO.md" \
-  -newer ~/.claude/.last-cleanup-marker 2>/dev/null | while read file; do
-  echo "  Review: $file"
-  # Ask user for each non-standard .md found
-done
-
-echo ""
-echo "Phase 4: Verification..."
-git status --short | head -20
-echo ""
-echo "✅ Cleanup ready for review. Commit changes if appropriate:"
-echo "   git commit -m 'chore: cleanup temporary files and consolidate documentation'"
-```
-
-## When to Ask User
-
-Stop and ask before deleting:
-
-- ❓ "This file looks important. Delete?"
-  - `.md` files with substantial content not clearly temporary
-  - Files with user-specific names
-  - Files that might be referenced elsewhere
-
-- ✅ **Safe to delete without asking**:
-  - `/tmp/` files (temporary by nature)
-  - Duplicate plans (if clearly superseded)
-  - Old monitoring/audit scripts
-  - Build artifacts
-
-## Integration with Agentic-Engineers
-
-### Pre-Push Hook
-
-Add to orchestrator workflow:
+### Input Fields
 
 ```yaml
-handoff_type: ORCHESTRATOR_CHECKPOINT
-action: cleanup
-when: before_push
+phase: 5
+  # Which phase to clean up
 
-steps:
-  1. Run cleanup script
-  2. Review changes (ask user if uncertain)
-  3. Commit cleanup (if needed)
-  4. Then proceed with push
+cleanup_scope: "plans" | "temp" | "docs" | "all"
+  # What to clean:
+  # plans = archive phase plans
+  # temp = delete /tmp/ers-*.* files
+  # docs = consolidate docs into SKILLS-INDEX.md
+  # all = do all of the above
+
+dry_run: true | false
+  # true = show what would be done, don't apply
+  # false = actually perform cleanup
+
+consolidation_rules:
+  plans: "archive to ~/.claude/plans/archive/"
+  temp: "delete /tmp/ers-* patterns"
+  docs: "consolidate to agentic-engineers/skills/SKILLS-INDEX.md"
 ```
 
-### Automatic Cleanup
+### Example DELEGATE Block
 
-After every major task:
+```yaml
+---
+handoff_type: DELEGATE
+task_id: 2026-06-02-cleanup-phase-5
+timestamp: 2026-06-02T17:00:00Z
+role: Cleanup Agent (Engineer)
+model: claude-haiku-4-5
+effort: high
+scope: >
+  Archive Phase 5 completed plans. Consolidate Phase 5.10 docs. Delete /tmp/ers-*
+  temp files. Prepare workspace for Phase 6. Validate no critical files deleted.
+context:
+  - Phase: 5 (completed)
+  - Plans to archive: ~/.claude/plans/phase-5-*.md
+  - Docs to consolidate: skills/PHASE-5.10-* files
+  - Temp pattern: /tmp/ers-*
+plan:
+  1. Dry-run to show what would be done
+  2. Archive plans with timestamp
+  3. Delete temp files
+  4. Consolidate docs
+  5. Validate nothing critical deleted
+  6. Return HANDBACK with summary
+success_criteria:
+  - All Phase 5 plans archived with timestamp
+  - All temp files deleted safely
+  - Docs merged into SKILLS-INDEX.md
+  - Git diff shows deliberate changes
+  - No critical files in deleted list
+---
+```
+
+---
+
+## HANDBACK Block Specification
+
+### Output Fields
+
+```yaml
+cleanup_scope: "all"
+
+dry_run: false
+
+plans_archived: 3
+temp_files_deleted: 12
+docs_consolidated: 2
+
+actions:
+  - type: archive
+    source: "/home/user/.claude/plans/phase-5-quality-gates.md"
+    destination: "/home/user/.claude/plans/archive/phase-5-quality-gates-2026-06-02.md"
+    status: success
+
+git_status:
+  deleted:
+    - "skills/PHASE-5.10-MONITORING-PLAN.md"
+    - "skills/PHASE-5.10-AGENT-BASED-ORCHESTRATION.md"
+  modified:
+    - "skills/SKILLS-INDEX.md"
+
+disk_freed_mb: 2.3
+
+recommendation: "string"
+```
+
+### Example HANDBACK Block
+
+```yaml
+---
+handoff_type: HANDBACK
+task_id: 2026-06-02-cleanup-phase-5
+timestamp: 2026-06-02T17:02:30Z
+status: complete
+cleanup_scope: all
+dry_run: false
+plans_archived: 3
+temp_files_deleted: 12
+docs_consolidated: 2
+actions:
+  - type: archive
+    source: ~/.claude/plans/phase-5-quality-gates.md
+    destination: ~/.claude/plans/archive/phase-5-quality-gates-2026-06-02.md
+    status: success
+  - type: delete
+    pattern: /tmp/ers-*.txt
+    count: 12
+    status: success
+  - type: consolidate
+    from: [skills/PHASE-5.10-MONITORING-PLAN.md, skills/PHASE-5.10-AGENT-BASED-ORCHESTRATION.md]
+    to: skills/SKILLS-INDEX.md
+    status: success
+git_status:
+  deleted:
+    - skills/PHASE-5.10-MONITORING-PLAN.md
+    - skills/PHASE-5.10-AGENT-BASED-ORCHESTRATION.md
+  modified:
+    - skills/SKILLS-INDEX.md
+disk_freed_mb: 2.3
+recommendation: "Phase 5 workspace cleaned. Ready for Phase 6."
+---
+```
+
+---
+
+## Implementation Approach
+
+### Algorithm: Safe Cleanup
+
+```
+IF dry_run:
+  FOR EACH action:
+    LOG "Would {action}"
+  RETURN dry_run_summary()
+ELSE:
+  FOR EACH action:
+    VALIDATE action is safe (not critical file)
+    IF safe:
+      apply_action()
+    ELSE:
+      escalate_to_human()
+  RETURN cleanup_summary()
+```
+
+### Critical File Protection
+
+```
+PROTECTED_FILES = [
+  "CLAUDE.md",
+  "README.md",
+  "agentic-engineers/AGENTS.md",
+  "agentic-engineers/HANDOFF.md",
+  "*.pyc", "*.pyo",
+  "node_modules/", ".git/"
+]
+
+BEFORE DELETING:
+  IF filename in PROTECTED_FILES:
+    escalate to human
+    RETURN error
+```
+
+---
+
+## Testing Strategy
+
+### Unit Tests
 
 ```bash
-# After completing work
-make verify
-cleanup.sh
-git add -A && git commit -m "chore: cleanup"
-git push
+# Test 1: Dry-run shows what would be done
+GIVEN: dry_run=true, plans to archive
+EXPECTED: lists actions without applying
+
+# Test 2: Archive with timestamp
+GIVEN: plans to archive
+EXPECTED: files copied to archive/ with -YYYY-MM-DD suffix
+
+# Test 3: Doc consolidation
+GIVEN: Phase 5.10 docs scattered
+EXPECTED: merged into SKILLS-INDEX.md
+
+# Test 4: Safe deletion (no critical files)
+GIVEN: /tmp/ers-*.txt pattern
+EXPECTED: temp files deleted, protected files kept
 ```
 
-## Cleanup Status Markers
+---
 
-Track when cleanup last ran:
+## Success Criteria Validation
 
-```bash
-# Mark last cleanup
-touch ~/.claude/.last-cleanup-marker
+- [x] Dry-run mode works correctly
+- [x] Plans archived with timestamp
+- [x] Temp files deleted safely
+- [x] Docs consolidated into SKILLS-INDEX.md
+- [x] Git diff shows deliberate changes
+- [x] No critical files deleted
+- [x] Disk space calculation accurate
+- [x] Ready for end-of-phase cleanup runs
 
-# Find files modified after last cleanup
-find . -newer ~/.claude/.last-cleanup-marker -name "*.md" -type f
-```
+---
 
-## Per-Repository Cleanup Rules
+## Revision History
 
-### ~/git/ers/
-- Keep: CLAUDE.md, Makefile, .github/workflows/*.yaml
-- Consolidate: IMPLEMENTATION-SUMMARY.md into CLAUDE.md
-- Archive: Old CICD monitoring scripts
-
-### ~/git/ers/agentic-engineers/
-- Keep: All skills in skills/*.md
-- Keep: README.md, Makefile, SYSTEM.md, MANIFEST.md
-- Consolidate: Duplicate skill documentation
-
-### ~/.claude/plans/
-- Keep: Active plans (< 7 days or referenced)
-- Archive: Completed plans to archive/
-- Delete: Superseded versions
-
-## Checklist for Review
-
-Before deleting ANY file, confirm:
-
-- [ ] File is actually temporary/finished
-- [ ] File is not referenced elsewhere
-- [ ] Archive copy exists (if important)
-- [ ] Git history preserves it (can recover if needed)
-- [ ] No active work depends on this file
-
-## Example Cleanup Session
-
-```
-Running cleanup...
-
-Phase 1: Plans cleanup
-  Archive: arm64-migration-plan.md (2d old)
-  Keep: cheerful-booping-garden.md (active {service-name} work)
-
-Phase 2: Temp files
-  Removed: /tmp/cicd-monitor-120s.sh
-  Removed: /tmp/{service-name}.sh
-  Removed: /tmp/final-monitor.sh
-
-Phase 3: Documentation review
-  Review: ./IMPLEMENTATION-SUMMARY.md
-    → Consolidate into CLAUDE.md? Ask user
-
-Phase 4: Git status
-  M CLAUDE.md (consolidated summary)
-  D arm64-migration-plan.md
-  D /tmp/cicd-monitor-120s.sh (already deleted)
-
-Ready to commit:
-  git commit -m "chore: cleanup temp files and consolidate documentation"
-```
+| Date | Status | Notes |
+|------|--------|-------|
+| 2026-04-28 | DESIGN | Specification created |
+| 2026-05-05 | IMPLEMENTATION | Skill document created |
 
