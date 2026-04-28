@@ -1,0 +1,76 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-05-week2-engineer-3-config-audit
+timestamp: 2026-04-28T19:00:00Z
+from_agent: Orchestrator (Haiku)
+to_agent: Engineer (Sonnet)
+role: Engineer
+model: claude-sonnet-4-6
+effort: high
+
+scope: >
+  Implement Config Audit skill — compliance verification agent. Create
+  agentic-engineers/skills/config-audit.md with complete DELEGATE/HANDBACK
+  protocol. Agent scans service configurations against ERS standards, identifies
+  deviations, rates severity, provides remediation guidance.
+
+context:
+  - Design spec: agentic-engineers/orchestration/AGENT-SPECS-WEEK1-DESIGNS.md (Agent 3)
+  - Role: Quality Engineer (compliance verification)
+  - Standards reference: ~/.agents/agentic-engineers/skills/{service-name}.md
+  - Handoff protocol: HANDOFF.md
+  - Integration: Config Enforcement (takes audit output, applies fixes)
+  - Architecture Remediation Week 2: 2026-05-05 to 2026-05-12
+  - Budget: ~2000 tokens estimated
+
+plan:
+  1. Review AGENT-SPECS-WEEK1-DESIGNS.md Agent 3 specification
+  2. Review ERS configuration standard from skills/{service-name}.md
+  3. Review related agent: Config Enforcement (integration point)
+  4. Create skills/config-audit.md with structure:
+     - Agent purpose + scope
+     - DELEGATE block specification (service_path, audit_scope, strict_mode)
+     - HANDBACK block specification (deviations[], deviation_count, compliance_score)
+     - Configuration file reading (Makefile, CDK, env files, CLAUDE.md)
+     - Rule checking logic (compare actual files to standard rules)
+     - Severity rating system (high=blocking, medium=should fix, low=nice-to-have)
+     - Remediation guidance generation
+     - Compliance score calculation (100 - deviations)
+     - Trend tracking (compare to last audit)
+  5. Support granular audit scope (full, makefile, cdk, env, claude-md)
+  6. Ensure consistency of severity ratings across audits
+  7. Test on sample service ({service-name})
+  8. Return HANDBACK with deliverable + validation
+
+success_criteria:
+  - Skill document created (400-500 lines)
+  - DELEGATE spec matches design spec
+  - HANDBACK spec includes all fields (deviations[], compliance_score, recommendation)
+  - Reads and interprets ERS configuration standard correctly
+  - Severity ratings are consistent and defensible
+  - Remediation guidance is specific and actionable
+  - Compliance score accurately reflects deviations
+  - Can detect trends (improving/stable/declining)
+  - Integration with Config Enforcement clear
+  - Ready for weekly audit runs
+
+success_metrics:
+  - make lint passes
+  - make test passes (with sample service configs)
+  - Skill document is clear and reference-quality
+  - Design spec -> implementation traceable
+  - Test results show 0% false positives
+
+notes: >
+  This agent is foundation for configuration compliance across ERS. Accuracy
+  is critical. Ensure rule interpretation matches intent of ERS configuration
+  standard.
+
+budget_context:
+  session_pct_at_delegation: 48.0
+  estimated_tokens_needed: 2000
+  hours_until_reset: 5.5
+  status: GREEN
+  recommendation: "Sonnet appropriate for static analysis + file reading"
+
+---
