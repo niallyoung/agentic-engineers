@@ -25,11 +25,16 @@ SKIP_E2E="${SKIP_E2E:-false}"
 VALIDATE_MIGRATIONS="${VALIDATE_MIGRATIONS:-false}"
 JSON_OUTPUT="${JSON_OUTPUT:-false}"
 MAX_HEAL_ATTEMPTS="${MAX_HEAL_ATTEMPTS:-3}"
+ENABLE_CLOUDWATCH="${ENABLE_CLOUDWATCH:-true}"
 
 # Derived
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]' | head -c 12)
 AUDIT_LOG="quality-gate-audit-${SESSION_ID}.jsonl"
+SERVICE_NAME=$(basename $SERVICE_PATH)
+START_TIME=$(date +%s)
+CW_LOG_GROUP="/ers/quality-gates/audit-trail"
+CW_NAMESPACE="ERS/QualityGates"
 
 function print_header() {
   local text="$1"
@@ -55,6 +60,40 @@ function print_error() {
   printf "${RED}❌ %s${RESET}\n" "$1"
 }
 
+function push_to_cloudwatch() {
+  local message="$1"
+
+  # Only attempt if CloudWatch is enabled and AWS CLI is available
+  if [ "$ENABLE_CLOUDWATCH" = "true" ] && command -v aws &> /dev/null; then
+    # Try to push to CloudWatch Logs, but don't fail if it errors
+    aws logs put-log-events \
+      --log-group-name "$CW_LOG_GROUP" \
+      --log-stream-name "$SERVICE_NAME-$DEPLOYMENT_TARGET" \
+      --log-events "timestamp=$(date +%s000),message=$message" \
+      --region "${AWS_REGION:-ap-southeast-2}" \
+      2>/dev/null || true
+  fi
+}
+
+function push_metric() {
+  local metric_name="$1"
+  local value="$2"
+  local unit="${3:-Count}"
+
+  # Only attempt if CloudWatch is enabled and AWS CLI is available
+  if [ "$ENABLE_CLOUDWATCH" = "true" ] && command -v aws &> /dev/null; then
+    # Push custom metric to CloudWatch
+    aws cloudwatch put-metric-data \
+      --namespace "$CW_NAMESPACE" \
+      --metric-name "$metric_name" \
+      --value "$value" \
+      --unit "$unit" \
+      --dimensions "Service=$SERVICE_NAME,DeploymentTarget=$DEPLOYMENT_TARGET" \
+      --region "${AWS_REGION:-ap-southeast-2}" \
+      2>/dev/null || true
+  fi
+}
+
 function log_audit() {
   local phase="$1"
   local status="$2"
@@ -64,6 +103,7 @@ function log_audit() {
 {
   "timestamp": "$TIMESTAMP",
   "session_id": "$SESSION_ID",
+  "service": "$SERVICE_NAME",
   "phase": "$phase",
   "status": "$status",
   "details": $details
@@ -71,7 +111,11 @@ function log_audit() {
 EOF
 )
 
+  # Write to local audit log
   echo "$json_entry" >> "$AUDIT_LOG"
+
+  # Push to CloudWatch Logs if enabled
+  push_to_cloudwatch "$json_entry"
 }
 
 ################################################################################
@@ -245,6 +289,50 @@ else
 fi
 
 log_audit "phase_4" "$FINAL_DECISION" "{\"deployment_target\":\"$DEPLOYMENT_TARGET\",\"final_decision\":\"$FINAL_DECISION\"}"
+
+################################################################################
+# CloudWatch Metrics Publishing
+################################################################################
+
+END_TIME=$(date +%s)
+EXECUTION_TIME=$((END_TIME - START_TIME))
+
+# Push execution time metric
+push_metric "ExecutionTimeSeconds" "$EXECUTION_TIME" "Seconds"
+
+# Push pass/fail metrics
+if [ "$FINAL_DECISION" = "PROCEED" ]; then
+  push_metric "PassCount" "1" "Count"
+else
+  push_metric "FailCount" "1" "Count"
+fi
+
+# Push phase-specific metrics
+case "$TESTS_UNIT" in
+  PASS) push_metric "PhaseTests/UnitPass" "1" "Count" ;;
+  FAIL) push_metric "PhaseTests/UnitFail" "1" "Count" ;;
+  *) push_metric "PhaseTests/UnitSkipped" "1" "Count" ;;
+esac
+
+case "$SECURITY_SECRETS" in
+  PASS) push_metric "PhaseSecurity/SecretsPass" "1" "Count" ;;
+  WARN) push_metric "PhaseSecurity/SecretsWarn" "1" "Count" ;;
+  *) push_metric "PhaseSecurity/SecretsSkipped" "1" "Count" ;;
+esac
+
+# Push Healer metrics if Phase 3 ran
+if [ "$GATE_DECISION" = "ISSUES_FOUND" ]; then
+  if [ "$HEALER_ELIGIBLE" = "true" ]; then
+    push_metric "HealerInvoked" "1" "Count"
+    if [ "$HEALER_SUCCESS" = "true" ]; then
+      push_metric "HealerSuccess" "1" "Count"
+    else
+      push_metric "HealerFailed" "1" "Count"
+    fi
+  else
+    push_metric "HealerEscalated" "1" "Count"
+  fi
+fi
 
 ################################################################################
 # Output & Summary
