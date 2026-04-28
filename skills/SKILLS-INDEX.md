@@ -1,7 +1,7 @@
 ---
 name: ERS Architecture Skills Index
 type: index
-last_updated: 2026-04-27 (planning & workflow skills added)
+last_updated: 2026-04-28 (Phase 5 Quality Engineer + Self-Healing skills complete)
 ---
 
 # ERS Architecture & Enforcement Skills
@@ -157,7 +157,109 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Integration**: Designed to run in `pre-commit` and `pre-push` git hooks
 - **Escalation**: Immediate rotation required; never delegate to Healer
 
-## Current Compliance Status (2026-04-27)
+## Testing Orchestration (Phase 5 — Quality Engineer)
+
+### **test-unit-orchestration.md** — Unit Test Discovery & Execution
+- **Purpose**: Discover, execute, and report on unit tests; parse coverage output for gate decisions
+- **Input**: `service_path`, `test_filter` (optional glob), `coverage_threshold`
+- **Output**: Tests passed/failed, coverage %, failed test list, mutation recommendations
+- **Coverage gate**: PASS if >= threshold (default 80%), WARN if below
+- **Called by**: `quality-gate-orchestration` (testing phase, parallel execution)
+
+### **test-integration-orchestration.md** — Integration Test Orchestration
+- **Purpose**: Run integration tests with ERS service mocking (DynamoDB, SNS, EventBridge)
+- **Input**: `service_path`, `environment` (test/staging/dev), `test_filter`
+- **Output**: Integration tests passed/failed, mocks used, execution time
+- **Mocking**: LocalStack for DynamoDB/SNS/SQS, serverless-offline for Lambda
+- **Called by**: `quality-gate-orchestration` (testing phase, parallel execution)
+
+### **test-e2e-orchestration.md** — Playwright E2E Test Orchestration
+- **Purpose**: Filter and execute Playwright E2E tests by scenario name; capture video/traces on failure
+- **Input**: `scenario_filter` (optional: "login", "create_event"), `headless`, `parallel_workers`
+- **Output**: Scenarios run/passed/failed, execution time, trace files if failures
+- **Cost**: High (run only pre-deployment, not per-commit)
+- **Called by**: `quality-gate-orchestration` (if `skip_e2e=false`)
+
+### **test-business-logic.md** — Business Logic & State Machine Testing
+- **Purpose**: Parametric testing for edge cases, state transitions, data interactions
+- **Input**: `service_path`, `business_logic_spec` (requirements), `state_machine_transitions`
+- **Output**: Edge cases tested, state transitions covered, uncovered transitions flagged
+- **Examples**: User role transitions (member→admin→disabled), event status flows, concurrent writes
+- **Called by**: `quality-gate-orchestration` (testing phase, parallel execution)
+
+## Compliance & Requirements (Phase 5 — Quality Engineer)
+
+### **requirement-mapping.md** — Requirement Traceability Mapping
+- **Purpose**: Map requirements → test cases → code; calculate coverage %; identify unmapped requirements
+- **Input**: `service_path`, `spec_file` (requirement spec)
+- **Output**: Requirement coverage %, mapping matrix, unmapped requirements, orphaned code
+- **Gate**: Informational (no gate decision, reports only)
+- **Called by**: `quality-gate-orchestration` (compliance phase)
+
+### **requirement-verification.md** — Pre-Deployment Requirement Gate
+- **Purpose**: Pre-deployment gate: verify all requirements have passing tests
+- **Input**: `service_path`, `deployment_target` (dev/staging/prod)
+- **Output**: Requirements tested, requirements all passing, gate result (PROCEED/WARN/BLOCK)
+- **Strictness**: Prod requires 100% requirement coverage, dev allows partial
+- **Called by**: `quality-gate-orchestration` (compliance phase)
+
+### **spec-compliance-verification.md** — Spec Compliance Validation
+- **Purpose**: Verify code implementation complies with extracted architectural specs
+- **Input**: `service_path`, `spec_dir` ({service-name}/specs)
+- **Output**: Spec compliance %, deviations detected, severity per deviation
+- **Checks**: Makefile pattern, CDK structure, event versioning, auth flow, config standard, GitHub Actions, replay mode
+- **Called by**: `quality-gate-orchestration` (compliance phase)
+
+## Self-Healing Feedback Loop (Phase 5 — Quality Engineer)
+
+### **issue-diagnostic-engine.md** — Root Cause Analysis & Confidence Scoring
+- **Purpose**: Diagnose quality gate failures; assess confidence (HIGH/LOW) and risk (LOW/HIGH)
+- **Input**: `failure_log` (test/security/config), `failure_type`
+- **Output**: Root cause category, confidence, risk level, suggested fix, healer_eligible flag
+- **Categories**: dependency, configuration, test_flakiness, logic, infrastructure, security
+- **Routing**: HIGH confidence + LOW risk → Healer eligible; otherwise → escalate to human
+- **Called by**: `quality-gate-orchestration` (self-healing phase, per issue)
+
+### **healer-engineer.md** — Autonomous Issue Fixing & PR Creation
+- **Purpose**: Auto-fix low-risk, pattern-matchable issues; create PR with optional auto-merge
+- **Input**: `diagnostic` result (must have confidence=HIGH, risk_level=LOW)
+- **Allowed fixes**: Missing env var, dependency patch, flaky test, lockfile stale, import path wrong
+- **Output**: PR created with audit trail, auto-merge status if applicable
+- **Constraints**: Single file change, no multi-file refactoring, conservative auto-merge rules
+- **Called by**: `quality-gate-orchestration` (self-healing phase, after diagnostic)
+
+## Master Orchestration (Phase 5 — Quality Engineer)
+
+### **quality-gate-orchestration.md** — Master Quality Gate Orchestrator
+- **Purpose**: Coordinate all 12 quality skills in comprehensive pre-deployment verification with self-healing loop
+- **Input**: `service_path`, `deployment_target` (dev/staging/prod), `skip_e2e`, `max_heal_attempts`
+- **Output**: Structured gate decision (PROCEED/WARN/BLOCK/ESCALATE), audit trail, report saved to S3
+- **Workflow**: 
+  1. PHASE 1: Run all 12 skills in parallel (testing, security, compliance)
+  2. PHASE 2: Check if all green; if yes → PROCEED; if no → PHASE 3
+  3. PHASE 3: Self-healing loop (diagnostic → healer or escalate)
+  4. PHASE 4: Final gate decision with deployment readiness
+- **Strictness by target**: prod (all requirements, 100% coverage) > staging > dev
+- **Called by**: GitHub Actions, Orchestrator agent, pre-deployment hooks
+
+## Roles (Phase 5 — Quality Engineer Specialization)
+
+### **Healer Engineer** (`roles/healer-engineer.md`)
+- **Purpose**: Autonomous agent that auto-fixes low-risk quality issues
+- **Responsibilities**: Fix missing env vars, dependency patches, flaky tests, lockfiles, import paths
+- **Constraints**: Only acts on HIGH confidence + LOW risk diagnostics; escalates high-risk issues
+- **Auto-fix types**: Configuration missing, dependency patch bump, test flakiness, lockfile regeneration, import path wrong
+- **NO auto-fix**: Security issues, logic bugs, architecture changes, multi-file refactoring
+- **Success metric**: >70% of detected issues should be auto-fixable
+- **Model**: Claude Sonnet (cost-effective autonomous execution)
+
+### **Quality Engineer** (updated)
+- **Responsibilities**: Orchestrate all quality gates, coordinate self-healing loop, make final deployment decisions
+- **Skills used**: All 12 quality skills + orchestrator + diagnostic engine + healer routing
+- **Decision authority**: PROCEED/WARN/BLOCK/ESCALATE on deployments
+- **Escalation paths**: Lead (logic issues) → Principal (architecture) → Security (findings)
+
+## Current Compliance Status (2026-04-28)
 
 | Service | Makefile | .env Files | CDK | GitHub Actions | Status |
 |---------|----------|-----------|-----|----------------|--------|
