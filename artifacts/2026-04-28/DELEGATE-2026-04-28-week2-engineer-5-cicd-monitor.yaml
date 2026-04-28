@@ -1,0 +1,78 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-05-week2-engineer-5-cicd-monitor
+timestamp: 2026-04-28T19:00:00Z
+from_agent: Orchestrator (Haiku)
+to_agent: Engineer (Haiku)
+role: Engineer
+model: claude-haiku-4-5
+effort: high
+
+scope: >
+  Implement CICD Monitor skill — GitHub Actions monitoring agent. Create
+  agentic-engineers/skills/cicd-monitor.md with complete DELEGATE/HANDBACK
+  protocol. Agent polls workflow status every 120 seconds, reports completion,
+  escalates on timeout or failure.
+
+context:
+  - Design spec: agentic-engineers/orchestration/AGENT-SPECS-WEEK1-DESIGNS.md (Agent 5)
+  - Role: Orchestrator (specialized polling + escalation)
+  - Framework: AGENTS.md
+  - Handoff protocol: HANDOFF.md
+  - GitHub API: Workflows API for polling (get latest run)
+  - Poll interval: 120 seconds (per design spec)
+  - Max wait: 30 minutes (hard timeout)
+  - Integration: Called from Orchestrator after push to main
+  - Architecture Remediation Week 2: 2026-05-05 to 2026-05-12
+  - Budget: ~1500 tokens estimated
+
+plan:
+  1. Review AGENT-SPECS-WEEK1-DESIGNS.md Agent 5 specification
+  2. Review GitHub Actions Workflows API (get run status, job results)
+  3. Create skills/cicd-monitor.md with structure:
+     - Agent purpose + scope
+     - DELEGATE block specification (repo, ref, workflow_name, max_wait_minutes, poll_interval_seconds)
+     - HANDBACK block specification (status, workflow_run_id, jobs_completed[], jobs_failed[])
+     - GitHub API polling logic (every 120s until completion)
+     - Job-by-job status tracking
+     - Failure log extraction (capture relevant error messages)
+     - Timeout handling (hard stop after 30 min)
+     - Escalation decision logic (failure -> escalate to Lead Engineer)
+     - Poll count + wait time tracking
+  4. Handle GitHub API rate limits gracefully
+  5. Extract useful failure log excerpts (not full logs)
+  6. Test with mock GitHub API responses
+  7. Return HANDBACK with deliverable + validation
+
+success_criteria:
+  - Skill document created (350-400 lines)
+  - DELEGATE spec matches design spec
+  - HANDBACK spec includes all fields (status, jobs_completed[], jobs_failed[], escalation_path)
+  - Polls every 120 seconds correctly
+  - Detects workflow completion (all job states)
+  - Captures failure logs when jobs fail
+  - Timeout after 30 minutes (hard stop)
+  - Poll count and wait time accurate
+  - Escalation path set for failures and timeouts
+  - GitHub API error handling graceful
+  - Ready for post-push monitoring
+
+success_metrics:
+  - make lint passes
+  - make test passes (with mock API responses)
+  - Skill document is clear and actionable
+  - Design spec -> implementation traceable
+  - Mock tests show correct polling behavior
+
+notes: >
+  This agent conserves API calls with 120s intervals. Critical for Phase 5.10
+  deployment monitoring. Ensure timeout handling is bulletproof (no infinite loops).
+
+budget_context:
+  session_pct_at_delegation: 48.0
+  estimated_tokens_needed: 1500
+  hours_until_reset: 5.5
+  status: GREEN
+  recommendation: "Haiku appropriate for polling + status tracking"
+
+---
