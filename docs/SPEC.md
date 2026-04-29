@@ -1,21 +1,43 @@
 # Agentic Engineers System Specification
 
-**Version:** 1.1  
+**Version:** 2.0  
 **Created:** 2026-04-29  
-**Last Updated:** 2026-04-29 (Spec Engineer baseline validation + TYPE_C optimizations documented)
-**Author:** Engineer Agent (Haiku 4.5, spec-extraction baseline) + Spec Engineer (Sonnet 4.6, baseline validation)
-**Purpose:** Complete, production-grade specification enabling re-implementation of agentic-engineers from scratch. Baseline validated by Spec Engineer (92.9% compliance, zero regressions).
+**Last Updated:** 2026-04-29  
+**Constraint:** Self-contained agent system — NO external dependencies (Claude APIs, shell scripts, external services). All work is agent-to-agent delegation via DELEGATE/HANDBACK/FEEDBACK protocol.
+**Author:** Engineer Agent (Haiku 4.5, spec-extraction baseline) + Spec Engineer (Sonnet 4.6, validation)
+**Purpose:** Complete specification of agentic-engineers as a fully self-contained, model-driven orchestration system. Agents delegate work to agents; no external integrations.
+
+---
+
+## 🔒 Architectural Constraint
+
+**agentic-engineers IS:**
+- ✅ Agent-driven system: all work flows between agents via DELEGATE/HANDBACK/FEEDBACK
+- ✅ Model-agnostic: agents are implemented as other agents, recursively
+- ✅ Self-contained: zero external dependencies (no APIs, no shell scripts, no cloud calls)
+- ✅ Fully internal: artifact files only; all communication is DELEGATE/HANDBACK blocks
+
+**agentic-engineers IS NOT:**
+- ❌ An API integration system (no Claude API calls, no external services)
+- ❌ A shell/script system (no bash, no tools, no external processes)
+- ❌ Cloud-dependent (no AWS, no GitHub, no services)
+- ❌ A build/deployment system (no make, no docker, no CI/CD)
+
+**Rule:** Any feature requiring external integration must be:
+1. Described in spec as "Agent X delegates to Agent Y"
+2. Implemented as Agent Y (not as an external call)
+3. Agent Y may itself delegate, recursively
 
 ---
 
 ## 1. Overview
 
-**Agentic Engineers** is a decentralized Software Development Lifecycle (SDLC) orchestration platform using multi-agent routing and real-time feedback loops. Two integrated subsystems:
+**Agentic Engineers** is a fully self-contained, decentralized Software Development Lifecycle (SDLC) orchestration system using agent-to-agent delegation and feedback loops. Two integrated subsystems:
 
-1. **Quality Gate (Synchronous)**: 5 sub-agents validate every commit against security, testing, metrics, healing, and specification.
+1. **Quality Gate (Synchronous)**: 5 sub-agents validate work against security, testing, metrics, healing, and specification via DELEGATE/HANDBACK protocol.
 2. **SDLC Orchestrator (Asynchronous)**: 8 primary agents route work to specialists, with 3 parallel feedback loops optimizing cost, quality, and configuration compliance.
 
-**Core Principle:** All work flows through DELEGATE/HANDBACK markup blocks, creating machine-readable task provenance and enabling continuous improvement via Model Engineer recommendations.
+**Core Principle:** All work flows through DELEGATE/HANDBACK/FEEDBACK blocks. Each agent receives a DELEGATE block (input), executes work by delegating to sub-agents, and returns a HANDBACK block (output). No external systems are called; all orchestration is internal.
 
 ---
 
