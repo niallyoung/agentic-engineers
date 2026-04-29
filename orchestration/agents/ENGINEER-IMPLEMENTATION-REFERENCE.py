@@ -254,24 +254,24 @@ def example_usage():
     # Create a DELEGATE block (from Orchestrator)
     delegate_block = {
         "handoff_type": "DELEGATE",
-        "task_id": "2026-04-29-fix-auth-timeout-abc123",
+        "task_id": "2026-04-29-timeout-grace-period-abc123",
         "role": "engineer",
         "model": "claude-haiku-4-5",
         "effort": "high",
-        "scope": "Fix token validation timeout in {service-name}; do not change Cognito config",
+        "scope": "Add timeout grace period to authentication service validation",
         "context": {
-            "file": "lambda/api/main.go:92 (expiry check)",
-            "error": "Token rejected after 1hr on mobile",
-            "root_cause": "clock skew on device"
+            "component": "Token validation layer",
+            "issue": "Tokens rejected after expiry period on mobile clients",
+            "root_cause": "Clock synchronization differences between client and server"
         },
         "plan": [
-            "Add 30s grace period to exp claim check at line 92",
-            "Write test TestTokenExpiryGracePeriod",
-            "Run 'make verify'"
+            "Add 30s grace period to timeout validation logic",
+            "Write test for grace period behavior",
+            "Run full test suite"
         ],
         "success_criteria": [
-            "make verify passes",
-            "Mobile e2e auth passes"
+            "All tests pass",
+            "Mobile client tests pass"
         ]
     }
 
