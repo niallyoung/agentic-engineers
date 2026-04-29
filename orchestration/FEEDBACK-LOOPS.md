@@ -20,13 +20,14 @@ Sorted by Model (Haiku → Sonnet → Opus), then by Cost.
 | **Haiku** | Orchestrator | 500-1K | $0.01-0.03 | Routing, state mgmt, scheduling | Tokens → Budget Optimizer |
 | **Haiku** | Metrics Agent | 1-3K | $0.03-0.09 | Health scoring, anomaly detect | Anomalies → Quality Analyst |
 | **Haiku** | Pattern Recognition | 2-4K | $0.06-0.12 | Find recurring issues | Patterns → Continuous Improvement |
+| **Haiku** | Testing Agent | 4-10K | $0.03-0.08 | Unit/E2E tests, coverage | Results → Healing Agent |
+| **Haiku** | Model Engineer | 3-7K | $0.02-0.06 | Analyze token usage, recommend models | Recommendations → Orchestrator routing |
 | **Sonnet** | Engineer | 2-5K | $0.06-0.15 | Well-scoped implementation | Result → Quality Engineer |
 | **Sonnet** | Quality Engineer | 3-8K | $0.09-0.24 | Code review, validation | Assessment → Model Engineer |
 | **Sonnet** | Senior Engineer | 5-15K | $0.15-0.45 | Complex coding, planning | Plan → Engineer (downstream) |
-| **Sonnet** | Testing Agent | 4-10K | $0.12-0.30 | Unit/E2E tests, coverage | Results → Healing Agent |
 | **Sonnet** | Healing Agent | 3-8K | $0.09-0.24 | Auto-fixes, lint corrections | Fixes → Config Audit (re-verify) |
 | **Sonnet** | Config Enforcement | 2-6K | $0.06-0.18 | Apply config fixes | Compliance Δ → Pattern Recognition |
-| **Sonnet** | Model Engineer | 3-7K | $0.09-0.21 | Analyze token usage, recommend models | Recommendations → Orchestrator routing |
+| **Sonnet** | Orchestrator (Quality Gate) | 2-4K | $0.06-0.12 | Delegate & aggregate quality gate decisions | Decisions → HANDBACK |
 | **Opus** | Security Agent | 6-15K | $0.18-0.45 | Credential scanning, threat modeling | Findings → Orchestrator decision |
 | **Opus** | Principal Engineer | 10-25K | $0.30-0.75 | Cross-service architecture | Design → Lead Engineer review |
 
@@ -50,7 +51,7 @@ Sorted by Model (Haiku → Sonnet → Opus), then by Cost.
 │ │ │       → Orchestrator receives via artifacts/               │
 │ │ │       → Attributes: severity, confidence, token_usage      │
 │ │ │                                                              │
-│ │ ├─ [Parallel] DELEGATE to Testing Agent (Sonnet)             │
+│ │ ├─ [Parallel] DELEGATE to Testing Agent (Haiku)             │
 │ │ │ └─ SPAN: agent-testing [async, 0-5min]                    │
 │ │ │    └─ HANDBACK: {status, coverage, failures, flaky}       │
 │ │ │       → Orchestrator receives via artifacts/               │
@@ -87,7 +88,7 @@ Sorted by Model (Haiku → Sonnet → Opus), then by Cost.
 │ │ └─ SPAN: agent-aggregation [sync, <1sec]                    │
 │ │    └─ Combines all HANDBACK blocks into single decision      │
 │ │                                                                │
-│ ├─ [Async] DELEGATE to Model Engineer (Sonnet)                 │
+│ ├─ [Async] DELEGATE to Model Engineer (Haiku)                 │
 │ │ ├─ Input: observed tokens, latency, quality_score           │
 │ │ ├─ SPAN: agent-model-engineer [async, 0-5min]              │
 │ │ │ └─ Analysis:                                                │
@@ -159,7 +160,7 @@ Sorted by Model (Haiku → Sonnet → Opus), then by Cost.
 │  ├─ Observed: tokens_used, latency, model_used
 │  ├─ Result: final_decision (PROCEED | ESCALATE)
 │  │
-│  └─ [Async] DELEGATE to Model Engineer (Sonnet)
+│  └─ [Async] DELEGATE to Model Engineer (Haiku)
 │     ├─ Analyze: Was the model choice optimal?
 │     │  ├─ If tokens_used < predicted: maybe Haiku would work?
 │     │  ├─ If tokens_used >> predicted: Opus needed?

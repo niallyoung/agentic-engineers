@@ -36,13 +36,13 @@ status: IN_PROGRESS
   - Output: HANDBACK blocks (final_decision: PROCEED/ESCALATE)
   - OpenTelemetry instrumentation for all operations
 
-- ✅ Implemented 5 agents:
+- ✅ Implemented 6 agents:
   - Quality Gate Orchestrator (Sonnet) - master coordinator
   - Security Agent (Opus) - credential/permission scanning
-  - Testing Agent (Sonnet) - unit/E2E test execution
+  - Testing Agent (Haiku) - unit/E2E test execution
   - Metrics Agent (Haiku) - health scoring
   - Healing Agent (Sonnet) - auto-fixes
-  - Model Engineer Agent (Sonnet) - token analysis + feedback loop
+  - Model Engineer Agent (Haiku) - token analysis + feedback loop
 
 - ✅ Wired git hooks to generate DELEGATE blocks
   - File: `{service-name}/githooks/pre-commit` (updated with DELEGATE generation)
@@ -92,6 +92,20 @@ status: IN_PROGRESS
 ---
 
 ## Phase 6: Agent Feedback Loops & Observability (2 weeks, 2026-06-02 → 2026-06-16)
+
+**Status**: ✅ **DESIGN COMPLETE - READY FOR IMPLEMENTATION**
+
+**Deliverables**:
+- ✅ Quality Gate Feedback Handler (aggregation logic, decision tree)
+- ✅ Model Engineer Feedback Handler (token efficiency analysis, recommendations)
+- ✅ Config Enforcement Feedback Handler (fix verification, confidence learning)
+- ✅ Phase 6 Integration Guide (data flow, timeline, success criteria)
+
+**Files**:
+- `orchestration/handlers/quality-gate-feedback-handler.md` (aggregation + decision logic)
+- `orchestration/handlers/model-engineer-feedback-handler.md` (efficiency analysis + learning loop)
+- `orchestration/handlers/config-enforcement-feedback-handler.md` (fix verification + confidence)
+- `orchestration/PHASE-6-INTEGRATION-GUIDE.md` (wiring diagram, timeline, examples)
 
 ### Objective 1: Closed Feedback Loops (Agents → Orchestrator → Decision)
 

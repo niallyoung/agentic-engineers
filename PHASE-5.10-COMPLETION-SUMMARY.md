@@ -107,12 +107,13 @@ phase: 5.10
 |-------|-------|--------|------|
 | Orchestrator | Sonnet | 850 | $0.026 |
 | Security | Opus | 2845 | $0.085 |
-| Testing | Sonnet | 5120 | $0.154 |
+| Testing | Haiku | 5120 | $0.034 |
 | Metrics | Haiku | 950 | $0.028 |
 | Healing | Sonnet | 3200 | $0.096 |
-| **Total** | - | **12,965** | **$0.389** |
+| Model Engineer | Haiku | 200 | $0.009 |
+| **Total** | - | **13,165** | **$0.278** |
 
-**Cost per commit**: ~$0.39 (Sonnet-dominant, Opus for security, Haiku for metrics)
+**Cost per commit**: ~$0.28 (optimized via Haiku downgrades; Opus only for critical security, Sonnet for orchestration/healing)
 
 ### Latency (Target)
 
@@ -126,9 +127,9 @@ phase: 5.10
 
 - Per commit: 1 quality gate
 - Frequency: ~10-20 commits/day (typical developer)
-- Cost per day: ~$3.90-$7.80 (10-20 commits × $0.39)
-- Cost per month: ~$117-$234
-- Annual: ~$1,404-$2,808
+- Cost per day: ~$2.78-$5.56 (10-20 commits × $0.28)
+- Cost per month: ~$83-$167
+- Annual: ~$996-$2,000
 
 **vs. Manual code review**: $0 automation cost, saves 10-30 min per commit (~$50-150 per commit in dev time)
 

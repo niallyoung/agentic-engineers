@@ -6,9 +6,12 @@ phase: 5.10
 
 # Testing Agent — LIVE IMPLEMENTATION
 
-**Role**: Quality Engineer  
-**Model**: claude-sonnet-4-6  
-**Effort**: high
+**Role**: Engineer  
+**Model**: claude-haiku-4-5  
+**Effort**: medium (downgraded from Sonnet for cost optimization)
+
+**Why Haiku**: Structured output parsing (make test) is mechanical. Haiku excels at this.
+**Cost savings**: 78% reduction (Sonnet $0.154 → Haiku $0.034)
 
 ## Agent Logic
 
