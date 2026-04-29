@@ -43,11 +43,23 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 - Orchestrator applies recommendations to next similar task
 - System improves routing over time with no manual intervention
 
+**Agent Implementations**:
+- ✅ [Orchestrator Agent](./agents/general-orchestrator-agent.md)
+- ✅ [Engineer Agent](./agents/engineer-agent.md)
+- ✅ [Senior Engineer Agent](./agents/senior-engineer-agent.md)
+- ✅ [Lead Engineer Agent](./agents/lead-engineer-agent.md)
+- ✅ [Quality Engineer Agent](./agents/quality-engineer-agent.md)
+- ✅ [Principal Engineer Agent](./agents/principal-engineer-agent.md)
+- ✅ [Spec Engineer Agent](./agents/spec-engineer-agent.md) (Quality Gate sub-agent)
+- ✅ [Security Engineer Agent](./agents/security-agent.md) (Quality Gate sub-agent)
+- ✅ [Model Engineer Agent](./agents/model-engineer-agent.md) (Feedback loop)
+
 **Mandatory Constraints:**
 - Engineer MUST NOT receive a task without a pre-written `plan` in the DELEGATE block (except one-sentence bug fixes)
 - **Orchestrator MUST NOT perform work — only route, track, and apply Model Engineer recommendations.** ALL execution work (code edits, implementations, reviews, documentation work) MUST be delegated via HANDOFF to appropriate role. Direct execution pollutes Orchestrator context and prevents isolated Engineer sessions.
 - Security Engineer is invoked ONLY for security-scoped tasks; no other role escalates directly to Security Engineer (go through Principal first)
 - Quality Engineer MUST provide `model_assessment` feedback in HANDBACK for Model Engineer analysis
+- Spec Engineer (Quality Gate) validates code against docs/SPEC.md on every commit
 
 **Routing Decision Tree (for Orchestrator):**
 
