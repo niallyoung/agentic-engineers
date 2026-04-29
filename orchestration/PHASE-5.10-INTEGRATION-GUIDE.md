@@ -76,7 +76,7 @@ File: artifacts/2026-MM-DD/DELEGATE-{timestamp}-commit-{service}-security.yaml
   → Sent to Security Agent (Opus)
   
 File: artifacts/2026-MM-DD/DELEGATE-{timestamp}-commit-{service}-testing.yaml
-  → Sent to Testing Agent (Sonnet)
+  → Sent to Testing Agent (Haiku)
   
 File: artifacts/2026-MM-DD/DELEGATE-{timestamp}-commit-{service}-metrics.yaml
   → Sent to Metrics Agent (Haiku)
@@ -143,11 +143,11 @@ File: artifacts/2026-MM-DD/DELEGATE-{timestamp}-commit-{service}-model-feedback.
   
 File: artifacts/feedback/model-recommendations.jsonl
   Written by: Model Engineer Agent
-  Appended to: models/sonnet recommended for testing (confidence 0.90)
+  Appended to: models/haiku recommended for testing (confidence 0.90)
   
 Next commit of same type:
   → Orchestrator uses this recommendation
-  → Uses Sonnet for Testing Agent instead of default
+  → Uses Haiku for Testing Agent (downgraded for cost efficiency)
   → Tracks outcome (PASS/FAIL) to refine confidence
 ```
 
