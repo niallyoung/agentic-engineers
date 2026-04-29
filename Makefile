@@ -1,4 +1,6 @@
-.PHONY: help install verify clean
+.PHONY: help install install-docs install-github install-copilot install-claude install-all \
+        uninstall-github uninstall-copilot uninstall-claude uninstall-all status \
+        verify clean list-backups restore
 
 INSTALL_PREFIX ?= $(HOME)/.agents
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -7,19 +9,64 @@ SRC_DIR := $(REPO_ROOT)
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
-	@echo "Targets:"
-	@echo "  make install       Install framework to ~/.agents/agentic-engineers/"
-	@echo "  make verify        Verify installation integrity"
-	@echo "  make list-backups  List available backup versions"
-	@echo "  make restore       Restore from a backup (BACKUP_DATE=YYYYMMDD_HHMMSS)"
-	@echo "  make clean         Remove installed files from ~/.agents/"
+	@echo "Install targets:"
+	@echo "  install-docs        rsync framework into ~/.agents/agentic-engineers/  (doc surface)"
+	@echo "  install-github      Render → ~/.github/  (legacy compat layout)"
+	@echo "  install-copilot     Render skills → ~/.copilot/skills/"
+	@echo "  install-claude      Render agents → ~/.claude/agents/, skills → ~/.claude/skills/"
+	@echo "  install-all         All four"
+	@echo "  install             Alias for install-docs (back-compat)"
+	@echo ""
+	@echo "Uninstall targets:"
+	@echo "  uninstall-github    Remove agentic-engineers files from ~/.github/"
+	@echo "  uninstall-copilot   Remove from ~/.copilot/skills/  (only managed)"
+	@echo "  uninstall-claude    Remove from ~/.claude/  (only managed)"
+	@echo "  uninstall-all       All three"
+	@echo "  clean               Remove ~/.agents/agentic-engineers/  (doc surface)"
+	@echo ""
+	@echo "Diagnostic:"
+	@echo "  verify              Verify framework structure"
+	@echo "  status              Drift report across ~/.github/, ~/.copilot/, ~/.claude/"
+	@echo "  list-backups        List ~/.agents/ backups"
+	@echo "  restore             Restore ~/.agents/ from backup (BACKUP_DATE=YYYYMMDD_HHMMSS)"
 	@echo ""
 	@echo "Environment:"
-	@echo "  INSTALL_PREFIX     Installation root (default: ~/.agents)"
-	@echo "  BACKUP_DATE        Timestamp for restore (e.g., 20260425_190131)"
+	@echo "  INSTALL_PREFIX      ~/.agents/ install root (default: \$$HOME/.agents)"
+	@echo "  BACKUP_DATE         Timestamp for restore"
 
-install: verify
-	@echo "📦 Installing agentic-engineers framework..."
+install: install-docs ## Back-compat alias for install-docs
+
+install-all: install-docs install-github install-copilot install-claude ## Install to all targets
+
+install-docs: verify
+	@$(MAKE) -s _install-docs-impl
+
+# Renderer targets delegate to renderer/Makefile
+install-github:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer install-github
+
+install-copilot:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer install-copilot
+
+install-claude:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer install-claude
+
+uninstall-github:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer uninstall-github
+
+uninstall-copilot:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer uninstall-copilot
+
+uninstall-claude:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer uninstall-claude
+
+uninstall-all: uninstall-github uninstall-copilot uninstall-claude
+
+status:
+	@$(MAKE) -s -C $(REPO_ROOT)/renderer status
+
+_install-docs-impl:
+	@echo "📦 Installing agentic-engineers framework → $(INSTALL_PREFIX)/agentic-engineers/"
 	@INSTALL_DIR="$(INSTALL_PREFIX)/agentic-engineers"; \
 	if [ -d "$$INSTALL_DIR" ]; then \
 		echo "⚠️  Directory already exists: $$INSTALL_DIR"; \
