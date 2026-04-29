@@ -45,7 +45,7 @@ EOF
 1. **Read DELEGATE block** from artifacts/ directory
 2. **Delegate in parallel** to 4 sub-agents:
    - Security Agent (Opus) — credential/permission scanning
-   - Testing Agent (Sonnet) — unit/E2E test execution
+   - Testing Agent (Haiku) — unit/E2E test execution
    - Metrics Agent (Haiku) — health scoring
    - Healing Agent (Sonnet) — auto-fix attempts
 3. **Wait for all HANDBACK blocks** (5-min timeout, poll artifacts/)
