@@ -1,0 +1,54 @@
+{
+  "provider": "claude",
+  "timestamp": "2026-04-30T17:05:38.553695",
+  "role_models": {
+    "engineer": {
+      "model": "claude-haiku-4-5",
+      "effort": "high",
+      "thinking": false,
+      "canonical": "claude-haiku"
+    },
+    "senior_engineer": {
+      "model": "claude-sonnet-4-6",
+      "effort": "high",
+      "thinking": true,
+      "canonical": "claude-sonnet"
+    },
+    "quality_engineer": {
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
+      "thinking": true,
+      "canonical": "claude-sonnet"
+    },
+    "lead_engineer": {
+      "model": "claude-sonnet-4-6",
+      "effort": "high",
+      "thinking": true,
+      "canonical": "claude-sonnet"
+    },
+    "security_engineer": {
+      "model": "claude-opus-4-7",
+      "effort": "max",
+      "thinking": true,
+      "canonical": "claude-opus"
+    },
+    "principal_engineer": {
+      "model": "claude-opus-4-7",
+      "effort": "high",
+      "thinking": true,
+      "canonical": "claude-opus"
+    },
+    "model_engineer": {
+      "model": "claude-haiku-4-5",
+      "effort": "medium",
+      "thinking": false,
+      "canonical": "claude-haiku"
+    },
+    "general_orchestrator": {
+      "model": "claude-haiku-4-5",
+      "effort": "low",
+      "thinking": false,
+      "canonical": "claude-haiku"
+    }
+  }
+}
