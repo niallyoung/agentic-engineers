@@ -94,6 +94,29 @@ agentic-engineers/
 
 ---
 
+## 📊 Visual Workflow Diagrams
+
+**Want to see how work moves through the system?**
+
+- **[WORKFLOW.md](WORKFLOW.md)** — Comprehensive diagram with example flow showing:
+  - System architecture with all agent types
+  - Complete example: feature implementation from intake through merge
+  - DELEGATE/HANDBACK message formats with actual data
+  - Parallel quality gate execution (Testing, Healing, Security, Metrics)
+  - Decision points and escalation paths
+  - ~15-minute read for full understanding
+
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** — One-page quick reference with:
+  - Architecture overview diagram
+  - Agent responsibilities table
+  - Decision trees (routing, aggregation)
+  - Example timeline (feature from start to deploy)
+  - Communication patterns
+  - Key metrics
+  - ~5-minute read for quick lookup
+
+---
+
 ## Quick Start (5 Minutes)
 
 ### 1. Understand the Model
