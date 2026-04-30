@@ -1,4 +1,4 @@
-.PHONY: help install-copilot install-claude install-all \
+.PHONY: help install install-copilot install-claude \
         uninstall-copilot uninstall-claude uninstall-all status \
         verify clean render-claude render-copilot render-all
 
@@ -8,9 +8,9 @@ help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
 	@echo "Install targets (platform-specific):"
+	@echo "  install             Install to both ~/.claude/ and ~/.copilot/"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
 	@echo "  install-copilot     Install rendered agents → ~/.copilot/"
-	@echo "  install-all         Both"
 	@echo ""
 	@echo "Uninstall targets:"
 	@echo "  uninstall-claude    Remove from ~/.claude/  (managed only)"
@@ -27,7 +27,7 @@ help:
 	@echo "  verify              Verify framework structure"
 	@echo "  clean               Remove both installations"
 
-install-all: install-claude install-copilot ## Install to both ~/.claude/ and ~/.copilot/
+install: install-claude install-copilot ## Install to both ~/.claude/ and ~/.copilot/
 
 install-copilot:
 	@bash $(REPO_ROOT)/scripts/install-copilot.sh install
