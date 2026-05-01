@@ -59,12 +59,16 @@ render-claude:
 	@echo "📦 Rendering agents for Claude → dist/claude/"
 	@mkdir -p $(REPO_ROOT)/dist/claude/roles
 	@cp $(REPO_ROOT)/orchestration/agents/*.md $(REPO_ROOT)/dist/claude/roles/ 2>/dev/null || true
+	@cp -r $(REPO_ROOT)/skills $(REPO_ROOT)/dist/claude/ 2>/dev/null || true
+	@cp $(REPO_ROOT)/config/models.json $(REPO_ROOT)/dist/claude/ 2>/dev/null || true
 	@echo "✅ Done"
 
 render-copilot:
 	@echo "📦 Rendering agents for Copilot → dist/copilot/"
 	@mkdir -p $(REPO_ROOT)/dist/copilot/roles
 	@cp $(REPO_ROOT)/orchestration/agents/*.md $(REPO_ROOT)/dist/copilot/roles/ 2>/dev/null || true
+	@cp -r $(REPO_ROOT)/skills $(REPO_ROOT)/dist/copilot/ 2>/dev/null || true
+	@cp $(REPO_ROOT)/config/models.json $(REPO_ROOT)/dist/copilot/ 2>/dev/null || true
 	@echo "✅ Done"
 
 verify:
