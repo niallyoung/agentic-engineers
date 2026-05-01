@@ -85,7 +85,7 @@ case "$MODE" in
         # Smart backup: only back up files that will be updated
         if [ "$SMART_INSTALL" = true ]; then
           echo "🔍 Checking for changed files..."
-          CHANGED=$(rsync -n -r --delete "$DIST_DIR/" "$COPILOT_DIR/" 2>&1 | grep -c "^<" || true)
+          CHANGED=$(rsync -n -r "$DIST_DIR/" "$COPILOT_DIR/" 2>&1 | grep -c "^<" || true)
           if [ "$CHANGED" -gt 0 ]; then
             BACKUP_DIR="${COPILOT_DIR}.backup.${TIMESTAMP}"
             echo "💾 Backing up $CHANGED changed file(s) → $BACKUP_DIR"
@@ -121,7 +121,7 @@ case "$MODE" in
 
     if [ "$SMART_INSTALL" = true ]; then
       # Use rsync: only copy changed files, skip queue/
-      rsync -r --delete \
+      rsync -r \
         --exclude="queue/" \
         --exclude=".agentic-engine{service-name}" \
         "$DIST_DIR/" "$COPILOT_DIR/"
