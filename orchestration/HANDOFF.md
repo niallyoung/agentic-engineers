@@ -196,8 +196,6 @@ success_criteria:
 handoff_type: HANDBACK
 task_id: 2026-04-24-bug-expired-tokens-mobile
 status: complete
-delegate_artifact: "delegates/2026-04-24/DELEGATE-2026-04-24-bug-expired-tokens-mobile-Lead-Engineer.yaml"
-red_green_tdd_applied: false
 deliverables:
   - Analysis: Root cause is client-side clock skew on mobile. Server checks expiry against server time (UTC); mobile client uses device clock (which may lag 10-60s). At exactly 1hr boundary, mobile clock is behind, token appears unexpired on client but expired on server.
   - Evidence: lambda/api/main.go:92 checks `time.Now()` against claim `exp`. Mobile device clocks not synced with NTP pool.
@@ -270,7 +268,6 @@ task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-red_green_tdd_required: true
 scope: Implement 30s token expiry grace period in {service-name}. Do not change authentication flow or Cognito config.
 context:
   - File: lambda/api/main.go:92 (expiry check in extractAndValidateScopes)
@@ -278,10 +275,10 @@ context:
   - Design decision: Add 30s grace window to exp claim validation
   - Related: {service-name}/CLAUDE.md sections on token lifecycle
 plan:
-  1. [RED] Write failing test: TestTokenExpiryGracePeriod that asserts a token 25s expired is still accepted
-  2. [GREEN] Modify line 92 in lambda/api/main.go: change `time.Now()` to `time.Now().Add(-30 * time.Second)`
-  3. [REFACTOR] Extract 30 to const GRACE_PERIOD_SECS; improve error message with grace period info
-  4. [VERIFY] Run "make verify" — all tests pass, coverage maintained
+  1. Write test TestTokenExpiryGracePeriod that asserts a token 25s expired is still accepted
+  2. Modify line 92 in lambda/api/main.go: change `time.Now()` to `time.Now().Add(-30 * time.Second)`
+  3. Extract 30 to const GRACE_PERIOD_SECS; improve error message with grace period info
+  4. Run "make verify" — all tests pass, coverage maintained
   5. Commit with message: "fix(identity): add 30s grace period for token expiry to handle clock skew"
 success_criteria:
   - "make verify" passes (all tests pass)
