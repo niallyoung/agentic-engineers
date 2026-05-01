@@ -1,12 +1,12 @@
 # Handoff Markup Protocol
 
-Machine-readable format for Agent-to-Agent handoffs. Eliminates context re-duplication and enables structured task tracking.
+Machine-readable format for agent-to-agent handoffs via queue system. See [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) for queue mechanics.
 
-**Integration:** This protocol works within the [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) active queue system. See that document for artifact lifecycle, queue transitions (`incoming/ → processing/ → done/`), and Orchestrator active loop.
+Two block types: `DELEGATE` (Orchestrator → Agent) and `HANDBACK` (Agent → Orchestrator).
 
-Two block types: `DELEGATE` (sender → receiver) and `HANDBACK` (receiver → sender).
-
-**Key Change:** DELEGATE blocks are NOW STORED in `artifacts/delegates/` for reference and auditability (not just ephemeral messages).
+**Storage:** 
+- DELEGATE stored in `artifacts/delegates/` for reference
+- HANDBACK stored in `artifacts/queue/processing/` (then moved to done/ after QE review)
 
 ---
 
@@ -17,37 +17,30 @@ Used by the delegating agent (typically Orchestrator) to pass work to a speciali
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: YYYY-MM-DD-slug (e.g. 2026-04-24-fix-auth-timeout)
+task_id: YYYY-MM-DD-slug (e.g. 2026-04-24-fix-token-timeout)
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer
 model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-sonnet-4-7 | claude-opus-4-6 | claude-opus-4-7
 effort: low | medium | high | max
-red_green_tdd_required: true | false  # NEW: Mandatory for code changes (true)
 scope: >
   One sentence: what is in scope, explicitly what is out of scope.
-  Example: "Fix expired token handling in {service-name} login flow only; do not change Cognito config or other services."
+  Example: "Fix token validation timeout in {service-name}; do not change Cognito or other services"
 context:
-  - File: lambda/api/main.go:45-120 (extractAndValidateScopes function)
-  - Error: "Token validation fails after 1hr on mobile; works on desktop"
-  - Attempted: Added cache.Invalidate() at line 115 → no change
-  - Repo state: Clean, main branch, no uncommitted files
-  - Related: {service-name}/CLAUDE.md sections on JWT handling
-success_criteria:
-  - "make verify" passes in {service-name}
-  - New test covers token refresh + 1hr expiry edge case
-  - Mobile auth in e2e tests passes (npm run e2e:smoke)
-  - No other repos modified
+  - File: lambda/api/main.go:92 (expiry check)
+  - Error: "Token validation fails after 1hr on mobile"
+  - Root cause: Client-side clock skew on mobile devices
+  - Repo state: Clean, main branch
 plan:
-  1. [RED] Write failing test TestTokenExpiryGracePeriod (token valid within 30s after expiry)
-  2. [GREEN] Implement minimal fix: change expiry check at line 92 to accept grace period
-  3. [REFACTOR] Extract grace period to constant GRACE_PERIOD_SECS; improve error message
-  4. [VERIFY] Run "make verify" — all tests pass, coverage maintained
-  5. Verify mobile e2e test passes
+  1. Write test showing expected grace period behavior
+  2. Modify line 92 to implement 30s grace window
+  3. Run "make verify" to confirm all tests pass
+  4. Verify mobile e2e tests pass
+success_criteria:
+  - "make verify" passes (all tests, coverage maintained)
+  - New test added and passing
+  - Mobile e2e auth tests pass
+  - No other repos modified
 ---
 ```
-
-**NEW: `red_green_tdd_required` field:**
-- `true` — Mandatory for ALL code changes (bugs, features, refactoring)
-- `false` — Analysis, planning, documentation, or review tasks (no code changes)
 
 **Mandatory fields:**
 - `handoff_type: DELEGATE` (literal string)
@@ -73,41 +66,27 @@ Used by the receiving agent to return work to the delegator with outcome metadat
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-04-24-fix-auth-timeout (must match the DELEGATE task_id)
-status: complete | blocked | partial | rejected  # NEW: rejected = QE failed task
-delegate_artifact: "delegates/2026-04-24/DELEGATE-2026-04-24-fix-auth-timeout-Engineer.yaml"  # NEW: reference
-red_green_tdd_applied: true  # NEW: If red_green_tdd_required was true
-red_green_evidence:          # NEW: Evidence of RED-GREEN-REFACTOR-VERIFY phases
-  - "[RED] TestTokenExpiryGracePeriod added at line 120, FAILS as expected"
-  - "[GREEN] Modified line 92 to accept tokens within 30s after expiry, test PASSES"
-  - "[REFACTOR] Extracted GRACE_PERIOD_SECS = 30 constant; improved error message"
-  - "[VERIFY] 'make verify' PASS (47 tests, 89% coverage)"
+task_id: 2026-04-24-fix-token-timeout (must match DELEGATE task_id)
+status: complete | blocked | partial
 deliverables:
-  - Modified: lambda/api/main.go (lines 45-120)
-  - Added: lambda/api/main_test.go (new test TestTokenRefreshEdgeCase_1hrExpiry)
-  - Commit: abc1234 (optional; if pushed)
+  - Modified: lambda/api/main.go (line 92: added grace period logic)
+  - Added: lambda/api/main_test.go (TestTokenExpiryGracePeriod)
+  - Commit: abc1234 (optional)
 tests:
   - Command: "make verify" in {service-name}
-  - Result: PASS (all 47 tests passed)
-  - Coverage: 89% (up from 87%)
+  - Result: PASS (47 tests)
+  - Coverage: 89% (maintained)
   - Mobile e2e: "npm run e2e:smoke" PASS (3/3 scenarios)
-tokens_in: 1200 (approximate, from context used)
-tokens_out: 820 (approximate, from response length)
-model: claude-haiku-4-5 (actual model used — may differ from DELEGATE if escalated)
-effort: high (actual effort used)
+tokens_in: 1200
+tokens_out: 820
+model: claude-haiku-4-5
+effort: high
 duration_minutes: 18
-escalations: 0 (count of times escalated to different role/model)
-blockers: (omitted if status is "complete" or "partial"; required if status is "blocked")
-rejection_reason: (omitted if status is not "rejected"; required if status is "rejected")
-notes: "Token expiry was tracked client-side, not server-side; fixed by syncing server clock with client during refresh token exchange."
+escalations: 0
+blockers: (omitted if complete; required if blocked)
+notes: "Grace period cleanly implemented. Error messages improved."
 ---
 ```
-
-**NEW Fields:**
-- `red_green_tdd_applied: true/false` — Was Red-Green TDD followed (required if DELEGATE had `red_green_tdd_required: true`)?
-- `red_green_evidence: [...]` — List showing RED, GREEN, REFACTOR, VERIFY phases with line numbers and results
-- `delegate_artifact: "path/to/DELEGATE"` — Reference to original DELEGATE for traceability
-- `status: rejected` — Added to indicate QE rejected the task; new DELEGATE for rework will be created
 
 **Mandatory fields:**
 - `handoff_type: HANDBACK` (literal string)
@@ -235,69 +214,50 @@ notes: "The bug is genuine but subtle — only manifests on devices with clock s
 ---
 ```
 
-### Engineer → Orchestrator (implementation complete with Red-Green TDD evidence)
+### Engineer → Orchestrator (implementation complete)
 
 ```yaml
 ---
 handoff_type: HANDBACK
 task_id: 2026-04-24-fix-token-grace-period
 status: complete
-delegate_artifact: "delegates/2026-04-24/DELEGATE-2026-04-24-fix-token-grace-period-Engineer.yaml"
-red_green_tdd_applied: true
-red_green_evidence:
-  - "[RED] TestTokenExpiryGracePeriod added at lambda/api/main_test.go:145, FAILS initially (expects token to be valid 25s after expiry)"
-  - "[GREEN] Modified lambda/api/main.go:92 from time.Now() to time.Now().Add(-30 * time.Second), test PASSES"
-  - "[REFACTOR] Extracted grace period to const GRACE_PERIOD_SECS = 30; improved error message to include grace period info"
-  - "[VERIFY] 'make verify' PASS (all 47 tests passed, coverage 89%, no new warnings)"
 deliverables:
-  - Modified: lambda/api/main.go:92 (added grace period logic)
-  - Modified: lambda/api/main_test.go:145 (added TestTokenExpiryGracePeriod)
-  - Commit: abc1234def5678 (fix: add 30s grace period for token expiry)
+  - Modified: lambda/api/main.go:92 (grace period logic)
+  - Added: lambda/api/main_test.go:145 (TestTokenExpiryGracePeriod)
+  - Commit: abc1234
 tests:
-  - Command: "make verify"
-  - Result: PASS (47 tests)
-  - Coverage: 89% (↑ from 87%)
-  - E2E mobile auth: PASS (3/3 scenarios)
+  - "make verify": PASS (47 tests, 89% coverage)
+  - Mobile e2e: PASS (3/3 scenarios)
 tokens_in: 1200
 tokens_out: 820
 model: claude-haiku-4-5
 effort: high
 duration_minutes: 18
 escalations: 0
-notes: "Grace period implemented cleanly. Error handling improved to show remaining grace window. No other tests broken."
+notes: "Grace period cleanly implemented. Tests added covering edge case. No other tests affected."
 ---
 ```
 
-**Next Step:** Quality Engineer receives this HANDBACK and verifies Red-Green evidence, then adds feedback.
+**Next:** Quality Engineer reviews and adds feedback.
 
 ### Quality Engineer → Orchestrator (verification complete)
 
-Quality Engineer receives Engineer's HANDBACK above and:
-1. Runs Tier 1 checklist (tests pass, lint clean, coverage OK)
-2. Verifies Red-Green TDD evidence (RED, GREEN, REFACTOR, VERIFY all present)
-3. Adds feedback for Model Engineer
+Quality Engineer verifies Tier 1 checklist:
+- [x] Tests pass, coverage maintained
+- [x] Lint clean, no warnings
+- [x] No secrets or scope creep
+- [x] In-scope
 
-**Verification Output (added to HANDBACK above):**
+**Adds to HANDBACK:**
 ```yaml
 qe_feedback:
   tier_1_verdict: PASS
-  red_green_tdd_applied: true
-  red_green_quality:
-    red_phase_clear: true
-    green_phase_minimal: true
-    refactor_phase_present: true
-    comment: "Clean Red-Green cycle; constant extraction and error message improvement show good refactoring"
   model_assessment: "haiku_suitable"
-  reasoning: "Task was well-scoped with clear plan. Haiku executed efficiently; no rework needed. Red-Green TDD applied perfectly."
-  confidence_for_similar_tasks: 0.94
-  quality_dimensions:
-    test_coverage: 89
-    error_handling: "defensive (includes grace period context)"
-    code_clarity: "excellent"
-    pattern_adherence: "follows conventions"
+  confidence_for_similar_tasks: 0.92
+  notes: "Well-scoped task with clear plan. Haiku executed efficiently."
 ```
 
-**Final Status:** Task moved to `artifacts/queue/done/{task_id}-complete.yaml` with decision = PROCEED. Orchestrator auto-merges to main.
+Task moves to `artifacts/queue/done/{task_id}-PROCEED.yaml`. Orchestrator (or human) decides: merge or require review.
 
 ---
 
@@ -329,54 +289,6 @@ success_criteria:
   - Mobile e2e auth tests pass
   - No other repos modified
 ---
-```
-
----
-
-## Red-Green TDD Requirement (MANDATORY for Code Changes)
-
-When DELEGATE has `red_green_tdd_required: true`:
-
-**Plan MUST include Red-Green-Refactor phases:**
-```yaml
-plan:
-  1. [RED] Write failing test for the bug/requirement
-  2. [GREEN] Implement minimal fix to pass the test
-  3. [REFACTOR] Improve code, extract constants, enhance error handling
-  4. [VERIFY] Run full test suite
-```
-
-**Engineer MUST provide evidence in HANDBACK:**
-```yaml
-red_green_tdd_applied: true
-red_green_evidence:
-  - "[RED] TestX added at line N, FAILS"
-  - "[GREEN] Modified line M to fix issue, test PASSES"
-  - "[REFACTOR] Extracted constant, improved error message"
-  - "[VERIFY] 'make verify' PASS (all tests)"
-```
-
-**Quality Engineer MUST verify:**
-- [ ] `red_green_tdd_applied: true` exists?
-- [ ] Evidence shows RED phase (test added, fails initially)?
-- [ ] Evidence shows GREEN phase (fix implemented, test passes)?
-- [ ] Evidence shows REFACTOR phase (code improved)?
-- [ ] Full test suite passes?
-
-**Rejection Rules:**
-- If `red_green_tdd_required: true` but `red_green_tdd_applied: false` → **REJECT**
-- If evidence is incomplete (missing RED or GREEN) → **REJECT** with feedback
-- If REFACTOR missing (GREEN-only) → **ACCEPT** but note as "bare minimum"
-
-**Rejection Response Example:**
-```yaml
-status: rejected
-rejection_reason:
-  - "Red-Green TDD evidence missing: no RED phase documented"
-  - "Test was not shown to fail before implementation"
-instructions:
-  - "Resubmit with clear RED-GREEN-REFACTOR evidence"
-  - "Show: test name, initial failure, fix applied, refactoring details"
 ```
 
 ---
