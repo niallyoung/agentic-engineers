@@ -2,7 +2,11 @@
 
 Machine-readable format for Agent-to-Agent handoffs. Eliminates context re-duplication and enables structured task tracking.
 
+**Integration:** This protocol works within the [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) active queue system. See that document for artifact lifecycle, queue transitions (`incoming/ → processing/ → done/`), and Orchestrator active loop.
+
 Two block types: `DELEGATE` (sender → receiver) and `HANDBACK` (receiver → sender).
+
+**Key Change:** DELEGATE blocks are NOW STORED in `artifacts/delegates/` for reference and auditability (not just ephemeral messages).
 
 ---
 
@@ -17,6 +21,7 @@ task_id: YYYY-MM-DD-slug (e.g. 2026-04-24-fix-auth-timeout)
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer
 model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-sonnet-4-7 | claude-opus-4-6 | claude-opus-4-7
 effort: low | medium | high | max
+red_green_tdd_required: true | false  # NEW: Mandatory for code changes (true)
 scope: >
   One sentence: what is in scope, explicitly what is out of scope.
   Example: "Fix expired token handling in {service-name} login flow only; do not change Cognito config or other services."
@@ -32,14 +37,17 @@ success_criteria:
   - Mobile auth in e2e tests passes (npm run e2e:smoke)
   - No other repos modified
 plan:
-  1. Read the failing test in lambda/api/main_test.go to understand expected behavior
-  2. Trace token extraction at line 45 — identify where expiry is checked
-  3. Write a failing test for the 1hr edge case
-  4. Fix the bug (likely in extractAndValidateScopes cache logic)
-  5. Run "make verify" to confirm all tests pass
-  6. Verify mobile e2e test passes
+  1. [RED] Write failing test TestTokenExpiryGracePeriod (token valid within 30s after expiry)
+  2. [GREEN] Implement minimal fix: change expiry check at line 92 to accept grace period
+  3. [REFACTOR] Extract grace period to constant GRACE_PERIOD_SECS; improve error message
+  4. [VERIFY] Run "make verify" — all tests pass, coverage maintained
+  5. Verify mobile e2e test passes
 ---
 ```
+
+**NEW: `red_green_tdd_required` field:**
+- `true` — Mandatory for ALL code changes (bugs, features, refactoring)
+- `false` — Analysis, planning, documentation, or review tasks (no code changes)
 
 **Mandatory fields:**
 - `handoff_type: DELEGATE` (literal string)
@@ -66,7 +74,14 @@ Used by the receiving agent to return work to the delegator with outcome metadat
 ---
 handoff_type: HANDBACK
 task_id: 2026-04-24-fix-auth-timeout (must match the DELEGATE task_id)
-status: complete | blocked | partial
+status: complete | blocked | partial | rejected  # NEW: rejected = QE failed task
+delegate_artifact: "delegates/2026-04-24/DELEGATE-2026-04-24-fix-auth-timeout-Engineer.yaml"  # NEW: reference
+red_green_tdd_applied: true  # NEW: If red_green_tdd_required was true
+red_green_evidence:          # NEW: Evidence of RED-GREEN-REFACTOR-VERIFY phases
+  - "[RED] TestTokenExpiryGracePeriod added at line 120, FAILS as expected"
+  - "[GREEN] Modified line 92 to accept tokens within 30s after expiry, test PASSES"
+  - "[REFACTOR] Extracted GRACE_PERIOD_SECS = 30 constant; improved error message"
+  - "[VERIFY] 'make verify' PASS (47 tests, 89% coverage)"
 deliverables:
   - Modified: lambda/api/main.go (lines 45-120)
   - Added: lambda/api/main_test.go (new test TestTokenRefreshEdgeCase_1hrExpiry)
@@ -83,9 +98,16 @@ effort: high (actual effort used)
 duration_minutes: 18
 escalations: 0 (count of times escalated to different role/model)
 blockers: (omitted if status is "complete" or "partial"; required if status is "blocked")
+rejection_reason: (omitted if status is not "rejected"; required if status is "rejected")
 notes: "Token expiry was tracked client-side, not server-side; fixed by syncing server clock with client during refresh token exchange."
 ---
 ```
+
+**NEW Fields:**
+- `red_green_tdd_applied: true/false` — Was Red-Green TDD followed (required if DELEGATE had `red_green_tdd_required: true`)?
+- `red_green_evidence: [...]` — List showing RED, GREEN, REFACTOR, VERIFY phases with line numbers and results
+- `delegate_artifact: "path/to/DELEGATE"` — Reference to original DELEGATE for traceability
+- `status: rejected` — Added to indicate QE rejected the task; new DELEGATE for rework will be created
 
 **Mandatory fields:**
 - `handoff_type: HANDBACK` (literal string)
@@ -195,6 +217,8 @@ success_criteria:
 handoff_type: HANDBACK
 task_id: 2026-04-24-bug-expired-tokens-mobile
 status: complete
+delegate_artifact: "delegates/2026-04-24/DELEGATE-2026-04-24-bug-expired-tokens-mobile-Lead-Engineer.yaml"
+red_green_tdd_applied: false
 deliverables:
   - Analysis: Root cause is client-side clock skew on mobile. Server checks expiry against server time (UTC); mobile client uses device clock (which may lag 10-60s). At exactly 1hr boundary, mobile clock is behind, token appears unexpired on client but expired on server.
   - Evidence: lambda/api/main.go:92 checks `time.Now()` against claim `exp`. Mobile device clocks not synced with NTP pool.
@@ -211,6 +235,72 @@ notes: "The bug is genuine but subtle — only manifests on devices with clock s
 ---
 ```
 
+### Engineer → Orchestrator (implementation complete with Red-Green TDD evidence)
+
+```yaml
+---
+handoff_type: HANDBACK
+task_id: 2026-04-24-fix-token-grace-period
+status: complete
+delegate_artifact: "delegates/2026-04-24/DELEGATE-2026-04-24-fix-token-grace-period-Engineer.yaml"
+red_green_tdd_applied: true
+red_green_evidence:
+  - "[RED] TestTokenExpiryGracePeriod added at lambda/api/main_test.go:145, FAILS initially (expects token to be valid 25s after expiry)"
+  - "[GREEN] Modified lambda/api/main.go:92 from time.Now() to time.Now().Add(-30 * time.Second), test PASSES"
+  - "[REFACTOR] Extracted grace period to const GRACE_PERIOD_SECS = 30; improved error message to include grace period info"
+  - "[VERIFY] 'make verify' PASS (all 47 tests passed, coverage 89%, no new warnings)"
+deliverables:
+  - Modified: lambda/api/main.go:92 (added grace period logic)
+  - Modified: lambda/api/main_test.go:145 (added TestTokenExpiryGracePeriod)
+  - Commit: abc1234def5678 (fix: add 30s grace period for token expiry)
+tests:
+  - Command: "make verify"
+  - Result: PASS (47 tests)
+  - Coverage: 89% (↑ from 87%)
+  - E2E mobile auth: PASS (3/3 scenarios)
+tokens_in: 1200
+tokens_out: 820
+model: claude-haiku-4-5
+effort: high
+duration_minutes: 18
+escalations: 0
+notes: "Grace period implemented cleanly. Error handling improved to show remaining grace window. No other tests broken."
+---
+```
+
+**Next Step:** Quality Engineer receives this HANDBACK and verifies Red-Green evidence, then adds feedback.
+
+### Quality Engineer → Orchestrator (verification complete)
+
+Quality Engineer receives Engineer's HANDBACK above and:
+1. Runs Tier 1 checklist (tests pass, lint clean, coverage OK)
+2. Verifies Red-Green TDD evidence (RED, GREEN, REFACTOR, VERIFY all present)
+3. Adds feedback for Model Engineer
+
+**Verification Output (added to HANDBACK above):**
+```yaml
+qe_feedback:
+  tier_1_verdict: PASS
+  red_green_tdd_applied: true
+  red_green_quality:
+    red_phase_clear: true
+    green_phase_minimal: true
+    refactor_phase_present: true
+    comment: "Clean Red-Green cycle; constant extraction and error message improvement show good refactoring"
+  model_assessment: "haiku_suitable"
+  reasoning: "Task was well-scoped with clear plan. Haiku executed efficiently; no rework needed. Red-Green TDD applied perfectly."
+  confidence_for_similar_tasks: 0.94
+  quality_dimensions:
+    test_coverage: 89
+    error_handling: "defensive (includes grace period context)"
+    code_clarity: "excellent"
+    pattern_adherence: "follows conventions"
+```
+
+**Final Status:** Task moved to `artifacts/queue/done/{task_id}-complete.yaml` with decision = PROCEED. Orchestrator auto-merges to main.
+
+---
+
 ### Orchestrator → Engineer (implementation)
 
 ```yaml
@@ -220,6 +310,7 @@ task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
 model: claude-haiku-4-5
 effort: high
+red_green_tdd_required: true
 scope: Implement 30s token expiry grace period in {service-name}. Do not change authentication flow or Cognito config.
 context:
   - File: lambda/api/main.go:92 (expiry check in extractAndValidateScopes)
@@ -227,10 +318,10 @@ context:
   - Design decision: Add 30s grace window to exp claim validation
   - Related: {service-name}/CLAUDE.md sections on token lifecycle
 plan:
-  1. Write a failing test: TestTokenExpiryGracePeriod that verifies a token 25s expired is still accepted
-  2. Modify line 92 in lambda/api/main.go: change `time.Now()` to `time.Now().Add(-30 * time.Second)`
-  3. Run "make verify" — test should now pass
-  4. Verify no other tests broke
+  1. [RED] Write failing test: TestTokenExpiryGracePeriod that asserts a token 25s expired is still accepted
+  2. [GREEN] Modify line 92 in lambda/api/main.go: change `time.Now()` to `time.Now().Add(-30 * time.Second)`
+  3. [REFACTOR] Extract 30 to const GRACE_PERIOD_SECS; improve error message with grace period info
+  4. [VERIFY] Run "make verify" — all tests pass, coverage maintained
   5. Commit with message: "fix(identity): add 30s grace period for token expiry to handle clock skew"
 success_criteria:
   - "make verify" passes (all tests pass)
@@ -238,6 +329,54 @@ success_criteria:
   - Mobile e2e auth tests pass
   - No other repos modified
 ---
+```
+
+---
+
+## Red-Green TDD Requirement (MANDATORY for Code Changes)
+
+When DELEGATE has `red_green_tdd_required: true`:
+
+**Plan MUST include Red-Green-Refactor phases:**
+```yaml
+plan:
+  1. [RED] Write failing test for the bug/requirement
+  2. [GREEN] Implement minimal fix to pass the test
+  3. [REFACTOR] Improve code, extract constants, enhance error handling
+  4. [VERIFY] Run full test suite
+```
+
+**Engineer MUST provide evidence in HANDBACK:**
+```yaml
+red_green_tdd_applied: true
+red_green_evidence:
+  - "[RED] TestX added at line N, FAILS"
+  - "[GREEN] Modified line M to fix issue, test PASSES"
+  - "[REFACTOR] Extracted constant, improved error message"
+  - "[VERIFY] 'make verify' PASS (all tests)"
+```
+
+**Quality Engineer MUST verify:**
+- [ ] `red_green_tdd_applied: true` exists?
+- [ ] Evidence shows RED phase (test added, fails initially)?
+- [ ] Evidence shows GREEN phase (fix implemented, test passes)?
+- [ ] Evidence shows REFACTOR phase (code improved)?
+- [ ] Full test suite passes?
+
+**Rejection Rules:**
+- If `red_green_tdd_required: true` but `red_green_tdd_applied: false` → **REJECT**
+- If evidence is incomplete (missing RED or GREEN) → **REJECT** with feedback
+- If REFACTOR missing (GREEN-only) → **ACCEPT** but note as "bare minimum"
+
+**Rejection Response Example:**
+```yaml
+status: rejected
+rejection_reason:
+  - "Red-Green TDD evidence missing: no RED phase documented"
+  - "Test was not shown to fail before implementation"
+instructions:
+  - "Resubmit with clear RED-GREEN-REFACTOR evidence"
+  - "Show: test name, initial failure, fix applied, refactoring details"
 ```
 
 ---
