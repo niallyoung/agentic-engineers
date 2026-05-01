@@ -1,21 +1,23 @@
 # Agentic Engineers System
 
-Complete multi-agent team with 8 specialized roles, 38 skills, quality gates, real-time usage budget monitoring, and autonomous feedback loops.
+Complete multi-agent orchestration framework with 8 specialized roles, queue-based delegation, quality gates, and autonomous feedback loops.
 
-**This directory is self-contained.** Located at `~/.agents/agentic-engineers/` after installation.
-
-**How to use:**
-```
-load agentic-engineers
-```
-
-Or explicitly reference: `~/.agents/agentic-engineers/SYSTEM.md`
-
-**Optional: Enable usage tracking**
+**Installation:**
 ```bash
-bash ~/.agents/agentic-engineers/setup/session-init.sh
+make install                    # Install to both ~/.claude/ and ~/.copilot/
+make install-copilot           # Install to ~/.copilot/ only
+make install-claude            # Install to ~/.claude/ only
 ```
-(One-time per session, idempotent — initializes token budgeting and metrics)
+
+**After Installation:**
+- Claude Code: agents load automatically from ~/.claude/
+- Copilot: Reference ~/.copilot/ in your system prompt or settings
+
+**Verification:**
+```bash
+make status                     # Check installation status
+make verify                     # Verify framework structure
+```
 
 ---
 
@@ -54,32 +56,51 @@ Both Claude Code and GitHub Copilot: Start here for complete file discovery.
 
 ```
 agentic-engineers/
-├── README.md (this file)
-├── config/                  System configuration (locked)
+├── README.md                 This file
+├── MANIFEST.md              Complete file listing & discovery guide
+├── QUEUE-INTEGRATION-SUMMARY.md  Queue architecture overview
+├── config/                  System configuration
 │   ├── MODEL_ASSIGNMENTS_LOCKED.md
 │   └── QUICK_REFERENCE.md
-├── setup/                   Installation & enforcement
+├── setup/                   Installation & harness integration
 │   ├── copilot-instructions.md
-│   └── GLOBAL_COPILOT_INSTRUCTIONS.md
+│   ├── GLOBAL_COPILOT_INSTRUCTIONS.md
+│   └── STARTUP-CHECKLIST.md
 ├── guides/                  Learning & documentation
-│   ├── CLAUDE.md
-│   ├── INDEX.md
-│   ├── DEPLOYMENT_STATUS.md
-│   └── ... (6 more reference docs)
-├── orchestration/           How work flows
-│   ├── AGENTS.md
-│   ├── HANDOFF.md
-│   ├── QUALITY.md
-│   ├── USAGE-BUDGET-MANAGER.md
-│   ├── USAGE-BUDGET-INTEGRATION.md
-│   └── scripts/             Utility scripts (budget monitoring)
+│   ├── CLAUDE.md (team context)
+│   └── SYSTEM_INTEGRATION.md (12-month roadmap)
+├── orchestration/           Agent definitions & workflow
+│   ├── AGENTS.md (8 roles, routing rules)
+│   ├── SKILLS.md (role-specific workflows)
+│   ├── HANDOFF.md (DELEGATE/HANDBACK format)
+│   ├── QUEUE-PROTOCOL.md (queue mechanics)
+│   ├── QUALITY.md (quality gates)
+│   └── agents/*.md (detailed role specs)
 ├── operations/              Metrics & optimization
 │   ├── METRICS.md
 │   └── TOKENADVISOR.md
-├── reference/               Architecture & patterns
-│   └── ... (reference docs)
-└── skills/                  Role-based skills
-    └── ... (organized by role)
+├── skills/                  Role-based skills (38 total)
+│   ├── orchestrator/skills/
+│   ├── engineer/skills/
+│   ├── senior-engineer/skills/
+│   ├── lead-engineer/skills/
+│   ├── principal-engineer/skills/
+│   ├── security-engineer/skills/
+│   ├── quality-engineer/skills/
+│   ├── model-engineer/skills/
+│   └── shared/skills/
+├── artifacts/               Runtime & queue files
+│   └── queue/
+│       ├── incoming/        New tasks
+│       ├── processing/      In-progress work
+│       └── done/            Completed work
+├── dist/                    Rendered distributions
+│   ├── claude/              For ~/.claude/ installation
+│   └── copilot/             For ~/.copilot/ installation
+├── scripts/                 Installation scripts
+│   ├── install-claude.sh
+│   └── install-copilot.sh
+└── Makefile                 Build & install targets
 ```
 
 ## ⚡ Quick Start
@@ -191,50 +212,79 @@ How the system automatically improves model selection and cost.
 
 ---
 
-## The Workflow
+## The Workflow (Queue-Based Delegation)
 
-### User Has a Task
+### 1. Task Enters Queue
 
 ```
-❶ Task arrives at Orchestrator
-   "Add Redis caching to {service-name}"
+Task arrives → artifacts/queue/incoming/{task_id}.yaml
+Example: "Fix token timeout in {service-name}"
+```
 
-❷ Orchestrator routes (AGENTS.md rules)
-   Complexity: medium
-   Well-scoped: yes
-   → Engineer (Haiku high-effort)
+### 2. Orchestrator Polls & Routes
 
-❸ DELEGATE markup (HANDOFF.md)
-   Include: files, line numbers, root cause, plan
-   Send to Engineer
+```
+Orchestrator (harness agent) polls every 30-60 seconds:
+├─ Reads AGENTS.md routing rules
+├─ Applies decision tree (complexity? scope? security?)
+├─ Creates DELEGATE block (HANDOFF.md format)
+├─ Stores in artifacts/delegates/YYYY-MM-DD/
+└─ Sends to appropriate role agent
+```
 
-❹ Engineer executes (implementation-coding.md skill)
-   RED: write failing test first
-   GREEN: implement minimal code
-   REFACTOR: improve without changing behavior
+### 3. Agent Executes
 
-❺ HANDBACK markup (results + metrics)
-   Deliverables: what changed
-   Tests: "make verify" status
-   Tokens: tokens_in, tokens_out
-   Quality: estimated score
-   Duration: how long it took
+```
+Engineer (or other role) receives DELEGATE:
+├─ Reads scope, context, plan, success_criteria
+├─ Reads SKILLS.md for role-specific guidance
+├─ Executes work (Engineer can use Red-Green TDD)
+└─ Returns HANDBACK with:
+   - deliverables (what changed)
+   - tests (make verify status)
+   - tokens_in, tokens_out (metrics)
+   - duration_minutes
+   - escalations (if any)
+```
 
-❻ Quality Engineer reviews (QUALITY.md gates)
-   Tier 1: lint pass? tests pass? coverage ok?
-   If PASS: accept and record metrics
-   If FAIL: return to Engineer (rework loop)
+### 4. Orchestrator Routes HANDBACK
 
-❼ Metrics recorded (~/.claude/metrics/)
-   Feeds optimization loops
+```
+Orchestrator polls artifacts/queue/processing/:
+├─ If status=complete → route to Quality Engineer
+├─ If status=blocked → escalate to Lead/Senior Engineer
+└─ Otherwise → determine next steps
+```
 
-❽ TokenAdvisor Scheduler analyzes daily
-   Produces cost/quality report
-   Flags opportunities
+### 5. Quality Engineer Verifies
 
-❾ Model Engineer updates recommendations
-   Next similar task routes to better model
-   Self-improving loop continues
+```
+Quality Engineer runs Tier 1/2/3 checklist:
+├─ Tests pass? Lint clean? Coverage maintained?
+├─ No scope creep? No security issues?
+├─ Model assessment (was Haiku suitable?)
+└─ Moves to artifacts/queue/done/{task_id}-{decision}.yaml
+   (PASS, FAIL/REWORK, or ESCALATE)
+```
+
+### 6. Orchestrator Decides Next Step
+
+```
+Orchestrator polls artifacts/queue/done/:
+├─ PROCEED → merge to main
+├─ REWORK → create new DELEGATE with feedback
+└─ ESCALATE → promote to higher role (Senior/Lead/Principal)
+```
+
+### 7. Feedback Loop (Async)
+
+```
+Model Engineer (runs periodically):
+├─ Analyzes QE feedback from completed tasks
+├─ Builds confidence scores per model/task-type
+├─ Generates routing recommendations
+└─ Orchestrator uses for next similar task
+   (self-improving optimization)
 ```
 
 ---
@@ -277,67 +327,80 @@ Day 60: New model released (Haiku 4.6)
 
 ## The 8 Roles (Quick Reference)
 
-### Primary Execution Roles (7)
+| Role | Model | Cost | Primary Use |
+|------|-------|------|-------------|
+| **Orchestrator** | Haiku | 60% of spend | Route tasks, manage queue, apply recommendations |
+| **Engineer** | Haiku | 18% of spend | Execute well-planned tasks (low-medium complexity) |
+| **Senior Engineer** | Sonnet | 7% of spend | Complex coding, planning, diagnosis |
+| **Lead Engineer** | Sonnet | 2% of spend | Code review, unblock stuck tasks |
+| **Principal Engineer** | Opus | 1% of spend | Cross-service architecture |
+| **Security Engineer** | Opus | 1% of spend | Security audits, threat modeling |
+| **Quality Engineer** | Sonnet | 8% of spend | Quality gate verification, model assessment |
+| **Model Engineer** | Sonnet | 3% of spend | Analyze feedback, optimize routing |
 
-| Role | Model | Cost | Use For |
-|------|-------|------|---------|
-| **Orchestrator** | Haiku | 1x | Route tasks, collect metrics |
-| **Engineer** | Haiku | 1x | Well-planned coding, <2hr tasks |
-| **Senior Engineer** | Sonnet | 3x | Complex coding, architecture questions |
-| **Lead Engineer** | Sonnet | 3x | Code review, quality verification |
-| **Principal Engineer** | Opus | 7.5x | Cross-service architecture, design |
-| **Security Engineer** | Opus | 7.5x | Security analysis, threat modeling |
-| **Quality Engineer** | Haiku/Sonnet | 1-3x | Post-implementation QA, gate checks |
+**Orchestrator:** Runs in harness, polls queue every 30-60s. Routes per AGENTS.md decision tree.
 
-### Optimization Coordinator (1)
+**Quality Engineer:** Verifies Tier 1/2/3 checklist. Assesses model suitability for Model Engineer feedback loop.
 
-| Role | Model | Use For |
-|------|-------|---------|
-| **Model Engineer** | Opus | Analyze quality/cost feedback, recommend optimal models |
-
-Model Engineer works with Quality Engineer to continuously improve routing. Each task makes future similar tasks better routed.
-
-**Routing:** See `orchestration/AGENTS.md` (lines 28-50)  
-**Optimization:** See `skills/model-engineer/` and `skills/orchestrator/skills/model-engineer-coordination.md`
+**See:** `orchestration/AGENTS.md` (role definitions)  
+**See:** `orchestration/SKILLS.md` (role-specific workflows)  
+**See:** `orchestration/QUEUE-PROTOCOL.md` (queue mechanics)
 
 ---
 
 ## Key Concepts
 
-### DELEGATE/HANDBACK Protocol
+### Queue-Based Delegation
 
-Compact markup (80% context savings vs. full briefing):
+Work flows through a simple 3-state queue:
 
-**Orchestrator → Engineer:**
-```yaml
----
-handoff_type: DELEGATE
-task_id: 2026-04-24-redis-caching
-role: Engineer
-scope: Add Redis caching to {service-name}
-context:
-  - File: lambda/query/main.go:45
-  - Problem: Cache misses
-plan:
-  1. Add Redis client
-  2. Implement cache getter
-  3. Write tests
----
+```
+incoming/          → New tasks waiting for routing
+  ↓
+processing/        → Work assigned to agents (awaiting HANDBACK)
+  ↓
+done/              → Completed work (PROCEED/REWORK/ESCALATE)
 ```
 
-**Engineer → Orchestrator:**
+Agents don't know about each other; the queue is the mediator.
+Everything is stored for auditability: `artifacts/queue/` + `artifacts/delegates/`
+
+### DELEGATE/HANDBACK Protocol
+
+Compact structured markup:
+
+**Orchestrator → Engineer (DELEGATE):**
 ```yaml
----
-handoff_type: HANDBACK
-task_id: 2026-04-24-redis-caching
+task_id: 2026-04-24-fix-timeout
+role: Engineer
+model: claude-haiku-4-5
+scope: Fix token timeout in {service-name}; no Cognito changes
+context:
+  - File: lambda/api/main.go:92
+  - Root cause: Client clock skew
+plan:
+  1. Write test showing grace period behavior
+  2. Modify line 92 for 30s grace window
+  3. Run "make verify"
+success_criteria:
+  - Tests pass, coverage maintained
+  - Mobile e2e tests pass
+```
+
+**Engineer → Orchestrator (HANDBACK):**
+```yaml
+task_id: 2026-04-24-fix-timeout
 status: complete
 deliverables:
-  - Modified: lambda/query/main.go
+  - Modified: lambda/api/main.go:92
+  - Added: lambda/api/main_test.go:145 (TestTokenGrace)
 tests:
-  - "make verify": PASS (87% coverage)
-tokens_in: 18500
-tokens_out: 2100
----
+  - "make verify": PASS (47 tests, 89% coverage)
+tokens_in: 1200
+tokens_out: 820
+model: claude-haiku-4-5
+duration_minutes: 18
+escalations: 0
 ```
 
 ### Quality Gates (Mandatory)
