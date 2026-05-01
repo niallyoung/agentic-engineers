@@ -94,7 +94,7 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a new task:
 **For each route:** Orchestrator creates DELEGATE block with mandatory fields:
 - `role`, `model`, `effort` (from AGENTS.md columns)
 - `plan` (pre-written concrete steps, required for Engineer)
-- `red_green_tdd_required: true` (for code changes)
+- `scope`, `context`, `success_criteria` (see HANDOFF.md for format)
 - Store DELEGATE in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
 - Move task to `processing/` and await HANDBACK
 
