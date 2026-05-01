@@ -4,9 +4,7 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 
 **Primary Entry Point:** Orchestrator (Haiku, low effort) routes all work to specialists based on task complexity and requirements.
 
-**Active Queue Loop:** Orchestrator continuously monitors `artifacts/queue/incoming/ → processing/ → done/`, ensuring work flows smoothly and escalations are handled automatically (see [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)).
-
-**Red-Green TDD Enforcement:** ALL code changes require Red-Green TDD (write failing test → implement fix → refactor). Evidence of each phase must appear in HANDBACK or work is rejected by Quality Engineer (see [SKILLS.md](SKILLS.md) > Engineer Skills).
+**Queue-Based Delegation:** Orchestrator polls `artifacts/queue/incoming/` and manages work via queue system (incoming → processing → done). See [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md).
 
 **Optimization Loop:** Engineer → Quality Engineer → Model Engineer → Orchestrator (improved routing for future similar tasks).
 
@@ -61,35 +59,26 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 **Mandatory Constraints:**
 
 **QUEUE-BASED ROUTING** (see [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)):
-- ALL work MUST flow through `artifacts/queue/incoming/ → processing/ → done/` queue system
-- Orchestrator actively monitors queue every 30-60 seconds and routes appropriately
-- DELEGATE artifacts stored in `artifacts/delegates/YYYY-MM-DD/` for reference
-- HANDBACK stored in `artifacts/queue/processing/` before Quality Engineer verification
-- Work must include both DELEGATE (what) and HANDBACK (outcome) artifacts
+- ALL work flows through queue: `artifacts/queue/incoming/ → processing/ → done/`
+- Orchestrator (running in harness) polls every 30-60 seconds and routes per decision tree
+- DELEGATE stored in `artifacts/delegates/YYYY-MM-DD/` for reference
+- HANDBACK stored in `artifacts/queue/processing/` (then moved to done/ after QE review)
 
-**RED-GREEN TDD ENFORCEMENT**:
-- Engineer MUST apply Red-Green TDD to ALL code changes (`red_green_tdd_required: true` in DELEGATE)
-- RED phase: Write failing test demonstrating bug/requirement
-- GREEN phase: Implement minimal fix to pass test
-- REFACTOR phase: Improve code without changing behavior
-- HANDBACK MUST include `red_green_evidence` documenting each phase with line numbers
-- Quality Engineer MUST verify evidence exists and is clear; if missing → **REJECT** (status: rejected)
-
-**PLAN & ESCALATION**:
-- Engineer MUST NOT receive a task without a pre-written `plan` in the DELEGATE block (except one-sentence bug fixes)
-- If Engineer cannot execute plan → status `blocked` in HANDBACK; Orchestrator re-routes to Senior Engineer
-- If work rejected by QE → Orchestrator creates rework DELEGATE; retry limit = 3 before escalate to Senior Engineer
+**PLANNING & ESCALATION**:
+- Engineer MUST NOT receive task without pre-written `plan` in DELEGATE (except trivial fixes)
+- If Engineer cannot execute plan → report `status: blocked`; Orchestrator escalates to Senior Engineer
+- Blocked tasks and rejections escalate automatically per AGENTS.md routing rules
 
 **ORCHESTRATOR CONSTRAINTS**:
-- **Orchestrator MUST NOT perform work — only route, track, and apply Model Engineer recommendations.** ALL execution work (code edits, implementations, reviews, documentation work) MUST be delegated via HANDOFF to appropriate role. Direct execution pollutes Orchestrator context and prevents isolated Engineer sessions.
-- Orchestrator MUST use QUEUE-PROTOCOL active loop for task coordination (no manual handoffs)
-- Orchestrator MUST apply Model Engineer recommendations for next similar task
+- Orchestrator MUST NOT perform work (only route, coordinate, apply recommendations)
+- Orchestrator runs in harness via polling loop (no external cron/tools)
+- ALL execution work delegated to appropriate role via DELEGATE/HANDBACK
 
 **ROLE-SPECIFIC RULES**:
-- Security Engineer is invoked ONLY for security-scoped tasks; no other role escalates directly to Security Engineer (go through Principal first)
-- Quality Engineer MUST provide `model_assessment` feedback in HANDBACK for Model Engineer analysis
-- Spec Engineer (Quality Gate) validates code against docs/SPEC.md on every commit
-- Lead Engineer/Senior Engineer unblock Engineer when status `blocked` is reported
+- Security Engineer is invoked ONLY for security-scoped tasks
+- Quality Engineer provides `model_assessment` feedback in HANDBACK (for Model Engineer)
+- Lead Engineer/Senior Engineer unblock or redirect Engineer when task blocked
+- Each role has specific skills (see SKILLS.md)
 
 **Routing Decision Tree (for Orchestrator):**
 
@@ -120,22 +109,25 @@ Orchestrator → Engineer (via DELEGATE block):
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-04-24-fix-token-timeout
+task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Fix token validation timeout in {service-name}; do not change Cognito config
+scope: Implement 30s token expiry grace period in {service-name}; do not change Cognito config
 context:
-  - File: lambda/api/main.go:92 (expiry check)
-  - Error: "Token rejected after 1hr on mobile"
-  - Root cause from Lead Engineer: clock skew on device
+  - File: lambda/api/main.go:92 (expiry check in extractAndValidateScopes)
+  - Root cause from Lead Engineer: client-side clock skew on mobile devices
+  - Design decision: Add 30s grace window to token expiry validation
 plan:
-  1. Add 30s grace period to exp claim check at line 92
-  2. Write test TestTokenExpiryGracePeriod
-  3. Run "make verify"
+  1. Add TestTokenExpiryGracePeriod test showing expected behavior
+  2. Modify line 92 to accept tokens within 30s after expiry
+  3. Extract grace period to constant GRACE_PERIOD_SECS
+  4. Run "make verify" to confirm all tests pass
 success_criteria:
-  - "make verify" passes
-  - Mobile e2e auth passes
+  - "make verify" passes (all tests pass, coverage maintained)
+  - New test TestTokenExpiryGracePeriod added and passing
+  - Mobile e2e auth tests pass
+  - No other repos modified
 ---
 ```
 
