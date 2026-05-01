@@ -4,6 +4,10 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 
 **Primary Entry Point:** Orchestrator (Haiku, low effort) routes all work to specialists based on task complexity and requirements.
 
+**Active Queue Loop:** Orchestrator continuously monitors `artifacts/queue/incoming/ → processing/ → done/`, ensuring work flows smoothly and escalations are handled automatically (see [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)).
+
+**Red-Green TDD Enforcement:** ALL code changes require Red-Green TDD (write failing test → implement fix → refactor). Evidence of each phase must appear in HANDBACK or work is rejected by Quality Engineer (see [SKILLS.md](SKILLS.md) > Engineer Skills).
+
 **Optimization Loop:** Engineer → Quality Engineer → Model Engineer → Orchestrator (improved routing for future similar tasks).
 
 **Goal:** Minimize cost, reduce latency, and maximize quality using right agent + effort combo. Self-improving through feedback-driven model selection.
@@ -55,21 +59,55 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 - ✅ [Model Engineer Agent](./agents/model-engineer-agent.md) (Feedback loop)
 
 **Mandatory Constraints:**
+
+**QUEUE-BASED ROUTING** (see [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)):
+- ALL work MUST flow through `artifacts/queue/incoming/ → processing/ → done/` queue system
+- Orchestrator actively monitors queue every 30-60 seconds and routes appropriately
+- DELEGATE artifacts stored in `artifacts/delegates/YYYY-MM-DD/` for reference
+- HANDBACK stored in `artifacts/queue/processing/` before Quality Engineer verification
+- Work must include both DELEGATE (what) and HANDBACK (outcome) artifacts
+
+**RED-GREEN TDD ENFORCEMENT**:
+- Engineer MUST apply Red-Green TDD to ALL code changes (`red_green_tdd_required: true` in DELEGATE)
+- RED phase: Write failing test demonstrating bug/requirement
+- GREEN phase: Implement minimal fix to pass test
+- REFACTOR phase: Improve code without changing behavior
+- HANDBACK MUST include `red_green_evidence` documenting each phase with line numbers
+- Quality Engineer MUST verify evidence exists and is clear; if missing → **REJECT** (status: rejected)
+
+**PLAN & ESCALATION**:
 - Engineer MUST NOT receive a task without a pre-written `plan` in the DELEGATE block (except one-sentence bug fixes)
+- If Engineer cannot execute plan → status `blocked` in HANDBACK; Orchestrator re-routes to Senior Engineer
+- If work rejected by QE → Orchestrator creates rework DELEGATE; retry limit = 3 before escalate to Senior Engineer
+
+**ORCHESTRATOR CONSTRAINTS**:
 - **Orchestrator MUST NOT perform work — only route, track, and apply Model Engineer recommendations.** ALL execution work (code edits, implementations, reviews, documentation work) MUST be delegated via HANDOFF to appropriate role. Direct execution pollutes Orchestrator context and prevents isolated Engineer sessions.
+- Orchestrator MUST use QUEUE-PROTOCOL active loop for task coordination (no manual handoffs)
+- Orchestrator MUST apply Model Engineer recommendations for next similar task
+
+**ROLE-SPECIFIC RULES**:
 - Security Engineer is invoked ONLY for security-scoped tasks; no other role escalates directly to Security Engineer (go through Principal first)
 - Quality Engineer MUST provide `model_assessment` feedback in HANDBACK for Model Engineer analysis
 - Spec Engineer (Quality Gate) validates code against docs/SPEC.md on every commit
+- Lead Engineer/Senior Engineer unblock Engineer when status `blocked` is reported
 
 **Routing Decision Tree (for Orchestrator):**
 
-Use the Routing Rules above. In order:
-1. Is task security-scoped? → Security Engineer
-2. Is task cross-service architecture? → Principal Engineer
-3. Is task complex coding without pre-written plan? → Senior Engineer (to plan first)
-4. Is task code review or quality verification? → Lead Engineer
-5. Is task well-planned, low-medium complexity? → Engineer
+When Orchestrator polls `artifacts/queue/incoming/` and finds a new task:
+
+1. Is task security-scoped? → **Security Engineer** (see [SKILLS.md](SKILLS.md) > Security Engineer Skills)
+2. Is task cross-service architecture (affects >2 repos)? → **Principal Engineer** (see [SKILLS.md](SKILLS.md) > Principal Engineer Skills)
+3. Is task complex coding WITHOUT pre-written plan? → **Senior Engineer** (to plan first; see [SKILLS.md](SKILLS.md) > Senior Engineer Skills)
+4. Is task code review or quality verification? → **Lead Engineer** or **Quality Engineer** (see [SKILLS.md](SKILLS.md) > Lead Engineer Skills, Quality Engineer Skills)
+5. Is task well-planned, low-medium complexity? → **Engineer** (see [SKILLS.md](SKILLS.md) > Engineer Skills)
 6. Otherwise → Escalate to human (unclear scope)
+
+**For each route:** Orchestrator creates DELEGATE block with mandatory fields:
+- `role`, `model`, `effort` (from AGENTS.md columns)
+- `plan` (pre-written concrete steps, required for Engineer)
+- `red_green_tdd_required: true` (for code changes)
+- Store DELEGATE in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
+- Move task to `processing/` and await HANDBACK
 
 **Handoff Protocol (Mandatory):**
 All agent-to-agent work transfer uses structured DELEGATE/HANDBACK markup blocks (see [HANDOFF.md](HANDOFF.md) for format). Markup enables:

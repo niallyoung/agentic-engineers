@@ -1,0 +1,45 @@
+---
+# EXAMPLE: Bug Fix Task via Red-Green TDD
+# Stored in: artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml
+# Sent to: Engineer (claude-haiku-4-5, high effort)
+# Date: 2026-04-30
+
+handoff_type: DELEGATE
+task_id: 2026-04-30-fix-token-timeout
+role: Engineer
+model: claude-haiku-4-5
+effort: high
+red_green_tdd_required: true
+
+scope: >
+  Fix token validation timeout bug in {service-name} login flow.
+  Only change token expiry grace period logic; do NOT change Cognito config, JWT structure, or other services.
+
+context:
+  - File: lambda/api/main.go:92 (extractAndValidateScopes function)
+  - Error: "Unauthorized: token expired" on mobile after 1hr; desktop works fine
+  - Root cause from Lead Engineer: Client-side clock skew (device time lags server by 10-60s)
+  - Logs: {service-name} logs show "token claims invalid at 3600s"
+  - Repo state: Clean, main branch, no uncommitted files
+  - Related: docs/ARCHITECTURE.md#token-lifecycle, {service-name}/CLAUDE.md
+
+success_criteria:
+  - "make verify" passes in {service-name} (all tests pass, coverage ≥85%)
+  - New test TestTokenExpiryGracePeriod added and passing
+  - Mobile e2e auth tests pass (npm run e2e:smoke)
+  - No other repos modified
+  - Red-Green TDD evidence documented in HANDBACK
+
+plan:
+  1. [RED] Write failing test TestTokenExpiryGracePeriod that asserts: "A token 25 seconds past expiry should still be accepted (grace period)" — verify it FAILS
+  2. [GREEN] Implement minimal fix at line 92: change `time.Now()` to `time.Now().Add(-30 * time.Second)` to add 30s grace window — verify test PASSES
+  3. [REFACTOR] Extract grace period to const GRACE_PERIOD_SECS = 30 at top of file; improve error message to include grace period info; review for other improvements
+  4. [VERIFY] Run "make verify" to ensure all 47 tests pass and coverage stays ≥85%
+  5. Commit with descriptive message: "fix(identity): add 30s grace period for token expiry to handle clock skew"
+  6. Verify: npm run e2e:smoke passes for mobile auth scenarios
+
+delegation_notes: >
+  Clear scope, specific root cause identified by Lead Engineer, plan is concrete.
+  This is a straightforward bug fix suitable for Engineer with High effort.
+  If you get blocked, escalate to Senior Engineer via status=blocked in HANDBACK.
+---
