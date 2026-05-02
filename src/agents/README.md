@@ -29,7 +29,7 @@ Each agent definition follows this structure:
 ---
 name: Agent Name
 description: Brief description of what this agent does
-model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-opus-4-7
+model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.7
 ---
 
 # Agent Name
@@ -155,7 +155,7 @@ To add a new agent:
    ---
    name: New Agent
    description: What this agent does
-   model: claude-haiku-4-5
+   model: claude-haiku-4.5
    ---
    
    # New Agent
@@ -182,7 +182,7 @@ Every agent must have valid YAML frontmatter with three required fields:
 |-------|------|---------|----------|
 | `name` | string | "Engineer" | Yes |
 | `description` | string | "Executes well-scoped implementation tasks..." | Yes |
-| `model` | string | "claude-haiku-4-5" | Yes |
+| `model` | string | "claude-haiku-4.5" | Yes |
 
 The renderer validates these fields and will fail if any are missing.
 

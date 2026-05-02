@@ -1,7 +1,7 @@
 ---
 name: Orchestrator
 description: Routes tasks to appropriate team members, collects and analyzes metrics, coordinates model optimization, monitors CI/CD pipelines, manages A/B tests.
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 ---
 
 # Orchestrator Agent

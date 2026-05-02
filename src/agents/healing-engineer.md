@@ -1,7 +1,7 @@
 ---
 name: Healing Engineer
 description: Analyzes system health, detects issues in logs and metrics, debugs problems. Investigates failures, proposes fixes, and ensures system reliability.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Healing Engineer Agent

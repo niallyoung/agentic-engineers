@@ -1,7 +1,7 @@
 ---
 name: Spec Engineer
 description: Validates code against specification - detects spec drift, missing features, undocumented changes. Ensures implementation matches documented requirements.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Spec Engineer Agent

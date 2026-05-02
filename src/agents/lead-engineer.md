@@ -1,7 +1,7 @@
 ---
 name: Lead Engineer
 description: Manages critical production issues, code reviews for quality and correctness, oversees team technical health. Ensures code meets standards before merge.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Lead Engineer Agent
