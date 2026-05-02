@@ -22,6 +22,97 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 
 ---
 
+## ORCHESTRATOR-FIRST EXECUTION MODEL (MANDATORY)
+
+**This is a hard constraint. All work MUST flow through the Orchestrator. No exceptions.**
+
+### What This Means
+
+1. **No Direct Agent Invocation**
+   - Engineers MUST NOT invoke agents directly via tool calls or message passing
+   - Engineers MUST NOT create DELEGATE blocks manually and send them to agents
+   - Work only flows through the Orchestrator queue system
+
+2. **All Work Enters the Queue**
+   - New tasks arrive as files in `artifacts/queue/incoming/{task_id}.yaml`
+   - Orchestrator polls this directory every 30-60 seconds
+   - No other entry point exists (no Makefile targets, no scripts, no cron jobs, no ad-hoc invocations)
+
+3. **Orchestrator is the Router**
+   - Reads incoming task from `incoming/` queue
+   - Applies AGENTS.md routing decision tree to determine which agent to delegate to
+   - Creates DELEGATE block in `artifacts/delegates/YYYY-MM-DD/` with complete context
+   - Sends DELEGATE to agent
+   - Receives HANDBACK from agent
+   - Routes HANDBACK to Quality Engineer for verification
+   - Moves completed task to `done/` queue
+   - Applies Model Engineer recommendations to improve future routing
+
+4. **No External Scripts, Tools, or Cron Jobs**
+   - **NO Python scripts** for queue management, span capture, indexing, or any other operations
+   - **NO Makefile targets** for Orchestrator operations, span capture, or artifact generation
+   - **NO shell scripts** for queue automation, task creation, or observability
+   - **NO cron jobs** for polling, index generation, or metrics collection
+   - **NO external monitoring or indexing tools** beyond what agents natively produce
+   - All functionality is implemented as agent SKILLS (Orchestrator SKILL for span capture, Model Engineer SKILL for artifact indexing)
+
+### Implementation Requirements for Engineers
+
+**When creating an agent implementation:**
+
+1. **Implement QUEUE POLLING**
+   - Orchestrator SKILL polls `artifacts/queue/incoming/` every 30-60 seconds
+   - Each poll reads new tasks and creates DELEGATEs
+   - This is the ONLY way work enters the system
+
+2. **Implement ROUTING**
+   - Orchestrator applies AGENTS.md decision tree to route each task to the correct agent
+   - Decision tree is documented in AGENTS.md; Orchestrator implements it
+   - All routing logic is inside the Orchestrator agent; no external configuration
+
+3. **Implement DELEGATE/HANDBACK PROTOCOL**
+   - Orchestrator creates DELEGATE blocks in YAML format per HANDOFF.md spec
+   - Agents receive DELEGATE, execute work, return HANDBACK
+   - DELEGATE includes: scope, context, plan (for Engineer), success criteria
+   - HANDBACK includes: status, deliverables, test results, token counts, model assessment
+   - Structured format is machine-readable for metrics and span capture
+
+4. **Implement SPAN CAPTURE**
+   - When Orchestrator receives HANDBACK from any agent, capture OpenTelemetry span
+   - Extract: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
+   - Write SPAN to `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
+   - This is the ONLY observability mechanism; no external logging or monitoring
+
+5. **Implement ARTIFACT INDEXING**
+   - Model Engineer generates `artifacts/index.json` as part of feedback loop analysis
+   - Scans artifacts/2026-*/ for DELEGATE/HANDBACK/SPAN metadata
+   - Creates searchable index by: file_type, task_id, agent_type, status
+   - Calculates: total_tokens, total_cost, critical_issues, escalations
+   - This is the ONLY cost analysis and trend reporting mechanism
+
+### What NOT to Do
+
+**PROHIBITED ACTIVITIES:**
+
+- ❌ Do NOT write Python scripts that manage queues, capture spans, or generate indexes
+- ❌ Do NOT add Makefile targets for Orchestrator operations
+- ❌ Do NOT create shell scripts for queue automation
+- ❌ Do NOT set up cron jobs for any system operations
+- ❌ Do NOT invoke agents directly without going through Orchestrator queue
+- ❌ Do NOT create manual DELEGATE blocks and send them to agents
+- ❌ Do NOT skip quality checks or escalation rules
+- ❌ Do NOT implement observability outside of agent SKILLS
+
+**Why This Constraint Exists:**
+The queue-first model ensures all work is tracked, routable, optimizable, and auditable. External scripts and manual invocations create gaps in observability, break routing logic, and prevent the system from improving itself through the feedback loop. By making Orchestrator the single point of control, we guarantee:
+- ✅ Complete audit trail of all work
+- ✅ Correct routing via decision tree
+- ✅ Accurate cost tracking via span capture
+- ✅ Autonomous optimization via Model Engineer feedback
+- ✅ No bypasses or edge cases
+
+---
+
 ## Current Implementation vs. Original Spec
 
 ### What Changed in Phase 5.10
