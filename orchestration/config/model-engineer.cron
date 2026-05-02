@@ -1,7 +1,0 @@
-# Model Engineer — Task routing analysis (17:15 UTC)
-# Role: Senior Engineer
-# Input: TokenAdvisor output + historical metrics
-# Output: Routing recommendations + A/B test proposals
-# Integration: Feeds recommendations to A/B Testing Framework
-
-15 17 * * * cd /home/user/git/ers/{service-name} && python3 ./agentic-engineers/skills/model-engineer/scripts/model-engineer.py --analyze 2>&1 | tee ./agentic-engineers/data/logs/model-engineer-$(date +\%Y-\%m-\%d).log
