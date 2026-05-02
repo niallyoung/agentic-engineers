@@ -84,6 +84,71 @@ status: IN_PROGRESS
 - ✅ Orchestrator-first execution model documented (ENTRYPOINT.md, README.md)
 - ✅ Canonical workflow: Queue DELEGATE → Orchestrator polls → delegates to agents → captures SPAN data & index
 
+---
+
+### Objective 3: Enforce Orchestrator-First Execution Model (5.10.1)
+
+**Status**: 🔄 IN_PROGRESS - 6 DELEGATE tasks queued in ~/.copilot/queue/incoming/
+
+**Context**: Principal Engineer audit found critical violations where agents can be directly imported, bypassing queue routing and breaking auditability.
+
+**Queued DELEGATE Tasks** (awaiting agent implementation):
+1. **queue-enforcement-middleware-5101** (Principal Engineer, effort=high)
+   - [ ] Design queue-enforcement middleware to prevent direct agent imports
+   - [ ] Implement wrapper pattern that enforces queue-only invocation
+   - Acceptance: Agents cannot be instantiated outside orchestrator context
+
+2. **continuous-polling-loop-5102** (Principal Engineer, effort=high)
+   - [ ] Verify/update Orchestrator continuous polling loop design
+   - [ ] Document timeout/failsafe mechanisms
+   - Acceptance: Orchestrator polls every 30-60s, exits cleanly after idle timeout
+
+3. **quality-commit-integration-5103** (Lead Engineer, effort=high)
+   - [ ] Design pre-commit hook integration for quality gates
+   - [ ] Implement quality task queueing + commit blocking
+   - Acceptance: Quality checks block commits until HANDBACK arrives
+
+4. **agent-invocation-delegation-5104** (Senior Engineer, effort=high)
+   - [ ] Design agent invocation strategy (subprocess, context passing, timeouts)
+   - [ ] Specify HANDBACK reception protocol
+   - Acceptance: Design spec with implementation roadmap
+
+5. **task-movement-skill-5105** (Senior Engineer, effort=high)
+   - [ ] Implement move_task() RED-GREEN TDD (atomic state transitions)
+   - [ ] Handle concurrent access, error recovery
+   - Acceptance: All tests passing, integrated into Orchestrator
+
+6. **agent-invocation-skill-5106** (Senior Engineer, effort=high)
+   - [ ] Implement invoke_agent() RED-GREEN TDD (subprocess invocation, HANDBACK polling, timeouts)
+   - [ ] Capture SPAN data for observability
+   - Acceptance: All tests passing, HANDBACK validation working, timeouts per effort level
+
+**Current Progress**:
+- ✅ Orchestrator.move_task() implemented (awaiting task 5105 verification)
+- ✅ Orchestrator.invoke_agent() implemented (awaiting task 5106 verification)
+- ✅ run_poll_cycle() integrated with delegation logic
+- ✅ Queue polling loop verified (45s interval, 60s idle timeout)
+- ⏳ Awaiting agents to process HANDBACKs and return verification
+
+**Remaining Implementation**:
+- [ ] queue-enforcement-middleware-5101: Design (Principal Engineer)
+- [ ] continuous-polling-loop-5102: Documentation (Principal Engineer)
+- [ ] quality-commit-integration-5103: Design + Implement (Lead Engineer)
+- [ ] agent-invocation-delegation-5104: Design (Senior Engineer)
+- [ ] task-movement-skill-5105: Tests + Verification (Senior Engineer)
+- [ ] agent-invocation-skill-5106: Tests + Verification (Senior Engineer)
+
+**Success Criteria**:
+- All 6 DELEGATE tasks processed and returned with HANDBACK
+- Queue enforcement verified via make verify
+- All tests passing
+- No direct agent imports possible
+- Quality gates blocking commits
+
+---
+
+## Phase 5.10.1: Enforce Agents-Only Execution (CURRENT PHASE)
+
 **Remaining Implementation** (Phase 6 - Orchestrator code wiring):
 - [ ] Implement Orchestrator.capture_span() - write SPAN YAML when receiving HANDBACKs
 - [ ] Implement ModelEngineer.generate_index() - scan artifacts/, generate index.json
