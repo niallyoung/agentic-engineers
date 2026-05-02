@@ -2,6 +2,8 @@
 
 Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages.
 
+**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `artifacts/queue/incoming/`, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+
 ---
 
 ## Queue Structure
