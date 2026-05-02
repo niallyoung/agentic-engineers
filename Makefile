@@ -27,64 +27,49 @@ help:
 	@echo "  verify              Verify framework structure"
 	@echo "  clean               Remove both installations"
 
-install: install-claude install-copilot ## Install to both ~/.claude/ and ~/.copilot/
+install: ## Queue installation task to Orchestrator
+	@echo "❌ SPEC VIOLATION: make install is prohibited" >&2
+	@echo "" >&2
+	@echo "Installation must be queued as a DELEGATE task, not executed via external script." >&2
+	@echo "" >&2
+	@echo "To install agentic-engineers:" >&2
+	@echo "  1. Create artifacts/queue/incoming/install-task.yaml with DELEGATE block" >&2
+	@echo "  2. Start Orchestrator polling" >&2
+	@echo "  3. Orchestrator routes to Installation Agent" >&2
+	@echo "  4. Agent performs installation and returns HANDBACK" >&2
+	@echo "" >&2
+	@echo "See: docs/SPEC.md - ORCHESTRATOR-FIRST EXECUTION MODEL (MANDATORY)" >&2
+	@exit 1
 
-install-copilot:
-	@bash $(REPO_ROOT)/scripts/install-copilot.sh install
+uninstall-all: ## Queue uninstall task to Orchestrator
+	@echo "❌ SPEC VIOLATION: make uninstall is prohibited" >&2
+	@echo "Use Orchestrator queue-based delegation instead." >&2
+	@exit 1
 
-install-claude:
-	@bash $(REPO_ROOT)/scripts/install-claude.sh install
+status: ## Queue status check task to Orchestrator
+	@echo "❌ SPEC VIOLATION: make status is prohibited" >&2
+	@echo "Use Orchestrator queue-based delegation instead." >&2
+	@exit 1
 
-uninstall-all: uninstall-claude uninstall-copilot ## Uninstall from both locations
-
-uninstall-copilot:
-	@bash $(REPO_ROOT)/scripts/install-copilot.sh --uninstall
-
-uninstall-claude:
-	@bash $(REPO_ROOT)/scripts/install-claude.sh --uninstall
-
-status: status-claude status-copilot
-
-status-claude:
-	@echo "=== Claude Installation ===" && \
-	bash $(REPO_ROOT)/scripts/install-claude.sh --status 2>/dev/null || echo "❌ Not installed"
-
-status-copilot:
-	@echo "=== Copilot Installation ===" && \
-	bash $(REPO_ROOT)/scripts/install-copilot.sh --status 2>/dev/null || echo "❌ Not installed"
-
-render-all: render-claude render-copilot
-
-render-claude:
-	@echo "📦 Rendering agents for Claude → dist/claude/"
-	@mkdir -p $(REPO_ROOT)/dist/claude/roles
-	@cp $(REPO_ROOT)/orchestration/agents/*.md $(REPO_ROOT)/dist/claude/roles/ 2>/dev/null || true
-	@cp -r $(REPO_ROOT)/skills $(REPO_ROOT)/dist/claude/ 2>/dev/null || true
-	@cp $(REPO_ROOT)/config/models.json $(REPO_ROOT)/dist/claude/ 2>/dev/null || true
-	@echo "✅ Done"
-
-render-copilot:
-	@echo "📦 Rendering agents for Copilot → dist/copilot/"
-	@mkdir -p $(REPO_ROOT)/dist/copilot/roles
-	@cp $(REPO_ROOT)/orchestration/agents/*.md $(REPO_ROOT)/dist/copilot/roles/ 2>/dev/null || true
-	@cp -r $(REPO_ROOT)/skills $(REPO_ROOT)/dist/copilot/ 2>/dev/null || true
-	@cp $(REPO_ROOT)/config/models.json $(REPO_ROOT)/dist/copilot/ 2>/dev/null || true
-	@echo "✅ Done"
-
-verify:
+verify: ## Verify framework structure and tests (SPEC-compliant)
 	@echo "🔍 Verifying framework structure..."
 	@test -d "$(REPO_ROOT)/orchestration/agents" || (echo "❌ orchestration/agents/ missing" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/claude" || (echo "❌ dist/claude/ missing (run: make render-claude)" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/copilot" || (echo "❌ dist/copilot/ missing (run: make render-copilot)" && exit 1)
-	@test -f "$(REPO_ROOT)/scripts/install-claude.sh" || (echo "❌ scripts/install-claude.sh missing" && exit 1)
-	@test -f "$(REPO_ROOT)/scripts/install-copilot.sh" || (echo "❌ scripts/install-copilot.sh missing" && exit 1)
+	@test -d "$(REPO_ROOT)/orchestration" || (echo "❌ orchestration/ missing" && exit 1)
+	@test -f "$(REPO_ROOT)/docs/SPEC.md" || (echo "❌ docs/SPEC.md missing" && exit 1)
 	@echo "✅ Framework structure verified"
 	@echo ""
 	@echo "🧪 Running Orchestrator tests..."
-	@cd "$(REPO_ROOT)" && python3 -m unittest orchestration.agents.test_orchestrator 2>&1 | grep -E "^Ran|^OK|^FAILED" || true
-	@echo "✅ All verifications passed"
+	@cd "$(REPO_ROOT)" && python3 -m unittest orchestration.agents.test_orchestrator 2>&1 | tail -5 || true
+	@echo ""
+	@echo "🔐 Checking SPEC compliance (no external scripts)..."
+	@! grep -E "^\s+@(bash|sh|python).*scripts" $(REPO_ROOT)/Makefile || (echo "❌ SPEC VIOLATION: Makefile invokes external scripts" && exit 1)
+	@echo "✅ SPEC compliance verified"
 
-clean: uninstall-all
+clean: ## Clean build artifacts (no external scripts)
+	@echo "🧹 Cleaning artifacts..."
+	@rm -rf "$(REPO_ROOT)/dist/"
+	@find "$(REPO_ROOT)" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	@find "$(REPO_ROOT)" -type f -name "*.pyc" -delete 2>/dev/null || true
 	@echo "✅ Cleanup complete"
 
 .DEFAULT_GOAL := help
