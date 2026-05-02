@@ -1,7 +1,7 @@
 ---
 name: Senior Engineer
 description: Handles complex coding and architecture without a detailed plan. Implements intricate features, debugs deeply, mentors engineers, bridges complex requirements.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Senior Engineer Agent
