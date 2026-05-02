@@ -2,31 +2,49 @@
 
 **Version:** 2.0  
 **Created:** 2026-04-29  
-**Last Updated:** 2026-04-29  
-**Constraint:** Self-contained agent system — NO external dependencies (Claude APIs, shell scripts, external services). All work is agent-to-agent delegation via DELEGATE/HANDBACK/FEEDBACK protocol.
+**Last Updated:** 2026-05-02 (spec extraction + validation queued)
+**Constraint:** Self-contained agent system — NO external dependencies (Claude APIs, shell scripts, external services). All work is agent-to-agent delegation via DELEGATE/HANDBACK/FEEDBACK protocol. NO external scripts or tools.
 **Author:** Engineer Agent (Haiku 4.5, spec-extraction baseline) + Spec Engineer (Sonnet 4.6, validation)
 **Purpose:** Complete specification of agentic-engineers as a fully self-contained, model-driven orchestration system. Agents delegate work to agents; no external integrations.
 
+**Status:** Phase 5.10 Objective 2 (Audit Trails) completed. Spec extraction and validation tasks queued in artifacts/queue/incoming/.
+
 ---
 
-## 🔒 Architectural Constraint
+## 🔒 Architectural Constraints
+
+### Core Principle: No External Scripts or Tools
+**All work flows through AGENTS via DELEGATE/HANDBACK, never external scripts/utilities.**
 
 **agentic-engineers IS:**
 - ✅ Agent-driven system: all work flows between agents via DELEGATE/HANDBACK/FEEDBACK
 - ✅ Model-agnostic: agents are implemented as other agents, recursively
 - ✅ Self-contained: zero external dependencies (no APIs, no shell scripts, no cloud calls)
 - ✅ Fully internal: artifact files only; all communication is DELEGATE/HANDBACK blocks
+- ✅ SKILLS-based: all functionality is agent SKILL responsibility (documented in orchestration/SKILLS.md)
 
 **agentic-engineers IS NOT:**
+- ❌ A script/utility system (no Python scripts, no Bash utilities, no standalone tools)
 - ❌ An API integration system (no Claude API calls, no external services)
-- ❌ A shell/script system (no bash, no tools, no external processes)
+- ❌ A shell/script system (no make, no docker, no CI/CD)
 - ❌ Cloud-dependent (no AWS, no GitHub, no services)
-- ❌ A build/deployment system (no make, no docker, no CI/CD)
+- ❌ A build/deployment system
 
-**Rule:** Any feature requiring external integration must be:
-1. Described in spec as "Agent X delegates to Agent Y"
-2. Implemented as Agent Y (not as an external call)
-3. Agent Y may itself delegate, recursively
+### How Features Are Implemented
+1. **Define in AGENTS.md** — New role or routing rule
+2. **Specify in SKILLS.md** — Agent's workflow/responsibility
+3. **Queue work in artifacts/queue/incoming/** — DELEGATE block with task
+4. **Orchestrator routes** — Per AGENTS.md decision tree
+5. **Agent executes** — Per SKILLS.md workflow
+6. **Return HANDBACK** — Agent reports results
+
+**Rule:** Any feature must be:
+1. Described in spec as "Agent X delegates to Agent Y via DELEGATE/HANDBACK"
+2. Implemented as Agent Y workflow (in SKILLS.md)
+3. Queued as work (in artifacts/queue/incoming/)
+4. Agent Y may itself delegate, recursively
+
+**Forbidden:** External Python scripts, shell utilities, Makefile targets, cron jobs. All work is delegated through the queue.
 
 ---
 
