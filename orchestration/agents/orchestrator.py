@@ -292,7 +292,22 @@ class Orchestrator:
             return False
 
     def route_task(self, task: Dict) -> Dict:
-        """Route task to appropriate agent per AGENTS.md decision tree."""
+        """Route task to appropriate agent per AGENTS.md decision tree.
+        
+        Decision logic:
+        1. Security-scoped tasks → Security Engineer (opus-4-7, max effort)
+        2. Cross-service architecture (>2 repos) → Principal Engineer (opus-4-6, high effort)
+        3. Complex coding without plan → Senior Engineer (sonnet-4-6, high effort)
+        4. Code review tasks → Quality Engineer (sonnet-4-6, medium effort)
+        5. Well-planned, low-medium complexity → Engineer (haiku-4-5, high effort)
+        Default: Lead Engineer (sonnet-4-6, high effort)
+        
+        Args:
+            task: Task dictionary with scope, type, description, complexity, has_plan, etc.
+            
+        Returns:
+            Dictionary with role, model, and effort fields for routing decision.
+        """
         scope = task.get('scope', '').lower()
         task_type = task.get('type', '').lower()
         description = task.get('description', '').lower()
@@ -350,7 +365,18 @@ class Orchestrator:
         }
 
     def create_delegate(self, task: Dict, role: str, model: str, effort: str) -> Dict:
-        """Create DELEGATE block for task."""
+        """Create DELEGATE block for task per HANDOFF.md spec.
+        
+        Args:
+            task: Task dictionary with task_id, description, plan, etc.
+            role: Target agent role (Engineer, Senior Engineer, etc).
+            model: Target model (claude-haiku-4-5, etc).
+            effort: Effort level (low, medium, high, max).
+            
+        Returns:
+            DELEGATE dictionary with handoff_type, task_id, role, model, effort,
+            scope, context, plan, and success_criteria fields.
+        """
         task_id = task.get('task_id', '')
         description = task.get('description', '')
         plan = task.get('plan', [])
@@ -367,10 +393,18 @@ class Orchestrator:
             "success_criteria": task.get('success_criteria', ["Task completed per specification"])
         }
         
+        logger.debug(f"Created DELEGATE for task {task_id} to {role} using {model}")
         return delegate
 
     def move_task_to_processing(self, task_id: str) -> bool:
-        """Move task from incoming to processing queue."""
+        """Move task from incoming to processing queue.
+        
+        Args:
+            task_id: Unique identifier for the task.
+            
+        Returns:
+            True if task was successfully moved, False otherwise.
+        """
         incoming_file = self.queue_dir / "incoming" / f"{task_id}.yaml"
         
         if incoming_file.exists():
@@ -381,21 +415,33 @@ class Orchestrator:
                 
                 # Delete from incoming
                 incoming_file.unlink()
+                logger.info(f"Moved task {task_id} from incoming to processing")
                 
                 return True
             except Exception as e:
-                print(f"Error moving task to processing: {e}")
+                logger.error(f"Error moving task {task_id} to processing: {e}")
                 return False
         
+        logger.warning(f"Task file not found for {task_id}")
         return False
 
     def move_task_to_done(self, task_id: str, decision: str) -> bool:
-        """Move task from processing to done queue with decision."""
+        """Move task from processing to done queue with decision.
+        
+        Args:
+            task_id: Unique identifier for the task.
+            decision: Decision type (PROCEED, REWORK, ESCALATE).
+            
+        Returns:
+            True if task was successfully moved, False otherwise.
+        """
         try:
             # Delete HANDBACK files from processing
             processing_dir = self.queue_dir / "processing"
+            handback_count = 0
             for handback_file in processing_dir.glob(f"{task_id}-HANDBACK-*.yaml"):
                 handback_file.unlink()
+                handback_count += 1
             
             # Create decision file
             decision_file = self.queue_dir / "done" / f"{task_id}-{decision}.yaml"
@@ -408,9 +454,11 @@ class Orchestrator:
             with open(decision_file, 'w') as f:
                 yaml.dump(decision_data, f)
             
+            logger.info(f"Moved task {task_id} from processing to done with decision={decision} "
+                       f"(removed {handback_count} HANDBACK file(s))")
             return True
         except Exception as e:
-            print(f"Error moving task to done: {e}")
+            logger.error(f"Error moving task {task_id} to done: {e}")
             return False
 
     def process_handback(self, handback: Dict) -> Dict:
@@ -527,7 +575,18 @@ class Orchestrator:
         return cost_in + cost_out
 
     def generate_artifact_index(self) -> Path:
-        """Generate searchable index.json from artifacts."""
+        """Generate searchable index.json from all artifacts.
+        
+        Scans artifacts directory for SPAN files and aggregates them into a
+        single index.json with statistics by agent and status. Used for
+        observability and metrics reporting.
+        
+        Returns:
+            Path to written index.json file.
+            
+        Raises:
+            IOError: If index file cannot be written.
+        """
         index_data = {
             "generated_at": datetime.now().isoformat(),
             "artifacts": [],
@@ -592,7 +651,7 @@ class Orchestrator:
                     index_data['stats']['by_status'][status] += 1
                     
                 except Exception as e:
-                    print(f"Error processing span file {span_file}: {e}")
+                    logger.error(f"Error processing span file {span_file}: {e}")
         
         # Round costs for readability
         index_data['stats']['total_cost'] = round(index_data['stats']['total_cost'], 6)
@@ -609,13 +668,24 @@ class Orchestrator:
         return index_file
 
     def run_poll_cycle(self) -> Dict:
-        """Run one complete poll cycle.
+        """Run one complete poll cycle (30-60 second cadence).
         
         Polls all three queues (incoming, processing, done) and generates
         artifact index. Captures detailed metrics for observability.
         
+        Queue polling order:
+        1. Incoming queue: Check for new DELEGATE tasks
+        2. Processing queue: Check for HANDBACK completions
+        3. Done queue: Check for human decisions (PROCEED, REWORK, ESCALATE)
+        4. Artifact index: Update statistics and cost tracking
+        
         Returns:
-            Dictionary with poll cycle results and metrics.
+            Dictionary with poll cycle results and metrics including:
+            - timestamp: ISO 8601 timestamp of poll cycle start
+            - incoming_tasks: Number of new tasks found
+            - handbacks_processed: Number of HANDBACKs found
+            - decisions_processed: Number of human decisions found
+            - errors: List of any errors encountered
         """
         results = {
             "timestamp": datetime.now().isoformat(),
