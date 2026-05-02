@@ -133,7 +133,6 @@ plan:
   - Read orchestration/SKILLS.md (Orchestrator + Model Engineer sections)
   - Review orchestration/SPAN-CAPTURE-INTEGRATION.md
   - Update docs/SPEC.md with Phase 5.10 details
-  - Commit with Co-authored-by trailer
 success_criteria:
   - docs/SPEC.md is current and complete
   - Phase 5.10 changes are documented
