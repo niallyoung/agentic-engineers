@@ -1,7 +1,0 @@
-# A/B Testing Monitor — Daily experiment early stopping check (18:00 UTC)
-# Role: Lead Engineer
-# Input: Active experiments from agentic-engineers/data/experiments/
-# Output: Analysis + early stopping recommendations
-# Integration: Checks for significance, regression, sample size thresholds
-
-0 18 * * * cd /home/user/git/ers/{service-name} && python3 ./agentic-engineers/skills/ab-testing/scripts/ab-testing.py --monitor 2>&1 | tee ./agentic-engineers/data/logs/ab-testing-monitor-$(date +\%Y-\%m-\%d).log

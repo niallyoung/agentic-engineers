@@ -1,7 +1,0 @@
-# Daily Email Summary — 24h activity report (22:00 UTC)
-# Role: Orchestrator
-# Input: Git logs from all ERS repos, metrics, test results
-# Output: Email summary + voice notification
-# Includes: Commits, LOC changes, features shipped, test coverage, WIP items
-
-0 22 * * * cd /home/user/git/ers/{service-name} && /bin/bash ./agentic-engineers/skills/tokenadvisor/scripts/daily-email-summary.sh 2>&1 | tee ./agentic-engineers/data/logs/daily-email-summary-$(date +\%Y-\%m-\%d).log
