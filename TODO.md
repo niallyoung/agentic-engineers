@@ -66,28 +66,24 @@ status: IN_PROGRESS
 
 ### Objective 2: Enable Audit Trails (Local artifacts/ directory)
 
-**Status**: artifacts/ directory + README.md exist. Infrastructure ready.
+**Status**: ✅ **DESIGN COMPLETE - SKILLS DOCUMENTED**
 
-**Work**:
-- [ ] Wire all agent invocations to write spans to artifacts/
-  - Format: `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent}-{task_id}.yaml`
-  - Contents: OpenTelemetry schema (trace_id, span_id, parent_span_id, start_time, end_time, status, attributes)
-  - Includes: Tokens used, model used, latency, error codes (if any)
-
-- [ ] Create `agentic-engineers/orchestration/telemetry/otel-schema.md`
-  - Define standard span format for all agents
-  - Map to OpenTelemetry semantic conventions
-  - Support future Bedrock migration (spans → CloudWatch Logs)
-
-- [ ] Add `artifacts/index.json` generation
-  - Auto-generated file (no git, regenerated on each session)
-  - Index all DELEGATE/HANDBACK/SPAN artifacts by task_id, timestamp, agent
-  - Enables: Quick queries ("all decisions by Security Agent", "all escalations", etc.)
+**Design Work Completed**:
+- ✅ `orchestration/telemetry/otel-schema.md` - OpenTelemetry span format specification
+- ✅ `orchestration/SKILLS.md` updated:
+  - Orchestrator: Added span capture as observability step (no external tools)
+  - Model Engineer: Added artifact indexing as secondary responsibility
+- ✅ Architecture decision: Agents capture spans via SKILLS (no external scripts/utilities)
 
 **Deliverables**:
-- Complete OpenTelemetry telemetry schema
-- Automated span capture in artifacts/
-- Queryable index.json for artifact analysis
+- ✅ OpenTelemetry span format (otel-schema.md)
+- ✅ Orchestrator span capture workflow (SKILLS.md)
+- ✅ Model Engineer index generation (SKILLS.md)
+
+**Pending Implementation** (Phase 6 - Orchestrator code):
+- [ ] Orchestrator to write SPAN files when receiving HANDBACKs
+- [ ] Model Engineer to generate artifacts/index.json as part of feedback analysis
+- [ ] Wire span data into feedback loop handlers (quality-gate, model-engineer, config-enforcement)
 
 ---
 
