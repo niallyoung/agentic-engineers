@@ -79,11 +79,16 @@ status: IN_PROGRESS
 - ✅ OpenTelemetry span format (otel-schema.md)
 - ✅ Orchestrator span capture workflow (SKILLS.md)
 - ✅ Model Engineer index generation (SKILLS.md)
+- ✅ docs/SPEC.md updated with Phase 5.10 architecture (via Senior Engineer agent)
+- ✅ spec-validation-report.md created (via Lead Engineer agent)
+- ✅ Orchestrator-first execution model documented (ENTRYPOINT.md, README.md)
+- ✅ Canonical workflow: Queue DELEGATE → Orchestrator polls → delegates to agents → captures SPAN data & index
 
-**Pending Implementation** (Phase 6 - Orchestrator code):
-- [ ] Orchestrator to write SPAN files when receiving HANDBACKs
-- [ ] Model Engineer to generate artifacts/index.json as part of feedback analysis
+**Remaining Implementation** (Phase 6 - Orchestrator code wiring):
+- [ ] Implement Orchestrator.capture_span() - write SPAN YAML when receiving HANDBACKs
+- [ ] Implement ModelEngineer.generate_index() - scan artifacts/, generate index.json
 - [ ] Wire span data into feedback loop handlers (quality-gate, model-engineer, config-enforcement)
+- [ ] Test full loop: DELEGATE → execution → HANDBACK → SPAN capture → index generation
 
 ---
 
@@ -445,8 +450,9 @@ Future (Phase 9+):
 
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
-| 5.10 | Quality Gate Orchestrator activation + audit trails | IN PROGRESS |
-| 6 | Feedback loops + OpenTelemetry telemetry | TODO |
+| 5.10 | Quality Gate Orchestrator + audit trails (design + spec complete) | ✅ DESIGN COMPLETE |
+| 5.10 (impl) | Code: span capture, indexing, feedback handlers | Phase 6 (pending) |
+| 6 | Feedback loops + OpenTelemetry implementation | TODO |
 | 7 | Self-sustaining optimization loop | TODO |
 | 8+ | Bedrock migration documentation | TODO (docs only) |
 | 9+ | artifacts/ backend abstraction + scaling infrastructure | TBD |
@@ -466,8 +472,11 @@ Future (Phase 9+):
 
 ## Next: Execution Checklist
 
-- [ ] Save this TODO.md to git
-- [ ] Reload agentic-engineers context
-- [ ] Begin Phase 5.10 (Quality Gate Orchestrator activation)
-- [ ] Begin Phase 6 (feedback loops + observability)
+- [x] Save this TODO.md to git
+- [x] Reload agentic-engineers context
+- [x] ✅ Phase 5.10 Objective 1 (Quality Gate Orchestrator): Design complete
+- [x] ✅ Phase 5.10 Objective 2 (Audit Trails): Design complete + spec extracted + validated
+- [x] ✅ Orchestrator-first execution model: Documented (ENTRYPOINT.md) + demonstrated
+- [ ] Phase 6: Code implementation (span capture, indexing, feedback handlers)
+- [ ] Begin Phase 6 implementation (feedback loops + observability code wiring)
 - [ ] Document Bedrock plan (Phase 8+, no implementation yet)
