@@ -1,7 +1,0 @@
-# TokenAdvisor — Daily metrics analysis (17:00 UTC)
-# Role: Orchestrator
-# Input: Metrics from agentic-engineers/data/metrics/
-# Output: Analysis report + recommendations
-# Integration: Feeds to Model Engineer (15 min later)
-
-0 17 * * * cd {workspace-root}/{service-name} && python3 ./agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily 2>&1 | tee ./agentic-engineers/data/logs/tokenadvisor-$(date +\%Y-\%m-\%d).log
