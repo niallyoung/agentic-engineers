@@ -325,6 +325,100 @@ confidence: [0.0-1.0, for Model Engineer feedback]
 
 ---
 
+## Agent Autonomy Model
+
+Agents operate in **reduced autonomy mode**: they continue work autonomously when additional tasks exist, but pause and wait for user input when the current scope is complete.
+
+### Autonomy Principles
+
+**Core Rule:** Agents should pause when assigned task scope is complete, unless additional work has been explicitly queued or is documented in their working notes.
+
+### Autonomy Decision Workflow
+
+When an agent completes work:
+
+1. **Check Current Scope**
+   - Did I complete the assigned task/DELEGATE?
+   - Are all success criteria met?
+   - Are all todos from the current scope marked done in TODO.md?
+
+2. **Check for Remaining Work**
+   - Is there a `TODO.md` with additional pending todos?
+   - Is there a queued follow-up task or DELEGATE?
+   - Does the repository have documented outstanding work?
+
+3. **Decide: Continue or Pause**
+   - **CONTINUE autonomously IF:** More todos exist in TODO.md (marked pending)
+   - **PAUSE and wait for input IF:** Current scope is complete AND no additional work is documented in TODO.md
+   - **Always pause** when uncertain about scope boundaries
+
+### TODO Tracking (MANDATORY)
+
+**Use TODO.md in repository ONLY for todo tracking. Do NOT use SQL databases or session artifacts.**
+
+- Agents must read `TODO.md` from repository root to find remaining todos
+- Todos are marked in markdown checklist format: `- [ ]` (pending) or `- [x]` (done)
+- Agents update TODO.md directly by editing the file
+- TODO.md is the canonical source of truth for all work items
+- **PROHIBITED:** Do not use SQL `todos` table, spreadsheets, or external tracking systems
+- Do NOT use session workspace plan.md as substitute for TODO.md
+
+### Agent Responsibilities
+
+**When pausing (end of current scope):**
+- Clearly summarize what was completed
+- List any remaining work (if known)
+- Explicitly state: "Pausing here. Ready for next task or input."
+- Do NOT assume there's more work; let the user decide
+
+**When continuing (additional work exists):**
+- Acknowledge remaining todos in TODO.md
+- Continue executing on the next item
+- Update TODO.md as you progress
+- Report progress at key milestones
+
+### Examples
+
+**Example 1: Task Complete, Pause**
+```
+✓ Feature implemented and tested
+✓ All success criteria met
+✓ No todos remaining
+
+→ PAUSE: "Task complete. Awaiting further input."
+```
+
+**Example 2: Multiple Todos, Continue**
+```
+✓ First todo (database schema) complete
+→ TODO: Second todo (API routes) pending
+→ TODO: Third todo (tests) pending
+
+→ CONTINUE: "Moving to next todo: API routes."
+```
+
+**Example 3: Unclear Scope, Pause**
+```
+? Current task done, but not sure if more work planned
+? No explicit todos documented
+
+→ PAUSE: "Completed assigned work. Are there more tasks?"
+```
+
+### Implications for Orchestrator
+
+The Orchestrator-first execution model (MANDATORY) is **not changed** by autonomy rules. Agents still:
+- Only receive work via DELEGATE blocks from Orchestrator
+- Only return HANDBACKs to Orchestrator
+- Never invoke agents directly
+- Never bypass the queue
+
+Reduced autonomy is about **when agents stop working on the current task**, not about **how work enters the system**. Both constraints work together:
+- **Orchestrator-first:** How work is routed (mandatory, enforced)
+- **Reduced autonomy:** When agents pause within their current task scope (guidance, not enforcement)
+
+---
+
 ## SKILLS: Role-Specific Execution Details
 
 ### Engineer
