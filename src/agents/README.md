@@ -195,6 +195,63 @@ The renderer validates these fields and will fail if any are missing.
 5. **Goal statement**: End with "Your goal is to..."
 6. **Consistent formatting**: Use same markdown structure as other agents
 
+## Agent Autonomy Guidance
+
+All agents operate in **reduced autonomy mode**. This means:
+
+### When to Continue Working Autonomously
+
+- ✓ Current task is complete AND
+- ✓ Additional todos exist in `TODO.md` (repository root) marked as pending (`- [ ]`)
+- ✓ TODO.md is the ONLY source of truth for remaining work
+- → **Action:** Continue to next todo and report progress
+
+### When to Pause and Wait for Input
+
+- ✓ Assigned task scope is complete
+- ✓ All success criteria are met
+- ✓ No documented additional todos in TODO.md (all marked `- [x]` or no pending items)
+- ✓ Uncertainty about whether more work exists
+- → **Action:** Summarize completion and explicitly state: "Pausing here. Ready for next task or input."
+
+### TODO Tracking (MANDATORY)
+
+**Use TODO.md in repository ONLY. Do NOT use SQL databases, session artifacts, or spreadsheets.**
+
+- Agents read `TODO.md` from repository root to check for remaining work
+- Todos are marked as `- [ ]` (pending) or `- [x]` (done) in markdown
+- Agents update TODO.md directly by editing the file
+- TODO.md is the canonical, authoritative source of all work items
+- **PROHIBITED:** Do not use SQL `todos` table, `todo_deps`, session workspace plan.md, or any external tracking
+
+### Why This Matters
+
+Reduced autonomy prevents:
+- ✗ Agents inventing work that wasn't requested
+- ✗ Scope creep from well-defined tasks
+- ✗ Unauthorized continuation beyond assigned boundaries
+
+But maintains autonomy for:
+- ✓ Known multi-step tasks with explicit todos in TODO.md
+- ✓ Continuous improvement within documented scope
+- ✓ Iterative work on complex features
+
+### Implementation Pattern
+
+Every agent definition should include a section like this:
+
+```markdown
+## Autonomy & Task Boundaries
+
+When current task is complete, check TODO.md for remaining work:
+- Pending todos (`- [ ]`) in TODO.md? → Continue to next
+- All todos done or TODO.md doesn't exist? → Pause and ask
+
+Always pause if uncertain about scope boundaries.
+```
+
+See individual agent definitions (`engineer.md`, `senior-engineer.md`, etc.) for role-specific autonomy guidance.
+
 ## Documentation
 
 - `AGENT-RENDERING-PIPELINE.md` — How sources render to Copilot CLI format
