@@ -1,0 +1,78 @@
+---
+handoff_type: HANDBACK
+task_id: spec-review-lead-engineer-2026-05-02
+agent: Lead Engineer
+status: BLOCKED
+timestamp: "2026-05-03T09:18:37Z"
+duration_minutes: 132
+confidence: 0.62
+
+explicit_confirmation: "SPEC prevents external scripts" = NO
+
+findings_summary: |
+  SPEC review identified 5 issues preventing certification:
+  1. Line 604: Direct contradiction of line 112 — uses "except trivial fixes" after explicitly prohibiting it
+  2. Line 561: "(Optional)" weakens mandatory observability requirement
+  3. Lines 218, 275, 284: "External systems" undefined; allows direct queue writes by CI/CD
+  4. 31 non-exempt script files not covered by deprecation notice
+  5. Internal consistency: rules marked "guidance, not enforcement" undermine mandatory prohibitions
+
+critical_issues:
+  - line: 604
+    issue: "except trivial fixes" contradicts line 112 prohibition
+    severity: CRITICAL
+    fix: "Replace with explicit escalation path; no exceptions allowed"
+  
+  - line: 561
+    issue: "(Optional)" weakens mandatory span capture for observability
+    severity: HIGH
+    fix: "Remove Optional; require queued DELEGATE to Model Engineer"
+  
+  - line: 218
+    issue: "external systems" undefined; allows CI/CD to write DELEGATE directly
+    severity: HIGH
+    fix: "Define external systems; prohibit direct queue writes; require human or Orchestrator only"
+  
+  - line: 113
+    issue: "scripts" prohibition doesn't cover direct DELEGATE writes by external systems
+    severity: HIGH
+    fix: "Add clause prohibiting external systems from writing to incoming/ directory"
+  
+  - line: 124-157
+    issue: Deprecation notice incomplete; 31 scripts unaddressed in SPEC coverage
+    severity: HIGH
+    fix: "Expand deprecation section with full script inventory and removal timeline"
+
+recommendations:
+  - Remove line 604 "(except trivial fixes)" entirely
+  - Change line 561 from Optional to mandatory queued DELEGATE
+  - Add glossary entry defining "external systems" (humans + Orchestrator ONLY)
+  - Add prohibition: no automated system may write directly to artifacts/queue/incoming/
+  - Expand deprecation notice (lines 124-157) to list all 31 remaining scripts
+  - Add 30-day removal deadline for unlisted scripts
+
+positive_findings: |
+  - Orchestrator-First model clearly stated (line 27: "No exceptions")
+  - renderer/scripts/ exemption is well-bounded and documented
+  - Prohibited activities list is comprehensive (line 101: "NO EXCEPTIONS, EVER")
+  - AGENTS.md + SKILLS.md architecture is clear
+  - Deprecation notice names specific files (8 removed + 6 deprecated)
+
+confidence_breakdown:
+  orchestrator_prohibition: 0.90
+  external_script_prohibition: 0.70
+  exemption_boundaries: 0.85
+  repo_coverage: 0.30
+  internal_consistency: 0.50
+  overall: 0.62
+
+summary: |
+  The SPEC has strong architectural intent but suffers from a critical self-contradiction:
+  line 112 explicitly prohibits "trivial fixes" as an escape clause, while line 604 uses
+  that exact escape clause for the Engineer MUST NOT rule. An engineer reading the SPEC
+  has textual basis to invoke the exception, defeating the constraint. Three additional
+  issues (optional observability, undefined external systems, incomplete deprecation)
+  must also be resolved. All four changes are surgical and the overall architecture is
+  sound — recommend Engineer assigned to fix these items with re-review.
+
+---

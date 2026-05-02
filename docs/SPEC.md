@@ -158,6 +158,88 @@ This is the ONLY allowed entry point for all work.
 
 ---
 
+## COMPLETE SCRIPT INVENTORY
+
+This section documents all script files in the repository and their compliance status with the ORCHESTRATOR-FIRST EXECUTION MODEL.
+
+### EXEMPT: Build-Time & Setup Scripts
+
+**Location:** `renderer/scripts/`
+
+These scripts are exempted because they run at build/setup time and do not affect runtime orchestration:
+
+- `renderer/scripts/copilot-guard.sh` — Guard checks for Copilot environment
+- `renderer/scripts/copilot-session-init.sh` — Session initialization utility
+- `renderer/scripts/render-claude.sh` — Render tooling for Claude model setup
+- `renderer/scripts/render-copilot.sh` — Render tooling for Copilot setup
+- `renderer/scripts/render-copilot-agents.sh` — Agent rendering helper
+- `renderer/scripts/render-copilot-agents.py` — Agent rendering Python helper
+
+**Rationale:** These scripts execute only during development environment setup and build-time rendering. They do not participate in runtime task orchestration or queue processing and therefore do not violate the ORCHESTRATOR-FIRST constraint.
+
+### REFERENCE: Reference Implementations (Non-Invokable)
+
+**Location:** `orchestration/agents/`
+
+These Python files are included as reference impls and documentation but are NOT directly invokable at runtime:
+
+- `orchestration/agents/__init__.py` — Module initialization
+- `orchestration/agents/AGENT-IMPLEMENTATION-TEMPLATE.py` — Agent pattern template
+- `orchestration/agents/ENGINEER-IMPLEMENTATION-REFERENCE.py` — Engineer agent reference
+- `orchestration/agents/ORCHESTRATOR-IMPLEMENTATION-REFERENCE.py` — Orchestrator reference
+- `orchestration/agents/artifact_manager.py` — Artifact management utilities
+- `orchestration/agents/example_end_to_end.py` — Example workflow documentation
+- `orchestration/agents/implementations.py` — Implementation examples
+- `orchestration/agents/spec_validator.py` — Specification validation utilities
+- `orchestration/agents/testing_harness.py` — Testing framework
+- `orchestration/agents/workflow.py` — Workflow utilities
+- `orchestration/agents/*.md` — Agent specification documents
+
+**Rationale:** These Python files are included as reference impls, design documentation, and utilities for agent development. All task routing flows through the Orchestrator queue via DELEGATE/HANDBACK protocol. These files are never invoked directly as autonomous scripts and therefore do not violate the ORCHESTRATOR-FIRST constraint.
+
+### COMPLIANT: Approved Skill Scripts
+
+**Location:** `skills/*/scripts/`
+
+All scripts in the skills directory are approved and compliant because they are organized as SKILLS with formal specifications (SKILLS.md). These include:
+
+- `skills/ab-testing/scripts/ab-testing.py`
+- `skills/metrics-etl/scripts/metrics-etl.py`
+- `skills/model-engineer/scripts/model-engineer.py`
+- `skills/tokenadvisor/scripts/daily-email-summary.sh`
+- `skills/tokenadvisor/scripts/tokenadvisor.py`
+- `skills/usage-tracking/scripts/analyze_usage_trends.py`
+- `skills/usage-tracking/scripts/capture_token_usage.sh`
+- `skills/usage-tracking/scripts/usage-tracking.sh`
+- `skills/voice-notify/scripts/demo.sh`
+- `skills/voice-notify/scripts/select-voices.sh`
+- `skills/voice-notify/scripts/setup-tts.sh`
+- `skills/voice-notify/scripts/voice-notify.sh`
+- `skills/voice-notify/scripts/vote-all-voices.sh`
+
+**Rationale:** Each skill follows the formal SKILLS.md specification and is properly invoked through the Orchestrator's task routing system. These are the ONLY scripts permitted to execute autonomous logic at runtime.
+
+### DEPRECATED: Removal Timeline
+
+The following files are deprecated and will be removed or converted to SKILLS within 30 days of discovery:
+
+- `orchestration/scripts/analyze_usage_trends.py`
+- `orchestration/scripts/usage_budget_check.py`
+
+**Action Required:** Convert these to properly-scoped SKILLS via `SKILLS.md` with formal specifications, or delete them entirely.
+
+### ENFORCEMENT CLAUSE
+
+**Any script file not listed in the EXEMPT, REFERENCE, or COMPLIANT sets is considered a SPEC violation.**
+
+Scripts not in these categories must be:
+1. Removed immediately, OR
+2. Converted to an Agent SKILL (via SKILLS.md) within 30 days of discovery
+
+This constraint is non-negotiable. No legacy scripts, cron jobs, or autonomous processes are permitted outside the DELEGATE/HANDBACK orchestration model.
+
+---
+
 ## Current Implementation vs. Original Spec
 
 ### What Changed in Phase 5.10
