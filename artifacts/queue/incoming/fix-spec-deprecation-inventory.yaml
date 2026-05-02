@@ -1,0 +1,41 @@
+---
+handoff_type: DELEGATE
+task_id: fix-spec-deprecation-inventory-2026-05-03
+role: Engineer
+model: claude-sonnet-4-6
+effort: medium
+scope: |
+  Expand SPEC.md deprecation notice to cover all 31 non-exempt script files currently in repo.
+  Current deprecation notice (lines 124-157) only names 8 removed + 6 deprecated files.
+  31 additional scripts remain unaddressed and not covered by SPEC.
+
+context:
+  - File: docs/SPEC.md
+  - Section: DEPRECATION NOTICE (lines 124-157)
+  - Issue: Incomplete inventory; files not explicitly covered could be claimed as "not prohibited"
+
+plan:
+  - 1. Audit repo for all scripts: find . -type f \( -name "*.sh" -o -name "*.py" \) | grep -v ".git" | grep -v "node_modules" | grep -v ".venv" | sort
+  - 2. Categorize scripts:
+     a) EXEMPT: renderer/scripts/ (build-time only) — document this
+     b) ACTIVE: orchestration/agents/*.py (reference impls, not invokable) — document this
+     c) DEPRECATED: analyze_usage_trends.py, usage_budget_check.py — already marked
+     d) MUST DELETE: any other scripts found
+  - 3. Open docs/SPEC.md and expand DEPRECATION NOTICE section (after line 157)
+  - 4. Add subsection: "COMPLETE SCRIPT INVENTORY"
+     - List "EXEMPT: renderer/scripts/" with justification
+     - List "REFERENCE: orchestration/agents/*.py (not invokable)"
+     - List "DEPRECATED: [names] — removal timeline TBD"
+     - Add clause: "Any script file not listed above is considered a SPEC violation"
+  - 5. Add explicit 30-day removal deadline: "Scripts not in exempted or deprecated sets must be removed or converted to SKILLS within 30 days of discovery"
+  - 6. Run: git diff docs/SPEC.md (verify coverage is complete)
+  - 7. Commit: "Expand SPEC.md deprecation notice: document all script inventory and 30-day removal timeline"
+
+success_criteria:
+  - SPEC now explicitly lists all exempted scripts (renderer/scripts/, orchestration/agents/*.py)
+  - SPEC now explicitly lists all deprecated scripts (analyze_usage_trends.py, usage_budget_check.py)
+  - SPEC includes 30-day removal deadline for unlisted scripts
+  - Deprecation section is comprehensive and leaves no ambiguity
+  - Change committed
+
+---
