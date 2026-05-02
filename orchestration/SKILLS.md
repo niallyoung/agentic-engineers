@@ -561,3 +561,76 @@ Each cycle is independent; tasks progress through queues asynchronously. No bloc
 | **Model Engineer** | Analyze feedback | Routing recommendations | Orchestrator (applies) |
 | **Orchestrator** | Manage queue | Route + transition | Agents + humans |
 
+
+---
+
+### SKILL: Queue State Transitions (Task Movement)
+
+**Trigger:** After routing decision and delegation, before agent processing; after HANDBACK received.
+
+**What to do:**
+
+1. **Move task from `incoming/` to `processing/`:**
+   - Read task file: `~/.copilot/queue/incoming/{task_id}.yaml`
+   - Create agent context with routing info (role, model, effort)
+   - Move file to: `~/.copilot/queue/processing/{task_id}.yaml`
+   - Success = task locked for exclusive agent processing
+
+2. **Move task from `processing/` to `done/`:**
+   - Read HANDBACK file: `~/.copilot/queue/processing/{task_id}-HANDBACK.yaml`
+   - Validate HANDBACK has decision field (PROCEED / REWORK / ESCALATE)
+   - Move task to: `~/.copilot/queue/done/{task_id}-{DECISION}.yaml`
+   - Success = task archived; decision tracked
+
+**Error Handling:**
+- Task file not found → log error, alert human
+- Concurrent access (task in both states) → revert, escalate to Lead Engineer
+- HANDBACK missing/malformed → hold in processing, request correction from agent
+
+**Success Criteria:**
+- Task always in exactly one state (incoming OR processing OR done)
+- No lost tasks or orphaned files
+- State transitions are atomic (all-or-nothing)
+- Full audit trail preserved
+
+---
+
+### SKILL: Agent Invocation & HANDBACK Reception
+
+**Trigger:** After moving task to `processing/`.
+
+**What to do:**
+
+1. **Invoke agent for task:**
+   - Read task: `~/.copilot/queue/processing/{task_id}.yaml`
+   - Extract: role, model, effort, scope, plan, success_criteria
+   - Invoke agent via CLI with task context (NOT direct Python import)
+   - Pass context: task_id, role, model, deadline, scope
+   - Set timeout based on effort (low=15min, medium=30min, high=60min, max=120min)
+   - Wait for agent completion
+
+2. **Receive HANDBACK:**
+   - Agent writes: `~/.copilot/queue/processing/{task_id}-HANDBACK.yaml`
+   - Read HANDBACK and validate mandatory fields:
+     - handoff_type: "HANDBACK"
+     - task_id, status, role, model
+     - tokens_in, tokens_out, duration_minutes
+     - decision: PROCEED / REWORK / ESCALATE
+     - confidence (0.0–1.0)
+   - Extract metadata: cost, token count, severity
+   - Capture SPAN (OpenTelemetry format) for observability
+   - Route to next step based on decision
+
+**Error Handling:**
+- Agent timeout → escalate to Lead Engineer for investigation
+- HANDBACK missing/malformed → request correction from agent
+- Agent failure → move task back to incoming with error context
+- Decision ambiguous → escalate to Lead Engineer
+
+**Success Criteria:**
+- Agent completes within timeout
+- HANDBACK arrives with all mandatory fields
+- SPAN captured for metrics/feedback
+- Decision clearly stated and actionable
+
+---
