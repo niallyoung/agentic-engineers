@@ -41,34 +41,48 @@ success_criteria:
 
 See `orchestration/HANDOFF.md` for complete DELEGATE format.
 
-### 2. Start the Orchestrator
+### 2. Start the Orchestrator Agent
 
-The Orchestrator is the harness agent that:
-- Polls `artifacts/queue/incoming/` every 30-60 seconds
+The **Orchestrator** is a special agent defined in `orchestration/AGENTS.md` that:
+- Polls `~/.copilot/queue/incoming/` every 30-60 seconds
 - Routes tasks to appropriate agents using AGENTS.md decision tree
 - Delegates work via DELEGATE/HANDBACK protocol
-- Processes results and updates queue
+- Processes results and moves tasks through queue states
 - Captures observability (span data, indexing)
 - Continues until queue is empty
 
-**Start Orchestrator:**
+**Invoke Orchestrator:**
 
-```bash
-# In main session (or any session with Copilot CLI)
-cd 
+The Orchestrator is invoked by the Copilot CLI harness (not as a direct script). Queue a DELEGATE task specifying `role: Orchestrator`:
 
-# Start Orchestrator in background
-orchestrator start
-# OR (if orchestrator script doesn't exist yet)
-# Use the generic task invocation:
+```yaml
+---
+handoff_type: DELEGATE
+task_id: orchestrator-polling-session
+role: Orchestrator
+model: claude-haiku-4-5
+effort: low
+scope: |
+  Poll queue and delegate all work to appropriate agents.
+  Process until idle (no tasks for 60+ seconds).
+context: |
+  6 tasks in ~/.copilot/queue/incoming/ awaiting delegation.
+plan:
+  - Poll queue every 45 seconds
+  - Route each task per AGENTS.md
+  - Delegate with proper context
+  - Wait for HANDBACK
+  - Move to done/
+  - Continue until idle
+success_criteria:
+  - All incoming tasks routed
+  - HANDBACK results processed
+  - Tasks moved through queue states
+  - Exited cleanly on idle timeout
+---
 ```
 
-In the meantime, from the Copilot CLI, you can invoke:
-
-```bash
-# This will start an Orchestrator agent that polls queue and delegates work
-copilot task --type orchestrator --repo 
-```
+Then the Copilot CLI harness will invoke the Orchestrator agent which implements the SKILLs defined in `orchestration/SKILLS.md`.
 
 ### 3. Orchestrator handles everything
 
