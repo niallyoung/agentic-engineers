@@ -1,12 +1,13 @@
 # renderer Makefile — render agentic-engineers' canonical specs into per-tool target formats
 #
 # Targets:
-#   install-github    Copy hooks/scripts/instructions into ~/.github/   (legacy compat layout)
-#   install-copilot   Render skills into ~/.copilot/skills/
-#   install-claude    Render agents → ~/.claude/agents/, skills → ~/.claude/skills/
-#   install-all       All three
-#   uninstall-*       Per-target uninstall
-#   status            Drift report across all targets
+#   install          Render agents + skills into ~/.copilot/ and ~/.claude/ (main entry point)
+#   install-github   Copy hooks/scripts/instructions into ~/.github/   (legacy compat layout)
+#   install-copilot  Render agents + skills into ~/.copilot/agents/ and ~/.copilot/skills/
+#   install-claude   Render agents → ~/.claude/agents/, skills → ~/.claude/skills/
+#   install-all      All targets including ~/.github/
+#   uninstall-*      Per-target uninstall
+#   status           Drift report across all targets
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
@@ -16,14 +17,17 @@ GITHUB := $(HOME)/.github
 COPILOT := $(HOME)/.copilot
 CLAUDE := $(HOME)/.claude
 
-.PHONY: help install-all install-github install-copilot install-claude \
-        uninstall-github uninstall-copilot uninstall-claude uninstall-all status
+.PHONY: help install install-all install-github install-copilot install-claude \
+        uninstall-github uninstall-copilot uninstall-claude uninstall-all \
+        status
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-install-all: install-github install-copilot install-claude ## Install to all three targets
+install: install-copilot install-claude ## Render agents + skills (main entry point)
+
+install-all: install-github install-copilot install-claude ## Install to all three targets including ~/.github/
 
 # -----------------------------------------------------------------------------
 # Target 1: ~/.github/  (legacy compat layout — currently no real consumer,
@@ -52,11 +56,15 @@ uninstall-github: ## Remove agentic-engineers files from ~/.github/
 
 # -----------------------------------------------------------------------------
 # Target 2: ~/.copilot/  (GitHub Copilot CLI — real consumer)
-# -----------------------------------------------------------------------------
-install-copilot: ## Render skills into ~/.copilot/skills/
+# Includes: agents (from src/agents) + skills (from renderer/scripts)
+# Agent rendering is automatic as part of install-copilot
+install-copilot: ## Render agents + skills into ~/.copilot/
+	@echo "🔧 Rendering agents from src/agents/ → ~/.copilot/agents/..."
+	@$(CURDIR)/scripts/render-copilot-agents.sh
+	@echo "📦 Installing skills and agents → ~/.copilot/..."
 	@$(CURDIR)/scripts/render-copilot.sh "$(REPO_ROOT)" "$(COPILOT)"
 
-uninstall-copilot: ## Remove agentic-engine{service-name} skills from ~/.copilot/skills/
+uninstall-copilot: ## Remove agentic-engine{service-name} files from ~/.copilot/
 	@$(CURDIR)/scripts/render-copilot.sh "$(REPO_ROOT)" "$(COPILOT)" --uninstall
 
 # -----------------------------------------------------------------------------
