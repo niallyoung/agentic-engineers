@@ -1,0 +1,35 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-02-spec-validate-impl
+role: Lead Engineer
+model: claude-sonnet-4-6
+effort: high
+scope: |
+  Validate agentic-engineers implementation against docs/SPEC.md.
+  Identify any drift: implementation doesn't match spec.
+  Output: spec-validation-report.md with findings and recommendations.
+context:
+  - Repo: 
+  - Spec: docs/SPEC.md (being updated by concurrent task)
+  - Implementation files: orchestration/AGENTS.md, orchestration/SKILLS.md, orchestration/QUEUE-PROTOCOL.md
+  - Phase 5.10: Span capture + indexing recently added
+  - Goal: Ensure implementation matches specification
+plan:
+  - 1. Read docs/SPEC.md (after extraction task completes)
+  - 2. Review all agent roles and assignments (AGENTS.md)
+  - 3. Verify workflow specifications (SKILLS.md) match AGENTS.md
+  - 4. Check queue mechanics match QUEUE-PROTOCOL.md specification
+  - 5. Validate constraint: "no external scripts/tools" - check for violations
+  - 6. Verify span capture documented in SKILLS matches otel-schema.md spec
+  - 7. Create validation report with:
+     - ✅ Items matching spec
+     - ⚠️ Items needing clarification
+     - ❌ Items violating spec
+  - 8. Return HANDBACK with report
+success_criteria:
+  - Spec validation report created and checked into artifacts/
+  - All agent roles documented in AGENTS.md match spec
+  - All workflows documented in SKILLS.md match agent responsibilities
+  - No external scripts/tools violations found
+  - Implementation drift (if any) clearly identified
+---
