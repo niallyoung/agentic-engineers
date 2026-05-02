@@ -1,0 +1,33 @@
+---
+handoff_type: DELEGATE
+task_id: fix-spec-critical-contradiction-2026-05-03
+role: Engineer
+model: claude-sonnet-4-6
+effort: low
+scope: |
+  Fix critical self-contradiction in docs/SPEC.md:
+  - Line 112 explicitly prohibits: "Do NOT use 'trivial fixes' or other undefined escape clauses"
+  - Line 604 uses that exact clause: "except trivial fixes"
+  
+  This must be fixed to prevent engineers from invoking the exception.
+
+context:
+  - File: /home/user/agentic-engineers/docs/SPEC.md
+  - Lines: 604 (current), 112 (prohibition)
+  - Issue: Direct contradiction defeats constraint
+
+plan:
+  - 1. Open docs/SPEC.md and locate line 604
+  - 2. Find text: "Engineer MUST NOT receive task without pre-written `plan` in DELEGATE (except trivial fixes)"
+  - 3. Replace with: "Engineer MUST NOT receive task without pre-written `plan` in DELEGATE. No exceptions — all tasks require a plan. If scope is unclear, return status: blocked and Orchestrator escalates to Senior Engineer to write the plan."
+  - 4. Verify line 112 prohibition still reads: "Do NOT use 'trivial fixes' or other undefined escape clauses"
+  - 5. Run: git diff docs/SPEC.md (confirm change)
+  - 6. Commit with message: "Fix SPEC.md line 604: Remove 'trivial fixes' exception (contradicts line 112)"
+
+success_criteria:
+  - Line 604 no longer contains "except trivial fixes"
+  - Replacement text guides engineers to escalate unclear scopes
+  - Line 112 prohibition still reads clearly
+  - Change committed with proper message
+
+---
