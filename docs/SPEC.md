@@ -48,13 +48,19 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
    - Moves completed task to `done/` queue
    - Applies Model Engineer recommendations to improve future routing
 
-4. **No External Scripts, Tools, or Cron Jobs**
+4. **No External Scripts, Tools, or Cron Jobs (Agent Operations)**
    - **NO Python scripts** for queue management, span capture, indexing, or any other operations
-   - **NO Makefile targets** for Orchestrator operations, span capture, or artifact generation
-   - **NO shell scripts** for queue automation, task creation, or observability
+   - **NO Makefile targets** for Orchestrator operations, span capture, or artifact generation (exception: `render-*` targets)
+   - **NO shell scripts** for queue automation, task creation, or observability (exception: `renderer/scripts/` for installation only)
    - **NO cron jobs** for polling, index generation, or metrics collection
    - **NO external monitoring or indexing tools** beyond what agents natively produce
    - All functionality is implemented as agent SKILLS (Orchestrator SKILL for span capture, Model Engineer SKILL for artifact indexing)
+   
+   **EXEMPTIONS (Build & Installation Only):**
+   - `renderer/scripts/` — Shell scripts for rendering agents/skills to ~/.copilot/ and ~/.claude/ (called by `make install/render` targets only)
+   - `make install`, `make install-copilot`, `make install-claude` — Invoke renderer scripts for framework bootstrap
+   - `make render-copilot`, `make render-claude` — Generate dist/ artifacts
+   - These are build-time operations, not runtime agent operations. Once installed, all work flows through Orchestrator queue.
 
 ### Implementation Requirements for Engineers
 
@@ -94,10 +100,10 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 
 **PROHIBITED ACTIVITIES (NO EXCEPTIONS, EVER):**
 
-- ❌ Do NOT write Python scripts that manage queues, capture spans, or generate indexes
-- ❌ Do NOT add Makefile targets for Orchestrator operations
-- ❌ Do NOT create shell scripts for queue automation, task processing, or external invocation
-- ❌ Do NOT set up cron jobs for any system operations
+- ❌ Do NOT write Python scripts that manage queues, capture spans, or generate indexes (exception: `renderer/scripts/` for installation only)
+- ❌ Do NOT add Makefile targets for Orchestrator operations (exception: `render-*` and `install*` targets that invoke renderer scripts)
+- ❌ Do NOT create shell scripts for queue automation, task processing, or external invocation (exception: `renderer/scripts/` for build-time rendering only)
+- ❌ Do NOT set up cron jobs for any system operations (all scheduling via agent SKILLs)
 - ❌ Do NOT invoke subprocess, os.system(), or exec() in agent code
 - ❌ Do NOT invoke agents directly without going through Orchestrator queue
 - ❌ Do NOT create manual DELEGATE blocks and send them to agents

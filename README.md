@@ -2,28 +2,60 @@
 
 Complete multi-agent orchestration framework with 8 specialized roles, queue-based delegation, quality gates, and autonomous feedback loops.
 
-**Installation:**
+**Installation (Build-Time, SPEC-Compliant):**
+
 ```bash
-make install                    # Install to both ~/.claude/ and ~/.copilot/
-make install-copilot           # Install to ~/.copilot/ only
-make install-claude            # Install to ~/.claude/ only
+# Fresh install from scratch
+git clone https://github.com/{your-org}/agentic-engineers.git
+cd agentic-engineers
+make install              # Install to both ~/.copilot/ and ~/.claude/
 ```
+
+Or install to a single platform:
+```bash
+make install-copilot      # Install to ~/.copilot/ only
+make install-claude       # Install to ~/.claude/ only
+make status               # Check installation status
+```
+
+**What `make install` does:**
+1. Renders all skills from `skills/` → `~/.copilot/skills/` and `~/.claude/skills/`
+2. Renders all agents from `orchestration/agents/` → agent definitions
+3. Creates agent configurations and manifests
+4. Marks installed files so uninstall can clean them up safely
+5. Leaves user files untouched
 
 **Standard Execution Model (CANONICAL WORKFLOW):**
 ```bash
-# 1. Queue a task (create DELEGATE YAML in artifacts/queue/incoming/)
-# 2. Start Orchestrator: it polls queue and delegates to agents
-# 3. Check results in artifacts/queue/done/ and generated files
-# 4. Commit: git add artifacts/ && git commit
+# After install, start Orchestrator (entry point for all work)
+python3 orchestration/agents/orchestrator.py --poll
+
+# In another terminal, queue work:
+cat > ~/.copilot/queue/incoming/my-task.yaml <<'EOF'
+---
+task_id: my-task-001
+description: "What needs to be done"
+role: engineer
+priority: medium
+scope: "Specific scope"
+EOF
+
+# Monitor progress:
+ls ~/.copilot/queue/processing/   # In progress
+ls ~/.copilot/queue/done/         # Completed
 ```
 
-**📖 QUICK START:**
-→ **See [ENTRYPOINT.md](ENTRYPOINT.md)** for complete workflow examples, code samples, and canonical execution model.
+**Key Points:**
+- Installation is one-time: `make install`
+- Runtime uses queue-based delegation (DELEGATE → HANDBACK)
+- No manual agent invocation — Orchestrator routes everything
+- All work is auditable (stored in queue)
+- No external scripts in runtime (only build-time rendering)
 
 **Verification:**
 ```bash
-make status                     # Check installation status
-make verify                     # Verify framework structure
+make verify               # Verify framework structure + SPEC compliance
+make uninstall-all        # Remove managed installations
 ```
 
 ---
@@ -110,7 +142,132 @@ agentic-engineers/
 └── Makefile                 Build & install targets
 ```
 
-## ⚡ Quick Start
+---
+
+## 🚀 Installation Deep Dive
+
+### What Happens When You Run `make install`
+
+**Build-Time (One-Time):**
+```bash
+make install              # This calls renderer/scripts/
+```
+
+The Makefile invokes shell scripts (exempted from "no scripts" rule) to:
+1. Scan `skills/` for directories containing `SKILL.md`
+2. Copy each skill to `~/.copilot/skills/` and `~/.claude/skills/`
+3. Scan `orchestration/agents/` for agent definitions
+4. Copy each agent to `~/.copilot/agents/` and `~/.claude/agents/`
+5. Create marker file (`.agentic-engine{service-name}`) on each installed item
+6. Marker ensures `make uninstall` only removes OUR files, not user files
+
+**Exemptions to "No External Scripts" Rule:**
+- `renderer/scripts/` — Build-time rendering scripts (ALLOWED)
+- `make install*` and `make render*` targets (ALLOWED)
+- Everything else must be agent SKILLs via queue-based DELEGATE/HANDBACK
+
+See `docs/SPEC.md` for full SPEC compliance details.
+
+**Runtime (Always Queue-Based):**
+- Start Orchestrator: `python3 orchestration/agents/orchestrator.py --poll`
+- Queue work: Create `~/.copilot/queue/incoming/{task_id}.yaml` (DELEGATE block)
+- Orchestrator routes and delegates to appropriate agent
+- Agent returns HANDBACK in `~/.copilot/queue/done/`
+- NO external scripts, NO manual invocation, NO exceptions
+
+### Fresh Install Scenario
+
+**You just cloned the repo:**
+
+```bash
+git clone https://github.com/{your-org}/agentic-engineers.git
+cd agentic-engineers
+
+# 1. Install (renders skills & agents to user's home)
+make install
+
+# Check status
+make status
+# Output: ✅ skill ab-testing, ✅ skill metrics-etl, ...
+
+# 2. Start Orchestrator (entry point for all work)
+python3 orchestration/agents/orchestrator.py --poll
+
+# 3. In another terminal, queue a task
+cat > ~/.copilot/queue/incoming/example-task.yaml <<'EOF'
+---
+task_id: example-2026-05-02
+description: "Example task to test queue-based delegation"
+role: engineer
+priority: medium
+scope: "Create and test a simple function"
+EOF
+
+# 4. Monitor in queue
+ls ~/.copilot/queue/processing/    # In progress
+ls ~/.copilot/queue/done/          # Completed
+cat ~/.copilot/queue/done/*.yaml   # View results
+```
+
+### What's NOT Changed
+
+- ❌ `renderer/scripts/` are NOT agent SKILLs (they're build tools)
+- ❌ `make install` is NOT a queue task (it's pre-bootstrap)
+- ❌ Nothing external runs after installation (except Orchestrator agent)
+
+---
+
+## 🏗️ Architecture: Build vs Runtime
+
+### Build-Time (One-Time: `make install`)
+```
+Makefile targets (install, render)
+    ↓
+renderer/scripts/render-*.sh (external scripts - ALLOWED)
+    ↓
+Renders to ~/.copilot/ and ~/.claude/
+    ↓
+System ready for Orchestrator
+```
+
+**Why scripts allowed here:**
+- Pre-bootstrap (queue doesn't exist yet)
+- Trusted installation scripts
+- No observability or metrics needed
+- Clearly separated from runtime
+
+### Runtime (Continuous: Queue-Based)
+```
+DELEGATE in queue/incoming/
+    ↓
+Orchestrator polls & reads
+    ↓
+Routes to appropriate Agent
+    ↓
+Agent executes (via agent SKILL)
+    ↓
+HANDBACK in queue/done/
+    ↓
+Fully auditable, routable, optimizable
+```
+
+**Zero external scripts in runtime:**
+- All logic is agent SKILLS
+- Everything flows through queue
+- Complete audit trail
+- Self-improving via feedback loops
+
+### Installation vs Operation
+
+| Aspect | Installation | Operation |
+|--------|--------------|-----------|
+| Frequency | One-time: `make install` | Continuous: Queue polling |
+| Script Use | Shell scripts OK (build tools) | NO scripts (agent-based only) |
+| Entry Point | Makefile target | Orchestrator queue polling |
+| Auditing | Not needed (bootstrapping) | Complete audit trail (queue) |
+| Use Case | Get system ready | All actual work |
+
+---
 
 **New to the system?** Start here:
 1. [`setup/copilot-instructions.md`](setup/copilot-instructions.md) — Enforcement rules, learning path (READ FIRST!)
