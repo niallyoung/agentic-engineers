@@ -1,4 +1,10 @@
 """
+⚠️ REFERENCE IMPLEMENTATION ONLY — DO NOT INVOKE DIRECTLY
+
+This file is a reference impl for understanding agent structure.
+All work MUST flow through agent SKILLS via DELEGATE/HANDBACK protocol.
+Do NOT execute this script directly.
+
 Engineer Agent Implementation Reference
 
 Model: claude-haiku-4-5 (high effort)
