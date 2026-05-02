@@ -756,3 +756,76 @@ class Orchestrator:
             results['errors'].append(f"unexpected: {str(e)}")
         
         return results
+    
+    def run(self, idle_timeout_seconds: int = 60, poll_interval_seconds: int = 45):
+        """Run Orchestrator in continuous polling mode.
+        
+        Polls queue continuously until idle timeout is reached.
+        
+        Args:
+            idle_timeout_seconds: Exit after this many seconds of no activity (default: 60)
+            poll_interval_seconds: Sleep between polls (default: 45, range 30-60)
+        """
+        import signal
+        
+        idle_count = 0
+        idle_threshold = max(1, idle_timeout_seconds // poll_interval_seconds)
+        
+        def signal_handler(signum, frame):
+            logger.info(f"Received signal {signum}, shutting down gracefully...")
+            exit(0)
+        
+        # Register signal handlers for clean shutdown
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+        
+        logger.info(f"Starting continuous polling loop (idle_timeout={idle_timeout_seconds}s, poll_interval={poll_interval_seconds}s)")
+        
+        cycle_num = 0
+        while True:
+            cycle_num += 1
+            logger.info(f"Poll cycle {cycle_num}: checking queue...")
+            
+            try:
+                results = self.run_poll_cycle()
+                total_processed = results['incoming_tasks'] + results['handbacks_processed'] + results['decisions_processed']
+                
+                if total_processed > 0:
+                    idle_count = 0
+                    logger.info(f"Cycle {cycle_num} processed {total_processed} items, resetting idle count")
+                else:
+                    idle_count += 1
+                    logger.info(f"Cycle {cycle_num} idle, count: {idle_count}/{idle_threshold}")
+                
+                # Check idle timeout
+                if idle_count >= idle_threshold:
+                    logger.info(f"Idle timeout reached after {idle_count * poll_interval_seconds}s, exiting...")
+                    break
+                
+            except KeyboardInterrupt:
+                logger.info("Interrupted by user, shutting down...")
+                break
+            except Exception as e:
+                logger.error(f"Error in poll cycle: {e}")
+                idle_count += 1
+            
+            # Sleep before next cycle (30-60s per SPEC)
+            logger.debug(f"Sleeping for {poll_interval_seconds}s before next poll...")
+            time.sleep(poll_interval_seconds)
+        
+        logger.info("Orchestrator stopped")
+
+
+if __name__ == "__main__":
+    """Run Orchestrator as the master router for all work.
+    
+    Starts continuous polling loop that:
+    1. Polls ~/.copilot/queue/incoming/ for new DELEGATE tasks
+    2. Routes to appropriate agent per AGENTS.md
+    3. Delegates task to agent
+    4. Waits for HANDBACK
+    5. Moves task to done/
+    6. Exits when no work for 60+ seconds
+    """
+    orch = Orchestrator()
+    orch.run(idle_timeout_seconds=60, poll_interval_seconds=45)
