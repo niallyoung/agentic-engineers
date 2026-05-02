@@ -1,4 +1,10 @@
 """
+⚠️ TEMPLATE ONLY — DO NOT USE FOR PRODUCTION AGENTS
+
+This file is a template for understanding agent structure.
+All work MUST flow through agent SKILLS via DELEGATE/HANDBACK protocol.
+Use this only as a reference when implementing new agents.
+
 Agent Implementation Template
 
 Use this template as a starting point for implementing agent behavior.

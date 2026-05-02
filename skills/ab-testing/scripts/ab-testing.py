@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 A/B Testing Framework - Automated experiment orchestration and analysis

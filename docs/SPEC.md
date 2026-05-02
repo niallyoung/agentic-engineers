@@ -208,6 +208,23 @@ All work enters via **Orchestrator** (default entry point). Orchestrator applies
 
 ---
 
+## Glossary: Standardized Terminology
+
+This section defines canonical terms used throughout the agentic-engineers framework to avoid ambiguity and ensure consistency.
+
+| Term | Definition | Example |
+|------|-----------|---------|
+| **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `artifacts/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
+| **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `artifacts/queue/incoming/` by external systems. Core unit of work. | `artifacts/queue/incoming/task-2026-05-02.yaml` |
+| **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `artifacts/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `artifacts/queue/done/task-2026-05-02-HANDBACK.yaml` |
+| **Queue System** | File-based work queue with three directories: `incoming/` (new tasks), `processing/` (in-progress), `done/` (completed). Located at `~/.copilot/queue/`. | All work coordination happens through queue file operations. |
+| **Agent SKILL** | A Python module implementing an agent's core capabilities. Invoked only through agent context (not external scripts). Located in `orchestration/agents/`. | `orchestration/agents/engineer_agent.py` |
+| **Span Capture** | Observability mechanism that tracks work execution from initiation through completion, including decision points, delays, and handoffs. | `artifacts/spans/ directory records all task spans. |
+| **Task Routing** | The process by which Orchestrator examines a DELEGATE block and applies the decision tree to select the appropriate agent role. | "Routing determined this was a security task, so Principal Engineer was selected." |
+| **Model/Effort Combo** | The pairing of an LLM model (Haiku, Sonnet, Opus) with execution effort (low, medium, high, max). Determines cost and quality tradeoff. | Quality Engineer runs at Sonnet 4.6, medium effort. |
+
+---
+
 ## Routing Decision Tree (Orchestrator)
 
 When Orchestrator polls `artifacts/queue/incoming/` and finds a task:

@@ -31,8 +31,8 @@ install: install-copilot install-claude ## Install to both ~/.copilot/ and ~/.cl
 	@echo ""
 	@echo "✅ Installation complete!"
 	@echo ""
-	@echo "Next: Start Orchestrator to process queued tasks:"
-	@echo "  python3 orchestration/agents/orchestrator.py --poll"
+	@echo "Next: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
+	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
 
 install-copilot: render-copilot ## Install rendered agents → ~/.copilot/
 	@echo "📦 Installing agentic-engineers to ~/.copilot/..."

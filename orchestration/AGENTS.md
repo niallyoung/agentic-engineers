@@ -23,12 +23,12 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 |---|---|---|---|---|
 | **Orchestrator** | claude-haiku-4-5 | low | $0.03 | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4-5 | high | $0.03 | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-4-5 | medium | $0.09 | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-4-5 | high | $0.09 | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Quality Engineer** | claude-sonnet-4-6 | medium | $0.09 | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-4-6 | high | $0.09 | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
 | **Lead Engineer** | claude-sonnet-4-6 | high | $0.09 | Code review; quality decisions; medium-complexity planning; architectural guidance |
 | **Principal Engineer** | claude-opus-4-6 | high | $0.15 | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
 | **Security Engineer** | claude-opus-4-7 | max | $0.15 | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-4-5 | high | $0.09 | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+| **Model Engineer** | claude-sonnet-4-6 | high | $0.09 | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
 **Routing Rules** (for Orchestrator):
 - If task is security-scoped → Security Engineer (block all other routes)
