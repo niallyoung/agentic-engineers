@@ -111,6 +111,7 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 - ❌ Do NOT implement observability outside of agent SKILLS
 - ❌ Do NOT use "trivial fixes" or other undefined escape clauses to bypass queue
 - ❌ Do NOT allow CI/CD or external systems to invoke scripts directly
+- ❌ Do NOT allow any automated external system to write files directly to `artifacts/queue/incoming/` — all queue entries originate from humans or the Orchestrator
 - ❌ Do NOT create automated cron job installers or pre-configured cron jobs
 
 **Why This Constraint Exists:**
@@ -215,7 +216,7 @@ This section defines canonical terms used throughout the agentic-engineers frame
 | Term | Definition | Example |
 |------|-----------|---------|
 | **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `artifacts/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
-| **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `artifacts/queue/incoming/` by external systems. Core unit of work. | `artifacts/queue/incoming/task-2026-05-02.yaml` |
+| **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `artifacts/queue/incoming/` only by humans or the Orchestrator itself. Automated external systems MUST NOT write directly to the queue. Core unit of work. | `artifacts/queue/incoming/task-2026-05-02.yaml` |
 | **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `artifacts/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `artifacts/queue/done/task-2026-05-02-HANDBACK.yaml` |
 | **Queue System** | File-based work queue with three directories: `incoming/` (new tasks), `processing/` (in-progress), `done/` (completed). Located at `~/.copilot/queue/`. | All work coordination happens through queue file operations. |
 | **Agent SKILL** | A Python module implementing an agent's core capabilities. Invoked only through agent context (not external scripts). Located in `orchestration/agents/`. | `orchestration/agents/engineer_agent.py` |
