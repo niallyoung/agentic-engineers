@@ -1,7 +1,7 @@
 ---
 name: Security Engineer
 description: Handles security architecture, vulnerability analysis, and compliance. Reviews code for security, designs secure systems, manages secrets and access control.
-model: claude-opus-4-7
+model: claude-opus-4.7
 ---
 
 # Security Engineer Agent

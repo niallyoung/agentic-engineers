@@ -1,7 +1,7 @@
 ---
 name: Model Engineer
 description: Analyzes token usage, cost efficiency, and model selection trade-offs. Recommends model upgrades/downgrades, optimizes budget allocation, runs cost-quality experiments.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Model Engineer Agent

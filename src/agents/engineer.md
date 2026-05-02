@@ -1,7 +1,7 @@
 ---
 name: Engineer
 description: Executes well-scoped implementation tasks with pre-written plans. Code edits, feature implementation, bug fixes, straightforward refactoring.
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 ---
 
 # Engineer Agent

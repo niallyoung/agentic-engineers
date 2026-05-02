@@ -1,7 +1,7 @@
 ---
 name: Metrics
 description: Captures and analyzes token usage, cost efficiency, and performance metrics. Tracks completion time, quality scores, and generates optimization reports.
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 ---
 
 # Metrics Agent
