@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# ⚠️ DEPRECATED: This script violates SPEC constraints.
+# All work must flow through agent SKILLS via DELEGATE/HANDBACK protocol.
+# This file is retained for reference only and should NOT be executed directly.
+#
 """
 Usage Budget Manager — Real-time token budget monitoring and recommendations.
 

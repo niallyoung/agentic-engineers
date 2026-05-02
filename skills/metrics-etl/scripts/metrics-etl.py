@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Metrics ETL Pipeline — Aggregate token metrics for dashboard visualization
 

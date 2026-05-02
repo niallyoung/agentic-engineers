@@ -26,24 +26,7 @@ make status               # Check installation status
 5. Leaves user files untouched
 
 **Standard Execution Model (CANONICAL WORKFLOW):**
-```bash
-# After install, start Orchestrator (entry point for all work)
-python3 orchestration/agents/orchestrator.py --poll
-
-# In another terminal, queue work:
-cat > ~/.copilot/queue/incoming/my-task.yaml <<'EOF'
----
-task_id: my-task-001
-description: "What needs to be done"
-role: engineer
-priority: medium
-scope: "Specific scope"
-EOF
-
-# Monitor progress:
-ls ~/.copilot/queue/processing/   # In progress
-ls ~/.copilot/queue/done/         # Completed
-```
+See **[ENTRYPOINT.md](ENTRYPOINT.md)** for the complete queue-based execution model and how to invoke agents through the Orchestrator. All work flows through the queue system — no direct Python script invocation.
 
 **Key Points:**
 - Installation is one-time: `make install`
@@ -169,10 +152,10 @@ The Makefile invokes shell scripts (exempted from "no scripts" rule) to:
 See `docs/SPEC.md` for full SPEC compliance details.
 
 **Runtime (Always Queue-Based):**
-- Start Orchestrator: `python3 orchestration/agents/orchestrator.py --poll`
-- Queue work: Create `~/.copilot/queue/incoming/{task_id}.yaml` (DELEGATE block)
-- Orchestrator routes and delegates to appropriate agent
-- Agent returns HANDBACK in `~/.copilot/queue/done/`
+- Queue work by creating a DELEGATE block in `~/.copilot/queue/incoming/{task_id}.yaml`
+- Orchestrator polls the queue and routes tasks to appropriate agent SKILLs
+- Agent processes work and returns HANDBACK in `~/.copilot/queue/done/`
+- **See [ENTRYPOINT.md](ENTRYPOINT.md) for complete workflow details**
 - NO external scripts, NO manual invocation, NO exceptions
 
 ### Fresh Install Scenario
@@ -190,10 +173,7 @@ make install
 make status
 # Output: ✅ skill ab-testing, ✅ skill metrics-etl, ...
 
-# 2. Start Orchestrator (entry point for all work)
-python3 orchestration/agents/orchestrator.py --poll
-
-# 3. In another terminal, queue a task
+# 2. Queue a task (Orchestrator automatically polls and processes)
 cat > ~/.copilot/queue/incoming/example-task.yaml <<'EOF'
 ---
 task_id: example-2026-05-02
