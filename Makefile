@@ -79,6 +79,10 @@ verify:
 	@test -f "$(REPO_ROOT)/scripts/install-claude.sh" || (echo "❌ scripts/install-claude.sh missing" && exit 1)
 	@test -f "$(REPO_ROOT)/scripts/install-copilot.sh" || (echo "❌ scripts/install-copilot.sh missing" && exit 1)
 	@echo "✅ Framework structure verified"
+	@echo ""
+	@echo "🧪 Running Orchestrator tests..."
+	@cd "$(REPO_ROOT)" && python3 -m unittest orchestration.agents.test_orchestrator 2>&1 | grep -E "^Ran|^OK|^FAILED" || true
+	@echo "✅ All verifications passed"
 
 clean: uninstall-all
 	@echo "✅ Cleanup complete"

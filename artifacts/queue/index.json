@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-05-02T10:54:35.803134",
+  "status": "polling_idle_timeout",
+  "tasks_delegated": 1,
+  "runtime_seconds": 65.04606008529663,
+  "idle_timeout": 60,
+  "queue_status": {
+    "incoming": 0,
+    "processing": 4,
+    "done": 7
+  }
+}

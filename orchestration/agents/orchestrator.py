@@ -1,0 +1,673 @@
+"""
+REFACTOR Phase: Orchestrator agent implementation with improved quality.
+
+Implements complete Orchestrator functionality:
+1. Queue polling (incoming, processing, done)
+2. DELEGATE validation and creation
+3. Agent routing per AGENTS.md
+4. HANDBACK processing
+5. Queue state transitions
+6. Span capture (OpenTelemetry format)
+7. Artifact indexing
+
+Quality features:
+- Comprehensive error handling with informative messages
+- Detailed logging for observability
+- Type hints throughout
+- Docstrings for all public methods
+- Defensive programming for malformed files
+"""
+
+import yaml
+import json
+import time
+import logging
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
+import hashlib
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class Orchestrator:
+    """Master router for all software engineering work."""
+
+    MODEL = "claude-haiku-4-5"
+    EFFORT = "low"
+
+    # Routing decision tree
+    ROUTING_RULES = [
+        ("security", "Security Engineer", "claude-opus-4-7", "max"),
+        ("cross-service-architecture", "Principal Engineer", "claude-opus-4-6", "high"),
+        ("complex-coding-no-plan", "Senior Engineer", "claude-sonnet-4-6", "high"),
+        ("code-review", "Lead Engineer", "claude-sonnet-4-6", "high"),
+        ("well-planned-low-complexity", "Engineer", "claude-haiku-4-5", "high"),
+    ]
+
+    # Valid roles per AGENTS.md
+    VALID_ROLES = {
+        "Engineer",
+        "Senior Engineer",
+        "Lead Engineer",
+        "Quality Engineer",
+        "Principal Engineer",
+        "Security Engineer",
+        "Model Engineer",
+        "Orchestrator"
+    }
+
+    # Valid models per AGENTS.md
+    VALID_MODELS = {
+        "claude-haiku-4-5",
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+        "claude-opus-4-7"
+    }
+
+    # Valid effort levels
+    VALID_EFFORTS = {"low", "medium", "high", "max"}
+
+    # Token pricing (per 1M tokens)
+    TOKEN_PRICING = {
+        "claude-haiku-4-5": {"input": 0.80, "output": 4.0},
+        "claude-sonnet-4-5": {"input": 3.0, "output": 15.0},
+        "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
+        "claude-opus-4-6": {"input": 15.0, "output": 75.0},
+        "claude-opus-4-7": {"input": 15.0, "output": 75.0},
+    }
+
+    def __init__(self, artifacts_dir: str = "artifacts"):
+        """Initialize Orchestrator with artifacts directory.
+        
+        Args:
+            artifacts_dir: Root directory for all artifacts and queues.
+            
+        Raises:
+            OSError: If artifacts directory cannot be created.
+        """
+        try:
+            self.artifacts_dir = Path(artifacts_dir)
+            self.queue_dir = self.artifacts_dir / "queue"
+            self.delegates_dir = self.artifacts_dir / "delegates"
+            self.current_date = datetime.now().strftime("%Y-%m-%d")
+            
+            # Create necessary directories
+            (self.queue_dir / "incoming").mkdir(parents=True, exist_ok=True)
+            (self.queue_dir / "processing").mkdir(parents=True, exist_ok=True)
+            (self.queue_dir / "done").mkdir(parents=True, exist_ok=True)
+            self.delegates_dir.mkdir(parents=True, exist_ok=True)
+            (self.artifacts_dir / self.current_date).mkdir(parents=True, exist_ok=True)
+            
+            logger.info(f"Orchestrator initialized with artifacts_dir={artifacts_dir}")
+        except OSError as e:
+            logger.error(f"Failed to initialize Orchestrator: {e}")
+            raise
+
+    def poll_incoming_queue(self) -> List[Dict]:
+        """Poll incoming queue for new tasks.
+        
+        Returns:
+            List of task dictionaries from incoming queue.
+            Empty list if no tasks or on error.
+        """
+        incoming_dir = self.queue_dir / "incoming"
+        tasks = []
+        
+        try:
+            if not incoming_dir.exists():
+                logger.warning(f"Incoming queue directory does not exist: {incoming_dir}")
+                return tasks
+            
+            for task_file in sorted(incoming_dir.glob("*.yaml")):
+                try:
+                    with open(task_file, 'r') as f:
+                        task = yaml.safe_load(f)
+                        if task and isinstance(task, dict):
+                            tasks.append(task)
+                            logger.debug(f"Loaded task from {task_file.name}")
+                        else:
+                            logger.warning(f"Invalid task format in {task_file.name}")
+                except yaml.YAMLError as e:
+                    logger.error(f"YAML parse error in {task_file.name}: {e}")
+                except Exception as e:
+                    logger.error(f"Error reading task file {task_file.name}: {e}")
+            
+            if tasks:
+                logger.info(f"Poll incoming: found {len(tasks)} task(s)")
+            
+        except Exception as e:
+            logger.error(f"Error polling incoming queue: {e}")
+        
+        return tasks
+
+    def poll_processing_queue(self) -> List[Dict]:
+        """Poll processing queue for completed work (HANDBACKs).
+        
+        Returns:
+            List of HANDBACK dictionaries from processing queue.
+            Empty list if no handbacks or on error.
+        """
+        processing_dir = self.queue_dir / "processing"
+        handbacks = []
+        
+        try:
+            if not processing_dir.exists():
+                logger.warning(f"Processing queue directory does not exist: {processing_dir}")
+                return handbacks
+            
+            for handback_file in sorted(processing_dir.glob("*-HANDBACK-*.yaml")):
+                try:
+                    with open(handback_file, 'r') as f:
+                        handback = yaml.safe_load(f)
+                        if handback and isinstance(handback, dict):
+                            if handback.get('handoff_type') == 'HANDBACK':
+                                handbacks.append(handback)
+                                logger.debug(f"Loaded HANDBACK from {handback_file.name}")
+                            else:
+                                logger.warning(f"Invalid HANDBACK type in {handback_file.name}")
+                        else:
+                            logger.warning(f"Invalid HANDBACK format in {handback_file.name}")
+                except yaml.YAMLError as e:
+                    logger.error(f"YAML parse error in {handback_file.name}: {e}")
+                except Exception as e:
+                    logger.error(f"Error reading HANDBACK file {handback_file.name}: {e}")
+            
+            if handbacks:
+                logger.info(f"Poll processing: found {len(handbacks)} HANDBACK(s)")
+            
+        except Exception as e:
+            logger.error(f"Error polling processing queue: {e}")
+        
+        return handbacks
+
+    def poll_done_queue(self) -> List[Dict]:
+        """Poll done queue for human decisions.
+        
+        Returns:
+            List of decision dictionaries from done queue.
+            Empty list if no decisions or on error.
+        """
+        done_dir = self.queue_dir / "done"
+        decisions = []
+        
+        try:
+            if not done_dir.exists():
+                logger.warning(f"Done queue directory does not exist: {done_dir}")
+                return decisions
+            
+            for decision_pattern in ["*-PROCEED.yaml", "*-REWORK.yaml", "*-ESCALATE.yaml"]:
+                for decision_file in sorted(done_dir.glob(decision_pattern)):
+                    try:
+                        with open(decision_file, 'r') as f:
+                            decision = yaml.safe_load(f)
+                            if decision and isinstance(decision, dict):
+                                decisions.append(decision)
+                                logger.debug(f"Loaded decision from {decision_file.name}")
+                            else:
+                                logger.warning(f"Invalid decision format in {decision_file.name}")
+                    except yaml.YAMLError as e:
+                        logger.error(f"YAML parse error in {decision_file.name}: {e}")
+                    except Exception as e:
+                        logger.error(f"Error reading decision file {decision_file.name}: {e}")
+            
+            if decisions:
+                logger.info(f"Poll done: found {len(decisions)} decision(s)")
+            
+        except Exception as e:
+            logger.error(f"Error polling done queue: {e}")
+        
+        return decisions
+
+    def validate_delegate_format(self, delegate: Dict) -> bool:
+        """Validate DELEGATE format per HANDOFF.md spec.
+        
+        Args:
+            delegate: Dictionary to validate as DELEGATE block.
+            
+        Returns:
+            True if DELEGATE format is valid, False otherwise.
+        """
+        try:
+            if not isinstance(delegate, dict):
+                logger.warning(f"DELEGATE must be dict, got {type(delegate)}")
+                return False
+            
+            # Check required fields
+            required_fields = {
+                'handoff_type',
+                'task_id',
+                'role',
+                'model',
+                'effort',
+                'scope',
+                'context',
+                'plan',
+                'success_criteria'
+            }
+            
+            # Check handoff_type
+            if delegate.get('handoff_type') != 'DELEGATE':
+                logger.warning(f"Invalid handoff_type: {delegate.get('handoff_type')}")
+                return False
+            
+            # Check all required fields exist
+            missing_fields = required_fields - set(delegate.keys())
+            if missing_fields:
+                logger.warning(f"DELEGATE missing required fields: {missing_fields}")
+                return False
+            
+            # Validate role
+            if delegate['role'] not in self.VALID_ROLES:
+                logger.warning(f"Invalid role: {delegate['role']}")
+                return False
+            
+            # Validate model
+            if delegate['model'] not in self.VALID_MODELS:
+                logger.warning(f"Invalid model: {delegate['model']}")
+                return False
+            
+            # Validate effort
+            if delegate['effort'] not in self.VALID_EFFORTS:
+                logger.warning(f"Invalid effort: {delegate['effort']}")
+                return False
+            
+            # Validate task_id format (should be YYYY-MM-DD-slug)
+            task_id = delegate['task_id']
+            if not task_id or len(task_id) < 10:
+                logger.warning(f"Invalid task_id format: {task_id}")
+                return False
+            
+            logger.debug(f"DELEGATE format valid for task {task_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error validating DELEGATE format: {e}")
+            return False
+
+    def route_task(self, task: Dict) -> Dict:
+        """Route task to appropriate agent per AGENTS.md decision tree."""
+        scope = task.get('scope', '').lower()
+        task_type = task.get('type', '').lower()
+        description = task.get('description', '').lower()
+        
+        # 1. Security-scoped task
+        if 'security' in scope or task_type == 'security':
+            return {
+                "role": "Security Engineer",
+                "model": "claude-opus-4-7",
+                "effort": "max"
+            }
+        
+        # 2. Cross-service architecture
+        repos_affected = task.get('repos_affected', [])
+        if len(repos_affected) > 2 or 'cross-service' in scope or 'architecture' in description:
+            return {
+                "role": "Principal Engineer",
+                "model": "claude-opus-4-6",
+                "effort": "high"
+            }
+        
+        # 3. Complex coding without plan
+        complexity = task.get('complexity', '').lower()
+        has_plan = task.get('has_plan', False)
+        
+        if complexity == 'high' and not has_plan and 'review' not in task_type:
+            return {
+                "role": "Senior Engineer",
+                "model": "claude-sonnet-4-6",
+                "effort": "high"
+            }
+        
+        # 4. Code review
+        if task_type == 'code-review' or 'review' in description:
+            # Route to Quality Engineer for lighter reviews, Lead Engineer for critical
+            return {
+                "role": "Quality Engineer",
+                "model": "claude-sonnet-4-6",
+                "effort": "medium"
+            }
+        
+        # 5. Well-planned, low-medium complexity
+        if has_plan and complexity in ['low', 'medium']:
+            return {
+                "role": "Engineer",
+                "model": "claude-haiku-4-5",
+                "effort": "high"
+            }
+        
+        # Default to Lead Engineer for unknown cases
+        return {
+            "role": "Lead Engineer",
+            "model": "claude-sonnet-4-6",
+            "effort": "high"
+        }
+
+    def create_delegate(self, task: Dict, role: str, model: str, effort: str) -> Dict:
+        """Create DELEGATE block for task."""
+        task_id = task.get('task_id', '')
+        description = task.get('description', '')
+        plan = task.get('plan', [])
+        
+        delegate = {
+            "handoff_type": "DELEGATE",
+            "task_id": task_id,
+            "role": role,
+            "model": model,
+            "effort": effort,
+            "scope": description,
+            "context": task.get('context', []),
+            "plan": plan if isinstance(plan, list) else [plan],
+            "success_criteria": task.get('success_criteria', ["Task completed per specification"])
+        }
+        
+        return delegate
+
+    def move_task_to_processing(self, task_id: str) -> bool:
+        """Move task from incoming to processing queue."""
+        incoming_file = self.queue_dir / "incoming" / f"{task_id}.yaml"
+        
+        if incoming_file.exists():
+            try:
+                # Read task
+                with open(incoming_file, 'r') as f:
+                    task = yaml.safe_load(f)
+                
+                # Delete from incoming
+                incoming_file.unlink()
+                
+                return True
+            except Exception as e:
+                print(f"Error moving task to processing: {e}")
+                return False
+        
+        return False
+
+    def move_task_to_done(self, task_id: str, decision: str) -> bool:
+        """Move task from processing to done queue with decision."""
+        try:
+            # Delete HANDBACK files from processing
+            processing_dir = self.queue_dir / "processing"
+            for handback_file in processing_dir.glob(f"{task_id}-HANDBACK-*.yaml"):
+                handback_file.unlink()
+            
+            # Create decision file
+            decision_file = self.queue_dir / "done" / f"{task_id}-{decision}.yaml"
+            decision_data = {
+                "task_id": task_id,
+                "decision": decision,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            with open(decision_file, 'w') as f:
+                yaml.dump(decision_data, f)
+            
+            return True
+        except Exception as e:
+            print(f"Error moving task to done: {e}")
+            return False
+
+    def process_handback(self, handback: Dict) -> Dict:
+        """Process HANDBACK from agent."""
+        status = handback.get('status', 'unknown')
+        task_id = handback.get('task_id', '')
+        
+        if status == 'complete':
+            return {
+                "success": True,
+                "next_step": "quality-gate",
+                "task_id": task_id
+            }
+        elif status == 'blocked':
+            return {
+                "success": True,
+                "next_step": "escalate",
+                "task_id": task_id,
+                "blockers": handback.get('blockers', [])
+            }
+        elif status == 'partial':
+            return {
+                "success": True,
+                "next_step": "rework",
+                "task_id": task_id,
+                "deliverables": handback.get('deliverables', [])
+            }
+        else:
+            return {
+                "success": False,
+                "next_step": "error",
+                "task_id": task_id,
+                "error": f"Unknown HANDBACK status: {status}"
+            }
+
+    def capture_span(self, agent_role: str, handback: Dict) -> Path:
+        """Capture OpenTelemetry span from HANDBACK.
+        
+        Args:
+            agent_role: Role of the agent that completed work.
+            handback: HANDBACK dictionary with task results.
+            
+        Returns:
+            Path to written span file.
+            
+        Raises:
+            IOError: If span file cannot be written.
+        """
+        try:
+            task_id = handback.get('task_id', 'unknown')
+            tokens_in = handback.get('tokens_in', 0)
+            tokens_out = handback.get('tokens_out', 0)
+            model = handback.get('model', '')
+            duration_minutes = handback.get('duration_minutes', 0)
+            
+            # Validate inputs
+            if not isinstance(tokens_in, int) or tokens_in < 0:
+                logger.warning(f"Invalid tokens_in: {tokens_in}, using 0")
+                tokens_in = 0
+            if not isinstance(tokens_out, int) or tokens_out < 0:
+                logger.warning(f"Invalid tokens_out: {tokens_out}, using 0")
+                tokens_out = 0
+            
+            # Calculate cost
+            cost = self._calculate_token_cost(model, tokens_in, tokens_out)
+            
+            # Create span data
+            span_data = {
+                "span_type": "task_execution",
+                "task_id": task_id,
+                "agent_role": agent_role,
+                "model": model,
+                "agent_model": model,
+                "status": handback.get('status', 'unknown'),
+                "tokens_in": tokens_in,
+                "tokens_out": tokens_out,
+                "tokens_total": tokens_in + tokens_out,
+                "cost": round(cost, 6),
+                "duration_seconds": duration_minutes * 60,
+                "effort": handback.get('effort', ''),
+                "escalations": handback.get('escalations', 0),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Write span file
+            date_dir = self.artifacts_dir / self.current_date
+            date_dir.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
+            span_file = date_dir / f"SPAN-{timestamp}-{agent_role}.yaml"
+            
+            with open(span_file, 'w') as f:
+                yaml.dump(span_data, f)
+            
+            logger.info(f"Captured span for task {task_id} to {span_file.name}")
+            return span_file
+            
+        except IOError as e:
+            logger.error(f"Failed to write span file: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error capturing span: {e}")
+            raise
+
+    def _calculate_token_cost(self, model: str, tokens_in: int, tokens_out: int) -> float:
+        """Calculate cost from token counts."""
+        if model not in self.TOKEN_PRICING:
+            return 0.0
+        
+        pricing = self.TOKEN_PRICING[model]
+        cost_in = (tokens_in / 1_000_000) * pricing['input']
+        cost_out = (tokens_out / 1_000_000) * pricing['output']
+        
+        return cost_in + cost_out
+
+    def generate_artifact_index(self) -> Path:
+        """Generate searchable index.json from artifacts."""
+        index_data = {
+            "generated_at": datetime.now().isoformat(),
+            "artifacts": [],
+            "stats": {
+                "total_artifacts": 0,
+                "total_tokens": 0,
+                "total_cost": 0.0,
+                "by_agent": {},
+                "by_status": {}
+            }
+        }
+        
+        # Scan all date directories for artifacts
+        for date_dir in sorted(self.artifacts_dir.glob("20*")):
+            if not date_dir.is_dir():
+                continue
+            
+            # Scan for SPAN files
+            for span_file in sorted(date_dir.glob("SPAN-*.yaml")):
+                try:
+                    with open(span_file, 'r') as f:
+                        span_data = yaml.safe_load(f)
+                    
+                    if not span_data:
+                        continue
+                    
+                    artifact_entry = {
+                        "file": span_file.name,
+                        "file_type": "SPAN",
+                        "task_id": span_data.get('task_id'),
+                        "agent_role": span_data.get('agent_role'),
+                        "agent_model": span_data.get('agent_model'),
+                        "status": span_data.get('status'),
+                        "tokens_total": span_data.get('tokens_total', 0),
+                        "cost": span_data.get('cost', 0.0),
+                        "timestamp": span_data.get('timestamp')
+                    }
+                    
+                    index_data['artifacts'].append(artifact_entry)
+                    
+                    # Update statistics
+                    index_data['stats']['total_artifacts'] += 1
+                    index_data['stats']['total_tokens'] += span_data.get('tokens_total', 0)
+                    index_data['stats']['total_cost'] += span_data.get('cost', 0.0)
+                    
+                    # By agent stats
+                    agent = span_data.get('agent_role', 'unknown')
+                    if agent not in index_data['stats']['by_agent']:
+                        index_data['stats']['by_agent'][agent] = {
+                            "count": 0,
+                            "total_cost": 0.0,
+                            "total_tokens": 0
+                        }
+                    index_data['stats']['by_agent'][agent]['count'] += 1
+                    index_data['stats']['by_agent'][agent]['total_cost'] += span_data.get('cost', 0.0)
+                    index_data['stats']['by_agent'][agent]['total_tokens'] += span_data.get('tokens_total', 0)
+                    
+                    # By status stats
+                    status = span_data.get('status', 'unknown')
+                    if status not in index_data['stats']['by_status']:
+                        index_data['stats']['by_status'][status] = 0
+                    index_data['stats']['by_status'][status] += 1
+                    
+                except Exception as e:
+                    print(f"Error processing span file {span_file}: {e}")
+        
+        # Round costs for readability
+        index_data['stats']['total_cost'] = round(index_data['stats']['total_cost'], 6)
+        for agent_key in index_data['stats']['by_agent']:
+            index_data['stats']['by_agent'][agent_key]['total_cost'] = round(
+                index_data['stats']['by_agent'][agent_key]['total_cost'], 6
+            )
+        
+        # Write index file
+        index_file = self.artifacts_dir / "index.json"
+        with open(index_file, 'w') as f:
+            json.dump(index_data, f, indent=2)
+        
+        return index_file
+
+    def run_poll_cycle(self) -> Dict:
+        """Run one complete poll cycle.
+        
+        Polls all three queues (incoming, processing, done) and generates
+        artifact index. Captures detailed metrics for observability.
+        
+        Returns:
+            Dictionary with poll cycle results and metrics.
+        """
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "incoming_tasks": 0,
+            "handbacks_processed": 0,
+            "decisions_processed": 0,
+            "errors": []
+        }
+        
+        try:
+            logger.info("Starting poll cycle")
+            
+            # Poll incoming
+            try:
+                incoming_tasks = self.poll_incoming_queue()
+                results['incoming_tasks'] = len(incoming_tasks)
+            except Exception as e:
+                logger.error(f"Error polling incoming queue: {e}")
+                results['errors'].append(f"incoming: {str(e)}")
+            
+            # Poll processing (handbacks)
+            try:
+                handbacks = self.poll_processing_queue()
+                results['handbacks_processed'] = len(handbacks)
+            except Exception as e:
+                logger.error(f"Error polling processing queue: {e}")
+                results['errors'].append(f"processing: {str(e)}")
+            
+            # Poll done (decisions)
+            try:
+                decisions = self.poll_done_queue()
+                results['decisions_processed'] = len(decisions)
+            except Exception as e:
+                logger.error(f"Error polling done queue: {e}")
+                results['errors'].append(f"done: {str(e)}")
+            
+            # Generate index
+            try:
+                self.generate_artifact_index()
+                logger.info("Generated artifact index")
+            except Exception as e:
+                logger.error(f"Error generating artifact index: {e}")
+                results['errors'].append(f"index: {str(e)}")
+            
+            # Summary
+            total_processed = results['incoming_tasks'] + results['handbacks_processed'] + results['decisions_processed']
+            if total_processed > 0:
+                logger.info(f"Poll cycle complete: {results['incoming_tasks']} incoming, "
+                           f"{results['handbacks_processed']} handbacks, {results['decisions_processed']} decisions")
+            
+        except Exception as e:
+            logger.error(f"Unexpected error in poll cycle: {e}")
+            results['errors'].append(f"unexpected: {str(e)}")
+        
+        return results
