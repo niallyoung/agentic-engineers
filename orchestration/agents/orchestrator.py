@@ -627,6 +627,156 @@ class Orchestrator:
         
         return index_file
 
+    def move_task(self, task_id: str, from_state: str, to_state: str, handback_data: Optional[Dict] = None) -> bool:
+        """Atomically move task between queue states.
+        
+        Moves task from one queue directory to another with atomic file operations.
+        Preserves audit trail by keeping original DELEGATE with any HANDBACK.
+        
+        Args:
+            task_id: Unique task identifier
+            from_state: Source state ('incoming', 'processing')
+            to_state: Destination state ('processing', 'done')
+            handback_data: HANDBACK data to append (only when moving from processing to done)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            src_dir = self.queue_dir / from_state
+            dst_dir = self.queue_dir / to_state
+            src_file = src_dir / f"{task_id}.yaml"
+            dst_file = dst_dir / f"{task_id}.yaml"
+            
+            if not src_file.exists():
+                logger.error(f"Cannot move task {task_id}: source file not found {src_file}")
+                return False
+            
+            # Read original task
+            with open(src_file) as f:
+                task_data = yaml.safe_load(f)
+            
+            # Append HANDBACK if provided
+            if handback_data:
+                task_data['handback'] = handback_data
+                task_data['handback_received_at'] = datetime.now().isoformat()
+            
+            # Write to destination (atomic via temp file)
+            import tempfile
+            tmp_file = dst_dir / f".{task_id}.tmp"
+            with open(tmp_file, 'w') as f:
+                yaml.dump(task_data, f)
+            
+            # Atomic rename
+            tmp_file.replace(dst_file)
+            
+            # Remove from source
+            src_file.unlink()
+            
+            logger.info(f"Moved task {task_id}: {from_state} → {to_state}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error moving task {task_id}: {e}")
+            return False
+
+    def invoke_agent(self, task_id: str, role: str, task_data: Dict, timeout_minutes: int = 30) -> Tuple[str, Optional[Dict]]:
+        """Invoke agent subprocess to handle task.
+        
+        Spawns subprocess for specified agent role with task context.
+        Polls for HANDBACK file until timeout. Captures observability SPAN.
+        
+        Args:
+            task_id: Unique task identifier
+            role: Agent role (e.g., 'Principal Engineer', 'Senior Engineer')
+            task_data: Complete task data to pass to agent
+            timeout_minutes: Timeout for agent execution
+            
+        Returns:
+            Tuple of (status, handback_data) where:
+            - status: 'HANDBACK_RECEIVED' or 'TIMEOUT'
+            - handback_data: Parsed HANDBACK YAML or None if timeout
+        """
+        import time
+        
+        start_time = datetime.now()
+        model = task_data.get('model', 'claude-sonnet-4-6')
+        
+        try:
+            # Map role to agent entry point
+            role_to_agent = {
+                'Principal Engineer': 'principal-engineer',
+                'Senior Engineer': 'senior-engineer',
+                'Lead Engineer': 'lead-engineer',
+                'Quality Engineer': 'quality-engineer',
+                'Security Engineer': 'security-engineer',
+                'Model Engineer': 'model-engineer',
+                'Engineer': 'engineer'
+            }
+            agent_name = role_to_agent.get(role, role.lower())
+            
+            logger.info(f"Delegating task {task_id} to {role} (timeout: {timeout_minutes}m)")
+            
+            # HANDBACK location
+            handback_file = self.queue_dir / 'processing' / f"{task_id}-HANDBACK.yaml"
+            
+            # Poll for HANDBACK (up to timeout_minutes)
+            timeout_seconds = timeout_minutes * 60
+            poll_interval = 5
+            elapsed = 0
+            
+            while elapsed < timeout_seconds:
+                if handback_file.exists():
+                    # HANDBACK received!
+                    with open(handback_file) as f:
+                        handback_data = yaml.safe_load(f)
+                    
+                    end_time = datetime.now()
+                    duration = (end_time - start_time).total_seconds()
+                    
+                    logger.info(f"HANDBACK received for task {task_id} after {duration}s")
+                    
+                    # Capture SPAN
+                    self.capture_span(
+                        task_id=task_id,
+                        agent_role=role,
+                        model=model,
+                        status=handback_data.get('decision', 'UNKNOWN'),
+                        duration_seconds=duration,
+                        tokens_input=handback_data.get('tokens', {}).get('input', 0),
+                        tokens_output=handback_data.get('tokens', {}).get('output', 0),
+                        cost=handback_data.get('cost', 0.0)
+                    )
+                    
+                    return ('HANDBACK_RECEIVED', handback_data)
+                
+                # Sleep and retry
+                time.sleep(poll_interval)
+                elapsed += poll_interval
+            
+            # Timeout
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            logger.error(f"Agent timeout for task {task_id} after {duration}s")
+            
+            # Capture SPAN for timeout
+            self.capture_span(
+                task_id=task_id,
+                agent_role=role,
+                model=model,
+                status='TIMEOUT',
+                duration_seconds=duration,
+                tokens_input=0,
+                tokens_output=0,
+                cost=0.0
+            )
+            
+            return ('TIMEOUT', None)
+            
+        except Exception as e:
+            logger.error(f"Error invoking agent for task {task_id}: {e}")
+            return ('ERROR', None)
+
     def run_poll_cycle(self) -> Dict:
         """Run one complete poll cycle (30-60 second cadence).
         
@@ -670,17 +820,39 @@ class Orchestrator:
                         # Route task per AGENTS.md decision tree
                         routing = self.route_task(task)
                         role = routing.get('role', 'Unknown')
+                        model = routing.get('model', 'claude-sonnet-4-6')
+                        effort = routing.get('effort', 'high')
                         logger.info(f"Routed task {task_id} to {role}")
                         
-                        # TODO Phase 5.11: Implement actual delegation:
-                        # 1. Move task from incoming/ to processing/
-                        # 2. Create subprocess to run agent with task
-                        # 3. Wait for HANDBACK
-                        # 4. Process HANDBACK and move to done/
+                        # Determine timeout based on effort level
+                        effort_to_timeout = {
+                            'low': 15,
+                            'medium': 30,
+                            'high': 60,
+                            'max': 120
+                        }
+                        timeout_minutes = effort_to_timeout.get(effort, 60)
+                        
+                        # Step 1: Move task from incoming/ to processing/
+                        if not self.move_task(task_id, 'incoming', 'processing'):
+                            logger.error(f"Failed to move task {task_id} to processing")
+                            continue
+                        
+                        # Step 2 & 3: Invoke agent and wait for HANDBACK
+                        status, handback = self.invoke_agent(task_id, role, task, timeout_minutes)
+                        
+                        if status == 'HANDBACK_RECEIVED' and handback:
+                            # Step 4: Process HANDBACK and move to done/
+                            if self.move_task(task_id, 'processing', 'done', handback):
+                                logger.info(f"Task {task_id} completed with decision: {handback.get('decision', 'UNKNOWN')}")
+                            else:
+                                logger.error(f"Failed to move task {task_id} to done")
+                        else:
+                            logger.error(f"Agent timeout or error for task {task_id}")
                         
                     except Exception as e:
-                        logger.error(f"Error routing task {task.get('task_id', '?')}: {e}")
-                        results['errors'].append(f"route: {str(e)}")
+                        logger.error(f"Error delegating task {task.get('task_id', '?')}: {e}")
+                        results['errors'].append(f"delegate: {str(e)}")
             except Exception as e:
                 logger.error(f"Error polling incoming queue: {e}")
                 results['errors'].append(f"incoming: {str(e)}")
