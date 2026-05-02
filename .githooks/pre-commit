@@ -1,0 +1,23 @@
+#!/bin/bash
+# Pre-commit hook: prevent external script bypass paths
+# This hook blocks commits that contain scripts violating SPEC constraints
+
+set -e
+
+# Check for .py or .sh files in orchestration/scripts/
+if find orchestration/scripts -type f \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | grep -q . ; then
+  echo "❌ VIOLATION: External scripts found in orchestration/scripts/"
+  echo "All work must flow through DELEGATE/HANDBACK protocol"
+  echo "See docs/SPEC.md for details"
+  exit 1
+fi
+
+# Check for .cron files in orchestration/config/
+if find orchestration/config -name "*.cron" -type f 2>/dev/null | grep -q . ; then
+  echo "❌ VIOLATION: Cron files found in orchestration/config/"
+  echo "Use queue-based delegation instead"
+  echo "See docs/SPEC.md for details"
+  exit 1
+fi
+
+exit 0

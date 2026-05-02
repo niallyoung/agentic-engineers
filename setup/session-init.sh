@@ -42,7 +42,20 @@ if [ -f "$AGENTIC_ENGINEERS_ROOT/skills/usage-tracking/SESSION-INIT.sh" ]; then
     bash "$AGENTIC_ENGINEERS_ROOT/skills/usage-tracking/SESSION-INIT.sh"
 fi
 
-# 3. Verify framework readiness
+# 3. Install git hooks
+#    This ensures pre-commit and pre-push hooks are active
+if [ -d "$AGENTIC_ENGINEERS_ROOT/.githooks" ]; then
+    for hook in "$AGENTIC_ENGINEERS_ROOT"/.githooks/*; do
+        if [ -f "$hook" ]; then
+            git -C "$AGENTIC_ENGINEERS_ROOT" config core.hooksPath .githooks
+            if [ ! -x "$hook" ]; then
+                chmod +x "$hook"
+            fi
+        fi
+    done
+fi
+
+# 4. Verify framework readiness
 if [ ! -d "$AGENTIC_ENGINEERS_ROOT/orchestration" ] || \
    [ ! -d "$AGENTIC_ENGINEERS_ROOT/skills" ] || \
    [ ! -f "$AGENTIC_ENGINEERS_ROOT/MANIFEST.md" ]; then
