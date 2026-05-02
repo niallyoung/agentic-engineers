@@ -1,7 +1,7 @@
 ---
 name: Spec Engineer Orchestrator
 description: Specialized orchestrator that combines spec validation with task routing. Validates code meets specifications while delegating work to appropriate agents.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Spec Engineer Orchestrator Agent

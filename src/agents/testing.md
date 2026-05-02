@@ -1,7 +1,7 @@
 ---
 name: Testing
 description: Executes tests, validates test quality, and reports coverage. Runs test suites, analyzes failures, and ensures adequate test coverage for code changes.
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 ---
 
 # Testing Agent

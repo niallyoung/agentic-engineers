@@ -1,7 +1,7 @@
 ---
 name: Quality Engineer
 description: Manages testing strategy, quality metrics, and test automation. Ensures tests are comprehensive, maintains coverage thresholds, and improves test quality.
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Quality Engineer Agent

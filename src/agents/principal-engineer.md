@@ -1,7 +1,7 @@
 ---
 name: Principal Engineer
 description: Handles organization-wide architecture, strategy, and high-stakes technical decisions. Designs systems, mentors senior engineers, defines best practices.
-model: claude-opus-4-7
+model: claude-opus-4.7
 ---
 
 # Principal Engineer Agent
