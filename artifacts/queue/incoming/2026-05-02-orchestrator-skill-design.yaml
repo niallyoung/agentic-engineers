@@ -1,0 +1,34 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-02-orchestrator-skill-design
+role: Senior Engineer
+model: claude-sonnet-4-6
+effort: high
+scope: |
+  Design the Orchestrator SKILL specification in orchestration/SKILLS.md.
+  Document what Orchestrator agent does as a SKILL (not implementation details).
+  This is the specification for how an agent implements orchestrator responsibilities.
+context:
+  - SKILLS.md template: orchestration/SKILLS.md (other roles documented there)
+  - QUEUE-PROTOCOL.md: orchestration/QUEUE-PROTOCOL.md (queue mechanics)
+  - AGENTS.md: orchestration/AGENTS.md (routing rules)
+  - Phase 5.10 Orchestrator work was demonstrated in practice
+plan:
+  - 1. Read orchestration/SKILLS.md to understand format for other roles
+  - 2. Create "Orchestrator" section in SKILLS.md with:
+       - SKILL: Queue polling (what triggers work, what signals completion)
+       - SKILL: DELEGATE validation (per docs/SPEC.md format)
+       - SKILL: Routing decision tree (apply AGENTS.md rules)
+       - SKILL: Agent delegation (invoke appropriate agent)
+       - SKILL: HANDBACK processing (capture observability, update queue state)
+       - SKILL: Span capture (OpenTelemetry format per Phase 5.10)
+       - SKILL: Index generation (artifacts/index.json after queue empty)
+  - 3. Document expected behavior, success criteria, error handling
+  - 4. Note: Implementation details (Python, shell, etc) are ENGINEER work, not spec
+  - 5. Commit: "docs: add Orchestrator SKILL specification to orchestration/SKILLS.md"
+success_criteria:
+  - Orchestrator section added to orchestration/SKILLS.md
+  - All SKILLs (queue polling, delegation, HANDBACK, span capture, indexing) documented
+  - Specification is implementation-agnostic (WHAT to do, not HOW to do it)
+  - Engineers can implement Orchestrator per this SKILL spec
+---
