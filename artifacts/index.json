@@ -1,104 +1,11 @@
 {
-  "generated_at": "2026-05-02T10:30:00Z",
-  "generator": "Orchestrator Agent",
-  "summary": {
-    "total_delegates": 2,
-    "total_handbacks": 2,
-    "total_spans": 2,
-    "total_cost_usd": 1.21,
-    "total_tokens": 27000,
-    "average_quality_score": 96.5,
-    "completed_tasks": 2,
-    "pending_tasks": 0
-  },
-  "by_date": {
-    "2026-05-02": {
-      "span_files": [
-        "SPAN-20260502-100000-senior-engineer.yaml",
-        "SPAN-20260502-100200-lead-engineer.yaml"
-      ],
-      "task_count": 2,
-      "status": "complete",
-      "cost_usd": 1.21
-    }
-  },
-  "by_task_id": {
-    "2026-05-02-spec-extract-current-impl": {
-      "agent_type": "senior-engineer",
-      "agent_role": "Senior Engineer",
-      "model": "claude-sonnet-4-6",
-      "status": "complete",
-      "duration_minutes": 12,
-      "cost_usd": 0.57,
-      "tokens": 12700,
-      "quality_score": 98,
-      "deliverables": [
-        "docs/SPEC.md (623 lines, 23KB)"
-      ],
-      "span_file": "artifacts/2026-05-02/SPAN-20260502-100000-senior-engineer.yaml",
-      "handback_file": "artifacts/queue/done/2026-05-02-spec-extract-current-impl-HANDBACK.yaml"
-    },
-    "2026-05-02-spec-validate-impl": {
-      "agent_type": "lead-engineer",
-      "agent_role": "Lead Engineer",
-      "model": "claude-sonnet-4-6",
-      "status": "complete",
-      "duration_minutes": 11,
-      "cost_usd": 0.64,
-      "tokens": 14300,
-      "quality_score": 95,
-      "deliverables": [
-        "artifacts/spec-validation-report.md (24.5KB)"
-      ],
-      "span_file": "artifacts/2026-05-02/SPAN-20260502-100200-lead-engineer.yaml",
-      "handback_file": "artifacts/queue/done/2026-05-02-spec-validate-impl-HANDBACK.yaml"
-    }
-  },
-  "by_agent_type": {
-    "senior-engineer": {
-      "count": 1,
-      "avg_tokens": 12700,
-      "avg_duration_minutes": 12,
-      "avg_cost_usd": 0.57,
-      "avg_quality_score": 98
-    },
-    "lead-engineer": {
-      "count": 1,
-      "avg_tokens": 14300,
-      "avg_duration_minutes": 11,
-      "avg_cost_usd": 0.64,
-      "avg_quality_score": 95
-    }
-  },
-  "by_status": {
-    "complete": {
-      "count": 2,
-      "tasks": [
-        "2026-05-02-spec-extract-current-impl",
-        "2026-05-02-spec-validate-impl"
-      ]
-    }
-  },
-  "metrics": {
-    "total_cost_usd": 1.21,
-    "total_tokens_in": 17700,
-    "total_tokens_out": 9300,
-    "total_duration_minutes": 23,
-    "cost_per_token": 0.0000448,
-    "tokens_per_minute": 1173.91,
-    "quality_compliance": 0.965
-  },
-  "observations": [
-    "Phase 5.10 implementation successfully documented in updated SPEC.md",
-    "Validation report confirms 92% specification compliance",
-    "Both tasks completed on schedule with high quality scores (95-98)",
-    "Total span capture and indexing workflow operational",
-    "Queue-based delegation protocol functioning as specified"
-  ],
-  "next_steps": [
-    "Phase 6: Implement span capture in Orchestrator code",
-    "Phase 6: Enable artifact indexing in Model Engineer code",
-    "Monitor span data for cost trends and routing improvements",
-    "Validate Phase 5.10 observability with real task data (2-3 weeks)"
-  ]
+  "generated_at": "2026-05-02T14:07:38.261962",
+  "artifacts": [],
+  "stats": {
+    "total_artifacts": 0,
+    "total_tokens": 0,
+    "total_cost": 0.0,
+    "by_agent": {},
+    "by_status": {}
+  }
 }
