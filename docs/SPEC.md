@@ -92,22 +92,60 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 
 ### What NOT to Do
 
-**PROHIBITED ACTIVITIES:**
+**PROHIBITED ACTIVITIES (NO EXCEPTIONS, EVER):**
 
 - ❌ Do NOT write Python scripts that manage queues, capture spans, or generate indexes
 - ❌ Do NOT add Makefile targets for Orchestrator operations
-- ❌ Do NOT create shell scripts for queue automation
+- ❌ Do NOT create shell scripts for queue automation, task processing, or external invocation
 - ❌ Do NOT set up cron jobs for any system operations
+- ❌ Do NOT invoke subprocess, os.system(), or exec() in agent code
 - ❌ Do NOT invoke agents directly without going through Orchestrator queue
 - ❌ Do NOT create manual DELEGATE blocks and send them to agents
 - ❌ Do NOT skip quality checks or escalation rules
 - ❌ Do NOT implement observability outside of agent SKILLS
+- ❌ Do NOT use "trivial fixes" or other undefined escape clauses to bypass queue
+- ❌ Do NOT allow CI/CD or external systems to invoke scripts directly
+- ❌ Do NOT create automated cron job installers or pre-configured cron jobs
 
 **Why This Constraint Exists:**
 The queue-first model ensures all work is tracked, routable, optimizable, and auditable. External scripts and manual invocations create gaps in observability, break routing logic, and prevent the system from improving itself through the feedback loop. By making Orchestrator the single point of control, we guarantee:
 - ✅ Complete audit trail of all work
 - ✅ Correct routing via decision tree
 - ✅ Accurate cost tracking via span capture
+
+---
+
+## DEPRECATION NOTICE: Removed External Scripts & Cron Jobs
+
+**Effective 2026-05-02:** The following files have been removed and MUST NOT be recreated:
+
+**Orchestration Scripts (REMOVED):**
+- `orchestration/scripts/process-log-queue.sh`
+- `orchestration/scripts/capture_token_usage.sh`
+- `orchestration/scripts/manage-credentials.sh`
+- `orchestration/scripts/setup-msmtp.sh`
+- `orchestration/scripts/send-alert-email.sh`
+- `orchestration/scripts/usage-tracking.sh`
+- `orchestration/scripts/usage-budget.sh`
+- `orchestration/install-automation.sh`
+
+**Cron Job Definitions (REMOVED):**
+- `orchestration/config/queue-processor.cron`
+- `orchestration/config/metrics-etl.cron`
+- `orchestration/config/tokenadvisor.cron`
+- `orchestration/config/model-engineer.cron`
+- `orchestration/config/ab-testing-monitor.cron`
+- `orchestration/config/daily-email-summary.cron`
+
+**Reason:** These files violated the ORCHESTRATOR-FIRST EXECUTION MODEL (MANDATORY) constraint. All logic must flow through AGENTS with SKILLS via DELEGATE/HANDBACK protocol.
+
+**If you need the functionality these scripts provided:**
+1. Implement the logic as an Agent SKILL
+2. Queue work as a DELEGATE block in `artifacts/queue/incoming/`
+3. Let Orchestrator route and delegate to the appropriate agent
+4. Agent executes and returns HANDBACK
+
+This is the ONLY allowed entry point for all work.
 - ✅ Autonomous optimization via Model Engineer feedback
 - ✅ No bypasses or edge cases
 
