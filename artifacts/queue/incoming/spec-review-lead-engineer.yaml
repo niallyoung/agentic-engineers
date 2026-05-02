@@ -1,0 +1,44 @@
+---
+handoff_type: DELEGATE
+task_id: spec-review-lead-engineer-2026-05-02
+role: Lead Engineer
+model: claude-sonnet-4-6
+effort: high
+scope: |
+  CRITICAL: Review docs/SPEC.md to confirm that NO EXTERNAL SCRIPTS can EVER be created or used.
+  
+  Verify:
+  1. SPEC explicitly forbids: Python scripts, shell scripts, Makefile targets, cron jobs
+  2. SPEC enforces: ALL work flows through Orchestrator queue (AGENTS.md + SKILLS.md)
+  3. SPEC has clear "What NOT to Do" section with prohibited activities
+  4. SPEC documents no exceptions, no workarounds, no escapes
+  
+  Find any loopholes or ambiguities that could allow external scripts to be created in the future.
+
+context:
+  - File: /home/user/agentic-engineers/docs/SPEC.md (714 lines)
+  - Focus: Lines 25-100 (ORCHESTRATOR-FIRST EXECUTION MODEL section)
+  - Look for: Any phrase that could be interpreted as allowing external tools
+  - Constraint source: User mandate - "NO EXTERNAL SCRIPTS WILL BE CREATED OR USED, EVER!"
+  
+plan:
+  - 1. Read docs/SPEC.md carefully (all 714 lines)
+  - 2. Check section: "No External Scripts, Tools, or Cron Jobs" (lines 51-57)
+  - 3. Check section: "What NOT to Do" (lines 93-100+)
+  - 4. Verify all enforcement mechanisms are clear and unambiguous
+  - 5. Find any loopholes that could allow bypassing the constraint
+  - 6. If loopholes found: suggest specific wording changes to close them
+  - 7. Return HANDBACK with:
+       - status: pass (if SPEC is airtight) OR blocked (if loopholes found)
+       - violations: list any loopholes or ambiguities
+       - recommendations: specific text to add/change if needed
+       - confidence: 0.0-1.0 on whether SPEC prevents external scripts forever
+
+success_criteria:
+  - SPEC reviewed line-by-line
+  - NO loopholes found in prohibition of external scripts
+  - SPEC is crystal clear: AGENTS.md + SKILLS.md ONLY, NO EXCEPTIONS
+  - Any ambiguities documented with remediation suggestions
+  - HANDBACK includes explicit confirmation: "SPEC prevents external scripts" (YES/NO)
+
+---

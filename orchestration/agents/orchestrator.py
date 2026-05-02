@@ -83,18 +83,33 @@ class Orchestrator:
         "claude-opus-4-7": {"input": 15.0, "output": 75.0},
     }
 
-    def __init__(self, artifacts_dir: str = "artifacts"):
-        """Initialize Orchestrator with artifacts directory.
+    def __init__(self, artifacts_dir: str = "artifacts", queue_dir: Optional[str] = None):
+        """Initialize Orchestrator with artifacts and queue directories.
         
         Args:
-            artifacts_dir: Root directory for all artifacts and queues.
+            artifacts_dir: Root directory for artifacts (spans, indexes). Defaults to "artifacts" (git repo).
+            queue_dir: Root directory for queue (incoming, processing, done). 
+                      Defaults to ~/.copilot/queue/ for production runtime.
+                      Set to artifacts_dir/queue for testing.
             
         Raises:
-            OSError: If artifacts directory cannot be created.
+            OSError: If directories cannot be created.
         """
         try:
             self.artifacts_dir = Path(artifacts_dir)
-            self.queue_dir = self.artifacts_dir / "queue"
+            
+            # Queue location: ~/.copilot/queue/ for production, or override for testing
+            if queue_dir:
+                self.queue_dir = Path(queue_dir)
+            else:
+                # Production: use ~/.copilot/queue/ (actual runtime queue)
+                home_queue = Path.home() / ".copilot" / "queue"
+                if home_queue.exists():
+                    self.queue_dir = home_queue
+                else:
+                    # Fallback: create in artifacts/ for initial setup
+                    self.queue_dir = self.artifacts_dir / "queue"
+            
             self.delegates_dir = self.artifacts_dir / "delegates"
             self.current_date = datetime.now().strftime("%Y-%m-%d")
             
