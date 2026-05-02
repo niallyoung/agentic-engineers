@@ -1,0 +1,47 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-02-implement-orchestrator-tdd
+role: Engineer
+model: claude-haiku-4-5
+effort: high
+scope: |
+  Implement Orchestrator agent functionality per SKILLS.md specification.
+  Use RED-GREEN TDD: write tests first, then implement, then refactor.
+  NO external scripts - all work is AGENTS with SKILLS.
+context:
+  - Spec source: orchestration/SKILLS.md (Orchestrator section, added by prior task)
+  - Queue protocol: orchestration/QUEUE-PROTOCOL.md
+  - Agent routing: orchestration/AGENTS.md
+  - Reference: Phase 5.10 Orchestrator execution (already demonstrated)
+  - ENTRYPOINT.md: workflow examples
+plan:
+  - 1. RED: Write tests for Orchestrator SKILL
+       - Test: Poll incoming queue, find DELEGATE blocks
+       - Test: Validate DELEGATE format (per docs/SPEC.md)
+       - Test: Route task to correct agent per AGENTS.md
+       - Test: Delegate task to agent
+       - Test: Receive and process HANDBACK
+       - Test: Move tasks through queue states (incoming → processing → done)
+       - Test: Capture span data (task_id, model, tokens, cost, duration)
+       - Test: Generate index.json from artifacts
+  - 2. GREEN: Implement per tests (make tests pass)
+       - Queue polling mechanism (check incoming/ every 30-60s)
+       - DELEGATE validation
+       - Agent routing per AGENTS.md
+       - HANDBACK reception & processing
+       - Queue state transitions
+       - Span capture (OpenTelemetry format)
+       - Index generation (searchable by file_type, task_id, agent_type)
+  - 3. REFACTOR: Clean up error handling, logging, observability
+  - 4. Run: make verify (ensure tests pass, no SPEC violations)
+  - 5. Commit with proper message
+success_criteria:
+  - All tests written and passing
+  - Orchestrator polls queue every 30-60 seconds
+  - Routing per AGENTS.md decision tree works
+  - HANDBACK processing works (queue state updates correctly)
+  - Span files created: artifacts/2026-MM-DD/SPAN-*.yaml
+  - Index generated: artifacts/index.json (with searchable structure)
+  - No external scripts or tools used
+  - make verify passes
+---
