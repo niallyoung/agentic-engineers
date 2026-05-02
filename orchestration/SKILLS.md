@@ -4,6 +4,60 @@ Role-specific execution details. Complements AGENTS.md (who, when, routing) and 
 
 ---
 
+## Validation & Error Handling Patterns
+
+All agent implementations MUST follow these validation and error handling patterns:
+
+### Input Validation
+1. **DELEGATE Block Validation:**
+   - Check all mandatory fields present: task_id, role, scope, success_criteria
+   - Validate task_id format matches queue naming conventions
+   - Ensure role matches agent's authorized role
+   - Verify plan exists (except for Senior Engineer planning tasks)
+   - Reject task with `status: blocked` if critical fields missing
+
+2. **Scope & Plan Validation:**
+   - Confirm scope is achievable within effort level and time constraints
+   - Verify plan aligns with scope and success criteria
+   - Flag any scope creep or contradictions immediately
+   - Request clarification before proceeding if ambiguous
+
+### Error Handling
+1. **Recoverable Errors** (request clarification, retry):
+   - Missing or unclear success criteria → Request DELEGATE modification
+   - Conflicting plan steps → Request clarification in HANDBACK comment
+   - Dependency not met → Report `status: blocked` with reason
+   
+2. **Critical Errors** (escalate to Lead Engineer):
+   - Architectural conflicts discovered during execution
+   - Security concerns or policy violations
+   - Resource limits exceeded (time, tokens, disk space)
+   - Third-party service failures (if any external calls attempted)
+
+3. **HANDBACK Error Format:**
+   ```yaml
+   status: blocked | error
+   decision: ESCALATE
+   severity: low | medium | high | critical
+   error_message: "Clear description of what went wrong"
+   remediation: "Suggested next steps for resolution"
+   ```
+
+### Quality Validation
+1. **Code Quality Checklist:**
+   - Run linters specified in repo (before committing)
+   - Verify all tests pass (new + existing)
+   - Confirm no sensitive data in logs or deliverables
+   - Check documentation updated if applicable
+
+2. **Deliverable Validation:**
+   - All changes committed with descriptive messages
+   - No temporary files or debug code left behind
+   - Success criteria objectively verified
+   - Token usage and metrics captured for Model Engineer feedback
+
+---
+
 ## Engineer
 
 **Model:** claude-haiku-4-5 (high effort)  
