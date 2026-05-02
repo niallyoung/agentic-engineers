@@ -1,0 +1,59 @@
+---
+handoff_type: DELEGATE
+task_id: src-review-principal-engineer-2026-05-02
+role: Principal Engineer
+model: claude-opus-4-6
+effort: high
+scope: |
+  CRITICAL: Review src/*, orchestration/*, config/ to confirm that NO EXTERNAL SCRIPTS exist now
+  or can be created in the future.
+  
+  Verify:
+  1. NO Python scripts that invoke external tools or system commands
+  2. NO shell scripts (scripts/ directory should be empty or not exist)
+  3. NO Makefile targets that bypass Orchestrator queue
+  4. NO cron job definitions or scheduling logic
+  5. ALL logic is in orchestration/agents/*.py (Agent SKILLs)
+  6. Orchestrator.py implements AGENTS.md routing + DELEGATE/HANDBACK protocol
+  7. Engineer.py, Senior Engineer.py, etc. only accept DELEGATE blocks
+  8. NO direct agent invocation, NO manual DELEGATE creation, NO system() calls
+  
+  Find any architectural patterns or code structures that could allow external scripts.
+
+context:
+  - Directories to review:
+    - orchestration/agents/ (Agent implementations)
+    - orchestration/ (AGENTS.md, SKILLS.md, QUEUE-PROTOCOL.md)
+    - config/ (configuration files)
+    - dist/ (rendered artifacts - should not contain scripts)
+  - Files to check:
+    - Makefile (should not invoke external scripts)
+    - Any .py, .sh, .yaml files in root or src/
+  - Constraint: User mandate - "AGENTS.md with SKILLS.md is our workflow implementation"
+  
+plan:
+  - 1. grep -r "bash\|shell\|system\|exec\|subprocess" orchestration/ config/ Makefile
+  - 2. Find all .py files and check for os.system(), subprocess, bash invocations
+  - 3. Verify Makefile has NO bash/sh/python invocations of scripts/
+  - 4. Check if scripts/ directory exists (it shouldn't)
+  - 5. Verify all agent implementations follow DELEGATE/HANDBACK pattern
+  - 6. Confirm Orchestrator.py implements queue polling + routing
+  - 7. Check orchestration/AGENTS.md and SKILLS.md are complete
+  - 8. Find any architectural loopholes that could enable external scripts
+  - 9. Return HANDBACK with:
+       - status: pass (if architecture prevents external scripts) OR blocked (if loopholes found)
+       - violations: any found code that could enable external scripts
+       - recommendations: specific changes to close loopholes
+       - confidence: 0.0-1.0 on whether architecture prevents external scripts forever
+
+success_criteria:
+  - All code reviewed for external script invocations
+  - NO Python scripts exist that invoke system commands
+  - NO shell scripts exist
+  - NO Makefile targets bypass Orchestrator
+  - Orchestrator implements queue polling + routing
+  - All agents only accept DELEGATE blocks
+  - Any loopholes documented with remediation
+  - HANDBACK includes explicit confirmation: "Architecture prevents external scripts" (YES/NO)
+
+---

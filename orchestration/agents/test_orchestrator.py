@@ -57,7 +57,7 @@ class TestOrchestratorQueuePolling(unittest.TestCase):
         
         # Poll should find this task
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         tasks = orch.poll_incoming_queue()
         
         self.assertEqual(len(tasks), 1)
@@ -67,7 +67,7 @@ class TestOrchestratorQueuePolling(unittest.TestCase):
     def test_poll_incoming_queue_empty(self):
         """Test: Poll incoming queue when empty."""
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         tasks = orch.poll_incoming_queue()
         
         self.assertEqual(len(tasks), 0)
@@ -86,7 +86,7 @@ class TestOrchestratorQueuePolling(unittest.TestCase):
                 yaml.dump(task_data, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         tasks = orch.poll_incoming_queue()
         
         self.assertEqual(len(tasks), 3)
@@ -111,7 +111,7 @@ class TestOrchestratorQueuePolling(unittest.TestCase):
             yaml.dump(handback_data, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         handbacks = orch.poll_processing_queue()
         
         self.assertEqual(len(handbacks), 1)
@@ -131,7 +131,7 @@ class TestOrchestratorQueuePolling(unittest.TestCase):
             yaml.dump(decision_data, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         decisions = orch.poll_done_queue()
         
         self.assertEqual(len(decisions), 1)
@@ -145,6 +145,10 @@ class TestDELEGATEValidation(unittest.TestCase):
         """Setup for validation tests."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.artifacts_dir = Path(self.temp_dir.name)
+        self.queue_dir = self.artifacts_dir / "queue"
+        (self.queue_dir / "incoming").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "processing").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "done").mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
         """Cleanup."""
@@ -177,7 +181,7 @@ class TestDELEGATEValidation(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         is_valid = orch.validate_delegate_format(delegate)
         
         self.assertTrue(is_valid)
@@ -197,7 +201,7 @@ class TestDELEGATEValidation(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         is_valid = orch.validate_delegate_format(delegate)
         
         self.assertFalse(is_valid)
@@ -217,7 +221,7 @@ class TestDELEGATEValidation(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         is_valid = orch.validate_delegate_format(delegate)
         
         self.assertFalse(is_valid)
@@ -230,6 +234,10 @@ class TestAgentRouting(unittest.TestCase):
         """Setup for routing tests."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.artifacts_dir = Path(self.temp_dir.name)
+        self.queue_dir = self.artifacts_dir / "queue"
+        (self.queue_dir / "incoming").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "processing").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "done").mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
         """Cleanup."""
@@ -244,7 +252,7 @@ class TestAgentRouting(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         agent_info = orch.route_task(task)
         
         self.assertEqual(agent_info['role'], "Security Engineer")
@@ -260,7 +268,7 @@ class TestAgentRouting(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         agent_info = orch.route_task(task)
         
         self.assertEqual(agent_info['role'], "Principal Engineer")
@@ -275,7 +283,7 @@ class TestAgentRouting(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         agent_info = orch.route_task(task)
         
         self.assertEqual(agent_info['role'], "Senior Engineer")
@@ -290,7 +298,7 @@ class TestAgentRouting(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         agent_info = orch.route_task(task)
         
         self.assertIn(agent_info['role'], ["Lead Engineer", "Quality Engineer"])
@@ -310,7 +318,7 @@ class TestAgentRouting(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         agent_info = orch.route_task(task)
         
         self.assertEqual(agent_info['role'], "Engineer")
@@ -346,7 +354,7 @@ class TestQueueStateTransitions(unittest.TestCase):
             yaml.dump(task_data, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         # Move to processing
         orch.move_task_to_processing(task_id)
@@ -371,7 +379,7 @@ class TestQueueStateTransitions(unittest.TestCase):
             yaml.dump(handback_data, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         # Move to done
         orch.move_task_to_done(task_id, "PROCEED")
@@ -389,6 +397,10 @@ class TestSpanCapture(unittest.TestCase):
         """Setup for span capture tests."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.artifacts_dir = Path(self.temp_dir.name)
+        self.queue_dir = self.artifacts_dir / "queue"
+        (self.queue_dir / "incoming").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "processing").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "done").mkdir(parents=True, exist_ok=True)
         self.artifacts_date_dir = self.artifacts_dir / "2026-05-02"
         self.artifacts_date_dir.mkdir(parents=True, exist_ok=True)
 
@@ -411,7 +423,7 @@ class TestSpanCapture(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         span_file = orch.capture_span("engineer", handback)
         
@@ -440,7 +452,7 @@ class TestSpanCapture(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         span_file = orch.capture_span("engineer", handback)
         
         # Verify naming pattern
@@ -462,7 +474,7 @@ class TestSpanCapture(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         span_file = orch.capture_span("engineer", handback)
         
         with open(span_file, 'r') as f:
@@ -480,6 +492,10 @@ class TestArtifactIndexing(unittest.TestCase):
         """Setup for indexing tests."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.artifacts_dir = Path(self.temp_dir.name)
+        self.queue_dir = self.artifacts_dir / "queue"
+        (self.queue_dir / "incoming").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "processing").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "done").mkdir(parents=True, exist_ok=True)
         
         # Create sample date directories with artifacts
         for day in range(1, 4):
@@ -518,7 +534,7 @@ class TestArtifactIndexing(unittest.TestCase):
             yaml.dump(span2, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         index_file = orch.generate_artifact_index()
         
@@ -545,7 +561,7 @@ class TestArtifactIndexing(unittest.TestCase):
             yaml.dump(span, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         index_file = orch.generate_artifact_index()
         
         with open(index_file, 'r') as f:
@@ -572,7 +588,7 @@ class TestArtifactIndexing(unittest.TestCase):
                 yaml.dump(span, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         index_file = orch.generate_artifact_index()
         
         with open(index_file, 'r') as f:
@@ -598,7 +614,7 @@ class TestArtifactIndexing(unittest.TestCase):
             yaml.dump(span, f)
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         index_file = orch.generate_artifact_index()
         
         with open(index_file, 'r') as f:
@@ -644,7 +660,7 @@ class TestHandbackProcessing(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         result = orch.process_handback(handback)
         
@@ -667,7 +683,7 @@ class TestHandbackProcessing(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         result = orch.process_handback(handback)
         
@@ -691,7 +707,7 @@ class TestHandbackProcessing(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         result = orch.process_handback(handback)
         
@@ -706,6 +722,10 @@ class TestDelegateCreation(unittest.TestCase):
         """Setup for DELEGATE creation tests."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.artifacts_dir = Path(self.temp_dir.name)
+        self.queue_dir = self.artifacts_dir / "queue"
+        (self.queue_dir / "incoming").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "processing").mkdir(parents=True, exist_ok=True)
+        (self.queue_dir / "done").mkdir(parents=True, exist_ok=True)
         self.delegates_dir = self.artifacts_dir / "delegates"
         self.delegates_dir.mkdir(parents=True, exist_ok=True)
 
@@ -724,7 +744,7 @@ class TestDelegateCreation(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         delegate = orch.create_delegate(task, "Engineer", "claude-haiku-4-5", "high")
         
@@ -742,7 +762,7 @@ class TestDelegateCreation(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         delegate = orch.create_delegate(task, "Engineer", "claude-haiku-4-5", "high")
         
@@ -757,7 +777,7 @@ class TestDelegateCreation(unittest.TestCase):
         }
         
         from orchestrator import Orchestrator
-        orch = Orchestrator(str(self.artifacts_dir))
+        orch = Orchestrator(str(self.artifacts_dir), queue_dir=str(self.queue_dir))
         
         delegate = orch.create_delegate(task, "Engineer", "claude-haiku-4-5", "high")
         
