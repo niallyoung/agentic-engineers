@@ -309,7 +309,7 @@ class Orchestrator:
     def route_task(self, task: Dict) -> Dict:
         """Route task to appropriate agent per AGENTS.md decision tree.
         
-        Decision logic:
+        If task has explicit 'role' field, respect it. Otherwise, apply routing logic:
         1. Security-scoped tasks → Security Engineer (opus-4-7, max effort)
         2. Cross-service architecture (>2 repos) → Principal Engineer (opus-4-6, high effort)
         3. Complex coding without plan → Senior Engineer (sonnet-4-6, high effort)
@@ -318,11 +318,19 @@ class Orchestrator:
         Default: Lead Engineer (sonnet-4-6, high effort)
         
         Args:
-            task: Task dictionary with scope, type, description, complexity, has_plan, etc.
+            task: Task dictionary with optional 'role', 'model', 'effort' fields.
             
         Returns:
             Dictionary with role, model, and effort fields for routing decision.
         """
+        # If task explicitly specifies role/model/effort, respect it
+        if 'role' in task:
+            return {
+                "role": task['role'],
+                "model": task.get('model', 'claude-sonnet-4-6'),
+                "effort": task.get('effort', 'high')
+            }
+        
         scope = task.get('scope', '').lower()
         task_type = task.get('type', '').lower()
         description = task.get('description', '').lower()
@@ -713,10 +721,29 @@ class Orchestrator:
         try:
             logger.info("Starting poll cycle")
             
-            # Poll incoming
+            # Poll incoming and delegate
             try:
                 incoming_tasks = self.poll_incoming_queue()
                 results['incoming_tasks'] = len(incoming_tasks)
+                
+                # Delegate each incoming task to appropriate agent
+                for task in incoming_tasks:
+                    try:
+                        task_id = task.get('task_id', 'unknown')
+                        # Route task per AGENTS.md decision tree
+                        routing = self.route_task(task)
+                        role = routing.get('role', 'Unknown')
+                        logger.info(f"Routed task {task_id} to {role}")
+                        
+                        # TODO Phase 5.11: Implement actual delegation:
+                        # 1. Move task from incoming/ to processing/
+                        # 2. Create subprocess to run agent with task
+                        # 3. Wait for HANDBACK
+                        # 4. Process HANDBACK and move to done/
+                        
+                    except Exception as e:
+                        logger.error(f"Error routing task {task.get('task_id', '?')}: {e}")
+                        results['errors'].append(f"route: {str(e)}")
             except Exception as e:
                 logger.error(f"Error polling incoming queue: {e}")
                 results['errors'].append(f"incoming: {str(e)}")
