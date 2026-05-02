@@ -95,11 +95,20 @@ Scan for vulnerabilities, check dependencies, verify access controls, return fin
 **Model:** claude-sonnet-4-6 (high effort)  
 **Cost Target:** 3%
 
-Analyze completed task feedback (~10-100 samples). Identify patterns: which models succeed? Which fail? Token efficiency?
+**Primary:** Analyze completed task feedback (~10-100 samples). Identify patterns: which models succeed? Which fail? Token efficiency?
 
 **Output:** Ranking for next similar task (Rank 1 = highest confidence, Rank 2 = exploratory, Rank 3 = fallback).
 
 Orchestrator uses Rank 1 for the next matching task.
+
+**Secondary (Audit Trail):** Generate `artifacts/index.json` periodically
+- Scan artifacts/2026-*/ for DELEGATE/HANDBACK/SPAN files
+- Extract metadata: task_id, agent_type, status, tokens, cost, severity, decision
+- Create searchable index by: file_type, task_id, agent_type, status
+- Include stats: total_tokens, total_cost, critical_issues, escalations
+- Store as: artifacts/index.json (human-readable, version-controlled in artifacts/)
+
+**Skill:** Artifact indexing as part of feedback loop analysis (cost tracking enables Model Engineer's recommendations).
 
 ---
 
@@ -110,15 +119,26 @@ Orchestrator uses Rank 1 for the next matching task.
 
 Runs in harness. Polls queues every 30-60 seconds.
 
-**Workflow:**
+**Core Workflow:**
 1. Check `incoming/` → route using AGENTS.md decision tree → create DELEGATE → send to agent
 2. Check `processing/` → if complete, route to QE; if blocked, escalate to Lead/Senior Engineer
 3. Check `done/` → if PROCEED, merge; if REWORK, return to incoming with feedback; if ESCALATE, promote role
 4. Apply Model Engineer recommendations (use Rank 1 model for similar tasks)
 
-See QUEUE-PROTOCOL.md for implementation detail
+**Span Capture (Observability):** When receiving HANDBACK from any agent:
+1. Extract: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
+2. Calculate: duration (end_time - start_time), cost_usd (tokens × model pricing)
+3. Create SPAN with OpenTelemetry attributes (see otel-schema.md):
+   - trace_id, span_id, parent_span_id, start_time, end_time, duration_ms
+   - agent_type, agent_model, agent_role, service_name
+   - input_tokens, output_tokens, total_tokens, cost_usd
+   - status, decision, severity, confidence
+4. Write SPAN to: `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
+5. (Optional, async) Request Model Engineer to regenerate `artifacts/index.json`
 
-s.
+**Key:** Span capture is internal observability; doesn't change agent behavior. HANDBACKs include token counts (agents already track this).
+
+See QUEUE-PROTOCOL.md for implementation detail and SPAN-CAPTURE-INTEGRATION.md for architecture.
 
 ---
 
