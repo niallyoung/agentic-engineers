@@ -419,70 +419,7 @@ class Orchestrator:
         logger.debug(f"Created DELEGATE for task {task_id} to {role} using {model}")
         return delegate
 
-    def move_task_to_processing(self, task_id: str) -> bool:
-        """Move task from incoming to processing queue.
-        
-        Args:
-            task_id: Unique identifier for the task.
-            
-        Returns:
-            True if task was successfully moved, False otherwise.
-        """
-        incoming_file = self.queue_dir / "incoming" / f"{task_id}.yaml"
-        
-        if incoming_file.exists():
-            try:
-                # Read task
-                with open(incoming_file, 'r') as f:
-                    task = yaml.safe_load(f)
-                
-                # Delete from incoming
-                incoming_file.unlink()
-                logger.info(f"Moved task {task_id} from incoming to processing")
-                
-                return True
-            except Exception as e:
-                logger.error(f"Error moving task {task_id} to processing: {e}")
-                return False
-        
-        logger.warning(f"Task file not found for {task_id}")
-        return False
 
-    def move_task_to_done(self, task_id: str, decision: str) -> bool:
-        """Move task from processing to done queue with decision.
-        
-        Args:
-            task_id: Unique identifier for the task.
-            decision: Decision type (PROCEED, REWORK, ESCALATE).
-            
-        Returns:
-            True if task was successfully moved, False otherwise.
-        """
-        try:
-            # Delete HANDBACK files from processing
-            processing_dir = self.queue_dir / "processing"
-            handback_count = 0
-            for handback_file in processing_dir.glob(f"{task_id}-HANDBACK-*.yaml"):
-                handback_file.unlink()
-                handback_count += 1
-            
-            # Create decision file
-            decision_file = self.queue_dir / "done" / f"{task_id}-{decision}.yaml"
-            decision_data = {
-                "task_id": task_id,
-                "decision": decision,
-                "timestamp": datetime.now().isoformat()
-            }
-            
-            with open(decision_file, 'w') as f:
-                yaml.dump(decision_data, f)
-            
-            logger.info(f"Moved task {task_id} from processing to done with decision={decision} "
-                       f"(removed {handback_count} HANDBACK file(s))")
-            return True
-        except Exception as e:
-            logger.error(f"Error moving task {task_id} to done: {e}")
-            return False
 
     def process_handback(self, handback: Dict) -> Dict:
         """Process HANDBACK from agent."""
