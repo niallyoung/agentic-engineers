@@ -558,7 +558,7 @@ Runs continuously in harness. Polls queues every 30-60 seconds.
    - status (success/error/deadline_exceeded)
    - attributes: agent_type, agent_model, service_name, input_tokens, output_tokens, total_tokens, cost_usd, status, decision, severity, confidence
 5. Write SPAN to: `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
-6. (Optional, async) Request Model Engineer to regenerate `artifacts/index.json`
+6. Queue async DELEGATE to Model Engineer to regenerate `artifacts/index.json` (non-blocking; fire-and-forget, but MUST be queued — not skipped)
 
 **Key:** Span capture is internal observability; doesn't change agent behavior. HANDBACKs include token counts (agents already track this).
 
@@ -601,7 +601,7 @@ Runs continuously in harness. Polls queues every 30-60 seconds.
 - **HANDBACK stored** in `artifacts/queue/processing/` (moved to done/ after QE review)
 
 ### Planning & Escalation
-- **Engineer MUST NOT receive task without pre-written `plan`** in DELEGATE (except trivial fixes)
+- **Engineer MUST NOT receive task without pre-written `plan`** in DELEGATE. No exceptions — all tasks require a plan. If scope is unclear, return status: blocked and Orchestrator escalates to Senior Engineer to write the plan.
 - **If Engineer cannot execute plan** → report `status: blocked`; Orchestrator escalates to Senior Engineer
 - **Blocked tasks and rejections escalate** automatically per AGENTS decision tree
 
