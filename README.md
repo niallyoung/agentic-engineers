@@ -9,9 +9,16 @@ make install-copilot           # Install to ~/.copilot/ only
 make install-claude            # Install to ~/.claude/ only
 ```
 
-**After Installation:**
-- Claude Code: agents load automatically from ~/.claude/
-- Copilot: Reference ~/.copilot/ in your system prompt or settings
+**Standard Execution Model (CANONICAL WORKFLOW):**
+```bash
+# 1. Queue a task (create DELEGATE YAML in artifacts/queue/incoming/)
+# 2. Start Orchestrator: it polls queue and delegates to agents
+# 3. Check results in artifacts/queue/done/ and generated files
+# 4. Commit: git add artifacts/ && git commit
+```
+
+**📖 QUICK START:**
+→ **See [ENTRYPOINT.md](ENTRYPOINT.md)** for complete workflow examples, code samples, and canonical execution model.
 
 **Verification:**
 ```bash
