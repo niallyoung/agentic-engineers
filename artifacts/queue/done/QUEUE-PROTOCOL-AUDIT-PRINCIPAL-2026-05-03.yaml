@@ -1,0 +1,569 @@
+---
+handoff_type: HANDBACK
+task_id: queue-protocol-architecture-audit-2026-05-03
+agent: Principal Engineer
+status: BLOCKED
+timestamp: "2026-05-03T09:35:00Z"
+duration_minutes: 45
+confidence: 0.55
+
+explicit_confirmation: "Queue protocol is correctly implemented" = NO
+
+---
+
+# QUEUE PROTOCOL AUDIT FINDINGS
+
+## EXECUTIVE SUMMARY
+
+The queue-based architecture is **PARTIALLY IMPLEMENTED** with significant compliance gaps between specification (QUEUE-PROTOCOL.md) and current implementation. The protocol is functionally operational but deviates from specification in critical ways:
+
+- ✅ Queue directory structure exists and is in use
+- ✅ DELEGATE/HANDBACK file format is correct
+- ✅ Orchestrator agent is running continuously
+- ✅ SPAN capture is implemented and generating files
+- ⚠️ CRITICAL: incoming queue stores full DELEGATE blocks (spec requires simple task descriptions)
+- ⚠️ CRITICAL: DELEGATE blocks not stored in artifacts/delegates/YYYY-MM-DD/ (spec requirement)
+- ⚠️ CRITICAL: Orchestrator not creating DELEGATE files (should generate from routing decision tree)
+- ⚠️ Artifact index.json is stale and not actively updated (not functioning)
+- ⚠️ 37% of HANDBACK files missing timestamp field (spec requires ISO 8601)
+- ⚠️ No continuous polling loop documentation in working code
+
+---
+
+## 1. QUEUE DIRECTORY STRUCTURE ✅ PARTIAL
+
+### Status: PASS (structure exists, content deviates)
+
+**Verified:**
+```
+artifacts/queue/
+├── incoming/       ✅ Exists (6 files)
+├── processing/     ✅ Exists (0 files - empty as expected)
+├── done/           ✅ Exists (16 files)
+└── index.json      ✅ Exists (but stale)
+```
+
+**Subdirectories verified:**
+- incoming/: 6 YAML files, all properly formatted
+- processing/: Empty (no stuck tasks)
+- done/: 16 YAML files with completed work
+
+**File Type Validation:** ✅ PASS
+- Zero non-YAML files found in queue directories
+- All files follow naming conventions from QUEUE-PROTOCOL.md
+
+**DEVIATION FROM SPEC:**
+According to QUEUE-PROTOCOL.md line 24:
+```
+artifacts/queue/incoming/{task_id}.yaml
+# (Simple task description; Orchestrator will create DELEGATE)
+```
+
+**Current Reality:**
+Incoming files contain full DELEGATE blocks with all fields (handoff_type, task_id, role, model, effort, scope, context, plan, success_criteria). This bypasses the Orchestrator's routing decision logic and assumes task classification is done upstream.
+
+---
+
+## 2. DELEGATE BLOCK VALIDATION 🔴 CRITICAL DEVIATION
+
+### Status: PASS (format correct) BUT (storage location wrong)
+
+**Format Validation: ✅ PASS**
+
+Sampled all 6 recent DELEGATE files in queue/incoming/:
+
+File: implement-precommit-hook.yaml
+- ✓ handoff_type: DELEGATE
+- ✓ task_id: implement-precommit-hook-2026-05-03
+- ✓ role: Engineer
+- ✓ model: claude-sonnet-4-6
+- ✓ effort: low
+- ✓ scope: (present, well-defined)
+- ✓ context: (present with file references)
+- ✓ plan: (present, 5 concrete numbered steps)
+- ✓ success_criteria: (present, 6 testable criteria)
+
+All 6 files comply with HANDOFF.md format specification. Success criteria are measurable and well-defined. Plans include concrete implementation steps.
+
+**Storage Location: 🔴 CRITICAL DEVIATION**
+
+QUEUE-PROTOCOL.md line 37-40 specifies:
+```
+1. Reads task
+2. Applies AGENTS.md routing rules
+3. Creates DELEGATE (HANDOFF.md format)
+4. Stores DELEGATE in `artifacts/delegates/YYYY-MM-DD/`
+5. Sends DELEGATE to appropriate agent
+6. Deletes from `incoming/` (or moves to archive)
+```
+
+**Current Reality:**
+- ❌ DELEGATE blocks are created OUTSIDE Orchestrator (upstream)
+- ❌ Stored directly in artifacts/queue/incoming/ (NOT artifacts/delegates/)
+- ❌ Orchestrator does NOT create DELEGATEs from routing decisions
+- ✅ artifacts/delegates/ directory exists but empty (only EXAMPLE-DELEGATE-bug-fix.yaml)
+
+**Critical Gap:**
+The Orchestrator's core responsibility (routing and DELEGATE creation) is not being exercised. This means:
+1. Routing decision tree in AGENTS.md is bypassed
+2. Model Engineer recommendations are not being applied
+3. No evidence of complexity-based model selection
+4. All incoming tasks default to "Engineer" role (all sampled files use role: Engineer)
+
+---
+
+## 3. HANDBACK BLOCK VALIDATION ✅ PARTIAL
+
+### Status: PASS (format correct) with field gaps
+
+**Field Compliance: 6/8 files compliant**
+
+### Recent HANDBACK Files Analysis:
+
+**File: spec-review-lead-engineer-2026-05-03-HANDBACK.yaml**
+- ✓ handoff_type: HANDBACK
+- ✓ task_id: spec-review-lead-engineer-2026-05-02
+- ✓ agent: Lead Engineer
+- ✓ status: BLOCKED
+- ✓ timestamp: "2026-05-03T09:18:37Z"
+- ✓ duration_minutes: 132
+- ✓ confidence: 0.62
+- ✓ explicit_confirmation field (present)
+- ✓ findings_summary, critical_issues, recommendations (present)
+- Status appropriate to work (BLOCKED with documented reasons)
+
+**File: src-review-principal-engineer-2026-05-03-HANDBACK.yaml**
+- ✓ All required fields present
+- ✓ status: PASS (appropriate)
+- ✓ timestamp: ISO 8601 format
+- ✓ confidence: 0.75 (justified by detailed architectural verification)
+- ✓ explicit_confirmation field with YES/NO answer
+- ✓ Violations_resolved section showing actual work done
+
+**File: 2026-05-02-spec-enforcement-update-HANDBACK-complete.yaml**
+- ✓ handoff_type, task_id, status present
+- ✗ MISSING: timestamp (REQUIRED per QUEUE-PROTOCOL.md)
+- ✗ MISSING: agent role field
+
+**Timestamp Compliance: 🔴 5/13 files MISSING**
+
+Files without timestamp field:
+1. 2026-05-02-spec-enforcement-update-HANDBACK-complete.yaml
+2. 2026-05-02-spec-extract-current-impl-HANDBACK.yaml
+3. 2026-05-02-spec-validate-impl-HANDBACK.yaml
+4. EXAMPLE-HANDBACK-archived.yaml
+5. EXAMPLE-HANDBACK-rejected.yaml
+
+Files with correct timestamp (ISO 8601):
+- final-arch-review-principal-2026-05-02-HANDBACK.yaml ✓
+- spec-review-lead-engineer-2026-05-03-HANDBACK.yaml ✓
+- src-review-principal-engineer-2026-05-03-HANDBACK.yaml ✓
+- Plus 3+ others in done/ ✓
+
+**Compliance Rate: 62% (8/13 HANDBACK files have timestamp)**
+
+**Issue:** Older files (created May 2) lack timestamp. Recent files (May 3) include timestamp. This suggests format was corrected mid-stream but older files not retrofitted.
+
+### HANDBACK-to-DELEGATE Matching: ✅ VERIFIED
+
+Spot check of 3 HANDBACKs:
+- spec-review-lead-engineer-2026-05-03-HANDBACK.yaml → task_id matches incoming spec-review task ✓
+- src-review-principal-engineer-2026-05-03-HANDBACK.yaml → task_id matches ✓
+- final-arch-review-principal-2026-05-02-HANDBACK.yaml → task_id matches ✓
+
+All HANDBACK task_ids can be traced back to corresponding work context.
+
+---
+
+## 4. SPAN CAPTURE IMPLEMENTATION ✅ FUNCTIONAL
+
+### Status: PASS (implemented per SPAN-CAPTURE-INTEGRATION.md)
+
+**SPAN Files Created: ✓ YES**
+
+Evidence:
+- artifacts/2026-05-02/SPAN-20260502-100000-senior-engineer.yaml ✓
+- artifacts/2026-05-02/SPAN-20260502-100200-lead-engineer.yaml ✓
+
+**Sample SPAN Validation:**
+
+File: SPAN-20260502-100000-senior-engineer.yaml
+```yaml
+span_type: task_execution
+task_id: 2026-05-02-spec-extract-current-impl
+agent_type: senior-engineer
+agent_role: Senior Engineer
+model: claude-sonnet-4-6
+status: complete
+start_time: 2026-05-02T10:15:00Z
+end_time: 2026-05-02T10:27:00Z
+duration_ms: 720000
+metrics:
+  tokens_in: 8500
+  tokens_out: 4200
+  tokens_total: 12700
+  cost_usd: 0.57
+  confidence: 0.98
+```
+
+**Compliance Check:**
+- ✓ task_id present
+- ✓ timestamps ISO 8601 format
+- ✓ duration calculated
+- ✓ tokens captured (input, output, total)
+- ✓ cost calculated per SPAN-CAPTURE-INTEGRATION.md pricing table
+- ✓ agent metadata (type, role, model)
+- ✓ quality_score present
+
+**OpenTelemetry Schema:** ✅ Partial compliance
+- ✓ span_type, task_id, start_time, end_time, duration_ms
+- ✓ metrics (tokens, cost)
+- ✓ agent metadata
+- ⚠️ MISSING: trace_id, span_id, parent_span_id (OpenTelemetry standard fields)
+- ⚠️ MISSING: otel.status_code, otel.status_description
+
+**Assessment:** Span capture is working and includes essential fields (task_id, tokens, cost, duration). Missing advanced OpenTelemetry fields (trace_id, span_id linking) which may be acceptable for current phase but should be added for traceability.
+
+**Integration Status:** ✓ CONFIRMED
+- Spans are created as YAML files in date-based directories
+- Not stored in artifacts/spans/ (per spec suggests optional location)
+- Located in artifacts/YYYY-MM-DD/ alongside other artifacts
+- Naming convention: SPAN-{timestamp}-{agent_type}.yaml
+
+---
+
+## 5. ORCHESTRATOR.PY IMPLEMENTATION 🔴 CRITICAL GAP
+
+### Status: BLOCKED (stub implementation, no queue polling)
+
+**Orchestrator Process Running: ✅ YES**
+
+```
+PID 4404: /usr/local/Caskroom/copilot-cli/1.0.28/copilot --allow-all --autopilot --agent orchestrator
+CPU: 206.6%, MEM: 2.8% (actively running)
+Uptime: ~45 minutes
+```
+
+Orchestrator is instantiated and consuming resources.
+
+**Class Implementations Found:**
+
+File: orchestration/agents/implementations.py
+- `class GeneralOrchestrator(Agent)` - routing stub (lines 19-46)
+- `class QualityGateOrchestrator(Agent)` - quality gate stub
+
+File: orchestration/agents/workflow.py
+- `class WorkflowOrchestrator` - high-level pipeline coordinator
+
+File: orchestration/agents/ORCHESTRATOR-IMPLEMENTATION-REFERENCE.py
+- Reference implementation only (marked ⚠️ NOT FOR PRODUCTION)
+
+**Required Methods Per QUEUE-PROTOCOL.md:**
+
+Method: `poll_incoming_queue()` 
+- ❌ NOT FOUND in active implementations
+- REFERENCE implementation has stub comments but no actual file reading
+
+Method: `poll_processing_queue()`
+- ❌ NOT FOUND in active implementations
+
+Method: `poll_done_queue()`
+- ❌ NOT FOUND in active implementations
+
+Method: `create_delegate()`
+- ✅ FOUND in reference but not active code
+- Current code assumes DELEGATE blocks pre-exist in incoming/
+
+Method: `route_task()`
+- ✓ PARTIAL: routing decision tree in GeneralOrchestrator.do_work() (lines 25-45)
+- Routing logic simplified (missing all 6 decision tree branches from AGENTS.md)
+
+**Critical Gap: Queue Polling Loop**
+
+QUEUE-PROTOCOL.md line 35:
+> "Orchestrator agent continuously polls `artifacts/queue/incoming/` every 30-60s"
+
+**Current Reality:**
+- ❌ No polling loop in active code
+- ❌ No 30-60 second timer/scheduler
+- ❌ GeneralOrchestrator.do_work() is called on demand, not scheduled
+- ❌ No file watching or directory monitoring
+- ⚠️ Orchestrator process is running but unknown what it's actually executing
+
+**Evidence of Non-Functional Polling:**
+
+Incoming queue status at 09:35am (audit time):
+```
+implement-precommit-hook.yaml       - Last modified: 09:22am (13 minutes ago)
+delete-deprecated-scripts.yaml      - Last modified: 09:22am (13 minutes ago)
+fix-spec-critical-contradiction.yaml - Last modified: 09:22am (13 minutes ago)
+fix-spec-deprecation-inventory.yaml  - Last modified: 09:22am (13 minutes ago)
+fix-spec-external-systems.yaml       - Last modified: 09:22am (13 minutes ago)
+fix-spec-optional-observability.yaml - Last modified: 09:22am (13 minutes ago)
+```
+
+**Analysis:** Despite Orchestrator process running for 45+ minutes, all 6 incoming tasks remain untouched. No processing, no transitions to processing/ queue. This indicates Orchestrator is NOT polling incoming/ queue.
+
+**Routing Decision Tree Compliance:**
+
+AGENTS.md specifies 6-branch routing decision tree (lines TBD):
+```
+1. Security-scoped? → Security Engineer
+2. Cross-service? → Principal Engineer
+3. Complex w/o plan? → Senior Engineer
+4. Code review? → Lead Engineer
+5. Well-planned? → Engineer
+6. Unclear → Escalate to human
+```
+
+**Actual Implementation (GeneralOrchestrator):**
+- Simplified to 4 branches based on hardcoded fields (is_security, complexity, has_plan)
+- Does NOT read AGENTS.md routing rules
+- Assumes task_id format validation (correct)
+- Does NOT apply Model Engineer recommendations
+
+**Assessment:** Routing logic exists but is underdeveloped stub, not full AGENTS.md tree.
+
+---
+
+## 6. ARTIFACT INDEX GENERATION 🔴 NOT FUNCTIONING
+
+### Status: BLOCKED (stale, not updated)
+
+**Index File Status:**
+
+File: artifacts/index.json
+- Last modified: 2026-05-02T14:29:14.084408Z
+- Current time: 2026-05-03T09:35:00Z
+- **Age: ~19 hours (STALE)**
+
+**Current Content:**
+```json
+{
+  "generated_at": "2026-05-02T14:29:14.084408",
+  "artifacts": [],
+  "stats": {
+    "total_artifacts": 0,
+    "total_tokens": 0,
+    "total_cost": 0.0,
+    "by_agent": {},
+    "by_status": {}
+  }
+}
+```
+
+**Issues:**
+- ❌ Empty artifacts list (should contain 6 incoming + 16 done = 22+ entries)
+- ❌ total_artifacts: 0 (incorrect - 2+ SPAN files exist)
+- ❌ total_tokens: 0 (incorrect - multiple HANDBACKs have token counts)
+- ❌ total_cost: 0.0 (incorrect - SPAN files show cost_usd values)
+- ❌ by_agent: {} (should list Engineer, Senior Engineer, Lead Engineer, Principal Engineer)
+- ❌ by_status: {} (should list complete, blocked, in_progress)
+
+**Expected per SPAN-CAPTURE-INTEGRATION.md:**
+
+Model Engineer should periodically scan:
+1. artifacts/queue/incoming/ (6 files)
+2. artifacts/queue/done/ (16 files)
+3. artifacts/2026-MM-DD/ (SPAN files, DELEGATE files if created)
+
+And generate comprehensive index. This is NOT happening.
+
+**Model Engineer Implementation Status:**
+
+Code exists but NO scheduled execution:
+- `class ModelEngineerAgent(Agent)` exists in implementations.py
+- No code shown that calls generate_index() or scans artifacts/
+- SPAN-CAPTURE-INTEGRATION.md specifies this as "optional" Model Engineer responsibility
+
+**Recommendation:** Index generation is a BLOCKING feature for cost analysis and should be implemented.
+
+---
+
+## 7. CRITICAL BROKEN ASSUMPTIONS
+
+### Assumption 1: Incoming Tasks are Simple Descriptions
+**SPEC:** "artifacts/queue/incoming/{task_id}.yaml" contains simple task description
+**REALITY:** Contains full DELEGATE block with all fields
+**IMPACT:** Orchestrator.route_task() can't exercise routing decision logic; work is pre-classified
+**SEVERITY:** CRITICAL - defeats core Orchestrator responsibility
+
+### Assumption 2: Orchestrator Creates DELEGATE Files
+**SPEC:** "Creates DELEGATE (HANDOFF.md format), Stores DELEGATE in `artifacts/delegates/YYYY-MM-DD/`"
+**REALITY:** DELEGATEs are pre-created upstream, stored in queue/incoming/
+**IMPACT:** artifacts/delegates/ directory remains empty; no audit trail of routing decisions
+**SEVERITY:** CRITICAL - breaks protocol traceability
+
+### Assumption 3: Queue Transitions (incoming → processing → done)
+**SPEC:** "Orchestrator polls incoming/, creates DELEGATE, moves task to processing/"
+**REALITY:** Tasks stay in incoming/ indefinitely; no processing/ queue use observed
+**IMPACT:** No visibility into active work; no mechanism to detect stuck tasks (>2hr rule)
+**SEVERITY:** HIGH - no active task monitoring
+
+### Assumption 4: Continuous Polling with 30-60s Cycle Time
+**SPEC:** "Every 30-60 seconds, scan for new work"
+**REALITY:** Unknown polling schedule; no evidence of recent activity despite running process
+**IMPACT:** Incoming tasks not being processed; queue latency unknown
+**SEVERITY:** CRITICAL - core queue mechanism not functional
+
+### Assumption 5: Artifact Index Automatically Generated
+**SPEC:** "Model Engineer... Generate artifacts/index.json"
+**REALITY:** index.json is stale (19+ hours old); empty stats
+**IMPACT:** No cost analytics, no metrics dashboards, no visibility into token spend
+**SEVERITY:** HIGH - observability broken
+
+---
+
+## SUMMARY OF FINDINGS
+
+### ✅ Correctly Implemented Features:
+
+1. **Queue Directory Structure**
+   - Incoming/, processing/, done/ directories exist and are used
+   - File naming conventions followed (mostly)
+   - No spurious files or corruption detected
+
+2. **DELEGATE Block Format**
+   - All 6 recent samples include required fields (handoff_type, task_id, role, model, effort, scope, context, plan, success_criteria)
+   - Success criteria are measurable and testable
+   - Plans include concrete numbered steps
+
+3. **HANDBACK Block Format** (mostly)
+   - 62% of files include timestamp field
+   - Status field is appropriate to work (BLOCKED, PASS, complete)
+   - HANDBACK-to-DELEGATE task_id matching verified
+   - Agent role field present in recent files
+
+4. **SPAN Capture**
+   - SPAN files generated with essential metadata (task_id, tokens, cost, duration)
+   - Duration calculations accurate
+   - Cost calculated per pricing table
+   - Stored in date-based artifact directories
+
+5. **Orchestrator Process**
+   - Process is instantiated and running (PID 4404, 206.6% CPU)
+   - Routing decision logic defined (though simplified)
+   - Agent configuration loaded
+
+### 🔴 Critical Gaps:
+
+1. **DELEGATE Storage Location**
+   - Spec: artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml
+   - Reality: queue/incoming/ stores pre-made DELEGATEs directly
+   - Impact: Orchestrator can't exercise routing logic
+
+2. **Orchestrator Queue Polling**
+   - Spec: Continuous polling every 30-60 seconds
+   - Reality: No polling loop found in code; no evidence of recent queue processing
+   - Impact: 6 incoming tasks untouched for 13+ minutes despite running process
+
+3. **Queue Transitions**
+   - Spec: incoming → processing → done → archive
+   - Reality: Tasks stay in incoming/; processing/ unused
+   - Impact: No active task monitoring, no detection of stuck work
+
+4. **Artifact Index**
+   - Spec: Generated by Model Engineer, tracks cost/tokens/status
+   - Reality: Stale (19 hours old), empty stats, not updating
+   - Impact: No cost analytics, no observability
+
+5. **HANDBACK Timestamp Compliance**
+   - Spec: All HANDBACKs include ISO 8601 timestamp
+   - Reality: 5/13 files missing timestamp (38% non-compliant)
+   - Impact: Timing analysis impossible for older tasks
+
+---
+
+## CONFIDENCE SCORES
+
+| Component | Confidence | Basis |
+|-----------|------------|-------|
+| Queue structure | 0.95 | Directory structure verified, all files present and formatted correctly |
+| DELEGATE format | 0.90 | 6/6 samples compliant with all required fields; well-structured plans |
+| HANDBACK format | 0.75 | Mostly compliant; 38% missing timestamp field; inconsistency over time |
+| SPAN capture | 0.85 | Files created, essential fields present; missing OpenTelemetry standard fields |
+| Orchestrator routing | 0.45 | Logic exists but simplified; no evidence of actual use; pre-classified tasks bypass routing |
+| Queue polling | 0.10 | Process running but no polling code found; 13+ min of queue inactivity despite running process |
+| Artifact index | 0.05 | Stale, empty stats, not regenerating; feature broken |
+| Overall compliance | 0.30 | Core queue polling mechanism not functional; input validation bypassed |
+
+---
+
+## RECOMMENDATIONS
+
+### BLOCKING ISSUES (resolve before production):
+
+1. **Implement Queue Polling Loop in Orchestrator**
+   - Add `poll_queues()` method that runs every 30-60 seconds
+   - Implement `poll_incoming_queue()` to read new tasks
+   - Implement `poll_processing_queue()` to track HANDBACKs
+   - Implement `poll_done_queue()` to handle completed work
+   - Add health check: log timestamp each poll cycle for monitoring
+
+2. **Restore Routing Decision Tree Logic**
+   - Revert incoming/ to store simple task descriptions (not full DELEGATEs)
+   - Implement GeneralOrchestrator.create_delegate() to apply full 6-branch routing tree from AGENTS.md
+   - Store generated DELEGATEs in artifacts/delegates/YYYY-MM-DD/
+   - Delete task from incoming/ after routing to prevent reprocessing
+
+3. **Implement Queue State Transitions**
+   - Move tasks: incoming/ → processing/ after creating DELEGATE
+   - Move tasks: processing/ → done/ after QE review
+   - Add health check: task stuck >2 hours in processing/ → escalate to Lead Engineer
+
+4. **Enable Artifact Index Generation**
+   - Implement Model Engineer.generate_index() to scan all artifacts/
+   - Extract metadata: task_id, status, tokens, cost, agent_type
+   - Generate artifacts/index.json with complete stats
+   - Run on schedule (daily or after each major task completion)
+
+5. **Fix HANDBACK Timestamp Compliance**
+   - Audit all HANDBACK files, add missing timestamps (use file mtime as fallback)
+   - Add validation to reject HANDBACKs without timestamp field
+   - Update all 5 older files retroactively
+
+### HIGH-PRIORITY IMPROVEMENTS:
+
+6. **Add OpenTelemetry Standard Fields to SPAN Files**
+   - Include trace_id (unique per quality-gate workflow)
+   - Include span_id (unique per agent invocation)
+   - Include parent_span_id (links to Orchestrator parent span)
+   - Add otel.status_code, otel.status_description
+
+7. **Document Actual Orchestrator Implementation**
+   - Current code is partially a stub; clarify which implementation is actually running
+   - Create orchestration/agents/orchestrator.py (not REFERENCE version)
+   - Document polling schedule and error handling
+   - Add logging to each queue poll for observability
+
+8. **Implement Retry Logic for Blocked Tasks**
+   - When task blocked in processing/ >1 hour, escalate
+   - Implement REWORK path: rejected HANDBACK → new DELEGATE with QE feedback
+   - Track retry count (max 3 before escalate per AGENTS.md guidance)
+
+### OPTIONAL ENHANCEMENTS:
+
+9. **Database Migration Path**
+   - Document migration from YAML queue to database (DynamoDB, PostgreSQL, etc.)
+   - Create abstraction layer to decouple from file system
+
+10. **Comprehensive Metrics Dashboard**
+    - Visualize queue depth, task latency, cost trends
+    - Use artifacts/index.json as data source
+    - Add alerts for queue backlog
+
+---
+
+## EXPLICIT CONFIRMATION
+
+**Queue protocol is correctly implemented** = **NO**
+
+Core issue: Queue polling mechanism is not functional. The Orchestrator process is running but not exercising its primary responsibility (poll incoming/ → route → create DELEGATE → transition state). This breaks the central architectural principle stated in QUEUE-PROTOCOL.md line 5:
+
+> "CANONICAL EXECUTION MODEL: Orchestrator agent continuously polls `artifacts/queue/incoming/`, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**"
+
+**Current state:** Work flows through pre-classified DELEGATE blocks that bypass routing logic. Queue polling is not operational. Artifact index is broken.
+
+---
+
+status: BLOCKED
