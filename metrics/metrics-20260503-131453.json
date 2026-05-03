@@ -1,0 +1,21 @@
+{
+  "status": "COMPLETE",
+  "exit_reason": "max_cycles",
+  "metrics": {
+    "start_time": "2026-05-03T13:14:54.079093",
+    "end_time": "2026-05-03T13:14:57.091864",
+    "total_duration_seconds": 3.012771,
+    "cycles_completed": 3,
+    "cycle_duration_avg_seconds": 0.0,
+    "cycle_duration_min_seconds": 0.0,
+    "cycle_duration_max_seconds": 0.001,
+    "tasks_processed": 0,
+    "tasks_success": 0,
+    "tasks_escalated": 0,
+    "tasks_failed": 0,
+    "error_count": 0,
+    "errors": [],
+    "shutdown_reason": "max_cycles",
+    "shutdown_signal": "none"
+  }
+}

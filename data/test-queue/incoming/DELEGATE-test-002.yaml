@@ -1,0 +1,19 @@
+---
+handoff_type: DELEGATE
+task_id: test-task-002
+role: Engineer
+model: claude-sonnet-4.6
+effort: low
+scope: |
+  Create another test file.
+  Verify sequential task processing in automation loop.
+
+plan: |
+  1. Create data/test-artifacts/test-002.txt
+  2. Verify test-001.txt exists
+  3. Record timestamp
+
+success_criteria:
+  - File created successfully
+  - Previous test artifact verified
+  - Task completes cleanly
