@@ -714,6 +714,60 @@ class QualityValidator:
                 ))
                 deductions += 5
 
+        # 3.8 Enforce Quality Checklist Completion (ORCHESTRATION/QUALITY.md Tiers)
+        # All agents must complete Tier 1 (lint, test, scope, hazards)
+        tier1_completed = handback.get("checklist_tier_1_completed", False)
+        if not tier1_completed and status != "failed":
+            findings.append(ValidationFinding(
+                layer=3, check="tier1_checklist_incomplete",
+                severity=Severity.ERROR,
+                message=(
+                    "Tier 1 quality checklist not completed. "
+                    "HANDBACK must include 'checklist_tier_1_completed: true' "
+                    "with proof: lint pass, tests pass, scope validation, no hazards."
+                ),
+                field="checklist_tier_1_completed", score_deduction=20,
+            ))
+            deductions += 20
+
+        # Senior Engineer, Lead Engineer, Principal Engineer must complete Tier 2
+        # (coverage, docs, plan completeness)
+        if original_delegate:
+            role = str(original_delegate.get("role", "")).lower()
+            if role in {"senior_engineer", "lead_engineer", "principal_engineer"}:
+                tier2_completed = handback.get("checklist_tier_2_completed", False)
+                if not tier2_completed and status != "failed":
+                    findings.append(ValidationFinding(
+                        layer=3, check="tier2_checklist_incomplete",
+                        severity=Severity.ERROR,
+                        message=(
+                            f"Tier 2 quality checklist required for {role}. "
+                            "HANDBACK must include 'checklist_tier_2_completed: true' "
+                            "with proof: coverage maintained/improved, docs added, "
+                            "plan steps executed completely."
+                        ),
+                        field="checklist_tier_2_completed", score_deduction=15,
+                    ))
+                    deductions += 15
+
+            # Principal Engineer and Security Engineer must complete Tier 3
+            # (architecture adherence, IAM/security, cross-service contracts)
+            if role in {"principal_engineer", "security_engineer"}:
+                tier3_completed = handback.get("checklist_tier_3_completed", False)
+                if not tier3_completed and status != "failed":
+                    findings.append(ValidationFinding(
+                        layer=3, check="tier3_checklist_incomplete",
+                        severity=Severity.ERROR,
+                        message=(
+                            f"Tier 3 quality checklist required for {role}. "
+                            "HANDBACK must include 'checklist_tier_3_completed: true' "
+                            "with proof: architecture adherence, IAM/security compliance, "
+                            "cross-service contract validation."
+                        ),
+                        field="checklist_tier_3_completed", score_deduction=15,
+                    ))
+                    deductions += 15
+
         score = max(0, 100 - deductions)
         return findings, score
 

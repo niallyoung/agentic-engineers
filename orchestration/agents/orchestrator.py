@@ -642,7 +642,13 @@ class TaskRouter:
             agent_class = self.AGENT_CLASSES["senior_engineer"]
             return ("senior_engineer", agent_class())
         
-        if "review" in scope or delegate.get("is_code_review", False):
+        # Code review and validation tasks route to Quality Engineer (post-implementation review)
+        if delegate.get("is_code_review", False) or delegate.get("requires_quality_review", False):
+            agent_class = self.AGENT_CLASSES["quality_engineer"]
+            return ("quality_engineer", agent_class())
+        
+        # Architecture guidance and refinement route to Lead Engineer
+        if "review" in scope and "architecture" in scope.lower():
             agent_class = self.AGENT_CLASSES["lead_engineer"]
             return ("lead_engineer", agent_class())
         
@@ -810,8 +816,60 @@ class OrchestratorAgent(Agent):
             print(f"   🔍 HANDBACK quality: {self.quality_validator.summary(handback_validation)}")
             handback["quality_validation"] = handback_validation.as_dict()
             
+            # 6.5 Threshold-based escalation (NEW: Post-execution quality gates)
+            # If quality score too low OR critical issues found, escalate to Quality Engineer
+            escalate_for_review = False
+            escalation_reason = None
+            
+            if handback_validation.quality_score < 70:
+                escalate_for_review = True
+                escalation_reason = f"Low quality score ({handback_validation.quality_score}/100)"
+                print(f"   🚨 Escalation triggered: {escalation_reason}")
+            
+            if handback_validation.critical_findings:
+                escalate_for_review = True
+                escalation_reason = f"Critical findings: {len(handback_validation.critical_findings)}"
+                print(f"   🚨 Escalation triggered: {escalation_reason}")
+            
+            # Check for test/coverage regressions
+            if handback.get("coverage_decreased") or handback.get("tests_failed"):
+                escalate_for_review = True
+                escalation_reason = "Test/coverage regression detected"
+                print(f"   🚨 Escalation triggered: {escalation_reason}")
+            
+            # If escalation needed, reroute to Quality Engineer for review
+            decision = "ESCALATE" if escalate_for_review else "PROCEED"
+            if escalate_for_review:
+                print(f"   ↪️  Rerouting to Quality Engineer for secondary review...")
+                # Create escalation delegate for Quality Engineer
+                escalation_delegate = {
+                    "handoff_type": "DELEGATE",
+                    "task_id": f"{task_id}-qe-review",
+                    "role": "quality_engineer",
+                    "model": "claude-sonnet-4-6",
+                    "effort": "medium",
+                    "scope": f"Quality review and validation: {escalation_reason}",
+                    "requires_quality_review": True,
+                    "original_task_id": task_id,
+                    "original_handback": handback,
+                    "validation_result": handback_validation.as_dict(),
+                    "plan": [
+                        "Analyze HANDBACK quality validation findings",
+                        "Assess deliverable quality and completeness",
+                        "Determine if work meets production standards",
+                        "Approve for merge or request rework"
+                    ]
+                }
+                # Execute Quality Engineer review
+                qe_agent_class = self.task_router.AGENT_CLASSES["quality_engineer"]
+                qe_agent = qe_agent_class()
+                qe_review = qe_agent.execute(escalation_delegate)
+                print(f"   ✓ Quality Engineer review: {qe_review.get('decision', 'PENDING')}")
+                # Merge QE feedback into handback
+                handback["quality_engineer_review"] = qe_review
+                decision = qe_review.get("decision", "ESCALATE")
+            
             # 7. Move to done queue using move_task (atomic with audit trail and decision)
-            decision = handback.get("decision", "PROCEED")
             move_done_result = self.queue_manager.move_task(
                 task_id=task_id,
                 from_state="processing",
@@ -822,11 +880,11 @@ class OrchestratorAgent(Agent):
             
             # Update metrics
             self.tasks_processed += 1
-            if handback.get("status") == "PASS":
+            if decision == "PROCEED":
                 self.tasks_success += 1
             else:
                 self.tasks_escalated += 1
-                print(f"   ⚠ Task escalated: {handback.get('error', 'unknown')}")
+                print(f"   ⚠ Task escalated: {escalation_reason}")
         
         except Exception as e:
             print(f"   ❌ Error processing task: {e}")
