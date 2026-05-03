@@ -13,6 +13,23 @@ effort: low
 **Model:** Haiku (fast, efficient routing decisions)  
 **Confidence Scoring:** 0.70-0.95 per routing decision
 
+## Core Design Principle: Dog-Fooding
+
+> **Every agent and tool we build is validated by the quality system it helps improve. This creates exponential improvement through immediate feedback loops.**
+
+This is not just a testing practice—it's our fundamental advantage:
+
+- **Quality gates validate agent code** → faster feedback
+- **Agents implement features that quality gates need** → self-improving
+- **Quality Engineer reviews improvements to quality** → catches gaps in the system
+- **Model Engineer analyzes improvement metrics** → optimizes routing
+- **Next task uses better routing** → better quality → better feedback
+- **Cycle repeats** → exponential improvement
+
+**See:** [`docs/PHILOSOPHY-DOG-FOOD.md`](docs/PHILOSOPHY-DOG-FOOD.md)
+
+---
+
 ## Routing Decision Tree
 
 When given a task, evaluate in order and route to first matching agent:
