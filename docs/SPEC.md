@@ -300,7 +300,7 @@ This section defines canonical terms used throughout the agentic-engineers frame
 | **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `artifacts/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
 | **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `artifacts/queue/incoming/` only by humans or the Orchestrator itself. Automated external systems MUST NOT write directly to the queue. Core unit of work. | `artifacts/queue/incoming/task-2026-05-02.yaml` |
 | **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `artifacts/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `artifacts/queue/done/task-2026-05-02-HANDBACK.yaml` |
-| **Queue System** | File-based work queue with three directories: `incoming/` (new tasks), `processing/` (in-progress), `done/` (completed). Located at `~/.copilot/queue/`. | All work coordination happens through queue file operations. |
+| **Queue System** | File-based work queue with three directories: `incoming/` (new tasks), `processing/` (in-progress), `done/` (completed). Location is context-aware: `~/.copilot/queue/` when running Copilot agents, `~/.claude/queue/` when running Claude agents. Both use identical DELEGATE/HANDBACK protocol. | All work coordination happens through context-specific queue file operations. |
 | **Agent SKILL** | A Python module implementing an agent's core capabilities. Invoked only through agent context (not external scripts). Located in `orchestration/agents/`. | `orchestration/agents/engineer_agent.py` |
 | **Span Capture** | Observability mechanism that tracks work execution from initiation through completion, including decision points, delays, and handoffs. | `artifacts/spans/ directory records all task spans. |
 | **Task Routing** | The process by which Orchestrator examines a DELEGATE block and applies the decision tree to select the appropriate agent role. | "Routing determined this was a security task, so Principal Engineer was selected." |
@@ -910,6 +910,61 @@ All agent-to-agent communication uses DELEGATE/HANDBACK markup:
 
 ---
 
+## Quality Gates (Phase 6)
+
+The pre-commit hook integrates with the Quality Engineer agent to block commits on quality failures.
+
+### Flow
+
+1. Developer runs `git commit`
+2. Pre-commit hook (`.githooks/pre-commit`) writes a quality-gate DELEGATE to `artifacts/queue/incoming/`
+3. Orchestrator priority-routes to Quality Engineer (Sonnet, medium effort)
+4. Quality Engineer runs Tier 1/2 checks, returns HANDBACK with `assessment: PASS|FAIL`
+5. Hook evaluates `assessment`: exit 0 (allow) or exit 1 (block + error details)
+6. Infrastructure failures → warn only, never block commit
+
+### Quality Check Tiers
+
+| Tier | Trigger | Checks | Timeout |
+|------|---------|--------|---------|
+| **Tier 1** | All commits | lint, type-check, secret detection, YAML validity | <20s |
+| **Tier 2** | Code files staged (`.py`, `.ts`, `.js`, `.go`) | unit tests (changed modules), coverage delta | <60s |
+| **Tier 3** | `main` branch or `QG_TIER=3` flag | full test suite, integration tests, e2e | <300s |
+
+### HANDBACK Evaluation Logic
+
+```
+assessment: PASS    → allow commit (exit 0)
+assessment: FAIL    → block commit (exit 1) + display quality_gate_failures
+assessment: <other> → warn + allow commit (exit 0)
+HANDBACK missing after 90s timeout → warn + allow commit (exit 0)
+```
+
+### SPEC Exemption
+
+Pre-commit hooks are classified as **build/setup-time operations** (same exemption as `renderer/scripts/`, `make install`). The hook does NOT invoke agents directly — it writes a DELEGATE YAML to the queue and polls for the HANDBACK result. All quality evaluation logic remains inside the agent system.
+
+### Activation
+
+```bash
+make install-hooks   # activate quality gate pre-commit hook
+make verify-hooks    # validate hooks are installed correctly
+```
+
+### Emergency Bypass
+
+```bash
+git commit --no-verify   # bypass all hooks (emergencies only; logged in span data)
+QG_ENABLED=false git commit  # disable quality gate for this commit (warns)
+QG_TIMEOUT=30 git commit     # reduce timeout for local development
+```
+
+### Reference
+
+Full architecture specification: `docs/architecture-quality-gates-5103.md`
+
+---
+
 ## Summary Table
 
 | Component | Role | Implementation | Status |
@@ -923,6 +978,7 @@ All agent-to-agent communication uses DELEGATE/HANDBACK markup:
 | Artifact Indexing | Model Engineer SKILL | Generate artifacts/index.json | ✅ Phase 5.10 |
 | Cost Optimization | Model Engineer | Feedback analysis + ranking | ✅ Active |
 | Escalation Handling | Orchestrator + Lead Engineer | Per decision tree + unblock | ✅ Active |
+| **Quality Gate** | **Pre-commit hook + Quality Engineer** | **DELEGATE → HANDBACK evaluation → block/allow** | **📋 Phase 6** |
 
 ---
 
