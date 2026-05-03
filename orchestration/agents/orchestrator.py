@@ -35,7 +35,7 @@ from .quality_validator import QualityValidator, RoutingDecision
 
 
 class QueueManager:
-    """Manage queue directory structure and file operations."""
+    """Manage queue directory structure and file operations with session-id partitioning."""
     
     @staticmethod
     def detect_agent_context() -> str:
@@ -88,10 +88,227 @@ class QueueManager:
         # Ultimate fallback
         return 'copilot'
     
+    @staticmethod
+    def detect_session_id() -> str:
+        """
+        Detect session-id for queue partitioning.
+        
+        Detection priority:
+        1. COPILOT_SESSION_ID environment variable (set by Copilot CLI runtime)
+        2. Scan ~/.copilot/session-state/ for current process's session directory
+        3. Fallback to CLAUDE_SESSION_ID if available (Claude context)
+        
+        Returns:
+            Session-id UUID string (e.g., "54744939-4acb-430c-b2c4-3b8322289d0b")
+        
+        Raises:
+            RuntimeError: If session-id cannot be detected
+        """
+        # Priority 1: Check COPILOT_SESSION_ID environment variable
+        copilot_session_id = os.environ.get('COPILOT_SESSION_ID', '').strip()
+        if copilot_session_id:
+            return copilot_session_id
+        
+        # Priority 2: Check CLAUDE_SESSION_ID (Claude context)
+        claude_session_id = os.environ.get('CLAUDE_SESSION_ID', '').strip()
+        if claude_session_id:
+            return claude_session_id
+        
+        # Priority 3: Scan ~/.copilot/session-state/ for session directory
+        home = Path.home()
+        session_state_dir = home / '.copilot' / 'session-state'
+        
+        if session_state_dir.exists():
+            # Find most recently modified session directory (likely current session)
+            session_dirs = [d for d in session_state_dir.iterdir() if d.is_dir()]
+            if session_dirs:
+                # Sort by modification time, get most recent
+                latest_session = max(session_dirs, key=lambda p: p.stat().st_mtime)
+                session_id = latest_session.name
+                # Validate it looks like a UUID
+                if len(session_id) == 36 and session_id.count('-') == 4:
+                    return session_id
+        
+        # Priority 4: Try Claude session-state
+        claude_session_state = home / '.claude' / 'session-state'
+        if claude_session_state.exists():
+            session_dirs = [d for d in claude_session_state.iterdir() if d.is_dir()]
+            if session_dirs:
+                latest_session = max(session_dirs, key=lambda p: p.stat().st_mtime)
+                session_id = latest_session.name
+                if len(session_id) == 36 and session_id.count('-') == 4:
+                    return session_id
+        
+        # Could not detect session-id
+        raise RuntimeError(
+            "Could not detect session-id. Ensure COPILOT_SESSION_ID environment variable is set "
+            "or ~/.copilot/session-state/ contains a valid session directory."
+        )
+    
+    def migrate_legacy_queue(self):
+        """
+        Migrate old queue structure (~/.copilot/queue/{incoming,processing,done})
+        to new session-id based structure (~/.copilot/queue/{session-id}/{incoming,processing,done}).
+        
+        Only runs once per session. Creates .migration-log with details of what was migrated.
+        
+        Actions:
+        1. Check if old queue structure exists (incoming/, processing/, done/ directly under base_dir)
+        2. If yes:
+           - Create new session-id queue directories
+           - Copy old queue contents to new location
+           - Create .migration-log with timestamp and migration details
+           - Remove or rename old directories
+        3. Log all actions
+        """
+        # Only run if base_dir points to old structure (not yet partitioned)
+        incoming_path = self.base_dir / "incoming"
+        processing_path = self.base_dir / "processing"
+        done_path = self.base_dir / "done"
+        
+        # Check if old structure exists at base level
+        old_structure_exists = (
+            incoming_path.exists() or 
+            processing_path.exists() or 
+            done_path.exists()
+        )
+        
+        # Also check if we're already in a session-id partitioned structure
+        # (if base_dir ends with a UUID, we're already partitioned)
+        if self.base_dir.name.count('-') == 4 and len(self.base_dir.name) == 36:
+            # Already partitioned, skip migration
+            return
+        
+        if not old_structure_exists:
+            # No old structure to migrate
+            return
+        
+        print(f"   🔄 Migrating legacy queue structure to session-id partitioning...")
+        
+        migration_log = []
+        migration_log.append({
+            "timestamp": datetime.now().isoformat(),
+            "action": "migration_started",
+            "from_structure": "~/.copilot/queue/{incoming,processing,done}",
+            "to_structure": f"~/.copilot/queue/{self.session_id}/{{incoming,processing,done}}"
+        })
+        
+        try:
+            # Create new session-id queue structure if it doesn't exist
+            self._ensure_queue_structure()
+            
+            # Migrate incoming queue
+            if incoming_path.exists() and incoming_path.is_dir():
+                incoming_files = list(incoming_path.glob("*.yaml"))
+                if incoming_files:
+                    for file in incoming_files:
+                        new_file_path = self.incoming_dir / file.name
+                        shutil.copy2(str(file), str(new_file_path))
+                        migration_log.append({
+                            "timestamp": datetime.now().isoformat(),
+                            "action": "file_copied",
+                            "from": f"incoming/{file.name}",
+                            "to": f"{self.session_id}/incoming/{file.name}"
+                        })
+            
+            # Migrate processing queue
+            if processing_path.exists() and processing_path.is_dir():
+                processing_files = list(processing_path.glob("*.yaml"))
+                if processing_files:
+                    for file in processing_files:
+                        new_file_path = self.processing_dir / file.name
+                        shutil.copy2(str(file), str(new_file_path))
+                        migration_log.append({
+                            "timestamp": datetime.now().isoformat(),
+                            "action": "file_copied",
+                            "from": f"processing/{file.name}",
+                            "to": f"{self.session_id}/processing/{file.name}"
+                        })
+            
+            # Migrate done queue
+            if done_path.exists() and done_path.is_dir():
+                done_files = list(done_path.glob("*.yaml"))
+                if done_files:
+                    for file in done_files:
+                        new_file_path = self.done_dir / file.name
+                        shutil.copy2(str(file), str(new_file_path))
+                        migration_log.append({
+                            "timestamp": datetime.now().isoformat(),
+                            "action": "file_copied",
+                            "from": f"done/{file.name}",
+                            "to": f"{self.session_id}/done/{file.name}"
+                        })
+            
+            # Rename old directories to backup
+            migration_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            
+            if incoming_path.exists():
+                backup_path = incoming_path.parent / f"incoming-legacy-{migration_timestamp}"
+                shutil.move(str(incoming_path), str(backup_path))
+                migration_log.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "action": "old_directory_renamed",
+                    "from": "incoming",
+                    "to": f"incoming-legacy-{migration_timestamp}"
+                })
+            
+            if processing_path.exists():
+                backup_path = processing_path.parent / f"processing-legacy-{migration_timestamp}"
+                shutil.move(str(processing_path), str(backup_path))
+                migration_log.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "action": "old_directory_renamed",
+                    "from": "processing",
+                    "to": f"processing-legacy-{migration_timestamp}"
+                })
+            
+            if done_path.exists():
+                backup_path = done_path.parent / f"done-legacy-{migration_timestamp}"
+                shutil.move(str(done_path), str(backup_path))
+                migration_log.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "action": "old_directory_renamed",
+                    "from": "done",
+                    "to": f"done-legacy-{migration_timestamp}"
+                })
+            
+            migration_log.append({
+                "timestamp": datetime.now().isoformat(),
+                "action": "migration_completed",
+                "status": "success"
+            })
+            
+            # Write migration log
+            log_path = self.base_dir / ".migration-log"
+            with open(log_path, 'w') as f:
+                yaml.dump(migration_log, f, default_flow_style=False, sort_keys=False)
+            
+            print(f"   ✅ Migration complete. Log saved to {log_path}")
+            
+        except Exception as e:
+            migration_log.append({
+                "timestamp": datetime.now().isoformat(),
+                "action": "migration_failed",
+                "error": str(e)
+            })
+            log_path = self.base_dir / ".migration-log"
+            with open(log_path, 'w') as f:
+                yaml.dump(migration_log, f, default_flow_style=False, sort_keys=False)
+            print(f"   ⚠️  Migration failed: {e}")
+            raise
+    
     def __init__(self, queue_dir: Optional[str] = None, agent_context: Optional[str] = None):
+        # Detect session-id early
+        try:
+            self.session_id = self.detect_session_id()
+        except RuntimeError as e:
+            print(f"   ⚠️  Warning: {e}. Falling back to generic session handling.")
+            # Fallback: use a placeholder for testing/migration purposes
+            self.session_id = "default"
+        
         # Use explicit queue_dir, or auto-detect based on agent context
         if queue_dir:
-            self.base_dir = Path(queue_dir).expanduser()
+            base_queue_dir = Path(queue_dir).expanduser()
             self.agent_context = agent_context or self.detect_agent_context()
         else:
             # Auto-detect agent context
@@ -102,31 +319,56 @@ class QueueManager:
                 claude_queue = Path("~/.claude/queue").expanduser()
                 repo_queue = Path("artifacts/queue")
                 if claude_queue.exists():
-                    self.base_dir = claude_queue
+                    base_queue_dir = claude_queue
                 elif repo_queue.exists():
-                    self.base_dir = repo_queue
+                    base_queue_dir = repo_queue
                 else:
-                    self.base_dir = claude_queue
+                    base_queue_dir = claude_queue
             else:  # copilot
                 copilot_queue = Path("~/.copilot/queue").expanduser()
                 repo_queue = Path("artifacts/queue")
                 if copilot_queue.exists():
-                    self.base_dir = copilot_queue
+                    base_queue_dir = copilot_queue
                 elif repo_queue.exists():
-                    self.base_dir = repo_queue
+                    base_queue_dir = repo_queue
                 else:
-                    self.base_dir = copilot_queue
+                    base_queue_dir = copilot_queue
         
-        self.incoming_dir = self.base_dir / "incoming"
-        self.processing_dir = self.base_dir / "processing"
-        self.done_dir = self.base_dir / "done"
+        # Store the base queue directory (for migrations)
+        self.base_dir = base_queue_dir
+        
+        # Now set the session-id partitioned queue directory BEFORE migration
+        self.session_queue_dir = self.base_dir / self.session_id
+        self.incoming_dir = self.session_queue_dir / "incoming"
+        self.processing_dir = self.session_queue_dir / "processing"
+        self.done_dir = self.session_queue_dir / "done"
+        
+        # Migrate legacy queue structure if needed
+        self.migrate_legacy_queue()
+        
+        # Ensure queue structure exists after migration
         self._ensure_queue_structure()
-        print(f"   Queue Manager initialized: {self.base_dir} (agent_context={self.agent_context})")
+        print(f"   Queue Manager initialized: {self.session_queue_dir} (session_id={self.session_id}, agent_context={self.agent_context})")
+    
     
     def _ensure_queue_structure(self):
         """Ensure all queue directories exist."""
         for dir_path in [self.incoming_dir, self.processing_dir, self.done_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
+    
+    # Queue path accessor methods (session-aware)
+    def get_incoming_queue_dir(self) -> Path:
+        """Return the incoming queue directory for this session."""
+        return self.incoming_dir
+    
+    def get_processing_queue_dir(self) -> Path:
+        """Return the processing queue directory for this session."""
+        return self.processing_dir
+    
+    def get_done_queue_dir(self) -> Path:
+        """Return the done queue directory for this session."""
+        return self.done_dir
+    
     
     def list_incoming_tasks(self) -> List[str]:
         """List all DELEGATE files in incoming queue."""
