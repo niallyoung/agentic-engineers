@@ -19,6 +19,15 @@ from typing import Dict, List, Optional, Any
 import yaml
 import json
 
+# Import queue enforcement middleware for easy access
+from .queue_enforcement_middleware import (
+    QueueContext,
+    QueueContextManager,
+    QueueEnforcementError,
+    QueueEnforcingProxy,
+    QueueEnforcementLogger,
+)
+
 
 @dataclass
 class AgentConfig:
@@ -257,4 +266,10 @@ __all__ = [
     "HEALING_AGENT_CONFIG",
     "SPEC_ENGINEER_CONFIG",
     "QUALITY_GATE_ORCHESTRATOR_CONFIG",
+    # Queue Enforcement Middleware (Phase 4)
+    "QueueContext",
+    "QueueContextManager",
+    "QueueEnforcementError",
+    "QueueEnforcingProxy",
+    "QueueEnforcementLogger",
 ]
