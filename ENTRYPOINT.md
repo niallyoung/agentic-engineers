@@ -2,11 +2,13 @@
 
 **Canonical workflow for running agentic-engineers**
 
-The system works across multiple agent contexts:
-- **Copilot agents** queue work in `~/.copilot/queue/`
-- **Claude agents** queue work in `~/.claude/queue/`
+The system works across multiple agent contexts with per-session queue partitioning:
+- **Copilot agents** queue work in `~/.copilot/queue/{session-id}/` (each session has isolated queue)
+- **Claude agents** queue work in `~/.claude/queue/{session-id}/` (each session has isolated queue)
 - Both use identical DELEGATE/HANDBACK protocol
-- Orchestrator auto-detects which context is running and uses correct queue
+- Orchestrator auto-detects session-id and uses session-specific queue partition
+- Multiple simultaneous Copilot/Claude instances don't interfere with each other
+- Legacy queue structure automatically migrated on first run
 
 ---
 
@@ -22,12 +24,16 @@ cd ~/.copilot/session-state/YOUR-SESSION/files/agentic-engineers
 cd 
 ```
 
-Create a DELEGATE YAML in the appropriate queue:
+Create a DELEGATE YAML in the appropriate session-specific queue:
 
 **For Copilot agents:**
 ```bash
-mkdir -p ~/.copilot/queue/incoming
-cat > ~/.copilot/queue/incoming/{task_id}.yaml <<'EOF'
+# Queue paths are now partitioned by session-id
+# Get your session-id from COPILOT_SESSION_ID env var or ~/.copilot/session-state/
+COPILOT_SESSION_ID=$(echo $COPILOT_SESSION_ID)  # Or discover from session-state
+
+mkdir -p ~/.copilot/queue/$COPILOT_SESSION_ID/incoming
+cat > ~/.copilot/queue/$COPILOT_SESSION_ID/incoming/{task_id}.yaml <<'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer | Quality Engineer | Model Engineer | Orchestrator
@@ -49,8 +55,11 @@ EOF
 
 **For Claude agents:**
 ```bash
-mkdir -p ~/.claude/queue/incoming
-cat > ~/.claude/queue/incoming/{task_id}.yaml <<'EOF'
+# Queue paths are now partitioned by session-id
+CLAUDE_SESSION_ID=$(echo $CLAUDE_SESSION_ID)  # Or discover from session-state
+
+mkdir -p ~/.claude/queue/$CLAUDE_SESSION_ID/incoming
+cat > ~/.claude/queue/$CLAUDE_SESSION_ID/incoming/{task_id}.yaml <<'EOF'
 # Same YAML structure as above
 EOF
 ```
@@ -316,6 +325,67 @@ artifacts/index.json
 
 ---
 
+## 🔀 Multi-Session Queue Partitioning
+
+When multiple Copilot or Claude instances run concurrently, each session has its own isolated queue partition:
+
+### Session-ID Concept
+
+- **Session-ID** is a UUID assigned to each Copilot/Claude instance
+- Location: `~/.copilot/session-state/{session-id}/` or `~/.claude/session-state/{session-id}/`
+- Each session's Orchestrator only polls its own queue partition
+- No cross-contamination between simultaneous sessions
+
+### Queue Paths by Session
+
+```
+~/.copilot/queue/
+├── 54744939-4acb-430c-b2c4-3b8322289d0b/
+│   ├── incoming/     # Tasks for this session only
+│   ├── processing/
+│   └── done/
+├── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/  # Different session
+│   ├── incoming/
+│   ├── processing/
+│   └── done/
+└── .migration-log    # Record of queue migrations
+```
+
+### Automatic Migration
+
+When upgrading to session-id partitioning:
+1. Old queue structure (`~/.copilot/queue/{incoming,processing,done}`) is auto-detected
+2. Files are copied to new session-specific location
+3. Old directories renamed to backup (e.g., `incoming-legacy-20260503-143022/`)
+4. Migration logged in `.migration-log` for audit trail
+5. Zero data loss — all work preserved
+
+### Session-ID Detection
+
+The Orchestrator detects your session-id using:
+1. **COPILOT_SESSION_ID** environment variable (highest priority)
+2. **CLAUDE_SESSION_ID** environment variable
+3. Scan of `~/.copilot/session-state/` or `~/.claude/session-state/` (most recent session)
+
+You can check your session-id:
+```bash
+# Print current session-id
+echo $COPILOT_SESSION_ID
+
+# Or find it from session-state
+ls ~/.copilot/session-state/
+```
+
+### Troubleshooting Queue Not Found
+
+If you see "queue not found" errors:
+1. Verify your session-id: `echo $COPILOT_SESSION_ID`
+2. Check queue exists: `ls ~/.copilot/queue/$COPILOT_SESSION_ID/incoming/`
+3. Check migration log: `cat ~/.copilot/queue/.migration-log`
+4. Verify session-state dir: `ls ~/.copilot/session-state/`
+
+---
+
 ## 🔐 Security & Constraints
 
 ✅ **All work flows through agents** — no external scripts, cron jobs, or utilities
@@ -340,9 +410,11 @@ See `docs/SPEC.md` for full architectural constraints.
 
 ## 🚀 TL;DR
 
-1. **Queue a task** → Create DELEGATE YAML in `artifacts/queue/incoming/`
-2. **Start Orchestrator** → It polls queue and delegates work
-3. **Check results** → Review `artifacts/queue/done/` and generated files
+1. **Queue a task** → Create DELEGATE YAML in `~/.copilot/queue/{session-id}/incoming/`
+   - Session-id auto-detected from environment or filesystem
+2. **Start Orchestrator** → It polls your session's queue and delegates work
+   - Multi-session support: Each session has isolated queue
+3. **Check results** → Review `~/.copilot/queue/{session-id}/done/` and generated files
 4. **Commit** → Add artifacts to git
 
-That's it. Orchestrator handles routing, execution, observability, and queue management. Everything is agent-based, auditable, and framework-native.
+That's it. Orchestrator handles routing, execution, observability, session isolation, and queue management. Everything is agent-based, auditable, and framework-native.

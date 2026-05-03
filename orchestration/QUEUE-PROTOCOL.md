@@ -1,18 +1,32 @@
 # Queue-Based Delegation Mechanics
 
-Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages.
+Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
 
-**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `artifacts/queue/incoming/`, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.copilot/queue/{session-id}/incoming/` (or `~/.claude/queue/` for Claude context), routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
 
 ---
 
-## Queue Structure
+## Queue Structure (Session-ID Partitioned)
 
 ```
-artifacts/queue/
-├── incoming/      # New work, ready for Orchestrator agent to process
-├── processing/    # Work assigned to agent, awaiting HANDBACK
-└── done/          # Completed work, ready for human decision
+~/.copilot/queue/
+├── {session-id}/                    # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
+│   ├── incoming/                    # New work, ready for Orchestrator agent to process
+│   ├── processing/                  # Work assigned to agent, awaiting HANDBACK
+│   └── done/                        # Completed work, ready for human decision
+├── {other-session-id}/
+│   ├── incoming/
+│   ├── processing/
+│   └── done/
+└── .migration-log                   # Migration record (legacy → partitioned)
+```
+
+**Prior Structure (Legacy - Automatically Migrated):**
+```
+~/.copilot/queue/
+├── incoming/                        # Migrated to {session-id}/incoming/
+├── processing/                      # Migrated to {session-id}/processing/
+└── done/                            # Migrated to {session-id}/done/
 ```
 
 ---
@@ -21,7 +35,9 @@ artifacts/queue/
 
 ### 1. Incoming Queue
 
-**New task arrives as:** `artifacts/queue/incoming/{task_id}.yaml`
+**New task arrives as:** `~/.copilot/queue/{session-id}/incoming/{task_id}.yaml`
+
+Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/incoming/2026-04-30-fix-token-timeout.yaml`
 
 ```yaml
 ---
@@ -32,17 +48,19 @@ priority: high
 ---
 ```
 
-**Orchestrator agent (running in harness) polls `incoming/` every 30-60s and:**
+**Orchestrator agent (running in harness) polls `{session-id}/incoming/` every 30-60s and:**
 1. Reads task
 2. Applies AGENTS.md routing rules
 3. Creates DELEGATE (HANDOFF.md format)
 4. Stores DELEGATE in `artifacts/delegates/YYYY-MM-DD/`
 5. Sends DELEGATE to appropriate agent
-6. Deletes from `incoming/` (or moves to archive)
+6. Deletes from `{session-id}/incoming/` (or moves to archive)
 
 ### 2. Processing Queue
 
-**Agent returns work as:** `artifacts/queue/processing/{task_id}-HANDBACK-{role}.yaml`
+**Agent returns work as:** `~/.copilot/queue/{session-id}/processing/{task_id}-HANDBACK-{role}.yaml`
+
+Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
 
 ```yaml
 ---
@@ -60,14 +78,16 @@ escalations: 0
 ---
 ```
 
-**Orchestrator agent polls `processing/` and:**
+**Orchestrator agent polls `{session-id}/processing/` and:**
 1. Routes complete work to Quality Engineer
 2. Escalates blocked work to Lead/Senior Engineer
-3. Moves to `done/` after decision
+3. Moves to `{session-id}/done/` after decision
 
 ### 3. Done Queue
 
-**Final decision stored as:** `artifacts/queue/done/{task_id}-{decision}.yaml`
+**Final decision stored as:** `~/.copilot/queue/{session-id}/done/{task_id}-{decision}.yaml`
+
+Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
 
 ```yaml
 task_id: 2026-04-30-fix-token-timeout
@@ -75,7 +95,7 @@ decision: PROCEED | REWORK | ESCALATE
 notes: "Quality Engineer verified; ready to merge"
 ```
 
-**Human/external system reads from `done/` for:**
+**Human/external system reads from `{session-id}/done/` for:**
 - Merge decisions (PROCEED)
 - Rework notifications (REWORK)
 - Escalation alerts (ESCALATE)
@@ -95,6 +115,118 @@ Orchestrator is a harness agent (defined in AGENTS.md) that:
 7. **Applies recommendations** from Model Engineer feedback loop
 
 **No external tools**, no cron jobs, no shell scripts — 100% agent-based.
+
+---
+
+## Session-ID Based Partitioning
+
+Each Copilot or Claude session has its own isolated queue, identified by a unique session-id (UUID). This ensures that multiple simultaneous Copilot/Claude instances don't interfere with each other's tasks.
+
+### Session-ID Detection
+
+The Orchestrator detects the session-id using the following priority:
+
+1. **COPILOT_SESSION_ID Environment Variable** (highest priority)
+   - Set automatically by Copilot CLI runtime
+   - Example: `export COPILOT_SESSION_ID=54744939-4acb-430c-b2c4-3b8322289d0b`
+
+2. **CLAUDE_SESSION_ID Environment Variable**
+   - Set automatically by Claude runtime (if running in Claude context)
+   - Example: `export CLAUDE_SESSION_ID=...`
+
+3. **Filesystem Scan** (lowest priority)
+   - Scan `~/.copilot/session-state/` or `~/.claude/session-state/`
+   - Find the most recently modified session directory
+   - Use its directory name (UUID) as the session-id
+   - Example: `~/.copilot/session-state/54744939-4acb-430c-b2c4-3b8322289d0b/`
+
+### Multiple Simultaneous Sessions
+
+When multiple Copilot or Claude instances run concurrently, each gets a unique queue partition:
+
+```
+~/.copilot/queue/
+├── 54744939-4acb-430c-b2c4-3b8322289d0b/  # Copilot session 1
+│   ├── incoming/ ← Tasks for session 1 only
+│   ├── processing/
+│   └── done/
+├── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/  # Copilot session 2
+│   ├── incoming/ ← Tasks for session 2 only
+│   ├── processing/
+│   └── done/
+└── .migration-log
+```
+
+Each session's Orchestrator only polls and processes its own queue partition. No cross-contamination, no race conditions.
+
+---
+
+## Migration Guide (Legacy → Session-ID Partitioned)
+
+### Automatic Migration on First Run
+
+When QueueManager is initialized for the first time with the new code:
+
+1. **Detects legacy queue structure** (`~/.copilot/queue/{incoming,processing,done}`)
+2. **Creates new session-id directories** (`~/.copilot/queue/{session-id}/`)
+3. **Copies all queue files** from old location to new location
+4. **Renames old directories** to backup location (e.g., `incoming-legacy-20260503-143022/`)
+5. **Records migration** in `.migration-log`
+
+### Migration Log
+
+After migration, a `.migration-log` file is created at `~/.copilot/queue/.migration-log`:
+
+```yaml
+- timestamp: 2026-05-03T14:30:22.123456
+  action: migration_started
+  from_structure: "~/.copilot/queue/{incoming,processing,done}"
+  to_structure: "~/.copilot/queue/{session-id}/{incoming,processing,done}"
+
+- timestamp: 2026-05-03T14:30:22.234567
+  action: file_copied
+  from: "incoming/task-001.yaml"
+  to: "54744939-4acb-430c-b2c4-3b8322289d0b/incoming/task-001.yaml"
+
+- timestamp: 2026-05-03T14:30:22.345678
+  action: file_copied
+  from: "processing/task-002.yaml"
+  to: "54744939-4acb-430c-b2c4-3b8322289d0b/processing/task-002.yaml"
+
+- timestamp: 2026-05-03T14:30:22.456789
+  action: old_directory_renamed
+  from: "incoming"
+  to: "incoming-legacy-20260503-143022"
+
+- timestamp: 2026-05-03T14:30:22.567890
+  action: migration_completed
+  status: success
+```
+
+### Backward Compatibility
+
+- Old queue files are **not deleted**, only copied to new location
+- Old directories are **renamed** with timestamp, not removed
+- All data is preserved for auditing and recovery
+- If migration fails, `.migration-log` records the error for debugging
+
+### Manual Queue Inspection
+
+To view tasks in a specific session's queue:
+
+```bash
+# Detect current session-id
+echo $COPILOT_SESSION_ID
+
+# Or find it from session-state
+ls ~/.copilot/session-state/
+
+# List incoming tasks for a session
+ls ~/.copilot/queue/{session-id}/incoming/
+
+# Inspect a task
+cat ~/.copilot/queue/{session-id}/incoming/task-001.yaml
+```
 
 ---
 
