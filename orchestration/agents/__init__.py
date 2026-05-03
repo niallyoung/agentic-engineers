@@ -215,6 +215,24 @@ QUALITY_GATE_ORCHESTRATOR_CONFIG = AgentConfig(
     description="Delegate to 5 QG sub-agents, aggregate, decide PROCEED/ESCALATE"
 )
 
+# Phase 5: Pure Orchestrator Refactor
+
+ROUTING_AGENT_CONFIG = AgentConfig(
+    name="Routing Agent",
+    model="claude-haiku-4-5",
+    effort="low",
+    role="routing_agent",
+    description="Translate AGENTS.md decision tree to route tasks to appropriate agents"
+)
+
+DECISION_ENGINE_CONFIG = AgentConfig(
+    name="Decision Engine",
+    model="claude-sonnet-4-6",
+    effort="medium",
+    role="decision_engine",
+    description="Evaluate HANDBACK against success criteria and decide next action"
+)
+
 
 # Registry of all agents
 AGENTS = {
@@ -232,6 +250,8 @@ AGENTS = {
     "healing_agent": HEALING_AGENT_CONFIG,
     "spec_engineer": SPEC_ENGINEER_CONFIG,
     "quality_gate_orchestrator": QUALITY_GATE_ORCHESTRATOR_CONFIG,
+    "routing_agent": ROUTING_AGENT_CONFIG,
+    "decision_engine": DECISION_ENGINE_CONFIG,
 }
 
 
@@ -266,6 +286,8 @@ __all__ = [
     "HEALING_AGENT_CONFIG",
     "SPEC_ENGINEER_CONFIG",
     "QUALITY_GATE_ORCHESTRATOR_CONFIG",
+    "ROUTING_AGENT_CONFIG",
+    "DECISION_ENGINE_CONFIG",
     # Queue Enforcement Middleware (Phase 4)
     "QueueContext",
     "QueueContextManager",
