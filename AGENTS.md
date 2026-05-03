@@ -18,6 +18,10 @@ effort: low
 When given a task, evaluate in order and route to first matching agent:
 
 ```
+0. Is this a pre-commit quality gate? (origin: pre-commit-hook OR task_id starts with "quality-gate-precommit-")
+   → YES: Quality Engineer (Sonnet, medium effort) — PRIORITY: route immediately, skip queue position
+   → Note: A developer is waiting for this result; expedite above all other tasks
+
 1. Is this security-scoped? (auth, crypto, data protection, secrets, vulnerability)
    → YES: Security Engineer (Opus)
    

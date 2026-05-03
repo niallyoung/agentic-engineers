@@ -1,6 +1,12 @@
 # Agentic Engineers: Standard Execution Model
 
-**Canonical workflow for running agentic-engineers from `~/.copilot/`**
+**Canonical workflow for running agentic-engineers**
+
+The system works across multiple agent contexts:
+- **Copilot agents** queue work in `~/.copilot/queue/`
+- **Claude agents** queue work in `~/.claude/queue/`
+- Both use identical DELEGATE/HANDBACK protocol
+- Orchestrator auto-detects which context is running and uses correct queue
 
 ---
 
@@ -16,10 +22,12 @@ cd ~/.copilot/session-state/YOUR-SESSION/files/agentic-engineers
 cd /home/user/agentic-engineers
 ```
 
-Create a DELEGATE YAML in `artifacts/queue/incoming/{task_id}.yaml`:
+Create a DELEGATE YAML in the appropriate queue:
 
-```yaml
----
+**For Copilot agents:**
+```bash
+mkdir -p ~/.copilot/queue/incoming
+cat > ~/.copilot/queue/incoming/{task_id}.yaml <<'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer | Quality Engineer | Model Engineer | Orchestrator
@@ -36,7 +44,15 @@ plan:
   - 2. Second step
 success_criteria:
   - What "done" looks like
----
+EOF
+```
+
+**For Claude agents:**
+```bash
+mkdir -p ~/.claude/queue/incoming
+cat > ~/.claude/queue/incoming/{task_id}.yaml <<'EOF'
+# Same YAML structure as above
+EOF
 ```
 
 See `orchestration/HANDOFF.md` for complete DELEGATE format.
@@ -44,7 +60,8 @@ See `orchestration/HANDOFF.md` for complete DELEGATE format.
 ### 2. Start the Orchestrator Agent
 
 The **Orchestrator** is a special agent defined in `orchestration/AGENTS.md` that:
-- Polls `~/.copilot/queue/incoming/` every 30-60 seconds
+- Auto-detects whether running in Claude or Copilot context
+- Polls the correct queue (`~/.claude/queue/` or `~/.copilot/queue/`)
 - Routes tasks to appropriate agents using AGENTS.md decision tree
 - Delegates work via DELEGATE/HANDBACK protocol
 - Processes results and moves tasks through queue states
@@ -53,7 +70,7 @@ The **Orchestrator** is a special agent defined in `orchestration/AGENTS.md` tha
 
 **Invoke Orchestrator:**
 
-The Orchestrator is invoked by the Copilot CLI harness (not as a direct script). Queue a DELEGATE task specifying `role: Orchestrator`:
+The Orchestrator is invoked by the agent harness (Claude or Copilot CLI). Queue a DELEGATE task specifying `role: Orchestrator`:
 
 ```yaml
 ---
@@ -66,9 +83,10 @@ scope: |
   Poll queue and delegate all work to appropriate agents.
   Process until idle (no tasks for 60+ seconds).
 context: |
-  6 tasks in ~/.copilot/queue/incoming/ awaiting delegation.
+  Tasks in queue awaiting delegation (Orchestrator auto-detects correct queue).
 plan:
-  - Poll queue every 45 seconds
+  - Auto-detect agent context (Claude vs Copilot)
+  - Poll correct queue (~/.claude/queue or ~/.copilot/queue)
   - Route each task per AGENTS.md
   - Delegate with proper context
   - Wait for HANDBACK
