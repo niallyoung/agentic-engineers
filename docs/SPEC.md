@@ -124,6 +124,41 @@ The queue-first model ensures all work is tracked, routable, optimizable, and au
 
 ---
 
+## DOG-FOOD PRINCIPLE: Self-Improving Through Continuous Feedback
+
+**Core Design Principle (New in Phase 5.10):**
+
+Every agent and quality system we build must be validated by the quality systems it helps improve. This creates a positive feedback loop where improvements compound.
+
+### How It Works
+
+1. **Agent Implementation** → Validated by quality gates
+2. **Quality Gates** → Validated by Quality Engineer review
+3. **Quality Engineer Review** → Informed by Model Engineer analysis
+4. **Model Engineer Optimization** → Improves routing for next task
+5. **Next Task** → Routed better → produces better work → improves feedback
+6. **Cycle Repeats** → Exponential improvement
+
+### Practical Constraints
+
+- ✅ When implementing feature X, use the quality gates that X improves
+- ✅ Agent code must pass the validation rules it implements
+- ✅ Quality improvements must be validated by Quality Engineer
+- ✅ Feedback from task execution must inform next task routing
+- ✅ Metrics from improvements must drive optimization decisions
+
+### Why This Matters
+
+Traditional QA is **reactive**: code → test → fix → deploy (days/weeks)
+
+Dog-fooding is **proactive**: code → quality gate → escalate if needed → fix → next code (minutes)
+
+This creates exponential improvement instead of linear.
+
+**See:** [`docs/PHILOSOPHY-DOG-FOOD.md`](../PHILOSOPHY-DOG-FOOD.md) for full philosophy
+
+---
+
 ## DEPRECATION NOTICE: Removed External Scripts & Cron Jobs
 
 **Effective 2026-05-02:** The following files have been removed and MUST NOT be recreated:
