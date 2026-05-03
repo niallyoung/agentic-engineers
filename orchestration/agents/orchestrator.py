@@ -31,6 +31,7 @@ from .implementations import (
     LeadEngineerAgent, PrincipalEngineerAgent, QualityEngineerAgent,
     ModelEngineerAgent, SecurityEngineerAgent
 )
+from .quality_validator import QualityValidator, RoutingDecision
 
 
 class QueueManager:
@@ -426,6 +427,7 @@ class OrchestratorAgent(Agent):
         agent_context: Optional[str] = None,
         idle_timeout: int = 60,
         agent_invoker=None,
+        quality_validator: Optional["QualityValidator"] = None,
     ):
         super().__init__(ORCHESTRATOR_CONFIG)
         self.queue_manager = QueueManager(queue_dir, agent_context)
@@ -437,6 +439,8 @@ class OrchestratorAgent(Agent):
         self.tasks_escalated = 0
         # Optional AgentInvoker for subprocess-based delegation (task 5106)
         self.agent_invoker = agent_invoker
+        # Quality validator — defaults to a fresh instance if not injected
+        self.quality_validator = quality_validator or QualityValidator()
     
     def run_poll_cycle(self) -> Dict:
         """
@@ -507,8 +511,28 @@ class OrchestratorAgent(Agent):
             task_id = delegate.get("task_id", "unknown")
             role = delegate.get("role", "unknown")
             print(f"   Task ID: {task_id} | Role: {role}")
+
+            # 2. Layer 1 + Layer 2 quality validation (pre-routing)
+            validation = self.quality_validator.validate_delegate(delegate)
+            print(f"   🔍 Quality: {self.quality_validator.summary(validation)}")
+
+            if validation.routing_decision == RoutingDecision.CRITICAL:
+                # Quality gate blocks routing — escalate immediately
+                print(f"   💥 CRITICAL quality failure — escalating task {task_id}")
+                self._handle_quality_escalation(filename, delegate, validation)
+                return
+
+            if validation.routing_decision == RoutingDecision.LOW:
+                # Route to Principal Engineer for redesign
+                print(f"   🔄 LOW quality score ({validation.quality_score}/100) — routing to Principal Engineer")
+                role = "principal_engineer"
+            elif validation.routing_decision == RoutingDecision.MEDIUM:
+                # Route to Lead Engineer for refinement
+                print(f"   🔄 MEDIUM quality score ({validation.quality_score}/100) — routing to Lead Engineer")
+                role = "lead_engineer"
+            # HIGH: proceed with original role as-is
             
-            # 2. Move to processing queue using move_task (atomic with audit trail)
+            # 3. Move to processing queue using move_task (atomic with audit trail)
             move_result = self.queue_manager.move_task(
                 task_id=task_id,
                 from_state="incoming",
@@ -517,21 +541,34 @@ class OrchestratorAgent(Agent):
                     "routing_info": {
                         "role": role,
                         "model": delegate.get("model", "unknown"),
-                        "effort": delegate.get("effort", "unknown")
-                    }
+                        "effort": delegate.get("effort", "unknown"),
+                    },
+                    "quality_validation": {
+                        "score": validation.quality_score,
+                        "routing_decision": validation.routing_decision.value,
+                        "findings_count": len(validation.findings),
+                    },
                 }
             )
             print(f"   ✓ Moved to processing queue (audit: {len(move_result['audit_trail'])} entries)")
             
-            # 3. Route to appropriate agent
-            agent_name, agent = self.task_router.route_task(delegate)
+            # 4. Route to appropriate agent
+            # Override role in delegate based on quality routing decision
+            effective_delegate = dict(delegate)
+            effective_delegate["role"] = role
+            agent_name, agent = self.task_router.route_task(effective_delegate)
             print(f"   ✓ Routed to: {agent_name}")
             
-            # 4. Execute agent
-            handback = agent.execute(delegate)
+            # 5. Execute agent
+            handback = agent.execute(effective_delegate)
             print(f"   ✓ Agent executed with status: {handback.get('status')}")
+
+            # 6. Layer 3 quality validation (post-completion)
+            handback_validation = self.quality_validator.validate_handback(handback, delegate)
+            print(f"   🔍 HANDBACK quality: {self.quality_validator.summary(handback_validation)}")
+            handback["quality_validation"] = handback_validation.as_dict()
             
-            # 5. Move to done queue using move_task (atomic with audit trail and decision)
+            # 7. Move to done queue using move_task (atomic with audit trail and decision)
             decision = handback.get("decision", "PROCEED")
             move_done_result = self.queue_manager.move_task(
                 task_id=task_id,
@@ -557,6 +594,26 @@ class OrchestratorAgent(Agent):
             # Archive failed task for debugging
             self.queue_manager.archive_task(filename)
             print(f"   ✓ Archived for debugging")
+
+    def _handle_quality_escalation(self, filename: str, delegate: Dict, validation) -> None:
+        """
+        Handle a task that failed quality validation with CRITICAL severity.
+
+        Archives the task and emits a detailed escalation report so the
+        Principal Engineer can inspect and remediate.
+        """
+        task_id = delegate.get("task_id", "unknown")
+        report = self.quality_validator.validation_report(validation)
+        print(f"\n{report}")
+        # Archive with quality failure metadata
+        try:
+            self.queue_manager.archive_task(filename)
+            print(f"   ✓ Archived CRITICAL quality failure for {task_id}")
+        except Exception as exc:
+            print(f"   ⚠ Could not archive {filename}: {exc}")
+        self.tasks_processed += 1
+        self.tasks_escalated += 1
+
     
     def do_work(self) -> Dict:
         """
