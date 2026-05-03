@@ -68,6 +68,41 @@ User Task
 | **Principal Engineer** | Opus | High | Cross-service architecture, major refactors |
 | **Model Engineer** | Haiku | Low | Analyzes metrics, optimizes routing & models |
 
+### Dog-Food Philosophy: Self-Improving Through Continuous Feedback
+
+**Core Design Principle:** *We use the agents and quality systems we build to improve the agents and quality systems themselves.*
+
+This creates exponential improvement through immediate feedback loops:
+
+```
+Traditional:     Code → Test (delayed) → Feedback (delayed) → Fix
+Dog-Food:        Code → Quality gate (immediate) → Escalation → Better tools → Next code (better)
+```
+
+**Why it matters:**
+- **Feedback time:** Reduced from weeks to minutes
+- **Improvement cycle:** Exponential, not linear
+- **Quality gates validate themselves:** Layer 3 validates the validators
+- **Agent code feeds back:** Immediately informs routing optimization
+- **Model Engineer learns:** From every escalation and metric
+
+**In practice (Phase 5.10):**
+1. We built better quality gates (checklist enforcement, escalation thresholds)
+2. Those gates validated the code that built them
+3. Escalation feedback goes to Model Engineer
+4. Next agent task uses improved routing
+5. Cycle repeats → exponential improvement
+
+This philosophy is embedded throughout the system:
+- **AGENTS.md:** Every agent validates itself through quality gates
+- **Quality Gates:** Validate agent code that improves quality gates
+- **Model Engineer:** Feeds optimization data back into routing
+- **HANDBACK:** Includes metrics that improve Model Engineer decisions
+
+**Result:** Agentic-engineers gets cheaper and better every day automatically.
+
+---
+
 ### Queue Protocol: DELEGATE ↔ HANDBACK
 
 **DELEGATE** (user → orchestrator):
