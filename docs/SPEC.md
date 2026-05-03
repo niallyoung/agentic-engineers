@@ -34,18 +34,19 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
    - Work only flows through the Orchestrator queue system
 
 2. **All Work Enters the Queue**
-   - New tasks arrive as files in `artifacts/queue/incoming/{task_id}.yaml`
+   - New tasks arrive as files in `~/.copilot/queue/{session-id}/incoming/{task_id}.yaml` (Copilot context)
+   - Each session has its own isolated queue partition
    - Orchestrator polls this directory every 30-60 seconds
    - No other entry point exists (no Makefile targets, no scripts, no cron jobs, no ad-hoc invocations)
 
 3. **Orchestrator is the Router**
-   - Reads incoming task from `incoming/` queue
+   - Reads incoming task from session-partitioned queue
    - Applies AGENTS.md routing decision tree to determine which agent to delegate to
    - Creates DELEGATE block in `artifacts/delegates/YYYY-MM-DD/` with complete context
    - Sends DELEGATE to agent
    - Receives HANDBACK from agent
    - Routes HANDBACK to Quality Engineer for verification
-   - Moves completed task to `done/` queue
+   - Moves completed task to session-partitioned `done/` queue
    - Applies Model Engineer recommendations to improve future routing
 
 4. **No External Scripts, Tools, or Cron Jobs (Agent Operations)**
@@ -67,8 +68,9 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 **When creating an agent implementation:**
 
 1. **Implement QUEUE POLLING**
-   - Orchestrator SKILL polls `artifacts/queue/incoming/` every 30-60 seconds
-   - Each poll reads new tasks and creates DELEGATEs
+   - Orchestrator SKILL detects session-id (from COPILOT_SESSION_ID or filesystem scan)
+   - Orchestrator SKILL polls `~/.copilot/queue/{session-id}/incoming/` every 30-60 seconds
+   - Each poll reads new tasks from session's queue partition only
    - This is the ONLY way work enters the system
 
 2. **Implement ROUTING**
@@ -300,7 +302,7 @@ This section defines canonical terms used throughout the agentic-engineers frame
 | **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `artifacts/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
 | **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `artifacts/queue/incoming/` only by humans or the Orchestrator itself. Automated external systems MUST NOT write directly to the queue. Core unit of work. | `artifacts/queue/incoming/task-2026-05-02.yaml` |
 | **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `artifacts/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `artifacts/queue/done/task-2026-05-02-HANDBACK.yaml` |
-| **Queue System** | File-based work queue with three directories: `incoming/` (new tasks), `processing/` (in-progress), `done/` (completed). Location is context-aware: `~/.copilot/queue/` when running Copilot agents, `~/.claude/queue/` when running Claude agents. Both use identical DELEGATE/HANDBACK protocol. | All work coordination happens through context-specific queue file operations. |
+| **Queue System** | File-based work queue with three session-id partitioned directories: `~/.copilot/queue/{session-id}/{incoming,processing,done}/` (Copilot context) or `~/.claude/queue/{session-id}/{incoming,processing,done}/` (Claude context). Each Copilot or Claude session has isolated queue partition identified by UUID. Automatic migration of legacy queues on first run. Both use identical DELEGATE/HANDBACK protocol. | All work coordination happens through context-specific, session-partitioned queue file operations. No cross-session contamination. |
 | **Agent SKILL** | A Python module implementing an agent's core capabilities. Invoked only through agent context (not external scripts). Located in `orchestration/agents/`. | `orchestration/agents/engineer_agent.py` |
 | **Span Capture** | Observability mechanism that tracks work execution from initiation through completion, including decision points, delays, and handoffs. | `artifacts/spans/ directory records all task spans. |
 | **Task Routing** | The process by which Orchestrator examines a DELEGATE block and applies the decision tree to select the appropriate agent role. | "Routing determined this was a security task, so Principal Engineer was selected." |
@@ -333,38 +335,56 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
 
 ## Queue-Based Delegation Mechanics
 
-### Queue Structure
+### Queue Structure (Session-ID Partitioned)
 
 ```
-artifacts/queue/
-├── incoming/      # New tasks, ready for Orchestrator to process
-├── processing/    # Work assigned to agent, awaiting HANDBACK
-└── done/          # Completed work, ready for human decision
+~/.copilot/queue/
+├── {session-id}/                    # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
+│   ├── incoming/                    # New tasks, ready for Orchestrator to process
+│   ├── processing/                  # Work assigned to agent, awaiting HANDBACK
+│   └── done/                        # Completed work, ready for human decision
+├── {other-session-id}/
+│   ├── incoming/
+│   ├── processing/
+│   └── done/
+└── .migration-log                   # Migration record
 ```
+
+**Session-ID Detection:**
+- COPILOT_SESSION_ID environment variable (highest priority)
+- CLAUDE_SESSION_ID environment variable
+- Filesystem scan of `~/.copilot/session-state/` or `~/.claude/session-state/` (lowest priority)
+
+**Backward Compatibility:**
+- Old queue structure (`~/.copilot/queue/{incoming,processing,done}/`) automatically migrated on first run
+- All files copied to new session-id location
+- Old directories renamed to backup location (e.g., `incoming-legacy-{timestamp}/`)
+- Migration recorded in `.migration-log`
 
 ### Queue Flow
 
-1. **Incoming** → New task arrives as `{task_id}.yaml`
+1. **Incoming** → New task arrives as `{session-id}/incoming/{task_id}.yaml`
 2. **Orchestrator polls** (every 30-60s):
-   - Reads task from `incoming/`
+   - Detects own session-id
+   - Reads task from `{session-id}/incoming/`
    - Applies routing decision tree
    - Creates DELEGATE in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
    - Sends DELEGATE to agent
-   - Deletes from `incoming/` (or archives)
-3. **Processing** → Agent returns HANDBACK to `{task_id}-HANDBACK-{role}.yaml`
+   - Deletes from `{session-id}/incoming/` (or archives)
+3. **Processing** → Agent returns HANDBACK to `{session-id}/processing/{task_id}-HANDBACK-{role}.yaml`
 4. **Orchestrator routes completion**:
    - If complete → Route to Quality Engineer
    - If blocked → Escalate to Lead/Senior Engineer
-5. **Done** → Human/external system reads final decision from `artifacts/queue/done/`
+5. **Done** → Human/external system reads final decision from `{session-id}/done/{task_id}-{decision}.yaml`
 
 ### Artifact Storage
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
 | DELEGATE | `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
-| HANDBACK | `artifacts/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
+| HANDBACK | `~/.copilot/queue/{session-id}/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
 | SPAN | `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml` | Orchestrator | Model Engineer (analysis), index generation |
-| Decision | `artifacts/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
+| Decision | `~/.copilot/queue/{session-id}/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
 
 ---
 
