@@ -7,8 +7,8 @@
 **Last Updated:** 2026-05-09
 
 **Owned By:**
-- Lead Engineer — blocking criteria (Section 4)
-- Quality Engineer — assessment dimensions (Section 2) and scoring (Section 3)
+- Lead Engineer — blocking criteria (Section 3) and role coordination (Section 6)
+- Quality Engineer — assessment dimensions (Section 1), scoring (Section 2), and post-approval workflow (Section 4)
 
 ---
 

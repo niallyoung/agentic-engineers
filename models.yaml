@@ -30,7 +30,7 @@ role_models:
 
   quality_engineer:
     canonical: "claude-sonnet"
-    thinking: true
+    thinking: false
     effort: "medium"
     providers:
       copilot: "gpt-4"
@@ -77,15 +77,15 @@ role_models:
     description: "Cross-service architecture - design options & trade-offs"
 
   model_engineer:
-    canonical: "claude-haiku"
-    thinking: false
+    canonical: "claude-sonnet"
+    thinking: true
     effort: "medium"
     providers:
-      copilot: "gpt-4o-mini"
-      claude: "claude-haiku-4.5"
-      openai: "gpt-4o-mini"
-      google: "gemini-2.0-flash"
-      meta: "llama-3-8b"
+      copilot: "gpt-4"
+      claude: "claude-sonnet-4.5"
+      openai: "gpt-4-turbo"
+      google: "gemini-1-5-pro"
+      meta: "llama-3-70b"
     description: "Model optimization - token efficiency & routing accuracy"
 
   general_orchestrator:
