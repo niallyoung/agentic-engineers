@@ -49,6 +49,9 @@ orchestrator.md uses:
   └─ [5 more optimization/monitoring skills]
 
 engineer.md uses:
+  ├─ shared/core-engineering-baseline.md
+  ├─ shared/quality-assessment-baseline.md
+  ├─ shared/engineer-specifics.md
   ├─ patterns/implementation-coding.md
   ├─ patterns/local-ci.md
   ├─ testing/playwright-testing.md (Part 1)
@@ -58,7 +61,37 @@ engineer.md uses:
   ├─ shared/cdk-stack.md
   └─ [more shared skills]
 
-[etc for all 8 roles]
+senior-engineer.md uses:
+  ├─ shared/core-engineering-baseline.md
+  ├─ shared/quality-assessment-baseline.md
+  ├─ patterns/api-resilience.md (owned)
+  ├─ patterns/event-consumer.md (owned)
+  ├─ review/code-review.md
+  ├─ patterns/lambda-handler.md
+  ├─ patterns/makefile.md
+  ├─ testing/playwright-testing.md (both parts)
+  └─ [more shared skills]
+
+lead-engineer.md uses:
+  ├─ shared/quality-assessment-baseline.md
+  ├─ shared/core-engineering-baseline.md
+  ├─ review/code-review.md
+  ├─ review/code-quality-analysis.md
+  ├─ patterns/lambda-handler.md
+  ├─ orchestration/todo-management.md
+  └─ [more monitoring/review skills]
+
+quality-engineer.md uses:
+  ├─ shared/quality-assessment-baseline.md
+  ├─ shared/core-engineering-baseline.md
+  ├─ review/code-quality-analysis.md
+  ├─ review/quorum-qe.md
+  ├─ monitoring/cicd-watch.md
+  ├─ orchestration/todo-management.md
+  ├─ testing/playwright-testing.md (E2E focus)
+  └─ [more review/security skills]
+
+[etc for principal-engineer, security-engineer, model-engineer]
 ```
 
 ---

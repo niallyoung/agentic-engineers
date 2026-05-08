@@ -8,18 +8,35 @@ Complex coding and architecture without a detailed plan. Implements intricate fe
 
 ## Primary Skills
 
-1. **patterns/api-resilience.md** — Resilient API client patterns (retry, token refresh, maintenance)
-2. **patterns/event-consumer.md** — Event consumer patterns (SNS FIFO → SQS FIFO → Lambda + idempotency)
-3. **review/code-review.md** — Code review and verification
+1. **shared/core-engineering-baseline.md** — Baseline skills shared by all 4 engineer roles
+   - Section 1: Git Workflow
+   - Section 2: TDD & Implementation
+   - Section 3: Code Review Standards
+   - Section 4: Testing Overview (Playwright)
+   - Section 5: GitHub CLI Essentials
+   - Section 6: CDK Stack Patterns
 
-## Shared Skills
+2. **shared/quality-assessment-baseline.md** — Shared quality framework for complex design decisions
+   - Use all sections to guide architectural quality trade-offs
+   - Mentor Engineers on quality frameworks
 
-4. **shared/cdk-stack.md** — CDK infrastructure patterns
-5. **shared/git-workflow.md** — Trunk-based development
-6. **patterns/lambda-handler.md** — Lambda patterns
-7. **patterns/makefile.md** — Build patterns
-8. **testing/playwright-testing.md** — E2E testing (both parts)
-9. **patterns/implementation-coding.md** — TDD workflow
+## Specialist Skills (Senior Engineer)
+
+3. **patterns/api-resilience.md** — Resilient API client patterns (retry, token refresh, maintenance)
+   - Owned and authored by Senior Engineer
+   - Engineers implement these patterns with reference to Senior Engineer documentation
+4. **patterns/event-consumer.md** — Event consumer patterns (SNS FIFO → SQS FIFO → Lambda + idempotency)
+   - Owned and authored by Senior Engineer
+   - Engineers implement these patterns with reference to Senior Engineer documentation
+5. **review/code-review.md** — Deep code review standards for complex changes
+6. **monitoring/cicd-watch.md** — Monitor CI/CD pipelines after pushing code
+7. **orchestration/todo-management.md** — Track and manage task todos
+
+## Detailed References (Deep Dives)
+
+- `patterns/lambda-handler.md` — Lambda patterns (infrastructure context)
+- `patterns/makefile.md` — Build pattern context
+- `testing/playwright-testing.md` — E2E testing framework (both parts, for comprehensive understanding)
 
 ## When Escalated To
 

@@ -8,16 +8,25 @@ Post-implementation QA, verification against quality gates, quorum voting on cri
 
 ## Primary Skills
 
-1. **review/code-quality-analysis.md** — Code quality assessment methodology
-2. **review/quorum-qe.md** — Quorum voting process (1/3/5 QE verification)
-3. **testing/playwright-testing.md** (Part 2) — Run and validate E2E tests
-4. **monitoring/cicd-watch.md** — Monitor CI/CD pipeline status
+1. **shared/quality-assessment-baseline.md** — Post-approval assessment framework
+   - Section 1: 8 quality dimensions
+   - Section 2: Scoring bands and pass/fail thresholds
+   - Section 4: Quality workflow and QE responsibilities
+   - Use this as framework for ACCEPT/REJECT decisions
 
-## Shared Skills
+2. **shared/core-engineering-baseline.md** — Baseline skills shared by all 4 engineer roles
+   - Section 3: Code Review Standards (read-only context)
+   - Section 4: Testing Overview (Playwright focus)
+   - Section 5: GitHub CLI Essentials
+   - Section 1: Git Workflow (read-only)
 
-5. **shared/git-workflow.md** — Git standards and workflow
-6. **shared/github-cli.md** — GitHub operations
-7. **review/security-architecture-review.md** — Tier 3 security review (group)
+## Specialist Skills (Quality Engineer)
+
+3. **review/code-quality-analysis.md** — Post-implementation validation and quality scoring
+4. **review/quorum-qe.md** — Distributed QA voting process (1/3/5 QE verification)
+5. **monitoring/cicd-watch.md** — Pipeline monitoring and CI/CD health
+6. **orchestration/todo-management.md** — Track and manage task todos
+7. **security/security-architecture-review.md** — Tier 3 security gate (reference only, quorum voting)
 
 ## Quality Gate Involvement
 

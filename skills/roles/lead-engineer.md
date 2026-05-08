@@ -8,18 +8,29 @@ Quality verification, code review, medium-level planning, escalation decisions. 
 
 ## Primary Skills
 
-1. **review/code-review.md** — Code review standards and verification
-2. **orchestration/todo-management.md** — Plan code review sessions, manage blocking issues
-3. **monitoring/cidc-watch.md** — Monitor CI/CD pipeline status
-4. **review/code-quality-analysis.md** — Code quality assessment
+1. **shared/quality-assessment-baseline.md** — Blocking authority framework
+   - Section 3: Blocking criteria (what makes code unmergeable)
+   - Section 6: Role coordination (Lead's authority and responsibilities)
+   - Use this as source of truth for APPROVE/REWORK/ESCALATE decisions
 
-## Shared Skills
+2. **shared/core-engineering-baseline.md** — Baseline skills shared by all 4 engineer roles
+   - Section 1: Git Workflow
+   - Section 3: Code Review Standards (authority)
+   - Section 4: Testing Overview
+   - Section 5: GitHub CLI Essentials
+   - Section 6: CDK Stack Patterns (read-only context)
+   - Section 2: TDD & Implementation (read-only context)
 
-5. **shared/git-workflow.md** — Git workflow and standards
-6. **shared/github-cli.md** — GitHub operations
-7. **patterns/implementation-coding.md** — Can write code if needed
-8. **patterns/lambda-handler.md** — Infrastructure patterns
-9. **testing/playwright-testing.md** — Test verification
+## Specialist Skills (Lead Engineer)
+
+3. **review/code-review.md** — Authority on 8-point checklist, blocking decisions
+4. **review/code-quality-analysis.md** — Code quality scoring and assessment
+5. **orchestration/todo-management.md** — Code review planning and session management
+6. **monitoring/cicd-watch.md** — Pipeline operations and monitoring
+
+## Detailed References (Deep Dives)
+
+- `patterns/lambda-handler.md` — Infrastructure verification context
 
 ## When Escalated To
 

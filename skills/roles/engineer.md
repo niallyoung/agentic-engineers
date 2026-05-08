@@ -8,17 +8,33 @@ Well-scoped implementation: writes code, tests, and infrastructure following TDD
 
 ## Primary Skills
 
-1. **patterns/implementation-coding.md** — TDD workflow (RED → GREEN → REFACTOR)
-2. **patterns/local-ci.md** — Local CI pipeline (verify + review + diff)
-3. **testing/playwright-testing.md** (Part 1) — Write behavior-driven E2E tests
-4. **patterns/lambda-handler.md** — Lambda handler scaffolding (HTTP API + Event Consumer)
-5. **patterns/makefile.md** — Standard Makefile pattern (describe → lint → test → build → deploy)
+1. **shared/core-engineering-baseline.md** — Baseline skills shared by all 4 engineer roles
+   - Section 1: Git Workflow
+   - Section 2: TDD & Implementation
+   - Section 3: Code Review Standards
+   - Section 4: Testing Overview (Playwright)
+   - Section 5: GitHub CLI Essentials
+   - Section 6: CDK Stack Patterns
 
-## Shared Skills
+2. **shared/quality-assessment-baseline.md** — Shared quality framework for self-evaluation
+   - Use Sections 1-2 to understand quality dimensions and scoring bands
+   - Self-evaluate before requesting Lead Engineer review
 
-6. **shared/git-workflow.md** — Trunk-based development workflow
-7. **shared/cdk-stack.md** — CDK infrastructure patterns
-8. **testing/playwright-testing.md** — E2E testing framework (complementary to Part 1)
+3. **shared/engineer-specifics.md** — Engineer-only specialist skills
+   - Local CI Pipeline (Section 1)
+   - Lambda Handler Patterns (Section 2)
+   - Makefile Standards (Section 3)
+
+4. **monitoring/cicd-watch.md** — Monitor CI/CD pipelines after pushing code
+5. **orchestration/todo-management.md** — Track and manage task todos
+
+## Detailed References (Deep Dives)
+
+- `patterns/implementation-coding.md` — Complete TDD workflow (referenced in baseline)
+- `patterns/local-ci.md` — Complete Local CI reference (referenced in engineer-specifics)
+- `testing/playwright-testing.md` — Complete Playwright reference (Part 1 for engineers)
+- `patterns/lambda-handler.md` — Complete Lambda patterns (referenced in engineer-specifics)
+- `patterns/makefile.md` — Complete Makefile reference (referenced in engineer-specifics)
 
 ## How This Role Works
 
@@ -48,7 +64,14 @@ DELEGATE (from Orchestrator)
 - **Question about Lambda?** → See patterns/lambda-handler.md
 - **Question about infrastructure?** → See shared/cdk-stack.md
 - **Question about git?** → See shared/git-workflow.md
+- **Question about quality assessment?** → See shared/quality-assessment-baseline.md
 - **Stuck on unclear spec?** → Escalate to Orchestrator
+
+## Pattern Ownership
+
+- `patterns/api-resilience.md` and `patterns/event-consumer.md` are Advanced Patterns authored by Senior Engineer
+- Engineers implement these patterns with reference to Senior Engineer documentation
+- Questions about these patterns should be escalated to Senior Engineer
 
 ## Task Complexity
 
