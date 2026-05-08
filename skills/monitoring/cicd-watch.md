@@ -1,6 +1,6 @@
 # CI/CD Watch Skill
 
-**Used by:** engineer
+**Used by:** engineer, senior-engineer, lead-engineer, quality-engineer
 **Model:** claude-sonnet-4-6
 **Effort:** low — monitoring only; no code changes required.
 
