@@ -199,7 +199,7 @@ DELEGATE task is created to when the HANDBACK result is accepted and metrics are
 ### Run the Protocol Compliance Audit
 
 ```bash
-python3 orchestration/tools/protocol_audit.py
+python3 src/orchestration/tools/protocol_audit.py
 ```
 
 Expected output when fully compliant:
@@ -210,6 +210,39 @@ Expected output when fully compliant:
 ...
 Compliance Score: 100/100 ✅
 Status: READY FOR PRODUCTION
+```
+
+---
+
+## 📁 Repository Structure
+
+```
+agentic-engineers/
+├── src/                              # All source files
+│   ├── agents/                       # Agent definitions (.md) + implementations
+│   ├── skills/                       # Skill implementations (with SKILL.md)
+│   ├── roles/                        # Role definitions
+│   ├── orchestration/                # Orchestrator logic (Python)
+│   │   ├── agents/                   # Core agent Python package
+│   │   └── tools/                    # CLI utilities (protocol_audit, lead_review)
+│   └── tools/                        # Utility scripts
+├── docs/                             # All documentation
+│   ├── SPEC.md                       # Core specification
+│   ├── PROTOCOL.md                   # Delegate/Handback protocol
+│   ├── AGENTS.md                     # Agent routing reference
+│   ├── ONBOARDING.md                 # New agent/dev onboarding
+│   ├── guides/                       # How-to guides
+│   └── decisions/                    # Architecture Decision Records (ADRs)
+├── tests/                            # All test files
+├── renderer/                         # Build system (renders to ~/.copilot/ ~/.claude/)
+├── config/                           # Configuration files
+├── operations/                       # Operational docs and metrics
+├── data/                             # Queue data (incoming/processing/done)
+├── .github/                          # GitHub Actions workflows
+├── README.md                         # This file
+├── Makefile                          # Build, install, verify targets
+├── models.yaml                       # Model configuration
+└── .gitignore                        # Excludes logs/, artifacts/, temp/
 ```
 
 ---
@@ -234,8 +267,8 @@ make status
 ```
 
 **What `make install` does:**
-1. Renders all skills from `skills/` → `~/.copilot/skills/` and `~/.claude/skills/`
-2. Renders all agents from `orchestration/agents/` → agent definitions
+1. Renders all skills from `src/skills/` → `~/.copilot/skills/` and `~/.claude/skills/`
+2. Renders all agents from `src/agents/` → agent definitions
 3. Creates agent configurations and manifests
 4. Marks installed files for safe uninstall
 5. Leaves user files untouched
@@ -1193,25 +1226,25 @@ Fully autonomous, local, self-contained.
 
 ## Next Steps
 
-1. **Load context:** Read `guides/CLAUDE.md` + `orchestration/AGENTS.md`
+1. **Load context:** Read `docs/guides/CLAUDE.md` + `docs/AGENTS.md`
 2. **Understand routing:** Memorize the 5-step decision tree
-3. **Study your role:** Read your role's `skills/*/skills/` subdirectory
+3. **Study your role:** Read your role's `src/skills/*/` subdirectory
 4. **Practice:** Run 1-2 sample tasks with feedback
 5. **Operationalize:** Set up metrics directory + cron jobs for automations
 
-See `guides/SYSTEM_INTEGRATION.md` for detailed Week 1-4 deployment checklist.
+See `docs/guides/SYSTEM_INTEGRATION.md` for detailed Week 1-4 deployment checklist.
 
 ---
 
 ## Support
 
-- **Questions about routing?** → See `orchestration/AGENTS.md`
-- **Questions about handoffs?** → See `orchestration/HANDOFF.md`
-- **Questions about a skill?** → See `skills/<role>/skills/<skill-name>.md`
-- **Questions about quality?** → See `orchestration/QUALITY.md`
+- **Questions about routing?** → See `docs/AGENTS.md`
+- **Questions about handoffs?** → See `docs/HANDOFF.md`
+- **Questions about a skill?** → See `src/skills/<role>/`
+- **Questions about quality?** → See `docs/QUALITY.md`
 - **Questions about costs?** → See `operations/TOKENADVISOR.md`
-- **Questions about roadmap?** → See `guides/SYSTEM_INTEGRATION.md`
-- **New team member?** → Start with `guides/CLAUDE.md`
+- **Questions about roadmap?** → See `docs/guides/SYSTEM_INTEGRATION.md`
+- **New team member?** → Start with `docs/guides/CLAUDE.md`
 
 ---
 

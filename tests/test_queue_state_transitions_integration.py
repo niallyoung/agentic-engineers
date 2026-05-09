@@ -11,7 +11,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from datetime import datetime
-from orchestration.agents.orchestrator import QueueManager
+from src.orchestration.agents.orchestrator import QueueManager
 
 
 def test_move_task_integration_incoming_to_processing():

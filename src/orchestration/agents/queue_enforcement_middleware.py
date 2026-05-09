@@ -135,8 +135,8 @@ class QueueEnforcingProxy:
     
     Example:
         # Direct instantiation (bypasses factory) - still gets proxy
-        from orchestration.agents.queue_enforcement_middleware import QueueEnforcingProxy
-        from orchestration.agents.implementations import EngineerAgent
+        from src.orchestration.agents.queue_enforcement_middleware import QueueEnforcingProxy
+        from src.orchestration.agents.implementations import EngineerAgent
         
         agent = QueueEnforcingProxy(EngineerAgent(), "engineer")
         
@@ -187,7 +187,7 @@ class QueueEnforcingProxy:
                 f"\n"
                 f"TO FIX:\n"
                 f"  • If this is test code:\n"
-                f"      from orchestration.agents.queue_enforcement_middleware import QueueContextManager\n"
+                f"      from src.orchestration.agents.queue_enforcement_middleware import QueueContextManager\n"
                 f"      with QueueContextManager():\n"
                 f"          agent = create_agent('{self._agent_role}')\n"
                 f"          result = agent.execute(work_item)\n"

@@ -6,7 +6,7 @@ Validates that all components of the Orchestration Protocol are present,
 correctly implemented, and passing tests.
 
 Usage:
-    python3 orchestration/tools/protocol_audit.py [--json] [--quiet]
+    python3 src/orchestration/tools/protocol_audit.py [--json] [--quiet]
 
 Exit codes:
     0 — all checks passed (compliance score 100/100)
@@ -25,13 +25,14 @@ from typing import Dict, List, Tuple
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ORCH_DIR = REPO_ROOT / "orchestration"
-AGENTS_DIR = ORCH_DIR / "agents"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SRC_ORCH_DIR = REPO_ROOT / "src" / "orchestration"
+AGENTS_DIR = SRC_ORCH_DIR / "agents"
+DOCS_DIR = REPO_ROOT / "docs"
 
 REQUIRED_SCHEMA_FILES = [
-    ORCH_DIR / "delegate-schema.yaml",
-    ORCH_DIR / "handback-schema.yaml",
+    SRC_ORCH_DIR / "delegate-schema.yaml",
+    SRC_ORCH_DIR / "handback-schema.yaml",
 ]
 
 REQUIRED_MODULES = [
@@ -44,10 +45,10 @@ REQUIRED_MODULES = [
 ]
 
 REQUIRED_DOCS = [
-    ORCH_DIR / "ORCHESTRATION-PROTOCOL.md",
-    ORCH_DIR / "AGENT-ONBOARDING.md",
-    ORCH_DIR / "PROTOCOL-QUICK-REFERENCE.md",
-    ORCH_DIR / "PROTOCOL-IMPLEMENTATION-STATUS.md",
+    DOCS_DIR / "PROTOCOL.md",
+    DOCS_DIR / "ONBOARDING.md",
+    DOCS_DIR / "PROTOCOL-QUICK-REFERENCE.md",
+    DOCS_DIR / "PROTOCOL-IMPLEMENTATION-STATUS.md",
 ]
 
 ROUTING_BANDS = ["90", "80", "70", "60"]          # score bands that must appear

@@ -23,9 +23,9 @@ import sys
 # Add parent directory to path to allow imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# Import QueueManager from orchestration.agents.orchestrator
+# Import QueueManager from src.orchestration.agents.orchestrator
 try:
-    from orchestration.agents.orchestrator import QueueManager
+    from src.orchestration.agents.orchestrator import QueueManager
 except ImportError as e:
     # If that fails, try direct file import by modifying the path
     sys.path.insert(0, str(Path(__file__).parent))
@@ -70,7 +70,7 @@ class TestSessionIDDetection:
             session_dir.mkdir(parents=True, exist_ok=True)
             
             # Mock home() to return tmpdir
-            with patch("orchestration.agents.orchestrator.Path.home", return_value=Path(tmpdir)):
+            with patch("src.orchestration.agents.orchestrator.Path.home", return_value=Path(tmpdir)):
                 detected_id = QueueManager.detect_session_id()
                 assert detected_id == test_session_id
     
@@ -93,7 +93,7 @@ class TestSessionIDDetection:
             time.sleep(0.1)
             dir_2.touch()
             
-            with patch("orchestration.agents.orchestrator.Path.home", return_value=Path(tmpdir)):
+            with patch("src.orchestration.agents.orchestrator.Path.home", return_value=Path(tmpdir)):
                 detected_id = QueueManager.detect_session_id()
                 assert detected_id == session_id_2
     
@@ -104,7 +104,7 @@ class TestSessionIDDetection:
             env = {}
             
             with patch.dict(os.environ, env, clear=True):
-                with patch("orchestration.agents.orchestrator.Path.home", return_value=Path(tmpdir)):
+                with patch("src.orchestration.agents.orchestrator.Path.home", return_value=Path(tmpdir)):
                     with pytest.raises(RuntimeError, match="Could not detect session-id"):
                         QueueManager.detect_session_id()
 

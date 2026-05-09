@@ -15,7 +15,7 @@ Source: orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md
 
 import pytest
 from pathlib import Path
-from .delegate_validator import DelegateValidator, validate_delegate_pre_flight
+from src.orchestration.agents.delegate_validator import DelegateValidator, validate_delegate_pre_flight
 
 
 # Helper function for valid test delegates

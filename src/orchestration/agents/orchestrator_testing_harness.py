@@ -9,7 +9,7 @@ For production use, the Orchestrator agent is invoked through the agent harness
 by reading ~/.copilot/agents/orchestrator.agent.md or ~/.claude/agents/orchestrator.agent.md
 """
 
-from orchestration.agents.orchestrator import OrchestratorAgent
+from src.orchestration.agents.orchestrator import OrchestratorAgent
 from datetime import datetime
 
 
@@ -42,7 +42,7 @@ def test_orchestrator_with_context(agent_context: str = 'copilot', idle_timeout:
 
 def test_queue_manager():
     """Test harness for QueueManager context detection."""
-    from orchestration.agents.orchestrator import QueueManager
+    from src.orchestration.agents.orchestrator import QueueManager
     
     print("\nQUEUE MANAGER TEST HARNESS\n")
     

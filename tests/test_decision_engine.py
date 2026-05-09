@@ -5,7 +5,7 @@ Tests decision logic for various scenarios.
 """
 
 import pytest
-from . decision_engine import DecisionEngine, DECISION_ENGINE_CONFIG
+from src.orchestration.agents.decision_engine import DecisionEngine, DECISION_ENGINE_CONFIG
 
 
 class TestDecisionEngineDecisions:

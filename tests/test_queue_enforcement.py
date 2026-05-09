@@ -36,7 +36,7 @@ from unittest.mock import Mock, MagicMock, patch
 from dataclasses import dataclass
 from typing import Dict, Any
 
-from orchestration.agents.queue_enforcement_middleware import (
+from src.orchestration.agents.queue_enforcement_middleware import (
     QueueContext,
     QueueContextManager,
     QueueEnforcementError,

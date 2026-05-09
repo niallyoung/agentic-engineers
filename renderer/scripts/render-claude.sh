@@ -6,9 +6,9 @@
 #          $3 = optional: --uninstall | --status
 #
 # Renders:
-#   - Skills:  skills/<name>/  (containing SKILL.md)  →  ~/.claude/skills/<name>/
+#   - Skills:  src/skills/<name>/  (containing SKILL.md)  →  ~/.claude/skills/<name>/
 #              (Claude Code skill format == Copilot skill format == agentic-engineers skill format)
-#   - Agents:  orchestration/agents/<name>-agent.md   →  ~/.claude/agents/<name>.md
+#   - Agents:  src/agents/<name>-agent.md   →  ~/.claude/agents/<name>.md
 #              (frontmatter transformed to Claude Code subagent shape)
 #
 # Marker file (.agentic-engine{service-name}) tracks which targets are ours.
@@ -20,8 +20,8 @@ REPO_ROOT="${1:?usage: render-claude.sh REPO_ROOT CLAUDE_DIR [--uninstall|--stat
 CLAUDE="${2:?usage: render-claude.sh REPO_ROOT CLAUDE_DIR [--uninstall|--status]}"
 MODE="${3:-install}"
 
-SRC_SKILLS="$REPO_ROOT/skills"
-SRC_AGENTS="$REPO_ROOT/orchestration/agents"
+SRC_SKILLS="$REPO_ROOT/src/skills"
+SRC_AGENTS="$REPO_ROOT/src/agents"
 DST_SKILLS="$CLAUDE/skills"
 DST_AGENTS="$CLAUDE/agents"
 SKILL_MARKER=".agentic-engine{service-name}"

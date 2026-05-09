@@ -10,7 +10,7 @@ from pathlib import Path
 # Ensure the agents package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from orchestration.agents.gray_zone_reviewer import (
+from src.orchestration.agents.gray_zone_reviewer import (
     analyze_handback_for_gray_zone,
     _assess_risk,
     _verify_deliverables,
@@ -195,7 +195,7 @@ def test_analysis_attached_to_routing_context():
 
 def test_lead_review_tool_save_and_load(tmp_path, monkeypatch):
     """Review decision can be persisted and loaded."""
-    import orchestration.tools.lead_review_cli as cli
+    import src.orchestration.tools.lead_review_cli as cli
     reviews_file = tmp_path / "gray_zone_reviews.json"
     monkeypatch.setattr(cli, "REVIEWS_FILE", reviews_file)
     cli.save_review_decision("task-abc", "ACCEPT", "Looks good")
@@ -207,7 +207,7 @@ def test_lead_review_tool_save_and_load(tmp_path, monkeypatch):
 
 def test_review_decision_persisted_correctly(tmp_path, monkeypatch):
     """CONDITIONAL decision includes all expected fields."""
-    import orchestration.tools.lead_review_cli as cli
+    import src.orchestration.tools.lead_review_cli as cli
     reviews_file = tmp_path / "gray_zone_reviews.json"
     monkeypatch.setattr(cli, "REVIEWS_FILE", reviews_file)
     cli.save_review_decision("task-xyz", "CONDITIONAL", "Minor gaps remain")

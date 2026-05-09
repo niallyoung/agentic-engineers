@@ -48,7 +48,7 @@ def tmp_dirs(tmp_path):
 
 def make_invoker(tmp_dirs, poll_interval=0.02, effort_timeouts=None):
     """Helper: create an AgentInvoker with fast settings for tests."""
-    from orchestration.agents.invoke_agent import AgentInvoker
+    from src.orchestration.agents.invoke_agent import AgentInvoker
     return AgentInvoker(
         processing_dir=tmp_dirs["processing"],
         delegates_dir=tmp_dirs["delegates"],
@@ -132,15 +132,15 @@ class TestImports:
 
     def test_module_importable(self):
         """invoke_agent module must be importable."""
-        from orchestration.agents import invoke_agent  # noqa
+        from src.orchestration.agents import invoke_agent  # noqa
 
     def test_agent_invoker_class_exists(self):
         """AgentInvoker class must exist."""
-        from orchestration.agents.invoke_agent import AgentInvoker  # noqa
+        from src.orchestration.agents.invoke_agent import AgentInvoker  # noqa
 
     def test_handback_validation_error_exists(self):
         """HandbackValidationError must exist."""
-        from orchestration.agents.invoke_agent import HandbackValidationError  # noqa
+        from src.orchestration.agents.invoke_agent import HandbackValidationError  # noqa
 
 
 # ─── Happy Path ──────────────────────────────────────────────────────────────
@@ -445,7 +445,7 @@ class TestTimeoutHandling:
 
     def test_effort_level_low_timeout(self, tmp_dirs):
         """Low effort = 30s timeout by default."""
-        from orchestration.agents.invoke_agent import AgentInvoker
+        from src.orchestration.agents.invoke_agent import AgentInvoker
         invoker = AgentInvoker(
             processing_dir=tmp_dirs["processing"],
             delegates_dir=tmp_dirs["delegates"],
@@ -454,25 +454,25 @@ class TestTimeoutHandling:
 
     def test_effort_level_medium_timeout(self, tmp_dirs):
         """Medium effort = 120s timeout by default."""
-        from orchestration.agents.invoke_agent import AgentInvoker
+        from src.orchestration.agents.invoke_agent import AgentInvoker
         invoker = AgentInvoker(processing_dir=tmp_dirs["processing"])
         assert invoker.effort_timeouts["medium"] == 120
 
     def test_effort_level_high_timeout(self, tmp_dirs):
         """High effort = 600s timeout by default."""
-        from orchestration.agents.invoke_agent import AgentInvoker
+        from src.orchestration.agents.invoke_agent import AgentInvoker
         invoker = AgentInvoker(processing_dir=tmp_dirs["processing"])
         assert invoker.effort_timeouts["high"] == 600
 
     def test_effort_level_max_timeout(self, tmp_dirs):
         """Max effort = 3600s timeout by default."""
-        from orchestration.agents.invoke_agent import AgentInvoker
+        from src.orchestration.agents.invoke_agent import AgentInvoker
         invoker = AgentInvoker(processing_dir=tmp_dirs["processing"])
         assert invoker.effort_timeouts["max"] == 3600
 
     def test_effort_level_epic_timeout(self, tmp_dirs):
         """Epic effort = 3600s timeout (alias for max)."""
-        from orchestration.agents.invoke_agent import AgentInvoker
+        from src.orchestration.agents.invoke_agent import AgentInvoker
         invoker = AgentInvoker(processing_dir=tmp_dirs["processing"])
         assert invoker.effort_timeouts["epic"] == 3600
 
@@ -518,7 +518,7 @@ class TestHandbackValidation:
 
     def test_missing_field_raises_validation_error(self, tmp_dirs):
         """HANDBACK missing a required field raises HandbackValidationError."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-missing-field")
 
@@ -542,7 +542,7 @@ class TestHandbackValidation:
 
     def test_missing_field_error_lists_missing_fields(self, tmp_dirs):
         """HandbackValidationError.missing_fields lists the missing field names."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-list-missing")
 
@@ -567,7 +567,7 @@ class TestHandbackValidation:
 
     def test_invalid_status_raises_validation_error(self, tmp_dirs):
         """HANDBACK with invalid status (not complete/blocked/partial) raises error."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-bad-status")
 
@@ -588,7 +588,7 @@ class TestHandbackValidation:
 
     def test_wrong_task_id_raises_validation_error(self, tmp_dirs):
         """HANDBACK with mismatched task_id raises HandbackValidationError."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-correct-id")
 
@@ -611,7 +611,7 @@ class TestHandbackValidation:
 
     def test_wrong_handoff_type_raises_validation_error(self, tmp_dirs):
         """HANDBACK with wrong handoff_type raises HandbackValidationError."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-wrong-type")
 
@@ -632,7 +632,7 @@ class TestHandbackValidation:
 
     def test_invalid_yaml_raises_validation_error(self, tmp_dirs):
         """HANDBACK file with invalid YAML raises HandbackValidationError."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-bad-yaml")
 
@@ -672,7 +672,7 @@ class TestHandbackValidation:
 
     def test_invalid_token_values_raise_error(self, tmp_dirs):
         """Non-numeric tokens_in raises HandbackValidationError."""
-        from orchestration.agents.invoke_agent import HandbackValidationError
+        from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-bad-tokens")
 
@@ -997,29 +997,29 @@ class TestOrchestratorIntegration:
 
     def test_orchestrator_has_run_poll_cycle_method(self):
         """OrchestratorAgent must have run_poll_cycle() method."""
-        from orchestration.agents.orchestrator import OrchestratorAgent
+        from src.orchestration.agents.orchestrator import OrchestratorAgent
         assert hasattr(OrchestratorAgent, "run_poll_cycle"), (
             "OrchestratorAgent must have run_poll_cycle() method"
         )
 
     def test_orchestrator_run_poll_cycle_returns_dict(self, tmp_dirs):
         """run_poll_cycle() returns a dict with metrics."""
-        from orchestration.agents.orchestrator import OrchestratorAgent
+        from src.orchestration.agents.orchestrator import OrchestratorAgent
         agent = OrchestratorAgent(queue_dir=str(tmp_dirs["base"]))
         result = agent.run_poll_cycle()
         assert isinstance(result, dict)
 
     def test_orchestrator_run_poll_cycle_empty_queue(self, tmp_dirs):
         """run_poll_cycle() with empty queue returns tasks_processed=0."""
-        from orchestration.agents.orchestrator import OrchestratorAgent
+        from src.orchestration.agents.orchestrator import OrchestratorAgent
         agent = OrchestratorAgent(queue_dir=str(tmp_dirs["base"]))
         result = agent.run_poll_cycle()
         assert result.get("tasks_processed", 0) == 0
 
     def test_orchestrator_accepts_agent_invoker(self, tmp_dirs):
         """OrchestratorAgent accepts optional AgentInvoker in constructor."""
-        from orchestration.agents.orchestrator import OrchestratorAgent
-        from orchestration.agents.invoke_agent import AgentInvoker
+        from src.orchestration.agents.orchestrator import OrchestratorAgent
+        from src.orchestration.agents.invoke_agent import AgentInvoker
         invoker = AgentInvoker(
             processing_dir=tmp_dirs["processing"],
             delegates_dir=tmp_dirs["delegates"],
