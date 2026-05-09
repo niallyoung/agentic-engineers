@@ -17,7 +17,7 @@ DECISION_ENGINE_CONFIG = AgentConfig(
     model="claude-sonnet-4-6",
     effort="medium",
     role="decision_engine",
-    description="Evaluate HANDBACK against success criteria and decide next action"
+    description="Evaluate HANDBACK and make decision: proceed, rework, or escalate"
 )
 
 
@@ -170,8 +170,9 @@ class DecisionEngine(Agent):
                 "test" in str(handback.get("deliverables", "")).lower()
             )
         
-        if "security" in criterion or "vulnerability" in criterion:
-            if "no vulnerabilities" in criterion or "no security" in criterion:
+        if "security" in criterion or "vulnerab" in criterion:
+            # "vulnerab" matches "vulnerability", "vulnerabilities", "vulnerable"
+            if "no vulnerab" in criterion or "no security" in criterion:
                 return (
                     handback.get("security_score", 0) >= 85 or
                     handback.get("vulnerabilities_found", 1) == 0
@@ -197,7 +198,8 @@ class DecisionEngine(Agent):
             )
         
         if "error" in criterion or "fail" in criterion:
-            if "no error" in criterion or "no fail" in criterion or "no failure" in criterion:
+            if ("no error" in criterion or "no fail" in criterion or
+                    "no failure" in criterion or "without error" in criterion):
                 return (
                     handback.get("error_count", 0) == 0 or
                     handback.get("failure_count", 0) == 0
