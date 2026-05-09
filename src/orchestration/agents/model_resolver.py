@@ -107,10 +107,15 @@ class ModelResolver:
     def _find_models_yaml() -> Optional[Path]:
         """Auto-detect models.yaml in common locations."""
         candidates = [
+            # New location: src/config/models.yaml
+            Path(__file__).parent.parent.parent / "config" / "models.yaml",
+            # Old location: root models.yaml (for backwards compatibility)
             Path("models.yaml"),
-            Path.home() / "git" / "agentic-engineers" / "models.yaml",
-            Path("/home/user/agentic-engineers/models.yaml"),
             Path(__file__).parent.parent.parent / "models.yaml",
+            # Home directory paths
+            Path.home() / "git" / "agentic-engineers" / "models.yaml",
+            Path.home() / "git" / "agentic-engineers" / "src" / "config" / "models.yaml",
+            Path("/home/user/agentic-engineers/models.yaml"),
         ]
         for candidate in candidates:
             if candidate.exists():
