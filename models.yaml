@@ -1,0 +1,143 @@
+---
+# CANONICAL MODEL REGISTRY - Single Source of Truth
+# Maps roles to models across all providers
+# Used by render pipeline to substitute provider-specific model names
+
+role_models:
+  engineer:
+    canonical: "claude-haiku"
+    thinking: false
+    effort: "high"
+    providers:
+      copilot: "gpt-4o-mini"
+      claude: "claude-haiku-4.5"
+      openai: "gpt-4o-mini"
+      google: "gemini-2.0-flash"
+      meta: "llama-3-8b"
+    description: "Execution specialist - well-scoped, planned work"
+
+  senior_engineer:
+    canonical: "claude-sonnet"
+    thinking: true
+    effort: "high"
+    providers:
+      copilot: "gpt-4"
+      claude: "claude-sonnet-4.6"
+      openai: "gpt-4-turbo"
+      google: "gemini-1-5-pro"
+      meta: "llama-3-70b"
+    description: "Analysis & planning specialist - complex, unscoped work"
+
+  quality_engineer:
+    canonical: "claude-sonnet"
+    thinking: false
+    effort: "medium"
+    providers:
+      copilot: "gpt-4"
+      claude: "claude-sonnet-4.6"
+      openai: "gpt-4-turbo"
+      google: "gemini-1-5-pro"
+      meta: "llama-3-70b"
+    description: "Post-implementation validation - 8-point quality checklist"
+
+  lead_engineer:
+    canonical: "claude-sonnet"
+    thinking: true
+    effort: "high"
+    providers:
+      copilot: "gpt-4"
+      claude: "claude-sonnet-4.6"
+      openai: "gpt-4"
+      google: "gemini-1-5-pro"
+      meta: "llama-3-70b"
+    description: "Code review specialist - 8-point checklist validation"
+
+  security_engineer:
+    canonical: "claude-opus"
+    thinking: true
+    effort: "max"
+    providers:
+      copilot: "gpt-4o"
+      claude: "claude-opus-4.7"
+      openai: "gpt-4o"
+      google: "gemini-2-pro"
+      meta: "llama-3-405b"
+    description: "Threat modeling & security validation - STRIDE framework"
+
+  principal_engineer:
+    canonical: "claude-opus"
+    thinking: true
+    effort: "high"
+    providers:
+      copilot: "gpt-4o"
+      claude: "claude-opus-4.7"
+      openai: "gpt-4o"
+      google: "gemini-2-pro"
+      meta: "llama-3-405b"
+    description: "Cross-service architecture - design options & trade-offs"
+
+  model_engineer:
+    canonical: "claude-sonnet"
+    thinking: true
+    effort: "medium"
+    providers:
+      copilot: "gpt-4"
+      claude: "claude-sonnet-4.5"
+      openai: "gpt-4-turbo"
+      google: "gemini-1-5-pro"
+      meta: "llama-3-70b"
+    description: "Model optimization - token efficiency & routing accuracy"
+
+  general_orchestrator:
+    canonical: "claude-haiku"
+    thinking: false
+    effort: "low"
+    providers:
+      copilot: "gpt-4o-mini"
+      claude: "claude-haiku-4.5"
+      openai: "gpt-4o-mini"
+      google: "gemini-2.0-flash"
+      meta: "llama-3-8b"
+    description: "Task routing - 6-point decision tree"
+
+# Provider capabilities (LCD - highlight deltas)
+provider_features:
+  copilot:
+    name: "GitHub Copilot"
+    thinking: false  # ⚠️ Delta: Copilot doesn't support extended thinking
+    structured_output: true
+    max_tokens: 4096
+    cost_tier: "premium"
+    note: "Uses OpenAI models, no thinking mode"
+
+  claude:
+    name: "Claude (Anthropic)"
+    thinking: true
+    structured_output: true
+    max_tokens: 200000
+    cost_tier: "premium"
+    note: "Native thinking support, longest context"
+
+  openai:
+    name: "OpenAI API"
+    thinking: false  # ⚠️ Delta: Limited thinking in GPT-4o
+    structured_output: true
+    max_tokens: 128000
+    cost_tier: "premium"
+    note: "GPT-4o has limited reasoning"
+
+  google:
+    name: "Google Gemini"
+    thinking: false  # ⚠️ Delta: Gemini doesn't support extended thinking
+    structured_output: true
+    max_tokens: 1000000
+    cost_tier: "standard"
+    note: "Longest context window"
+
+  meta:
+    name: "Meta Llama"
+    thinking: false  # ⚠️ Delta: Llama doesn't support structured outputs
+    structured_output: false
+    max_tokens: 128000
+    cost_tier: "budget"
+    note: "Open-source, no structured output guarantee"
