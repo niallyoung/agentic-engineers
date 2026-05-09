@@ -33,6 +33,8 @@ from .implementations import (
 )
 from .quality_validator import QualityValidator, RoutingDecision
 from .delegate_validator import validate_delegate_pre_flight
+from .metrics_writer import MetricsWriter
+from .gray_zone_reviewer import analyze_handback_for_gray_zone
 
 
 # Protocol constants
@@ -759,7 +761,257 @@ class OrchestratorAgent(Agent):
         
         return " | ".join(guidance_parts) if guidance_parts else "Review all validator findings."
     
-    def run_poll_cycle(self) -> Dict:
+    def route_handback(self, handback_block: Dict, original_delegate: Dict) -> Tuple[str, Dict]:
+        """
+        Route HANDBACK to appropriate action based on quality score.
+        
+        Implements Quality Engineer Section 2 thresholds:
+        - 90–100: PROCEED (merge)
+        - 80–89: PROCEED (merge)
+        - 70–79: MANUAL_REVIEW (Lead Engineer, Week 3)
+        - 60–69: REWORK (auto-retry, same agent, max 2 attempts)
+        - <60: ESCALATE (Principal Engineer immediately)
+        - Critical findings: ESCALATE (any score)
+        
+        Args:
+            handback_block: HANDBACK YAML dict with status, quality_score, etc.
+            original_delegate: Original DELEGATE dict for retry context
+        
+        Returns:
+            Tuple of (action, context) where:
+            - action: 'PROCEED' | 'MANUAL_REVIEW' | 'REWORK' | 'ESCALATE'
+            - context: Dict with routing details, retry_context if rework, escalation reason if escalate
+        
+        Reference: Quality Engineer Section 2 (Acceptance Thresholds)
+        """
+        quality_score = handback_block.get('quality_score', 0)
+        status = handback_block.get('status', '')
+        task_id = handback_block.get('task_id', 'unknown')
+        
+        # Check for critical findings first
+        critical_issues = self._check_critical_issues(handback_block)
+        if critical_issues:
+            escalation_context = {
+                'action': 'ESCALATE',
+                'reason': 'Critical issues detected',
+                'critical_issues': critical_issues,
+                'evidence': {
+                    'status': status,
+                    'quality_score': quality_score,
+                    'deliverables': handback_block.get('deliverables', []),
+                },
+                'principal_engineer_instructions': (
+                    'Review critical findings and determine if work is salvageable. '
+                    'If not, request complete rework or close task.'
+                ),
+                'escalation_timestamp': datetime.now().isoformat(),
+            }
+            return ('ESCALATE', escalation_context)
+        
+        # Route based on quality score bands
+        if quality_score >= 90:
+            # PROCEED: High quality, ready to merge
+            return ('PROCEED', {
+                'action': 'PROCEED',
+                'reason': 'High quality score (90+)',
+                'quality_score': quality_score,
+            })
+        
+        elif quality_score >= 80:
+            # PROCEED: Acceptable quality with minor notes
+            return ('PROCEED', {
+                'action': 'PROCEED',
+                'reason': 'Acceptable quality score (80-89)',
+                'quality_score': quality_score,
+                'notes': 'Minor improvements possible in future iterations',
+            })
+        
+        elif quality_score >= 70:
+            # MANUAL_REVIEW: Gray zone, Lead Engineer decides
+            return ('MANUAL_REVIEW', {
+                'action': 'MANUAL_REVIEW',
+                'reason': 'Gray zone score (70-79) requires human judgment',
+                'quality_score': quality_score,
+                'reviewer_role': 'lead_engineer',
+                'review_guidance': 'Assess if quality is acceptable for production or requires rework',
+                'handback_summary': {
+                    'status': status,
+                    'deliverables_count': len(handback_block.get('deliverables', [])),
+                    'tests_passed': handback_block.get('tests', {}).get('passed', 0),
+                    'coverage': handback_block.get('tests', {}).get('coverage', 0),
+                },
+            })
+        
+        elif quality_score >= 60:
+            # REWORK: Below acceptable, retry with same agent
+            state = self._init_task_state(task_id)
+            if state['retry_count'] >= MAX_RETRIES:
+                # Max retries exceeded, escalate instead
+                return ('ESCALATE', {
+                    'action': 'ESCALATE',
+                    'reason': f'Max retries ({MAX_RETRIES}) exceeded after quality score {quality_score}',
+                    'quality_score': quality_score,
+                    'retry_count': state['retry_count'],
+                    'escalation_level': 'principal_engineer',
+                })
+            
+            # Build retry context for re-delegation
+            retry_context = {
+                'retry_count': state['retry_count'] + 1,
+                'previous_quality_score': quality_score,
+                'failure_analysis': handback_block.get('escalations', []),
+                'success_criteria_not_met': handback_block.get('success_criteria_not_met', []),
+                'improvement_guidance': (
+                    'Address validator findings. Focus on: '
+                    f"{', '.join(handback_block.get('escalations', ['all issues'])[:3])}"
+                ),
+            }
+            
+            return ('REWORK', {
+                'action': 'REWORK',
+                'reason': f'Quality score {quality_score} is below 70 threshold',
+                'quality_score': quality_score,
+                'retry_context': retry_context,
+                'same_agent': original_delegate.get('role'),
+                'max_retries_remaining': MAX_RETRIES - state['retry_count'],
+            })
+        
+        else:
+            # <60: Critical quality issues, escalate
+            return ('ESCALATE', {
+                'action': 'ESCALATE',
+                'reason': f'Critical quality issue: score {quality_score} < 60',
+                'quality_score': quality_score,
+                'escalation_level': 'principal_engineer',
+                'critical_issues': handback_block.get('escalations', []),
+                'evidence': {
+                    'status': status,
+                    'tests_passed': handback_block.get('tests', {}).get('passed', 0),
+                    'tests_failed': handback_block.get('tests', {}).get('failed', 0),
+                },
+                'principal_engineer_instructions': (
+                    'Review comprehensive failure analysis. Determine scope: '
+                    'salvageable with rework or requires complete restart.'
+                ),
+            })
+    
+    def _check_critical_issues(self, handback_block: Dict) -> List[str]:
+        """
+        Check for critical issues that force escalation regardless of score.
+        
+        Critical conditions:
+        - status='failed' with unrecoverable errors
+        - status='blocked' (agent escalated)
+        - Security issues flagged
+        - Infrastructure/external dependency failures
+        
+        Returns:
+            List of critical issue descriptions (empty if none)
+        """
+        critical = []
+        
+        status = handback_block.get('status', '')
+        if status == 'failed':
+            critical.append(f"Task failed: {handback_block.get('failure_reason', 'unknown')}")
+        
+        if status == 'blocked':
+            critical.append(f"Task blocked: {handback_block.get('blocked_reason', 'unknown')}")
+        
+        # Check for security flags
+        if handback_block.get('security_issues'):
+            critical.append(f"Security issues detected: {len(handback_block['security_issues'])} findings")
+        
+        # Check for infrastructure failures
+        if handback_block.get('infrastructure_blocked'):
+            critical.append(f"Infrastructure dependency failed: {handback_block['infrastructure_blocked']}")
+        
+        return critical
+    
+    def collect_metrics(self, handback_block: Dict, original_delegate: Dict = None) -> Dict:
+        """
+        Collect metrics from HANDBACK for Model Engineer optimization.
+        
+        Extracts and derives metrics matching Quality Engineer Section 5 schema.
+        
+        Args:
+            handback_block: HANDBACK dict with tokens, duration, quality_score
+            original_delegate: Original DELEGATE dict with role, effort, model
+        
+        Returns:
+            Dict with canonical metrics matching schema
+        
+        Reference: Quality Engineer Section 5 (Canonical Metrics Schema)
+        """
+        if original_delegate is None:
+            original_delegate = {}
+        
+        task_id = handback_block.get('task_id', 'unknown')
+        state = self.task_state.get(task_id, {})
+        
+        # Extract directly from HANDBACK
+        tokens_in = handback_block.get('tokens_in', 0)
+        tokens_out = handback_block.get('tokens_out', 0)
+        total_tokens = tokens_in + tokens_out
+        
+        duration_minutes = int(handback_block.get('effort_actual', 0) * 60)  # Convert hours to minutes
+        quality_score_validator = handback_block.get('quality_score', 0)
+        
+        # Extract test results
+        test_results = handback_block.get('tests', {})
+        test_coverage = test_results.get('coverage', 0.0)
+        
+        # Count deliverables
+        deliverables_count = len(handback_block.get('deliverables', []))
+        
+        # Get retry count from task state
+        retry_count = state.get('retry_count', 0)
+        first_try_quality = state.get('quality_score') if retry_count > 0 else None
+        
+        # Derive metrics
+        # Efficiency score: (quality / tokens_used) × 100
+        if total_tokens > 0:
+            efficiency_score = (quality_score_validator / total_tokens) * 100
+        else:
+            efficiency_score = 0.0
+        
+        # Rework cost ratio: (total_tokens / estimated)
+        # For now, set to 1.0 if first try, > 1.0 if retried
+        rework_cost_ratio = 1.0 + (retry_count * 0.5)  # Each retry adds 50% cost
+        
+        # Build metrics dictionary
+        metrics = {
+            'task_id': task_id,
+            'timestamp': datetime.now().isoformat(),
+            'role': original_delegate.get('role', 'unknown'),
+            'model': original_delegate.get('model', 'unknown'),
+            'effort': original_delegate.get('effort', 'unknown'),
+            'effort_actual': handback_block.get('effort_actual', 0.0),
+            'tokens_in': tokens_in,
+            'tokens_out': tokens_out,
+            'total_tokens': total_tokens,
+            'duration_minutes': duration_minutes,
+            'quality_score_validator': quality_score_validator,
+            'quality_score_agent_self': handback_block.get('quality_score_agent_self', quality_score_validator),
+            'status': handback_block.get('status', 'unknown'),
+            'retry_count': retry_count,
+            'test_coverage': test_coverage,
+            'deliverables_count': deliverables_count,
+            'efficiency_score': round(efficiency_score, 2),
+            'rework_cost_ratio': round(rework_cost_ratio, 2),
+        }
+        
+        # Add optional fields if present
+        if first_try_quality is not None:
+            metrics['first_try_quality'] = first_try_quality
+        
+        if handback_block.get('tests'):
+            metrics['test_results'] = {
+                'passed': test_results.get('passed', 0),
+                'failed': test_results.get('failed', 0),
+            }
+        
+        return metrics
+
         """
         Execute one polling cycle: check for incoming tasks and process them.
 
@@ -894,6 +1146,23 @@ class OrchestratorAgent(Agent):
                 escalate_for_review = True
                 escalation_reason = f"Low quality score ({handback_validation.quality_score}/100)"
                 print(f"   🚨 Escalation triggered: {escalation_reason}")
+            elif 70 <= handback_validation.quality_score < 80:
+                # Gray-zone gate: route to Lead Engineer for manual review
+                gray_zone_analysis = analyze_handback_for_gray_zone(handback, delegate)
+                print(f"   🟡 Gray-zone score ({handback_validation.quality_score}/100) — routing to Lead Engineer")
+                print(f"      Recommendation: {gray_zone_analysis['recommendation']}")
+                handback["gray_zone_analysis"] = gray_zone_analysis
+                # Move to done queue with MANUAL_REVIEW_LEAD decision (Lead Engineer reviews async)
+                move_done_result = self.queue_manager.move_task(
+                    task_id=task_id,
+                    from_state="processing",
+                    to_state="done",
+                    metadata=handback
+                )
+                self.tasks_processed += 1
+                self.tasks_escalated += 1
+                print(f"   ↪️  Routed to MANUAL_REVIEW_LEAD (gray-zone). Lead Engineer SLA: 2 hours.")
+                return ('MANUAL_REVIEW_LEAD', gray_zone_analysis)
             
             if handback_validation.critical_findings:
                 escalate_for_review = True
