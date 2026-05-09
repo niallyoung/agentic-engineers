@@ -71,3 +71,7 @@ reference/
 operations/
 metrics/
 data/
+# Auto-generated runtime artifacts
+data/
+artifacts/
+guides/
