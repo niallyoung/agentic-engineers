@@ -32,6 +32,12 @@ from .implementations import (
     ModelEngineerAgent, SecurityEngineerAgent
 )
 from .quality_validator import QualityValidator, RoutingDecision
+from .delegate_validator import validate_delegate_pre_flight
+
+
+# Protocol constants
+MAX_RETRIES = 2  # Maximum number of retries before escalation to Principal Engineer
+TASK_STATE_KEYS = {'retry_count', 'quality_score', 'last_failure_reasons', 'retry_context'}
 
 
 class QueueManager:
@@ -689,6 +695,69 @@ class OrchestratorAgent(Agent):
         self.agent_invoker = agent_invoker
         # Quality validator — defaults to a fresh instance if not injected
         self.quality_validator = quality_validator or QualityValidator()
+        # Task state tracking for retry management
+        self.task_state = {}  # Maps task_id -> {retry_count, quality_score, failure_reasons}
+    
+    def _init_task_state(self, task_id: str) -> Dict:
+        """Initialize task state for retry tracking."""
+        if task_id not in self.task_state:
+            self.task_state[task_id] = {
+                'retry_count': 0,
+                'quality_score': 0,
+                'last_failure_reasons': [],
+                'retry_context': None
+            }
+        return self.task_state[task_id]
+    
+    def _increment_retry_count(self, task_id: str, failure_reasons: List[str], quality_score: int) -> bool:
+        """
+        Increment retry count for a task.
+        
+        Returns True if retry is allowed, False if max retries exceeded.
+        On max retries, returns False (should escalate to Principal Engineer).
+        """
+        state = self._init_task_state(task_id)
+        state['retry_count'] += 1
+        state['last_failure_reasons'] = failure_reasons
+        state['quality_score'] = quality_score
+        
+        # Build retry context for re-delegation
+        state['retry_context'] = {
+            'retry_count': state['retry_count'],
+            'previous_score': quality_score,
+            'failure_reasons': failure_reasons,
+            'improvement_guidance': self._build_improvement_guidance(failure_reasons)
+        }
+        
+        if state['retry_count'] > MAX_RETRIES:
+            return False  # Max retries exceeded, escalate
+        
+        return True  # Retry allowed
+    
+    @staticmethod
+    def _build_improvement_guidance(failure_reasons: List[str]) -> str:
+        """Build improvement guidance from failure reasons."""
+        if not failure_reasons:
+            return "Review validator feedback and address all issues before resubmitting."
+        
+        guidance_parts = []
+        for reason in failure_reasons:
+            if 'B1' in reason:
+                guidance_parts.append("Make success_criteria measurable (add numbers/thresholds)")
+            elif 'B2' in reason:
+                guidance_parts.append("Add more success_criteria to match effort level")
+            elif 'B3' in reason:
+                guidance_parts.append("Make plan steps more concrete (reference files/commands)")
+            elif 'B4' in reason:
+                guidance_parts.append("Add explicit testing/validation steps to plan")
+            elif 'B5' in reason:
+                guidance_parts.append("Expand context section with more background (≥100 words)")
+            elif 'C1' in reason or 'C2' in reason or 'C3' in reason or 'C4' in reason:
+                guidance_parts.append("Re-route task to appropriate role based on scope/effort")
+            else:
+                guidance_parts.append("Address all validation findings before resubmitting")
+        
+        return " | ".join(guidance_parts) if guidance_parts else "Review all validator findings."
     
     def run_poll_cycle(self) -> Dict:
         """
