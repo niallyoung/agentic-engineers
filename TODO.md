@@ -183,6 +183,27 @@
 
 ## 🔵 FUTURE (Research/Design Phase)
 
+- [ ] **SKILL-REPO-INIT-001:** Implement repo-init skill for new repository onboarding
+  - Purpose: Initialize new repositories with agentic-engineers framework
+  - Triggers: When starting work in a new repo or running /init command
+  - Features:
+    - Repository analysis (structure, existing config, package managers)
+    - SPEC.md generation (establish project specification)
+    - Basic housekeeping (gitignore, README structure, docs setup)
+    - Framework bootstrap (create agents/, skills/, tests/ structure)
+    - Compatibility check (verify model/harness LLM readiness)
+    - Efficiency setup (TODO.md, queue structure, initial delegations)
+  - Owner: Senior Engineer or Principal Engineer
+  - Model: Sonnet (or Opus if architecture decisions needed)
+  - Effort: medium-high (estimated 3-5 days for design + implementation)
+  - Reference: Will use agent-creator skill + SPEC.md standards
+  - Success Criteria:
+    - New repo immediately ready for agentic-engineers workflow
+    - SPEC.md auto-generated with sensible defaults
+    - Directory structure optimized for LLM processing
+    - First delegations can be queued immediately
+    - Documentation complete for repo-specific standards
+
 - [ ] **MONITORING-001:** Automated document quality monitoring
   - Continuous link validation
   - Staleness detection (flag docs not updated in 30+ days)
@@ -261,6 +282,6 @@
 
 ---
 
-**Last Updated:** 2025-05-09  
+**Last Updated:** May 9, 2025 (22:34 UTC - repo-init skill added)  
 **Next Review:** 2025-05-16 (weekly)  
 **Owner:** Orchestrator Agent
