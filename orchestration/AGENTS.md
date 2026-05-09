@@ -417,8 +417,134 @@ This file provides a standard decision framework for AI agent assignment using *
 
 **Harness/Provider Agnostic:** These tiers are independent of the tool used to invoke the models (Claude Code, GitHub Copilot, custom harness, open-harness, etc.). The framework remains stable as the platform evolves toward a meta-harness/open-harness approach.
 
+---
+
+## Protocol Compliance Expectations
+
+> **Mandatory for all roles.** Full details in [ORCHESTRATION-PROTOCOL.md](ORCHESTRATION-PROTOCOL.md).
+
+Every agent must follow the DELEGATE/HANDBACK protocol. Violations are blocked by the
+pre-commit hook or caught by the post-execution validator. Non-compliance costs tokens —
+a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
+
+### Orchestrator
+
+**DELEGATE (emit):**
+- Run Groups A/B/C pre-flight checks before emitting any DELEGATE
+- Verify `task_id` is unique and correctly formatted (`YYYY-MM-DD-kebab-case`)
+- Verify `scope` ≥15 words, `success_criteria` are testable, `plan` is numbered
+- Route security tasks to `security_engineer`, architecture to `principal_engineer`
+- Track `retry_count` per task; escalate to `principal_engineer` on >2 retries
+
+**HANDBACK (process):**
+- Accept only validator-computed quality scores (not agent self-scores) for routing decisions
+- Score 90–100: move to done/ immediately
+- Score 80–89: move to done/ with notes
+- Score 70–79: route to Lead Engineer for manual review
+- Score 60–69: issue re-work DELEGATE (max 2 retries) with `retry_context` block
+- Score <60: escalate to Principal Engineer with full retry history
+
+**Metrics:** Emit `artifacts/metrics/YYYY-MM-DD-{task_id}-metrics.yaml` per task.
+
+### Engineer
+
+**DELEGATE (receive):**
+- If DELEGATE is incomplete or unclear, report `status: blocked` immediately — do not guess
+- Confirm plan steps are concrete before starting execution
+- Every plan step should map to a deliverable in the HANDBACK
+
+**HANDBACK (emit):**
+- Include all 12 required fields; do not omit `tests`, `tokens_in/out`, or `duration_minutes`
+- Report actual test pass/fail counts and coverage percentage
+- If scope creep occurred, document it in `scope_deviations`; stay within DELEGATE scope otherwise
+- Self-report `quality_score` honestly; validator score is authoritative for routing
+
+**Escalation:** Set `status: blocked` if stuck; Orchestrator escalates to Senior Engineer.
+
+### Senior Engineer
+
+**DELEGATE (receive):**
+- Accept complex DELEGATEs without fully pre-written plans
+- Produce a detailed numbered `plan` as first deliverable (for Engineer re-delegation if needed)
+- Apply quality baseline: ≥85% test coverage, zero production hazards
+
+**HANDBACK (emit):**
+- Include `qe_feedback` block where requested by Orchestrator
+- Document architectural decisions in `notes` so Lead Engineer can review them
+- Flag potential production hazards explicitly in HANDBACK notes
+
+**Mentoring:** When reviewing Engineer HANDBACKs, provide specific actionable feedback.
+
+### Lead Engineer
+
+**Gray-Zone Review (70–79 scores):**
+- Review HANDBACK notes, deliverables, and test results within 24h of routing
+- Choose one of: Accept / Conditional Accept / Rework
+- Document decision in `qe_feedback.lead_review` block
+- Conditional Accept: create follow-up P2 task for gaps; do not block merge
+
+**Code Review:**
+- Use 8-point checklist in QUALITY.md for structured review
+- Approve/reject with specific line-level reasoning (not just "looks good")
+
+**Protocol oversight:** Interpret protocol questions from team members; escalate protocol ambiguity to Principal Engineer.
+
+### Quality Engineer
+
+**HANDBACK (emit):**
+- Always include `qe_feedback` block with `model_assessment`, `confidence`, and coverage assessment
+- Record `qe_model_assessment` as: `haiku_suitable | sonnet_suitable | opus_required | over_engineered`
+- Flag cost anomalies in `qe_feedback` (cost overrun >50%, unexpected escalations)
+
+**Metrics:** Validate that 35-field canonical metrics record is complete and accurate.
+
+**Trends:** Report systemic quality issues (recurring failures, declining coverage) to Principal Engineer.
+
+### Principal Engineer
+
+**Escalation handling:**
+- Review all escalated tasks within 48h
+- For retry-overflow escalations: decide between (a) redesign task, (b) switch agent/model, (c) mark blocked
+- For critical findings: immediate review; security findings route to Security Engineer
+
+**Protocol oversight:**
+- Monthly review of protocol effectiveness with metric data
+- Approve breaking protocol changes with migration plan
+- Sign off on new agent roles or routing rule changes
+
+### Security Engineer
+
+**Scope:** Only invoked for security-scoped tasks. All other routes blocked.
+
+**HANDBACK:** Include threat model summary, CVE references where relevant, and explicit `no_secrets_found: true/false` assertion.
+
+### Model Engineer
+
+**Analysis cadence:** After every Quality Engineer HANDBACK, analyze `qe_model_assessment` and `flag_for_model_engineer` signals.
+
+**Recommendations:** Output ranked recommendations (rank_1 to rank_3) for model/effort combinations on similar future tasks.
+
+**HANDBACK:** Include `efficiency_score` trends and cost optimization rationale in notes.
+
+---
+
+## Protocol Reference
+
+| Resource | Purpose |
+|----------|---------|
+| [ORCHESTRATION-PROTOCOL.md](ORCHESTRATION-PROTOCOL.md) | Master protocol document (source of truth) |
+| [AGENT-ONBOARDING.md](AGENT-ONBOARDING.md) | Onboarding checklist for new agents |
+| [PROTOCOL-QUICK-REFERENCE.md](PROTOCOL-QUICK-REFERENCE.md) | One-page cheat sheet |
+| [PROTOCOL-IMPLEMENTATION-STATUS.md](PROTOCOL-IMPLEMENTATION-STATUS.md) | Implementation status and metrics |
+| [DELEGATE-HANDBACK-QUALITY-GATES.md](DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gates detail |
+| [delegate-schema.yaml](delegate-schema.yaml) | Machine-readable DELEGATE schema |
+| [handback-schema.yaml](handback-schema.yaml) | Machine-readable HANDBACK schema |
+
+---
+
 ## Update Log
 
 - **2026-04-19:** Initial AGENTS.md created (vendor-neutral) during {service-name}/{service-name}/{service-name} security hardening cycle.
 - **2026-04-24:** Added Model Engineer role (Phase 2C) with autonomous optimization feedback loop. QE now provides model_assessment feedback. Orchestrator applies Model Engineer recommendations for continuous cost/quality improvement.
+- **2026-05-09:** Added Protocol Compliance Expectations section (Week 4). Per-role DELEGATE/HANDBACK/Metrics/Escalation protocol responsibilities defined. Cross-references to ORCHESTRATION-PROTOCOL.md added.
 - **Recommendation:** Review this guide quarterly and update tier assignments based on new model releases and Model Engineer recommendation trends.

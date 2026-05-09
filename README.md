@@ -170,6 +170,50 @@ Phase 0-6 completed execution:
 
 ---
 
+## 📋 Orchestration Protocol
+
+The **Orchestration Protocol** governs how work flows between agents — from the moment a
+DELEGATE task is created to when the HANDBACK result is accepted and metrics are recorded.
+
+### Protocol Highlights
+
+| Feature | Detail |
+|---------|--------|
+| **Pre-flight validation** | Groups A/B/C checks block bad DELEGATEs before any tokens are spent |
+| **3-layer quality scoring** | Format (40%) + Content (35%) + Quality (25%) = composite 0–100 score |
+| **5-band routing** | 90–100 merge · 80–89 merge · 70–79 Lead review · 60–69 rework · <60 escalate |
+| **Retry cap** | `MAX_RETRIES = 2` hard limit; escalates to Principal Engineer on overflow |
+| **Metrics collection** | 35-field canonical record per task → Model Engineer optimization |
+| **Pre-commit enforcement** | Hook blocks non-compliant DELEGATEs at commit time |
+
+### Protocol Documents
+
+| Document | Purpose |
+|----------|---------|
+| [`orchestration/ORCHESTRATION-PROTOCOL.md`](orchestration/ORCHESTRATION-PROTOCOL.md) | **Master reference** — all 13 sections (source of truth) |
+| [`orchestration/AGENT-ONBOARDING.md`](orchestration/AGENT-ONBOARDING.md) | Onboarding checklist — read before assuming any agent role |
+| [`orchestration/PROTOCOL-QUICK-REFERENCE.md`](orchestration/PROTOCOL-QUICK-REFERENCE.md) | One-page cheat sheet for daily use |
+| [`orchestration/PROTOCOL-IMPLEMENTATION-STATUS.md`](orchestration/PROTOCOL-IMPLEMENTATION-STATUS.md) | Implementation status, metrics, and rollout plan |
+| [`orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md`](orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gates detail and re-work policy |
+
+### Run the Protocol Compliance Audit
+
+```bash
+python3 orchestration/tools/protocol_audit.py
+```
+
+Expected output when fully compliant:
+```
+==================================================
+  PROTOCOL COMPLIANCE AUDIT
+==================================================
+...
+Compliance Score: 100/100 ✅
+Status: READY FOR PRODUCTION
+```
+
+---
+
 ## 🚀 Quick Start
 
 ### Installation (One-Time)
