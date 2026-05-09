@@ -98,6 +98,27 @@
 
 ### Skills Implementation (Phase 2-3: 1-2 weeks)
 
+- [ ] **SKILL-QUEUE-MGT-001:** Implement queue-management skill
+  - Purpose: Automate adding tasks to both queue/ and TODO.md simultaneously
+  - Trigger: User command "add to queue: <task spec>" or programmatic calls
+  - Features:
+    - Parse task specifications (structured input)
+    - Validate QUEUE-PROTOCOL format (task_id, role, model, effort, scope, plan, criteria)
+    - Generate DELEGATE JSON file in ~/.copilot/queue/incoming/
+    - Add entry to repo TODO.md in appropriate section (PRIORITY/STANDARD/OPTIONAL)
+    - Commit both changes with structured message
+    - Validate format and no duplicates
+  - Owner: Engineer (or could be internal Orchestrator skill)
+  - Model: Haiku
+  - Effort: 1-2 days
+  - Success Criteria:
+    - Can add tasks via CLI: "add-to-queue --task-id X --role Y --scope Z..."
+    - Can add tasks via JSON: reads task spec file, auto-generates both files
+    - TODO.md entry includes: task_id, description, effort, owner, reference docs
+    - DELEGATE file includes: full spec with plan, success criteria, constraints
+    - Both committed atomically in single git commit
+    - Prevents duplicate task_ids across queue + TODO.md
+
 - [ ] **SKILL-TODO-001:** Implement todo-maintenance skill
   - Purpose: Auto-sync queue DELEGATEs ↔ TODO.md
   - Trigger: On HANDBACK received from queue
