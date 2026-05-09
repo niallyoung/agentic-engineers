@@ -39,3 +39,21 @@ htmlcov/
 # Temp files
 *.tmp
 .claude
+
+# Logs
+*.log
+logs/
+data/logs/
+
+# Artifacts and build outputs
+artifacts/
+archive/
+dist/
+build/
+*.egg-info/
+
+# Cache directories
+__pycache__/
+.pytest_cache/
+.coverage
+.env.production
