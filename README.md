@@ -103,6 +103,79 @@ This philosophy is embedded throughout the system:
 
 ---
 
+## 📁 Repository Structure
+
+**Optimized for clarity and maintainability** (see [STRUCTURE-ARCHITECTURE.md](STRUCTURE-ARCHITECTURE.md)):
+
+```
+agentic-engineers/
+│
+├── src/                          # ✅ ALL source code and configuration
+│   ├── agents/                   # Agent definitions (*.md files)
+│   ├── skills/                   # Skill implementations (SKILL.md)
+│   ├── orchestration/            # Orchestration logic (Python modules)
+│   │   ├── agents/               # Routing, delegation, validation
+│   │   ├── handlers/             # Event & state handlers
+│   │   ├── activators/           # Task activators & triggers
+│   │   ├── telemetry/            # Metrics & observability
+│   │   └── tools/                # Orchestration utilities
+│   ├── config/                   # Configuration (centralized)
+│   │   ├── models.yaml           # Model registry & assignments
+│   │   ├── MODEL_ASSIGNMENTS_LOCKED.md
+│   │   ├── QUICK_REFERENCE.md
+│   │   └── CONFIG-README.md
+│   ├── docs/                     # Internal documentation
+│   │   └── AGENTS.md             # Agent routing decision tree
+│   ├── shared/                   # Shared utilities
+│   └── tools/                    # Tools directory
+│
+├── docs/                         # ✅ External documentation
+│   ├── SPEC.md                   # Protocol specification
+│   ├── PROTOCOL.md               # Queue protocol documentation
+│   ├── architecture/             # Architecture decisions
+│   ├── guides/                   # Implementation guides
+│   └── [60+ other comprehensive docs]
+│
+├── tests/                        # ✅ Test suite (pytest)
+│   ├── test_*.py                 # Unit & integration tests
+│   └── [14 comprehensive test files, 430+ passing]
+│
+├── renderer/                     # ✅ Build/installation system
+│   ├── scripts/                  # Rendering logic
+│   │   ├── render-copilot.sh     # → ~/.copilot/skills/
+│   │   ├── render-claude.sh      # → ~/.claude/agents/ + skills/
+│   │   └── render-copilot-agents.py
+│   ├── hooks/                    # GitHub/enforcement hooks
+│   ├── instructions/             # Global instructions
+│   ├── workflows/                # Reusable GitHub Actions
+│   └── Makefile
+│
+├── .github/                      # ✅ GitHub configuration
+├── dist/                         # Build artifacts (gitignored)
+├── README.md                     # This file
+├── Makefile                      # Build targets
+├── conftest.py                   # pytest configuration
+│
+└── .gitignore                    # Includes: data/, artifacts/, guides/
+
+# Reference Guides (Architecture & Structure)
+├── AUDIT-RENDERING-PIPELINE.md     # Rendering system analysis
+├── STRUCTURE-RECOMMENDATION.md     # Optimization rationale
+└── STRUCTURE-ARCHITECTURE.md       # Implementation ADR
+```
+
+### Why This Structure
+
+✅ **Single source tree:** All source code under `src/` (agents, skills, orchestration, config)  
+✅ **Clear separation:** Source (`src/`), docs (`docs/`), tests (`tests/`), build (`renderer/`)  
+✅ **Logical grouping:** Configuration in `src/config/`, documentation in `src/docs/`  
+✅ **Easy navigation:** Max 3 directory levels to find anything  
+✅ **Scalable:** Can grow without polluting root directory  
+
+See [STRUCTURE-ARCHITECTURE.md](STRUCTURE-ARCHITECTURE.md) for full design rationale and migration details.
+
+---
+
 ### Queue Protocol: DELEGATE ↔ HANDBACK
 
 **DELEGATE** (user → orchestrator):
