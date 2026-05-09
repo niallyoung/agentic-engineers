@@ -347,7 +347,10 @@ class TestIntegration:
     
     def test_pre_commit_hook_exists(self):
         """Pre-commit hook file exists and is executable."""
-        hook_path = Path('/home/user/agentic-engineers/.git/hooks/pre-commit')
+        # Derive project root from this test file's location — avoids subprocess
+        # (subprocess.Popen may be mocked by concurrent-threading tests upstream)
+        project_root = Path(__file__).parent.parent.resolve()
+        hook_path = project_root / '.git' / 'hooks' / 'pre-commit'
         assert hook_path.exists(), "Pre-commit hook must exist"
         stat_info = hook_path.stat().st_mode
         # Check if executable by owner (mode & 0o100 would be non-zero)
