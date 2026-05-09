@@ -30,12 +30,12 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 
 # Import the module under test
-from orchestration.agents.automation import (
+from src.orchestration.agents.automation import (
     AutomationController,
     AutomationMetrics,
     ShutdownSignal,
 )
-from orchestration.agents.orchestrator import QueueManager
+from src.orchestration.agents.orchestrator import QueueManager
 
 
 # ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ def mock_orchestrator():
 @pytest.fixture
 def automation_controller(temp_queue_dir):
     """Create an AutomationController for testing."""
-    with patch('orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
+    with patch('src.orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
         mock_orch = Mock()
         mock_orch.run_poll_cycle = Mock(return_value={
             "tasks_processed": 0,
@@ -98,7 +98,7 @@ class TestConfigurationAndValidation:
     
     def test_default_configuration(self, temp_queue_dir):
         """Test default configuration values."""
-        with patch('orchestration.agents.automation.OrchestratorAgent'):
+        with patch('src.orchestration.agents.automation.OrchestratorAgent'):
             controller = AutomationController(queue_dir=temp_queue_dir)
             assert controller.poll_interval == 5.0
             assert controller.log_level == "INFO"
@@ -115,7 +115,7 @@ class TestConfigurationAndValidation:
             'AUTOMATION_IDLE_TIMEOUT': '60',
             'AUTOMATION_MAX_CYCLES': '10',
         }):
-            with patch('orchestration.agents.automation.OrchestratorAgent'):
+            with patch('src.orchestration.agents.automation.OrchestratorAgent'):
                 controller = AutomationController(queue_dir=temp_queue_dir)
                 assert controller.poll_interval == 2.5
                 assert controller.log_level == "DEBUG"
@@ -126,7 +126,7 @@ class TestConfigurationAndValidation:
     def test_parameter_override_environment(self, temp_queue_dir):
         """Test that parameters override environment variables."""
         with patch.dict(os.environ, {'POLL_INTERVAL_SECONDS': '10'}):
-            with patch('orchestration.agents.automation.OrchestratorAgent'):
+            with patch('src.orchestration.agents.automation.OrchestratorAgent'):
                 controller = AutomationController(
                     queue_dir=temp_queue_dir,
                     poll_interval=2.0
@@ -135,7 +135,7 @@ class TestConfigurationAndValidation:
     
     def test_invalid_poll_interval(self, temp_queue_dir):
         """Test validation of poll_interval."""
-        with patch('orchestration.agents.automation.OrchestratorAgent'):
+        with patch('src.orchestration.agents.automation.OrchestratorAgent'):
             with pytest.raises(ValueError, match="poll_interval must be positive"):
                 AutomationController(
                     queue_dir=temp_queue_dir,
@@ -144,7 +144,7 @@ class TestConfigurationAndValidation:
     
     def test_invalid_idle_timeout(self, temp_queue_dir):
         """Test validation of idle_timeout."""
-        with patch('orchestration.agents.automation.OrchestratorAgent'):
+        with patch('src.orchestration.agents.automation.OrchestratorAgent'):
             with pytest.raises(ValueError, match="idle_timeout must be non-negative"):
                 AutomationController(
                     queue_dir=temp_queue_dir,
@@ -153,7 +153,7 @@ class TestConfigurationAndValidation:
     
     def test_invalid_max_cycles(self, temp_queue_dir):
         """Test validation of max_cycles."""
-        with patch('orchestration.agents.automation.OrchestratorAgent'):
+        with patch('src.orchestration.agents.automation.OrchestratorAgent'):
             with pytest.raises(ValueError, match="max_cycles must be positive"):
                 AutomationController(
                     queue_dir=temp_queue_dir,
@@ -367,7 +367,7 @@ class TestExitConditions:
 class TestPollingLoopLogic:
     """Test core polling loop logic."""
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_single_cycle_execution(self, mock_orch_class, automation_controller):
         """Test execution of a single polling cycle."""
         mock_orch = Mock()
@@ -387,7 +387,7 @@ class TestPollingLoopLogic:
         assert result["metrics"]["cycles_completed"] == 1
         assert mock_orch.run_poll_cycle.called
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_multiple_cycles(self, mock_orch_class, automation_controller):
         """Test execution of multiple polling cycles."""
         mock_orch = Mock()
@@ -407,7 +407,7 @@ class TestPollingLoopLogic:
         assert result["metrics"]["cycles_completed"] == 3
         assert result["metrics"]["tasks_processed"] == 6
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_empty_queue_cycles(self, mock_orch_class, automation_controller):
         """Test cycles with empty queue."""
         mock_orch = Mock()
@@ -426,7 +426,7 @@ class TestPollingLoopLogic:
         assert result["status"] == "COMPLETE"
         assert result["metrics"]["tasks_processed"] == 0
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_cycle_with_error(self, mock_orch_class, automation_controller):
         """Test handling of errors during polling cycle."""
         mock_orch = Mock()
@@ -455,7 +455,7 @@ class TestPollingLoopLogic:
 class TestHeartbeat:
     """Test heartbeat emission."""
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_heartbeat_emission(self, mock_orch_class, automation_controller):
         """Test that heartbeat is emitted at intervals."""
         mock_orch = Mock()
@@ -499,7 +499,7 @@ success_criteria:
         task_file.write_text(task_content)
         
         # Create controller
-        with patch('orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
+        with patch('src.orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
             mock_orch = Mock()
             mock_orch.run_poll_cycle = Mock(return_value={
                 "tasks_processed": 1,
@@ -527,7 +527,7 @@ success_criteria:
         """Test writing metrics to file."""
         metrics_file = tmp_path / "metrics.json"
         
-        with patch('orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
+        with patch('src.orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
             mock_orch = Mock()
             mock_orch.run_poll_cycle = Mock(return_value={
                 "tasks_processed": 2,
@@ -564,7 +564,7 @@ success_criteria:
 class TestAcceptanceCriteria:
     """Test all acceptance criteria from DELEGATE."""
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_automation_controller_implemented(self, mock_orch_class):
         """AC: AutomationController class implemented and integrated."""
         mock_orch_class.return_value = Mock()
@@ -574,7 +574,7 @@ class TestAcceptanceCriteria:
         assert hasattr(controller, 'run')
         assert hasattr(controller, 'orchestrator')
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_while_true_polling_loop(self, mock_orch_class):
         """AC: While-True polling loop with signal handling working."""
         mock_orch = Mock()
@@ -593,7 +593,7 @@ class TestAcceptanceCriteria:
         
         assert result["metrics"]["cycles_completed"] == 3
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_configurable_poll_interval(self, mock_orch_class):
         """AC: Configurable poll interval via environment variables."""
         with patch.dict(os.environ, {'POLL_INTERVAL_SECONDS': '2.5'}):
@@ -602,7 +602,7 @@ class TestAcceptanceCriteria:
             
             assert controller.poll_interval == 2.5
     
-    @patch('orchestration.agents.automation.OrchestratorAgent')
+    @patch('src.orchestration.agents.automation.OrchestratorAgent')
     def test_comprehensive_test_coverage(self, mock_orch_class):
         """AC: Comprehensive test coverage (unit + integration)."""
         # This test class itself demonstrates comprehensive coverage
@@ -616,7 +616,7 @@ class TestAcceptanceCriteria:
         task_file = incoming_dir / "DELEGATE-task.yaml"
         task_file.write_text("test: data")
         
-        with patch('orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
+        with patch('src.orchestration.agents.automation.OrchestratorAgent') as mock_orch_class:
             mock_orch = Mock()
             mock_orch.run_poll_cycle = Mock(return_value={
                 "tasks_processed": 0,

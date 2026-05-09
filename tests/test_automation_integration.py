@@ -24,11 +24,11 @@ import pytest
 from datetime import datetime
 
 # Add project root to path
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from orchestration.agents.automation import AutomationController, AutomationMetrics
-from orchestration.agents.orchestrator import OrchestratorAgent, QueueManager
+from src.orchestration.agents.automation import AutomationController, AutomationMetrics
+from src.orchestration.agents.orchestrator import OrchestratorAgent, QueueManager
 
 
 class TestAutomationControllerE2E:

@@ -76,13 +76,14 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 
 verify: ## Verify framework structure and tests (SPEC-compliant)
 	@echo "🔍 Verifying framework structure..."
-	@test -d "$(REPO_ROOT)/orchestration/agents" || (echo "❌ orchestration/agents/ missing" && exit 1)
-	@test -d "$(REPO_ROOT)/orchestration" || (echo "❌ orchestration/ missing" && exit 1)
+	@test -d "$(REPO_ROOT)/src/orchestration/agents" || (echo "❌ src/orchestration/agents/ missing" && exit 1)
+	@test -d "$(REPO_ROOT)/src/orchestration" || (echo "❌ src/orchestration/ missing" && exit 1)
 	@test -f "$(REPO_ROOT)/docs/SPEC.md" || (echo "❌ docs/SPEC.md missing" && exit 1)
+	@test -d "$(REPO_ROOT)/tests" || (echo "❌ tests/ missing" && exit 1)
 	@echo "✅ Framework structure verified"
 	@echo ""
-	@echo "🧪 Running Orchestrator tests..."
-	@cd "$(REPO_ROOT)" && python3 -m unittest orchestration.agents.test_orchestrator 2>&1 | tail -5 || true
+	@echo "🧪 Running tests..."
+	@cd "$(REPO_ROOT)" && python3 -m pytest tests/ -q --tb=short 2>&1 | tail -10 || true
 	@echo ""
 	@echo "🔐 Checking SPEC compliance (no external scripts except renderer/)..."
 	@! grep -E "^\s+@(bash|sh|python).*scripts" $(REPO_ROOT)/Makefile | grep -v "renderer/scripts" | grep -q . || (echo "❌ SPEC VIOLATION: Makefile invokes external scripts" && exit 1) || true

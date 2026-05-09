@@ -20,7 +20,7 @@ import pytest
 from unittest.mock import MagicMock, call
 from typing import Dict, List, Any
 
-from orchestration.agents.quality_validator import (
+from src.orchestration.agents.quality_validator import (
     QualityValidator,
     ValidationResult,
     ValidationFinding,

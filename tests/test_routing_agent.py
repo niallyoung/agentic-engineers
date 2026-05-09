@@ -5,7 +5,7 @@ Tests all decision paths in AGENTS.md decision tree.
 """
 
 import pytest
-from . routing_agent import RoutingAgent, ROUTING_AGENT_CONFIG
+from src.orchestration.agents.routing_agent import RoutingAgent, ROUTING_AGENT_CONFIG
 
 
 class TestRoutingAgentDecisionTree:

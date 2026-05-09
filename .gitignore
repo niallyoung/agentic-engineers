@@ -39,6 +39,7 @@ htmlcov/
 # Temp files
 *.tmp
 .claude
+temp/
 
 # Logs
 *.log
@@ -57,3 +58,6 @@ __pycache__/
 .pytest_cache/
 .coverage
 .env.production
+
+# Copilot session state (runtime, not source)
+.copilot/session-state/

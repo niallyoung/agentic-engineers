@@ -19,7 +19,7 @@ REPO_ROOT="${1:?usage: render-copilot.sh REPO_ROOT COPILOT_DIR [--uninstall|--st
 COPILOT="${2:?usage: render-copilot.sh REPO_ROOT COPILOT_DIR [--uninstall|--status]}"
 MODE="${3:-install}"
 
-SRC_SKILLS="$REPO_ROOT/skills"
+SRC_SKILLS="$REPO_ROOT/src/skills"
 DST_SKILLS="$COPILOT/skills"
 MARKER=".agentic-engine{service-name}"
 
