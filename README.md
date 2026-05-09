@@ -105,7 +105,7 @@ This philosophy is embedded throughout the system:
 
 ## 📁 Repository Structure
 
-**Optimized for clarity and maintainability** (see [STRUCTURE-ARCHITECTURE.md](STRUCTURE-ARCHITECTURE.md)):
+**Optimized for clarity and maintainability** (see [Architecture Decision](docs/decisions/ADR-structure-2025-05-09.md)):
 
 ```
 agentic-engineers/
@@ -157,12 +157,18 @@ agentic-engineers/
 ├── conftest.py                   # pytest configuration
 │
 └── .gitignore                    # Includes: data/, artifacts/, guides/
-
-# Reference Guides (Architecture & Structure)
-├── AUDIT-RENDERING-PIPELINE.md     # Rendering system analysis
-├── STRUCTURE-RECOMMENDATION.md     # Optimization rationale
-└── STRUCTURE-ARCHITECTURE.md       # Implementation ADR
 ```
+
+### 📚 Documentation Guide
+
+For comprehensive documentation structure and how to find what you need, see [docs/README.md](docs/README.md).
+
+Key documentation:
+- **Getting Started:** [docs/INSTALL.md](docs/INSTALL.md)
+- **System Overview:** [docs/SYSTEM.md](docs/SYSTEM.md)
+- **Specification:** [docs/SPEC.md](docs/SPEC.md)
+- **Queue Protocol:** [docs/PROTOCOL.md](docs/PROTOCOL.md)
+- **Archived Docs:** [docs/archive/README.md](docs/archive/README.md)
 
 ### Why This Structure
 
@@ -172,7 +178,7 @@ agentic-engineers/
 ✅ **Easy navigation:** Max 3 directory levels to find anything  
 ✅ **Scalable:** Can grow without polluting root directory  
 
-See [STRUCTURE-ARCHITECTURE.md](STRUCTURE-ARCHITECTURE.md) for full design rationale and migration details.
+See [docs/decisions/ADR-structure-2025-05-09.md](docs/decisions/ADR-structure-2025-05-09.md) for full design rationale and migration details.
 
 ---
 
