@@ -1,0 +1,39 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-02-orchestrator-with-failsafe
+role: Orchestrator
+model: claude-haiku-4-5
+effort: low
+scope: |
+  Poll artifacts/queue/incoming/ for DELEGATE blocks and delegate to appropriate agents.
+  FAILSAFE: If queue is empty AND no agents running for 60 seconds, stop polling and exit.
+  Do NOT wait forever - implement timeout/idle detection.
+context:
+  - Queue location: artifacts/queue/incoming/ (in )
+  - Routing rules: orchestration/AGENTS.md (decision tree: which agent for which task)
+  - Agent skills: orchestration/SKILLS.md (what each agent does)
+  - Pending tasks: 3 DELEGATE blocks awaiting delegation
+plan:
+  - 1. Poll artifacts/queue/incoming/ for DELEGATE blocks
+  - 2. If tasks found:
+       - Read DELEGATE (task_id, role, model, scope, context, plan, success_criteria)
+       - Move from incoming/ to processing/
+       - Delegate to agent per AGENTS.md routing
+       - Wait for HANDBACK
+       - Move to done/ with HANDBACK
+  - 3. If queue empty and no active agents:
+       - Start idle timer (60 seconds)
+       - If no new work appears in 60s, STOP and exit
+       - Do NOT poll forever
+  - 4. When queue empty and idle timeout reached:
+       - Report final status
+       - Generate artifacts/index.json
+       - Exit gracefully
+success_criteria:
+  - All pending DELEGATE blocks are delegated
+  - Each delegated to correct agent per AGENTS.md
+  - HANDBACK received and processed
+  - Tasks moved to done/ queue
+  - Idle timeout prevents infinite polling (max 60s wait)
+  - Orchestrator exits when queue empty
+---

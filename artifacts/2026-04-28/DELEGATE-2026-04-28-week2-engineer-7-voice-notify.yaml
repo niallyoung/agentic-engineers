@@ -1,0 +1,78 @@
+---
+handoff_type: DELEGATE
+task_id: 2026-05-05-week2-engineer-7-voice-notify
+timestamp: 2026-04-28T19:00:00Z
+from_agent: Orchestrator (Haiku)
+to_agent: Engineer (Haiku)
+role: Engineer
+model: claude-haiku-4-5
+effort: low
+
+scope: >
+  Implement Voice Notify skill — audio notification agent. Create
+  agentic-engineers/skills/voice-notify.md with complete DELEGATE/HANDBACK
+  protocol. Agent delivers voice notifications for orchestration events,
+  matching personality voice to agent type.
+
+context:
+  - Design spec: agentic-engineers/orchestration/AGENT-SPECS-WEEK1-DESIGNS.md (Agent 7)
+  - Role: Engineer (lightweight notifier)
+  - Framework: AGENTS.md
+  - Handoff protocol: HANDOFF.md
+  - Notification types: success, warning, escalation, progress
+  - Voice personalities: default, optimistic, serious, technical
+  - TTS service: macOS `say` command (local, no cost)
+  - Async pattern: return immediately (don't block caller)
+  - Integration: Invoked by Quality Orchestrator, Config Audit, CICD Monitor
+  - Architecture Remediation Week 2: 2026-05-05 to 2026-05-12
+  - Budget: ~800 tokens estimated
+
+plan:
+  1. Review AGENT-SPECS-WEEK1-DESIGNS.md Agent 7 specification
+  2. Review notification types and voice personality preferences
+  3. Create skills/voice-notify.md with structure:
+     - Agent purpose + scope
+     - DELEGATE block specification (message, notification_type, agent_type, urgency, voice_preference)
+     - HANDBACK block specification (audio_file, duration_seconds, agent_voice, delivery_method, status)
+     - Voice personality matching logic (agent type -> voice personality)
+     - TTS generation (use macOS `say` command with voice + speed parameters)
+     - Audio playback (stdout or system audio)
+     - Async pattern (return immediately, don't wait for playback)
+     - Graceful degradation (if TTS unavailable, output text)
+     - Duration calculation (audio file length)
+  4. Support voice personalities (3-4 options minimum)
+  5. Urgency level affects TTS speed/volume
+  6. Test with sample notifications
+  7. Return HANDBACK with deliverable + validation
+
+success_criteria:
+  - Skill document created (300-350 lines)
+  - DELEGATE spec matches design spec
+  - HANDBACK spec includes all fields (audio_file, duration_seconds, agent_voice, status)
+  - Voice personality matched to agent type correctly
+  - TTS audio generated and played
+  - Async pattern works (doesn't block caller)
+  - Graceful degradation if TTS unavailable
+  - Urgency level affects playback (speed/volume)
+  - Duration calculation accurate
+  - Ready for integration with orchestration agents
+
+success_metrics:
+  - make lint passes
+  - make test passes
+  - Skill document is clear and concise
+  - Design spec -> implementation traceable
+  - Voice playback tested and confirmed
+
+notes: >
+  This agent enhances user experience by providing audio feedback. Keep it simple
+  and lightweight. Async pattern is important (don't block orchestration).
+
+budget_context:
+  session_pct_at_delegation: 48.0
+  estimated_tokens_needed: 800
+  hours_until_reset: 5.5
+  status: GREEN
+  recommendation: "Haiku appropriate for lightweight TTS wrapper"
+
+---

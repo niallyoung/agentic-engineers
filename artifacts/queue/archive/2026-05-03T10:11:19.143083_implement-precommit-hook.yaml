@@ -1,0 +1,42 @@
+---
+handoff_type: DELEGATE
+task_id: implement-precommit-hook-2026-05-03
+role: Engineer
+model: claude-sonnet-4-6
+effort: low
+scope: |
+  Implement .git/hooks/pre-commit to prevent regression.
+  Hook should block commits containing:
+  1. Executable Python/shell scripts in orchestration/scripts/
+  2. Cron job files in orchestration/config/
+  3. Any other external script bypass paths
+
+context:
+  - File: .git/hooks/pre-commit (create if not exists)
+  - Purpose: Prevent future commits from re-introducing external scripts
+  - Enforcement: Fail commit if prohibited files detected
+
+plan:
+  - 1. Create .git/hooks/pre-commit file (if not exists)
+  - 2. Make executable: chmod +x .git/hooks/pre-commit
+  - 3. Add bash script that:
+     a) Checks for .py or .sh files in orchestration/scripts/: 
+        if find orchestration/scripts -type f \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | grep -q . ; then exit 1; fi
+     b) Checks for .cron files in orchestration/config/:
+        if find orchestration/config -name "*.cron" -type f 2>/dev/null | grep -q . ; then exit 1; fi
+     c) On error, prints: "VIOLATION: External scripts found. All work must flow through DELEGATE/HANDBACK protocol."
+  - 4. Test the hook: 
+     a) Try to add a test .sh file to orchestration/scripts/
+     b) git add . 
+     c) Verify commit is blocked with error message
+  - 5. Commit the hook itself: git add .git/hooks/pre-commit && git commit -m "Add pre-commit hook: prevent external script regression"
+
+success_criteria:
+  - .git/hooks/pre-commit exists and is executable
+  - Hook blocks commits with .py/.sh files in orchestration/scripts/
+  - Hook blocks commits with .cron files in orchestration/config/
+  - Hook provides clear error message
+  - Pre-commit hook is itself committed to repo
+  - No future commits can re-introduce external scripts
+
+---
