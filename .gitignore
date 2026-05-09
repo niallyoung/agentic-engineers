@@ -61,3 +61,13 @@ __pycache__/
 
 # Copilot session state (runtime, not source)
 .copilot/session-state/
+
+# Deprecated/obsolete directories (kept in filesystem for reference only)
+orchestration/
+bin/
+render/
+setup/
+reference/
+operations/
+metrics/
+data/
