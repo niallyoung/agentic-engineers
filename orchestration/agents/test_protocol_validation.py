@@ -20,20 +20,59 @@ from .delegate_validator import DelegateValidator, validate_delegate_pre_flight
 
 # Helper function for valid test delegates
 def make_valid_delegate(task_id, role='engineer', effort='low', hours=2, **overrides):
-    """Create a valid delegate with minimal required fields."""
+    """Create a valid delegate with minimal required fields.
+
+    Scope deliberately avoids B7-trigger keywords (comprehensive, validation,
+    system, architecture, integration) so that effort='low' tests do not
+    generate false-positive B7 failures.  Context is ≥100 words to pass B5.
+    success_criteria count scales with hours to pass B2.
+    """
+    # Scale criteria count: ceil(hours / 4), minimum 2
+    min_criteria = max(2, (hours + 3) // 4)
+    _all_criteria = [
+        'All tests pass with 90% coverage',
+        'No regressions in existing test suite with zero test failures',
+        'All 3 new modules pass peer review with zero blocking comments',
+        'Performance benchmarks show no regression greater than 5 percent',
+        '100 percent of new public API methods have docstrings in README',
+        'Edge cases handled and covered by 4 dedicated unit test cases',
+        'Integration tests pass in CI environment with zero failures',
+        'Code coverage stays above 85 percent for modified packages',
+    ]
+    criteria = _all_criteria[:min_criteria]
+
     delegate = {
         'task_id': task_id,
         'role': role,
         'model': 'claude-haiku-4.5' if role == 'engineer' else 'claude-sonnet-4.6',
         'effort': effort,
         'estimated_hours': hours,
-        'scope': 'Create and implement a comprehensive validation system with proper error handling and logging for testing purposes',
-        'success_criteria': ['All 5 tests pass', 'Coverage reaches 90 percent'],
+        # Scope: ≥15 words, has action verb, avoids B7-trigger keywords
+        'scope': (
+            'Implement robust error handling and retry logic for API requests '
+            'in src/api.py by adding middleware with proper logging'
+        ),
+        'success_criteria': criteria,
         'plan': [
             {'step': 1, 'action': 'Implement feature in src/main.py', 'duration_minutes': 30},
             {'step': 2, 'action': 'Run pytest tests to verify correctness', 'duration_minutes': 30}
         ],
-        'context': 'This task implements proper validation of system components. The implementation is critical for ensuring compliance with protocol standards and requirements. Background: the system requires proper validation at multiple layers of execution. The approach involves creating validators that check structure, content quality, and routing sanity. This ensures all tasks meet minimum quality standards before execution and deployment. Implementation will significantly improve system reliability and reduce bugs. The validators use hard gates that block invalid tasks and warnings for borderline cases. Testing is essential for quality assurance.',
+        # Context: ≥100 words to pass B5
+        'context': (
+            'This task implements proper error handling for request processing. '
+            'The implementation is critical for ensuring compliance with protocol '
+            'standards and requirements. Background: the service requires proper '
+            'error recovery at multiple layers of request execution. The approach '
+            'involves creating middleware that checks request structure, content '
+            'quality, and routing sanity. This ensures all requests meet minimum '
+            'quality standards before execution and deployment. Implementation '
+            'will significantly improve service reliability and reduce bugs in '
+            'production. The middleware uses hard gates that block invalid requests '
+            'and emits warnings for borderline cases. Testing is essential for '
+            'quality assurance. Each change must include unit tests covering the '
+            'success path, the error path, and all boundary conditions. The '
+            'reviewer must confirm test coverage before approving the pull request.'
+        ),
     }
     if effort in ['medium', 'high', 'max', 'epic']:
         delegate['out_of_scope'] = ['Other related items']
@@ -94,7 +133,7 @@ class TestGroupAStructure:
     
     def test_a7_no_secrets_pass(self):
         """A7: delegate without secrets should pass."""
-        delegate = make_valid_delegate('2026-05-09-test-no-secrets')
+        delegate = make_valid_delegate('2026-05-09-clean-delegate')
         passed, failures = validate_delegate_pre_flight(delegate)
         assert passed
     
@@ -133,8 +172,8 @@ class TestGroupBContentQuality:
                 'success_criteria': [
                     '50 tests pass',
                     'Coverage above 80%',
-                    'Integration tests succeed',
-                    'Edge cases handled'
+                    'Integration tests pass with zero failures',
+                    'All edge cases covered in 4 dedicated unit tests',
                 ]
             }
         )
@@ -281,7 +320,7 @@ class TestIntegration:
             'model': 'claude-sonnet-4.6',
             'effort': 'high',
             'estimated_hours': 14,
-            'scope': 'Create and implement comprehensive pre-flight validation system enforcing protocol compliance with hard gates checking',
+            'scope': 'Create and implement comprehensive pre-flight validation system enforcing the protocol compliance with hard gates checking',
             'success_criteria': [
                 'All 25 tests pass with 95% coverage',
                 'Pre-commit hook blocks 100% of invalid DELEGATEs',
@@ -296,7 +335,7 @@ class TestIntegration:
                 {'step': 4, 'action': 'Create .git/hooks/pre-commit with validation', 'duration_minutes': 30},
                 {'step': 5, 'action': 'Run pytest to verify all tests pass', 'duration_minutes': 30}
             ],
-            'context': 'Three specialist agents completed comprehensive protocol review work identifying critical gaps. Quality Engineer identified 5 gaps in current system: no pre-delegation checklist exists, no retry limit enforcement, no canonical metrics record for tracking. Principal Engineer designed 5 architectural decisions with detailed pseudocode specifications. Lead Engineer confirmed all identified gaps are critical and real. The implementation includes hard gates for structure validation, content quality checks, and routing sanity verification. Pre-commit hook enforces compliance before commits. Retry tracking prevents infinite rework loops by capping retries at 2.',
+            'context': 'Three specialist agents completed comprehensive protocol review work identifying critical gaps. Quality Engineer identified 5 gaps in current system: no pre-delegation checklist exists, no retry limit enforcement, no canonical metrics record for tracking. Principal Engineer designed 5 architectural decisions with detailed pseudocode specifications. Lead Engineer confirmed all identified gaps are critical and real. The implementation includes hard gates for structure validation, content quality checks, and routing sanity verification. Pre-commit hook enforces compliance before commits. Retry tracking prevents infinite rework loops by capping retries at 2. All deliverables must exist on disk and tests must pass before HANDBACK is accepted by the Orchestrator.',
             'out_of_scope': [
                 'Gray-zone manual review gate (70-79)',
                 'Metrics collection and aggregation',
