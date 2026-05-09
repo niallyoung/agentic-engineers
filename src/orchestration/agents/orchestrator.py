@@ -1042,6 +1042,35 @@ class OrchestratorAgent(Agent):
             "tasks_escalated": self.tasks_escalated,
         }
 
+    def run_poll_cycle(self) -> Dict:
+        """
+        Execute a single polling cycle — list all incoming tasks and process each.
+
+        This is the interface used by AutomationController. Unlike poll_and_process
+        (which loops until idle), run_poll_cycle processes one batch and returns
+        immediately with a metrics dict.
+
+        Returns:
+            Dict with keys:
+            - tasks_processed: int — number of tasks attempted this cycle
+            - tasks_success: int — cumulative tasks successfully completed
+            - tasks_escalated: int — cumulative tasks escalated
+            - tasks_failed: int — cumulative tasks failed (errors)
+        """
+        incoming_tasks = self.queue_manager.list_incoming_tasks()
+        tasks_this_cycle = len(incoming_tasks)
+
+        for filename in incoming_tasks:
+            self._process_task(filename)
+            self.last_task_time = time.time()
+
+        return {
+            "tasks_processed": tasks_this_cycle,
+            "tasks_success": self.tasks_success,
+            "tasks_escalated": self.tasks_escalated,
+            "tasks_failed": 0,
+        }
+
     def poll_and_process(self):
         """
         Main polling loop - poll queue and process all available tasks.
