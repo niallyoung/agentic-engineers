@@ -1038,7 +1038,13 @@ class TestConcurrentInvocations:
     """Tests for concurrent agent invocations."""
 
     def test_concurrent_invocations_independent_files(self, tmp_dirs):
-        """Multiple concurrent invocations work with separate HANDBACK files."""
+        """Multiple concurrent invocations work with separate HANDBACK files.
+
+        NOTE: patch("subprocess.Popen") is applied at the method scope (not
+        inside threads) to prevent mock-stack corruption.  unittest.mock.patch
+        mutates global state; using it concurrently inside threads produces
+        non-deterministic un-patching that leaks the mock into later tests.
+        """
         invoker = make_invoker(tmp_dirs, poll_interval=0.02,
                                effort_timeouts={"medium": 5.0})
         results = []
@@ -1055,19 +1061,25 @@ class TestConcurrentInvocations:
                 )
                 write_handback_after_delay(hb_path, handback, delay=0.05)
 
-                with patch("subprocess.Popen") as mock_popen:
-                    mock_popen.return_value = mock_process(poll_return=None)
-                    result = invoker.invoke_agent(delegate, ["echo"])
+                # subprocess.Popen is already patched at the outer scope —
+                # do NOT nest another patch() inside a thread.
+                result = invoker.invoke_agent(delegate, ["echo"])
                 results.append(result)
             except Exception as e:
                 errors.append(e)
 
         task_ids = [f"2026-01-01-concurrent-{i}" for i in range(3)]
-        threads = [threading.Thread(target=invoke_one, args=(tid,)) for tid in task_ids]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join(timeout=10)
+
+        # Patch once at the method level so the mock stack is restored
+        # cleanly after *all* threads have finished.
+        with patch("subprocess.Popen") as mock_popen:
+            mock_popen.return_value = mock_process(poll_return=None)
+            threads = [threading.Thread(target=invoke_one, args=(tid,))
+                       for tid in task_ids]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=10)
 
         assert len(errors) == 0, f"Concurrent invocations raised errors: {errors}"
         assert len(results) == 3
