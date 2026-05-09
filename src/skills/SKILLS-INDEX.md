@@ -437,3 +437,27 @@ These skills should be reviewed quarterly:
 **Last full audit**: 2026-04-27
 **Next scheduled**: 2026-07-27
 
+
+---
+
+## Framework Lifecycle Skills
+
+### repo-init — Repository Initialization
+- **Skill:** `src/skills/repo-init/SKILL.md`
+- **Purpose:** Bootstrap new repositories with agentic-engineers framework
+- **Role:** Senior Engineer
+- **Model:** claude-sonnet-4.6
+- **Features:**
+  - 8-phase initialization workflow
+  - Repository analysis (language, package manager, CI/CD)
+  - SPEC.md generation with conservative defaults
+  - Directory structure bootstrap (agents/, skills/, tests/, docs/)
+  - Housekeeping (.gitignore, README.md patches)
+  - Framework artifact copy
+  - Compatibility validation (Claude, GPT-5, local models)
+  - TODO.md initialization with conditional items
+  - Documentation generation (ONBOARDING.md, QUICK-START.md, AGENTS.md)
+- **Idempotent:** Yes (blocked by INIT-COMPLETE.yaml marker)
+- **Dry-run:** Yes (`--dry-run` flag)
+- **Dependencies:** agent-creator (scaffold), spec-management (SPEC.md lifecycle)
+- **Added:** 2025-05-09
