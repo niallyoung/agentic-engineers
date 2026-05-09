@@ -136,12 +136,17 @@ success_criteria:
         """Test QueueManager correctly transitions task states."""
         queue_manager = QueueManager(queue_dir=str(test_queue))
         
-        # Check initial queue state
-        initial_count = len(list((test_queue / "incoming").glob("DELEGATE-*")))
+        # QueueManager migrates legacy flat structure (incoming/, done/) to
+        # session-id-partitioned structure ({session-id}/incoming/, etc.).
+        # Use get_incoming_queue_dir() to resolve the actual incoming directory.
+        incoming_dir = queue_manager.get_incoming_queue_dir()
+        
+        # Check initial queue state using the resolved directory
+        initial_count = len(list(incoming_dir.glob("DELEGATE-*")))
         assert initial_count == 3
         
         # Simulate moving a task through states
-        incoming_tasks = list((test_queue / "incoming").glob("DELEGATE-*"))
+        incoming_tasks = list(incoming_dir.glob("DELEGATE-*"))
         assert len(incoming_tasks) > 0
 
 
