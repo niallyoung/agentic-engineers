@@ -51,7 +51,7 @@
 
 **Validation Command:**
 ```bash
-grep -l "^---$" src/agents/*.md | wc -l
+grep -l "^---$" $REPO_ROOT/src/agents/*.md | wc -l
 # Expected: 10+ files with proper YAML frontmatter
 ```
 
@@ -79,7 +79,7 @@ grep -l "^---$" src/agents/*.md | wc -l
 
 **Validation Command:**
 ```bash
-grep -E "Routing Decision|confidence|role:" docs/AGENTS.md | head -20
+grep -E "Routing Decision|confidence|role:" $REPO_ROOT/docs/AGENTS.md | head -20
 ```
 
 ---

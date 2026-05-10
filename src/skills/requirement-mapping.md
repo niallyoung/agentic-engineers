@@ -14,9 +14,9 @@ requirements (no tests), orphaned code (no requirement), and calculate coverage 
 ## Usage
 
 ```
-/requirement-mapping service_path={service-name} spec_file=specs/user-management.yaml
+/requirement-mapping service_path={example-service} spec_file=specs/user-management.yaml
 /requirement-mapping service_path={service-name} requirement_id=REQ-004-membership
-/requirement-mapping service_path={service-name}  # use default spec discovery
+/requirement-mapping service_path={example-service}  # use default spec discovery
 ```
 
 ## Input
@@ -32,7 +32,7 @@ requirements (no tests), orphaned code (no requirement), and calculate coverage 
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "spec_file": "specs/user-management.yaml",
   "requirements_total": 15,
   "requirements_covered": 13,
@@ -85,7 +85,7 @@ func load_requirements(spec_file, service_path):
   # Auto-discover specs for service
   spec_dirs = [
     service_path + "/specs/",
-    "{service-name}/specs/",
+    "{workspace-name}/specs/",
     "~/.agents/agentic-engineers/skills/specs/"
   ]
   
@@ -236,7 +236,7 @@ func calculate_coverage(requirements, mappings):
 
 ## ERS Requirement Reference
 
-### {service-name} Requirements (examples)
+### {example-service} Requirements (examples)
 
 ```
 REQ-001-user-role-admin       Admin calendar event approval
@@ -268,7 +268,7 @@ func TestUpdateUser_NoEmailNoEmailNotification(t *testing.T) {
 
 Run this to see which tests lack requirement annotations:
 ```bash
-grep -r "^func Test" {service-name} --include="*_test.go" | \
+grep -r "^func Test" {example-service} --include="*_test.go" | \
   grep -v "// REQ-" | \
   head -20
 ```
@@ -283,7 +283,7 @@ grep -r "^func Test" {service-name} --include="*_test.go" | \
 
 ## Success Criteria
 
-- Map REQ-001 through REQ-008 to tests in {service-name}
+- Map REQ-001 through REQ-008 to tests in {example-service}
 - Calculate coverage % accurately
 - Identify at least 1 unmapped requirement (REQ-005-audit-logging is likely gap)
 - List orphaned handlers/functions with no requirement link

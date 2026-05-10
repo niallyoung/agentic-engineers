@@ -12,7 +12,7 @@ scope: |
   This must be fixed to prevent engineers from invoking the exception.
 
 context:
-  - File: docs/SPEC.md
+  - File: $REPO_ROOT/docs/SPEC.md
   - Lines: 604 (current), 112 (prohibition)
   - Issue: Direct contradiction defeats constraint
 

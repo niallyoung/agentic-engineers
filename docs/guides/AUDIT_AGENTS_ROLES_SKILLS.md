@@ -74,11 +74,11 @@ Should be: Move to shared/ only, remove from orchestrator/
 
 **Evidence of orphan cleanup incomplete:**
 These files match the directory names we deleted:
-- `lambda-handler.md` ← was `{service-name}/`
-- `makefile.md` ← was `{service-name}/`
-- `cdk-stack.md` ← was `{service-name}/`
+- `lambda-handler.md` ← was `{example-service}/`
+- `makefile.md` ← was `{example-service}/`
+- `cdk-stack.md` ← was `{example-service}/`
 - `cicd-watch.md` ← was `{service-name}/`
-- `sigv4-client.md` ← was `{service-name}/`
+- `sigv4-client.md` ← was `{example-service}/`
 
 ---
 

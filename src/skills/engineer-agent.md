@@ -122,13 +122,13 @@ role: Engineer
 model: claude-haiku-4-5
 effort: high
 scope: >
-  Fix token validation timeout in {service-name} service.
+  Fix token validation timeout in {example-service} service.
   Add 30-second grace period to exp claim check to account for clock skew on mobile devices.
 context:
   - File: lambda/api/main.go:92 (token expiry check)
   - Error: "Token rejected after 1hr on mobile"
   - Root cause: Clock skew (mobile device clock differs from server by 20-30 seconds)
-  - Reference: {service-name}/DESIGN.md line 156 (token lifecycle)
+  - Reference: {example-service}/DESIGN.md line 156 (token lifecycle)
 plan:
   1. Open lambda/api/main.go
   2. Locate expiry check at line 92

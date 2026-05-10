@@ -109,7 +109,7 @@ class ModelResolver:
         candidates = [
             Path("models.yaml"),
             Path.home() / "git" / "agentic-engineers" / "models.yaml",
-            Path("models.yaml"),
+            Path("$REPO_ROOT/models.yaml"),
             Path(__file__).parent.parent.parent / "models.yaml",
         ]
         for candidate in candidates:

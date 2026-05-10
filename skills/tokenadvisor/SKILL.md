@@ -36,7 +36,7 @@ python scripts/tokenadvisor.py --daily --date 2026-04-24
 Daily at 17:00 UTC via `orchestration/config/tokenadvisor.cron`
 
 ```bash
-0 17 * * * cd ~/git/ers/{service-name} && python agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily
+0 17 * * * cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily
 ```
 
 ## Voice Notifications

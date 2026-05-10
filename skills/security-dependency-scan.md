@@ -16,7 +16,7 @@ Engineer review.
 ## Usage
 
 ```
-/security-dependency-scan service_path={workspace-root}/{service-name}
+/security-dependency-scan service_path=$WORKSPACE_ROOT/{example-service}
 /security-dependency-scan service_path={service-name} fail_on_major=true
 /security-dependency-scan service_path={service-name} fix_available_only=true
 ```
@@ -34,7 +34,7 @@ Engineer review.
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "language": "go",
   "scanner": "govulncheck",
   "vulnerabilities": [
@@ -260,10 +260,10 @@ func gate_decision(counts, fail_on_critical, fail_on_major):
 
 ## ERS-Specific Notes
 
-### {service-name}, {service-name}, {service-name}, {service-name}, {service-name} (Go services)
+### {example-service}, {example-service}, {service-name}, {example-service}, {service-name} (Go services)
 
 ```bash
-cd {workspace-root}/{service}
+cd $WORKSPACE_ROOT/{service}
 govulncheck -json ./...
 ```
 
@@ -274,14 +274,14 @@ Key dependencies to watch:
 
 ```bash
 // Check installed versions
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 go list -m -json all | jq '{path:.Path, version:.Version}'
 ```
 
 ### {service-name} (Node/TypeScript)
 
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{service-name}
 npm audit --json
 ```
 

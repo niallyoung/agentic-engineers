@@ -37,7 +37,7 @@ python scripts/ab-testing.py --stop EXPERIMENT_ID
 Daily at 18:00 UTC (for early stopping checks) via `orchestration/config/ab-testing-monitor.cron`
 
 ```bash
-0 18 * * * cd ~/git/ers/{service-name} && python agentic-engineers/skills/ab-testing/scripts/ab-testing.py --monitor
+0 18 * * * cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/ab-testing/scripts/ab-testing.py --monitor
 ```
 
 ## Voice Notifications

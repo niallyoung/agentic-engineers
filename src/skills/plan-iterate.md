@@ -76,7 +76,7 @@ When a plan is drafted but needs refinement:
 
 ```
 1. Orchestrator drafts plan in TODO.md
-   └─ Save as: {service-name}/TODO.md or service/TODO.md
+   └─ Save as: {workspace-name}/TODO.md or service/TODO.md
 
 2. Orchestrator delegates to Senior Engineer
    Input: Link to plan (TODO.md section)
@@ -114,7 +114,7 @@ context: spec-extract skill planning for multi-repo pattern catalog
 
 ### Plan to Review
 
-See: {service-name}/TODO.md section "spec-extract"
+See: {workspace-name}/TODO.md section "spec-extract"
 
 ### Your Task
 
@@ -149,7 +149,7 @@ context: spec-extract skill planning — strategic review (builds on Senior feed
 
 ### Plan + Prior Review
 
-See: {service-name}/TODO.md section "spec-extract"  
+See: {workspace-name}/TODO.md section "spec-extract"  
 Prior feedback: REVIEW-SENIOR.md (attached/linked)
 
 ### Your Task
@@ -184,7 +184,7 @@ context: spec-extract skill planning — security & compliance review
 
 ### Plan + Prior Reviews
 
-See: {service-name}/TODO.md section "spec-extract"  
+See: {workspace-name}/TODO.md section "spec-extract"  
 Prior feedback:
 - REVIEW-SENIOR.md
 - REVIEW-PRINCIPAL.md
@@ -324,7 +324,7 @@ A: Yes — they become part of the planning record. Future engineers can see wha
 
 ## Example: spec-extract Plan Iteration
 
-**Initial draft**: {service-name}/TODO.md (this session)
+**Initial draft**: {workspace-name}/TODO.md (this session)
 
 **Stage 1 - Senior Engineer**:  
 Output: REVIEW-SENIOR-spec-extract.md

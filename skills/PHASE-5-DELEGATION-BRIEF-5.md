@@ -31,7 +31,7 @@ auto_merge_healed_prs: bool = True  # auto-merge low-risk fixes
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "start_time": "2026-04-27T14:00:00Z",
   "end_time": "2026-04-27T14:15:42Z",
@@ -123,7 +123,7 @@ auto_merge_healed_prs: bool = True  # auto-merge low-risk fixes
         "result": {
           "status": "SUCCESS",
           "pr_number": 456,
-          "pr_url": "https://github.com/{your-org}/{service-name}/pull/456",
+          "pr_url": "https://github.com/{your-org}/{example-service}/pull/456",
           "auto_merge": "PENDING_CI"
         }
       },
@@ -310,7 +310,7 @@ auto_merge_healed_prs: bool = True  # auto-merge low-risk fixes
    - Create roles/healer-engineer.md
 
 4. **Integration testing** (hours 22-28):
-   - Run full orchestration against {service-name}
+   - Run full orchestration against {example-service}
    - Trigger self-healing loop (inject test failure → diagnose → heal → re-validate)
    - Verify all 12 skills callable + integrated
    - Verify audit trail complete

@@ -16,7 +16,7 @@ phase: 5.10
 WHEN Orchestrator writes DELEGATE to artifacts/:
 
 1. ESTIMATE service health:
-   repo_path = {workspace-root}/{service}
+   repo_path = $WORKSPACE_ROOT/{service}
    
    Check code patterns:
    - Error handling present? +20 points
@@ -71,7 +71,7 @@ WHEN Orchestrator writes DELEGATE to artifacts/:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{service-name}
+task_id: 2026-05-26-commit-{example-service}-abc123-metrics
 timestamp: 2026-05-26T09:02:00Z
 status: PASS
 health_score: 93

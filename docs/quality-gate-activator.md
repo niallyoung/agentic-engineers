@@ -48,10 +48,10 @@ class QualityGateOrchestrator:
         delegate_block:
             {
                 "handoff_type": "DELEGATE",
-                "task_id": "2026-05-26-commit-{service-name}{sha}",
+                "task_id": "2026-05-26-commit-{example-service}-{sha}",
                 "timestamp": "2026-05-26T09:00:00Z",
-                "repo_path": "/home/user/git/ers/{service-name}",
-                "service_name": "{service-name}",
+                "repo_path": "/home/user/git/ers/{example-service}",
+                "service_name": "{example-service}",
                 "commit_sha": "abc123def...",
                 "budget_context": {
                     "session_pct": 45.0,
@@ -246,7 +246,7 @@ class QualityGateOrchestrator:
 
 ```bash
 #!/bin/bash
-# {service-name}/githooks/pre-commit (enhanced for Phase 5.10)
+# {workspace-name}/githooks/pre-commit (enhanced for Phase 5.10)
 
 REPO_NAME=$(basename "$(git rev-parse --show-toplevel)")
 SERVICE_NAME="$REPO_NAME"
@@ -322,13 +322,13 @@ fi
 ```
 artifacts/
 ├── 2026-04-28/
-│   ├── DELEGATE-2026-04-28T09:00:00Z-commit-{service-name}.yaml (hook writes)
+│   ├── DELEGATE-2026-04-28T09:00:00Z-commit-{example-service}.yaml (hook writes)
 │   ├── SPAN-2026-04-28T09:00:00Z-quality-gate-root.yaml (orchestrator writes)
 │   ├── SPAN-2026-04-28T09:00:15Z-agent-security.yaml (security agent)
 │   ├── SPAN-2026-04-28T09:00:15Z-agent-testing.yaml (testing agent)
 │   ├── SPAN-2026-04-28T09:00:15Z-agent-metrics.yaml (metrics agent)
 │   ├── SPAN-2026-04-28T09:00:15Z-agent-healing.yaml (healing agent)
-│   ├── HANDBACK-2026-04-28T09:00:00Z-commit-{service-name}.yaml (orchestrator writes)
+│   ├── HANDBACK-2026-04-28T09:00:00Z-commit-{example-service}.yaml (orchestrator writes)
 │   └── index.json (auto-generated, lists all artifacts)
 ```
 

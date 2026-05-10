@@ -16,7 +16,7 @@ Result: Budget-aware task routing, automatic alerts, and historical usage data f
 
 ```bash
 cd ~/git/ers
-bash {service-name}/agentic-engineers/skills/usage-tracking/SESSION-INIT.sh
+bash {workspace-name}/agentic-engineers/skills/usage-tracking/SESSION-INIT.sh
 ```
 
 This:

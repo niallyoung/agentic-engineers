@@ -36,7 +36,7 @@ qe_feedback:
     error_handling: "defensive"
     error_handling_notes: "All potential failures handled gracefully; clear error messages"
   
-  pattern_adherence: "Follows {service-name} conventions perfectly; no deviations"
+  pattern_adherence: "Follows {example-service} conventions perfectly; no deviations"
   
   completeness:
     scope_adherence: "in_scope"
@@ -91,7 +91,7 @@ qe_feedback:
 - Does code follow repo conventions?
 - Are established patterns used correctly?
 - Any anti-patterns introduced?
-- Example: "Follows {service-name} conventions; no deviations"
+- Example: "Follows {example-service} conventions; no deviations"
 
 **Completeness**
 - Are all acceptance criteria met?

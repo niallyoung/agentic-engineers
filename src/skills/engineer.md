@@ -34,9 +34,9 @@ timestamp: 2026-05-14T09:00:00Z
 role: Engineer
 model: claude-haiku
 effort: high
-scope: "Implement OAuth2 refresh token rotation in {service-name}"
+scope: "Implement OAuth2 refresh token rotation in {example-service}"
 context:
-  service: {service-name} (Go/Lambda)
+  service: {example-service} (Go/Lambda)
   spec_location: "docs/oauth2-refresh-rotation.md"
   relevant_files:
     - lambda/auth/main.go

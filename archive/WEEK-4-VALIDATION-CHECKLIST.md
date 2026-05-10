@@ -21,20 +21,20 @@ status: IN_PROGRESS
 ### Pre-Commit Hook Validation
 
 - [ ] **Test 1**: Simple commit with no quality failures
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Command: `git add . && git commit -m "test: validation"`
   - Expected: pre-commit hook calls `make quality-gate` → passes
   - Verify: Commit succeeds, no hook errors
 
 - [ ] **Test 2**: Commit with lint failure (intentional)
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Modify: lambda/api/main.go (introduce lint violation)
   - Command: `git add . && git commit -m "test: lint failure"`
   - Expected: pre-commit hook calls `make quality-gate` → fails
   - Verify: Commit rejected, lint error shown
 
 - [ ] **Test 3**: Commit with test failure (intentional)
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Modify: lambda/api/main_test.go (break test)
   - Command: `git add . && git commit -m "test: test failure"`
   - Expected: pre-commit hook calls `make quality-gate` → fails
@@ -46,8 +46,8 @@ status: IN_PROGRESS
   - Expected: pre-commit hook bumps patch version automatically
   - Verify: package.json version incremented
 
-- [ ] **Test 5**: No Makefile ({service-name})
-  - Repo: {service-name}
+- [ ] **Test 5**: No Makefile ({workspace-name})
+  - Repo: {workspace-name}
   - Command: `git add . && git commit -m "docs: test"`
   - Expected: pre-commit hook skips quality-gate (no Makefile)
   - Verify: Commit succeeds without quality-gate
@@ -55,14 +55,14 @@ status: IN_PROGRESS
 ### Pre-Push Hook Validation
 
 - [ ] **Test 6**: Push with successful quality-gate
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Command: `git push`
   - Expected: pre-push hook calls `make quality-gate` → passes
   - Expected: Shows color diff + confirmation prompt
   - Verify: Push proceeds after confirmation
 
 - [ ] **Test 7**: Push rejection via quality-gate failure
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Modify: Introduce lint violation
   - Command: `git push`
   - Expected: pre-push hook calls `make quality-gate` → fails
@@ -75,13 +75,13 @@ status: IN_PROGRESS
   - Verify: Both checks pass before push
 
 - [ ] **Test 9**: Non-interactive push (ERS_AUTO_PUSH=1)
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Command: `ERS_AUTO_PUSH=1 git push`
   - Expected: pre-push hook skips diff review + confirmation, keeps quality-gate
   - Verify: Push succeeds without interactive prompts
 
 - [ ] **Test 10**: Bypass hooks (--no-verify)
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Command: `git push --no-verify`
   - Expected: Bypasses all hooks
   - Verify: Push succeeds even if quality-gate would fail
@@ -93,19 +93,19 @@ status: IN_PROGRESS
 ### Quality Gate Orchestrator Integration
 
 - [ ] **Test 11**: make quality-gate calls verify
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Command: `make quality-gate`
   - Expected: Calls lint + test, not shell script
   - Verify: Output shows "✅ Quality Gate Passed"
 
 - [ ] **Test 12**: quality-gate target exists on all services
-  - Services: {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}
+  - Services: {example-service}, {example-service}, {example-service}, {service-name}, {example-service}, {service-name}, {service-name}, {service-name}
   - Command: `make quality-gate` (in each service)
   - Expected: All services have quality-gate target
   - Verify: All 8 services pass
 
 - [ ] **Test 13**: Verify make quality-gate doesn't call shell scripts
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Command: `make quality-gate 2>&1 | grep -i "quality-gate-orchestration"`
   - Expected: No output (shell script not called)
   - Verify: Confirms refactoring complete
@@ -221,7 +221,7 @@ status: IN_PROGRESS
 ### ERS Configuration Standard Audit
 
 - [ ] **Test 31**: Config Audit Agent scans all services
-  - Test: Run config audit on {service-name}
+  - Test: Run config audit on {example-service}
   - Expected: Identifies any deviations from standard
   - Verify: compliance_score returned
 
@@ -254,7 +254,7 @@ status: IN_PROGRESS
 ### Performance Metrics
 
 - [ ] **Test 36**: Quality Gate completes in <300 seconds
-  - Test: Run complete quality check on {service-name}
+  - Test: Run complete quality check on {example-service}
   - Expected: total_duration_seconds < 300
   - Verify: Timeout handling works
 

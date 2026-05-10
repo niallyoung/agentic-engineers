@@ -113,7 +113,7 @@ task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Implement 30s token expiry grace period in {service-name}; do not change Cognito config
+scope: Implement 30s token expiry grace period in {example-service}; do not change Cognito config
 context:
   - File: lambda/api/main.go:92 (expiry check in extractAndValidateScopes)
   - Root cause from Lead Engineer: client-side clock skew on mobile devices
@@ -324,14 +324,14 @@ Measured quarterly; adjust if cost targets drift.
 
 ## Real-World Example: Security Fix Cycle
 
-**Task:** Fix security bugs in 3 repos ({service-name}, {service-name}, {service-name}).
+**Task:** Fix security bugs in 3 repos ({service-name}, {example-service}, {example-service}).
 
 **Optimal Plan:**
 1. Advanced agent (Extra High effort, ~2 hours) → Create detailed TODO.md per repo
 2. Lightweight agents (Medium effort, parallel groups):
-   - **Group A:** {service-name} + {service-name} (2 agents, 1 hour each)
+   - **Group A:** {service-name} + {example-service} (2 agents, 1 hour each)
    - Check cost every 5 min; voice-notify on completion
-   - **Group B:** {service-name} (1 agent, 1 hour)
+   - **Group B:** {example-service} (1 agent, 1 hour)
 3. Standard agent (High effort, ~30 min) → E2E regression test + integration check
 4. Voice-notify: "All 3 repos green, ready for production deploy"
 
@@ -346,7 +346,7 @@ Measured quarterly; adjust if cost targets drift.
 
 ```
 "Advanced analysis complete, reviewing TODO files"
-"{service-name} security fixes merged, waiting on {service-name}"
+"{service-name} security fixes merged, waiting on {example-service}"
 "All CI pipelines green, integration tests running"
 ```
 
@@ -362,7 +362,7 @@ Measured quarterly; adjust if cost targets drift.
 
 ```
 "Lightweight agent stuck on type checking, escalating to Standard"
-"CI failure in {service-name}, human review needed"
+"CI failure in {example-service}, human review needed"
 "Advanced analysis flagged 3 design decisions — awaiting human guidance"
 ```
 
@@ -544,7 +544,7 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 
 ## Update Log
 
-- **2026-04-19:** Initial AGENTS.md created (vendor-neutral) during {service-name}/{service-name}/{service-name} security hardening cycle.
+- **2026-04-19:** Initial AGENTS.md created (vendor-neutral) during {service-name}/{example-service}/{example-service} security hardening cycle.
 - **2026-04-24:** Added Model Engineer role (Phase 2C) with autonomous optimization feedback loop. QE now provides model_assessment feedback. Orchestrator applies Model Engineer recommendations for continuous cost/quality improvement.
 - **2026-05-09:** Added Protocol Compliance Expectations section (Week 4). Per-role DELEGATE/HANDBACK/Metrics/Escalation protocol responsibilities defined. Cross-references to ORCHESTRATION-PROTOCOL.md added.
 - **Recommendation:** Review this guide quarterly and update tier assignments based on new model releases and Model Engineer recommendation trends.

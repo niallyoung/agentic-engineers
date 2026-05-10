@@ -103,7 +103,7 @@
 ## Example Flow: Feature Implementation with Quality Gate
 
 ### Scenario
-Engineer commits a new feature: "Add OAuth token rotation to {service-name}"
+Engineer commits a new feature: "Add OAuth token rotation to {example-service}"
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -114,9 +114,9 @@ INPUT (DELEGATE block):
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ task_id: 2026-04-30-feature-oauth-rotation                                  │
 │ task_type: feature                                                          │
-│ scope: "Add OAuth token rotation to {service-name}"                           │
+│ scope: "Add OAuth token rotation to {example-service}"                           │
 │ context:                                                                    │
-│   service: {service-name}                                                     │
+│   service: {example-service}                                                     │
 │   files_changed: [lambda/auth/oauth_rotation.go, tests]                    │
 │   estimated_complexity: high                                                │
 │   has_plan: false                                                           │
@@ -257,7 +257,7 @@ QUALITY ORCHESTRATOR spawns 4 PARALLEL DELEGATES:
 │                                                                             │
 │ ┌─TESTING AGENT──────────────────────────────────────────────────────────┐ │
 │ │ DELEGATE:                                                              │ │
-│ │   service: {service-name}                                               │ │
+│ │   service: {example-service}                                               │ │
 │ │   commit_sha: abc123def456                                            │ │
 │ │   action: run_tests_measure_coverage                                  │ │
 │ │                                                                        │ │
@@ -274,7 +274,7 @@ QUALITY ORCHESTRATOR spawns 4 PARALLEL DELEGATES:
 │                                                                             │
 │ ┌─HEALING AGENT──────────────────────────────────────────────────────────┐ │
 │ │ DELEGATE:                                                              │ │
-│ │   service: {service-name}                                               │ │
+│ │   service: {example-service}                                               │ │
 │ │   changes: [oauth_rotation.go, idempotency_v2.go]                    │ │
 │ │   action: detect_and_autofix_issues                                   │ │
 │ │                                                                        │ │
@@ -292,7 +292,7 @@ QUALITY ORCHESTRATOR spawns 4 PARALLEL DELEGATES:
 │                                                                             │
 │ ┌─SECURITY AGENT─────────────────────────────────────────────────────────┐ │
 │ │ DELEGATE:                                                              │ │
-│ │   service: {service-name}                                               │ │
+│ │   service: {example-service}                                               │ │
 │ │   commit_sha: abc123def456                                            │ │
 │ │   action: threat_model + scan                                         │ │
 │ │                                                                        │ │
@@ -313,7 +313,7 @@ QUALITY ORCHESTRATOR spawns 4 PARALLEL DELEGATES:
 │                                                                             │
 │ ┌─METRICS AGENT──────────────────────────────────────────────────────────┐ │
 │ │ DELEGATE:                                                              │ │
-│ │   service: {service-name}                                               │ │
+│ │   service: {example-service}                                               │ │
 │ │   baseline: latency=120ms, error_rate=0.1%                            │ │
 │ │   action: measure_system_health                                       │ │
 │ │                                                                        │ │
@@ -444,7 +444,7 @@ task_type: feature | bugfix | refactor | design | review
 
 # Context for the agent
 context:
-  service: {service-name}
+  service: {example-service}
   files_changed: [list of files]
   error_logs: [if applicable]
   constraints: [technical constraints]

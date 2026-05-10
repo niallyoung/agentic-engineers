@@ -43,13 +43,13 @@ Phase 5.8 successfully delivered a production-ready quality gate orchestration f
 - Environment-aware strictness (dev vs prod)
 
 **Status**: ✅ COMPLETE  
-**Testing**: Local validation on {service-name}, all phases working  
+**Testing**: Local validation on {example-service}, all phases working  
 **Time**: ~40 minutes
 
 ---
 
 ### Phase 5.8b: Makefile Integration
-**Deliverable**: Updated {service-name} Makefile (+10 lines)
+**Deliverable**: Updated {example-service} Makefile (+10 lines)
 
 **New Targets**:
 - `make quality-gate` — quick check (skip E2E, ~30s)
@@ -62,7 +62,7 @@ Phase 5.8 successfully delivered a production-ready quality gate orchestration f
 ---
 
 ### Phase 5.8c: GitHub Actions Integration
-**Deliverable**: Updated {service-name} main.yaml (+35 lines, 1 new job)
+**Deliverable**: Updated {example-service} main.yaml (+35 lines, 1 new job)
 
 **New Job**: `quality-gate-prod`
 - Runs after dev deployment
@@ -82,7 +82,7 @@ build-deploy-dev → quality-gate-prod → deploy-prod
 ---
 
 ### Phase 5.8d: Local Validation
-**Deliverable**: Validation results for {service-name}
+**Deliverable**: Validation results for {example-service}
 
 **Test Results**:
 - **Dev**: All checks pass, PROCEED decision ✅
@@ -165,7 +165,7 @@ build-deploy-dev → quality-gate-prod → deploy-prod
 - Quick reference guide
 
 ### ✅ Production Readiness
-- Tested on baseline service ({service-name})
+- Tested on baseline service ({example-service})
 - All error scenarios validated
 - Performance acceptable
 - No dependencies on external tools
@@ -194,13 +194,13 @@ skills/
 └── PHASE-5.8-FINAL-COMPLETION.md (THIS FILE)
 ```
 
-### {service-name} repo
+### {example-service} repo
 ```
 ├── Makefile (UPDATED, +10 lines)
 └── .github/workflows/main.yaml (UPDATED, +35 lines)
 ```
 
-### {service-name} repo
+### {workspace-name} repo
 ```
 └── TODO.md (UPDATED, Phase 5.8 completion tracking)
 ```
@@ -219,7 +219,7 @@ skills/
 1. **383540b** — feat(phase-5.8): Quality gate orchestration integration framework
 2. **60591ba** — docs: Add Phase 5.8 session summary
 3. **dde9571** — docs: Add quality gates quick reference guide for developers
-4. **806c6fd** — feat(phase-5.8): Integrate quality gates into CI/CD pipeline ({service-name})
+4. **806c6fd** — feat(phase-5.8): Integrate quality gates into CI/CD pipeline ({example-service})
 5. **b0f0159** — docs: Add Phase 5.8 quality gate integration to TODO.md
 6. **b1c6e75** — docs: Add Phase 5.8f comprehensive testing report
 7. **4711283** — docs: Update TODO.md — Phase 5.8 COMPLETE, Phase 5.9 READY
@@ -321,7 +321,7 @@ This keeps Phase 5.8 focused on delivery while maintaining clear roadmap.
 
 **Phase 5.8 Success When**:
 - [x] Quality gate script operational and tested
-- [x] Makefile targets work on {service-name}
+- [x] Makefile targets work on {example-service}
 - [x] GitHub Actions integration complete
 - [x] All tests pass locally (dev + prod)
 - [x] Documentation complete and comprehensive
@@ -373,8 +373,8 @@ This keeps Phase 5.8 focused on delivery while maintaining clear roadmap.
 3. Local validation on each service
 4. Commit and verify
 
-**Pattern**: Use {service-name} as template, apply to:
-- {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}
+**Pattern**: Use {example-service} as template, apply to:
+- {example-service}, {service-name}, {example-service}, {service-name}, {example-service}, {service-name}, {service-name}
 
 **Expected Result**: All 8 services have quality gates by 2026-05-03
 

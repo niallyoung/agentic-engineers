@@ -12,35 +12,35 @@ Use this list as a checklist:
 [X] **HANDOFF.md** — Structured markup protocol for agent-to-agent handoffs
     - Compact DELEGATE/HANDBACK format eliminates 80% context re-duplication
     - Includes 3 example workflows (Security Audit, Bug Triage, Feature Impl)
-    - Location: {service-name}/HANDOFF.md
+    - Location: {workspace-name}/HANDOFF.md
 
 [X] **AGENTS.md updated** — Clearer role/model 1:1 mapping with routing rules
     - New table: Role | Model | Effort | Cost Tier | Token Multiplier
     - Removed ambiguous tier names (Standard, Advanced); explicit model IDs
     - Added mandatory constraints (Engineer requires plan, Orchestrator no-work rule)
     - Includes HANDOFF.md example inline
-    - Location: {service-name}/AGENTS.md
+    - Location: {workspace-name}/AGENTS.md
 
 [X] **METRICS.md updated** — Minimal Viable Schema for metrics collection
     - Directory convention: ~/.claude/metrics/YYYY-MM-DD/<task_id>.json
     - JSON schema for per-task records (tokens_in, tokens_out, role, model, effort, duration, tests, escalations)
     - JSONL schema for session event log (append-only, parseable)
     - jq-validated example files in ~/.claude/metrics/
-    - Location: {service-name}/METRICS.md (prepended "Minimal Viable Schema" section)
+    - Location: {workspace-name}/METRICS.md (prepended "Minimal Viable Schema" section)
 
 [X] **QUALITY.md** — Pre-submission checklist to prevent re-work loops
     - Tier 1 (all engineers): lint+test pass, in-scope changes, tests added, no hazards
     - Tier 2 (Senior+): test coverage maintained, doc comments, plan completeness
     - Tier 3 (Principal/Security): architecture adherence, IAM correctness, cross-service contracts
     - Golden Rule: HANDBACK invalid until all checklist items ✓
-    - Location: {service-name}/QUALITY.md
+    - Location: {workspace-name}/QUALITY.md
 
 [X] **TOKENADVISOR.md** — Read-only feedback loop agent (stub)
     - Analyzes metrics from METRICS.md
     - Produces: cost splits, outlier flags, escalation rates, quality correlation
     - Invoked at session start/end for usage summaries
     - Phase 2 will add: A/B model comparison, auto tier adjustment, cost-per-quality metrics
-    - Location: {service-name}/TOKENADVISOR.md
+    - Location: {workspace-name}/TOKENADVISOR.md
 
 ### Impact
 

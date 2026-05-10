@@ -97,7 +97,7 @@ scope: >
   Currently: Single DynamoDB table in ap-southeast-2.
   Goal: Support disaster recovery, low-latency reads across regions.
 context:
-  - Services affected: {service-name} (write master), {service-name} (read replica), {service-name} (read replica)
+  - Services affected: {example-service} (write master), {service-name} (read replica), {example-service} (read replica)
   - Constraints: Must maintain immutability, strong consistency for critical paths
   - Scale: 100M events/year, 1000 events/sec peak
   - Latency requirement: P99 < 200ms for reads

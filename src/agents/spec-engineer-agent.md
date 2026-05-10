@@ -175,11 +175,11 @@ role: Spec Engineer
 model: claude-sonnet-4-6
 effort: medium
 scope: >
-  Validate {service-name} code against SPEC.md.
+  Validate {example-service} code against SPEC.md.
   Check: Does implemented code match documented behavior?
   Detect: Undocumented features, spec drift, feature deletions.
 context:
-  - Service: {service-name}
+  - Service: {example-service}
   - Spec location: docs/SPEC.md
   - Commit: abc123 (OAuth2 refresh token rotation)
   - Files changed: lambda/auth/oauth_rotation.go, lambda/auth/handlers.go

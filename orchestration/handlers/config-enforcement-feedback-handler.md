@@ -133,7 +133,7 @@ PROCESS:
      ```json
      {
        "timestamp": "2026-05-26T09:05:30Z",
-       "service": "{service-name}",
+       "service": "{example-service}",
        "fix": "add DATABASE_URL to .env",
        "fix_type": "env-variable-missing",
        "applied_confidence": 0.95,
@@ -205,7 +205,7 @@ PROCESS:
      
      attributes:
        config_fix_type: "environment-variable"
-       service: "{service-name}"
+       service: "{example-service}"
        total_deviations_resolved: 2
        escalation_needed: false
      ```

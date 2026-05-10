@@ -30,8 +30,8 @@ requirement_id: str = None  # specific requirement or None for all
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
-  "spec_file": "specs/{service-name}.yaml",
+  "service": "{example-service}",
+  "spec_file": "specs/{example-service}-requirements.yaml",
   "requirements_total": 15,
   "requirements_covered": 13,
   "coverage_percent": 86.7,
@@ -89,7 +89,7 @@ requirement_id: str = None  # specific requirement or None for all
 - Output: comprehensive mapping for audit trail
 
 **Success Criteria**:
-✓ Map REQ-001 to 3+ tests in {service-name}  
+✓ Map REQ-001 to 3+ tests in {example-service}  
 ✓ Calculate coverage % correctly  
 ✓ Identify unmapped requirements  
 ✓ Identify orphaned code (if any)  
@@ -114,7 +114,7 @@ fail_on_uncovered: bool = True
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "requirements_total": 15,
   "requirements_tested": 14,
@@ -160,7 +160,7 @@ fail_on_uncovered: bool = True
 - Escalation: BLOCK gates prevent deployment; WARN allows human review
 
 **Success Criteria**:
-✓ Verify all requirements in {service-name} have tests  
+✓ Verify all requirements in {example-service} have tests  
 ✓ Report any failing tests per requirement  
 ✓ Gate decision: proceed only if all green  
 ✓ Suggest remediation for each failing requirement
@@ -172,18 +172,18 @@ fail_on_uncovered: bool = True
 ---
 
 ### 10. spec-compliance-verification.md
-**Purpose**: Verify code complies with extracted specs ({service-name}/specs/*)
+**Purpose**: Verify code complies with extracted specs ({workspace-name}/specs/*)
 
 **Input Spec**:
 ```
 service_path: str
-spec_dir: str = "{service-name}/specs"
+spec_dir: str = "{workspace-name}/specs"
 ```
 
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "specs_total": 8,
   "specs_compliant": 7,
   "compliance_percent": 87.5,
@@ -211,7 +211,7 @@ spec_dir: str = "{service-name}/specs"
 ```
 
 **Implementation Notes**:
-- Load extracted specs from `{service-name}/specs/*.yaml`
+- Load extracted specs from `{workspace-name}/specs/*.yaml`
 - Spec structure: each spec defines a pattern + expected behavior
 - Compliance check: for each spec, verify service implementation matches pattern
 - Deviation types: PASS (compliant), MINOR (style/comment), WARN (functional), FAIL (breaks spec)
@@ -223,7 +223,7 @@ spec_dir: str = "{service-name}/specs"
 - Integration: works with spec-audit skill (from Phase 4)
 
 **Success Criteria**:
-✓ Verify {service-name} Makefile follows spec pattern  
+✓ Verify {example-service} Makefile follows spec pattern  
 ✓ Verify GitHub Actions spec compliance  
 ✓ Report deviations with severity  
 ✓ Support YAML spec format
@@ -267,7 +267,7 @@ spec_dir: str = "{service-name}/specs"
    - Test with real ERS requirements
 
 3. **Validate** (hours 24-28):
-   - Run requirement-mapping on {service-name}
+   - Run requirement-mapping on {example-service}
    - Run requirement-verification with passing + failing tests
    - Run spec-compliance-verification on all services
 

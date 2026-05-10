@@ -15,9 +15,9 @@ and specific deviations with severity.
 ## Usage
 
 ```
-/spec-compliance-verification service_path={service-name}
-/spec-compliance-verification service_path={service-name} spec_dir={service-name}/specs
-/spec-compliance-verification service_path={service-name} spec_id=SPEC-E-001
+/spec-compliance-verification service_path={example-service}
+/spec-compliance-verification service_path={service-name} spec_dir={workspace-name}/specs
+/spec-compliance-verification service_path={example-service} spec_id=SPEC-E-001
 ```
 
 ## Input
@@ -25,7 +25,7 @@ and specific deviations with severity.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `service_path` | str | required | Path to service root |
-| `spec_dir` | str | `{service-name}/specs` | Directory containing extracted specs |
+| `spec_dir` | str | `{workspace-name}/specs` | Directory containing extracted specs |
 | `spec_id` | str | null | Filter to single spec |
 | `severity_threshold` | str | `minor` | Minimum severity to report |
 
@@ -33,7 +33,7 @@ and specific deviations with severity.
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "specs_evaluated": 8,
   "specs_compliant": 7,
   "specs_deviated": 1,
@@ -171,7 +171,7 @@ func check_event_schema(service_path):
 func check_auth_flow(service_path):
   service_type = get_service_type(service_path)
   
-  if service_type == "gateway":  # {service-name}, {service-name}
+  if service_type == "gateway":  # {example-service}, {example-service}
     checks = [
       ("validates JWT in handler", grep(service_path, "jwt.Parse\|ValidateToken", "*.go")),
       ("uses SigV4 for backend calls", grep(service_path, "aws.Signer\|SigV4", "*.go")),
@@ -179,7 +179,7 @@ func check_auth_flow(service_path):
       ("no direct IAM from frontend", not grep(service_path, "AWS_ACCESS_KEY", "*.go"))
     ]
   
-  if service_type == "backend":  # {service-name}, {service-name}, etc.
+  if service_type == "backend":  # {service-name}, {example-service}, etc.
     checks = [
       ("no JWT acceptance", not grep(service_path, "jwt.Parse", "*.go")),
       ("IAM-only access", grep(service_path, "IAM\|SigV4\|iam", "cdk/stacks/*.go")),
@@ -191,7 +191,7 @@ func check_auth_flow(service_path):
 
 #### SPEC-P-001: Configuration Standard
 
-References `{service-name}.md` — checks from that standard:
+References `{example-service}.md` — checks from that standard:
 
 ```pseudo
 func check_config_standard(service_path):
@@ -234,7 +234,7 @@ func check_github_actions(service_path):
     ("has test step", "test" in content.lower()),
     ("deploy depends on test", job_depends_on(content, "deploy", "test")),
     ("uses make deploy", "make deploy" in content),
-    ("uses CI container", "ghcr.io/{your-org}/{service-name}" in content),
+    ("uses CI container", "ghcr.io/{your-org}/ci-image" in content),
     ("deploys dev then prod", "deploy-dev" in content and "deploy-prod" in content)
   ]
   
@@ -255,8 +255,8 @@ func check_replay_mode(service_path):
     ("skips idempotency in replay", replay_skips_idempotency(service_path)),
   ]
   
-  # {service-name} also skips side-effects
-  if service_name == "{service-name}":
+  # {example-service} also skips side-effects
+  if service_name == "{example-service}":
     checks.append(("skips side-effects in replay", 
                    replay_skips_side_effects(service_path)))
   
@@ -302,14 +302,14 @@ elif any_deviations and severity_threshold <= "minor":
 
 ## ERS Spec Library
 
-Reference specs (from `{service-name}/specs/` or embedded):
+Reference specs (from `{workspace-name}/specs/` or embedded):
 
 | Spec ID | Name | Applies To |
 |---------|------|------------|
 | SPEC-M-001 | Standard Makefile Pattern | all Go services |
 | SPEC-C-001 | CDK Stack Structure | all services with CDK |
 | SPEC-C-002 | CDK Lambda Construct | Go Lambda services |
-| SPEC-E-001 | Event Schema Versioning | {service-name}, event publishers |
+| SPEC-E-001 | Event Schema Versioning | {example-service}, event publishers |
 | SPEC-A-001 | Auth Flow (JWT→SigV4) | gateways + backends |
 | SPEC-P-001 | Configuration Standard | all services |
 | SPEC-G-001 | GitHub Actions Pattern | all services |
@@ -318,14 +318,14 @@ Reference specs (from `{service-name}/specs/` or embedded):
 ## Integration
 
 - Called by `quality-gate-orchestration` in compliance phase (parallel)
-- References `{service-name}.md` and `{service-name}.md` for config checks
+- References `{example-service}.md` and `{service-name}.md` for config checks
 - Works with `spec-audit.md` skill which extracts specs from codebase
 - Deviations feed `issue-diagnostic-engine` for remediation
 - Auto-fixable deviations (missing Makefile target, wrong env syntax) sent to `healer-engineer`
 
 ## Success Criteria
 
-- Verify {service-name} against all 8 applicable specs
+- Verify {example-service} against all 8 applicable specs
 - Report major deviation (e.g., hardcoded URL) as major severity
 - Report minor deviation (e.g., missing comment) as minor severity
 - Block deployment on auth/security spec violations

@@ -62,7 +62,7 @@ class SpecManager:
     - Rollback capability
     """
     
-    def __init__(self, spec_path: str = "docs/SPEC.md"):
+    def __init__(self, spec_path: str = "$REPO_ROOT/docs/SPEC.md"):
         self.spec_path = Path(spec_path)
         self.validator = ChangeValidator()
         self.authorizer = Authorizer()

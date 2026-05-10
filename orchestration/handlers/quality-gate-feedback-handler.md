@@ -186,7 +186,7 @@ confidence: 0.92
 
 ```yaml
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{service-name}
+task_id: 2026-05-26-commit-{example-service}-abc123
 timestamp: 2026-05-26T09:04:35Z
 status: COMPLETE
 final_decision: PROCEED

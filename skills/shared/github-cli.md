@@ -165,7 +165,7 @@ For individual repos or focused validation:
 
 ```bash
 # Monitor single repo until latest main branch run is green, then exit
-repo="{service-name}"
+repo="{example-service}"
 until gh run list --repo "{your-org}/$repo" --branch main --limit 1 \
   --json conclusion --template '{{range .}}{{.conclusion}}{{end}}' | grep -q "success"; do
   status=$(gh run list --repo "{your-org}/$repo" --branch main --limit 1 \
@@ -182,7 +182,7 @@ For platform-wide migrations or coordinated changes across multiple services:
 
 ```bash
 # Monitor all 8 services until each shows green, then exit
-repos=("{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}" "{service-name}")
+repos=("{service-name}" "{example-service}" "{example-service}" "{example-service}" "{service-name}" "{example-service}" "{service-name}" "{service-name}")
 declare -A status
 
 # Initialize: mark all as pending
@@ -217,7 +217,7 @@ echo "✅ All services green"
 
 ```bash
 # Monitor all 8 services with 60s check interval (conserves tokens/network)
-repos=({service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name})
+repos=({service-name} {example-service} {example-service} {example-service} {service-name} {example-service} {service-name} {service-name})
 until (for repo in "${repos[@]}"; do
   conclusion=$(gh run list --repo "{your-org}/$repo" --branch main --limit 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
   [ "$conclusion" = "success" ] || exit 1
@@ -236,8 +236,8 @@ echo "✅ All services green"
 ```bash
 # Monitor single repo until green, auto-stop
 Monitor(
-  description: "Watch {service-name} until latest main branch run is green",
-  command: "repo='{service-name}'; until gh run list --repo {your-org}/$repo --branch main --limit 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}' | grep -q success; do gh run list --repo {your-org}/$repo --branch main --limit 1 --json status,conclusion,name,number --template '{{range .}}$repo: #{{.number}} - {{.status}} ({{.conclusion}}){{end}}'; sleep 5; done; echo '✅ $repo green'",
+  description: "Watch {example-service} until latest main branch run is green",
+  command: "repo='{example-service}'; until gh run list --repo {your-org}/$repo --branch main --limit 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}' | grep -q success; do gh run list --repo {your-org}/$repo --branch main --limit 1 --json status,conclusion,name,number --template '{{range .}}$repo: #{{.number}} - {{.status}} ({{.conclusion}}){{end}}'; sleep 5; done; echo '✅ $repo green'",
   timeout_ms: 300000,
   persistent: false
 )

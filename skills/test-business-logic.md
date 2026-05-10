@@ -14,9 +14,9 @@ membership state machines, permission checks, and data consistency across servic
 ## Usage
 
 ```
-/test-business-logic service_path={service-name} requirement_id=REQ-001-user-role-admin
+/test-business-logic service_path={example-service} requirement_id=REQ-001-user-role-admin
 /test-business-logic service_path={service-name} state_machine=membership_status
-/test-business-logic service_path={service-name} business_logic_spec=@specs/user-permissions.yaml
+/test-business-logic service_path={example-service} business_logic_spec=@specs/user-permissions.yaml
 ```
 
 ## Input
@@ -70,7 +70,7 @@ func load_spec(business_logic_spec):
   elif is_dict(business_logic_spec):
     spec = business_logic_spec
   else:
-    # Read from {service-name}/specs/ using requirement_id
+    # Read from {workspace-name}/specs/ using requirement_id
     spec = load_from_specs_dir(requirement_id)
   
   return normalize_spec(spec)  # ensure: id, description, rules, edge_cases
@@ -223,7 +223,7 @@ func test_data_interactions(spec, service_path):
   for each data_interaction in spec.data_interactions:
     # e.g., "role_change_member_to_admin" → check that:
     # 1. {service-name} DynamoDB record updated
-    # 2. {service-name} Cognito group membership updated
+    # 2. {example-service} Cognito group membership updated
     # 3. JWT claims reflect new role on next login
     
     result = run_interaction_test(data_interaction)
@@ -238,7 +238,7 @@ ERS-specific data interactions to test:
 |---------|-----------------|
 | User role: member → admin | Cognito group change, {service-name} record updated |
 | User disabled | appAccess = false, Cognito account disabled |
-| Email changed | {service-name} + {service-name} both updated, verification sent |
+| Email changed | {service-name} + {example-service} both updated, verification sent |
 | Membership created | {service-name} MembershipCount incremented |
 | CalendarEvent cancelled | Attendees notified ({service-name} triggered) |
 

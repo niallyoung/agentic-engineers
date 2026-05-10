@@ -22,7 +22,7 @@ date: 2026-04-27
 
 **Input Spec**:
 ```
-service_path: str           # path to service (e.g., {workspace-root}/{service-name})
+service_path: str           # path to service (e.g., $WORKSPACE_ROOT/{example-service})
 test_filter: str = None     # optional glob pattern (e.g., "*/auth/*_test.go")
 coverage_threshold: int = 80  # min coverage %
 fail_on_below_threshold: bool = True
@@ -31,7 +31,7 @@ fail_on_below_threshold: bool = True
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "tests_found": 42,
   "tests_passed": 40,
   "tests_failed": 2,
@@ -59,8 +59,8 @@ fail_on_below_threshold: bool = True
 - Mutation recommendations: identify untested edge cases from coverage gaps
 
 **Success Criteria**:
-✓ Discover >30 unit tests in {service-name}  
-✓ Report coverage >=80% (actual coverage for {service-name} is ~82%)  
+✓ Discover >30 unit tests in {example-service}  
+✓ Report coverage >=80% (actual coverage for {example-service} is ~82%)  
 ✓ Identify failed tests correctly  
 ✓ Output matches spec exactly (JSON)
 
@@ -254,7 +254,7 @@ state_machine_transitions: dict = None
 2. **Implement in parallel** (hours 2-20):
    - Each skill as standalone Python class (recommended) or CLI script
    - Implement output to match JSON spec
-   - Test with real {service-name}, {service-name}, {service-name} services
+   - Test with real {example-service}, {service-name}, {service-name} services
 
 3. **Validate** (hours 20-24):
    - Run each skill against actual codebase

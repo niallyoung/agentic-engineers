@@ -15,8 +15,8 @@ or go mock libraries). Tests real service interactions without hitting live AWS.
 
 ```
 /test-integration-orchestration service_path=/home/user/git/ers/{service-name}
-/test-integration-orchestration service_path={service-name} mock_sns=true mock_dynamodb=true
-/test-integration-orchestration service_path={service-name} environment=staging
+/test-integration-orchestration service_path={example-service} mock_sns=true mock_dynamodb=true
+/test-integration-orchestration service_path={example-service} environment=staging
 ```
 
 ## Input
@@ -96,7 +96,7 @@ func setup_dynamodb_mock(service_path):
 
 ERS DynamoDB tables to create for tests:
 - `{service-name}{ENV}` — members projection table
-- `{service-name}{ENV}` — event store table  
+- `{example-service}-{ENV}` — event store table  
 - `{service-name}{ENV}` — idempotency tracking
 
 #### SNS/SQS Mock
@@ -154,7 +154,7 @@ make test-integration ENV_NAME=test
 
 ### Step 5: Event Consumer Test Pattern
 
-ERS event consumers ({service-name}, {service-name}, {service-name}) follow this integration test structure:
+ERS event consumers ({service-name}, {example-service}, {service-name}) follow this integration test structure:
 
 ```pseudo
 for each consumer (UserCreated, UserUpdated, MembershipCreated, etc.):
@@ -229,23 +229,23 @@ Consumers to test: UserCreated, UserUpdated, UserDeleted, MembershipCreated,
 MembershipUpdated, MembershipCancelled, PreferenceChanged, CategoryCreated,
 GroupCreated, CalendarEventCreated (events 8801–8819)
 
-### {service-name} Store Tests
+### {example-service} Store Tests
 
 ```bash
-cd /home/user/git/ers/{service-name}
+cd /home/user/git/ers/{example-service}
 # Tests: StoreEvent, GetEvents, ReplayEvents, PaginatedQuery
 go test ./... -v -timeout 60s
 ```
 
-### {service-name} Handler Tests
+### {example-service} Handler Tests
 
 ```bash
-cd /home/user/git/ers/{service-name}
+cd /home/user/git/ers/{example-service}
 # Tests: route commands → publish events, validate JWT scopes
 go test ./... -v
 ```
 
-Key integration: {service-name} calls {service-name} (SigV4), then {service-name}/{service-name}.
+Key integration: {example-service} calls {example-service} (SigV4), then {example-service}/{service-name}.
 Mock both downstream services in integration tests.
 
 ## LocalStack Quick Start

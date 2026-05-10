@@ -140,17 +140,17 @@ Dispatch: "M3 complete. Moving to M6 (MFA defaults)."
 
 Over time, assign focused skills to agent-personality-model-effort combinations.
 
-**Current Skills ({service-name}/skills/):**
-- {service-name} (all models, high effort)
-- {service-name} (Sonnet/Opus, complex tasks)
-- {service-name} (Sonnet/Opus 4.6, infrastructure)
-- {service-name} (Sonnet, medium+ effort)
-- {service-name} (Sonnet, medium+ effort)
-- {service-name} (Haiku Worker, high effort; Sonnet, medium+ effort)
+**Current Skills ({workspace-name}/skills/):**
+- {example-service} (all models, high effort)
+- {example-service} (Sonnet/Opus, complex tasks)
+- {example-service} (Sonnet/Opus 4.6, infrastructure)
+- {example-service}-consumer (Sonnet, medium+ effort)
+- {example-service} (Sonnet, medium+ effort)
+- {example-service} (Haiku Worker, high effort; Sonnet, medium+ effort)
 
 **Future Specializations (Dark Factory v2+):**
 - **Haiku Engineer:** `{service-name}`, `{service-name}`, `{service-name}`
-- **Architect (Sonnet):** `{service-name}`, `{service-name}`, `{service-name}`
+- **Architect (Sonnet):** `{service-name}`, `{service-name}`, `{example-service}-schema-design`
 - **Sage (Opus 4.6):** `{service-name}`, `{service-name}`, `{service-name}`
 - **Guardian (Opus 4.7):** `{service-name}`, `{service-name}`, `{service-name}`
 
@@ -165,7 +165,7 @@ Over time, assign focused skills to agent-personality-model-effort combinations.
 ### Morning Standup (Dispatch Orchestrator, 5 min)
 ```
 Dispatch: "ERS build status: main green. 3 PRs pending review. Security audit 
-scheduled for {service-name} this week. Allocating 20% capacity to security work."
+scheduled for {example-service} this week. Allocating 20% capacity to security work."
 ```
 
 ### Feature Work (Architect + Engineer, 2 hours)
@@ -181,24 +181,24 @@ Orchestrator: "Status: messaging system refactored, CI green."
 
 ### Security Audit (Guardian + Engineer, 3 hours)
 ```
-Orchestrator: "Guardian, analyze {service-name} for security risks."
+Orchestrator: "Guardian, analyze {example-service} for security risks."
 [Guardian produces SECURITY_REVIEW_TODO.md, 45 min]
 
 Orchestrator: "Engineer, implement Guardian's recommendations from TODO.md"
 [Engineer executes autonomy-flagged items, 90 min, CI green]
 
-Orchestrator: "{service-name} security audit complete, 7/9 fixes merged."
+Orchestrator: "{example-service} security audit complete, 7/9 fixes merged."
 ```
 
 ### Bug Triage (Architect + Engineer, 1.5 hours)
 ```
-Orchestrator: "Architect, diagnose CI failure in {service-name}"
+Orchestrator: "Architect, diagnose CI failure in {example-service}"
 [Architect reproduces, finds root cause, writes RED test + plan, 30 min]
 
-Orchestrator: "Engineer, fix {service-name} per Architect's plan"
+Orchestrator: "Engineer, fix {example-service} per Architect's plan"
 [Engineer implements, tests green, commits, 20 min]
 
-Orchestrator: "CI failure resolved, {service-name} now green."
+Orchestrator: "CI failure resolved, {example-service} now green."
 ```
 
 ---

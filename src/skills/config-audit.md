@@ -13,7 +13,7 @@ Run this to audit all ERS services:
 
 ```bash
 #!/bin/bash
-for repo in {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name}; do
+for repo in {example-service} {example-service} {example-service} {service-name} {service-name} {example-service} {service-name} {service-name}; do
   echo "=== Checking $repo ==="
   cd ~/git/ers/$repo 2>/dev/null || { echo "SKIP: repo not found"; continue; }
   
@@ -70,7 +70,7 @@ cat env/.env.dev env/.env.prod
 ✅ Example:
 ```
 ENV_NAME=dev
-APP_NAME=dev-{service-name}
+APP_NAME=dev-{example-service}
 AWS_ACCOUNT=417772279096
 AWS_REGION=ap-southeast-2
 FILES_API_URL=
@@ -79,7 +79,7 @@ FILES_API_URL=
 ❌ Wrong:
 ```
 ENV_NAME="dev"    # ← WRONG: quotes
-APP_NAME="dev-{service-name}"  # ← WRONG
+APP_NAME="dev-{example-service}"  # ← WRONG
 AWS_ACCOUNT="417772279096"  # ← WRONG
 ```
 
@@ -174,7 +174,7 @@ Should be:
     mkdir -p env
     cat > env/.env.dev <<'EOF'
     ENV_NAME=dev
-    APP_NAME=dev-{service-name}
+    APP_NAME=dev-{example-service}
     AWS_ACCOUNT=417772279096
     EOF
 ```
@@ -182,7 +182,7 @@ Should be:
 ❌ Wrong:
 ```yaml
     ENV_NAME="dev"    # ← Quotes!
-    APP_NAME="dev-{service-name}"
+    APP_NAME="dev-{example-service}"
 ```
 
 ### 6. CLAUDE.md Documentation
@@ -252,13 +252,13 @@ To automatically apply fixes across all repos:
 
 ```bash
 # Fix 1: Remove quotes from all .env files
-for repo in {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name}; do
+for repo in {example-service} {example-service} {example-service} {service-name} {service-name} {example-service} {service-name}; do
   cd ~/git/ers/$repo
   sed -i '' 's/="\([^"]*\)"/=\1/g' env/.env.*
 done
 
 # Fix 2: Verify Makefile pattern in all repos
-for repo in {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name}; do
+for repo in {example-service} {example-service} {example-service} {service-name} {service-name} {example-service} {service-name}; do
   cd ~/git/ers/$repo
   if ! grep -q "^export$" Makefile; then
     echo "$repo: missing 'export' statement in Makefile"

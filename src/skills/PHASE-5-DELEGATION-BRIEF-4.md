@@ -116,7 +116,7 @@ auto_merge_if_ci_passes: bool = True
   "fix_applied": "✓ File updated",
   "pr_created": true,
   "pr_number": 123,
-  "pr_url": "https://github.com/{your-org}/{service-name}/pull/123",
+  "pr_url": "https://github.com/{your-org}/{example-service}/pull/123",
   "pr_title": "fix(config): add missing DATABASE_URL env var to Lambda",
   "pr_status": "CI_RUNNING",
   "auto_merge_eligible": true,
@@ -223,7 +223,7 @@ issue-diagnostic-engine (classify + score)
    - Test with simulated failures from Track 1 (missing env vars, flaky tests)
 
 3. **Validate** (hours 20-24):
-   - Run diagnostic on real test failures from {service-name}
+   - Run diagnostic on real test failures from {example-service}
    - Run healer on missing env var → verify PR created
    - Run healer on flaky test → verify retry logic added
    - Verify auto-merge decision logic

@@ -39,7 +39,7 @@
 
 Complete DELEGATE block with:
 - `task_id`: Unique identifier (YYYY-MM-DD-slug)
-- `scope`: Specific, narrow scope ("Fix JWT validation in {service-name}", NOT "Improve auth")
+- `scope`: Specific, narrow scope ("Fix JWT validation in {example-service}", NOT "Improve auth")
 - `context`: File paths, line numbers, existing patterns, root cause analysis from higher role
 - `plan`: Numbered steps with concrete guidance (not vague)
 - `success_criteria`: Observable, testable outcomes (tests pass, coverage ≥X%, no regressions)
@@ -129,7 +129,7 @@ Ensure code adheres to these ERS patterns:
 **Event Sourcing & CQRS:**
 - Commands (ephemeral, 20100-20199) never stored; only domain events (8801-8899) persisted
 - Events include `version: "1.0"` in content JSON for schema evolution
-- Event Store is source of truth; projections ({service-name}, {service-name}) are read-only
+- Event Store is source of truth; projections ({service-name}, {example-service}) are read-only
 - Replay mode (`REPLAY_MODE=true`) skips idempotency checks
 
 **Authentication & Authorization:**
@@ -234,9 +234,9 @@ Include in escalation: current state, what you've tried, specific question.
 **Input (DELEGATE):**
 ```yaml
 task_id: 2026-04-24-jwt-aud-validation
-scope: Add JWT `aud` claim validation in {service-name}. Return 401 if claim missing or mismatched.
+scope: Add JWT `aud` claim validation in {example-service}. Return 401 if claim missing or mismatched.
 context:
-  - File: {service-name}/lambda/command-gateway/main.go:106-111
+  - File: {example-service}/lambda/command-gateway/main.go:106-111
   - COGNITO_CLIENT_ID env var contains expected audience
   - Cognito ID tokens use `aud` claim; access tokens use `client_id`
 plan:
@@ -300,8 +300,8 @@ func validateJWT(token string) error {
 task_id: 2026-04-24-jwt-aud-validation
 status: complete
 deliverables:
-  - Modified: {service-name}/lambda/command-gateway/main.go (lines 106-115)
-  - Added: {service-name}/lambda/command-gateway/main_test.go (TestJWTAudMismatch)
+  - Modified: {example-service}/lambda/command-gateway/main.go (lines 106-115)
+  - Added: {example-service}/lambda/command-gateway/main_test.go (TestJWTAudMismatch)
 tests:
   - Command: "make verify"
     Result: "PASS (124 tests, 87% coverage)"

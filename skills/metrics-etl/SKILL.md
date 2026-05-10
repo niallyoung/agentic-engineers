@@ -35,7 +35,7 @@ python scripts/metrics-etl.py --export json --output metrics.json
 Hourly (every hour on the hour) via `orchestration/config/metrics-etl.cron`
 
 ```bash
-0 * * * * cd ~/git/ers/{service-name} && python agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
+0 * * * * cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
 ```
 
 ## Voice Notifications

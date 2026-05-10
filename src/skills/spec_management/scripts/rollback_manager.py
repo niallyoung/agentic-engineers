@@ -31,7 +31,7 @@ class SpecVersion:
 class RollbackManager:
     """Tracks SPEC.md versions and enables rollback."""
     
-    def __init__(self, version_dir: str = "artifacts/spec-versions"):
+    def __init__(self, version_dir: str = "$REPO_ROOT/artifacts/spec-versions"):
         self.version_dir = Path(version_dir)
         self.version_dir.mkdir(parents=True, exist_ok=True)
         self._history: List[SpecVersion] = []

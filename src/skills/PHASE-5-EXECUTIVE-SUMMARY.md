@@ -76,7 +76,7 @@ Building a comprehensive **Quality Engineer role** with **self-healing feedback 
 ### 1. Quality Gate Execution (Parallel)
 
 ```
-{service-name} commit
+{example-service} commit
   ↓
 quality-gate-orchestration starts
   ↓ (parallel execution)
@@ -265,7 +265,7 @@ Issue detected
 ### For Users (After Go-Live)
 
 1. **Commit code**: Push to main (local quality gates run)
-2. **Pre-deploy**: Run orchestrator (`quality-gate-orchestration --service={service-name} --target=prod`)
+2. **Pre-deploy**: Run orchestrator (`quality-gate-orchestration --service={example-service} --target=prod`)
 3. **Review results**: If all green → deploy. If escalations → review + fix.
 4. **Deploy**: Proceed once orchestrator gives PROCEED signal.
 

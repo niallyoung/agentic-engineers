@@ -348,7 +348,7 @@ def example_usage():
 
     # Example 2: Well-scoped, planned work
     planned_work = {
-        "description": "Fix auth timeout in {service-name} (30 sec grace period)",
+        "description": "Fix auth timeout in {example-service} (30 sec grace period)",
         "complexity": "low",
         "has_plan": True,
         "plan": [
@@ -368,7 +368,7 @@ def example_usage():
         "has_plan": False,
         "scope": "architecture",
         "context": {
-            "services": ["{service-name}", "{service-name}", "{service-name}"],
+            "services": ["{example-service}", "{service-name}", "{example-service}"],
             "constraint": "Must maintain immutability, strong consistency"
         }
     }

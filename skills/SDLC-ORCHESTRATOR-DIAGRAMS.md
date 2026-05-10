@@ -538,7 +538,7 @@ Entry 1 (Phase 1 kickoff):
   "session_id": "a1b2c3d4-e5f6",
   "phase": "phase_1",
   "event": "started",
-  "details": {"env": "prod", "service": "{service-name}"}
+  "details": {"env": "prod", "service": "{example-service}"}
 }
 
 Entry 2-7 (Skill results):

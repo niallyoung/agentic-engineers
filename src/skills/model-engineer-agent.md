@@ -122,7 +122,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{service-name}
+task_id: 2026-05-26-commit-{example-service}-abc123-model-feedback
 timestamp: 2026-05-26T09:05:00Z
 status: complete
 recommendation:

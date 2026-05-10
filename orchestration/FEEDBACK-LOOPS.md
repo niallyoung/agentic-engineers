@@ -240,7 +240,7 @@ attributes:
   cost: 0.0854  # (1245*0.003 + 1600*0.015) / 100
   
   # Semantic attributes (OpenTelemetry standard)
-  service_name: "{service-name}"
+  service_name: "{example-service}"
   service_commit_sha: "abc123def..."
   
   # Agent-specific attributes

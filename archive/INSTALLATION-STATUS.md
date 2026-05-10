@@ -233,7 +233,7 @@ All docs are:
 
 1. Run `make install` to register both locations as managed:
    ```bash
-   cd 
+   cd $REPO_ROOT
    make install
    ```
 

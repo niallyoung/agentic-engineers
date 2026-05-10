@@ -8,7 +8,7 @@ Architectural and implementation patterns established in the ERS platform. Use t
 
 ### HTTP API Handler Pattern
 
-**Use for:** {service-name}, {service-name}, {service-name}, {service-name} Lambda handlers responding to API Gateway requests.
+**Use for:** {example-service}, {example-service}, {example-service}, {service-name} Lambda handlers responding to API Gateway requests.
 
 ```go
 func (h *Handler) handleCreateUser(ctx context.Context, req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
@@ -58,7 +58,7 @@ func errorResponse(statusCode int, err error) *events.APIGatewayProxyResponse {
 
 ### Event Consumer Pattern (SNS FIFO → SQS FIFO → Lambda)
 
-**Use for:** {service-name}, {service-name}, {service-name} consumers processing domain events.
+**Use for:** {service-name}, {example-service}, {service-name} consumers processing domain events.
 
 ```go
 func (h *Consumer) Handle(ctx context.Context, sqsEvent events.SQSEvent) error {
@@ -204,7 +204,7 @@ err := retryWithBackoff(ctx, func() error {
 ### Input Validation (System Boundary)
 
 ```go
-// {service-name} receives user input; validate here
+// {example-service} receives user input; validate here
 func (h *Handler) handleCreateUser(ctx context.Context, req CreateUserRequest) (*User, error) {
   // Validate at boundary
   if err := validateCreateUserRequest(req); err != nil {

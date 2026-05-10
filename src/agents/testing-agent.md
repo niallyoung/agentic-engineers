@@ -68,7 +68,7 @@ WHEN Orchestrator writes DELEGATE to artifacts/:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{service-name}
+task_id: 2026-05-26-commit-{example-service}-abc123-testing
 timestamp: 2026-05-26T09:04:20Z
 status: PASS  # or FAIL
 unit_tests: 45

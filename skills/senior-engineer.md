@@ -39,7 +39,7 @@ context:
   service: {service-name}
   issue_summary: "Events being processed 2-3x; idempotency key not working"
   reproduction:
-    - Create user in {service-name}
+    - Create user in {example-service}
     - Watch {service-name} consumer process UserCreated event
     - Event sometimes processed twice with different timestamps
   relevant_files:
@@ -140,7 +140,7 @@ WHEN Senior Engineer receives DELEGATE without plan:
    
    RECOMMENDED: OPTION 2 (SNS FIFO)
    REASON:
-   - {service-name} already publishes to SNS FIFO
+   - {example-service} already publishes to SNS FIFO
    - SNS handles deduplication automatically
    - Minimal code changes needed
    - AWS guarantees exactly-once-per-dedup-id
@@ -150,7 +150,7 @@ WHEN Senior Engineer receives DELEGATE without plan:
    
    ```
    PHASE 1: Understand current SNS setup (30 min)
-     1.1 Read {service-name}/cmd/publisher to understand SNS publishing
+     1.1 Read {example-service}/cmd/publisher to understand SNS publishing
      1.2 Verify SNS FIFO configuration (deduplication enabled?)
      1.3 Check CDK stack for SNS FIFO settings
    
@@ -315,7 +315,7 @@ solution_analysis:
   recommendation_reason: |
     AWS-provided guarantee is stronger than manual implementation.
     Minimal code changes = lower risk. Battle-tested pattern.
-    {service-name} already uses SNS FIFO, so deduplication available.
+    {example-service} already uses SNS FIFO, so deduplication available.
 
 execution_plan:
   total_estimated_time: 270
@@ -328,7 +328,7 @@ execution_plan:
       name: "Understand SNS FIFO setup"
       duration_min: 30
       steps:
-        - "Read {service-name}/cmd/publisher to see SNS publishing"
+        - "Read {example-service}/cmd/publisher to see SNS publishing"
         - "Verify SNS FIFO topic configuration"
         - "Check CDK stack for deduplication settings"
         - "Document: Current SNS dedup window"

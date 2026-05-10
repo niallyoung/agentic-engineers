@@ -334,7 +334,7 @@ bash skills/usage-tracking/scripts/capture_token_usage.sh --silent
 **Fix:** Run from project root (~/git/ers):
 ```bash
 cd ~/git/ers
-bash {service-name}/agentic-engineers/skills/usage-tracking/scripts/usage-tracking.sh analyze
+bash {workspace-name}/agentic-engineers/skills/usage-tracking/scripts/usage-tracking.sh analyze
 ```
 
 ---

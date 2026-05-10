@@ -55,7 +55,7 @@ Question 1: Is the task scope clear and well-defined?
 
 **Task Description:**
 ```
-Add Redis caching to {service-name} GetUser endpoint.
+Add Redis caching to {example-service} GetUser endpoint.
 Context: Cache key = {userID}, TTL = 1 hour.
 Acceptance criteria: Cache hit ratio >80%, no test failures.
 ```
@@ -100,9 +100,9 @@ Reasoning: Medium complexity with scope ambiguity. Sonnet can clarify requiremen
 
 **Task Description:**
 ```
-Design new event versioning scheme for {service-name} to support schema evolution.
+Design new event versioning scheme for {example-service} to support schema evolution.
 Must support: backward compatibility, migration strategies, and replay safety.
-Impacts: {service-name}, {service-name} (consumer), {service-name} (publisher).
+Impacts: {example-service}, {service-name} (consumer), {example-service} (publisher).
 ```
 
 **Analysis:**
@@ -244,7 +244,7 @@ Model: Sonnet or Opus (Haiku doesn't use extended thinking)
 
 ```json
 {
-  "task_description": "Add Redis caching to {service-name}",
+  "task_description": "Add Redis caching to {example-service}",
   "routing_decision": {
     "role": "Engineer",
     "model": "claude-haiku-4-5",

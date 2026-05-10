@@ -17,7 +17,7 @@ Developer:
   
   ↓ [AUTOMATIC - NO USER ACTION]
   
-Pre-commit Hook ({service-name}/githooks/pre-commit):
+Pre-commit Hook ({workspace-name}/githooks/pre-commit):
   1. Runs thin validation ({service-name} version bump)
   2. Generates DELEGATE block
      - Creates: artifacts/2026-MM-DD/DELEGATE-{timestamp}-commit-{service}.yaml
@@ -53,10 +53,10 @@ File: artifacts/2026-MM-DD/DELEGATE-{timestamp}-commit-{service}.yaml
 
 Content:
   handoff_type: DELEGATE
-  task_id: 2026-MM-DD-commit-{service-name}{sha}
+  task_id: 2026-MM-DD-commit-{example-service}-{sha}
   timestamp: 2026-MM-DDTHH:MM:SSZ
-  repo_path: /home/user/git/ers/{service-name}
-  service_name: {service-name}
+  repo_path: /home/user/git/ers/{example-service}
+  service_name: {example-service}
   commit_sha: {full_sha}
   budget_context:
     session_pct: 45.0
@@ -117,7 +117,7 @@ File: artifacts/2026-MM-DD/HANDBACK-{timestamp}-commit-{service}.yaml
   
 Content:
   handoff_type: HANDBACK
-  task_id: 2026-MM-DD-commit-{service-name}{sha}
+  task_id: 2026-MM-DD-commit-{example-service}-{sha}
   timestamp: 2026-MM-DDTHH:MM:SSZ
   status: complete
   final_decision: PROCEED  # or ESCALATE
@@ -226,8 +226,8 @@ Total latency: ~4-5 minutes per commit
 ```
 .claude/artifacts/
 ├── 2026-04-28/
-│   ├── DELEGATE-2026-04-28T09:00:00Z-commit-{service-name}.yaml
-│   ├── HANDBACK-2026-04-28T09:04:35Z-commit-{service-name}.yaml
+│   ├── DELEGATE-2026-04-28T09:00:00Z-commit-{example-service}.yaml
+│   ├── HANDBACK-2026-04-28T09:04:35Z-commit-{example-service}.yaml
 │   ├── SPAN-2026-04-28T09:00:00Z-quality-gate-root.yaml
 │   ├── SPAN-2026-04-28T09:00:15Z-agent-security.yaml
 │   ├── SPAN-2026-04-28T09:00:18Z-agent-testing.yaml

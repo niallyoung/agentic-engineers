@@ -211,8 +211,8 @@ Orchestrator identifies blocker
 ```markdown
 ## Blocked Tasks
 
-### Implement AWS_IAM auth for {service-name} — Engineer
-- **Blocker:** {service-name} config not deployed to dev environment
+### Implement AWS_IAM auth for {example-service} — Engineer
+- **Blocker:** {example-service} config not deployed to dev environment
 - **Escalation:** Orchestrator reached out to DevOps (through ticket #42)
 - **Expected unblock:** 2026-04-24 16:00 UTC (estimated)
 - **Workaround:** None — auth is required for this work
@@ -269,7 +269,7 @@ Orchestrator identifies blocker
 
 ## Recently Completed (Cleanup in 24h)
 
-### Fix {service-name} collision detection — Senior Engineer ✅
+### Fix {example-service} collision detection — Senior Engineer ✅
 - **Completed at:** 14:30 UTC
 - **Duration:** 22 minutes
 - **Result:** Implemented event hash comparison in `eventContentMatches()`. Test added and passing. Commit: 0d03223

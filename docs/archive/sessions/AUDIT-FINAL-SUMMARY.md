@@ -419,7 +419,7 @@ Scattering configuration across multiple locations led to confusion:
 ```python
 from src.orchestration.agents.model_resolver import ModelResolver
 m = ModelResolver()
-# ✅ Models YAML path: src/config/models.yaml
+# ✅ Models YAML path: $REPO_ROOT/src/config/models.yaml
 # ✅ Loaded models.yaml with 8 entries
 ```
 

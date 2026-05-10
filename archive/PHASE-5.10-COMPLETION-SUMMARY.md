@@ -251,7 +251,7 @@ Local → Cloud migration ready:
 # Phase 5.10 Testing Week
 
 Day 1-2: Basic functionality
-  - 10 commits, various services ({service-name}, {service-name}, etc.)
+  - 10 commits, various services ({example-service}, {example-service}, etc.)
   - Verify DELEGATE generation
   - Verify agent response times
   - Verify HANDBACK aggregation
@@ -363,7 +363,7 @@ agentic-engineers/
 └── artifacts/2026-04-28/
     └── (DELEGATE/HANDBACK blocks from testing)
 
-{service-name}/
+{workspace-name}/
 └── githooks/
     └── pre-commit (enhanced with DELEGATE generation)
 ```

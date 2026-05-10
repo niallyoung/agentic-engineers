@@ -273,7 +273,7 @@ created: 2026-04-28
 - `agentic-engineers/skills/quality-gate-orchestration.sh` (add CloudWatch integration)
 - `agentic-engineers/skills/issue-diagnostic-engine.md` (update confidence thresholds)
 - `agentic-engineers/skills/healer-engineer.md` (reference Level 3 graduation criteria)
-- `{service-name}/TODO.md` (add Phase 5.10 status)
+- `{workspace-name}/TODO.md` (add Phase 5.10 status)
 
 **AWS Resources to Create**:
 - CloudWatch Logs group: `/ers/quality-gates/audit-trail`
@@ -309,8 +309,8 @@ All 5 metrics must be met before Level 3 rollout:
 **Best case**: 2 weeks (metrics meet thresholds immediately)
 **Realistic**: 4-6 weeks (time to gather sufficient data, refine thresholds, build team confidence)
 **Phased rollout**: 
-- Week 1: Single service ({service-name}, lowest risk)
-- Week 2: Add {service-name}, {service-name}
+- Week 1: Single service ({example-service}, lowest risk)
+- Week 2: Add {service-name}, {example-service}
 - Week 3: Add remaining 4 services if all green
 
 ---

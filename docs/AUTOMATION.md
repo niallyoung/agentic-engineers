@@ -6,7 +6,7 @@ The ERS operational automation framework has been fully implemented, tested, and
 
 ### What Was Built
 
-**Centralized Location:** `~/git/ers/{service-name}/agentic-agents/`
+**Centralized Location:** `~/git/ers/{workspace-name}/agentic-agents/`
 
 **5 Interconnected Agents:**
 
@@ -71,7 +71,7 @@ agentic-agents/
 
 **Step 1:** Review what will be installed
 ```bash
-cd ~/git/ers/{service-name}
+cd ~/git/ers/{workspace-name}
 ./agentic-agents/install-automation.sh
 ```
 
@@ -87,7 +87,7 @@ The script will:
 crontab -l | grep "ERS Agentic"
 
 # Monitor real-time logs
-tail -f ~/git/ers/{service-name}/agentic-agents/data/logs/*.log
+tail -f ~/git/ers/{workspace-name}/agentic-agents/data/logs/*.log
 ```
 
 **Step 3:** Listen to voice notifications
@@ -176,13 +176,13 @@ crontab -e
 **View logs:**
 ```bash
 # Latest TokenAdvisor run
-tail -50 ~/git/ers/{service-name}/agentic-agents/data/logs/tokenadvisor-*.log
+tail -50 ~/git/ers/{workspace-name}/agentic-agents/data/logs/tokenadvisor-*.log
 
 # Stream live (Metrics ETL runs hourly)
-tail -f ~/git/ers/{service-name}/agentic-agents/data/logs/metrics-etl.log
+tail -f ~/git/ers/{workspace-name}/agentic-agents/data/logs/metrics-etl.log
 
 # All logs (past 7 days)
-ls -ltr ~/git/ers/{service-name}/agentic-agents/data/logs/
+ls -ltr ~/git/ers/{workspace-name}/agentic-agents/data/logs/
 ```
 
 **Check cron execution (macOS):**

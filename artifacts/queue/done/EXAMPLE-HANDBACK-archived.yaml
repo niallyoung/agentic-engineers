@@ -29,7 +29,7 @@ deliverables:
   - Commit: abc1234def567890 "fix(identity): add 30s grace period for token expiry to handle clock skew"
 
 tests:
-  - Command: "make verify" in {service-root}/
+  - Command: "make verify" in ~/{example-service}/
     - Result: PASS
     - Tests run: 47
     - Failures: 0

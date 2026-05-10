@@ -11,8 +11,8 @@ scope: |
   and code (missing features, undocumented changes, mismatches).
 
 context:
-  - Specification: docs/SPEC.md (v1.0, just approved)
-  - Code base:  (latest)
+  - Specification: $WORKSPACE_ROOT/agentic-engineers/docs/SPEC.md (v1.0, just approved)
+  - Code base: $WORKSPACE_ROOT/agentic-engineers/ (latest)
   - Status: Spec-Engineer role is 5th Quality Gate sub-agent
   - Objective: First baseline drift detection; establish compliance baseline
 

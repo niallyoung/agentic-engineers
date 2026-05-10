@@ -47,10 +47,10 @@ created: 2026-04-28
 **Verification**:
 ```bash
 # Test locally (with ENABLE_CLOUDWATCH=false)
-cd {service-name} && ENABLE_CLOUDWATCH=false ENV_NAME=dev make quality-gate
+cd {example-service} && ENABLE_CLOUDWATCH=false ENV_NAME=dev make quality-gate
 
 # Test with CloudWatch (requires AWS CLI + IAM permissions)
-cd {service-name} && ENV_NAME=dev make quality-gate
+cd {example-service} && ENV_NAME=dev make quality-gate
 # Check CloudWatch: aws logs tail /ers/quality-gates/audit-trail --follow
 ```
 
@@ -239,7 +239,7 @@ Once quality gate runs on all 7 services with CloudWatch integration, the follow
 
 **Modified**:
 - `agentic-engineers/skills/quality-gate-orchestration.sh` (+88 lines, CloudWatch integration)
-- `{service-name}/TODO.md` (Phase 5.10 section added)
+- `{workspace-name}/TODO.md` (Phase 5.10 section added)
 
 **Commits**:
 1. `d139335` - feat(phase-5.10): Monitoring & Continuous Improvement framework
@@ -258,7 +258,7 @@ Once quality gate runs on all 7 services with CloudWatch integration, the follow
 
 2. **Verify CloudWatch integration**:
    ```bash
-   cd {service-name}
+   cd {example-service}
    ENV_NAME=dev make quality-gate
    # Check CloudWatch Logs
    aws logs tail /ers/quality-gates/audit-trail --follow
@@ -333,7 +333,7 @@ Once Level 3 readiness confirmed:
 
 **Phase 5.11: Level 3 Rollout & Autonomous Healing** (1-2 days)
 - Enable Healer auto-merge for low-risk issues
-- Phased rollout: {service-name} → 3 services → all services
+- Phased rollout: {example-service} → 3 services → all services
 - Monitor incident rate closely
 - Establish incident response plan
 - Graduate from intelligent routing (Level 2) to autonomous healing (Level 3)

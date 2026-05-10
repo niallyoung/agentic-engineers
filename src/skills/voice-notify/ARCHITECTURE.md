@@ -135,7 +135,7 @@ Instead of voice alerts, cron jobs should:
 ```bash
 # Cron job wrapper for TokenAdvisor
 0 17 * * * \
-  cd /home/user/git/ers/{service-name} && \
+  cd /home/user/git/ers/{workspace-name} && \
   python ./agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily \
     2>&1 | tee ./agentic-engineers/data/logs/tokenadvisor-$(date +\%Y-\%m-\%d).log
 ```

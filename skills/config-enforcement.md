@@ -41,7 +41,7 @@ auto_approve_below_confidence: 0.8
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-config-enforcement-{service-name}
+task_id: 2026-05-05-config-enforcement-{example-service}
 timestamp: 2026-05-05T09:17:00Z
 role: Config Enforcement Agent (Senior Engineer)
 model: claude-sonnet-4-6
@@ -52,7 +52,7 @@ scope: >
 context:
   - Deviations from Config Audit (just completed)
   - Auto-approval threshold: confidence >= 0.8
-  - Service: {service-name}
+  - Service: {example-service}
 plan:
   1. For each deviation with confidence >= 0.8: apply fix
   2. For each fix: validate (lint/test)
@@ -111,7 +111,7 @@ recommendation: "string"
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-config-enforcement-{service-name}
+task_id: 2026-05-05-config-enforcement-{example-service}
 timestamp: 2026-05-05T09:18:30Z
 status: complete
 fixes_applied: 1

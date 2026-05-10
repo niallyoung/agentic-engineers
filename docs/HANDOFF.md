@@ -23,7 +23,7 @@ model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-sonnet-4-7 | claude-opus-4-
 effort: low | medium | high | max
 scope: >
   One sentence: what is in scope, explicitly what is out of scope.
-  Example: "Fix token validation timeout in {service-name}; do not change Cognito or other services"
+  Example: "Fix token validation timeout in {example-service}; do not change Cognito or other services"
 context:
   - File: lambda/api/main.go:92 (expiry check)
   - Error: "Token validation fails after 1hr on mobile"
@@ -73,7 +73,7 @@ deliverables:
   - Added: lambda/api/main_test.go (TestTokenExpiryGracePeriod)
   - Commit: abc1234 (optional)
 tests:
-  - Command: "make verify" in {service-name}
+  - Command: "make verify" in {example-service}
   - Result: PASS (47 tests)
   - Coverage: 89% (maintained)
   - Mobile e2e: "npm run e2e:smoke" PASS (3/3 scenarios)
@@ -173,11 +173,11 @@ scope: Diagnose why token validation fails after 1hr on mobile but not desktop. 
 context:
   - File: lambda/api/main.go:45-120 (extractAndValidateScopes)
   - Error: "Unauthorized: token expired" on iOS app after 1hr; desktop (Chrome) works fine
-  - Logs: {service-name} logs show "token claims invalid at 3600s"
+  - Logs: {example-service} logs show "token claims invalid at 3600s"
   - Attempted: Team tried cache invalidation → no change
   - Repo: Clean, main branch
 plan:
-  1. Read {service-name} CLAUDE.md to understand token lifecycle
+  1. Read {example-service} CLAUDE.md to understand token lifecycle
   2. Examine extractAndValidateScopes at line 45 — trace the expiry check
   3. Compare with {service-name} token refresh logic (src/services/auth.ts)
   4. Check if client-side clock sync is the issue (clock skew between mobile and server)
@@ -268,12 +268,12 @@ task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Implement 30s token expiry grace period in {service-name}. Do not change authentication flow or Cognito config.
+scope: Implement 30s token expiry grace period in {example-service}. Do not change authentication flow or Cognito config.
 context:
   - File: lambda/api/main.go:92 (expiry check in extractAndValidateScopes)
   - Root cause analysis from Lead Engineer (preceding HANDBACK block)
   - Design decision: Add 30s grace window to exp claim validation
-  - Related: {service-name}/CLAUDE.md sections on token lifecycle
+  - Related: {example-service}/CLAUDE.md sections on token lifecycle
 plan:
   1. Write test TestTokenExpiryGracePeriod that asserts a token 25s expired is still accepted
   2. Modify line 92 in lambda/api/main.go: change `time.Now()` to `time.Now().Add(-30 * time.Second)`

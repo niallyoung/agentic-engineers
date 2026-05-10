@@ -442,7 +442,7 @@ The `agentic-engineers` framework is positioned as:
 
 ## Appendix: File Locations
 
-All documents located in: `docs/`
+All documents located in: `$REPO_ROOT/docs/`
 
 ```
 docs/

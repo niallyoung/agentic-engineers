@@ -90,7 +90,7 @@ Model Comparison analyzes how different models perform on similar tasks to ident
 
 ```json
 {
-  "{service-name}": {
+  "{example-service}": {
     "task_count": 12,
     "models_tried": ["haiku"],
     "haiku_quality": 90.4,
@@ -180,9 +180,9 @@ Opus rarely needed for:
       "high": { "haiku": 82, "sonnet": 91, "delta": 9 }
     },
     "repository": {
-      "{service-name}": { "haiku": 90, "sonnet": null, "tested_models": ["haiku"] },
+      "{example-service}": { "haiku": 90, "sonnet": null, "tested_models": ["haiku"] },
       "{service-name}": { "haiku": 87, "sonnet": 93, "delta": 6 },
-      "{service-name}": { "haiku": 89, "sonnet": 91, "delta": 2 }
+      "{example-service}": { "haiku": 89, "sonnet": 91, "delta": 2 }
     }
   },
   "key_insights": [
@@ -212,7 +212,7 @@ When models are close in quality but differ in cost:
 ```json
 {
   "test_design": {
-    "hypothesis": "Haiku achieves 90+ quality on {service-name} medium tasks at $0.13 cost",
+    "hypothesis": "Haiku achieves 90+ quality on {example-service} medium tasks at $0.13 cost",
     "control": "haiku_high_effort",
     "test": "sonnet_medium_effort",
     "success_criteria": "haiku >= 89 AND cost <= $0.13",

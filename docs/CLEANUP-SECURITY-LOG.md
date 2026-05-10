@@ -76,7 +76,7 @@ The email address `user@example.com` appeared in:
 
 **Rule 1: Absolute Repository Path**
 ```
-
+$REPO_ROOT
       ↓
 /home/user/agentic-engineers
 ```

@@ -113,7 +113,7 @@ Unlock Keychain before running queue processor:
 crontab -e
 
 # Add this line (replace PASSWORD with your actual macOS password):
-*/5 * * * * security unlock-keychain -p YOUR_MACOS_PASSWORD /home/user/Library/Keychains/login.keychain-db && cd /home/user/git/ers/{service-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh
+*/5 * * * * security unlock-keychain -p YOUR_MACOS_PASSWORD /home/user/Library/Keychains/login.keychain-db && cd /home/user/git/ers/{workspace-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh
 ```
 
 ### Pros & Cons
@@ -165,7 +165,7 @@ Creates: `~/.msmtp-credentials` with SMTP_PASS=...
 crontab -e
 
 # Add this line:
-*/5 * * * * cd /home/user/git/ers/{service-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1
+*/5 * * * * cd /home/user/git/ers/{workspace-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1
 ```
 
 That's it. No password in cron, no prompts, no unlocking needed.

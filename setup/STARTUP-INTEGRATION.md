@@ -49,7 +49,7 @@ When set, indicates this session's tracking is already initialized. Checked at s
 
 ```bash
 # User runs Claude Code, loads workspace
-claude-code ~/git/ers/{service-name}/agentic-engineers/
+claude-code ~/git/ers/{workspace-name}/agentic-engineers/
 
 # Framework automatically:
 # 1. Reads copilot-instructions.md
@@ -93,8 +93,8 @@ Copilot reads this instruction and runs the command at session start.
 **Setup**:
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
-if [ -f "$HOME/git/ers/{service-name}/agentic-engineers/setup/session-init.sh" ]; then
-    bash "$HOME/git/ers/{service-name}/agentic-engineers/setup/session-init.sh"
+if [ -f "$HOME/git/ers/{workspace-name}/agentic-engineers/setup/session-init.sh" ]; then
+    bash "$HOME/git/ers/{workspace-name}/agentic-engineers/setup/session-init.sh"
 fi
 ```
 
@@ -113,15 +113,15 @@ fi
 **Setup in GitHub Actions (.github/workflows/main.yml)**:
 ```yaml
 - name: Initialize agentic-engineers session
-  run: bash {service-name}/agentic-engineers/setup/session-init.sh
+  run: bash {workspace-name}/agentic-engineers/setup/session-init.sh
 ```
 
 **Setup in pre-push hook (.git/hooks/pre-push)**:
 ```bash
 #!/bin/bash
 # Initialize session tracking before push
-if [ -f "{service-name}/agentic-engineers/setup/session-init.sh" ]; then
-    bash "{service-name}/agentic-engineers/setup/session-init.sh"
+if [ -f "{workspace-name}/agentic-engineers/setup/session-init.sh" ]; then
+    bash "{workspace-name}/agentic-engineers/setup/session-init.sh"
 fi
 ```
 
@@ -138,10 +138,10 @@ fi
 **Setup in crontab**:
 ```bash
 # Run at system/session startup
-@reboot bash /path/to/ers/{service-name}/agentic-engineers/setup/session-init.sh
+@reboot bash /path/to/ers/{workspace-name}/agentic-engineers/setup/session-init.sh
 
 # Or at specific times
-0 9 * * * bash /path/to/ers/{service-name}/agentic-engineers/setup/session-init.sh
+0 9 * * * bash /path/to/ers/{workspace-name}/agentic-engineers/setup/session-init.sh
 ```
 
 **Trigger**: Cron job executes at scheduled time
@@ -157,7 +157,7 @@ fi
 **Command**:
 ```bash
 cd ~/git/ers
-bash {service-name}/agentic-engineers/setup/session-init.sh
+bash {workspace-name}/agentic-engineers/setup/session-init.sh
 ```
 
 **When**:
@@ -253,7 +253,7 @@ tail -5 data/metrics/usage_history.jsonl | python3 -m json.tool
 **Fix**: Run from project root
 ```bash
 cd ~/git/ers
-bash {service-name}/agentic-engineers/setup/session-init.sh
+bash {workspace-name}/agentic-engineers/setup/session-init.sh
 ```
 
 ### "Cannot create .session-state directory"
@@ -279,7 +279,7 @@ ls ~/.claude/session-tracking-initialized
 **Force re-init**:
 ```bash
 rm ~/.claude/session-tracking-initialized
-bash {service-name}/agentic-engineers/setup/session-init.sh
+bash {workspace-name}/agentic-engineers/setup/session-init.sh
 ```
 
 ---

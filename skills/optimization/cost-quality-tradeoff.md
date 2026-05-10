@@ -95,7 +95,7 @@ If >0.05: quality improvement expensive (usually skip unless critical)
 {
   "task_signature": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "complexity": "medium"
   },
   "current_model": {
