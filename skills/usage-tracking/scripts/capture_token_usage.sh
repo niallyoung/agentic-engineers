@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Navigate from scripts/ → usage-tracking/ → skills/ → agentic-engineers/ → {service-name}/ → ers/
+# Navigate from scripts/ → usage-tracking/ → skills/ → agentic-engineers/ → {workspace-name}/ → ers/
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 ERS_ROOT="$(cd "$WORKSPACE_ROOT/.." && pwd)"
 METRICS_DIR="$ERS_ROOT/data/metrics"

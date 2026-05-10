@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-WORKSPACE_DIR="{workspace-root}"
-REPORT_DIR="{workspace-root}/{service-name}/agentic-agents/data/reports"
+WORKSPACE_DIR="$WORKSPACE_ROOT"
+REPORT_DIR="$WORKSPACE_ROOT/{workspace-name}/agentic-agents/data/reports"
 TODAY=$(date +%Y-%m-%d)
 REPORT_FILE="$REPORT_DIR/daily-summary-$TODAY.html"
 

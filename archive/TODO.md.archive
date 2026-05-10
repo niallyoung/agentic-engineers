@@ -45,7 +45,7 @@ status: IN_PROGRESS
   - Model Engineer Agent (Haiku) - token analysis + feedback loop
 
 - ✅ Wired git hooks to generate DELEGATE blocks
-  - File: `{service-name}/githooks/pre-commit` (updated with DELEGATE generation)
+  - File: `{workspace-name}/githooks/pre-commit` (updated with DELEGATE generation)
   - DELEGATE blocks written to artifacts/2026-MM-DD/ on every commit
   - Contains: repo_path, service_name, commit_sha, budget_context
   - Tested: Multiple commits generate valid DELEGATE blocks
