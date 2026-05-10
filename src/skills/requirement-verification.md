@@ -15,9 +15,9 @@ or have failing tests.
 ## Usage
 
 ```
-/requirement-verification service_path={service-name} deployment_target=prod
+/requirement-verification service_path={example-service} deployment_target=prod
 /requirement-verification service_path={service-name} deployment_target=dev fail_on_uncovered=false
-/requirement-verification service_path={service-name}  # uses prod defaults
+/requirement-verification service_path={example-service}  # uses prod defaults
 ```
 
 ## Input
@@ -34,7 +34,7 @@ or have failing tests.
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "requirements_total": 15,
   "requirements_tested": 14,
@@ -204,7 +204,7 @@ Before deploying any ERS service to prod, this skill verifies:
 
 ```bash
 # Run as part of pre-push gate:
-# (called by pre-push hook in {service-name}/githooks/pre-push)
+# (called by pre-push hook in {workspace-name}/githooks/pre-push)
 
 requirement-verification \
   --service-path . \
@@ -241,7 +241,7 @@ Exit codes:
 
 ## Success Criteria
 
-- Verify all requirements for {service-name} before prod deploy
+- Verify all requirements for {example-service} before prod deploy
 - BLOCK deployment if any auth/security requirement has failing test
 - WARN (not BLOCK) if non-critical requirement has no tests
 - Provide actionable remediation for every issue found

@@ -300,7 +300,7 @@ class DelegateValidator:
     @staticmethod
     def _is_task_id_unique(task_id: str) -> bool:
         """Check if task_id is unique in artifacts directory."""
-        artifacts_dir = Path('artifacts')
+        artifacts_dir = Path('$REPO_ROOT/artifacts')
         if not artifacts_dir.exists():
             return True  # No artifacts dir yet, assume unique
         

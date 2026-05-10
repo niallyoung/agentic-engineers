@@ -201,7 +201,7 @@ Recommend:
 {
   "task_signature": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "complexity": "medium",
     "language": "go"
   },

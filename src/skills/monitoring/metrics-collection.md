@@ -26,7 +26,7 @@ Metrics Collection captures task execution data from HANDBACK and records it to 
   
   "task_metadata": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "language": "go",
     "complexity_estimate": "medium",
     "complexity_actual": "low",

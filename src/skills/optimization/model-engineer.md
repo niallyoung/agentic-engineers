@@ -38,7 +38,7 @@
 ```json
 {
   "task_id": "2026-04-25-api-caching",
-  "title": "Add Redis caching to {service-name}",
+  "title": "Add Redis caching to {example-service}",
   "domain": "backend/go",
   "complexity": "medium",
   "scope": "2 files, ~200 LOC",

@@ -10,7 +10,7 @@ scope: |
   This contradicts mandatory observability guarantees.
 
 context:
-  - File: docs/SPEC.md
+  - File: $REPO_ROOT/docs/SPEC.md
   - Line: 561 (Orchestrator Span Capture workflow, Step 6)
   - Issue: "Optional" creates undefined discretion; makes artifact index staleable
 

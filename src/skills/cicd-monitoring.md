@@ -57,8 +57,8 @@ Check #3 (after 120s sleep)
 
 check_builds() {
   # Query GitHub for build status (single API call)
-  event_conclusion=$(gh run list -R {your-org}/{service-name} -L 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
-  query_conclusion=$(gh run list -R {your-org}/{service-name} -L 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
+  event_conclusion=$(gh run list -R {your-org}/{example-service} -L 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
+  query_conclusion=$(gh run list -R {your-org}/{example-service} -L 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
   
   # Check for failure (immediate exit if detected)
   if [ "$event_conclusion" = "failure" ]; then
@@ -116,7 +116,7 @@ This confirms:
 When a build fails, the monitor exits with code 1 and outputs:
 
 ```
-❌ {service-name} #43 FAILED
+❌ {example-service} #43 FAILED
 ```
 
 **At this point**, you (the Orchestrator) should:
@@ -175,13 +175,13 @@ Orchestrator (watching builds)
 
 ## Handling Multiple Services
 
-For monitoring multiple services ({service-name}, {service-name}, etc.):
+For monitoring multiple services ({example-service}, {example-service}, etc.):
 
 ```bash
 check_all_services() {
   local all_success=true
   
-  for repo in {service-name} {service-name} {service-name} {service-name}; do
+  for repo in {example-service} {example-service} {example-service} {service-name}; do
     conclusion=$(gh run list -R "{your-org}/$repo" -L 1 --json conclusion --template '{{range .}}{{.conclusion}}{{end}}')
     
     if [ "$conclusion" = "failure" ]; then
@@ -216,7 +216,7 @@ check_all_services() {
 ⏳ Still building...
 💤 Sleeping 120 seconds...
 [after 120s]
-✅ BOTH GREEN: {service-name} #25 + {service-name} #43
+✅ BOTH GREEN: {example-service} #25 + {example-service} #43
 ✅ SUCCESS - exiting
 ```
 
@@ -227,13 +227,13 @@ check_all_services() {
 ⏳ Still building...
 💤 Sleeping 120 seconds...
 [after 120s]
-❌ {service-name} #43 FAILED
+❌ {example-service} #43 FAILED
 [Monitor exits with code 1]
 ```
 
 **Action**: 
 1. Stop monitor
-2. Check logs: `gh run view [run-id] -R {your-org}/{service-name} --log`
+2. Check logs: `gh run view [run-id] -R {your-org}/{example-service} --log`
 3. Investigate error
 4. Use `{service-name}.md` to DELEGATE fixes to QE
 5. QE fixes and pushes
@@ -276,7 +276,7 @@ For longer waits (multiple builds or checking multiple branches):
 # Orchestrator code
 wakeup=$(ScheduleWakeup \
   delaySeconds=120 \
-  reason="checking if {service-name} #43 build completed" \
+  reason="checking if {example-service} #43 build completed" \
   prompt="watch github builds until green, fix any issues")
 
 # Returns a wakeup object that resumes after 120s

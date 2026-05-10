@@ -14,7 +14,7 @@ All planning work for ERS platform initiatives must be documented in **TODO.md f
 
 ### Where Plans Go
 
-- **Default location**: `{service-name}/TODO.md` (meta-repo level concerns, cross-service initiatives, specs, skills)
+- **Default location**: `{workspace-name}/TODO.md` (meta-repo level concerns, cross-service initiatives, specs, skills)
 - **Service-specific plans**: Individual service's `TODO.md` (service-level features, refactoring, deployment strategies)
 - **No other files**: Do not create `plan.md`, `PLAN.md`, `planning.md`, or separate planning documents
 
@@ -74,18 +74,18 @@ Each service/workspace should have a single `TODO.md` with clear sections:
 
 ### Examples
 
-**Good**: `{service-name}/TODO.md` with a `spec-extract` task documented comprehensively  
-**Bad**: `{service-name}/spec-extract-PLAN.md` or separate planning document  
+**Good**: `{workspace-name}/TODO.md` with a `spec-extract` task documented comprehensively  
+**Bad**: `{workspace-name}/spec-extract-PLAN.md` or separate planning document  
 
-**Good**: `{service-name}/TODO.md` with "event replay enhancement" detailed with phases  
-**Bad**: `{service-name}/ENHANCEMENT-PLAN.md` or in-code comments describing the plan  
+**Good**: `{example-service}/TODO.md` with "event replay enhancement" detailed with phases  
+**Bad**: `{example-service}/ENHANCEMENT-PLAN.md` or in-code comments describing the plan  
 
 ### When to Use TODO.md vs. Other Docs
 
 | Document | Purpose | Example |
 |----------|---------|---------|
 | **TODO.md** | Planning work, tracking progress, documenting decisions | "spec-extract skill implementation phases" |
-| **CLAUDE.md** | Service architecture, patterns, how-to operate | "{service-name} architecture, API reference" |
+| **CLAUDE.md** | Service architecture, patterns, how-to operate | "{example-service} architecture, API reference" |
 | **README.md** | Getting started, quick reference | "Build & test commands, deployment steps" |
 | **SKILLS-INDEX.md** | Inventory of reusable skills | "List of available skills with descriptions" |
 | **Code comments** | "Why", not "what" — only non-obvious behavior | "Refresh token rotation required due to 90-day expiry" |
@@ -143,7 +143,7 @@ When starting a new feature or refactoring task:
    - Approach and phases
    - Success criteria
    - Known blockers/dependencies
-4. **Link from code** (commit messages, code comments can reference "see {service-name}/TODO.md: spec-extract")
+4. **Link from code** (commit messages, code comments can reference "see {workspace-name}/TODO.md: spec-extract")
 5. **Update as you go** (add sub-tasks as they become clear)
 6. **Move to Completed** when finished (with checkmarks showing what was done)
 
@@ -154,8 +154,8 @@ When starting a new feature or refactoring task:
 **Q: Can I have multiple TODO.md files in a single repo?**  
 A: No. One TODO.md per repository/workspace. If you need multiple sections, use headers.
 
-**Q: Should high-level initiatives be in {service-name}/TODO.md or individual service TODOs?**  
-A: If it spans multiple services → {service-name}/TODO.md. If it's service-specific → that service's TODO.md.
+**Q: Should high-level initiatives be in {workspace-name}/TODO.md or individual service TODOs?**  
+A: If it spans multiple services → {workspace-name}/TODO.md. If it's service-specific → that service's TODO.md.
 
 **Q: What if a feature is too big to fit in one TODO.md section?**  
 A: Break it into multiple tasks in the same TODO.md, not separate files. Use sub-headings and link them.

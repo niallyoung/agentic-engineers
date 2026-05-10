@@ -30,7 +30,7 @@ verify_findings: bool = True  # adversarial verification
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "findings": [
     {
       "severity": "HIGH",
@@ -71,7 +71,7 @@ verify_findings: bool = True  # adversarial verification
 - Escalation: ALL semantic findings require Security Engineer review (not auto-fixable)
 
 **Success Criteria**:
-✓ Identify at least 1 real vulnerability in {service-name} (e.g., missing scope validation)  
+✓ Identify at least 1 real vulnerability in {example-service} (e.g., missing scope validation)  
 ✓ Report data flow chain clearly  
 ✓ Filter false positives via adversarial verification  
 ✓ Output matches spec exactly
@@ -96,7 +96,7 @@ fix_available_only: bool = False
 **Output Spec**:
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "language": "go",
   "vulnerabilities": [
     {
@@ -138,7 +138,7 @@ fix_available_only: bool = False
 - Note: Haiku cost ~$0.02 per run, so batch dependency scans
 
 **Success Criteria**:
-✓ Detect vulnerable dependencies in {service-name} (if any exist)  
+✓ Detect vulnerable dependencies in {example-service} (if any exist)  
 ✓ Report available fix versions  
 ✓ Gate decision: BLOCK if critical found  
 ✓ Support Go, Node, Python, Rust languages
@@ -238,7 +238,7 @@ fail_on_found: bool = True
    - Test against real ERS services
 
 3. **Validate** (hours 24-28):
-   - Run semantic scan on {service-name}, find real issue
+   - Run semantic scan on {example-service}, find real issue
    - Run dependency scan on all services
    - Run secret detection on git diffs
 

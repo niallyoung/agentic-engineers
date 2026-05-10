@@ -274,8 +274,8 @@ Periodic Checkpoints:
 ### Deliverable (End of Week 3)
 
 **Files Modified**:
-- [ ] `{service-name}/githooks/pre-commit` (thin validation)
-- [ ] `{service-name}/githooks/pre-push` (thin validation)
+- [ ] `{workspace-name}/githooks/pre-commit` (thin validation)
+- [ ] `{workspace-name}/githooks/pre-push` (thin validation)
 - [ ] Orchestration scripts → Token Advisor Agent delegation
 - [ ] `AUTOMATIC-INVOCATION.md` (updated with agent workflow)
 

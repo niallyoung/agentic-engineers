@@ -37,7 +37,7 @@ python scripts/model-engineer.py --feedback
 Daily at 17:15 UTC (15 min after TokenAdvisor) via `orchestration/config/model-engineer.cron`
 
 ```bash
-0 17 * * * sleep 900 && cd ~/git/ers/{service-name} && python agentic-engineers/skills/model-engineer/scripts/model-engineer.py --analyze
+0 17 * * * sleep 900 && cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/model-engineer/scripts/model-engineer.py --analyze
 ```
 
 ## Voice Notifications

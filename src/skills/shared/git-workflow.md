@@ -181,12 +181,12 @@ git push origin main
 
 ## Related Skills
 
-- `{service-name}` — Makefile structure and per-Lambda targets
-- `{service-name}` — Lambda handler patterns
-- `{service-name}` — CDK deployment
+- `{example-service}` — Makefile structure and per-Lambda targets
+- `{example-service}` — Lambda handler patterns
+- `{example-service}` — CDK deployment
 
 ## References
 
 - Root `/home/user/git/ers/CLAUDE.md` — Platform overview, architecture, CI/CD
-- Hook scripts: `{service-name}/githooks/` — pre-commit, pre-push, commit-msg
-- Hook install: `{service-name}/scripts/install-hooks.sh`
+- Hook scripts: `{workspace-name}/githooks/` — pre-commit, pre-push, commit-msg
+- Hook install: `{workspace-name}/scripts/install-hooks.sh`

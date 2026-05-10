@@ -10,7 +10,7 @@ date: 2026-04-28
 **Status**: ✅ ALL TESTS PASSED  
 **Date**: 2026-04-28  
 **Duration**: ~1 hour  
-**Test Environment**: {service-name} (baseline service)  
+**Test Environment**: {example-service} (baseline service)  
 **Baseline**: Clean main branch
 
 ---

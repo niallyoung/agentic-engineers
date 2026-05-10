@@ -68,7 +68,7 @@ WHEN Orchestrator writes DELEGATE to artifacts/:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{service-name}
+task_id: 2026-05-26-commit-{example-service}-abc123-security
 timestamp: 2026-05-26T09:03:45Z
 status: PASS  # or FAIL
 severity: INFO  # or LOW, MEDIUM, HIGH, CRITICAL

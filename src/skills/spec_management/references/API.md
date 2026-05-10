@@ -8,7 +8,7 @@ The main orchestrator for SPEC.md change management.
 
 ```python
 class SpecManager:
-    def __init__(self, spec_path: str = "docs/SPEC.md")
+    def __init__(self, spec_path: str = "$REPO_ROOT/docs/SPEC.md")
 ```
 
 #### Methods

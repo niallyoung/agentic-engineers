@@ -11,7 +11,7 @@ This document tracks completed initiatives, security audits, and multi-day proje
 
 ### What Was Done
 
-Security Engineer (Opus 4.7) analysis identified and fixed **3 CRITICAL + 8 HIGH priority security issues** across multiple ERS repositories ({service-name}, {service-name}, {service-name} re-audit).
+Security Engineer (Opus 4.7) analysis identified and fixed **3 CRITICAL + 8 HIGH priority security issues** across multiple ERS repositories ({service-name}, {example-service}, {example-service} re-audit).
 
 ### Fixes Applied
 
@@ -19,7 +19,7 @@ Security Engineer (Opus 4.7) analysis identified and fixed **3 CRITICAL + 8 HIGH
 
 | ID | Service | Issue | Fix | Commit |
 |----|---------|-------|-----|--------|
-| **C1** | {service-name} | `eventContentMatches()` collision detection broken | Implemented event hash comparison | `0d03223` |
+| **C1** | {example-service} | `eventContentMatches()` collision detection broken | Implemented event hash comparison | `0d03223` |
 | **C2** | {service-name} | JWT signature never verified + permissive JWKS fallback | Implemented RS256 verification, fail-closed JWKS | `3fffd63` + `f00af90` |
 | **C3** | {service-name} | Token storage regression (mixed localStorage/sessionStorage) | All ops use sessionStorage consistently | `cf9d22c` |
 
@@ -27,18 +27,18 @@ Security Engineer (Opus 4.7) analysis identified and fixed **3 CRITICAL + 8 HIGH
 
 | ID | Service | Issue | Fix | Commit(s) |
 |----|---------|-------|-----|-----------|
-| **H1** | {service-name} | JWT aud validation bypass on empty env var | Fail with 500 if `COGNITO_CLIENT_ID` empty | `c368e8f` |
-| **H2** | {service-name} | handleActivateUser missing auth parameters | Updated handler signature + auth parameters | `c368e8f` |
-| **H3** | {service-name} | No iss/aud re-validation | Validate issuer + client_id after token extraction | `c368e8f` |
-| **H4** | {service-name} | callerScopes not threaded to handlers | Pass callerScopes to all handlers | `c368e8f` |
+| **H1** | {example-service} | JWT aud validation bypass on empty env var | Fail with 500 if `COGNITO_CLIENT_ID` empty | `c368e8f` |
+| **H2** | {example-service} | handleActivateUser missing auth parameters | Updated handler signature + auth parameters | `c368e8f` |
+| **H3** | {example-service} | No iss/aud re-validation | Validate issuer + client_id after token extraction | `c368e8f` |
+| **H4** | {example-service} | callerScopes not threaded to handlers | Pass callerScopes to all handlers | `c368e8f` |
 | **H5** | {service-name} | Path existence leak (reverse HasPrefix) | Removed reverse check, forward-only validation | `f00af90` |
 | **H6** | {service-name} | CloudFront missing security headers | Added ResponseHeadersPolicy (HSTS, CSP, X-Frame-Options) | (pending) |
-| **H7** | {service-name} | Case-sensitive Authorization header | Changed lookup to lowercase | `c368e8f` |
-| **H8** | {service-name} | Email not normalized before Cognito | Added lowercase + trim before filter | `c368e8f` |
+| **H7** | {example-service} | Case-sensitive Authorization header | Changed lookup to lowercase | `c368e8f` |
+| **H8** | {example-service} | Email not normalized before Cognito | Added lowercase + trim before filter | `c368e8f` |
 
 ### Testing & Validation
 
-- ✅ {service-name}: `test(event): add comprehensive collision detection test` — `a1e903f`
+- ✅ {example-service}: `test(event): add comprehensive collision detection test` — `a1e903f`
 - ✅ {service-name}: `fix(files): add comprehensive JWT and path validation security tests` — `8f704a1`
 - ✅ {service-name}: `fix(app): fix CallbackPage test infinite loop, graceful state validation error, E2E sessionStorage` — `6722d06`
 
@@ -71,7 +71,7 @@ All repos passed `make verify` (lint + test) before deployment.
 **Status:** COMPLETE  
 **Related Files:**
 - Restructuring proposal: `/tmp/skills_restructuring_proposal.md`
-- MANIFEST.md: `{workspace-root}/{service-name}/agentic-engineers/MANIFEST.md`
+- MANIFEST.md: `$WORKSPACE_ROOT/{workspace-name}/agentic-engineers/MANIFEST.md`
 
 ### What Was Done
 
@@ -131,7 +131,7 @@ Each role is now a `.md` file that lists which skills it uses:
 ## TODO Management Skill Creation — 2026-04-24 ✅
 
 **Status:** COMPLETE  
-**Skill File:** `{workspace-root}/{service-name}/agentic-engineers/skills/orchestration/todo-management.md`
+**Skill File:** `$WORKSPACE_ROOT/{workspace-name}/agentic-engineers/skills/orchestration/todo-management.md`
 
 ### What Was Done
 
@@ -162,13 +162,13 @@ Created a new general-purpose TODO.md planning skill for **Orchestrator, Lead En
 ### Security Review (Phases 1-2)
 
 **Status:** READY FOR PHASE 1 (Phase 2 Complete ✅)  
-**Master Plan:** `{workspace-root}/{service-name}/SECURITY_REVIEW_SEQUENCE.md` (258 lines)  
-**Phase 1 Scope:** `{workspace-root}/{service-name}/SECURITY_REVIEW_TODO.md` (181 lines)
+**Master Plan:** `$WORKSPACE_ROOT/{workspace-name}/SECURITY_REVIEW_SEQUENCE.md` (258 lines)  
+**Phase 1 Scope:** `$WORKSPACE_ROOT/{workspace-name}/SECURITY_REVIEW_TODO.md` (181 lines)
 
-Phase 2 (re-audit with Security Engineer) complete for {service-name}, {service-name}, {service-name}. Phase 1 (new attack surfaces) ready for Security Engineer analysis:
+Phase 2 (re-audit with Security Engineer) complete for {service-name}, {example-service}, {example-service}. Phase 1 (new attack surfaces) ready for Security Engineer analysis:
 
-- **Phase 1:** New attack surfaces ({service-name}, {service-name}, {service-name}, {service-name}, {service-name})
-- **Phase 2:** Re-audit with lessons learned ({service-name}, {service-name}, {service-name}) — ✅ COMPLETE
+- **Phase 1:** New attack surfaces ({example-service}, {service-name}, {service-name}, {service-name}, {example-service})
+- **Phase 2:** Re-audit with lessons learned ({service-name}, {example-service}, {example-service}) — ✅ COMPLETE
 
 **Next:** When Phase 1 begins, use `orchestration/todo-management.md` skill to create TODO.md for per-repo tracking.
 

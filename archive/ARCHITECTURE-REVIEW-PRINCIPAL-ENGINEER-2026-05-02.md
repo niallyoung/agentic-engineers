@@ -38,12 +38,12 @@
 
 orchestration/config/queue-processor.cron:
 ```
-*/5 * * * * cd {workspace-root}/{service-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1
+*/5 * * * * cd $WORKSPACE_ROOT/{workspace-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1
 ```
 
 orchestration/config/metrics-etl.cron:
 ```
-0 * * * * cd {workspace-root}/{service-name} && python ./agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
+0 * * * * cd $WORKSPACE_ROOT/{workspace-name} && python ./agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
 ```
 
 **Impact:**

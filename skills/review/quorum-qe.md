@@ -82,7 +82,7 @@ QE Roster:
   - QE-David: Security specialist
   - QE-Eve: Testing specialist
 
-Task: "Add JWT audience validation in {service-name} (Go, auth)"
+Task: "Add JWT audience validation in {example-service} (Go, auth)"
   Risk: High (auth, multi-service impact)
   Assigned QEs: Alice (auth expert), David (security), Carol (ops check)
   Confidence target: 85%+ (3-person consensus)
@@ -330,7 +330,7 @@ Value: Catches high-stakes bugs worth the cost
 
 ## Example: Auth Task Quorum Review
 
-**Task:** Add JWT `aud` claim validation in {service-name}
+**Task:** Add JWT `aud` claim validation in {example-service}
 
 **Risk Assessment:** High (auth, multi-service impact)
 **Assigned QEs:** Alice (auth), David (security), Carol (ops) = 3 QEs

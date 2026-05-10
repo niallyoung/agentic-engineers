@@ -12,7 +12,7 @@ scope: |
   These were marked DEPRECATED by the Principal Engineer review but need to be removed.
 
 context:
-  - Directory: orchestration/scripts/
+  - Directory: $REPO_ROOT/orchestration/scripts/
   - Files to delete: analyze_usage_trends.py (162 lines), usage_budget_check.py (211 lines)
   - Reason: Both marked as violating SPEC constraints; bypass queue-based delegation
 

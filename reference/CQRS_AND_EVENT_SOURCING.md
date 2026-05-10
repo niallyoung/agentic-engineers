@@ -11,7 +11,7 @@ Comprehensive guide to command-query responsibility segregation (CQRS) and event
 Separates write operations (commands) from read operations (queries) into distinct code paths and services.
 
 **Why CQRS for ERS:**
-- Writes ({service-name}) publish domain events; reads ({service-name}) consume projections
+- Writes ({example-service}) publish domain events; reads ({example-service}) consume projections
 - Scales independently: heavy write load doesn't block heavy read load
 - Clear separation of concerns: command validation vs. query optimization
 - Enables event-driven architecture and replay/projection rebuild
@@ -19,21 +19,21 @@ Separates write operations (commands) from read operations (queries) into distin
 **Command Flow (Write Path):**
 ```
 {service-name} (user action)
-  → {service-name} (HTTP API)
+  → {example-service} (HTTP API)
   → validate input, apply business rules
-  → publish domain event to {service-name} (Event Store)
+  → publish domain event to {example-service} (Event Store)
   → return success response to {service-name}
 ```
 
 **Query Flow (Read Path):**
 ```
 {service-name} (user requests data)
-  → {service-name} (HTTP API)
+  → {example-service} (HTTP API)
   → read from {service-name} projection (DynamoDB)
   → return denormalized data to {service-name}
 ```
 
-**Key Principle:** Event Store ({service-name}) is the source of truth; projections ({service-name}, {service-name}) are derived read models built by consuming events. Never query the Event Store for application read operations—use projections instead.
+**Key Principle:** Event Store ({example-service}) is the source of truth; projections ({service-name}, {example-service}) are derived read models built by consuming events. Never query the Event Store for application read operations—use projections instead.
 
 ---
 
@@ -85,7 +85,7 @@ If adding optional field `preferredLanguage`, keep version "1.0" — old events 
 **Breaking Change (requires v1.1):**
 If changing `email` type from string to object `{address, verified}`, create a v1.1 consumer that handles both formats.
 
-### Event Store Design ({service-name})
+### Event Store Design ({example-service})
 
 **Role:** Immutable append-only log of all domain events. Single source of truth.
 
@@ -101,8 +101,8 @@ If changing `email` type from string to object `{address, verified}`, create a v
 - Corrections handled via new events (e.g., `UserEmailCorrected` for a fix)
 - DynamoDB TTL: none (events kept forever)
 
-**API ({service-name}):**
-- `POST /events` — Publish domain event ({service-name} only, SigV4 auth)
+**API ({example-service}):**
+- `POST /events` — Publish domain event ({example-service} only, SigV4 auth)
 - `GET /events?entityId=user_123` — Query events for one entity
 - `GET /events?kind=8801` — Query events by type (internal/batch operations)
 
@@ -120,7 +120,7 @@ Projections are read-optimized views built by consuming domain events. They deno
 - Membership projections: `{userId, orgId, role, joinedAt, ...}`
 
 **How it's built:**
-1. Consumer listens to SNS FIFO topic ({service-name} publishes here after storing event)
+1. Consumer listens to SNS FIFO topic ({example-service} publishes here after storing event)
 2. Receives events (UserCreated 8801, UserUpdated 8802, MembershipCreated 8804, etc.)
 3. Applies event to DynamoDB using idempotent write:
    - Check idempotency key (event ID) — if already processed, skip
@@ -158,12 +158,12 @@ return h.idempotency.Set(ctx, event.ID)
 - After processing: `PutItem(eventId, processedAt)` — marks event as handled
 - Guarantees: If consumer crashes after PutItem, replay won't re-apply the event
 
-### {service-name}: Cognito Identity Projection
+### {example-service}: Cognito Identity Projection
 
 **What it stores:**
 - Cognito user attributes: `{email, phone, givenName, familyName, appAccess}`
 - Source of truth for app login
-- Mirrors {service-name} (single-source-of-truth is {service-name}; {service-name} keeps Cognito in sync)
+- Mirrors {service-name} (single-source-of-truth is {service-name}; {example-service} keeps Cognito in sync)
 
 **How it's built:**
 1. Consumer receives UserCreated, UserUpdated events
@@ -184,7 +184,7 @@ When rebuilding from scratch (`REPLAY_MODE=true`):
 
 **1. Command Handler publishes domain event:**
 ```go
-// {service-name}/handlers.go
+// {example-service}/handlers.go
 func (h *Handler) handleCreateUser(ctx context.Context, req CreateUserRequest) (*UserResponse, error) {
   // Validate input
   if err := validateEmail(req.Email); err != nil {
@@ -227,14 +227,14 @@ func (h *Handler) handleCreateUser(ctx context.Context, req CreateUserRequest) (
 ### Event Propagation
 
 ```
-{service-name} (stores to DynamoDB)
+{example-service} (stores to DynamoDB)
   ↓
-  SNS FIFO topic ({service-name} publishes after storing)
+  SNS FIFO topic ({example-service} publishes after storing)
   ↓
   ┌─────────────────────┬──────────────────┬──────────────────┐
   ▼                     ▼                  ▼
 SQS FIFO              SQS FIFO           SQS FIFO
-({service-name})         ({service-name})     ({service-name})
+({service-name})         ({example-service})     ({service-name})
   ↓                     ↓                  ↓
 Lambda consumer    Lambda consumer    Lambda consumer
   ↓                     ↓                  ↓
@@ -244,7 +244,7 @@ DynamoDB            Cognito user       SES send email
 
 **Why SNS → SQS → Lambda:**
 - **SNS FIFO:** Ordered delivery (all events for one entityId delivered in order)
-- **SQS FIFO:** Queue isolation per consumer ({service-name} failures don't block {service-name})
+- **SQS FIFO:** Queue isolation per consumer ({service-name} failures don't block {example-service})
 - **Lambda:** Stateless consumer, scales independently, retries on failure
 - **DLQ:** Events that fail after max retries go to DLQ for manual inspection
 
@@ -265,7 +265,7 @@ export REPLAY_MODE=true
 ```
 
 **Replay Flow:**
-1. Clear projection tables ({service-name}, {service-name} partial data)
+1. Clear projection tables ({service-name}, {example-service} partial data)
 2. Deploy consumers with `REPLAY_MODE=true`
 3. Consumers read Event Store from beginning, apply all events
 4. After replay completes, deploy with `REPLAY_MODE=false` to resume normal operation
@@ -363,7 +363,7 @@ const analyticsQueue = new sqs.Queue(this, 'AnalyticsQueue', {
 const analyticsQueueDLQ = new sqs.Queue(this, 'AnalyticsDLQ', { fifo: true });
 analyticsQueue.deadLetterQueue = { queue: analyticsQueueDLQ, maxReceiveCount: 3 };
 
-// SNS subscription ({service-name} publishes here)
+// SNS subscription ({example-service} publishes here)
 const eventTopic = sns.Topic.fromTopicArn(...);
 eventTopic.addSubscription(new subs.SqsSubscription(analyticsQueue));
 
@@ -449,7 +449,7 @@ idempotency.Set() succeeds
 |---|---|
 | Publishing command instead of domain event | Domain events only (commands are request-response) |
 | Storing mutable state in Event Store | Events immutable; corrections via new events |
-| Querying Event Store for application reads | Use projections ({service-name}, {service-name}) |
+| Querying Event Store for application reads | Use projections ({service-name}, {example-service}) |
 | Consuming events without idempotency | Always check idempotency before processing |
 | Skipping side effects during replay | Intentional: REPLAY_MODE=true disables side effects |
 | Adding required fields to events | Only add optional fields; required fields break old events |
@@ -467,12 +467,12 @@ idempotency.Set() succeeds
 ```bash
 # 1. Check Event Store for UserCreated event
 curl -H "Authorization: Bearer $(aws sts get-session-token)" \
-  https://{service-name}.example.com/events?entityId=user_123
+  https://{example-service}.example.com/events?entityId=user_123
 
 # 2. Check projection ({service-name})
-curl https://{service-name}.example.com/users/user_123
+curl https://{example-service}.example.com/users/user_123
 
-# 3. Check Cognito ({service-name} projection)
+# 3. Check Cognito ({example-service} projection)
 aws cognito-idp admin-get-user --username user_123
 
 # 4. Check consumer logs (CloudWatch)
@@ -491,7 +491,7 @@ aws sqs receive-message --queue-url https://...{service-name}
 jq .Body message.json | base64 -D | jq .
 
 # Fix and manually process
-curl -X POST https://{service-name}.example.com/admin/replay-dlq?queueName={service-name}
+curl -X POST https://{example-service}.example.com/admin/replay-dlq?queueName={service-name}
 ```
 
 ### Event Integrity Checking
@@ -617,7 +617,7 @@ func TestEventStorePublishAndRetrieve(t *testing.T) {
 }
 ```
 
-### E2E Testing ({service-name} → {service-name} → {service-name} → {service-name})
+### E2E Testing ({service-name} → {example-service} → {example-service} → {service-name})
 
 ```typescript
 // playwright test
@@ -627,7 +627,7 @@ test('signup creates user in projection', async ({ page }) => {
   await page.fill('input[name=password]', 'Password123!');
   await page.click('button:has-text("Sign up")');
   
-  // Wait for projection (poll {service-name} until user appears)
+  // Wait for projection (poll {example-service} until user appears)
   const user = await waitForUser('alice@example.com', { timeout: 5000 });
   expect(user.email).toBe('alice@example.com');
 });
@@ -639,10 +639,10 @@ test('signup creates user in projection', async ({ page }) => {
 
 **Event Sourcing + CQRS = Scalable, auditable, replaying architecture**
 
-1. **Command → Domain Event → Event Store** ({service-name} publishes)
+1. **Command → Domain Event → Event Store** ({example-service} publishes)
 2. **Event Store → SNS FIFO → SQS FIFO → Lambda** (distributed event propagation)
 3. **Lambda Consumer → DynamoDB Projection** (idempotent processing)
-4. **{service-name} reads Projections** (fast reads)
+4. **{example-service} reads Projections** (fast reads)
 5. **Full replay possible anytime** (REPLAY_MODE=true)
 
 **Key Guarantees:**
@@ -658,17 +658,17 @@ test('signup creates user in projection', async ({ page }) => {
 
 | Kind | Event | Domain | Consumers |
 |------|-------|--------|-----------|
-| 8801 | UserCreated | {service-name} | {service-name}, {service-name}, {service-name} |
-| 8802 | UserUpdated | {service-name} | {service-name}, {service-name} |
-| 8803 | UserDeleted | {service-name} | {service-name}, {service-name} |
-| 8804-8806 | Membership* | {service-name} | {service-name} |
-| 8807 | PreferenceChanged | {service-name} | {service-name} |
-| 8808 | EmailChanged | {service-name} | {service-name}, {service-name}, {service-name} |
-| 8809 | PhoneChanged | {service-name} | {service-name} |
-| 8811-8813 | Category* | {service-name} | {service-name} |
-| 8814-8816 | Group* | {service-name} | {service-name} |
-| 8817-8819 | CalendarEvent* | {service-name} | {service-name} |
-| 8820 | ResendInvitation | {service-name} | {service-name} |
-| 8821 | ResetPassword | {service-name} | {service-name} |
+| 8801 | UserCreated | {example-service} | {service-name}, {example-service}, {service-name} |
+| 8802 | UserUpdated | {example-service} | {service-name}, {example-service} |
+| 8803 | UserDeleted | {example-service} | {service-name}, {example-service} |
+| 8804-8806 | Membership* | {example-service} | {service-name} |
+| 8807 | PreferenceChanged | {example-service} | {service-name} |
+| 8808 | EmailChanged | {example-service} | {service-name}, {example-service}, {service-name} |
+| 8809 | PhoneChanged | {example-service} | {service-name} |
+| 8811-8813 | Category* | {example-service} | {service-name} |
+| 8814-8816 | Group* | {example-service} | {service-name} |
+| 8817-8819 | CalendarEvent* | {example-service} | {service-name} |
+| 8820 | ResendInvitation | {example-service} | {service-name} |
+| 8821 | ResetPassword | {example-service} | {service-name} |
 
 Commands (20100-20199) are HTTP-only request/response; not stored in Event Store.

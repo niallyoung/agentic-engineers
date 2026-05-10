@@ -28,18 +28,18 @@ The `<voice_key>` can be an agent type, character name, or skill name. The scrip
 
 | Skills                                                    | Character      |
 |-----------------------------------------------------------|----------------|
-| {service-name}, {service-name}, {service-name}, {service-name} | **Builder** |
+| {example-service}, {example-service}-consumer, {example-service}, {example-service} | **Builder** |
 | docx, xlsx, pdf, pptx, marp-slides, frontend-design      | **Builder**    |
 | btc-cracker, btc-generator, claude-api, theme-factory     | **Builder**    |
-| {service-name}, {service-name}, customize-cloud-agent        | **Architect**  |
+| {example-service}, {example-service}, customize-cloud-agent        | **Architect**  |
 | skill-creator, mcp-builder, brand-guidelines              | **Architect**  |
-| {service-name}, webapp-testing                                | **Inspector**  |
+| {example-service}, webapp-testing                                | **Inspector**  |
 | doc-coauthoring, internal-comms                           | **Oracle**     |
 | linux-progress, btc-pipeline                              | **Scout**      |
 
 ### Override Rules
 1. **Error/Success always win** — failures → Gloom, milestones → Cheer
-2. **Activity trumps skill default** — reviewing in {service-name} → Inspector
+2. **Activity trumps skill default** — reviewing in {example-service} → Inspector
 3. **Planning → Architect** — even within a Builder skill
 4. **Exploring → Scout** — even within a Builder skill
 5. **Skill default** — when no override applies

@@ -347,7 +347,7 @@ class TestIntegration:
     
     def test_pre_commit_hook_exists(self):
         """Pre-commit hook file exists and is executable."""
-        hook_path = Path('.git/hooks/pre-commit')
+        hook_path = Path('$REPO_ROOT/.git/hooks/pre-commit')
         assert hook_path.exists(), "Pre-commit hook must exist"
         stat_info = hook_path.stat().st_mode
         # Check if executable by owner (mode & 0o100 would be non-zero)

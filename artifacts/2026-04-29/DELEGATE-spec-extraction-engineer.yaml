@@ -15,7 +15,7 @@ scope: |
     - Consistent, unified feature-set documented
 
 context:
-  - Repository: 
+  - Repository: $WORKSPACE_ROOT/agentic-engineers/
   - Target output: docs/SPEC.md (markdown, structured sections)
   - Success: Specification comprehensive enough to detect drift (spec-engineer validation)
   - Current state: agentic-engineers recovered from narrowed Quality Gate focus to full SDLC orchestration

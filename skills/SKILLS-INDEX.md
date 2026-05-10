@@ -10,7 +10,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 
 ## Configuration & Dependency Management
 
-### 1. **{service-name}.md** — The Baseline Standard
+### 1. **{example-service}.md** — The Baseline Standard
 - **Purpose**: Defines how all ERS services handle configuration, environment variables, and cross-service dependencies
 - **Key rules**:
   - REQUIRED dependencies fail loudly if missing
@@ -121,9 +121,9 @@ This index catalogs architectural decision patterns and enforcement skills for t
 ## Specification & Patterns (In Planning)
 
 ### 8. **spec-extract.md** — Software Specification Extraction Skill (Planned)
-- **Status**: Planning phase (see `{service-name}/TODO.md: spec-extract`)
+- **Status**: Planning phase (see `{workspace-name}/TODO.md: spec-extract`)
 - **Purpose**: Scan multi-repo microservices platforms; extract and catalog reusable patterns
-- **Target output**: `{service-name}/specs/` with pattern registry, compliance audits
+- **Target output**: `{workspace-name}/specs/` with pattern registry, compliance audits
 - **Phases**: Research, pattern extraction, catalog generation, compliance framework, documentation
 - **Who will use it**: Lead engineers, compliance auditors, onboarding new services
 - **Complementary skill**: `spec-audit.md` (validates repos against extracted specs)
@@ -205,7 +205,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 
 ### **spec-compliance-verification.md** — Spec Compliance Validation
 - **Purpose**: Verify code implementation complies with extracted architectural specs
-- **Input**: `service_path`, `spec_dir` ({service-name}/specs)
+- **Input**: `service_path`, `spec_dir` ({workspace-name}/specs)
 - **Output**: Spec compliance %, deviations detected, severity per deviation
 - **Checks**: Makefile pattern, CDK structure, event versioning, auth flow, config standard, GitHub Actions, replay mode
 - **Called by**: `quality-gate-orchestration` (compliance phase)
@@ -345,12 +345,12 @@ This index catalogs architectural decision patterns and enforcement skills for t
 
 | Service | Makefile | .env Files | CDK | GitHub Actions | Status |
 |---------|----------|-----------|-----|----------------|--------|
+| {example-service} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
+| {example-service} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
+| {example-service} | ✅ | ✅ | ✅* | ✅ | **COMPLIANT** (1 optional with comment) |
 | {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
 | {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅* | ✅ | **COMPLIANT** (1 optional with comment) |
-| {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
+| {example-service} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
 | {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
 | {service-name} | ❌ | ✅ | ✅ | ❌ | **NEEDS FIXES** (likely deprecated) |
 
@@ -359,7 +359,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 ## How to Use These Skills
 
 ### As an Engineer (During Development)
-1. Before writing configuration code, read `{service-name}.md`
+1. Before writing configuration code, read `{example-service}.md`
 2. Ask yourself: "Is this REQUIRED or OPTIONAL?"
 3. Document the answer explicitly in code comments
 4. Never use silent defaults
@@ -387,7 +387,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 These skills encode decisions made during 2026-04-27 CICD incident:
 
 **The Problem**: 
-- {service-name} #41 failed with "Unable to fetch parameters [/dev-{service-name}/APIUrl]"
+- {example-service} #41 failed with "Unable to fetch parameters [/dev-{service-name}/APIUrl]"
 - Root cause: Missing explicit handling of optional vs required dependencies
 - Symptom: Code had silent defaults (empty strings) with no documentation
 
@@ -406,12 +406,12 @@ These skills encode decisions made during 2026-04-27 CICD incident:
 ## Related Architecture Patterns
 
 These skills assume and build on:
-- **{service-name}**: Standard Makefile pattern (ENV_NAME, -include, export)
-- **{service-name}**: Lambda handler patterns (startup validation, graceful degradation)
-- **{service-name}**: CDK patterns (3-tier stacks, SSM references)
+- **{example-service}**: Standard Makefile pattern (ENV_NAME, -include, export)
+- **{example-service}**: Lambda handler patterns (startup validation, graceful degradation)
+- **{example-service}**: CDK patterns (3-tier stacks, SSM references)
 - **{service-name}**: Local quality gates (make verify, pre-commit hooks)
 
-See `~/git/ers/CLAUDE.md` and `~/git/ers/{service-name}/` for other architectural patterns.
+See `~/git/ers/CLAUDE.md` and `~/git/ers/{workspace-name}/` for other architectural patterns.
 
 ## Workflow Integration
 

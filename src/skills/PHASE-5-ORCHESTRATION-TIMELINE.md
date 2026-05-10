@@ -45,7 +45,7 @@ Parallel implementation of 12 Quality Engineer + Self-Healing skills across 5 tr
 ### Week 1, Day 2 (2026-04-28, Monday)
 
 **Morning (0-8 hours)**:
-- **Track 1**: Complete test-unit + test-integration; validate against {service-name}
+- **Track 1**: Complete test-unit + test-integration; validate against {example-service}
 - **Track 2**: Complete security-semantic + security-dependency; find real vulnerability
 - **Track 3**: Complete requirement-mapping; map REQ-001 to 3+ tests
 
@@ -105,7 +105,7 @@ Parallel implementation of 12 Quality Engineer + Self-Healing skills across 5 tr
 
 **Morning (0-8 hours)**:
 - **Track 5**: Complete quality-gate-orchestration implementation
-- Integration test: run full orchestration against {service-name}
+- Integration test: run full orchestration against {example-service}
 - Trigger self-healing loop (simulate test failure → diagnose → heal → re-validate)
 
 **Afternoon (8-16 hours)**:
@@ -282,7 +282,7 @@ If critical issue discovered post-Phase-5-complete:
 ## Next Steps (After Phase 5)
 
 ### Phase 5.8 (2026-05-02): Validation + Go-Live
-- Run orchestrator on all ERS services ({service-name}, {service-name}, {service-name}, etc.)
+- Run orchestrator on all ERS services ({example-service}, {service-name}, {example-service}, etc.)
 - Verify skill integrations across services
 - Document real examples (case studies)
 - Gradual rollout: dev → staging → prod

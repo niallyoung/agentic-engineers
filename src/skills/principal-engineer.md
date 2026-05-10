@@ -254,9 +254,9 @@ Choose based on project stage:
 
 Common ERS patterns:
 
-- **CQRS:** Command Query Responsibility Segregation ({service-name} / {service-name})
-- **Event Sourcing:** Immutable event log as source of truth ({service-name})
-- **Event-Driven:** Async communication via SNS FIFO ({service-name} → {service-name}, {service-name})
+- **CQRS:** Command Query Responsibility Segregation ({example-service} / {example-service})
+- **Event Sourcing:** Immutable event log as source of truth ({example-service})
+- **Event-Driven:** Async communication via SNS FIFO ({example-service} → {service-name}, {service-name})
 - **Eventual Consistency:** Multiple services with separate storage
 - **Saga Pattern:** Distributed transactions across services
 

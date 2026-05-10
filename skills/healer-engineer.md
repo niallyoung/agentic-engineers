@@ -18,7 +18,7 @@ orchestrator to re-run quality gates.
 ## Usage
 
 ```
-/healer-engineer diagnostic={...} service_path={service-name}
+/healer-engineer diagnostic={...} service_path={example-service}
 /healer-engineer diagnostic={...} service_path={service-name} auto_merge_if_ci_passes=false
 ```
 
@@ -49,14 +49,14 @@ if diagnostic.healer_eligible != true:
   "file_modified": "cdk/stacks/command_stack.go",
   "fix_applied": "Added SNS_TOPIC_ARN to Lambda environment vars block",
   "pr_created": true,
-  "pr_url": "https://github.com/{your-org}/{service-name}/pull/47",
+  "pr_url": "https://github.com/{your-org}/{example-service}/pull/47",
   "pr_status": "CI_RUNNING",
   "auto_merge_eligible": true,
   "merge_status": "MERGED",
   "notes": "CI passed in 3m12s. Auto-merged. Quality gates re-triggered.",
   "audit": {
     "issue_type": "config_missing",
-    "service": "{service-name}",
+    "service": "{example-service}",
     "fixed_at": "2026-04-27T14:23:00Z",
     "fix_commit": "abc1234",
     "healer_version": "1.0"
@@ -361,7 +361,7 @@ If any guardrail fails: leave PR open, set `merge_status = "PENDING"`, notify or
   "fix_type": "config_missing",
   "file_modified": "cdk/stacks/command_stack.go",
   "fix_applied": "Added SNS_TOPIC_ARN env var referencing SSM parameter /${appName}/SNSTopicARN",
-  "pr_url": "https://github.com/{your-org}/{service-name}/pull/47",
+  "pr_url": "https://github.com/{your-org}/{example-service}/pull/47",
   "pr_status": "CI_PASSED",
   "merge_status": "MERGED"
 }
@@ -416,7 +416,7 @@ If any guardrail fails: leave PR open, set `merge_status = "PENDING"`, notify or
   "issue_fixed": true,
   "fix_type": "config_missing",
   "file_modified": "cdk/stacks/command_stack.go",
-  "pr_url": "https://github.com/{your-org}/{service-name}/pull/47",
+  "pr_url": "https://github.com/{your-org}/{example-service}/pull/47",
   "pr_status": "CI_FAILED",
   "merge_status": "FAILED",
   "notes": "CI failed on unrelated test TestIntegration_DynamoDB. Healer escalates to lead for review."

@@ -220,4 +220,4 @@ This enables:
 - `agentic-engineers/orchestration/HANDOFF.md` — DELEGATE/HANDBACK protocol
 - `agentic-engineers/ARCHITECTURE-AUDIT.md` — Compliance findings
 - `agentic-engineers/ARCHITECTURE-REMEDIATION-PLAN.md` — 4-week plan
-- `{service-name}/TODO.md` — Master project tracking
+- `{workspace-name}/TODO.md` — Master project tracking

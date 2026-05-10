@@ -17,7 +17,7 @@ applies_to: [all ERS services]
 - **Behavior**: Fail immediately at CDK synthesis time with clear error message
 - **Error message must include**:
   - Which parameter/variable is missing
-  - Which service needs it (e.g., "{service-name} requires /dev-{service-name}/APIUrl")
+  - Which service needs it (e.g., "{example-service} requires /dev-{service-name}/APIUrl")
   - How to create/fix it (e.g., "Deploy {service-name} first")
 
 **Example (CDK Go)**:
@@ -86,7 +86,7 @@ Environment: &map[string]*string{
 ```bash
 # .env.prod
 ENV_NAME=prod
-APP_NAME=prod-{service-name}
+APP_NAME=prod-{example-service}
 AWS_ACCOUNT=666109694932
 AWS_REGION=ap-southeast-2
 # Optional: empty if not deployed
@@ -204,7 +204,7 @@ Every workflow must:
     mkdir -p env
     cat > env/.env.dev <<'EOF'
     ENV_NAME=dev
-    APP_NAME=dev-{service-name}
+    APP_NAME=dev-{example-service}
     AWS_ACCOUNT=417772279096
     AWS_REGION=ap-southeast-2
     EOF

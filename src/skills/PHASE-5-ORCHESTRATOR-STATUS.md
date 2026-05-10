@@ -162,9 +162,9 @@ Phase 5 orchestration briefs and documentation have been created and committed t
 ### Checkpoint 1: Foundation (2026-04-28, EOD)
 **Validate**: Tracks 1-3 skills working
 ```bash
-python -m skills.test_unit_orchestration --service=/path/to/{service-name}
-python -m skills.security_semantic_scan --service=/path/to/{service-name}
-python -m skills.requirement_mapping --service=/path/to/{service-name} --spec=/path/to/spec.yaml
+python -m skills.test_unit_orchestration --service=/path/to/{example-service}
+python -m skills.security_semantic_scan --service=/path/to/{example-service}
+python -m skills.requirement_mapping --service=/path/to/{example-service} --spec=/path/to/spec.yaml
 ```
 **Expected**: All 9 skills return JSON matching spec
 
@@ -182,7 +182,7 @@ python -m skills.healer_engineer --diagnostic='{"confidence": "HIGH", "risk_leve
 ### Checkpoint 3: Orchestration (2026-05-01, EOD)
 **Validate**: Master orchestrator + full integration
 ```bash
-python -m skills.quality_gate_orchestration --service={service-name} --target=prod
+python -m skills.quality_gate_orchestration --service={example-service} --target=prod
 ```
 **Expected**: All 12 skills run parallel, aggregated results, self-healing loop functional, final decision correct
 
@@ -248,7 +248,7 @@ skills/
 
 ### By 2026-05-02, EOD (Phase 5.8)
 
-- [ ] Orchestrator run on all ERS services ({service-name}, {service-name}, {service-name}, etc.)
+- [ ] Orchestrator run on all ERS services ({example-service}, {service-name}, {example-service}, etc.)
 - [ ] Real vulnerability found (semantic scan)
 - [ ] Real env var fix auto-healed (healer-engineer)
 - [ ] Comprehensive documentation + examples
@@ -308,7 +308,7 @@ skills/
 ## Assumptions & Constraints
 
 ### Assumptions
-1. Sub-agents have access to ERS codebase ({service-name}, {service-name}, {service-name}, etc.)
+1. Sub-agents have access to ERS codebase ({example-service}, {service-name}, {service-name}, etc.)
 2. Git hooks + CI/CD infrastructure available (GitHub Actions, CDK deployments)
 3. Each sub-agent can commit to agentic-engineers repo
 4. 24-hour turnaround on each checkpoint

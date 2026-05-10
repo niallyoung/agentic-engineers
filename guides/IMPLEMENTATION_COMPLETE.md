@@ -281,7 +281,7 @@
 
 ### To Begin Testing:
 
-1. **Receive a task** (e.g., "Add caching to {service-name} GetEvent")
+1. **Receive a task** (e.g., "Add caching to {example-service} GetEvent")
 2. **Orchestrator routes** (using baseline or prior recommendation)
 3. **Engineer executes** with DELEGATE/HANDBACK
 4. **Quality Engineer adds feedback** (model_assessment + confidence)

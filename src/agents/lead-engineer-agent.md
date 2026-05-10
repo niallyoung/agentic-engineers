@@ -69,7 +69,7 @@ role: Lead Engineer
 model: claude-sonnet-4-6
 effort: high
 scope: >
-  Code review: OAuth2 refresh token rotation in {service-name}.
+  Code review: OAuth2 refresh token rotation in {example-service}.
   Senior Engineer + 3 Engineers implemented. Need Lead Engineer sign-off before merge.
 context:
   - Files to review: lambda/auth/oauth_rotation.go, lambda/auth/handlers.go (lines 85-120)

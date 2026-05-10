@@ -11,8 +11,8 @@
 ### Task Description
 
 ```
-Feature: Add result caching to {service-name} GetEvent endpoint
-Repo: {service-name}
+Feature: Add result caching to {example-service} GetEvent endpoint
+Repo: {example-service}
 Type: Feature (caching pattern)
 Complexity: Medium (straightforward if pattern is known)
 ```
@@ -32,7 +32,7 @@ task_id: 2026-04-24-cache-getevent
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Add Redis caching to {service-name} GetEvent endpoint. Cache key={eventID}, TTL=1h. No changes to upstream services.
+scope: Add Redis caching to {example-service} GetEvent endpoint. Cache key={eventID}, TTL=1h. No changes to upstream services.
 context:
   - File: lambda/query/main.go:215 (GetEvent handler)
   - Pattern: Redis caching already used in GetMembers (line 150) — same pattern
@@ -146,7 +146,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-24/2026-04-24-cache-getevent.js
   "timestamp": "2026-04-24T18:30:00Z",
   "task_metadata": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "language": "go",
     "complexity_estimate": "medium",
     "complexity_actual": "low"
@@ -191,7 +191,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-24/2026-04-24-cache-getevent.js
 
 **Analysis:**
 ```
-Task signature: feature, {service-name}, medium-complexity caching
+Task signature: feature, {example-service}, medium-complexity caching
 Historical samples for this signature: 1 (this task)
 Quality: 92/100 ✅
 QE assessment: haiku_suitable (confidence 0.88)
@@ -207,7 +207,7 @@ Error rate: 0 escalations
 {
   "task_signature": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "complexity": "medium",
     "pattern_type": "caching"
   },
@@ -253,8 +253,8 @@ Error rate: 0 escalations
 ### Task Description
 
 ```
-Feature: Add result caching to {service-name} GetMember endpoint
-Repo: {service-name}
+Feature: Add result caching to {example-service} GetMember endpoint
+Repo: {example-service}
 Type: Feature (caching pattern — same as Day 1)
 Complexity: Medium (same pattern)
 ```
@@ -263,7 +263,7 @@ Complexity: Medium (same pattern)
 
 **Orchestrator Logic:**
 1. Receive task: "Add caching to GetMember endpoint"
-2. Identify signature: feature, {service-name}, medium-complexity caching
+2. Identify signature: feature, {example-service}, medium-complexity caching
 3. Check Model Engineer recommendations for this signature
 4. Found: Recommendation from 2026-04-24-cache-getevent (confidence 0.88)
 5. Apply rank_1: **Use Haiku high-effort with 0.88 confidence**
@@ -275,7 +275,7 @@ task_id: 2026-04-25-cache-getmember
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Add Redis caching to {service-name} GetMember endpoint. Cache key={memberID}, TTL=1h. Pattern: follow GetEvent caching (task 2026-04-24-cache-getevent).
+scope: Add Redis caching to {example-service} GetMember endpoint. Cache key={memberID}, TTL=1h. Pattern: follow GetEvent caching (task 2026-04-24-cache-getevent).
 context:
   - File: lambda/query/main.go:290 (GetMember handler)
   - Reference: See 2026-04-24-cache-getevent for identical pattern
@@ -372,7 +372,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-25/2026-04-25-cache-getmember.j
 {
   "task_signature": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "pattern_type": "caching"
   },
   "analysis": {
@@ -388,7 +388,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-25/2026-04-25-cache-getmember.j
       "model": "claude-haiku-4-5",
       "effort": "high",
       "confidence": 0.92,
-      "reason": "2 consistent samples, both quality 92-93. QE confirms Haiku is optimal for {service-name} caching tasks. Proven pattern."
+      "reason": "2 consistent samples, both quality 92-93. QE confirms Haiku is optimal for {example-service} caching tasks. Proven pattern."
     },
     "rank_2": {
       "model": "claude-haiku-4-5",
@@ -404,7 +404,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-25/2026-04-25-cache-getmember.j
     }
   },
   "insights": {
-    "pattern_mastery": "{service-name} caching tasks are routine for Haiku. Recommend Haiku for all future caching tasks.",
+    "pattern_mastery": "{example-service} caching tasks are routine for Haiku. Recommend Haiku for all future caching tasks.",
     "cost_optimization": "At $0.1295/task, caching tasks are cost-efficient. No need to explore higher models.",
     "next_sample": "Next sample will increase confidence toward 0.95+. Consider then whether effort can reduce to medium."
   }

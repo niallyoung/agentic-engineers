@@ -42,7 +42,7 @@ Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/incoming/20
 ```yaml
 ---
 task_id: 2026-04-30-fix-token-timeout
-description: "Fix token validation timeout in {service-name}"
+description: "Fix token validation timeout in {example-service}"
 priority: high
 # (Simple task description; Orchestrator will create DELEGATE)
 ---

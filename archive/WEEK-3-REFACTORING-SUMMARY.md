@@ -20,7 +20,7 @@ status: IN_PROGRESS
 
 ### ✅ Git Hooks Refactored
 
-**File**: `{service-name}/githooks/pre-commit`
+**File**: `{workspace-name}/githooks/pre-commit`
 
 **Before**: Direct inline `make lint` + `make test` calls
 ```bash
@@ -55,7 +55,7 @@ fi
 - Single entry point: `make quality-gate`
 - Ready for agent integration
 
-**File**: `{service-name}/githooks/pre-push`
+**File**: `{workspace-name}/githooks/pre-push`
 
 **Changes**:
 - Added `make quality-gate` call BEFORE E2E tests
@@ -83,11 +83,11 @@ quality-gate: verify
 ```
 
 **Services Updated**:
-- {service-name}: quality-gate → verify (lint + test)
+- {example-service}: quality-gate → verify (lint + test)
+- {example-service}: quality-gate → verify
+- {example-service}: quality-gate → verify
 - {service-name}: quality-gate → verify
-- {service-name}: quality-gate → verify
-- {service-name}: quality-gate → verify
-- {service-name}: quality-gate → verify
+- {example-service}: quality-gate → verify
 - {service-name}: quality-gate → verify
 - {service-name}: quality-gate → verify
 - {service-name}: quality-gate → verify + app.e2e
@@ -200,7 +200,7 @@ pre-push hook (thin validation)
 ### Unit Testing
 ```bash
 # Test quality-gate target in isolation
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 make quality-gate          # Should succeed
 make quality-gate 2>&1 | grep "✅"  # Should show success marker
 ```
@@ -208,7 +208,7 @@ make quality-gate 2>&1 | grep "✅"  # Should show success marker
 ### Integration Testing (with git hooks)
 ```bash
 # Test pre-commit hook invocation
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 git add .
 git commit -m "test: Quality gate refactoring"
 # Should call make quality-gate via pre-commit hook
@@ -229,16 +229,16 @@ ERS_AUTO_PUSH=1 git push
 
 ## Files Modified
 
-### {service-name} Git Hooks
+### {workspace-name} Git Hooks
 - `githooks/pre-commit` — Updated to delegate via `make quality-gate`
 - `githooks/pre-push` — Updated to delegate via `make quality-gate`
 
 ### ERS Service Makefiles
+- `{example-service}/Makefile` — Added quality-gate target
+- `{example-service}/Makefile` — Added quality-gate target
+- `{example-service}/Makefile` — Added quality-gate target
 - `{service-name}/Makefile` — Added quality-gate target
-- `{service-name}/Makefile` — Added quality-gate target
-- `{service-name}/Makefile` — Added quality-gate target
-- `{service-name}/Makefile` — Added quality-gate target
-- `{service-name}/Makefile` — Added quality-gate target
+- `{example-service}/Makefile` — Added quality-gate target
 - `{service-name}/Makefile` — Added quality-gate target
 - `{service-name}/Makefile` — Added quality-gate target
 - `{service-name}/Makefile` — Added quality-gate target

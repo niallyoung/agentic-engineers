@@ -12,7 +12,7 @@ scope: |
   3. Any other external script bypass paths
 
 context:
-  - File: .git/hooks/pre-commit (create if not exists)
+  - File: $REPO_ROOT/.git/hooks/pre-commit (create if not exists)
   - Purpose: Prevent future commits from re-introducing external scripts
   - Enforcement: Fail commit if prohibited files detected
 

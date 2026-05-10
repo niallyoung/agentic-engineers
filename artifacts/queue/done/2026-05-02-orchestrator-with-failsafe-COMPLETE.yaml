@@ -9,7 +9,7 @@ scope: |
   FAILSAFE: If queue is empty AND no agents running for 60 seconds, stop polling and exit.
   Do NOT wait forever - implement timeout/idle detection.
 context:
-  - Queue location: artifacts/queue/incoming/ (in )
+  - Queue location: artifacts/queue/incoming/ (in $REPO_ROOT)
   - Routing rules: orchestration/AGENTS.md (decision tree: which agent for which task)
   - Agent skills: orchestration/SKILLS.md (what each agent does)
   - Pending tasks: 3 DELEGATE blocks awaiting delegation

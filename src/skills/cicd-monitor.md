@@ -18,7 +18,7 @@ CICD Monitor watches GitHub Actions quality gate workflows. It polls every 120 s
 ### Input Fields
 
 ```yaml
-repo: "{service-name}"
+repo: "{example-service}"
   # Repository name (part of full GitHub path)
 
 ref: "abc123def456" | "main"
@@ -45,16 +45,16 @@ escalate_on_failure: true
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-cicd-monitor-{service-name}
+task_id: 2026-05-05-cicd-monitor-{example-service}
 timestamp: 2026-05-05T10:30:00Z
 role: CICD Monitor (Orchestrator)
 model: claude-haiku-4-5
 effort: medium
 scope: >
-  Monitor GitHub Actions main.yaml workflow for {service-name} commit abc123.
+  Monitor GitHub Actions main.yaml workflow for {example-service} commit abc123.
   Poll every 120 seconds. Report status when complete. Escalate on timeout/failure.
 context:
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Commit: abc123def456
   - Expected duration: 4-6 minutes typical
   - Poll interval: 120 seconds
@@ -130,7 +130,7 @@ recommendation: "string"
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-cicd-monitor-{service-name}
+task_id: 2026-05-05-cicd-monitor-{example-service}
 timestamp: 2026-05-05T10:35:15Z
 status: complete
 workflow_status: FAILURE
@@ -151,7 +151,7 @@ jobs_failed:
   - name: deploy-prod
     conclusion: failure
     failure_log_excerpt: |
-      Error: Unable to assume IAM role arn:aws:iam::666109694932:role/prod-{service-name}
+      Error: Unable to assume IAM role arn:aws:iam::666109694932:role/prod-{example-service}-cdk-role
       Reason: AccessDenied (MissingPermission for sts:AssumeRole)
 escalation_path:
   agent: Lead Engineer

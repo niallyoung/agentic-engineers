@@ -9,7 +9,7 @@ scope: |
   Output: Updated docs/SPEC.md with actual implementation details.
   Do NOT modify implementation; only document current state.
 context:
-  - Repo: 
+  - Repo: $REPO_ROOT
   - Current SPEC.md: docs/SPEC.md (2026-04-29, needs update)
   - Key files: orchestration/AGENTS.md, orchestration/SKILLS.md, orchestration/QUEUE-PROTOCOL.md
   - Constraint: "No external scripts/tools - all work via AGENTS DELEGATE/HANDBACK"

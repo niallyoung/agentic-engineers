@@ -16,16 +16,16 @@ Master orchestrator that coordinates all 12 Quality Engineer skills in a compreh
 
 ```bash
 # Full pre-deployment verification
-/quality-gate-orchestration /home/user/git/ers/{service-name} --deployment-target prod
+/quality-gate-orchestration /home/user/git/ers/{example-service} --deployment-target prod
 
 # Faster check (skip expensive E2E)
-/quality-gate-orchestration /home/user/git/ers/{service-name} --skip-e2e
+/quality-gate-orchestration /home/user/git/ers/{example-service} --skip-e2e
 
 # With state migration validation
-/quality-gate-orchestration /home/user/git/ers/{service-name} --deployment-target prod --validate-migrations
+/quality-gate-orchestration /home/user/git/ers/{example-service} --deployment-target prod --validate-migrations
 
 # JSON output for CI/CD
-/quality-gate-orchestration /home/user/git/ers/{service-name} --json --output-dir ./quality-reports/
+/quality-gate-orchestration /home/user/git/ers/{example-service} --json --output-dir ./quality-reports/
 ```
 
 ## Architecture
@@ -87,7 +87,7 @@ PHASE 4: Final Gate Decision
 
 ```json
 {
-  "service_path": "/home/user/git/ers/{service-name}",
+  "service_path": "/home/user/git/ers/{example-service}",
   "deployment_target": "prod",  // dev | staging | prod
   "skip_e2e": false,            // skip expensive E2E tests
   "skip_business_logic": false, // skip parametric testing
@@ -101,7 +101,7 @@ PHASE 4: Final Gate Decision
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "timestamp": "2026-04-28T08:15:00Z",
   "overall_decision": "PROCEED",  // PROCEED | WARN | BLOCK | ESCALATE
@@ -168,7 +168,7 @@ PHASE 4: Final Gate Decision
     { "timestamp": "2026-04-28T08:17:30Z", "event": "PHASE_4_DECISION", "details": "PROCEED (with escalation review)" }
   ],
   
-  "report_location": "/home/user/git/ers/quality-reports/{service-name}/2026-04-28-08-15/report.json"
+  "report_location": "/home/user/git/ers/quality-reports/{example-service}/2026-04-28-08-15/report.json"
 }
 ```
 
@@ -265,7 +265,7 @@ Different deployment targets have different quality thresholds:
 ## Example: Full Pre-Deployment Run
 
 ```bash
-$ /quality-gate-orchestration /home/user/git/ers/{service-name} --deployment-target prod --json
+$ /quality-gate-orchestration /home/user/git/ers/{example-service} --deployment-target prod --json
 
 [2026-04-28 08:15:00] Starting Phase 1: Quality checks...
 [2026-04-28 08:15:03] ✅ test-unit-orchestration: 142 passed
@@ -299,7 +299,7 @@ Phase 3 complete: 0 auto-fixed, 3 escalated
 Final Decision: BLOCK (critical issues require review)
 Exit code: 2
 
-Report saved: /home/user/git/ers/quality-reports/{service-name}/2026-04-28-08-15/report.json
+Report saved: /home/user/git/ers/quality-reports/{example-service}/2026-04-28-08-15/report.json
 ```
 
 ## Related Skills

@@ -984,7 +984,7 @@ How the system automatically improves model selection and cost.
 
 ```
 Task arrives → artifacts/queue/incoming/{task_id}.yaml
-Example: "Fix token timeout in {service-name}"
+Example: "Fix token timeout in {example-service}"
 ```
 
 ### 2. Orchestrator Polls & Routes
@@ -1140,7 +1140,7 @@ Compact structured markup:
 task_id: 2026-04-24-fix-timeout
 role: Engineer
 model: claude-haiku-4-5
-scope: Fix token timeout in {service-name}; no Cognito changes
+scope: Fix token timeout in {example-service}; no Cognito changes
 context:
   - File: lambda/api/main.go:92
   - Root cause: Client clock skew

@@ -14,7 +14,7 @@ runs tests, parses coverage, and returns structured results for the quality gate
 ## Usage
 
 ```
-/test-unit-orchestration service_path={workspace-root}/{service-name}
+/test-unit-orchestration service_path=$WORKSPACE_ROOT/{example-service}
 /test-unit-orchestration service_path={service-name} coverage_threshold=85
 /test-unit-orchestration service_path={service-name} test_filter="*/auth/*"
 ```
@@ -32,7 +32,7 @@ runs tests, parses coverage, and returns structured results for the quality gate
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "language": "go",
   "tests_found": 42,
   "tests_passed": 40,
@@ -50,7 +50,7 @@ runs tests, parses coverage, and returns structured results for the quality gate
     }
   ],
   "low_coverage_packages": [
-    { "package": "{service-name}/internal/auth", "coverage": 62.0 }
+    { "package": "{example-service}/internal/auth", "coverage": 62.0 }
   ],
   "mutation_recommendations": [
     "Add edge case: empty tags array in CreateCalendarEvent",
@@ -188,9 +188,9 @@ return gate_result
 
 ## ERS-Specific Notes
 
-### {service-name} (Go)
+### {example-service} (Go)
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 make test
 # Runs: go test ./... -v -coverprofile=coverage.out
 ```
@@ -198,11 +198,11 @@ make test
 Expected: >30 tests, ~80% coverage. Key packages to check:
 - `internal/handlers` — command routing (CreateUser, UpdateUser, etc.)
 - `internal/auth` — JWT validation
-- `internal/event` — event publishing to {service-name}
+- `internal/event` — event publishing to {example-service}
 
 ### {service-name} (Go)
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{service-name}
 make test
 ```
 
@@ -210,7 +210,7 @@ Key test coverage: membership state transitions, DynamoDB projections, SNS event
 
 ### {service-name} (Node/Vitest)
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{service-name}
 npm test -- --coverage
 ```
 

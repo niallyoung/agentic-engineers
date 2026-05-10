@@ -71,10 +71,10 @@ gh issue comment <number> --body "Fixed in PR #456"
 
 ```bash
 # View PR comments
-gh api repos/{your-org}/{service-name}/pulls/123/comments
+gh api repos/{your-org}/{example-service}/pulls/123/comments
 
 # Resolve comment
-gh api -X PUT repos/{your-org}/{service-name}/pulls/comments/<comment_id>/replies \
+gh api -X PUT repos/{your-org}/{example-service}/pulls/comments/<comment_id>/replies \
   --input - << 'EOF'
 {"body": "Fixed in commit abc123"}
 EOF

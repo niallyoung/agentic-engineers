@@ -183,7 +183,7 @@ done
 
 ```bash
 # Run queue processor every 15 minutes
-*/15 * * * * cd {workspace-root}/{service-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1 | tee -a agentic-engineers/data/logs/queue-processor-$(date +\%Y-\%m-\%d).log
+*/15 * * * * cd $WORKSPACE_ROOT/{workspace-name} && bash agentic-engineers/orchestration/scripts/process-log-queue.sh 2>&1 | tee -a agentic-engineers/data/logs/queue-processor-$(date +\%Y-\%m-\%d).log
 ```
 
 ---

@@ -38,7 +38,7 @@ One JSON object per file (task completion snapshot):
   "model": "claude-haiku-4-5",
   "effort": "high",
   "task_type": "bug_fix",
-  "repo": "{service-name}",
+  "repo": "{example-service}",
   "delegated_by": "Orchestrator",
   "plan_provided": true,
   "status": "complete",
@@ -65,7 +65,7 @@ One JSON object per file (task completion snapshot):
 - `model` — exact Claude model ID used (e.g. `claude-haiku-4-5`)
 - `effort` — actual effort level used (low, medium, high, max)
 - `task_type` — category (bug_fix, feature, security_audit, refactor, planning, code_review, etc.)
-- `repo` — single repo modified (e.g. `{service-name}`); if multiple, use comma-separated list
+- `repo` — single repo modified (e.g. `{example-service}`); if multiple, use comma-separated list
 - `delegated_by` — role that delegated this task (usually Orchestrator)
 - `plan_provided` — boolean; was a pre-written plan provided in DELEGATE block?
 - `status` — complete | partial | blocked
@@ -206,7 +206,7 @@ Personalities: Dispatch (most), Engineer (most), Architect (most)
 - `task_type_distribution` — % security work, feature work, bug fixes, chores
 - `quality_metrics` — % of tasks passing first-time CI, test coverage changes, code review feedback
 - `personality_effectiveness` — Which personality solved the most complex tasks? Highest quality?
-- `skill_usage` — Which skills ({service-name}, {service-name}, etc.) were deployed? Effectiveness?
+- `skill_usage` — Which skills ({example-service}, {example-service}, etc.) were deployed? Effectiveness?
 - `blocker_analysis` — Common escalation patterns (e.g., "Engineer stuck on type checking")
 - `model_efficiency` — Cost per completed task by role (Orchestrator cheapest, Security Engineer most expensive)
 
@@ -271,11 +271,11 @@ Personality Impact:
   - Guardian personality under-utilized (only 1.5% of tasks); consider more security focus
 
 Skills Status:
-  ✓ {service-name}: Production-ready, 100% adoption
-  ✓ {service-name}: Production-ready, 95% adoption
-  ⚠️ {service-name}: 80% ready, needs more Opus 4.6 design work
-  ⚠️ {service-name}: 70% ready, Engineer struggles with idempotency logic
-  ⚠️ {service-name}: 60% ready, needs retry/circuit-breaker patterns
+  ✓ {example-service}: Production-ready, 100% adoption
+  ✓ {example-service}: Production-ready, 95% adoption
+  ⚠️ {example-service}: 80% ready, needs more Opus 4.6 design work
+  ⚠️ {example-service}-consumer: 70% ready, Engineer struggles with idempotency logic
+  ⚠️ {example-service}: 60% ready, needs retry/circuit-breaker patterns
 
 Agent Specialization:
   - Dispatch: Excellent routing; 98% correct first-time
@@ -292,7 +292,7 @@ Deployments: 12 repos deployed, 2 production incidents (both resolved <1h)
 Throughput: 32 commits/week avg, 88% CI pass rate (target: 95%), +1.2% coverage trend
 
 Recommendations for May:
-1. Invest in "{service-name}" skill (Architect + Engineer pairing)
+1. Invest in "{example-service}-consumer" skill (Architect + Engineer pairing)
 2. Increase Sage utilization (schedule 3 multi-repo design sessions)
 3. Add TypeScript strict mode handling to Engineer training
 4. Experiment with new Guardian personality variant for compliance/audit work
@@ -374,7 +374,7 @@ Every N minutes, Dispatch checks current session metrics and voice-notifies:
 
 ```
 Dispatch: "Session checkpoint: 8K tokens spent (Dispatch 40%, Engineer 35%, Architect 25%). 
-3 tasks completed. No blockers. Next: {service-name} security analysis."
+3 tasks completed. No blockers. Next: {example-service} security analysis."
 ```
 
 **Frequency:** Every 5 min if user is actively watching, 10 min during background work.  

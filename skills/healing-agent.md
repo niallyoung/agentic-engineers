@@ -16,7 +16,7 @@ phase: 5.10
 WHEN Orchestrator writes DELEGATE to artifacts/:
 
 1. READ: DELEGATE block + issues from other agents
-   repo_path = {workspace-root}/{service}
+   repo_path = $WORKSPACE_ROOT/{service}
    issues = [issues from Security, Testing, Metrics agents]
 
 2. FOR EACH issue, attempt auto-fix:
@@ -91,7 +91,7 @@ WHEN Orchestrator writes DELEGATE to artifacts/:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{service-name}
+task_id: 2026-05-26-commit-{example-service}-abc123-healing
 timestamp: 2026-05-26T09:03:15Z
 status: PASS
 auto_fixes_attempted: 3

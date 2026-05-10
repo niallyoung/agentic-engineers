@@ -18,7 +18,7 @@ Voice Notify provides audio feedback for critical orchestration events (completi
 ### Input Fields
 
 ```yaml
-message: "Quality gate passed for {service-name}"
+message: "Quality gate passed for {example-service}"
   # Message to speak
 
 notification_type: "success" | "warning" | "escalation" | "progress"
@@ -39,17 +39,17 @@ voice_preference: "default" | "optimistic" | "serious" | "technical"
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-notify-quality-gate-pass-{service-name}
+task_id: 2026-05-05-notify-quality-gate-pass-{example-service}
 timestamp: 2026-05-05T09:35:00Z
 role: Voice Notify Agent (Engineer)
 model: claude-haiku-4-5
 effort: low
 scope: >
-  Deliver voice notification: "Quality gate passed for {service-name}. All checks green."
+  Deliver voice notification: "Quality gate passed for {example-service}. All checks green."
   Use optimistic personality voice (Orchestrator agent). Urgency: low.
 context:
   - Agent initiating: Quality Gate Orchestrator
-  - Message: "Quality gate passed for {service-name}"
+  - Message: "Quality gate passed for {example-service}"
   - Notification type: success
   - Urgency: low
 plan:
@@ -72,7 +72,7 @@ success_criteria:
 ### Output Fields
 
 ```yaml
-message: "Quality gate passed for {service-name}. All checks green."
+message: "Quality gate passed for {example-service}. All checks green."
   # Message that was spoken
 
 notification_type: "success"
@@ -103,10 +103,10 @@ system_output: "string"
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-notify-quality-gate-pass-{service-name}
+task_id: 2026-05-05-notify-quality-gate-pass-{example-service}
 timestamp: 2026-05-05T09:35:03Z
 status: complete
-message: "Quality gate passed for {service-name}. All checks green."
+message: "Quality gate passed for {example-service}. All checks green."
 notification_type: success
 audio_file: null
 duration_seconds: 4.1
@@ -115,7 +115,7 @@ urgency_level: low
 delivery_method: system-tts
 status: delivered
 system_output: |
-  [Voice]: "Quality gate passed for {service-name}. All checks green."
+  [Voice]: "Quality gate passed for {example-service}. All checks green."
   (4.1 second audio playback)
 recommendation: "Notification delivered. User informed of successful quality gate."
 ---

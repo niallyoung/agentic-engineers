@@ -20,7 +20,7 @@ class ChangelogGenerator:
     
     CHANGELOG_SECTION_MARKER = "## CHANGELOG"
     
-    def __init__(self, spec_path: str = "docs/SPEC.md"):
+    def __init__(self, spec_path: str = "$REPO_ROOT/docs/SPEC.md"):
         self.spec_path = Path(spec_path)
     
     def add_entry(self, change_id: str, title: str, author: str, 

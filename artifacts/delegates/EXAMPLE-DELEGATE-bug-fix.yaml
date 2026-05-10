@@ -12,19 +12,19 @@ effort: high
 red_green_tdd_required: true
 
 scope: >
-  Fix token validation timeout bug in {service-name} login flow.
+  Fix token validation timeout bug in {example-service} login flow.
   Only change token expiry grace period logic; do NOT change Cognito config, JWT structure, or other services.
 
 context:
   - File: lambda/api/main.go:92 (extractAndValidateScopes function)
   - Error: "Unauthorized: token expired" on mobile after 1hr; desktop works fine
   - Root cause from Lead Engineer: Client-side clock skew (device time lags server by 10-60s)
-  - Logs: {service-name} logs show "token claims invalid at 3600s"
+  - Logs: {example-service} logs show "token claims invalid at 3600s"
   - Repo state: Clean, main branch, no uncommitted files
-  - Related: docs/ARCHITECTURE.md#token-lifecycle, {service-name}/CLAUDE.md
+  - Related: docs/ARCHITECTURE.md#token-lifecycle, {example-service}/CLAUDE.md
 
 success_criteria:
-  - "make verify" passes in {service-name} (all tests pass, coverage ≥85%)
+  - "make verify" passes in {example-service} (all tests pass, coverage ≥85%)
   - New test TestTokenExpiryGracePeriod added and passing
   - Mobile e2e auth tests pass (npm run e2e:smoke)
   - No other repos modified

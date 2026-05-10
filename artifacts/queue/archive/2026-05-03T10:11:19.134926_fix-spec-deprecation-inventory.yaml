@@ -10,7 +10,7 @@ scope: |
   31 additional scripts remain unaddressed and not covered by SPEC.
 
 context:
-  - File: docs/SPEC.md
+  - File: $REPO_ROOT/docs/SPEC.md
   - Section: DEPRECATION NOTICE (lines 124-157)
   - Issue: Incomplete inventory; files not explicitly covered could be claimed as "not prohibited"
 

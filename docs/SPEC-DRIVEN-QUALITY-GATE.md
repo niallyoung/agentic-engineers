@@ -154,7 +154,7 @@ Healing Agent executes:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-06-02-commit-{service-name}
+task_id: 2026-06-02-commit-{example-service}-abc123
 timestamp: 2026-06-02T09:05:00Z
 status: PASS | ESCALATE
 

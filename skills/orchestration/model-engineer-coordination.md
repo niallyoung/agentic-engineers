@@ -91,8 +91,8 @@ After QE:
 Example:
 
 ```
-Task: Feature in {service-name}, medium-complexity
-Historical lookup: 5 previous medium-complexity features in {service-name}
+Task: Feature in {example-service}, medium-complexity
+Historical lookup: 5 previous medium-complexity features in {example-service}
 Model Engineer recommendation: Haiku high-effort (confidence 0.92)
 Action: Use Haiku in DELEGATE
 ```
@@ -128,7 +128,7 @@ Example log:
   "timestamp": "2026-04-24T19:00:00Z",
   "task_signature": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "complexity": "medium"
   },
   "previous_assignment": {
@@ -231,7 +231,7 @@ Maintain log of all routing decisions and why:
     "confidence": 0.95
   },
   
-  "decision_basis": "Model Engineer recommendation for medium-complexity {service-name} features",
+  "decision_basis": "Model Engineer recommendation for medium-complexity {example-service} features",
   
   "assignment_source": "model_engineer_recommendation",
   "recommendation_id": "redis-caching-2026-04-24",

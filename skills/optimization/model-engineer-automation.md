@@ -28,7 +28,7 @@
 ---
 action: recommend_model
 task_analysis:
-  title: "Add Redis caching to {service-name}"
+  title: "Add Redis caching to {example-service}"
   domain: "backend/go"
   complexity: "medium"
   scope: "2 files, ~200 LOC"
@@ -160,7 +160,7 @@ task_id: 2026-04-25-redis-caching
 role: Engineer
 model: claude-haiku-4-5  # ← From Model Engineer recommendation
 effort: high
-scope: Add Redis caching to {service-name} (cache user memberships)
+scope: Add Redis caching to {example-service} (cache user memberships)
 context:
   - File: lambda/query/main.go:45 (membership lookup)
   - Current: Cache miss, every query hits DynamoDB

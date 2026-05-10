@@ -89,12 +89,12 @@ quality-gate-prod:
   needs: build-deploy-dev
   runs-on: ubuntu-latest
   container:
-    image: ghcr.io/{your-org}/{service-name}:latest
+    image: ghcr.io/{your-org}/ci-image:latest
     credentials:
       username: ${{ github.actor }}
       password: ${{ secrets.GHCR_TOKEN }}
   concurrency:
-    group: {service-name}
+    group: {example-service}-quality
     cancel-in-progress: false
   steps:
     - uses: actions/checkout@v4
@@ -129,7 +129,7 @@ deploy-prod:
 
 ## Phase 5.8c: Update Pre-Push Hook
 
-Add quality gate check to pre-push hook in `{service-name}/githooks/pre-push`:
+Add quality gate check to pre-push hook in `{workspace-name}/githooks/pre-push`:
 
 ```bash
 # Quality gate check (skip E2E for speed)
@@ -150,7 +150,7 @@ fi
 
 ---
 
-## Phase 5.8d: Test on {service-name} (Baseline Service)
+## Phase 5.8d: Test on {example-service} (Baseline Service)
 
 ### Step 1: Verify quality-gate-orchestration is available
 
@@ -163,7 +163,7 @@ which /quality-gate-orchestration
 ### Step 2: Dry-run locally
 
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 
 # Quick check (dev, skip E2E)
 ENV_NAME=dev make quality-gate
@@ -181,7 +181,7 @@ Quality gate returns structured JSON:
 ```json
 {
   "timestamp": "2026-04-28T12:00:00Z",
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "phase_1": {
     "status": "PASS",
@@ -215,7 +215,7 @@ Intentionally introduce a low-risk issue to trigger Healer:
 ENV_NAME=dev make quality-gate-full
 
 # Check for Healer PR:
-gh pr list --repo {your-org}/{service-name} --state open
+gh pr list --repo {your-org}/{example-service} --state open
 ```
 
 ---
@@ -248,15 +248,15 @@ gh pr list --repo {your-org}/{service-name} --state open
 
 ## Phase 5.9: Rollout to All 8 ERS Services
 
-Once Phase 5.8 validation is complete on {service-name}:
+Once Phase 5.8 validation is complete on {example-service}:
 
 ### Services to Update (in order)
-1. ✅ **{service-name}** (baseline, Phase 5.8)
-2. **{service-name}** (read gateway, similar to {service-name})
+1. ✅ **{example-service}** (baseline, Phase 5.8)
+2. **{example-service}** (read gateway, similar to {example-service})
 3. **{service-name}** (event consumer, DynamoDB)
-4. **{service-name}** (EventStore, critical path)
+4. **{example-service}** (EventStore, critical path)
 5. **{service-name}** (event consumer, SES)
-6. **{service-name}** (Cognito integration, sensitive)
+6. **{example-service}** (Cognito integration, sensitive)
 7. **{service-name}** (file sync, Lambda)
 8. **{service-name}** (deprecated, lower priority)
 
@@ -308,7 +308,7 @@ Once Phase 5.8 validation is complete on {service-name}:
 - [ ] Phase 5.8a: Add Makefile targets to all services
 - [ ] Phase 5.8b: Update GitHub Actions main.yaml
 - [ ] Phase 5.8c: Update pre-push hooks
-- [ ] Phase 5.8d: Local validation on {service-name}
+- [ ] Phase 5.8d: Local validation on {example-service}
 - [ ] Phase 5.8e: Self-healing workflow test
 
 ### Validation
@@ -319,7 +319,7 @@ Once Phase 5.8 validation is complete on {service-name}:
 - [ ] GitHub Actions integration verified
 
 ### Rollout
-- [ ] {service-name} baseline complete (Phase 5.8)
+- [ ] {example-service} baseline complete (Phase 5.8)
 - [ ] All 8 services updated (Phase 5.9)
 - [ ] Monitoring + metrics collection active (Phase 5.10)
 - [ ] Continuous improvement loop established
@@ -332,7 +332,7 @@ Once Phase 5.8 validation is complete on {service-name}:
 **Solution**: Install agentic-engineers skills globally or add to PATH
 ```bash
 # Ensure agentic-engineers is in ~/.agents/agentic-engineers
-# Or set up symlinks: ln -s  ~/.agents/
+# Or set up symlinks: ln -s $WORKSPACE_ROOT/agentic-engineers ~/.agents/
 ```
 
 ### Issue: Quality gate times out
@@ -359,7 +359,7 @@ make quality-gate-full         # Include E2E (longer)
 ## Success Criteria
 
 ✅ **Phase 5.8 Complete When:**
-- {service-name} quality gates pass locally
+- {example-service} quality gates pass locally
 - Self-healing workflow tested end-to-end
 - GitHub Actions integration verified
 - Audit trail shows expected flow (detect → diagnose → heal/escalate → re-validate)
@@ -378,5 +378,5 @@ make quality-gate-full         # Include E2E (longer)
 ---
 
 **Status**: Ready for Phase 5.8 implementation  
-**Next**: Begin local testing on {service-name}  
+**Next**: Begin local testing on {example-service}  
 **Target**: Complete Phase 5.8 by 2026-04-29

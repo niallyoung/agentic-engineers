@@ -39,9 +39,9 @@ date: 2026-04-28
 
 ---
 
-### Phase 5.8b: Makefile Integration ({service-name}) ✅
+### Phase 5.8b: Makefile Integration ({example-service}) ✅
 
-**Updated**: `{workspace-root}/{service-name}/Makefile`
+**Updated**: `$WORKSPACE_ROOT/{example-service}/Makefile`
 
 **New Targets**:
 ```makefile
@@ -64,9 +64,9 @@ $ ENV_NAME=prod make quality-gate
 
 ---
 
-### Phase 5.8c: GitHub Actions Integration ({service-name}) ✅
+### Phase 5.8c: GitHub Actions Integration ({example-service}) ✅
 
-**Updated**: `{workspace-root}/{service-name}/.github/workflows/main.yaml`
+**Updated**: `$WORKSPACE_ROOT/{example-service}/.github/workflows/main.yaml`
 
 **New Job: `quality-gate-prod`**
 ```yaml
@@ -97,7 +97,7 @@ deploy-prod (only if quality gates pass)
 
 ---
 
-### Phase 5.8d: Local Validation ({service-name}) ✅
+### Phase 5.8d: Local Validation ({example-service}) ✅
 
 **Test Results**:
 
@@ -147,7 +147,7 @@ Final Decision:       PROCEED ✅
 
 1. **`PHASE-5-INTEGRATION-GUIDE.md`** (500+ lines)
    - Comprehensive integration strategy for all 8 ERS services
-   - Phase 5.8: Baseline integration ({service-name})
+   - Phase 5.8: Baseline integration ({example-service})
    - Phase 5.9: Rollout to all services
    - Phase 5.10: Monitoring and continuous improvement
    - Troubleshooting guide
@@ -178,14 +178,14 @@ Final Decision:       PROCEED ✅
   - PHASE-5.8-IMPLEMENTATION-LOG.md (tracking)
 ```
 
-### {service-name} repo
+### {example-service} repo
 ```
 806c6fd feat(phase-5.8): Integrate quality gates into CI/CD pipeline
   - Makefile: Add quality-gate targets
   - main.yaml: Add quality-gate-prod job, update deploy-prod dependency
 ```
 
-### {service-name} repo
+### {workspace-name} repo
 ```
 b0f0159 docs: Add Phase 5.8 quality gate integration to TODO.md
   - Track Phase 5.8 progress
@@ -258,12 +258,12 @@ Priority: HIGH (verify error handling before rollout)
 Priority: HIGH (enable quality gates across platform)
 
 **Services in Order**:
-1. ✅ {service-name} (baseline, done)
-2. [ ] {service-name} (similar to {service-name})
+1. ✅ {example-service} (baseline, done)
+2. [ ] {example-service} (similar to {example-service})
 3. [ ] {service-name} (event consumer)
-4. [ ] {service-name} (EventStore, critical)
+4. [ ] {example-service} (EventStore, critical)
 5. [ ] {service-name} (event consumer)
-6. [ ] {service-name} (sensitive)
+6. [ ] {example-service} (sensitive)
 7. [ ] {service-name} (file sync)
 8. [ ] {service-name} (deprecated, lower priority)
 
@@ -399,7 +399,7 @@ Code → Push → GitHub Actions:
 
 **Phase 5.8 Success Criteria**:
 - [x] Quality gate script operational and tested
-- [x] Makefile targets work on {service-name}
+- [x] Makefile targets work on {example-service}
 - [x] GitHub Actions integration complete
 - [x] All tests pass locally (dev + prod)
 - [x] Documentation complete and comprehensive
@@ -440,8 +440,8 @@ Code → Push → GitHub Actions:
 - `agentic-engineers/skills/healer-engineer.md` — Healer Engineer role definition
 - `agentic-engineers/skills/issue-diagnostic-engine.md` — Diagnostic engine spec
 - `agentic-engineers/skills/PHASE-5-COMPLETION-SUMMARY.md` — Phase 5 overview
-- `{service-name}/.github/workflows/main.yaml` — GitHub Actions integration
-- `{service-name}/TODO.md` — Project tracking
+- `{example-service}/.github/workflows/main.yaml` — GitHub Actions integration
+- `{workspace-name}/TODO.md` — Project tracking
 
 **External References**:
 - [Self-Healing CI/CD Pipeline with AI Agents](https://blog.appxlab.io/2026/03/31/self-healing-cicd-pipeline-ai-agents/)
@@ -452,4 +452,4 @@ Code → Push → GitHub Actions:
 **Status**: ✅ Phase 5.8a-e COMPLETE  
 **Ready For**: Phase 5.8f testing with intentional failures  
 **Target Completion**: Phase 5.9 by 2026-05-03  
-**All Commits**: Pushed to respective repos (agentic-engineers, {service-name}, {service-name})
+**All Commits**: Pushed to respective repos (agentic-engineers, {example-service}, {workspace-name})

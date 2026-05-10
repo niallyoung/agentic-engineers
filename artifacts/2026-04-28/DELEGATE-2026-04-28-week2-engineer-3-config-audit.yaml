@@ -17,7 +17,7 @@ scope: >
 context:
   - Design spec: agentic-engineers/orchestration/AGENT-SPECS-WEEK1-DESIGNS.md (Agent 3)
   - Role: Quality Engineer (compliance verification)
-  - Standards reference: ~/.agents/agentic-engineers/skills/{service-name}.md
+  - Standards reference: ~/.agents/agentic-engineers/skills/{example-service}.md
   - Handoff protocol: HANDOFF.md
   - Integration: Config Enforcement (takes audit output, applies fixes)
   - Architecture Remediation Week 2: 2026-05-05 to 2026-05-12
@@ -25,7 +25,7 @@ context:
 
 plan:
   1. Review AGENT-SPECS-WEEK1-DESIGNS.md Agent 3 specification
-  2. Review ERS configuration standard from skills/{service-name}.md
+  2. Review ERS configuration standard from skills/{example-service}.md
   3. Review related agent: Config Enforcement (integration point)
   4. Create skills/config-audit.md with structure:
      - Agent purpose + scope
@@ -39,7 +39,7 @@ plan:
      - Trend tracking (compare to last audit)
   5. Support granular audit scope (full, makefile, cdk, env, claude-md)
   6. Ensure consistency of severity ratings across audits
-  7. Test on sample service ({service-name})
+  7. Test on sample service ({example-service})
   8. Return HANDBACK with deliverable + validation
 
 success_criteria:

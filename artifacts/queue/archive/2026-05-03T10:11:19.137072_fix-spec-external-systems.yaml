@@ -10,7 +10,7 @@ scope: |
   This should be: only humans and Orchestrator can write to queue.
 
 context:
-  - File: docs/SPEC.md
+  - File: $REPO_ROOT/docs/SPEC.md
   - Lines: 218 (Glossary), 113 (Prohibited Activities), and related sections
   - Issue: "external systems" is undefined; CI/CD could write DELEGATE directly and bypass SPEC constraints
 

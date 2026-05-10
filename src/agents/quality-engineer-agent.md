@@ -69,12 +69,12 @@ model: claude-sonnet-4-6
 effort: medium
 scope: >
   Validate OAuth2 refresh token rotation implementation.
-  Verify against spec: {service-name}/DESIGN.md + acceptance criteria.
+  Verify against spec: {example-service}/DESIGN.md + acceptance criteria.
 context:
   - Implemented by: Senior Engineer + 3 Engineers
   - Deliverables: oauth_rotation.go, handlers.go, _test.go
   - Test coverage: 96%
-  - Acceptance criteria: [spec in {service-name}/SPEC.md]
+  - Acceptance criteria: [spec in {example-service}/SPEC.md]
 success_criteria:
   - Implementation matches design spec (100%)
   - All acceptance criteria met
@@ -99,7 +99,7 @@ assessment: PASS
 quality_score: 94
 
 validation_checklist:
-  spec_compliance: ✅ PASS (100% matches {service-name}/DESIGN.md)
+  spec_compliance: ✅ PASS (100% matches {example-service}/DESIGN.md)
   acceptance_criteria: ✅ PASS (all 5 criteria met)
   test_coverage: ✅ PASS (96% coverage, edge cases covered)
   regression_risk: ✅ PASS (isolated change, no side effects detected)

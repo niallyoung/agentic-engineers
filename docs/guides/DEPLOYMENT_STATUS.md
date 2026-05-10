@@ -156,7 +156,7 @@ Model Engineer phase complete. Focus: test optimization feedback loop on real ta
 ### Files Audited & Consolidated
 
 **Sources audited:**
-- {service-name}/* (found 6 reference docs to consolidate)
+- {workspace-name}/* (found 6 reference docs to consolidate)
 - ~/.claude/* (found copilot-instructions.md)
 - ~/.github/* (no agentic-specific files)
 - {service-name}/ (copied global copilot-instructions)

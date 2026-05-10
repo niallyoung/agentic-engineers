@@ -13,7 +13,7 @@ On 2026-04-27, a comprehensive **Configuration & Dependency Management Standard*
 
 ### The Incident
 - **When**: 2026-04-26 evening, during CICD work to get all 8 ERS services green
-- **What failed**: {service-name} #41 failed with `ValidationError: Unable to fetch parameters [/dev-{service-name}/APIUrl]`
+- **What failed**: {example-service} #41 failed with `ValidationError: Unable to fetch parameters [/dev-{service-name}/APIUrl]`
 - **Root cause**: Missing explicit designation of whether dependencies are REQUIRED or OPTIONAL
 - **Initial mistake**: Added silent default (`filesAPIURL := jsii.String("")`) without explanation
 - **User feedback**: "seems risky, I would rather the cicd job bomb out and exit if we're missing required configuration, than to default to some un-configured/non-dynamic default"
@@ -21,7 +21,7 @@ On 2026-04-27, a comprehensive **Configuration & Dependency Management Standard*
 ### The Solution
 Three comprehensive skill documents created and registered:
 
-#### 1. **{service-name}.md** (1200+ lines)
+#### 1. **{example-service}.md** (1200+ lines)
 Defines the architectural standard for all ERS services:
 - Configuration hierarchy (required vs optional)
 - Makefile pattern (ENV_NAME, -include, export)
@@ -59,20 +59,20 @@ Run on 2026-04-27 across all 8 ERS services:
 
 | Service | Makefile | .env Files | CDK | GitHub Actions | Status |
 |---------|----------|-----------|-----|----------------|--------|
+| {example-service} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
+| {example-service} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
+| {example-service} | ✅ | ✅ | ✅* | ✅ | **COMPLIANT** |
 | {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
 | {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅* | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
-| {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
+| {example-service} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
 | {service-name} | ✅ | ✅ | ✅ | ✅ | **COMPLIANT** |
 | {service-name} | ❌ | ✅ | ✅ | ❌ | **NEEDS FIXES** (deprecated) |
 
 **Key finding**: 87.5% compliance already in place. {service-name} is deprecated and can be skipped.
 
-## Architectural Changes Made to {service-name}
+## Architectural Changes Made to {example-service}
 
-During this work, {service-name} CDK was updated to model optional dependencies:
+During this work, {example-service} CDK was updated to model optional dependencies:
 
 **Before** (silent default):
 ```go
@@ -88,12 +88,12 @@ filesAPIURL := awsssm.StringParameter_ValueForStringParameter(stack, ...)
 filesAPIURL := jsii.String("")
 ```
 
-This change was made to both the {service-name} code AND documented in detailed comments so future engineers understand the decision.
+This change was made to both the {example-service} code AND documented in detailed comments so future engineers understand the decision.
 
 ## How Engineers Use These Standards
 
 ### During Development
-1. Before touching configuration code, read `{service-name}.md`
+1. Before touching configuration code, read `{example-service}.md`
 2. Ask: "Is this REQUIRED or OPTIONAL?"
 3. Document explicitly in code comments
 4. Never use silent defaults
@@ -111,7 +111,7 @@ This change was made to both the {service-name} code AND documented in detailed 
 5. Integrate and deploy
 
 ### During Architecture Discussions
-1. Reference `{service-name}.md` to align on patterns
+1. Reference `{example-service}.md` to align on patterns
 2. Refer to `SKILLS-INDEX.md` for compliance status
 3. Cite specific decisions (e.g., "REQUIRED fails loudly per standard")
 
@@ -121,7 +121,7 @@ All skills are in the agentic-engineers framework:
 
 ```
 ~/.agents/agentic-engineers/skills/
-├── {service-name}.md       ← The baseline standard
+├── {example-service}.md       ← The baseline standard
 ├── {service-name}.md          ← Audit checklist & tools
 ├── {service-name}.md    ← Delegation pattern
 └── SKILLS-INDEX.md              ← This index & compliance status
@@ -151,7 +151,7 @@ These skills integrate seamlessly with the orchestrator workflow:
 - Update standard if needed
 
 ### When Standards Change
-- Update `{service-name}.md`
+- Update `{example-service}.md`
 - Update all affected `.md` references
 - Notify all engineers of change
 - Run audit to identify non-compliant services
@@ -192,14 +192,14 @@ These skills integrate seamlessly with the orchestrator workflow:
 
 **No immediate changes**: This work establishes the standard and documents existing compliance. No service code needs to change (except {service-name} which is deprecated).
 
-**Future changes**: All configuration changes will follow this standard going forward, preventing the silent default anti-pattern that caused the original {service-name} failure.
+**Future changes**: All configuration changes will follow this standard going forward, preventing the silent default anti-pattern that caused the original {example-service} failure.
 
 ## Related Work
 
 This standard builds on and aligns with:
-- **{service-name}** skill: Makefile pattern (ENV_NAME, -include, export)
-- **{service-name}** skill: CDK patterns (3-tier stacks, SSM references)
-- **{service-name}** skill: Lambda handler patterns (startup validation)
+- **{example-service}** skill: Makefile pattern (ENV_NAME, -include, export)
+- **{example-service}** skill: CDK patterns (3-tier stacks, SSM references)
+- **{example-service}** skill: Lambda handler patterns (startup validation)
 - **{service-name}** skill: Local quality gates (make verify)
 
 ## Next Steps

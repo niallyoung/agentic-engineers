@@ -187,15 +187,15 @@ Problem: Solved — verified ownership before responding
 
 **Example (BAD):**
 ```
-{service-name} calls {service-name} (sync) → {service-name} calls {service-name} → {service-name} calls {service-name}
+{example-service} calls {service-name} (sync) → {service-name} calls {example-service} → {example-service} calls {example-service}
 Circular dependency → deadlock risk
 ```
 
 **Example (GOOD):**
 ```
-{service-name} → {service-name} (IAM SigV4 signed, 3-second timeout, fallback: cache)
-{service-name} → {service-name} (IAM SigV4 signed, async with circuit breaker)
-{service-name} → SNS (async, fire-and-forget)
+{example-service} → {service-name} (IAM SigV4 signed, 3-second timeout, fallback: cache)
+{service-name} → {example-service} (IAM SigV4 signed, async with circuit breaker)
+{example-service} → SNS (async, fire-and-forget)
 Problem: Solved — clear direction, resilience, no circles
 ```
 

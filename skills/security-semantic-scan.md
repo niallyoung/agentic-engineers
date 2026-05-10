@@ -19,9 +19,9 @@ that only appear at the intersection of components.
 ## Usage
 
 ```
-/security-semantic-scan service_path={workspace-root}/{service-name}
+/security-semantic-scan service_path=$WORKSPACE_ROOT/{example-service}
 /security-semantic-scan service_path={service-name} focus_areas=["auth","data_flow"]
-/security-semantic-scan service_path={service-name} focus_areas=["crypto"] verify_findings=true
+/security-semantic-scan service_path={example-service} focus_areas=["crypto"] verify_findings=true
 ```
 
 ## Input
@@ -36,7 +36,7 @@ that only appear at the intersection of components.
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "focus_areas": ["auth", "data_flow"],
   "findings": [
     {
@@ -249,7 +249,7 @@ func format_results(verified_findings, false_positives):
 
 ## ERS-Specific Focus Areas
 
-### {service-name} (most critical surface)
+### {example-service} (most critical surface)
 
 - **Auth**: Confirm scope assertion after JWT parse in each command handler. API Gateway authorizer validates signature; Lambda must additionally check `scope` claim matches the command's required privilege level.
 - **Data flow**: Trace request body fields → DynamoDB `ExpressionAttributeValues`. Confirm no direct string interpolation into filter expressions.
@@ -257,10 +257,10 @@ func format_results(verified_findings, false_positives):
 
 ```bash
 # Key files to trace
-find {workspace-root}/{service-name} -name "*.go" | xargs grep -l "Claims\|scope\|putItem\|PutItem"
+find $WORKSPACE_ROOT/{example-service} -name "*.go" | xargs grep -l "Claims\|scope\|putItem\|PutItem"
 ```
 
-### {service-name} (trust boundary)
+### {example-service} (trust boundary)
 
 - **Auth**: Verify callers are IAM-authenticated (SigV4). Confirm no public endpoint.
 - **Event validation**: Check that event kind is in the allowed range (8801-8899) before storing.
@@ -271,7 +271,7 @@ find {workspace-root}/{service-name} -name "*.go" | xargs grep -l "Claims\|scope
 - **Sender validation**: Verify SNS source topic ARN is checked before processing event payload.
 - **Idempotency bypass in replay**: Confirm `REPLAY_MODE=true` can only be set via Lambda env var (not request body).
 
-### {service-name} (Cognito bridge)
+### {example-service} (Cognito bridge)
 
 - **Privilege in event handler**: `UserCreated` triggers Cognito user creation. Confirm event payload fields (email, given_name, family_name) are length/format validated before passing to Cognito API.
 - **Side-effect replay guard**: ResendInvitation and ResetPassword handlers must be skipped during replay. Verify the guard is present and tested.
@@ -303,7 +303,7 @@ Escalation path:
 
 ## Success Criteria
 
-- Trace data flow from HTTP request body through to DynamoDB write in {service-name}
+- Trace data flow from HTTP request body through to DynamoDB write in {example-service}
 - Identify at least one real vulnerability pattern (e.g., missing scope check, unvalidated event field)
 - Filter false positives via adversarial verification (challenge + search for disproving evidence)
 - Never surface a finding without adversarial verification step completed

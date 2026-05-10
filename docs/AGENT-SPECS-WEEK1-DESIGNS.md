@@ -52,7 +52,7 @@ input:
   source: make quality-gate (or API trigger)
   provides:
     - repo_path: "/home/user/git/ers/{service}"
-    - service_name: "{service-name}" (etc)
+    - service_name: "{example-service}" (etc)
     - commit_sha: "abc123def456" (optional)
     - force_full_checks: false (skip fast-path if true)
     - budget_context: 
@@ -101,17 +101,17 @@ output:
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-quality-orchestrator-{service-name}
+task_id: 2026-05-05-quality-orchestrator-{example-service}
 timestamp: 2026-05-05T09:00:00Z
 role: Quality Gate Orchestrator
 model: claude-sonnet-4-6
 effort: high
 scope: >
-  Execute full quality gate for {service-name} service. Delegate to Security, Testing, 
+  Execute full quality gate for {example-service} service. Delegate to Security, Testing, 
   Metrics, and Healing agents in parallel. Aggregate results. Return PROCEED or 
   ESCALATE decision with audit trail suitable for CI/CD pipeline consumption.
 context:
-  - Service: {service-name} (Go/Lambda)
+  - Service: {example-service} (Go/Lambda)
   - Commit: abc123def456
   - Budget: 45.0% session available, trend stable
   - Previous metrics: 92/100 health score
@@ -140,7 +140,7 @@ success_criteria:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-quality-orchestrator-{service-name}
+task_id: 2026-05-05-quality-orchestrator-{example-service}
 timestamp: 2026-05-05T09:04:30Z
 status: complete
 final_decision: PROCEED
@@ -348,7 +348,7 @@ analysis_details:
 
 **Purpose**: Scans service configurations (Makefile, CDK, env files, CLAUDE.md) against ERS standards; identifies deviations and non-compliance; rates severity.
 
-**Current Issue**: Config validation is scattered across `{service-name}.md` + skill docs; no agent executes periodic audits; no structured report.
+**Current Issue**: Config validation is scattered across `{example-service}.md` + skill docs; no agent executes periodic audits; no structured report.
 
 ### Role & Model Assignment
 
@@ -364,7 +364,7 @@ analysis_details:
 input:
   source: Quality Gate Orchestrator (periodic) or manual trigger
   provides:
-    - service_path: "/home/user/git/ers/{service-name}"
+    - service_path: "/home/user/git/ers/{example-service}"
     - audit_scope: "full" | "makefile" | "cdk" | "env" | "claude-md"
     - strict_mode: false (report warnings; true = fail on any deviation)
 ```
@@ -373,7 +373,7 @@ input:
 
 ```yaml
 output:
-  service: "{service-name}"
+  service: "{example-service}"
   audit_timestamp: "2026-05-05T09:15:00Z"
   scope: "full"
   status: "PASS" | "WARN" | "FAIL"
@@ -412,22 +412,22 @@ output:
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-config-audit-{service-name}
+task_id: 2026-05-05-config-audit-{example-service}
 timestamp: 2026-05-05T09:15:00Z
 role: Config Audit Agent (Quality Engineer)
 model: claude-sonnet-4-6
 effort: medium
 scope: >
-  Audit {service-name} service configuration against ERS Configuration & Dependency 
+  Audit {example-service} service configuration against ERS Configuration & Dependency 
   Management Standard. Check Makefile, CDK, env files, CLAUDE.md for compliance. 
   Report deviations with severity and remediation guidance. Provide compliance score.
 context:
-  - Standard location: ~/.agents/agentic-engineers/skills/{service-name}.md
-  - Service path: /home/user/git/ers/{service-name}
+  - Standard location: ~/.agents/agentic-engineers/skills/{example-service}.md
+  - Service path: /home/user/git/ers/{example-service}
   - Previous audit: 2026-04-28 (full compliance)
   - Last deviation trend: stable
 plan:
-  1. Load ERS configuration standard from skills/{service-name}.md
+  1. Load ERS configuration standard from skills/{example-service}.md
   2. Read target service files (Makefile, cdk/main.go, env/*, CLAUDE.md)
   3. Check each rule from standard against actual files
   4. Rate severity (high/medium/low) for each deviation
@@ -449,10 +449,10 @@ success_criteria:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-config-audit-{service-name}
+task_id: 2026-05-05-config-audit-{example-service}
 timestamp: 2026-05-05T09:16:45Z
 status: complete
-service: {service-name}
+service: {example-service}
 audit_timestamp: 2026-05-05T09:16:45Z
 scope: full
 status: WARN
@@ -562,7 +562,7 @@ output:
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-config-enforce-{service-name}
+task_id: 2026-05-05-config-enforce-{example-service}
 timestamp: 2026-05-05T09:17:00Z
 role: Config Enforcement Agent (Senior Engineer)
 model: claude-sonnet-4-6
@@ -574,7 +574,7 @@ scope: >
 context:
   - Deviations from Config Audit (just completed)
   - Auto-approval threshold: confidence >= 0.8
-  - Service: {service-name}
+  - Service: {example-service}
   - Must pass: make lint, make test
 plan:
   1. Receive deviations from Config Audit HANDBACK
@@ -601,7 +601,7 @@ success_criteria:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-config-enforce-{service-name}
+task_id: 2026-05-05-config-enforce-{example-service}
 timestamp: 2026-05-05T09:18:30Z
 status: complete
 fixes_applied: 1
@@ -624,7 +624,7 @@ git_diff: |
   --- a/env/.env.prod
   +++ b/env/.env.prod
   @@ -2,3 +2,3 @@
-   APP_NAME=prod-{service-name}
+   APP_NAME=prod-{example-service}
   -# DNS_ROOT_DOMAIN=evolutionrollersports.com
   +DNS_ROOT_DOMAIN=evolutionrollersports.com
 validation_results:
@@ -674,7 +674,7 @@ recommendation: "Applied fix validated. Escalated fix requires human review for 
 input:
   source: Orchestrator (post-push) or CI system
   provides:
-    - repo: "{service-name}"
+    - repo: "{example-service}"
     - ref: "main" or commit sha
     - workflow_name: "main.yaml"
     - max_wait_minutes: 30
@@ -729,17 +729,17 @@ output:
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-cicd-monitor-{service-name}
+task_id: 2026-05-05-cicd-monitor-{example-service}
 timestamp: 2026-05-05T10:30:00Z
 role: CICD Monitor (Orchestrator)
 model: claude-haiku-4-5
 effort: medium
 scope: >
-  Monitor GitHub Actions quality-gate workflow for {service-name} commit abc123def456. 
+  Monitor GitHub Actions quality-gate workflow for {example-service} commit abc123def456. 
   Poll every 120 seconds. Report status when complete. Escalate if timeout (>30 min) 
   or failure detected. Provide job-by-job results and failure logs.
 context:
-  - Repo: {service-name}
+  - Repo: {example-service}
   - Commit: abc123def456
   - Workflow: main.yaml (lint → test → build → deploy-dev → deploy-prod)
   - Expected duration: 4-6 minutes typical
@@ -770,7 +770,7 @@ success_criteria:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-cicd-monitor-{service-name}
+task_id: 2026-05-05-cicd-monitor-{example-service}
 timestamp: 2026-05-05T10:35:15Z
 status: complete
 workflow_status: FAILURE
@@ -794,7 +794,7 @@ jobs_failed:
   - name: deploy-prod
     conclusion: failure
     failure_log_excerpt: |
-      Error: Unable to assume IAM role arn:aws:iam::666109694932:role/prod-{service-name}
+      Error: Unable to assume IAM role arn:aws:iam::666109694932:role/prod-{example-service}-cdk-role
       Reason: AccessDenied (MissingPermission for sts:AssumeRole on resource)
 escalation_path:
   agent: Lead Engineer
@@ -1016,7 +1016,7 @@ recommendation: "Phase 5 workspace cleaned. Ready for Phase 6. All changes revie
 input:
   source: Other agents (Quality Orchestrator, Config Audit, CICD Monitor, etc)
   provides:
-    - message: "Quality gate passed for {service-name}"
+    - message: "Quality gate passed for {example-service}"
     - notification_type: "success" | "warning" | "escalation" | "progress"
     - agent_type: "Quality Engineer" | "Orchestrator" | "Security" (affects voice personality)
     - urgency: "low" | "medium" | "high" (affects TTS speed/volume)
@@ -1027,7 +1027,7 @@ input:
 
 ```yaml
 output:
-  message: "Quality gate passed for {service-name}"
+  message: "Quality gate passed for {example-service}"
   notification_type: "success"
   audio_file: "/tmp/notification-abc123.m4a"
   duration_seconds: 3.2
@@ -1053,17 +1053,17 @@ output:
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-05-notify-quality-gate-pass-{service-name}
+task_id: 2026-05-05-notify-quality-gate-pass-{example-service}
 timestamp: 2026-05-05T09:35:00Z
 role: Voice Notify Agent (Engineer)
 model: claude-haiku-4-5
 effort: low
 scope: >
-  Deliver voice notification: "Quality gate passed for {service-name}. All checks 
+  Deliver voice notification: "Quality gate passed for {example-service}. All checks 
   green. Ready to merge." Use optimistic personality voice. Urgency: low.
 context:
   - Agent initiating: Quality Gate Orchestrator
-  - Message: "Quality gate passed for {service-name}. All checks green."
+  - Message: "Quality gate passed for {example-service}. All checks green."
   - Voice personality: optimistic (agent is Orchestrator/coordinator)
   - Notification type: success
   - Urgency: low (not time-critical)
@@ -1085,10 +1085,10 @@ success_criteria:
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-05-notify-quality-gate-pass-{service-name}
+task_id: 2026-05-05-notify-quality-gate-pass-{example-service}
 timestamp: 2026-05-05T09:35:03Z
 status: complete
-message: "Quality gate passed for {service-name}. All checks green."
+message: "Quality gate passed for {example-service}. All checks green."
 notification_type: success
 audio_file: /tmp/notification-abc123def456.m4a
 duration_seconds: 4.1
@@ -1097,7 +1097,7 @@ urgency_level: low
 delivery_method: system-tts
 status: delivered
 system_output: |
-  [Voice]: "Quality gate passed for {service-name}. All checks green."
+  [Voice]: "Quality gate passed for {example-service}. All checks green."
   (4.1 second audio playback)
 recommendation: "Notification delivered. User can proceed with merge."
 ---

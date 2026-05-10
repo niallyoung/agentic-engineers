@@ -140,10 +140,10 @@ role: Senior Engineer
 model: claude-sonnet-4-6
 effort: high
 scope: >
-  Refactor {service-name} DynamoDB event store to support new delta-token-based sync.
+  Refactor {example-service} DynamoDB event store to support new delta-token-based sync.
   Currently: Full scan on every sync. Proposed: Incremental scan with cursor.
 context:
-  - Service: {service-name} (Go/Lambda)
+  - Service: {example-service} (Go/Lambda)
   - Current code: lambda/store/store.go (500 lines, complex)
   - Problem: OneDrive sync is slow (full scan every 15 min)
   - Solution: Implement delta token cursor (like DynamoDB GSI + last_sync_cursor)

@@ -169,17 +169,17 @@ healer_report.json.escalation.escalation_rate <= 30
 ## Rollout Plan (if approved)
 
 ### Phase 1: Single Service Pilot (Week 1)
-- [ ] Enable Level 3 on **{service-name}** (lowest risk, critical path)
+- [ ] Enable Level 3 on **{example-service}** (lowest risk, critical path)
 - [ ] Monitor 24/7: auto-merge rate, incident response, escalation patterns
 - [ ] Daily metrics review (ops team)
 
 ### Phase 2: Expand to 3 Services (Week 2)
-- [ ] If Phase 1 metrics healthy: enable on {service-name}, {service-name}, {service-name}
+- [ ] If Phase 1 metrics healthy: enable on {service-name}, {example-service}, {example-service}
 - [ ] Expand monitoring to dashboard
 - [ ] Weekly review with team
 
 ### Phase 3: Full Rollout (Week 3+)
-- [ ] If all 5 services green: enable on {service-name}, {service-name}, {service-name}
+- [ ] If all 5 services green: enable on {example-service}, {service-name}, {service-name}
 - [ ] Establish ongoing monitoring + feedback loop
 - [ ] Monthly readiness reviews
 

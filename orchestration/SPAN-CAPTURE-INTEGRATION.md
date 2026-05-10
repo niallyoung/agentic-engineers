@@ -134,7 +134,7 @@ attributes:
   agent_role: "Engineer"
   
   # Resource
-  service_name: "{service-name}"
+  service_name: "{example-service}"
   service_commit_sha: "abc123def..."
   
   # Token Usage (from HANDBACK)

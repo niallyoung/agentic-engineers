@@ -18,7 +18,7 @@ Run through this checklist **before** emitting the HANDBACK block. Estimate time
 - [ ] **Tests added/updated** — For any new function or behavior, a test was added or updated. If no test was added, the reason is documented (e.g. "integration test handles this").
 - [ ] **No production hazards** — No `panic`, `log.Fatal`, hardcoded secrets (API keys, URLs, tokens), or commented-out code left behind. All error handling is explicit.
 
-**TDD Validation:** Take a completed Engineer task (e.g. {service-name} token timeout fix). Walk through Tier 1. Each item must map to something observable in the final code or test output. If not, the checklist is incomplete.
+**TDD Validation:** Take a completed Engineer task (e.g. {example-service} token timeout fix). Walk through Tier 1. Each item must map to something observable in the final code or test output. If not, the checklist is incomplete.
 
 ---
 
@@ -56,11 +56,11 @@ If you skip an item, fix it and re-check. Do not emit HANDBACK with unchecked it
 
 ## Example: Quality Check for Token Timeout Fix
 
-**Task:** {service-name} token expiry grace period (Engineer tier, Tier 1 only)
+**Task:** {example-service} token expiry grace period (Engineer tier, Tier 1 only)
 
 ```
 [✓] Lint + Test Pass
-    $ cd {service-name} && make verify
+    $ cd {example-service} && make verify
     ... [output shows all 48 tests passed, 0 errors] ...
 
 [✓] No new errors introduced

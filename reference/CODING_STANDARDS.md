@@ -4,7 +4,7 @@ Quality and consistency guidelines for all ERS services (Go, TypeScript, CDK).
 
 ---
 
-## Go Services ({service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name})
+## Go Services ({example-service}, {example-service}, {example-service}, {example-service}, {service-name}, {service-name}, {service-name})
 
 ### Code Organization
 

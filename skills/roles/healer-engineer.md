@@ -170,7 +170,7 @@ Every action logged to `healer-audit-log.jsonl`:
   "fix_applied": "Add DATABASE_URL to Lambda env",
   "file_modified": "cdk/stacks/command_stack.go",
   "pr_number": 125,
-  "pr_url": "https://github.com/{your-org}/{service-name}/pull/125",
+  "pr_url": "https://github.com/{your-org}/{example-service}/pull/125",
   "ci_result": "PASS",
   "auto_merge_eligible": true,
   "auto_merge_action": "MERGED",
@@ -227,7 +227,7 @@ quality-gate-orchestration
 When Healer is triggered:
 1. **Slack**: Notify team that auto-fix in progress
    ```
-   🤖 Healer fixing {service-name}: missing DATABASE_URL (PR #125)
+   🤖 Healer fixing {example-service}: missing DATABASE_URL (PR #125)
    ```
 
 2. **PR Comment**: Add audit info to PR
@@ -240,7 +240,7 @@ When Healer is triggered:
 
 3. **Escalation**: If Healer PR fails, notify Lead Engineer
    ```
-   ⚠️  Healer fix failed CI: {service-name} #125
+   ⚠️  Healer fix failed CI: {example-service} #125
    Reason: New test failed (unrelated to fix)
    Action needed: Review + decide next step
    ```

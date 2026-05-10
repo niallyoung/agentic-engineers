@@ -50,7 +50,7 @@ role: Engineer
 model: sonnet
 owner: [Engineer name or TBD]
 estimated_effort: 3 hours
-from_plan: {service-name}/TODO.md → spec-extract → Phase 1
+from_plan: {workspace-name}/TODO.md → spec-extract → Phase 1
 ---
 
 ### Task Description
@@ -330,7 +330,7 @@ A: No. Just track metrics (time, escalations, success criteria met). Full postmo
 **Task**: Phase 1 — Scan GitHub Actions patterns in all 8 services
 
 **Engineer execution**:
-1. Scans {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}, {service-name}
+1. Scans {example-service}, {example-service}, {example-service}, {service-name}, {service-name}, {example-service}, {service-name}, {service-name}
 2. Documents main.yaml and branch.yaml patterns in INVENTORY.md
 3. Notices {service-name} has a custom .github/workflows/deploy.yaml that doesn't fit the pattern
 4. Unsure: should custom workflows be documented as a deviation, or ignored?

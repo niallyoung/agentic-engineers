@@ -44,7 +44,7 @@ fail_on_below_threshold: bool = True
 **Output**:
 ```
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "tests_found": 42,
   "tests_passed": 40,
   "tests_failed": 2,
@@ -64,7 +64,7 @@ fail_on_below_threshold: bool = True
 - Return failed test list for diagnostic engine
 
 **Success Criteria**:
-- Discover >30 tests in {service-name}
+- Discover >30 tests in {example-service}
 - Report coverage >=80%
 - Identify failed tests correctly
 
@@ -206,7 +206,7 @@ verify_findings: bool = True  # adversarial verification
 **Output**:
 ```
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "findings": [
     {
       "severity": "HIGH",
@@ -253,7 +253,7 @@ fix_available_only: bool = False  # only report if fix available
 **Output**:
 ```
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "language": "go",
   "vulnerabilities": [
     {
@@ -282,7 +282,7 @@ fix_available_only: bool = False  # only report if fix available
 - Escalation: critical = block, major = warn, minor = log
 
 **Success Criteria**:
-- Find vulnerable dependencies in {service-name}
+- Find vulnerable dependencies in {example-service}
 - Report available fix versions
 - Gate decision: critical blocks deployment
 
@@ -350,7 +350,7 @@ requirement_id: str = None  # specific requirement or all
 **Output**:
 ```
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "requirements_total": 15,
   "requirements_covered": 13,
   "coverage_percent": 86.7,
@@ -378,7 +378,7 @@ requirement_id: str = None  # specific requirement or all
 - Report orphaned code (no requirement, no test) — flag for refactoring
 
 **Success Criteria**:
-- Map REQ-001 to 3+ tests in {service-name}
+- Map REQ-001 to 3+ tests in {example-service}
 - Calculate coverage % correctly
 - Identify unmapped requirements
 
@@ -398,7 +398,7 @@ fail_on_uncovered: bool = True
 **Output**:
 ```
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "requirements_total": 15,
   "requirements_tested": 14,
@@ -426,7 +426,7 @@ fail_on_uncovered: bool = True
 - Escalation: if fail_on_uncovered, block deployment
 
 **Success Criteria**:
-- Verify all requirements in {service-name} have tests
+- Verify all requirements in {example-service} have tests
 - Report any failing tests per requirement
 - Gate decision: proceed if all green
 
@@ -434,18 +434,18 @@ fail_on_uncovered: bool = True
 
 ## Skill 10: spec-compliance-verification.md
 
-**Purpose**: Verify code complies with extracted specs ({service-name}/specs/*)
+**Purpose**: Verify code complies with extracted specs ({workspace-name}/specs/*)
 
 **Input**:
 ```
 service_path: str
-spec_dir: str = "{service-name}/specs"
+spec_dir: str = "{workspace-name}/specs"
 ```
 
 **Output**:
 ```
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "specs_total": 8,
   "specs_compliant": 7,
   "compliance_percent": 87.5,
@@ -462,14 +462,14 @@ spec_dir: str = "{service-name}/specs"
 ```
 
 **Implementation Notes**:
-- Load extracted specs from {service-name}/specs/
+- Load extracted specs from {workspace-name}/specs/
 - For each spec, check service compliance
 - Compare actual implementation against spec requirements
 - Report compliance % and deviations
 - Integration: works with spec-audit skill
 
 **Success Criteria**:
-- Verify {service-name} follows Makefile pattern spec
+- Verify {example-service} follows Makefile pattern spec
 - Verify GitHub Actions spec compliance
 - Report deviations with severity
 
@@ -537,7 +537,7 @@ auto_merge_if_ci_passes: bool = True
   "file_modified": "cdk/stacks/command_stack.go",
   "fix_applied": "Added DATABASE_URL to Lambda env vars",
   "pr_created": true,
-  "pr_url": "https://github.com/{your-org}/{service-name}/pull/123",
+  "pr_url": "https://github.com/{your-org}/{example-service}/pull/123",
   "pr_status": "CI_RUNNING",
   "auto_merge_eligible": true,
   "notes": "Fix merged successfully after CI passed"

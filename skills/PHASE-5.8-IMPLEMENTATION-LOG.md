@@ -23,7 +23,7 @@ Integrate the 13 Phase 5 quality skills into the existing ERS SDLC workflow:
 ### ✅ COMPLETE
 
 **Files Created:**
-- `skills/quality-gate-orchestration.sh` (executable wrapper)
+- `$WORKSPACE_ROOT/agentic-engineers/skills/quality-gate-orchestration.sh` (executable wrapper)
   - Implements 4-phase orchestration workflow
   - Phase 1: Parallel quality checks (tests, security, compliance)
   - Phase 2: Initial gate decision
@@ -40,19 +40,19 @@ Integrate the 13 Phase 5 quality skills into the existing ERS SDLC workflow:
 
 **Testing:**
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 ENV_NAME=dev make quality-gate      # All phases pass ✅
 ENV_NAME=prod make quality-gate     # Stricter compliance, all pass ✅
 ```
 
 ---
 
-## Phase 5.8b: Makefile Integration ({service-name})
+## Phase 5.8b: Makefile Integration ({example-service})
 
 ### ✅ COMPLETE
 
 **Files Updated:**
-- `{workspace-root}/{service-name}/Makefile`
+- `$WORKSPACE_ROOT/{example-service}/Makefile`
   - Added `quality-gate` target (skip E2E, dev/staging)
   - Added `quality-gate-full` target (include E2E, prod)
 
@@ -81,12 +81,12 @@ Audit Log:            quality-gate-audit-86d57e93-c68.jsonl
 
 ---
 
-## Phase 5.8c: GitHub Actions Integration ({service-name})
+## Phase 5.8c: GitHub Actions Integration ({example-service})
 
 ### ✅ COMPLETE
 
 **Files Updated:**
-- `{workspace-root}/{service-name}/.github/workflows/main.yaml`
+- `$WORKSPACE_ROOT/{example-service}/.github/workflows/main.yaml`
   - Added `quality-gate-prod` job (new)
   - Updated `deploy-prod` to depend on `quality-gate-prod`
   - Quality gates run after dev deployment, before prod
@@ -113,7 +113,7 @@ deploy-prod (only if quality gates pass)
 
 ---
 
-## Phase 5.8d: Local Validation on {service-name}
+## Phase 5.8d: Local Validation on {example-service}
 
 ### ✅ COMPLETE
 
@@ -193,8 +193,8 @@ $ ENV_NAME=prod make quality-gate
 - [x] issue-diagnostic-engine.md with confidence scoring
 
 ### Makefile Integration
-- [x] Added quality-gate target to {service-name} Makefile
-- [x] Added quality-gate-full target to {service-name} Makefile
+- [x] Added quality-gate target to {example-service} Makefile
+- [x] Added quality-gate-full target to {example-service} Makefile
 - [x] Targets execute successfully locally
 - [ ] Apply to all 8 ERS services
 
@@ -232,13 +232,13 @@ agentic-engineers/skills/
 
 ### Makefiles
 ```
-{service-name}/
+{example-service}/
 ├── Makefile (+ 10 lines: quality-gate, quality-gate-full)
 ```
 
 ### GitHub Actions
 ```
-{service-name}/
+{example-service}/
 ├── .github/workflows/main.yaml
 │   ├── Added quality-gate-prod job (35 lines)
 │   └── Updated deploy-prod dependency
@@ -319,7 +319,7 @@ Quality Gate Total: ~1m 45s
 - `deploy-prod` (existing) → Deploy to prod (only if quality gates pass)
 
 ### Pre-Push Hook (Optional)
-- Could add to `{service-name}/githooks/pre-push`
+- Could add to `{workspace-name}/githooks/pre-push`
 - Calls `make quality-gate` before allowing push
 - Blocks push if quality gates fail (override with `--no-verify`)
 
@@ -328,7 +328,7 @@ Quality Gate Total: ~1m 45s
 ## Success Metrics
 
 ✅ **Phase 5.8 Complete When:**
-- {service-name} quality gates pass locally (dev + prod)
+- {example-service} quality gates pass locally (dev + prod)
 - Quality gate script executes in <2 min (skip E2E)
 - GitHub Actions quality-gate-prod job passes
 - Audit logs generated correctly
@@ -342,7 +342,7 @@ Quality Gate Total: ~1m 45s
 ## Commit Message
 
 ```
-feat(phase-5.8): Quality gate orchestration integration for {service-name}
+feat(phase-5.8): Quality gate orchestration integration for {example-service}
 
 - Add quality-gate-orchestration.sh wrapper (4-phase workflow)
 - Integrate quality-gate + quality-gate-full targets in Makefile
@@ -351,7 +351,7 @@ feat(phase-5.8): Quality gate orchestration integration for {service-name}
 - Quality gates now block prod deployment until all checks pass
 
 Phase 5.8a: ✅ Quality gate shell implementation
-Phase 5.8b: ✅ Makefile targets ({service-name} baseline)
+Phase 5.8b: ✅ Makefile targets ({example-service} baseline)
 Phase 5.8c: ✅ GitHub Actions integration
 Phase 5.8d: ✅ Local validation complete
 Phase 5.8e: ✅ Documentation complete
@@ -365,6 +365,6 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 ---
 
 **Status:** Phase 5.8a-e COMPLETE, Phase 5.8f IN PROGRESS  
-**Baseline Service:** {service-name}  
+**Baseline Service:** {example-service}  
 **Execution Time:** ~2 hours (Phase 5.8a-e)  
 **Next:** Phase 5.8f testing, then Phase 5.9 rollout to all services

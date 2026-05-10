@@ -93,7 +93,7 @@ You pushed, but quality gates failed in GitHub Actions (quality-gate-prod job):
 
 ```bash
 # 1. Check GitHub Actions logs:
-#    https://github.com/{your-org}/{service-name}/actions
+#    https://github.com/{your-org}/{example-service}/actions
 
 # 2. Find the quality-gate-prod job output
 #    Look for Phase 1, Phase 2, Phase 4 results
@@ -147,7 +147,7 @@ High-risk issues found requiring human judgment.
 ### "make quality-gate: command not found"
 Quality gate script not in PATH. Make sure you're in the service directory:
 ```bash
-cd {workspace-root}/{service-name}
+cd $WORKSPACE_ROOT/{example-service}
 make quality-gate  # Should work now
 ```
 

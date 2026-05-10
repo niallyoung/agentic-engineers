@@ -14,9 +14,9 @@ suggests a fix, and decides whether the issue is eligible for automated healing 
 ## Usage
 
 ```
-/issue-diagnostic-engine failure_log={...} service_path={service-name} failure_type=config_missing
+/issue-diagnostic-engine failure_log={...} service_path={example-service} failure_type=config_missing
 /issue-diagnostic-engine failure_log={...} service_path={service-name} failure_type=test_failure
-/issue-diagnostic-engine failure_log={...} service_path={service-name} failure_type=security_finding
+/issue-diagnostic-engine failure_log={...} service_path={example-service} failure_type=security_finding
 ```
 
 ## Input
@@ -44,7 +44,7 @@ suggests a fix, and decides whether the issue is eligible for automated healing 
 {
   "error": "environment variable DATABASE_URL not found",
   "context": "Lambda startup",
-  "stack": "{service-name}"
+  "stack": "{example-service}"
 }
 ```
 
@@ -394,7 +394,7 @@ func generate_fix_suggestion(root_cause, error_text, service_path):
     "error_output": "environment variable SNS_TOPIC_ARN not found",
     "file": "handlers/command_test.go:88"
   },
-  "service_path": "{service-name}",
+  "service_path": "{example-service}",
   "failure_type": "config_missing"
 }
 ```
@@ -425,7 +425,7 @@ func generate_fix_suggestion(root_cause, error_text, service_path):
     "error_output": "expected status 200, got 403 — admin role not recognized",
     "file": "handlers/calendar_test.go:201"
   },
-  "service_path": "{service-name}",
+  "service_path": "{example-service}",
   "failure_type": "test_failure"
 }
 ```
@@ -457,7 +457,7 @@ func generate_fix_suggestion(root_cause, error_text, service_path):
     "file": "lambda/command/main.go:142",
     "tool": "security-semantic-scan"
   },
-  "service_path": "{service-name}",
+  "service_path": "{example-service}",
   "failure_type": "security_finding"
 }
 ```

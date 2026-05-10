@@ -62,7 +62,7 @@ Strategic guide for integrating all components (Phase 2A through 3+) into a cohe
 ### Data Flow (Complete Cycle)
 
 ```
-USER TASK (e.g., "Add JWT validation in {service-name}")
+USER TASK (e.g., "Add JWT validation in {example-service}")
   ↓
 Orchestrator.analyze(task)
   → Complexity: medium, Domain: auth/Go, Est. tokens: 15-20K

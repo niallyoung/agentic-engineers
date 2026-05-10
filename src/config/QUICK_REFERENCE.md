@@ -30,7 +30,7 @@ task_id: 2026-04-24-redis-caching
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Add Redis caching to {service-name}
+scope: Add Redis caching to {example-service}
 context:
   - File: lambda/query/main.go:45
   - Problem: Cache misses on every query

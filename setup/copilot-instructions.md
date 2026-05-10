@@ -205,7 +205,7 @@ Use voice notifications at milestones. Match the character to your current activ
 
 **Rules:**
 1. Error/Success always win — failures → Gloom, milestones → Cheer
-2. Activity trumps default — reviewing in {service-name} → Inspector
+2. Activity trumps default — reviewing in {example-service} → Inspector
 3. Planning → Architect, Exploring → Scout (even within other skills)
 4. Keep messages <15 words, natural phrasing
 5. First call in session: lead with character ("Builder here. Starting caching fix.")
@@ -226,7 +226,7 @@ task_id: 2026-04-24-redis-caching
 role: Engineer
 model: claude-haiku-4-5
 effort: high
-scope: Add Redis caching to {service-name}
+scope: Add Redis caching to {example-service}
 context:
   - File: lambda/query/main.go:45
   - Problem: Cache misses on every query

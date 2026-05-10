@@ -126,7 +126,7 @@ Quality Orchestrator receives: service_path, deployment_target, skip_e2e
 {
   "timestamp": "2026-04-28T15:21:00Z",
   "session_id": "abc123def456",
-  "service": "{service-name}",
+  "service": "{example-service}",
   "deployment_target": "prod",
   "phase": "security",
   "agent_role": "SecurityEngineer",
@@ -141,7 +141,7 @@ Quality Orchestrator receives: service_path, deployment_target, skip_e2e
 ```
 
 **CloudWatch Logs Group**: `/ers/quality-gates/agent-orchestration`
-**Log Streams**: `{service}-{environment}` (e.g., `{service-name}`)
+**Log Streams**: `{service}-{environment}` (e.g., `{example-service}-prod`)
 
 ### CloudWatch Metrics (Pushed by Quality Orchestrator)
 
@@ -212,7 +212,7 @@ Quality Orchestrator receives: service_path, deployment_target, skip_e2e
 **Security Agent logs**:
 ```yaml
 handoff_type: HANDBACK
-task_id: 2026-04-28-security-check-{service-name}
+task_id: 2026-04-28-security-check-{example-service}-prod
 status: complete
 deliverables:
   - Security scan results
@@ -230,7 +230,7 @@ gate_decision: "WARN"
 **Testing Agent logs**:
 ```yaml
 handoff_type: HANDBACK
-task_id: 2026-04-28-testing-check-{service-name}
+task_id: 2026-04-28-testing-check-{example-service}-prod
 status: complete
 deliverables:
   - Test results
@@ -248,17 +248,17 @@ gate_decision: "PASS"
 ```bash
 aws logs put-log-events \
   --log-group-name /ers/quality-gates/agent-orchestration \
-  --log-stream-name {service-name} \
+  --log-stream-name {example-service}-prod \
   --log-events "timestamp=$(date +%s000),message={handback_json}"
 ```
 
 **All handoff blocks are stored locally in audit directory** (git-ignored, for local analysis):
 ```
 quality-audit-{SESSION_ID}/
-├── 2026-04-28-15-21-00-security-{service-name}.jsonl
-├── 2026-04-28-15-22-00-testing-{service-name}.jsonl
-├── 2026-04-28-15-23-00-metrics-{service-name}.jsonl
-└── 2026-04-28-15-24-00-healer-{service-name}.jsonl
+├── 2026-04-28-15-21-00-security-{example-service}-prod.jsonl
+├── 2026-04-28-15-22-00-testing-{example-service}-prod.jsonl
+├── 2026-04-28-15-23-00-metrics-{example-service}-prod.jsonl
+└── 2026-04-28-15-24-00-healer-{example-service}-prod.jsonl
 ```
 
 ---

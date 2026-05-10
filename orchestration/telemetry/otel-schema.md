@@ -71,7 +71,7 @@ attributes:
     # Role from AGENTS.md (Security Engineer, Quality Engineer, etc.)
   
   # Resource (Service Being Checked)
-  service_name: "{service-name}"
+  service_name: "{example-service}"
     # ERS service being quality-checked
   
   service_commit_sha: "abc123def..."
@@ -229,7 +229,7 @@ trace_id: abc123...
 
 root_span: "quality-gate-commit"
 ├─ span_id: quality-gate-root
-├─ service: {service-name}
+├─ service: {example-service}
 ├─ start: 09:00:00
 │
 ├─ [Parallel Spans]
@@ -291,8 +291,8 @@ artifacts/2026-04-28/
 ├─ SPAN-2026-04-28T09:00:22Z-agent-metrics.yaml
 ├─ SPAN-2026-04-28T09:00:25Z-agent-healing.yaml
 ├─ SPAN-2026-04-28T09:04:30Z-decision-aggregation.yaml
-├─ DELEGATE-2026-04-28T09:00:00Z-commit-{service-name}.yaml
-└─ HANDBACK-2026-04-28T09:00:00Z-commit-{service-name}.yaml
+├─ DELEGATE-2026-04-28T09:00:00Z-commit-{example-service}.yaml
+└─ HANDBACK-2026-04-28T09:00:00Z-commit-{example-service}.yaml
 ```
 
 ---
@@ -309,7 +309,7 @@ When migrating to CloudWatch Logs:
     "trace_id": "abc123def456ghi789jkl",
     "span_id": "security-agent-001",
     "parent_span_id": "orchestrator-quality-gate",
-    "service_name": "{service-name}",
+    "service_name": "{example-service}",
     "agent_type": "security",
     "agent_model": "claude-opus-4-7",
     "input_tokens": 1245,

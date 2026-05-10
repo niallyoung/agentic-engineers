@@ -218,18 +218,18 @@ In a single @yolo execution session, completed:
 ## Key Files Updated/Created
 
 ### Specification
-- ✅ `docs/SPEC.md` (v1.1, updated)
+- ✅ `$WORKSPACE_ROOT/agentic-engineers/docs/SPEC.md` (v1.1, updated)
 
 ### Orchestration
-- ✅ `orchestration/PHASE-6-IMPLEMENTATION-ROADMAP.md` (new, 450+ lines)
-- ✅ `orchestration/PHASE-6-TASKS.md` (new, 400+ lines)
-- ✅ `orchestration/handlers/quality-gate-feedback-handler.md` (updated: 4→5 sub-agents)
+- ✅ `$WORKSPACE_ROOT/agentic-engineers/orchestration/PHASE-6-IMPLEMENTATION-ROADMAP.md` (new, 450+ lines)
+- ✅ `$WORKSPACE_ROOT/agentic-engineers/orchestration/PHASE-6-TASKS.md` (new, 400+ lines)
+- ✅ `$WORKSPACE_ROOT/agentic-engineers/orchestration/handlers/quality-gate-feedback-handler.md` (updated: 4→5 sub-agents)
 
 ### Artifacts
-- ✅ `artifacts/2026-04-29/` (consolidated approval + validation)
+- ✅ `$WORKSPACE_ROOT/agentic-engineers/artifacts/2026-04-29/` (consolidated approval + validation)
 
 ### Session Documentation
-- ✅ `SESSION-2026-04-29-SPEC-AND-PHASE6-COMPLETION.md` (this file)
+- ✅ `$WORKSPACE_ROOT/agentic-engineers/SESSION-2026-04-29-SPEC-AND-PHASE6-COMPLETION.md` (this file)
 
 ---
 

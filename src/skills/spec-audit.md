@@ -19,10 +19,10 @@ Validates services against 8 canonical ERS architectural patterns. Reports compl
 /spec-audit .
 
 # Audit specific service
-/spec-audit /home/user/git/ers/{service-name}
+/spec-audit /home/user/git/ers/{example-service}
 
 # With options
-/spec-audit /home/user/git/ers/{service-name} --fail-on-critical --json
+/spec-audit /home/user/git/ers/{example-service} --fail-on-critical --json
 ```
 
 ## Patterns Validated (8 Total)
@@ -71,7 +71,7 @@ Validates services against 8 canonical ERS architectural patterns. Reports compl
 ### Console Output
 
 ```
-Auditing: {service-name}
+Auditing: {example-service}
 
   P-001 Makefile 3-Phase                    ✓ COMPLIANT (100%)
   P-002 Environment Sourcing                ✓ COMPLIANT (100%)
@@ -83,7 +83,7 @@ Auditing: {service-name}
   P-008 Security Patterns                   ✓ COMPLIANT (100%)
 
 Service Compliance: 7.5/8 patterns (93.75%)
-Audit Report: ./audit/{service-name}.md
+Audit Report: ./audit/{example-service}-audit.md
 
 Status: 0 critical, 1 minor deviations
 ```
@@ -91,10 +91,10 @@ Status: 0 critical, 1 minor deviations
 ### Audit Report (Markdown)
 
 ```markdown
-# Audit Report: {service-name}
+# Audit Report: {example-service}
 
 **Generated**: 2026-04-27
-**Service**: {service-name}
+**Service**: {example-service}
 **Overall Compliance**: 7.5/8 patterns
 
 ## Pattern-by-Pattern Results
@@ -116,7 +116,7 @@ Status: 0 critical, 1 minor deviations
 
 ```json
 {
-  "service": "{service-name}",
+  "service": "{example-service}",
   "overall_compliance": {
     "patterns_compliant": 7,
     "patterns_total": 8,
@@ -176,8 +176,8 @@ Service Overall:
 
 Use for manual audits and reporting:
 ```bash
-/spec-audit /home/user/git/ers/{service-name}
-cat ./audit/{service-name}.md  # Review findings
+/spec-audit /home/user/git/ers/{example-service}
+cat ./audit/{example-service}-audit.md  # Review findings
 ```
 
 ### Pre-push Hook (Future)
@@ -199,17 +199,17 @@ cat ./audit/{service-name}.md  # Review findings
 ### Audit Single Service
 
 ```bash
-cd /home/user/git/ers/{service-name}
+cd /home/user/git/ers/{example-service}
 /spec-audit .
-# Outputs audit report to ./audit/{service-name}.md
+# Outputs audit report to ./audit/{example-service}-audit.md
 ```
 
 ### Batch Audit All Services
 
 ```bash
-for service in {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name} {service-name}; do
+for service in {example-service} {example-service} {example-service} {service-name} {service-name} {example-service} {service-name} {service-name}; do
   echo "Auditing $service..."
-  /spec-audit /home/user/git/ers/$service --output-dir /home/user/git/ers/{service-name}/audits
+  /spec-audit /home/user/git/ers/$service --output-dir /home/user/git/ers/{workspace-name}/audits
 done
 ```
 
@@ -295,4 +295,4 @@ These are design trade-offs for speed and safety. Phase 4 validation testing wil
 
 - `SPEC-AUDIT-DESIGN.md` — Full architecture design document
 - `PATTERN-HEURISTICS.md` — Canonical pattern definitions (8 patterns)
-- `{service-name}/specs/INDEX.md` — Phase 2 discovery output (58 spec files)
+- `{workspace-name}/specs/INDEX.md` — Phase 2 discovery output (58 spec files)

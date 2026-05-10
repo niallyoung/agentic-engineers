@@ -24,7 +24,7 @@ status: FINDINGS DOCUMENTED
 
 ### ❌ Non-Compliant: Git Hooks (Local Quality Gates)
 
-**Files**: `{workspace-root}/{service-name}/githooks/pre-commit`, `pre-push`, `commit-msg`
+**Files**: `$WORKSPACE_ROOT/{workspace-name}/githooks/pre-commit`, `pre-push`, `commit-msg`
 
 **Current**: Shell scripts that directly run `make lint`, `make test`, `make app.e2e`
 

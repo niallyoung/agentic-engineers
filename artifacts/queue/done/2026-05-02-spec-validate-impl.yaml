@@ -9,7 +9,7 @@ scope: |
   Identify any drift: implementation doesn't match spec.
   Output: spec-validation-report.md with findings and recommendations.
 context:
-  - Repo: 
+  - Repo: $REPO_ROOT
   - Spec: docs/SPEC.md (being updated by concurrent task)
   - Implementation files: orchestration/AGENTS.md, orchestration/SKILLS.md, orchestration/QUEUE-PROTOCOL.md
   - Phase 5.10: Span capture + indexing recently added

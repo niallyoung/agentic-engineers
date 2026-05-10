@@ -307,14 +307,14 @@ grep -r "MODEL_ASSIGNMENTS\|QUICK_REFERENCE" src/ tests/ --include="*.py"
 
 **Critical Finding:**
 ```
-orchestration/  (784K, untracked)
+$REPO_ROOT/orchestration/  (784K, untracked)
 ├── activators/
 ├── agents/
 ├── handlers/
 ├── telemetry/
 └── tools/
 
-src/orchestration/  (tracked)
+$REPO_ROOT/src/orchestration/  (tracked)
 ├── __init__.py
 ├── agents/
 ├── orchestration/

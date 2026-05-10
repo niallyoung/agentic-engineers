@@ -183,7 +183,7 @@ Updated resources:
 
 ### Orchestrator Agent
 ```bash
-/quality-gate-orchestration {workspace-root}/{service-name} \
+/quality-gate-orchestration $WORKSPACE_ROOT/{example-service} \
   --deployment-target prod \
   --validate-migrations \
   --json
@@ -234,7 +234,7 @@ Updated resources:
 ## Next Steps (Phase 5.8+)
 
 ### Immediate (days 2-3)
-1. Deploy to {service-name} (baseline service)
+1. Deploy to {example-service} (baseline service)
 2. Run full quality gate workflow
 3. Validate self-healing on 1 intentional issue
 4. Verify Healer auto-fixes and auto-merges
@@ -280,7 +280,7 @@ skills/
 SKILLS-INDEX.md (updated with all 13 skills)
 ```
 
-**All committed to**: ``
+**All committed to**: `$WORKSPACE_ROOT/agentic-engineers`
 
 ---
 

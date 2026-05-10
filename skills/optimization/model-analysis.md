@@ -32,7 +32,7 @@ Quality Engineer provides after every task completion:
   "test_coverage": "87%",
   "escalations": 0,
   "task_type": "feature",
-  "repo": "{service-name}",
+  "repo": "{example-service}",
   "complexity_estimate": "medium",
   "quality_feedback": "Clean implementation, good test coverage, follows patterns"
 }
@@ -73,7 +73,7 @@ Update model assignment table with:
 {
   "task_signature": {
     "task_type": "feature",
-    "repo": "{service-name}",
+    "repo": "{example-service}",
     "complexity": "medium",
     "language": "go"
   },
