@@ -4,7 +4,7 @@
 set -euo pipefail
 
 WORKSPACE_DIR="/home/user/git/ers"
-REPORT_DIR="/home/user/git/ers/{service-name}/agentic-agents/data/reports"
+REPORT_DIR="/home/user/git/ers/{workspace-name}/agentic-agents/data/reports"
 TODAY=$(date +%Y-%m-%d)
 REPORT_FILE="$REPORT_DIR/daily-summary-$TODAY.html"
 
