@@ -354,8 +354,8 @@ detect_p005_go_modules() {
 
   # Extract module path
   local module_path=$(grep "^module" "$go_mod" | awk '{print $2}' || echo "")
-  if [[ $module_path == "github.com/{your-org}"* ]] || [[ $module_path == "github.com/{your-org}"* ]]; then
-    evidence="$evidence|Module path follows ers-* naming convention"
+  if [[ $module_path == "github.com/{your-org}"* ]]; then
+    evidence="$evidence|Module path follows organization naming convention"
   fi
 
   # Check Go version
