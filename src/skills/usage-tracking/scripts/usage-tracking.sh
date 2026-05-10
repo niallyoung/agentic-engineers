@@ -38,15 +38,15 @@ case "${1:-help}" in
 Add to crontab (crontab -e) to capture usage every 30 minutes:
 
   # Capture token usage every 30 minutes
-  */30 * * * * /home/user/git/ers/{service-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh
+  */30 * * * * /home/user/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh
 
 Or every hour:
 
   # Capture token usage every hour
-  0 * * * * /home/user/git/ers/{service-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh
+  0 * * * * /home/user/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh
 
 Install with:
-  (crontab -l 2>/dev/null; echo "*/30 * * * * /home/user/git/ers/{service-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh") | crontab -
+  (crontab -l 2>/dev/null; echo "*/30 * * * * /home/user/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh") | crontab -
 
 View installed cron jobs:
   crontab -l
