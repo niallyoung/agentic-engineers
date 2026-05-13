@@ -775,3 +775,69 @@ canonical metrics YAML schema with all field descriptions and example values.
 | Quality thresholds | Quality Engineer |
 | Security concerns | Security Engineer |
 | Implementation bugs | Senior Engineer |
+
+---
+
+## Appendix G: Quick Reference
+
+> **One-page cheat sheet for daily use.**
+
+### DELEGATE Required Fields (9 core)
+`task_id` · `role` · `model` · `effort` · `estimated_hours` · `scope` · `success_criteria` · `plan` · `context`
+
+**task_id format:** `YYYY-MM-DD-kebab-case`
+
+**Effort bands:**
+| Level | Hours | Min Role |
+|-------|-------|----------|
+| `low` | 1–4h | engineer |
+| `medium` | 5–16h | engineer |
+| `high` | 17–48h | senior_engineer |
+| `max` | 49–120h | lead_engineer |
+| `epic` | 121h+ | principal_engineer |
+
+### HANDBACK Required Fields (12)
+`task_id` · `handoff_type` · `status` · `deliverables` · `tests` · `quality_score` · `effort_actual` · `tokens_in` · `tokens_out` · `duration_minutes` · `notes` · `agent`
+
+**Status values:** `complete` · `failed` · `partial` · `blocked`
+
+### Quality Routing
+| Score | Action | Who |
+|-------|--------|-----|
+| 90–100 | Merge immediately ✅ | Automated |
+| 80–89 | Merge with notes ✅ | Automated |
+| 70–79 | Lead Engineer review ⚠️ | Lead Engineer |
+| 60–69 | Auto-rework 🔄 | Decision Engine |
+| <60 | Escalate 🚨 | Principal Engineer |
+
+### Retry Rules
+```
+MAX_RETRIES = 2  (hard cap)
+Retry 1: {original-id}-retry-1
+Retry 2: {original-id}-retry-2
+Escalated: {original-id}-escalated
+```
+
+### Red Flags (pre-commit blocks)
+- task_id invalid/reused in same session
+- scope < 15 words or vague
+- success_criteria aspirational ("good code", "works well")
+- secrets in DELEGATE text
+- effort:low with >8 plan steps
+- effort:high/max with role:engineer
+
+### Scoring Formula
+```
+composite = (layer1 × 0.40) + (layer2 × 0.35) + (layer3 × 0.25)
+```
+
+### Role Quick Map
+| Role | Model | Use For |
+|------|-------|---------|
+| engineer | Haiku | Well-planned, well-scoped tasks |
+| senior_engineer | Sonnet | Complex coding without pre-written plan |
+| lead_engineer | Sonnet | Code review; gray-zone decisions |
+| quality_engineer | Sonnet | Post-implementation validation |
+| principal_engineer | Opus | Cross-service architecture; escalations |
+| security_engineer | Opus | Security scope only |
+| model_engineer | Sonnet | Metrics analysis; routing optimization |

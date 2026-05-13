@@ -371,3 +371,148 @@ Orchestrator implementation = AGENTS.md + SKILLS.md. See those docs for:
 - Escalation rules (AGENTS.md > Constraints)
 - Execution details (SKILLS.md > Orchestrator Skills)
 
+
+---
+
+## Queue Enforcement Rules
+
+> Source: queue-enforcement-rules.md (consolidated here)
+
+### Core Principle: ORCHESTRATOR-FIRST
+
+> All agent execution MUST flow through the Orchestrator's queue. No exceptions.
+
+### Rule 1: Queue Context Required
+
+`agent.execute()` can ONLY be called within active queue context.
+
+```python
+# ❌ Violates Rule 1 — No queue context
+agent = create_agent("engineer")
+result = agent.execute(work_item)  # QueueEnforcementError
+
+# ✅ Compliant — Queue context active
+with QueueContextManager():
+    agent = create_agent("engineer")
+    result = agent.execute(work_item)  # OK
+```
+
+### Rule 2: Explicit Context Marking in Tests
+
+Test code MUST explicitly opt into queue context via `QueueContextManager`. Makes testing intent explicit; prevents accidental bypasses.
+
+```python
+# ✅ Compliant
+def test_engineer_agent():
+    with QueueContextManager():
+        engineer = create_agent("engineer")
+        result = engineer.execute(test_item)
+        assert result.success
+```
+
+### Rule 3: Non-Execute Methods Always Allowed
+
+Non-execute methods (`status()`, `get_capabilities()`, etc.) can be called regardless of queue context.
+
+### Violation Handling
+
+| Violation | Error | Resolution |
+|-----------|-------|-----------|
+| execute() outside context | `QueueEnforcementError` | Wrap with `QueueContextManager()` |
+| Test without context | `QueueEnforcementError` | Add explicit context to test |
+| Direct instantiation bypass | `QueueEnforcementError` | Use `create_agent()` factory only |
+
+---
+
+## Queue Enforcement Migration Guide
+
+> Source: queue-enforcement-migration-guide.md (consolidated here)
+
+### 3-Step Fix for QueueEnforcementError
+
+**Step 1:** Add import
+```python
+from orchestration.agents.queue_enforcement_middleware import QueueContextManager
+```
+
+**Step 2:** Wrap execution
+```python
+# Before
+agent = create_agent("engineer")
+result = agent.execute(work_item)
+
+# After
+with QueueContextManager():
+    agent = create_agent("engineer")
+    result = agent.execute(work_item)
+```
+
+**Step 3:** Verify
+```bash
+python3 -m pytest orchestration/agents/test_queue_enforcement.py -v
+```
+
+### Test Harness Pattern
+
+```python
+from orchestration.agents.queue_enforcement_middleware import QueueContextManager
+
+class TestEngineerAgent:
+    def setup_method(self):
+        self.ctx = QueueContextManager()
+        self.ctx.__enter__()
+
+    def teardown_method(self):
+        self.ctx.__exit__(None, None, None)
+
+    def test_execution(self):
+        engineer = create_agent("engineer")
+        result = engineer.execute(test_item)
+        assert result.success
+```
+
+### Orchestrator Integration Pattern
+
+```python
+with QueueContextManager():
+    while orchestrator.has_pending_tasks():
+        task = orchestrator.dequeue()
+        agent = create_agent(task.role)
+        handback = agent.execute(task.work_item)
+        orchestrator.process_handback(handback)
+```
+
+---
+
+## Queue Enforcement Implementation Reference
+
+> Source: queue-enforcement-implementation-guide.md (consolidated here)
+> See: `orchestration/agents/queue_enforcement_middleware.py` for the implementation.
+
+### Key Classes
+
+| Class | Purpose |
+|-------|---------|
+| `QueueContext` | Thread-local singleton tracking active context state |
+| `QueueContextManager` | Context manager: activates/deactivates queue context |
+| `QueueEnforcementError` | Exception raised when execute() called outside context |
+| `QueueEnforcingProxy` | Transparent proxy wrapping agents to enforce queue rules |
+
+### create_agent() Factory (implementations.py)
+
+The factory wraps every returned agent in `QueueEnforcingProxy`:
+
+```python
+def create_agent(role):
+    if role not in AGENTS:
+        raise ValueError(f"Unknown role: {role}")
+    agent = AGENTS[role]()
+    return QueueEnforcingProxy(agent)   # Enforcement wrapper
+```
+
+### Validation
+
+```bash
+python3 -m pytest orchestration/agents/test_queue_enforcement.py -v
+python3 -m pytest orchestration/agents/test_queue_state_transitions.py -v
+```
