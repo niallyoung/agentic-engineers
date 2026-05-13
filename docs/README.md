@@ -82,7 +82,7 @@ Welcome to the agentic-engineers documentation directory. This guide explains ho
 - **Quality gates:** QUALITY.md, quality-gate-*.md, DELEGATE-HANDBACK-QUALITY-GATES.md
 - **Skills & automation:** SKILLS.md, TOKEN-USAGE-TRACKING.md
 - **Deployment & operations:** SYSTEM.md, INSTALL.md, MSMTP-SETUP.md
-- **Model selection:** MODEL-SELECTION-STRATEGY.md, model-*.md
+- **Model selection:** [docs/architecture/model-optimization.md](architecture/model-optimization.md)
 - **Testing & TDD:** TDD-ROADMAP.md, QUALITY-GATE-TEST-FRAMEWORK.md
 
 ## Documentation Standards
