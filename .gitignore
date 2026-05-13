@@ -1,4 +1,6 @@
-# Python
+# ============================================================================
+# PYTHON
+# ============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,8 +24,11 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# IDEs
+# ============================================================================
+# IDE AND EDITOR
+# ============================================================================
 .vscode/
 .idea/
 *.swp
@@ -31,47 +36,46 @@ wheels/
 *~
 .DS_Store
 
-# Testing
+# ============================================================================
+# TESTING
+# ============================================================================
 .coverage
 .pytest_cache/
 htmlcov/
+.tox/
 
-# Temp files
-*.tmp
-.claude
-temp/
-
-# Logs
-*.log
-logs/
-data/logs/
-
-# Artifacts and build outputs
-artifacts/
-archive/
-dist/
-build/
-*.egg-info/
-
-# Cache directories
-__pycache__/
-.pytest_cache/
-.coverage
+# ============================================================================
+# ENVIRONMENT & SECRETS
+# ============================================================================
+.env
+.env.local
 .env.production
+.env.*.local
 
-# Copilot session state (runtime, not source)
-.copilot/session-state/
-
-# Deprecated/obsolete directories (kept in filesystem for reference only)
-orchestration/
-bin/
-render/
-setup/
-reference/
-operations/
+# ============================================================================
+# RUNTIME DATA (DO NOT COMMIT)
+# ============================================================================
+logs/
 metrics/
 data/
-# Auto-generated runtime artifacts
-data/
 artifacts/
-guides/
+
+# ============================================================================
+# BUILD & TEMPORARY
+# ============================================================================
+dist/
+build/
+*.tmp
+temp/
+.claude
+
+# ============================================================================
+# COPILOT SPECIFIC
+# ============================================================================
+.copilot/session-state/
+
+# ============================================================================
+# GENERATED/AUTO
+# ============================================================================
+.coverage
+htmlcov/
