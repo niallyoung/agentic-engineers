@@ -684,7 +684,7 @@ with full retry history and token cost overrun report.
 | **Week 3** | Orchestrator gray-zone integration | ⏳ In Progress |
 | **Week 4** | `ORCHESTRATION-PROTOCOL.md` (this file) | ✅ Complete |
 | **Week 4** | `AGENT-ONBOARDING.md` | ✅ Complete |
-| **Week 4** | `PROTOCOL-QUICK-REFERENCE.md` | ✅ Complete |
+| **Week 4** | `PROTOCOL.md — Appendix G (Quick Reference)` | ✅ Complete |
 | **Week 4** | `PROTOCOL-IMPLEMENTATION-STATUS.md` | ✅ Complete |
 | **Week 4** | `tools/protocol_audit.py` | ✅ Complete |
 

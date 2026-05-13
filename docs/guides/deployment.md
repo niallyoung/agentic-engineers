@@ -10,7 +10,7 @@ This guide provides complete instructions for deploying the **Continuous Polling
 - `QueueManager`: Queue state management
 - Entrypoint script: Production-ready startup wrapper
 
-**Architecture:** [See docs/architecture-continuous-polling-5102.md]
+**Architecture:** [See docs/architecture/continuous-polling.md](../architecture/continuous-polling.md)
 
 ---
 

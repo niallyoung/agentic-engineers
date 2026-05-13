@@ -36,16 +36,8 @@ Welcome to the agentic-engineers documentation directory. This guide explains ho
 
 ### Standards & Compliance
 - **`STANDARDS-*.md`** — Documentation of standards compliance and alignment
-- **`PROTOCOL-*.md`** — Protocol implementation status and quick references
-- **`TDD-*.md`** — Test-driven development (TDD) roadmap and compliance
-
-### Phase Documentation
-- **`PHASE-*.md`** — Active phase implementation details and status
-- **`phase4-metrics-tracking.md`** — Metrics collection and tracking
-- **`PRINCIPAL-ENGINEER-*.md`** — Principal engineer reviews and recommendations
 
 ### Operational References
-- **`MANIFEST.md`** — File manifest with directory purposes
 - **`LOGGING-QUEUE-ARCHITECTURE.md`** — Logging and queue architecture
 - **`TOKEN-USAGE-TRACKING.md`** — Token usage monitoring
 - **`MSMTP-SETUP.md`** — Email/notification setup
