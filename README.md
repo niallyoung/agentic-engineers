@@ -733,11 +733,6 @@ See **[config/MODEL_ASSIGNMENTS_LOCKED.md](config/MODEL_ASSIGNMENTS_LOCKED.md)**
 │   ├── quality-engineer/skills/
 │   ├── model-engineer/skills/
 │   └── shared/skills/
-├── artifacts/               Runtime & queue files
-│   └── queue/
-│       ├── incoming/        New tasks
-│       ├── processing/      In-progress work
-│       └── done/            Completed work
 ├── dist/                    Rendered distributions
 │   ├── claude/              For ~/.claude/ installation
 │   └── copilot/             For ~/.copilot/ installation
@@ -983,7 +978,7 @@ How the system automatically improves model selection and cost.
 ### 1. Task Enters Queue
 
 ```
-Task arrives → artifacts/queue/incoming/{task_id}.yaml
+Task arrives → ~/.copilot/queue/incoming/{task_id}.yaml
 Example: "Fix token timeout in {example-service}"
 ```
 
@@ -994,7 +989,6 @@ Orchestrator (harness agent) polls every 30-60 seconds:
 ├─ Reads AGENTS.md routing rules
 ├─ Applies decision tree (complexity? scope? security?)
 ├─ Creates DELEGATE block (HANDOFF.md format)
-├─ Stores in artifacts/delegates/YYYY-MM-DD/
 └─ Sends to appropriate role agent
 ```
 
@@ -1016,7 +1010,7 @@ Engineer (or other role) receives DELEGATE:
 ### 4. Orchestrator Routes HANDBACK
 
 ```
-Orchestrator polls artifacts/queue/processing/:
+Orchestrator polls ~/.copilot/queue/processing/:
 ├─ If status=complete → route to Quality Engineer
 ├─ If status=blocked → escalate to Lead/Senior Engineer
 └─ Otherwise → determine next steps
@@ -1029,14 +1023,14 @@ Quality Engineer runs Tier 1/2/3 checklist:
 ├─ Tests pass? Lint clean? Coverage maintained?
 ├─ No scope creep? No security issues?
 ├─ Model assessment (was Haiku suitable?)
-└─ Moves to artifacts/queue/done/{task_id}-{decision}.yaml
+└─ Moves to ~/.copilot/queue/done/{task_id}-{decision}.yaml
    (PASS, FAIL/REWORK, or ESCALATE)
 ```
 
 ### 6. Orchestrator Decides Next Step
 
 ```
-Orchestrator polls artifacts/queue/done/:
+Orchestrator polls ~/.copilot/queue/done/:
 ├─ PROCEED → merge to main
 ├─ REWORK → create new DELEGATE with feedback
 └─ ESCALATE → promote to higher role (Senior/Lead/Principal)
@@ -1129,7 +1123,7 @@ done/              → Completed work (PROCEED/REWORK/ESCALATE)
 ```
 
 Agents don't know about each other; the queue is the mediator.
-Everything is stored for auditability: `artifacts/queue/` + `artifacts/delegates/`
+Queue coordination via `~/.copilot/queue/` for both individual operations and auditability.
 
 ### DELEGATE/HANDBACK Protocol
 
