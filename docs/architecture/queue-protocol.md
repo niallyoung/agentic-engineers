@@ -520,7 +520,7 @@ class Agent:
 
 **Files to Modify:**
 - `SPEC.md` (add section on queue enforcement)
-- `docs/architecture-queue-enforcement-5101.md` (THIS DOCUMENT)
+- `docs/architecture/queue-protocol.md` (THIS DOCUMENT)
 - Agent docstrings updated with queue requirements
 
 ---

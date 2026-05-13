@@ -534,7 +534,7 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 |----------|---------|
 | [ORCHESTRATION-PROTOCOL.md](ORCHESTRATION-PROTOCOL.md) | Master protocol document (source of truth) |
 | [AGENT-ONBOARDING.md](AGENT-ONBOARDING.md) | Onboarding checklist for new agents |
-| [PROTOCOL-QUICK-REFERENCE.md](PROTOCOL-QUICK-REFERENCE.md) | One-page cheat sheet |
+| [PROTOCOL.md — Appendix G](PROTOCOL.md) | One-page quick reference cheat sheet |
 | [PROTOCOL-IMPLEMENTATION-STATUS.md](PROTOCOL-IMPLEMENTATION-STATUS.md) | Implementation status and metrics |
 | [DELEGATE-HANDBACK-QUALITY-GATES.md](DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gates detail |
 | [delegate-schema.yaml](delegate-schema.yaml) | Machine-readable DELEGATE schema |

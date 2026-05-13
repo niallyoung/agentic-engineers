@@ -1016,7 +1016,7 @@ QG_TIMEOUT=30 git commit     # reduce timeout for local development
 
 ### Reference
 
-Full architecture specification: `docs/architecture-quality-gates-5103.md`
+Full architecture specification: `docs/architecture/quality-gates.md`
 
 ---
 
@@ -1053,7 +1053,7 @@ Full architecture specification: `docs/architecture-quality-gates-5103.md`
 - **QUEUE-PROTOCOL.md** — Queue mechanics, DELEGATE/HANDBACK storage, file structure
 - **HANDOFF.md** — Structured markup format for agent communication
 - **SPAN-CAPTURE-INTEGRATION.md** — Span capture architecture and data flow
-- **PHASE-5.10-INTEGRATION-GUIDE.md** — Phase 5.10 workflow from developer perspective
+- **`docs/ONBOARDING.md`** — Developer onboarding and workflow guide
 - **FEEDBACK-LOOPS.md** — Model Engineer feedback and cost optimization
 - **TOKEN-USAGE-TRACKING.md** — Token accounting and cost calculation
 
