@@ -21,13 +21,13 @@ metadata:
 ## Overview
 
 Protocol-Validator skill provides runtime validation of DELEGATE and HANDBACK messages against
-the canonical protocol specification (`specs/protocol-core-v1.0.yaml`). It validates both core
+the canonical protocol specification (`docs/specs/protocol-core-v1.0.yaml`). It validates both core
 (required) fields and extension (optional) fields with forward-compatibility support for unknown
 future fields.
 
 **What it does:**
 
-1. **Load Spec at Runtime** — Load `specs/protocol-core-v1.0.yaml` once, cache in memory
+1. **Load Spec at Runtime** — Load `docs/specs/protocol-core-v1.0.yaml` once, cache in memory
 2. **Validate Core Fields** — Strict validation of 7 required DELEGATE fields and 4 required HANDBACK fields
 3. **Validate Extensions** — Loose validation of optional fields; unknown fields logged as warnings
 4. **Forward-Compatibility** — Schema evolution supported; future fields don't break current validators
@@ -51,7 +51,7 @@ future fields.
 from skills.protocol_validator.scripts import ProtocolValidator
 
 # Initialize validator (loads spec once, cached)
-validator = ProtocolValidator(spec_path="specs/protocol-core-v1.0.yaml")
+validator = ProtocolValidator(spec_path="docs/specs/protocol-core-v1.0.yaml")
 
 # Validate DELEGATE
 delegate = {
@@ -111,7 +111,7 @@ python -m skills.protocol_validator --delegate path/to/delegate.yaml --spec path
 
 ## Protocol Specification
 
-The validator loads specification from `specs/protocol-core-v1.0.yaml`. Protocol version 1.0 defines:
+The validator loads specification from `docs/specs/protocol-core-v1.0.yaml`. Protocol version 1.0 defines:
 
 ### DELEGATE Core Fields (7 required)
 
@@ -291,7 +291,7 @@ Warnings are informational:
 
 ## References
 
-- `specs/protocol-core-v1.0.yaml` — Canonical protocol specification
+- `docs/specs/protocol-core-v1.0.yaml` — Canonical protocol specification
 - `skills/queue-management/` — CoreProtocolValidator reference impl
 - `docs/CORE-PROTOCOL-QUICKSTART.md` — Protocol 101
 - `docs/PROTOCOL-MIGRATION-GUIDE.md` — Migration from older versions
