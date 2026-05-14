@@ -1059,5 +1059,34 @@ Full architecture specification: `docs/architecture/quality-gates.md`
 
 ---
 
+## Repository Structure
+
+All source code lives in `src/`:
+
+- `src/orchestration/` — Agent orchestration framework (Python modules)
+  - `src/orchestration/agents/` — Routing, delegation, spec validation
+  - `src/orchestration/tools/` — Orchestration utilities
+- `src/skills/` — Skill implementations (each subdirectory = one SKILL)
+- `src/config/` — Configuration management (`models.yaml`, assignments)
+- `src/agents/` — Agent definition files (*.md role specs)
+- `src/tools/` — Shared tooling utilities
+
+All documentation lives in `docs/`:
+
+- `docs/guides/` — Implementation guides
+- `docs/reference/` — Design patterns and standards
+- `docs/operations/` — Operational reference
+- `docs/specs/` — Protocol specification documents
+- `docs/architecture/` — Architecture decisions (ADRs)
+- `docs/REPOSITORY-STRUCTURE.md` — Full directory reference
+
+Root-level duplicate directories (`orchestration/`, `skills/`, `config/`) were removed during Phase 3 restructuring. Only `src/` contains source code.
+
+Import statements use: `from src.orchestration.agents import ...`
+
+For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITORY-STRUCTURE.md).
+
+---
+
 **Document Status:** Specification complete. Implementation in progress (Phase 5.10/6).  
 **Maintenance:** Update when agent roles, models, routing rules, or SKILLS change.
