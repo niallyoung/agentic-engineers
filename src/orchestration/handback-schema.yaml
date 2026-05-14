@@ -120,6 +120,67 @@ required_fields:
     description: "≥5 words explaining outcome, decisions, and context"
     example: "Successfully implemented all Week 1 validation components: 5 YAML schemas with 18 validation checks, pre-flight function with Groups A/B/C, retry tracking with escalation, pre-commit hook, and 25 comprehensive unit tests. All tests passing with 95% coverage. Ready for Week 2 routing and metrics work."
 
+subtask_fields:
+  children_created:
+    type: array
+    optional: true
+    items:
+      type: string
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9\\-]{0,62}[a-z0-9]$"
+    description: "List of child task IDs created by this task during execution"
+    validation:
+      - "Count should match number of sub-tasks actually queued"
+    example:
+      - "2026-05-13-arch-service-a"
+      - "2026-05-13-arch-service-b"
+      - "2026-05-13-arch-service-c"
+
+  children_results:
+    type: object
+    optional: true
+    description: "Aggregated results from all child tasks (keyed by child task_id)"
+    additionalProperties:
+      type: object
+      required: ["status", "output", "quality"]
+      properties:
+        status:
+          type: string
+          enum: [complete, failed, partial, blocked]
+        output:
+          type: any
+          description: "Child task output payload"
+        quality:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: "Child task quality score"
+    validation:
+      - "Populated only when all children have completed (or timed out)"
+    example:
+      "2026-05-13-arch-service-a":
+        status: complete
+        output: {bottlenecks: [], recommendations: []}
+        quality: 92
+
+  children_failed:
+    type: array
+    optional: true
+    items:
+      type: string
+    description: "Child task IDs that failed (status=failed or status=blocked)"
+    example:
+      - "2026-05-13-arch-service-b"
+
+  result_aggregation_status:
+    type: string
+    optional: true
+    enum:
+      - all_complete     # All children finished successfully
+      - partial          # Some children failed but parent continues
+      - timed_out        # Children did not complete within timeout
+    description: "Reflects completion state of child task aggregation"
+    example: "all_complete"
+
 optional_fields:
   summary:
     type: string

@@ -1,0 +1,68 @@
+---
+# Example: Protocol Improvement - Require Skill Existence Check
+# This DELEGATE demonstrates validation rule tightening.
+#
+# Objective: Fail validation if skill doesn't exist in skills/ directory
+# Risk Level: MEDIUM (affects tasks with invalid skill references)
+# Expected Pass Rate: ~98% (only affects already-broken tasks)
+
+task_id: protocol-tighten-skill-validation
+skill: protocol-validator
+agent: quality-engineer
+scope: Tighten skill validation to fail if skill directory or SKILL.md not found in skills directory ensuring protocol integrity and preventing late failures
+success_criteria:
+  - Validation rule updated to require skill existence in Phase 3 core-protocol validator
+  - consistency-checker run shows pass_rate >= 95%
+  - Tasks with invalid skills identified in violation report
+  - All valid-skill tasks continue to validate successfully
+  - No regression in validation performance (still <5ms per task)
+plan:
+  - Analyze current protocol-validator implementation for skill checking
+  - Review existing queue to identify invalid skill references (if any)
+  - Update core_protocol_validator.py to enforce skill existence check
+  - Run consistency-checker with updated validator
+  - Generate impact report identifying affected tasks
+  - If pass_rate >= 95%, merge changes to validator
+  - Update validator tests with skill existence test cases
+context: |
+  Current protocol-validator already checks if skill exists via _skill_exists() function.
+  This validation is implemented but defensive (returns True if skills/ dir not accessible).
+  
+  Proposed change: Make skill validation stricter:
+  - MUST find skills/{skill}/ directory OR skills/{skill}.md file
+  - Return False (and error message) if neither exists
+  
+  Risk: Medium because only affects already-invalid DELEGATEs with typos in skill names.
+  Example: "task-management" skill doesn't exist (should be "queue-management")
+  
+  Current behavior: Logs warning, allows task through
+  New behavior: Rejects task immediately
+  
+  Expected affected tasks: <5 (typos in skill names)
+  Estimated pass rate: >98%
+
+effort: low
+priority: 5
+dependencies:
+  - protocol-validator
+parent_task_id: null
+
+_proposed_changes:
+  change_type: "VALIDATION RULE TIGHTENING"
+  file: "skills/queue-management/scripts/core_protocol_validator.py"
+  location: "_skill_exists() function"
+  modification: |
+    def _skill_exists(skill: str) -> bool:
+        """Check if skill exists in skills/ directory."""
+        if not skill or not isinstance(skill, str):
+            return False  # Stricter: empty or non-string = invalid
+        repo_root = Path(__file__).resolve().parents[3]
+        skills_dir = repo_root / "skills"
+        if not skills_dir.exists():
+            return False  # Stricter: can't access skills dir = invalid
+        skill_dir = skills_dir / skill
+        skill_md = skills_dir / f"{skill}.md"
+        if not (skill_dir.exists() or skill_md.exists()):
+            return False  # Stricter: skill must exist
+        return True
+  impact: "STRICTER VALIDATION - rejects previously-allowed invalid skills"

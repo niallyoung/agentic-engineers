@@ -127,6 +127,29 @@ required_fields:
       - "Sufficient detail that agent needs no clarification questions"
     example: "Three specialist agents completed a comprehensive protocol review and architecture design. Quality Engineer identified 5 critical gaps in validation. Principal Engineer designed 5 architectural decisions with 400 LOC pseudocode. This task implements Week 1 Priority 1 tasks to enforce protocol compliance from the start."
 
+subtask_fields:
+  parent_task_id:
+    type: string
+    optional: true
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9\\-]{0,62}[a-z0-9]$"
+    description: "Links this task to a parent task (required for sub-tasks, absent for root tasks)"
+    validation:
+      - "Must exist in done/, processing/, or incoming/ queue"
+      - "Cannot link task to itself or any of its ancestors (cycle detection)"
+    example: "2026-05-13-master-arch-review"
+
+  task_tier:
+    type: integer
+    optional: true
+    minimum: 0
+    maximum: 5
+    description: "Depth in task hierarchy (0=root, 1=child, 2=grandchild, max=5)"
+    validation:
+      - "Auto-calculated as parent task_tier + 1 (cannot be manually set to bypass limit)"
+      - "Rejected if would exceed 5 (RuntimeError raised)"
+      - "Root tasks have task_tier=0 (no parent_task_id)"
+    example: 1
+
 optional_fields:
   linked_issue:
     type: string

@@ -59,7 +59,7 @@
 ### New Files
 - `agentic-engineers/QUICK_REFERENCE.md` — One-page cheat sheet (450 lines)
 - `~/.claude/metrics/METRICS_LOGGING.md` — Metrics logging guide for agents
-- `/home/user/.claude/test-tasks/` — Test task documents (DELEGATE/HANDBACK markup samples)
+- `~/.claude/test-tasks/` — Test task documents (DELEGATE/HANDBACK markup samples)
 
 ### Updated Files
 - `agentic-engineers/README.md` — Added link to QUICK_REFERENCE.md under "Quick Reference" section

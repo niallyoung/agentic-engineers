@@ -841,3 +841,116 @@ composite = (layer1 × 0.40) + (layer2 × 0.35) + (layer3 × 0.25)
 | principal_engineer | Opus | Cross-service architecture; escalations |
 | security_engineer | Opus | Security scope only |
 | model_engineer | Sonnet | Metrics analysis; routing optimization |
+
+---
+
+## 14. Sub-Task Workflows (Phase 2)
+
+> **Added:** Phase 2 implementation. Enables agents to create sub-tasks directly,
+> reducing Orchestrator load by 60–70% and enabling parallel task execution.
+
+### 14.1 Overview
+
+Any agent can decompose its assigned task into child tasks by queuing sub-tasks
+via the `queue-management` skill. The Orchestrator detects when a parent task has
+children and performs result aggregation automatically.
+
+### 14.2 New DELEGATE Fields
+
+```yaml
+# DELEGATE (enhanced for sub-tasks)
+task_id: "2026-05-13-master-arch-review"
+role: senior_engineer
+scope: "Review microservices architecture ..."
+plan: [...]
+context: "..."
+
+# NEW (optional): Sub-task linking
+parent_task_id: "2026-05-12-sprint-planning"  # parent task ID
+task_tier: 1                                   # auto-calculated (parent_tier + 1)
+```
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `parent_task_id` | string | optional | Must exist in any queue state; cannot be self or ancestor |
+| `task_tier` | int 0–5 | optional | Auto-calculated as `parent_tier + 1`; max depth is **5** |
+
+**Validation rules:**
+- `parent_task_id` must exist in `incoming/`, `processing/`, or `done/`
+- `task_tier` is **auto-calculated** — agents should not set it manually
+- Maximum depth: tier 5 (grandparent→parent→child→grandchild→great-grandchild)
+- Maximum width: **10 children per parent**
+- Cycle detection: linking to self or ancestors is rejected
+
+### 14.3 New HANDBACK Fields
+
+```yaml
+# HANDBACK (enhanced for parent tasks)
+task_id: "2026-05-13-master-arch-review"
+status: complete
+
+# NEW (optional): Aggregated results
+children_created:
+  - "2026-05-13-arch-service-a"
+  - "2026-05-13-arch-service-b"
+children_results:
+  "2026-05-13-arch-service-a":
+    status: complete
+    output: {bottlenecks: [], recommendations: []}
+    quality: 92
+  "2026-05-13-arch-service-b":
+    status: complete
+    output: {bottlenecks: [...], recommendations: [...]}
+    quality: 88
+children_failed: []
+result_aggregation_status: all_complete   # all_complete | partial | timed_out
+```
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `children_created` | list[str] | Task IDs of sub-tasks created |
+| `children_results` | dict | Keyed by task_id; each entry has `status`, `output`, `quality` |
+| `children_failed` | list[str] | Task IDs that failed or were blocked |
+| `result_aggregation_status` | enum | `all_complete`, `partial`, `timed_out` |
+
+### 14.4 Sub-Task Workflow Lifecycle
+
+```
+1. Orchestrator picks up parent task from incoming/
+2. Agent executes and may create child tasks via queue-management skill
+3. Orchestrator detects has_children(parent_task_id) → True
+4. Orchestrator calls wait_for_children(parent_task_id, timeout_minutes=60)
+5. All children execute in parallel (each goes through incoming→processing→done)
+6. Orchestrator aggregates results: quality (weighted avg), tokens (sum), costs (sum)
+7. Parent HANDBACK is stored with children_results populated
+```
+
+### 14.5 Quality Score Aggregation
+
+Quality scores are **effort-weighted averages**:
+
+| Effort Level | Weight |
+|-------------|--------|
+| `high`      | 3×     |
+| `medium`    | 2×     |
+| `low`       | 1×     |
+
+Example: 3 children with scores `[90, 60, 30]` and efforts `[high, medium, low]`:
+```
+weighted_quality = (90×3 + 60×2 + 30×1) / (3+2+1) = 420/6 = 70.0
+```
+
+### 14.6 Failure Modes
+
+| Mode | Behaviour |
+|------|-----------|
+| `partial` (default) | Parent continues; `result_aggregation_status = partial` |
+| `all_or_nothing` | Parent fails if any child fails |
+
+### 14.7 Depth & Width Limits
+
+| Limit | Value | Error |
+|-------|-------|-------|
+| Max depth (task_tier) | 5 | `ValueError: task_tier X exceeds maximum` |
+| Max children per parent | 10 | `RuntimeError: already has N children (max 10)` |
+| Max tasks/hour (session) | 100 | `RuntimeError: Rate limit exceeded` |

@@ -87,7 +87,7 @@ Orchestrator applies to next similar task
 ## See Also
 
 - `../MANIFEST.md` — Complete file listing of entire system (discovery tool)
-- `../config/MODEL_ASSIGNMENTS_LOCKED.md` — Model costs ($/task)
-- `../skills/orchestration/todo-management.md` — Create/manage TODO.md for planning
-- `../skills/optimization/` — How metrics drive model recommendations
+- `../../config/MODEL_ASSIGNMENTS_LOCKED.md` — Model costs ($/task)
+- `../../skills/orchestration/todo-management.md` — Create/manage TODO.md for planning
+- `../../skills/optimization/` — How metrics drive model recommendations
 - `../guides/DEPLOYMENT_STATUS.md` — Phase tracking and capacity

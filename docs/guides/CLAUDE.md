@@ -4,7 +4,7 @@
 
 **This directory is self-contained and complete.** Load `agentic-engineers/` as a unit to get the full team, all skills, all rules, and all context.
 
-**First read:** [`../setup/copilot-instructions.md`](../setup/copilot-instructions.md) — enforcement rules, auto-load mechanism, learning path.
+**First read:** [`../../setup/copilot-instructions.md`](../../setup/copilot-instructions.md) — enforcement rules, auto-load mechanism, learning path.
 
 ---
 
@@ -12,10 +12,10 @@
 
 **New Collaborator?** Start here:
 
-1. Read `../README.md` (system overview)
-2. Read `../orchestration/AGENTS.md` (the 8-role model)
-3. Read `../orchestration/HANDOFF.md` (how agents hand work off)
-4. Explore `../skills/*/` (38 specialized skills)
+1. Read `../../README.md` (system overview)
+2. Read `../../orchestration/AGENTS.md` (the 8-role model)
+3. Read `../../orchestration/HANDOFF.md` (how agents hand work off)
+4. Explore `../../skills/*/` (38 specialized skills)
 5. Reference `../operations/` (metrics, dashboards, automation)
 
 **Running a Task?** Use this workflow:

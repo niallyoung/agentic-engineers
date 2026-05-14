@@ -6,11 +6,11 @@
 
 **Start here:**
 1. `CLAUDE.md` — Team context, role definitions, integration points
-2. `../config/QUICK_REFERENCE.md` — 1-page cheat sheet
-3. `../orchestration/AGENTS.md` — Detailed role model
-4. `../orchestration/HANDOFF.md` — Task hand-off protocol
+2. `../../config/QUICK_REFERENCE.md` — 1-page cheat sheet
+3. `../../orchestration/AGENTS.md` — Detailed role model
+4. `../../orchestration/HANDOFF.md` — Task hand-off protocol
 
-**Then explore your role's skills:** `../skills/{your-role}/`
+**Then explore your role's skills:** `../../skills/{your-role}/`
 
 ## Documentation Index
 
@@ -38,16 +38,16 @@
 
 ## Quick Links by Role
 
-- **Orchestrator** → CLAUDE.md + INDEX.md + ../orchestration/AGENTS.md
-- **Engineer** → INDEX.md + ../skills/engineer/ + WORKFLOW_TEST_EXAMPLE.md
-- **Quality Engineer** → DEPLOYMENT_STATUS.md + ../orchestration/QUALITY.md
+- **Orchestrator** → CLAUDE.md + INDEX.md + ../../orchestration/AGENTS.md
+- **Engineer** → INDEX.md + ../../skills/engineer/ + WORKFLOW_TEST_EXAMPLE.md
+- **Quality Engineer** → DEPLOYMENT_STATUS.md + ../../orchestration/QUALITY.md
 - **Senior Engineer** → SYSTEM_INTEGRATION.md + ../reference/
-- **Model Engineer** → ../operations/METRICS.md + ../skills/model-engineer/
-- **Principal/Security** → SYSTEM_INTEGRATION.md + ../orchestration/
+- **Model Engineer** → ../operations/METRICS.md + ../../skills/model-engineer/
+- **Principal/Security** → SYSTEM_INTEGRATION.md + ../../orchestration/
 
 ## See Also
 
 - `../MANIFEST.md` — Complete file listing of entire system (discovery tool)
-- `../setup/copilot-instructions.md` — Enforcement rules
-- `../config/MODEL_ASSIGNMENTS_LOCKED.md` — System configuration
-- `../orchestration/` — How work flows (AGENTS, HANDOFF, QUALITY)
+- `../../setup/copilot-instructions.md` — Enforcement rules
+- `../../config/MODEL_ASSIGNMENTS_LOCKED.md` — System configuration
+- `../../orchestration/` — How work flows (AGENTS, HANDOFF, QUALITY)
