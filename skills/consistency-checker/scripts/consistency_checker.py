@@ -78,7 +78,7 @@ class ConsistencyChecker:
         self,
         queue_path: str = "~/.copilot/queue",
         session_id: Optional[str] = None,
-        spec_path: str = "specs/protocol-core-v1.0.yaml",
+        spec_path: str = "docs/specs/protocol-core-v1.0.yaml",
     ):
         """
         Initialize checker.
@@ -452,7 +452,7 @@ def main():
     )
     parser.add_argument(
         '--spec',
-        default='specs/protocol-core-v1.0.yaml',
+        default='docs/specs/protocol-core-v1.0.yaml',
         help='Path to protocol spec'
     )
     parser.add_argument(

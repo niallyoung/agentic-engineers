@@ -135,7 +135,7 @@ Each queue state contains YAML files named `{task_id}.yaml` or `{task_id}.json`.
 
 ### Schema Compliance
 
-Each DELEGATE is validated against `specs/protocol-core-v1.0.yaml`:
+Each DELEGATE is validated against `docs/specs/protocol-core-v1.0.yaml`:
 - Core fields must be present and valid
 - Extensions must be valid (loose validation)
 - Unknown fields logged as warnings (don't fail)
@@ -265,7 +265,7 @@ Consistency-Checker enables protocol improvements via DELEGATE/HANDBACK:
    - Report: which tasks would fail, impact analysis
 
 4. **Deploy** — If approved, orchestrator deploys new spec
-   - Update specs/protocol-core-v1.0.yaml
+   - Update docs/specs/protocol-core-v1.0.yaml
    - Orchestrator restarts (loads new spec)
    - All future tasks use new schema
 
@@ -281,7 +281,7 @@ handback:
 Run check:
 ```bash
 python -m skills.consistency_checker \
-  --spec specs/protocol-core-v1.0-proposed.yaml \
+  --spec docs/specs/protocol-core-v1.0-proposed.yaml \
   --report results/protocol-impact-report.json
 ```
 
@@ -315,8 +315,8 @@ The Orchestrator should invoke consistency-checker:
 2. **On Protocol Change** — Run before deployment
    ```python
    # Validate protocol change
-   old_report = check_with_spec("specs/protocol-core-v1.0.yaml")
-   new_report = check_with_spec("specs/protocol-core-v1.0-proposed.yaml")
+   old_report = check_with_spec("docs/specs/protocol-core-v1.0.yaml")
+   new_report = check_with_spec("docs/specs/protocol-core-v1.0-proposed.yaml")
    
    if new_report.pass_rate >= 0.95:
        deploy_new_spec()
@@ -387,7 +387,7 @@ def test_aggregated_report_generation():
 
 ## References
 
-- `specs/protocol-core-v1.0.yaml` — Protocol specification
+- `docs/specs/protocol-core-v1.0.yaml` — Protocol specification
 - `skills/protocol-validator/` — Schema validation
 - `skills/queue-management/` — Queue operations
 - `docs/SELF-REFERENTIAL-WORKFLOW.md` — Protocol improvement workflow

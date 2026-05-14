@@ -1,7 +1,7 @@
 """
 Protocol Validator — Phase 4 Self-Referential Protocol Implementation.
 
-Validates DELEGATE/HANDBACK against protocol spec (specs/protocol-core-v1.0.yaml).
+Validates DELEGATE/HANDBACK against protocol spec (docs/specs/protocol-core-v1.0.yaml).
 
 Key features:
 - Load spec at runtime (supports schema evolution)
@@ -46,7 +46,7 @@ class ProtocolValidator:
     Performance: <5ms total (core <1ms, extensions <2ms).
     """
 
-    def __init__(self, spec_path: str = "specs/protocol-core-v1.0.yaml"):
+    def __init__(self, spec_path: str = "docs/specs/protocol-core-v1.0.yaml"):
         """
         Initialize validator with spec file.
         
@@ -208,8 +208,8 @@ def main():
     )
     parser.add_argument(
         '--spec',
-        default='specs/protocol-core-v1.0.yaml',
-        help='Path to protocol spec YAML (default: specs/protocol-core-v1.0.yaml)'
+        default='docs/specs/protocol-core-v1.0.yaml',
+        help='Path to protocol spec YAML (default: docs/specs/protocol-core-v1.0.yaml)'
     )
     parser.add_argument(
         '--json',
