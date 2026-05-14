@@ -38,7 +38,7 @@ import pytest
 # Path setup – allow running from repo root or tests/ directory
 # ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parents[1]
-QM_ROOT = REPO_ROOT / "skills" / "queue-management"
+QM_ROOT = REPO_ROOT / "src" / "skills" / "queue-management"
 if str(QM_ROOT) not in sys.path:
     sys.path.insert(0, str(QM_ROOT))
 
