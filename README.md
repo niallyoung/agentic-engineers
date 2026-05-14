@@ -2,7 +2,7 @@
 
 A complete, production-ready multi-agent system with 8 specialized roles, queue-based delegation, quality gates, and autonomous feedback loops. All work flows through a **SPEC-enforced queue protocol** with full observability and cost optimization.
 
-**Status:** ✅ **PRODUCTION READY** — All 6 phases complete, 400+ tests passing, end-to-end queue protocol verified.
+**Status:** ✅ **PRODUCTION READY** — All 6 phases complete, 1047+ tests passing, end-to-end queue protocol verified.
 
 ---
 
@@ -115,30 +115,28 @@ agentic-engineers/
 │   ├── skills/                   # Skill implementations (SKILL.md)
 │   ├── orchestration/            # Orchestration logic (Python modules)
 │   │   ├── agents/               # Routing, delegation, validation
-│   │   ├── handlers/             # Event & state handlers
-│   │   ├── activators/           # Task activators & triggers
-│   │   ├── telemetry/            # Metrics & observability
 │   │   └── tools/                # Orchestration utilities
 │   ├── config/                   # Configuration (centralized)
 │   │   ├── models.yaml           # Model registry & assignments
 │   │   ├── MODEL_ASSIGNMENTS_LOCKED.md
 │   │   ├── QUICK_REFERENCE.md
 │   │   └── CONFIG-README.md
-│   ├── docs/                     # Internal documentation
-│   │   └── AGENTS.md             # Agent routing decision tree
-│   ├── shared/                   # Shared utilities
-│   └── tools/                    # Tools directory
+│   └── tools/                    # Shared tools directory
 │
-├── docs/                         # ✅ External documentation
+├── docs/                         # ✅ ALL documentation
 │   ├── SPEC.md                   # Protocol specification
 │   ├── PROTOCOL.md               # Queue protocol documentation
-│   ├── architecture/             # Architecture decisions
+│   ├── REPOSITORY-STRUCTURE.md   # Full directory reference
+│   ├── architecture/             # Architecture decisions (ADRs)
 │   ├── guides/                   # Implementation guides
-│   └── [60+ other comprehensive docs]
+│   ├── reference/                # Design patterns and standards
+│   ├── operations/               # Operational reference
+│   ├── examples/                 # Example configurations
+│   └── specs/                    # Protocol specification docs
 │
 ├── tests/                        # ✅ Test suite (pytest)
 │   ├── test_*.py                 # Unit & integration tests
-│   └── [14 comprehensive test files, 430+ passing]
+│   └── [1047+ tests passing]
 │
 ├── renderer/                     # ✅ Build/installation system
 │   ├── scripts/                  # Rendering logic
@@ -147,25 +145,19 @@ agentic-engineers/
 │   │   └── render-copilot-agents.py
 │   ├── hooks/                    # GitHub/enforcement hooks
 │   ├── instructions/             # Global instructions
-│   ├── workflows/                # Reusable GitHub Actions
-│   └── Makefile
+│   └── workflows/                # Reusable GitHub Actions
 │
-├── .github/                      # ✅ GitHub configuration
 ├── dist/                         # Build artifacts (gitignored)
 ├── README.md                     # This file
 ├── Makefile                      # Build targets
-├── conftest.py                   # pytest configuration
-│
-└── .gitignore                    # Includes: data/, artifacts/, guides/
+└── conftest.py                   # pytest configuration
 ```
 
 ### 📚 Documentation Guide
 
-For comprehensive documentation structure and how to find what you need, see [docs/README.md](docs/README.md).
-
 Key documentation:
-- **Getting Started:** [docs/INSTALL.md](docs/INSTALL.md)
-- **System Overview:** [docs/SYSTEM.md](docs/SYSTEM.md)
+
+- **Repository Layout:** [docs/REPOSITORY-STRUCTURE.md](docs/REPOSITORY-STRUCTURE.md)
 - **Specification:** [docs/SPEC.md](docs/SPEC.md)
 - **Queue Protocol:** [docs/PROTOCOL.md](docs/PROTOCOL.md)
 - **Archived Docs:** [docs/archive/README.md](docs/archive/README.md)
@@ -174,11 +166,11 @@ Key documentation:
 
 ✅ **Single source tree:** All source code under `src/` (agents, skills, orchestration, config)  
 ✅ **Clear separation:** Source (`src/`), docs (`docs/`), tests (`tests/`), build (`renderer/`)  
-✅ **Logical grouping:** Configuration in `src/config/`, documentation in `src/docs/`  
+✅ **No duplication:** Root-level `orchestration/`, `skills/`, `config/` duplicates removed  
 ✅ **Easy navigation:** Max 3 directory levels to find anything  
 ✅ **Scalable:** Can grow without polluting root directory  
 
-See [docs/decisions/ADR-structure-2025-05-09.md](docs/decisions/ADR-structure-2025-05-09.md) for full design rationale and migration details.
+See [docs/decisions/ADR-structure-2025-05-09.md](docs/decisions/ADR-structure-2025-05-09.md) for full design rationale.
 
 ---
 
@@ -245,7 +237,7 @@ Phase 0-6 completed execution:
 - ✅ Pure orchestrator (zero business logic, 100% routing + delegation)
 - ✅ Model centralization (single source of truth: models.yaml)
 
-**Status:** 400+ tests, all passing. End-to-end queue protocol verified at scale.
+**Status:** 1047+ tests, all passing. End-to-end queue protocol verified at scale.
 
 ---
 
