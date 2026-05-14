@@ -1157,9 +1157,18 @@ class OrchestratorAgent(Agent):
             agent_name, agent = self.task_router.route_task(effective_delegate)
             print(f"   ✓ Routed to: {agent_name}")
             
-            # 5. Execute agent
-            handback = agent.execute(effective_delegate)
-            print(f"   ✓ Agent executed with status: {handback.get('status')}")
+            # 5. Execute agent (with sub-task aggregation if task has children)
+            if self.has_children(task_id):
+                print(f"   🌳 Task {task_id} has children — using result aggregation")
+                handback = self.execute_with_result_aggregation(task_id, agent_name)
+                print(
+                    f"   ✓ Aggregation complete: "
+                    f"{handback.get('result_aggregation_status', 'unknown')} "
+                    f"({len(handback.get('children_created', []))} children)"
+                )
+            else:
+                handback = agent.execute(effective_delegate)
+                print(f"   ✓ Agent executed with status: {handback.get('status')}")
 
             # 6. Layer 3 quality validation (post-completion)
             handback_validation = self.quality_validator.validate_handback(handback, delegate)
@@ -1282,6 +1291,287 @@ class OrchestratorAgent(Agent):
         self.tasks_escalated += 1
 
     
+    # ------------------------------------------------------------------
+    # Sub-task Support (Phase 2)
+    # ------------------------------------------------------------------
+
+    def has_children(self, task_id: str) -> bool:
+        """
+        Return True if any task in the queue has this task as its parent.
+
+        Scans incoming/, processing/, and done/ for tasks with
+        parent_task_id == task_id.
+
+        Args:
+            task_id: Parent task ID to check.
+
+        Returns:
+            bool
+        """
+        for state_dir in (
+            self.queue_manager.incoming_dir,
+            self.queue_manager.processing_dir,
+            self.queue_manager.done_dir,
+        ):
+            if not state_dir.exists():
+                continue
+            for task_file in state_dir.glob("*.yaml"):
+                try:
+                    import yaml as _yaml
+                    with open(task_file) as fh:
+                        content = fh.read()
+                    docs = [d.strip() for d in content.split("---") if d.strip()]
+                    task = _yaml.safe_load(docs[0]) if docs else _yaml.safe_load(content)
+                    if isinstance(task, dict) and task.get("parent_task_id") == task_id:
+                        return True
+                except Exception:
+                    continue
+        return False
+
+    def wait_for_children(
+        self, parent_task_id: str, timeout_minutes: int = 60
+    ) -> Dict:
+        """
+        Wait for all child tasks of *parent_task_id* to reach done/.
+
+        Scans processing/ until all children have moved to done/ or until
+        *timeout_minutes* elapses.
+
+        Args:
+            parent_task_id:   Parent task ID.
+            timeout_minutes:  Maximum wait time (default 60 minutes).
+
+        Returns:
+            {
+                status:           "all_complete" | "partial" | "timed_out",
+                children_results: {task_id: task_dict, ...},
+                children_failed:  [task_ids],
+                completion_time:  float (seconds elapsed),
+            }
+        """
+        import yaml as _yaml
+
+        timeout_seconds = timeout_minutes * 60.0
+        start = time.time()
+
+        # Collect all child task IDs across all states
+        def _find_children(state_dir) -> List[str]:
+            found = []
+            if not state_dir.exists():
+                return found
+            for task_file in state_dir.glob("*.yaml"):
+                try:
+                    with open(task_file) as fh:
+                        content = fh.read()
+                    docs = [d.strip() for d in content.split("---") if d.strip()]
+                    task = _yaml.safe_load(docs[0]) if docs else _yaml.safe_load(content)
+                    if isinstance(task, dict) and task.get("parent_task_id") == parent_task_id:
+                        found.append(task.get("task_id", task_file.stem))
+                except Exception:
+                    continue
+            return found
+
+        # Discover all expected child task IDs (may be in any state at start)
+        all_states = [
+            self.queue_manager.incoming_dir,
+            self.queue_manager.processing_dir,
+            self.queue_manager.done_dir,
+        ]
+        expected_children = set()
+        for sdir in all_states:
+            expected_children.update(_find_children(sdir))
+
+        if not expected_children:
+            return {
+                "status": "all_complete",
+                "children_results": {},
+                "children_failed": [],
+                "completion_time": 0.0,
+            }
+
+        remaining = set(expected_children)
+        children_results: Dict[str, Dict] = {}
+        children_failed: List[str] = []
+
+        while remaining:
+            elapsed = time.time() - start
+            if elapsed >= timeout_seconds:
+                for cid in list(remaining):
+                    children_results[cid] = {
+                        "task_id": cid,
+                        "status": "timed_out",
+                        "output": None,
+                        "quality_score": 0,
+                    }
+                    children_failed.append(cid)
+                return {
+                    "status": "timed_out",
+                    "children_results": children_results,
+                    "children_failed": children_failed,
+                    "completion_time": elapsed,
+                }
+
+            # Check done/ for completions
+            done_children = _find_children(self.queue_manager.done_dir)
+            for task_file in self.queue_manager.done_dir.glob("*.yaml"):
+                try:
+                    with open(task_file) as fh:
+                        content = fh.read()
+                    docs = [d.strip() for d in content.split("---") if d.strip()]
+                    task = _yaml.safe_load(docs[0]) if docs else _yaml.safe_load(content)
+                    if not isinstance(task, dict):
+                        continue
+                    cid = task.get("task_id", task_file.stem)
+                    if cid in remaining:
+                        children_results[cid] = task
+                        remaining.discard(cid)
+                        if task.get("status") in ("failed", "blocked"):
+                            children_failed.append(cid)
+                except Exception:
+                    continue
+
+            if remaining:
+                time.sleep(5)  # Check every 5 seconds in production
+
+        elapsed = time.time() - start
+        agg_status = "all_complete" if not children_failed else "partial"
+        return {
+            "status": agg_status,
+            "children_results": children_results,
+            "children_failed": children_failed,
+            "completion_time": elapsed,
+        }
+
+    def aggregate_child_results(
+        self, parent_task_id: str, children_handbacks: List[Dict]
+    ) -> Dict:
+        """
+        Aggregate results from all child tasks into a parent HANDBACK.
+
+        Algorithm:
+          1. Extract output from each child.
+          2. Merge quality scores (effort-weighted average).
+          3. Sum tokens and costs.
+          4. Identify failures.
+          5. Return aggregated HANDBACK dict.
+
+        Args:
+            parent_task_id:     Parent task ID.
+            children_handbacks: List of HANDBACK dicts from all children.
+
+        Returns:
+            Dict with aggregated HANDBACK fields.
+        """
+        _EFFORT_WEIGHTS = {"high": 3, "medium": 2, "low": 1}
+        _DEFAULT_W = 2
+
+        children_results: Dict[str, Dict] = {}
+        children_failed: List[str] = []
+        children_created: List[str] = []
+
+        total_tokens_in = 0
+        total_tokens_out = 0
+        quality_num = 0.0
+        quality_den = 0.0
+
+        for hb in children_handbacks:
+            cid = hb.get("task_id", "unknown")
+            status = hb.get("status", "unknown")
+            quality = float(hb.get("quality_score", 0))
+            effort = hb.get("effort", "medium")
+            weight = _EFFORT_WEIGHTS.get(effort, _DEFAULT_W)
+
+            children_created.append(cid)
+            children_results[cid] = {
+                "status": status,
+                "output": hb.get("output", hb.get("deliverables")),
+                "quality": quality,
+            }
+
+            if status in ("failed", "blocked"):
+                children_failed.append(cid)
+
+            quality_num += quality * weight
+            quality_den += weight
+            total_tokens_in += hb.get("tokens_in", 0)
+            total_tokens_out += hb.get("tokens_out", 0)
+
+        agg_quality = round(quality_num / quality_den, 2) if quality_den > 0 else 0.0
+        agg_status = "all_complete" if not children_failed else "partial"
+
+        return {
+            "task_id": parent_task_id,
+            "status": "complete" if not children_failed else "partial",
+            "children_created": children_created,
+            "children_results": children_results,
+            "children_failed": children_failed,
+            "result_aggregation_status": agg_status,
+            "metrics": {
+                "quality": agg_quality,
+                "tokens_in": total_tokens_in,
+                "tokens_out": total_tokens_out,
+                "total_tokens": total_tokens_in + total_tokens_out,
+                "children_count": len(children_handbacks),
+                "children_failed_count": len(children_failed),
+            },
+        }
+
+    def execute_with_result_aggregation(
+        self, task_id: str, agent_name: Optional[str] = None
+    ) -> Dict:
+        """
+        Enhanced execute that handles sub-task result aggregation.
+
+        If the task has children (created during execution or already queued):
+          1. Wait for all child tasks to complete (via wait_for_children).
+          2. Collect HANDBACK dicts from done/ for each child.
+          3. Aggregate results using aggregate_child_results.
+          4. Return aggregated HANDBACK.
+
+        Otherwise, execute normally (backward compatible).
+
+        Args:
+            task_id:    ID of the task to execute.
+            agent_name: Optional override for which agent to use.
+
+        Returns:
+            Dict — aggregated HANDBACK or normal HANDBACK.
+        """
+        if not self.has_children(task_id):
+            # Normal path — find and execute
+            for state_dir in (
+                self.queue_manager.processing_dir,
+                self.queue_manager.incoming_dir,
+            ):
+                task_file_candidates = list(state_dir.glob(f"{task_id}*.yaml"))
+                if task_file_candidates:
+                    import yaml as _yaml
+
+                    with open(task_file_candidates[0]) as fh:
+                        content = fh.read()
+                    docs = [d.strip() for d in content.split("---") if d.strip()]
+                    delegate = (
+                        _yaml.safe_load(docs[0]) if docs else _yaml.safe_load(content)
+                    )
+                    _, agent_obj = self.task_router.route_task(
+                        {**delegate, "role": agent_name or delegate.get("role", "engineer")}
+                    )
+                    return agent_obj.execute(delegate)
+
+            return {"task_id": task_id, "status": "failed", "notes": "Task not found"}
+
+        # Sub-task aggregation path
+        wait_result = self.wait_for_children(parent_task_id=task_id)
+        children_handbacks = list(wait_result["children_results"].values())
+        aggregated = self.aggregate_child_results(task_id, children_handbacks)
+        aggregated["wait_status"] = wait_result["status"]
+        aggregated["completion_time"] = wait_result["completion_time"]
+        return aggregated
+
+    # ------------------------------------------------------------------
+    # End Sub-task Support
+    # ------------------------------------------------------------------
+
     def do_work(self) -> Dict:
         """
         Execute orchestrator work from DELEGATE block.

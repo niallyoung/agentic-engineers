@@ -55,7 +55,7 @@ Accept or reject
 
 ## See Also
 
-- `../MANIFEST.md` — Complete file listing of entire system (discovery tool)
-- `../config/QUICK_REFERENCE.md` — 1-page routing cheat sheet
-- `../config/MODEL_ASSIGNMENTS_LOCKED.md` — Models for each role
-- `../guides/CLAUDE.md` — Integration with ERS platform
+- `./MANIFEST.md` — Complete file listing of entire system (discovery tool)
+- `../../config/QUICK_REFERENCE.md` — 1-page routing cheat sheet
+- `../../config/MODEL_ASSIGNMENTS_LOCKED.md` — Models for each role
+- `./guides/CLAUDE.md` — Integration with ERS platform
