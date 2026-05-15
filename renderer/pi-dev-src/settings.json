@@ -1,0 +1,13 @@
+{
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-20250514",
+  "defaultThinkingLevel": "medium",
+  "theme": "dark",
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384
+  },
+  "packages": [],
+  "extensions": [],
+  "skills": []
+}
