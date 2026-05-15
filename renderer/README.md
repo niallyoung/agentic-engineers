@@ -1,84 +1,123 @@
-# Global Enforcement Infrastructure
+# Agent & Integration Renderers
 
-Centralized Copilot CLI enforcement: hooks, scripts, and global instructions for all ERS repos.
+Renders agentic-engineers configurations for different tools:
+- **Copilot CLI** (`~/.copilot/agents/`)
+- **π.dev Harness** (`~/.pi/agent/`)
 
-**Location**: `~/git/ers/agentic-engineers/enforcement/`
-**Installed to**: `~/.github/` (via symlinks)
+## Quick Start
+
+### For π.dev (Recommended)
+
+```bash
+python3 renderer/scripts/render-pi-dev.py
+```
+
+Renders agentic-engineers system prompt and agent roles into `~/.pi/agent/`. Then:
+
+```bash
+cd /your/project
+pi
+# Now running with agentic-engineers identity & agent roles
+```
+
+See [PI-DEV-RENDERER.md](./PI-DEV-RENDERER.md) for full documentation.
+
+### For Copilot CLI (Legacy)
+
+```bash
+python3 renderer/scripts/render-copilot-agents.py
+```
+
+Renders agentic-engineers agent definitions into `~/.copilot/agents/`.
 
 ## Structure
 
 ```
-enforcement/
-├── hooks/                    — Copilot CLI hook definitions
-│   ├── guard.json           — preToolUse (blocks --no-verify, destructive ops, hook tampering)
-│   └── session-init.json    — sessionStart (displays init messages)
+renderer/
+├── pi-dev-src/                      — π.dev config sources
+│   ├── SYSTEM.md                    — System prompt (replaces π.dev default)
+│   ├── AGENTS.md                    — Agent role definitions
+│   └── settings.json                — Model/UI defaults
 │
-├── scripts/                  — Enforcement logic and session init
-│   ├── copilot-guard.sh     — Enforces CLI rules (preToolUse handler)
-│   └── copilot-session-init.sh — Session start display
+├── scripts/
+│   ├── render-pi-dev.py             — π.dev renderer (NEW)
+│   └── render-copilot-agents.py     — Copilot CLI renderer
 │
-├── instructions/             — Global Copilot CLI instructions
-│   └── copilot-instructions.md
-│
-├── workflows/                — Reusable GitHub Actions templates
-│   └── ci.yml
-│
-├── shared.mk                 — Common Makefile targets (included by repo Makefiles)
-├── Makefile                  — Install/uninstall logic
-└── README.md                 — This file
+├── PI-DEV-RENDERER.md               — π.dev integration guide
+├── instructions/                    — Global instructions
+├── hooks/                           — Enforcement hooks
+└── README.md                        — This file
 ```
 
-## Installation
+## Renderers
 
-### First Time Setup
+### π.dev Renderer
 
+**What**: Renders agentic-engineers into π.dev harness
+**How**: `python3 renderer/scripts/render-pi-dev.py`
+**Where**: `renderer/pi-dev-src/` → `~/.pi/agent/`
+**Docs**: [PI-DEV-RENDERER.md](./PI-DEV-RENDERER.md)
+
+**Key features**:
+- 100% system prompt control from bootstrap
+- No π.dev forking required
+- Works with standard `pi` binary (v0.74.0+)
+- SYSTEM.md completely replaces π.dev default
+
+**Files generated**:
+- `~/.pi/agent/SYSTEM.md` — Master system prompt
+- `~/.pi/agent/AGENTS.md` — Agent role context
+- `~/.pi/agent/settings.json` — Model defaults
+
+### Copilot CLI Renderer
+
+**What**: Renders agentic-engineers agents for Copilot CLI
+**How**: `python3 renderer/scripts/render-copilot-agents.py`
+**Docs**: See script documentation
+
+## Maintenance
+
+### Source Files
+
+All source files are committed:
 ```bash
-cd ~/git/ers/agentic-engineers/enforcement
-make install
+git log renderer/pi-dev-src/        # View history
+git log renderer/scripts/render-*.py # View renderer history
 ```
 
-This creates symlinks:
-- `hooks/` → `~/.github/hooks/`
-- `scripts/` → `~/.github/scripts/`
-- `copilot-instructions.md` → `~/.github/copilot-instructions.md`
-- `shared.mk` → `~/.github/shared.mk`
+### Rendered Output
 
-### Verify Installation
+Rendered files in `~/.pi/`, `~/.copilot/` are **local only** (not committed).
 
+### Update Workflow
+
+1. **Modify** source files in `renderer/pi-dev-src/` (or `src/agents/`)
+2. **Render** with the appropriate renderer script
+3. **Test** with pi or copilot CLI
+4. **Commit** source file changes to git
+
+Example:
 ```bash
-make status
+# Edit system prompt
+vim renderer/pi-dev-src/SYSTEM.md
+
+# Render to ~/.pi/agent/
+python3 renderer/scripts/render-pi-dev.py
+
+# Test
+pi "What can you do?"
+
+# Commit source changes
+git add renderer/pi-dev-src/SYSTEM.md
+git commit -m "Update agentic-engineers system prompt"
 ```
 
-Shows all symlink targets and their health.
+## Integration Timeline
 
-## Usage
+- **π.dev** (May 2026): Primary integration, full system prompt control
+- **Copilot CLI** (ongoing): Agent definitions, custom agents
 
-All ERS repos inherit global enforcement automatically:
-- Copilot CLI preToolUse hook validates all tool invocations
-- Session start hook displays enforcement rules
-- Git hooks (pre-commit, pre-push, commit-msg) delegate to Makefile targets
-- `shared.mk` provides common targets for all repos
+## See Also
 
-## Updating Enforcement Rules
-
-Edit files in place:
-- `hooks/*.json` — Change hook configuration
-- `scripts/*.sh` — Change enforcement logic
-- `instructions/copilot-instructions.md` — Update global instructions
-
-Changes take effect immediately (symlinks reflect updates).
-
-## Uninstall
-
-```bash
-make uninstall
-```
-
-Removes all symlinks from `~/.github/`. Repos will lose enforcement but continue functioning.
-
-## History
-
-**Previous location**: `~/git/ers/{service-name}/` (migrated Apr 2026)
-- Consolidated all global enforcement into single agentic-engineers directory
-- Symlink mechanism unchanged
-- No functional changes to enforcement rules or scripts
+- [PI-DEV-RENDERER.md](./PI-DEV-RENDERER.md) — π.dev integration guide
+- [Global Enforcement Infrastructure](../setup/) — Copilot CLI enforcement hooks
