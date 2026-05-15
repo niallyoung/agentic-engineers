@@ -1,6 +1,6 @@
-.PHONY: help install install-copilot install-claude \
-        uninstall-copilot uninstall-claude uninstall-all status \
-        verify clean render-claude render-copilot render-all
+.PHONY: help install install-copilot install-claude install-pi \
+        uninstall-copilot uninstall-claude uninstall-pi uninstall-all status \
+        verify clean render-claude render-copilot render-pi render-all
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -8,26 +8,29 @@ help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
 	@echo "Install targets (platform-specific):"
-	@echo "  install             Install to both ~/.claude/ and ~/.copilot/"
+	@echo "  install             Install to all 3 harnesses (~/.claude/, ~/.copilot/, ~/.pi/)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
 	@echo "  install-copilot     Install rendered agents → ~/.copilot/"
+	@echo "  install-pi          Install π.dev harness → ~/.pi/"
 	@echo ""
 	@echo "Uninstall targets:"
 	@echo "  uninstall-claude    Remove from ~/.claude/  (managed only)"
 	@echo "  uninstall-copilot   Remove from ~/.copilot/  (managed only)"
-	@echo "  uninstall-all       Both"
+	@echo "  uninstall-pi        Remove from ~/.pi/ (managed only)"
+	@echo "  uninstall-all       All three"
 	@echo ""
 	@echo "Render targets (generate dist/ from source):"
 	@echo "  render-claude       Generate dist/claude/ (provider-specific)"
 	@echo "  render-copilot      Generate dist/copilot/ (provider-specific)"
-	@echo "  render-all          Both"
+	@echo "  render-pi           Generate ~/.pi/agent/ config (π.dev harness)"
+	@echo "  render-all          All three"
 	@echo ""
 	@echo "Diagnostic:"
-	@echo "  status              Check installation status"
+	@echo "  status              Check installation status (all harnesses)"
 	@echo "  verify              Verify framework structure"
-	@echo "  clean               Remove both installations"
+	@echo "  clean               Remove build artifacts"
 
-install: install-copilot install-claude ## Install to both ~/.copilot/ and ~/.claude/
+install: install-copilot install-claude install-pi ## Install to all harnesses
 	@echo ""
 	@echo "✅ Installation complete!"
 	@echo ""
@@ -44,8 +47,6 @@ install-claude: render-claude ## Install rendered agents → ~/.claude/
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude"
 	@echo "✅ Installation to ~/.claude/ complete"
 
-uninstall-all: uninstall-copilot uninstall-claude ## Remove from both ~/.copilot/ and ~/.claude/
-	@echo "✅ Uninstall complete"
 
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only)
 	@echo "🧹 Uninstalling from ~/.copilot/..."
@@ -55,14 +56,7 @@ uninstall-claude: ## Remove from ~/.claude/ (managed only)
 	@echo "🧹 Uninstalling from ~/.claude/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude" --uninstall
 
-status: ## Check installation status
-	@echo "📋 Installation status for ~/.copilot/:"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot" --status
-	@echo ""
-	@echo "📋 Installation status for ~/.claude/:"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude" --status
 
-render-all: render-copilot render-claude ## Generate both dist/copilot and dist/claude
 
 render-copilot: ## Generate dist/copilot/ (provider-specific)
 	@echo "🔨 Rendering agents for Copilot..."
@@ -97,3 +91,32 @@ clean: ## Clean build artifacts (no external scripts)
 	@echo "✅ Cleanup complete"
 
 .DEFAULT_GOAL := help
+
+install-pi: render-pi ## Install π.dev harness to ~/.pi/agent/
+	@echo "📦 Installing agentic-engineers to ~/.pi/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi"
+	@echo "✅ Installation to ~/.pi/ complete"
+
+uninstall-all: uninstall-copilot uninstall-claude uninstall-pi ## Remove from all 3 locations
+	@echo "✅ Uninstall complete"
+
+uninstall-pi: ## Remove from ~/.pi/ (managed only)
+	@echo "🧹 Uninstalling from ~/.pi/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi" --uninstall
+
+render-pi: ## Generate ~/.pi/agent/ config (π.dev harness)
+	@echo "🔨 Rendering π.dev harness configuration..."
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-pi-dev.py" "$(REPO_ROOT)/renderer/pi-dev-src" "$(HOME)/.pi"
+	@echo "✅ π.dev harness rendering complete"
+
+render-all: render-copilot render-claude render-pi ## Generate config for all 3 harnesses
+
+status: ## Check installation status (all harnesses)
+	@echo "📋 Installation status for ~/.copilot/:"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot" --status
+	@echo ""
+	@echo "📋 Installation status for ~/.claude/:"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude" --status
+	@echo ""
+	@echo "📋 Installation status for ~/.pi/:"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi" --status

@@ -1,0 +1,153 @@
+# Pi Agent Configuration for agentic-engineers
+# Enables sub-agent orchestration across 9 specialized roles
+
+version: "1.0"
+
+# Core settings
+core:
+  defaultProvider: "anthropic"
+  defaultModel: "claude-3-5-sonnet-20241022"
+  thinking:
+    enabled: true
+    level: "medium"
+
+# Sub-agent extensions
+extensions:
+  # Agent Orchestration Framework
+  - name: "agent-orchestrator"
+    version: "1.0"
+    capabilities:
+      - task-routing
+      - agent-delegation
+      - metrics-collection
+      - handback-processing
+
+  # Specialized Agent Roles
+  - name: "specialized-agents"
+    version: "1.0"
+    agents:
+      - id: "engineer"
+        role: "Engineer"
+        model: "claude-3-5-haiku-20241022"
+        expertise: "General implementation, straightforward refactoring"
+        scope: "Single file/module changes"
+      
+      - id: "senior-engineer"
+        role: "Senior Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "Complex system design, debugging, mentoring"
+        scope: "Multi-service, complex logic"
+      
+      - id: "lead-engineer"
+        role: "Lead Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "Code review, quality assurance, spec validation"
+        scope: "Validation, review, quality gates"
+      
+      - id: "security-engineer"
+        role: "Security Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "Security architecture, vulnerability analysis"
+        scope: "Security decisions, compliance"
+      
+      - id: "principal-engineer"
+        role: "Principal Engineer"
+        model: "claude-3-5-opus-20250514"
+        expertise: "Cross-organization architecture, strategy"
+        scope: "Organization-wide impact"
+      
+      - id: "quality-engineer"
+        role: "Quality Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "Testing strategy, test automation, coverage"
+        scope: "Testing decisions, coverage"
+      
+      - id: "model-engineer"
+        role: "Model Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "Token optimization, cost-quality trade-offs"
+        scope: "Performance metrics, cost analysis"
+      
+      - id: "spec-engineer"
+        role: "Spec Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "Specification compliance, drift detection"
+        scope: "Validation, spec compliance"
+      
+      - id: "healing-engineer"
+        role: "Healing Engineer"
+        model: "claude-3-5-sonnet-20241022"
+        expertise: "System health analysis, debugging, issues"
+        scope: "Debugging, health analysis"
+
+# Task routing rules
+routing:
+  # Decision tree for agent assignment
+  rules:
+    - condition: "security-scoped"
+      agent: "security-engineer"
+      priority: 1
+    
+    - condition: "cross-service-architecture"
+      agent: "principal-engineer"
+      priority: 2
+    
+    - condition: "code-review-or-validation"
+      agent: "lead-engineer"
+      priority: 3
+    
+    - condition: "complex-unscoped"
+      agent: "senior-engineer"
+      priority: 4
+    
+    - condition: "testing-strategy"
+      agent: "quality-engineer"
+      priority: 5
+    
+    - condition: "cost-optimization"
+      agent: "model-engineer"
+      priority: 6
+    
+    - condition: "debugging-health"
+      agent: "healing-engineer"
+      priority: 7
+    
+    - condition: "spec-validation"
+      agent: "spec-engineer"
+      priority: 8
+
+# Skills (custom capabilities)
+skills:
+  - name: "delegate"
+    description: "Delegate task to sub-agent with full context"
+    
+  - name: "handback"
+    description: "Receive task results from sub-agent with metrics"
+    
+  - name: "route-task"
+    description: "Route task to appropriate agent based on decision tree"
+    
+  - name: "collect-metrics"
+    description: "Collect tokens, time, quality metrics from delegations"
+    
+  - name: "verify-completion"
+    description: "Run tests/linters to verify task completion"
+
+# Packages
+packages:
+  - name: "orchestration-framework"
+    version: "1.0"
+    modules:
+      - "delegation"
+      - "metrics"
+      - "routing"
+      - "validation"
+
+# Optimization settings
+optimization:
+  tokenBudget: 200000
+  costQualityTradeoff: "quality-first"
+  modelSelection:
+    haiku: "simple-tasks"
+    sonnet: "complex-tasks"
+    opus: "critical-decisions"

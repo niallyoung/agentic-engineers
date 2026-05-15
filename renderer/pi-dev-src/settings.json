@@ -1,13 +1,25 @@
 {
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4-20250514",
+  "defaultModel": "claude-3-5-sonnet-20241022",
   "defaultThinkingLevel": "medium",
   "theme": "dark",
   "compaction": {
     "enabled": true,
     "reserveTokens": 16384
   },
-  "packages": [],
-  "extensions": [],
-  "skills": []
+  "packages": [
+    "orchestration-framework"
+  ],
+  "extensions": [
+    "agent-orchestrator",
+    "specialized-agents"
+  ],
+  "skills": [
+    "delegate",
+    "handback",
+    "route-task",
+    "collect-metrics",
+    "verify-completion"
+  ],
+  "lastChangelogVersion": "0.74.0"
 }
