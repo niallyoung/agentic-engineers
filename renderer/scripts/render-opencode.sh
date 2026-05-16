@@ -432,11 +432,22 @@ case "$MODE" in
 			# Effort → temperature
 			temp=$(effort_to_temperature "${docs_effort:-medium}")
 
+			# Mode: orchestrator is the framework's entry point, so it must be
+			# selectable as a primary agent (--agent orchestrator, default_agent).
+			# Use mode: all so it can also be invoked as @orchestrator from inside
+			# any session. All other roles stay as subagents (invoked via @-mention
+			# or task tool only).
+			if [ "$name" = "orchestrator" ]; then
+				agent_mode="all"
+			else
+				agent_mode="subagent"
+			fi
+
 			# Emit OpenCode subagent frontmatter + transformed body.
 			{
 				echo "---"
 				printf 'description: "%s"\n' "$desc"
-				echo "mode: subagent"
+				echo "mode: $agent_mode"
 				echo "model: $model_full"
 				echo "temperature: $temp"
 				echo "permission:"
