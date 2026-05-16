@@ -128,6 +128,57 @@ qe_feedback:
 
 ---
 
+## Token Visibility in Handoffs
+
+**New in Phase 2D:** All agents can now monitor token usage in real-time during task execution.
+
+### Monitoring Token Usage During Handoff
+
+When executing a DELEGATE, agents can track token consumption:
+
+```bash
+# Get your session ID
+SESSION_ID=$(sqlite3 ~/.local/share/opencode/opencode.db \
+  "SELECT id FROM session ORDER BY time_created DESC LIMIT 1;")
+
+# Monitor tokens in real-time (updates every 5 seconds)
+watch -n 5 "opencode-tokens --session $SESSION_ID"
+
+# Check budget status
+opencode-budget --session $SESSION_ID --limit 200000
+
+# List all subagents
+opencode-subagents --session $SESSION_ID
+```
+
+### Token Reporting in HANDBACK
+
+Include actual token usage in HANDBACK block:
+
+```yaml
+tokens_in: 1200        # Tokens consumed reading DELEGATE + context
+tokens_out: 820        # Tokens produced in response
+model: claude-haiku-4-5
+effort: high
+duration_minutes: 18
+```
+
+**Guidelines:**
+- `tokens_in` = tokens to read DELEGATE + necessary code reads
+- `tokens_out` = tokens in your response (HANDBACK + explanation)
+- Report actual usage, not estimates
+- Use `opencode-tokens` to verify if unsure
+
+### Token Budget Awareness
+
+When executing a DELEGATE:
+1. Check available budget: `opencode-budget --session <id>`
+2. Estimate tokens needed (see AGENTS.md token allocation table)
+3. If approaching limit, escalate to Orchestrator with `status: blocked`
+4. Never exceed budget without explicit approval
+
+---
+
 ## Usage in Agent Conversations
 
 ### When to emit DELEGATE

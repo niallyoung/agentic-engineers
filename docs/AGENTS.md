@@ -187,6 +187,107 @@ This creates autonomous cost optimization: each task makes future similar tasks 
 
 ---
 
+## Token Visibility & Monitoring
+
+**New in Phase 2D:** Real-time token tracking for all agents and subagents via the token aggregator plugin.
+
+### Token Tracking Commands
+
+Three CLI commands provide complete visibility into token usage:
+
+```bash
+# Real-time token usage by agent
+opencode-tokens --session <session-id>
+
+# Budget status (if budget limit set)
+opencode-budget --session <session-id> --limit 200000
+
+# List all subagents in session
+opencode-subagents --session <session-id>
+```
+
+### Key Insights
+
+- **Orchestrator sees only 27%** of actual token usage (341,960 tokens)
+- **Subagents account for 73%** of usage (922,062 tokens)
+- **Total across 58 sessions:** 1,264,022 tokens
+- **No artificial limits** on concurrent agents, depth, or token consumption
+- **Proven capacity:** 36 concurrent agents from single parent (observed in production)
+
+### Monitoring Best Practices
+
+**During active work:**
+```bash
+# Watch token usage in real-time (updates every 5 seconds)
+watch -n 5 'opencode-tokens --session <your-session-id>'
+```
+
+**Database queries for analysis:**
+```bash
+# How many agents are running?
+sqlite3 ~/.local/share/opencode/opencode.db "
+SELECT parent_id, COUNT(*) as children 
+FROM session 
+WHERE parent_id IS NOT NULL 
+GROUP BY parent_id 
+ORDER BY children DESC;
+"
+
+# What's the deepest nesting?
+sqlite3 ~/.local/share/opencode/opencode.db "
+WITH RECURSIVE depth_calc AS (
+  SELECT id, parent_id, 1 as depth FROM session WHERE parent_id IS NULL
+  UNION ALL
+  SELECT s.id, s.parent_id, d.depth + 1 FROM session s
+  INNER JOIN depth_calc d ON s.parent_id = d.id
+)
+SELECT MAX(depth) as max_depth FROM depth_calc;
+"
+```
+
+### Token Budget Allocation
+
+Recommended allocation for typical workflows:
+
+| Role | Tokens | % | Notes |
+|------|--------|---|-------|
+| Orchestrator (Haiku, low) | 60k | 30% | Routing, coordination, metrics |
+| Engineer (Haiku, high) | 80k | 40% | Implementation, well-scoped tasks |
+| Quality Engineer (Sonnet, medium) | 30k | 15% | Verification, feedback |
+| Senior Engineer (Sonnet, high) | 20k | 10% | Complex tasks, planning |
+| Other roles | 10k | 5% | Lead, Principal, Security, Model Engineer |
+| **Total** | **200k** | **100%** | Typical session budget |
+
+**Adjust based on:**
+- Task complexity (complex tasks need more tokens)
+- Parallel delegation (more agents = higher total, but faster wall-clock)
+- Model selection (Opus uses more tokens than Haiku)
+
+### Parallel Delegation Token Impact
+
+Parallel delegation **reduces wall-clock time** but increases concurrent token usage:
+
+**Sequential (3 tasks, 1 hour each):**
+- Wall-clock: 3 hours
+- Peak tokens: 2,000 (one agent at a time)
+- Total tokens: 6,000
+
+**Parallel (3 tasks, 1 hour each, concurrent):**
+- Wall-clock: 1 hour (66% faster)
+- Peak tokens: 6,000 (three agents at once)
+- Total tokens: 6,000 (same)
+
+**Benefit:** 2 hours saved with same total token cost. Use parallel delegation when wall-clock time is critical.
+
+### Documentation
+
+- **Quick Start:** `docs/QUICK-START-CONCURRENT-AGENTS.md`
+- **Token Plugin:** `~/.config/opencode/.opencode/plugins/TOKEN-AGGREGATOR.md`
+- **Capacity Analysis:** `docs/CONCURRENT-SUBAGENT-CAPACITY.md`
+- **Testing Guide:** `docs/CONCURRENT-SUBAGENT-TESTING-GUIDE.md`
+
+---
+
 ## Effort Levels & Token Budget
 
 Set effort level when assigning to sub-agents. Effort controls reasoning depth and exploration scope.
