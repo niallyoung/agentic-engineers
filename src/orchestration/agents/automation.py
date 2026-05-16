@@ -37,6 +37,7 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 
 from .orchestrator import OrchestratorAgent, QueueManager
+from ..dry_run import initialize_dry_run, is_dry_run_enabled
 
 
 # ─── Configuration & Constants ───────────────────────────────────────────────
@@ -172,7 +173,9 @@ class AutomationController:
                  daemon_mode: Optional[bool] = None,
                  idle_timeout: Optional[int] = None,
                  max_cycles: Optional[int] = None,
-                 metrics_file: Optional[str] = None):
+                 metrics_file: Optional[str] = None,
+                 dry_run: bool = False,
+                 dry_run_log: Optional[str] = None):
         """
         Initialize AutomationController.
         
@@ -184,6 +187,8 @@ class AutomationController:
             idle_timeout: Idle timeout in seconds (default from env or 300)
             max_cycles: Maximum cycles before exit (for testing)
             metrics_file: Path to write final metrics JSON
+            dry_run: Enable dry-run mode (no side effects)
+            dry_run_log: Path to write dry-run audit trail
         """
         # Configuration from environment variables with defaults
         self.poll_interval = (
@@ -211,8 +216,23 @@ class AutomationController:
             os.getenv("AUTOMATION_METRICS_FILE")
         )
         
+        # Dry-run mode configuration
+        self.dry_run = dry_run or os.getenv("DRY_RUN_MODE", "false").lower() == "true"
+        self.dry_run_log = (
+            dry_run_log or 
+            os.getenv("DRY_RUN_LOG_FILE", "/tmp/orchestrator-dry-run.json")
+        )
+        
         # Setup logging
         self.logger = self._setup_logging()
+        
+        # Initialize dry-run context if enabled
+        if self.dry_run:
+            initialize_dry_run(
+                enabled=True,
+                log_file=self.dry_run_log,
+                logger=self.logger
+            )
         
         # Initialize orchestrator
         self.orchestrator = OrchestratorAgent(
@@ -499,6 +519,17 @@ def main():
         default="INFO",
         help="Logging level"
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Enable dry-run mode (simulate all operations without side effects)"
+    )
+    parser.add_argument(
+        "--dry-run-log",
+        type=str,
+        default=None,
+        help="Path to write dry-run audit trail JSON (default: /tmp/orchestrator-dry-run.json)"
+    )
     
     args = parser.parse_args()
     
@@ -510,6 +541,8 @@ def main():
         idle_timeout=args.idle_timeout,
         max_cycles=args.max_cycles,
         metrics_file=args.metrics_file,
+        dry_run=args.dry_run,
+        dry_run_log=args.dry_run_log,
     )
     
     result = controller.run()
