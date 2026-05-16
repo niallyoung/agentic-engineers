@@ -81,15 +81,15 @@ list_source_agents() {
 #   github-copilot/claude-sonnet-4.5
 #   github-copilot/claude-sonnet-4.6
 #
-# Note: claude-opus-4-6 maps to opus-4.7 because opus-4.6 is NOT in the registry;
-# 4.7 is the closest available (newer, same tier).
+# Note: claude-opus-4-6 is now declared in the custom provider config (see write_config)
+# so it maps directly instead of falling back to 4.7.
 map_model_opencode() {
 	case "$1" in
 		claude-haiku-4-5|claude-haiku-4.5)   echo "github-copilot/claude-haiku-4.5" ;;
 		claude-sonnet-4-6|claude-sonnet-4.6) echo "github-copilot/claude-sonnet-4.6" ;;
 		claude-sonnet-4-5|claude-sonnet-4.5) echo "github-copilot/claude-sonnet-4.5" ;;
 		claude-opus-4-7|claude-opus-4.7)     echo "github-copilot/claude-opus-4.7" ;;
-		claude-opus-4-6|claude-opus-4.6)     echo "github-copilot/claude-opus-4.7" ;;  # closest available
+		claude-opus-4-6|claude-opus-4.6)     echo "github-copilot/claude-opus-4.6" ;;
 		claude-opus-4-5|claude-opus-4.5)     echo "github-copilot/claude-opus-4.5" ;;
 		*) echo "" ;;  # sentinel — caller warns + skips model emission
 	esac
@@ -223,6 +223,37 @@ write_config() {
     "glob": "allow",
     "grep": "allow",
     "webfetch": "allow"
+  },
+  "provider": {
+    "github-copilot": {
+      "models": {
+        "claude-opus-4.6": {
+          "id": "claude-opus-4.6",
+          "name": "Claude Opus 4.6",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000005,
+            "output": 0.000025,
+            "cache_read": 0.0000005,
+            "cache_write": 0.00000625
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 128000
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        }
+      }
+    }
   }
 }
 EOF
