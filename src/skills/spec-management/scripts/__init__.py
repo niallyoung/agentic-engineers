@@ -1,5 +1,5 @@
 """
-spec_management skill modules.
+spec-management skill modules.
 
 Core modules:
 - spec_manager: Main orchestrator

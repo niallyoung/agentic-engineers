@@ -539,7 +539,7 @@ class InitResult:
 Instead, for each agent stub in `agents/`, repo-init calls:
 
 ```python
-from src.skills.agent_creator.scripts.agent_creator import AgentConfig, AgentCreator
+from src.skills.agent_creator import AgentConfig, AgentCreator
 
 creator = AgentCreator(output_root=target_repo / "skills")
 for role in enabled_roles:

@@ -400,3 +400,70 @@ pytest skills/queue-management/tests/ --cov=skills.queue_management --cov-report
 - **QUEUE-OPS-API.md** — Detailed API specification
 - **EXAMPLES.md** — Usage examples and patterns
 - **PROTOCOL-ANALYSIS.md** — Protocol analysis that motivated this skill
+
+---
+
+## CLI Tool: add-to-queue
+
+The `scripts/add-to-queue` CLI tool automates task queuing. Instead of manually creating both a DELEGATE JSON file and a TODO.md entry, users call this tool once and it handles both atomically.
+
+**What it does:**
+1. Parses task specifications (JSON or CLI args)
+2. Validates against QUEUE-PROTOCOL format
+3. Generates DELEGATE JSON file in `~/.copilot/queue/{session-id}/incoming/`
+4. Adds entry to repo TODO.md (correct phase section)
+5. Commits both files atomically in single git commit
+6. Detects and prevents duplicate task_ids
+
+### CLI Usage
+
+```bash
+# Add task via command-line arguments
+add-to-queue --task-id my-feature-001 \
+  --role Engineer \
+  --scope "Implement new authentication system" \
+  --effort high \
+  --priority high
+
+# Add task via JSON spec file
+add-to-queue --spec-file task-spec.json
+```
+
+### Programmatic Usage (QueueManager)
+
+```python
+from queue_manager import QueueManager
+
+qm = QueueManager()
+spec = {
+    "task_id": "feature-x-impl",
+    "role": "Senior Engineer",
+    "scope": "Implement feature X",
+    "plan": ["Design API", "Implement", "Test"],
+    "success_criteria": ["Tests pass", "Coverage 85%+"],
+    "effort": "high",
+}
+result = qm.process_task(spec)
+```
+
+### Required Fields
+
+- `task_id` — Kebab-case identifier (must be unique)
+- `role` — Assignment role (Engineer, Senior Engineer, Lead Engineer, etc.)
+- `scope` — Task description
+- `plan` — List of implementation steps (at least 1)
+- `success_criteria` — List of success metrics (at least 1)
+
+### Optional Fields
+
+- `effort` — low, medium, high (default: medium)
+- `priority` — low, normal, high (default: normal)
+- `phase` — Phase number for TODO.md section (default: 2)
+- `constraints` — List of constraints or limitations
+- `context` — Additional context
+
+### Scripts
+
+- `scripts/add-to-queue` — CLI entry point
+- `queue_manager.py` — Core QueueManager class with TODO.md integration
+- `cli.py` — CLI argument parsing and dispatch
