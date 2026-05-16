@@ -1,0 +1,20 @@
+
+╔════════════════════════════════════════════════════════════════╗
+║                    TOKEN USAGE AGGREGATION                     ║
+╚════════════════════════════════════════════════════════════════╝
+
+Total Sessions:        50
+Total Tokens:          50,184
+  ├─ Input:            161
+  ├─ Output:           50,023
+  ├─ Reasoning:        0
+  ├─ Cache Read:       813,249
+  └─ Cache Write:      193,084
+
+By Agent:
+  senior-engineer       11 sessions      24,567 tokens
+  engineer              20 sessions      12,087 tokens
+  lead-engineer         15 sessions      10,601 tokens
+  quality-engineer       3 sessions       1,975 tokens
+  security-engineer      1 sessions         954 tokens
+
