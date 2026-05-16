@@ -1,12 +1,14 @@
 {
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-3-5-sonnet-20241022",
+  "defaultModel": "claude-sonnet-4-20250514",
   "defaultThinkingLevel": "medium",
   "theme": "dark",
   "compaction": {
     "enabled": true,
     "reserveTokens": 16384
   },
+  "lastChangelogVersion": "0.74.0",
+  "_note": "packages/extensions/skills keys below are SPECULATIVE — not verified against pi.dev runtime API. They may have no effect. See pi.yml and SUB_AGENT_SETUP.md for details.",
   "packages": [
     "orchestration-framework"
   ],
@@ -20,6 +22,5 @@
     "route-task",
     "collect-metrics",
     "verify-completion"
-  ],
-  "lastChangelogVersion": "0.74.0"
+  ]
 }
