@@ -1,69 +1,31 @@
-# Documentation Archive
+# docs/archive — Historical Documents
 
-This directory contains archived documentation, session deliverables, and historical artifacts from the agentic-engineers project.
+This directory contains historical documents that were moved from the repository root
+during the 2026-05-16 documentation consolidation.
 
-## Purpose
+**Archived:** 2026-05-16
 
-Files are archived when they:
-- Document completed analysis or decisions that have been implemented
-- Are session deliverables that served their purpose but are no longer actively maintained
-- Contain outdated information superseded by newer documentation
-- Are kept for historical reference but should not be the primary source
+## Documents
 
-## Directory Structure
+| File | Original Location | Reason Archived |
+|------|------------------|-----------------|
+| `ANALYSIS_PI_INTEGRATION.md` | Root | Historical analysis of π.dev integration approach |
+| `PI_INTEGRATION_FILES.md` | Root | File inventory from π.dev integration work |
+| `PI_INTEGRATION_SUMMARY.md` | Root | Summary of π.dev integration decisions |
+| `PI-DEV-INTEGRATION.md` | Root | π.dev integration design document |
+| `PROTOCOL-ANALYSIS.md` | Root | Protocol analysis from early framework design |
+| `RESTRUCTURE-DESIGN.md` | Root | Repository restructure design document |
+| `RESTRUCTURE-FINAL-REPORT.md` | Root | Repository restructure completion report |
+| `PHASE-4-HANDBACK.md` | Root | Phase 4 implementation handback document |
+| `REPOSITORY-OVERVIEW.md` | Root | Comprehensive repository overview (superseded by README.md) |
 
-### `sessions/`
-**Session deliverables and audit artifacts**
+## Current Documentation
 
-Contains summaries, audit reports, and analysis from specific engineering sessions:
-- `AUDIT-FINAL-SUMMARY.md` — Comprehensive audit report from May 2025
-- `AUDIT-RENDERING-PIPELINE.md` — Technical analysis of rendering pipeline  
-- `STRUCTURE-RECOMMENDATION.md` — Proposed repository structure optimizations
-- `CONSOLIDATION-ROADMAP.md` — Plan for documentation consolidation (this initiative)
+For current documentation, see:
 
-**When to use:** Historical reference only. For current information, see `docs/` root and `docs/decisions/`.
-
-### `phase5/` and `phase6-draft/`
-**Phase implementation history**
-
-Contains documentation from specific development phases. See `docs/PHASE-*.md` for current phase documentation.
-
-### `legacy/`
-**Superseded architecture and old guides**
-
-Contains old implementation guides and architecture docs that have been superseded. Used only for historical context.
-
-## Retrieving Archived Content
-
-### Search within archive:
-```bash
-grep -r "search_term" docs/archive/
-```
-
-### View a specific archived file:
-```bash
-cat docs/archive/sessions/AUDIT-FINAL-SUMMARY.md
-```
-
-### Understanding what was archived and why:
-This consolidation was performed to reduce root-level clutter and organize documentation by relevance:
-- **Audit deliverables** archived because analysis was completed and implemented
-- **Structure docs** archived in `docs/decisions/` as ADRs (Architecture Decision Records)
-- **Planning docs** retained in `docs/` for ongoing reference
-
-## Adding Content to Archive
-
-When archiving new content:
-1. Move files to appropriate subdirectory (`sessions/`, `phase5/`, `phase6-draft/`, `legacy/`)
-2. Update this README.md with brief description
-3. Commit with clear message: `archive: Move [filename] to archive/[subdirectory]`
-
-## Current Tracking Effort
-
-Total tracked markdown files: ~150 (target: <150)
-
-Repository structure goals:
-- ✅ Root: ≤4 .md files (README.md, TODO.md + essential docs only)
-- ✅ `docs/`: Well-organized documentation with clear structure
-- ✅ `docs/archive/`: All historical artifacts properly categorized
-- ✅ All internal links updated to point to new locations
+- [`docs/AGENTS.md`](../AGENTS.md) — Agent roles, routing, and protocol
+- [`docs/OPENCODE-INSTALL.md`](../OPENCODE-INSTALL.md) — OpenCode installation guide
+- [`docs/CLAUDE-INSTALL.md`](../CLAUDE-INSTALL.md) — Claude Code installation guide
+- [`docs/HARNESS-REVIEW.md`](../HARNESS-REVIEW.md) — Comprehensive harness review
+- [`docs/HARNESS-FINAL-SUMMARY.md`](../HARNESS-FINAL-SUMMARY.md) — Final summary
+- [`README.md`](../../README.md) — Repository overview
