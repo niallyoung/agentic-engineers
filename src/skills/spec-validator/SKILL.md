@@ -60,7 +60,7 @@ git diff HEAD~1 | python scripts/spec_validator.py --spec docs/SPEC.md --stdin -
 
 ### Python API
 ```python
-from src.skills.spec_validator.scripts.spec_validator import SpecValidator, ValidationMode
+from src.skills.spec_validator.scripts.spec_validator import SpecValidator, ValidationMode  # note: Python module uses underscore (spec_validator) since hyphens are invalid in module names
 
 validator = SpecValidator()
 result = validator.validate(

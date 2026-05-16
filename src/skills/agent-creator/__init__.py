@@ -1,6 +1,37 @@
 # -*- coding: utf-8 -*-
-"""agent-creator skill resource directory.
+"""agent-creator — skill package for scaffolding new SPEC-compliant agents."""
+from .scripts.agent_creator import (
+    AgentConfig,
+    ValidationError,
+    CreationResult,
+    CreationStatus,
+    DependencyGraph,
+    ConfigValidator,
+    TemplateGenerator,
+    DependencyValidator,
+    IntegrationChecker,
+    AgentCreator,
+    ALLOWED_ROLES,
+    ALLOWED_EFFORTS,
+    ALLOWED_MODELS,
+    DEFAULT_MODEL,
+    DEFAULT_EFFORT,
+)
 
-The Python implementation lives in src/skills/agent_creator/ (underscore).
-This directory holds the SKILL.md specification and documentation.
-"""
+__all__ = [
+    "AgentConfig",
+    "ValidationError",
+    "CreationResult",
+    "CreationStatus",
+    "DependencyGraph",
+    "ConfigValidator",
+    "TemplateGenerator",
+    "DependencyValidator",
+    "IntegrationChecker",
+    "AgentCreator",
+    "ALLOWED_ROLES",
+    "ALLOWED_EFFORTS",
+    "ALLOWED_MODELS",
+    "DEFAULT_MODEL",
+    "DEFAULT_EFFORT",
+]

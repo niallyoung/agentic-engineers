@@ -32,7 +32,7 @@ Automates creation of new agent templates that are immediately SPEC-compliant an
 ### Python API (preferred)
 
 ```python
-from src.skills.agent_creator.scripts.agent_creator import AgentConfig, AgentCreator
+from src.skills.agent_creator import AgentConfig, AgentCreator
 from pathlib import Path
 
 cfg = AgentConfig(
@@ -60,14 +60,14 @@ result = creator.create(cfg, dry_run=True)
 ### CLI
 
 ```bash
-python src/skills/agent_creator/scripts/agent_creator.py \
+python src/skills/agent-creator/scripts/agent_creator.py \
   --name my-agent \
   --role engineer \
   --effort low \
   --description "Handles X and Y."
 
 # Dry-run:
-python src/skills/agent_creator/scripts/agent_creator.py \
+python src/skills/agent-creator/scripts/agent_creator.py \
   --name my-agent --role engineer --dry-run
 ```
 

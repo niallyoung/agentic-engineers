@@ -1,7 +1,7 @@
 ---
-name: Orchestrator
-description: Routes tasks to appropriate team members, collects and analyzes metrics, coordinates model optimization, monitors CI/CD pipelines, manages A/B tests.
-model: claude-haiku-4.5
+name: orchestrator
+description: All entry points; routing decisions; task management; metrics collection; model recommendations
+model: claude-haiku-4-5
 ---
 
 # Orchestrator Agent
@@ -87,3 +87,8 @@ The Orchestrator operates differently from other agents:
 
 **Note on Orchestrator Autonomy:**
 Unlike other agents, the Orchestrator's autonomy is about **continuous polling**, not task-based. It should poll the queue repeatedly while tasks exist, but pause when the queue is empty. This is automatic behavior, not a conscious decision per task.
+
+## Integration
+
+Invoked by OpenCode when explicitly requested via `@orchestrator` mention.
+Polls `artifacts/queue/incoming/` every 30-60 seconds in harness mode.
