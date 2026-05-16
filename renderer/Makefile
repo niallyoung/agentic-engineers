@@ -56,13 +56,15 @@ uninstall-github: ## Remove agentic-engineers files from ~/.github/
 
 # -----------------------------------------------------------------------------
 # Target 2: ~/.copilot/  (GitHub Copilot CLI — real consumer)
-# Includes: agents (from src/agents) + skills (from renderer/scripts)
-# Agent rendering is automatic as part of install-copilot
-install-copilot: ## Render agents + skills into ~/.copilot/
-	@echo "🔧 Rendering agents from src/agents/ → ~/.copilot/agents/..."
-	@$(CURDIR)/scripts/render-copilot-agents.sh
-	@echo "📦 Installing skills and agents → ~/.copilot/..."
+# IMPORTANT: Copilot CLI does not support custom agents. Only skills are installed.
+# The render-copilot-agents.sh/py scripts exist for legacy/experimental use but
+# are NOT invoked here. To install agents, use install-claude or install-opencode.
+# -----------------------------------------------------------------------------
+install-copilot: ## Install skills into ~/.copilot/ (skills only; agents not supported by Copilot CLI)
+	@echo "ℹ️  Note: Copilot CLI does not support custom agents; installing skills only."
+	@echo "📦 Installing skills → ~/.copilot/..."
 	@$(CURDIR)/scripts/render-copilot.sh "$(REPO_ROOT)" "$(COPILOT)"
+	@echo "✅ Installation to ~/.copilot/ complete (skills only)"
 
 uninstall-copilot: ## Remove agentic-engine{service-name} files from ~/.copilot/
 	@$(CURDIR)/scripts/render-copilot.sh "$(REPO_ROOT)" "$(COPILOT)" --uninstall

@@ -1,0 +1,111 @@
+/*!****************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ../../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[2]!../../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[3]!../../../node_modules/tailwindcss/base.css ***!
+  \****************************************************************************************************************************************************************************************************************************************************************************************************/
+@tailwind base;
+
+/*!**********************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ../../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[2]!../../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[3]!../../../node_modules/tailwindcss/components.css ***!
+  \**********************************************************************************************************************************************************************************************************************************************************************************************************/
+@tailwind components;
+
+/*!*********************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ../../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[2]!../../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[3]!../../../node_modules/tailwindcss/utilities.css ***!
+  \*********************************************************************************************************************************************************************************************************************************************************************************************************/
+@tailwind utilities;
+
+/*!******************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ../../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[2]!../../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[3]!./styles/globals.css ***!
+  \******************************************************************************************************************************************************************************************************************************************************************************/
+/* Dark mode CSS variables */
+:root {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+.dark {
+  --color-bg-primary: #111827;
+  --color-bg-secondary: #1f2937;
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-border: #374151;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Status badge colors */
+.badge-incoming {
+  @apply bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100;
+}
+
+.badge-in-progress {
+  @apply bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100;
+}
+
+.badge-completed {
+  @apply bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100;
+}
+
+.badge-failed {
+  @apply bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100;
+}
+
+.badge-escalated {
+  @apply bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100;
+}
+
+/* Tier color classes */
+.tier-supervised {
+  @apply bg-blue-500 dark:bg-blue-600;
+}
+
+.tier-assisted {
+  @apply bg-green-500 dark:bg-green-600;
+}
+
+.tier-balanced {
+  @apply bg-yellow-500 dark:bg-yellow-600;
+}
+
+.tier-accelerated {
+  @apply bg-orange-500 dark:bg-orange-600;
+}
+
+.tier-autonomous {
+  @apply bg-red-500 dark:bg-red-600;
+}
+
+/* Transitions */
+@layer components {
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .focus-ring {
+    @apply outline-none ring-2 ring-blue-500 dark:ring-blue-400 ring-offset-2 dark:ring-offset-gray-900;
+  }
+}
+

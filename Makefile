@@ -11,7 +11,7 @@ help:
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
-	@echo "  install-copilot     Install rendered agents → ~/.copilot/"
+	@echo "  install-copilot     Install rendered skills → ~/.copilot/ (skills only; Copilot CLI does not support custom agents)"
 	@echo "  install-pi          Install π.dev harness → ~/.pi/"
 	@echo "  install-opencode    Install agents & skills → ~/.config/opencode/ (OpenCode-compatible)"
 	@echo ""
@@ -42,16 +42,20 @@ install: install-copilot install-claude install-pi install-opencode ## Install t
 	@echo "Next: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
 
-install-copilot: render-copilot ## Install rendered agents → ~/.copilot/
-	@echo "📦 Installing agentic-engineers to ~/.copilot/..."
+install-copilot: render-copilot ## Install rendered skills → ~/.copilot/ (skills only; Copilot CLI does not support custom agents)
+	@echo "ℹ️  Note: Copilot CLI does not support custom agents; installing skills only."
+	@echo "📦 Installing skills → ~/.copilot/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot"
-	@echo "✅ Installation to ~/.copilot/ complete"
+	@echo "✅ Installation to ~/.copilot/ complete (skills only)"
 
 install-claude: render-claude ## Install rendered agents → ~/.claude/
 	@echo "📦 Installing agentic-engineers to ~/.claude/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude"
 	@echo "✅ Installation to ~/.claude/ complete"
 
+# Note: Copilot CLI does not support custom agents. Only skills are installed.
+# The render-copilot-agents.sh/py scripts exist for legacy/experimental use but
+# are NOT invoked here. To install agents, use install-claude or install-opencode.
 
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only)
 	@echo "🧹 Uninstalling from ~/.copilot/..."
