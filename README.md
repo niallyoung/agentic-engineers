@@ -810,6 +810,39 @@ make coverage
 
 ---
 
+## 🔄 Framework Integration
+
+**Status:** ⏸️ **PAUSED** — Research complete. No implementation until explicitly approved.
+
+Comprehensive research on 45 AI agent frameworks has been completed (May 2026). Top recommendations:
+
+| Tier | Framework | Stars | Use Case |
+|------|-----------|-------|----------|
+| **1** | CrewAI | 51.5K | Multi-agent orchestration (5.76x faster) |
+| **1** | LangGraph | 32.1K | State management & durability |
+| **1** | Pydantic AI | 17.1K | Type-safe agent development |
+| **1** | Ollama | 171K | Local LLM runtime |
+| **2** | Semantic Kernel | 27.9K | Enterprise multi-language |
+| **2** | Temporal | 20.3K | Durable execution |
+
+**To opt-in:** Add framework integration tasks to [TODO.md](TODO.md#framework-integration) and notify `@orchestrator`.
+
+📚 **Full research:** [docs/FRAMEWORKS/](docs/FRAMEWORKS/) — analysis, comparison tables, integration strategy, raw data (45 frameworks, ~170KB)
+
+---
+
+## 📚 Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [docs/SPEC.md](docs/SPEC.md) | Protocol specification (source of truth) |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Queue protocol documentation |
+| [docs/AGENTS.md](docs/AGENTS.md) | Agent routing reference |
+| [docs/FRAMEWORKS/](docs/FRAMEWORKS/) | AI frameworks research & integration strategy |
+| [docs/archive/](docs/archive/) | Archived documentation |
+
+---
+
 ## 🎬 Next Steps
 
 ### For New Users

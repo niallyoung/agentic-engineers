@@ -172,6 +172,71 @@
 
 ---
 
+## 🔵 FRAMEWORK INTEGRATION (Opt-In Required) {#framework-integration}
+
+> **Status:** ⏸️ PAUSED — Research complete. No work starts until explicitly approved.  
+> **Research:** [docs/FRAMEWORKS/](docs/FRAMEWORKS/) — full analysis, comparison, strategy  
+> **To activate:** Remove the PAUSED status and assign owners below.
+
+### Phase 1: Core Integration (2-3 weeks, ~70 hours)
+
+- [ ] **FRAMEWORK-001:** Verify/complete Anthropic SDK integration
+  - Ensure Claude support is complete with tool use, streaming, retry logic
+  - Effort: 1 day | Risk: Minimal | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-002:** Add/verify OpenAI SDK integration
+  - GPT-4o support, Assistants API, streaming
+  - Effort: 1 day | Risk: Minimal | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-003:** Integrate Ollama local LLM runtime
+  - REST API integration, document local development setup
+  - Effort: 1 day + 2 days docs | Risk: Minimal | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-004:** Document CrewAI as optional orchestration layer
+  - Integration points with agentic-engineers queue protocol
+  - Effort: 3-5 days | Risk: Low | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-005:** Integrate Pydantic AI for type-safe agents
+  - Type-safe DELEGATE/HANDBACK schemas, IDE support
+  - Effort: 2-3 days | Risk: Low | Owner: _unassigned_
+
+### Phase 2: Enhanced Features (3-4 weeks, ~60 hours)
+
+- [ ] **FRAMEWORK-006:** LangGraph integration (state management)
+  - Optional state-based orchestration layer
+  - Effort: 4-6 days | Risk: Low | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-007:** Aider terminal workflow documentation
+  - Integration guide for terminal-based development
+  - Effort: 2-3 days | Risk: Low | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-008:** Cohere SDK support
+  - CommandR model alternative provider
+  - Effort: 1 day | Risk: Minimal | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-009:** Semantic Kernel evaluation
+  - Enterprise multi-language support assessment
+  - Effort: 5-7 days | Risk: Medium | Owner: _unassigned_
+
+### Phase 3: Enterprise Features (4-6 weeks, ~80 hours)
+
+- [ ] **FRAMEWORK-010:** Temporal integration (durable execution)
+  - Wrap agent execution in Temporal workflows for failure recovery
+  - Effort: 4-5 days | Risk: Medium | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-011:** Ray integration (distributed agents)
+  - Scale agentic-engineers to distributed multi-machine execution
+  - Effort: 6-8 days | Risk: Medium-High | Owner: _unassigned_
+
+- [ ] **FRAMEWORK-012:** Cloud service integration guides
+  - AWS Bedrock, Google Vertex AI, Azure OpenAI documentation
+  - Effort: 3-4 days each | Risk: Low | Owner: _unassigned_
+
+> **Total effort:** 210+ hours across 8-12 weeks  
+> **Reference:** [docs/FRAMEWORKS/FRAMEWORK_INTEGRATION_STRATEGY.md](docs/FRAMEWORKS/FRAMEWORK_INTEGRATION_STRATEGY.md)
+
+---
+
 ## 🟢 OPTIONAL (Nice to Have)
 
 ### Standards Roadmap Phases (Q2-Q4 2025)
