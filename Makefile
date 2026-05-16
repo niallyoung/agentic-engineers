@@ -92,10 +92,10 @@ verify: ## Verify framework structure and tests (SPEC-compliant)
 validate-opencode: ## Validate OpenCode config generation (status + JSON schema check)
 	@echo "🔍 Validating OpenCode install at ~/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
-	@if [ -f "$(HOME)/.config/opencode/opencode.json" ]; then \
-		(command -v jq >/dev/null && jq -e . "$(HOME)/.config/opencode/opencode.json" >/dev/null) \
-		|| python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$(HOME)/.config/opencode/opencode.json"; \
-		echo "✅ opencode.json is valid JSON"; \
+	@if [ -f "$(HOME)/.config/opencode/opencode.jsonc" ]; then \
+		(command -v jq >/dev/null && jq -e --raw-input 'inputs' "$(HOME)/.config/opencode/opencode.jsonc" >/dev/null 2>&1) \
+		|| python3 -c "import json,sys,re; t=open(sys.argv[1]).read(); t=re.sub(r'^\s*//.*$$','',t,flags=re.M); json.loads(t)" "$(HOME)/.config/opencode/opencode.jsonc"; \
+		echo "✅ opencode.jsonc is valid JSONC"; \
 	fi
 	@echo "✅ OpenCode validation complete"
 
@@ -138,7 +138,8 @@ uninstall-opencode-legacy: ## Remove managed install from ~/.opencode/ (only if 
 	@echo "🧹 Checking for legacy install at ~/.opencode/..."
 	@if [ -d "$(HOME)/.opencode" ] && \
 	   { [ -f "$(HOME)/.opencode/agents/.agentic-engine{service-name}" ] || \
-	     grep -q '_managed_by.*agentic-engineers' "$(HOME)/.opencode/opencode.json" 2>/dev/null; }; then \
+	     grep -q '_managed_by.*agentic-engineers' "$(HOME)/.opencode/opencode.json" 2>/dev/null || \
+	     grep -q '_managed_by.*agentic-engineers' "$(HOME)/.opencode/opencode.jsonc" 2>/dev/null; }; then \
 		bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.opencode" --uninstall; \
 	else \
 		echo "  ℹ️  No managed agentic-engineers install found at ~/.opencode/ — nothing to do"; \
