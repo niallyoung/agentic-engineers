@@ -225,6 +225,11 @@ write_config() {
     "grep": "allow",
     "webfetch": "allow"
   },
+  "agent": {
+    "orchestrator": {
+      "model": "github-copilot/claude-haiku-4.5"
+    }
+  },
   "provider": {
     "github-copilot": {
       "models": {
