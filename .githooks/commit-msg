@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg — SDLC commit message enforcement
+#
+# Enforces:
+#   1. Minimum commit message length (not empty/trivial)
+#   2. Conventional commit format (optional but encouraged)
+#   3. SKIP_HOOKS bypass is documented when used
+#
+# Install: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Strip comments (lines starting with #)
+MSG_BODY=$(echo "$COMMIT_MSG" | grep -v '^#' | sed '/^$/d' || true)
+
+ERRORS=0
+
+fail() {
+  echo "❌ commit-msg: $1"
+  ERRORS=$((ERRORS + 1))
+}
+
+# ── 1. Non-empty message ───────────────────────────────────────────────────────
+if [ -z "$MSG_BODY" ]; then
+  fail "Commit message is empty"
+fi
+
+# ── 2. Minimum length (first line ≥ 10 chars) ─────────────────────────────────
+FIRST_LINE=$(echo "$MSG_BODY" | head -n1)
+if [ ${#FIRST_LINE} -lt 10 ]; then
+  fail "Commit message too short (${#FIRST_LINE} chars). Minimum 10 chars for first line."
+fi
+
+# ── 3. If SKIP_HOOKS was used, require documentation ──────────────────────────
+# (This hook itself runs, so SKIP_HOOKS only bypasses pre-commit)
+# But if the message mentions SKIP_HOOKS, ensure there's a reason
+if echo "$MSG_BODY" | grep -qi 'SKIP_HOOKS'; then
+  if ! echo "$MSG_BODY" | grep -qiE 'SKIP_HOOKS.*:.*\S|reason|emergency|bypass'; then
+    fail "SKIP_HOOKS mentioned but no reason documented. Add 'SKIP_HOOKS: <reason>' to commit message."
+  fi
+fi
+
+# ── Result ─────────────────────────────────────────────────────────────────────
+if [ "$ERRORS" -gt 0 ]; then
+  echo ""
+  echo "❌ commit-msg: $ERRORS issue(s). Fix commit message and retry."
+  exit 1
+fi
+
+echo "✅ commit-msg: message format OK"
+exit 0

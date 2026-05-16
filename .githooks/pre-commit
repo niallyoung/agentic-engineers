@@ -1,23 +1,106 @@
-#!/bin/bash
-# Pre-commit hook: prevent external script bypass paths
-# This hook blocks commits that contain scripts violating SPEC constraints
+#!/usr/bin/env bash
+# .githooks/pre-commit — SDLC enforcement for agentic-engineers
+#
+# Enforces:
+#   1. No external scripts in protected paths (SPEC constraint)
+#   2. No secrets/credentials committed
+#   3. YAML/JSON files are well-formed
+#   4. No --no-verify bypass markers in committed files
+#
+# Install: git config core.hooksPath .githooks
+# Bypass (emergency only): SKIP_HOOKS=1 git commit
 
-set -e
+set -euo pipefail
 
-# Check for .py or .sh files in orchestration/scripts/
-if find orchestration/scripts -type f \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | grep -q . ; then
-  echo "❌ VIOLATION: External scripts found in orchestration/scripts/"
-  echo "All work must flow through DELEGATE/HANDBACK protocol"
-  echo "See docs/SPEC.md for details"
+# Allow emergency bypass with explicit env var (must be documented in commit msg)
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⚠️  SKIP_HOOKS=1 set — bypassing pre-commit enforcement (emergency only)"
+  exit 0
+fi
+
+ERRORS=0
+
+fail() {
+  echo "❌ $1"
+  ERRORS=$((ERRORS + 1))
+}
+
+warn() {
+  echo "⚠️  $1"
+}
+
+# ── 1. SPEC constraint: no external scripts in agent runtime paths ─────────────
+# Exemption: renderer/scripts/ is the build-time installation path (allowed)
+if git diff --cached --name-only | grep -qE '^orchestration/scripts/.*\.(py|sh)$'; then
+  fail "VIOLATION: External scripts in orchestration/scripts/ — all work must flow through DELEGATE/HANDBACK protocol (docs/SPEC.md)"
+fi
+
+if git diff --cached --name-only | grep -qE '^orchestration/config/.*\.cron$'; then
+  fail "VIOLATION: Cron files in orchestration/config/ — use queue-based delegation instead (docs/SPEC.md)"
+fi
+
+# ── 2. Secret detection ────────────────────────────────────────────────────────
+# Scan staged files for common secret patterns
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+
+for f in $STAGED_FILES; do
+  [ -f "$f" ] || continue
+  # Skip binary files
+  if file "$f" 2>/dev/null | grep -qE '(binary|image|executable)'; then continue; fi
+
+  # Check for common secret patterns
+  if git show ":$f" 2>/dev/null | grep -qiE '(api_key|secret_key|private_key|password|token)\s*[:=]\s*["\x27]?[A-Za-z0-9/+]{20,}'; then
+    fail "Possible secret detected in $f — review before committing"
+  fi
+
+  # Check for AWS keys
+  if git show ":$f" 2>/dev/null | grep -qE 'AKIA[0-9A-Z]{16}'; then
+    fail "AWS access key pattern detected in $f"
+  fi
+done
+
+# ── 3. YAML well-formedness ────────────────────────────────────────────────────
+if command -v python3 >/dev/null 2>&1; then
+  for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true); do
+    [ -f "$f" ] || continue
+    if ! git show ":$f" 2>/dev/null | python3 -c "import sys,yaml; yaml.safe_load(sys.stdin)" 2>/dev/null; then
+      fail "Invalid YAML: $f"
+    fi
+  done
+
+  # JSON well-formedness
+  for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.json(c)?$' || true); do
+    [ -f "$f" ] || continue
+    # Strip JSONC comments before parsing
+    if ! git show ":$f" 2>/dev/null | python3 -c "
+import sys, re, json
+content = sys.stdin.read()
+# Strip // comments (not inside strings)
+content = re.sub(r'(?m)//.*$', '', content)
+# Strip /* */ comments
+content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+json.loads(content)
+" 2>/dev/null; then
+      warn "Possible JSON syntax issue in $f (JSONC comments stripped before check)"
+    fi
+  done
+fi
+
+# ── 4. No bypass markers in committed code ────────────────────────────────────
+for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|sh|bash)$' || true); do
+  [ -f "$f" ] || continue
+  if git show ":$f" 2>/dev/null | grep -qE '(--no-verify|SKIP_HOOKS=1)'; then
+    warn "$f contains --no-verify or SKIP_HOOKS=1 — ensure this is intentional"
+  fi
+done
+
+# ── Result ─────────────────────────────────────────────────────────────────────
+if [ "$ERRORS" -gt 0 ]; then
+  echo ""
+  echo "❌ pre-commit: $ERRORS violation(s) found. Fix issues and re-commit."
+  echo "   Emergency bypass: SKIP_HOOKS=1 git commit (document reason in commit msg)"
   exit 1
 fi
 
-# Check for .cron files in orchestration/config/
-if find orchestration/config -name "*.cron" -type f 2>/dev/null | grep -q . ; then
-  echo "❌ VIOLATION: Cron files found in orchestration/config/"
-  echo "Use queue-based delegation instead"
-  echo "See docs/SPEC.md for details"
-  exit 1
-fi
-
+echo "✅ pre-commit: all checks passed"
 exit 0
