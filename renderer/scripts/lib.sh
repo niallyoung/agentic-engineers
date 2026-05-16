@@ -59,3 +59,54 @@ strip_fm() {
 extract_body_model() {
 	grep -m1 -E "^\*?\*?Model\*?\*?:" "$1" 2>/dev/null | sed -E 's/.*[Mm]odel[^:]*:[ *]*//; s/\*+$//; s/[ \t]+$//'
 }
+
+# YAML-escape a description for use inside double-quoted YAML value.
+# Collapse newlines to spaces, replace double-quotes with single-quotes,
+# normalise whitespace. Output is safe to embed as: description: "OUTPUT"
+# Usage: desc_escaped=$(printf '%s' "$desc" | yaml_escape_inline)
+yaml_escape_inline() {
+	tr '\n' ' ' | sed -e 's/"/'\''/g' -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//'
+}
+
+# Parse docs/AGENTS.md canonical agent definitions table.
+# Returns lines of: agent_name|model|effort|description
+# Usage: parse_agents_md <agents_md_file>
+parse_agents_md() {
+	local agents_file="$1"
+	
+	if [ ! -f "$agents_file" ]; then
+		echo "error: $agents_file not found" >&2
+		return 1
+	fi
+	
+	awk '
+		/^\| \*\*[A-Za-z]/ {
+			gsub(/^\| /, "")
+			gsub(/ \|$/, "")
+			n = split($0, fields, "|")
+			if (n < 5) next
+			for (i = 1; i <= n; i++) {
+				gsub(/^[ \t]+|[ \t]+$/, "", fields[i])
+			}
+			role = fields[1]; model = fields[2]; effort = fields[3]; description = fields[5]
+			gsub(/\*\*/, "", role)
+			role_lower = tolower(role)
+			gsub(/ /, "-", role_lower)
+			gsub(/^[ \t]+|[ \t]+$/, "", model)
+			gsub(/^[ \t]+|[ \t]+$/, "", effort)
+			gsub(/^[ \t]+|[ \t]+$/, "", description)
+			if (role_lower && model && effort && description) {
+				print role_lower "|" model "|" effort "|" description
+			}
+		}
+	' "$agents_file"
+}
+
+# Lookup canonical agent metadata from parsed AGENTS.md map file.
+# Usage: lookup_agent_metadata <agent_name> <agents_map_file>
+# Returns: "model|effort|description" or empty string if not found
+lookup_agent_metadata() {
+	local agent_name="$1"
+	local agents_map="$2"
+	grep "^${agent_name}|" "$agents_map" | cut -d'|' -f2-
+}

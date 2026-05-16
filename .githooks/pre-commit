@@ -39,6 +39,103 @@ if git diff --cached --name-only | grep -qE '^orchestration/config/.*\.cron$'; t
   fail "VIOLATION: Cron files in orchestration/config/ — use queue-based delegation instead (docs/SPEC.md)"
 fi
 
+# ─── Section: Agent frontmatter consistency check ───────────────────────────
+# Validate that src/agents/*-agent.md frontmatter model/effort fields
+# match the canonical values in docs/AGENTS.md.
+# This prevents silent drift between source files and the canonical table.
+
+validate_agent_frontmatter() {
+	local repo_root="$1"
+	local agents_md="$repo_root/docs/AGENTS.md"
+	local src_agents="$repo_root/src/agents"
+	local errors=0
+	
+	# Check bypass flag
+	if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
+		echo "⚠️  pre-commit: BYPASS_HOOK_VALIDATION=true — skipping frontmatter check" >&2
+		return 0
+	fi
+	
+	# Source shared lib for extract_fm, parse_agents_md, lookup_agent_metadata
+	# shellcheck source=../renderer/scripts/lib.sh
+	source "$repo_root/renderer/scripts/lib.sh" 2>/dev/null || {
+		echo "⚠️  pre-commit: could not source lib.sh — skipping frontmatter check" >&2
+		return 0
+	}
+	
+	# Parse canonical metadata into a temp file
+	local agents_map
+	agents_map=$(mktemp)
+	trap "rm -f '$agents_map'" RETURN
+	
+	if ! parse_agents_md "$agents_md" > "$agents_map" 2>/dev/null; then
+		echo "⚠️  pre-commit: could not parse $agents_md — skipping frontmatter check" >&2
+		return 0
+	fi
+	
+	if [ ! -s "$agents_map" ]; then
+		echo "⚠️  pre-commit: $agents_md yielded no agent entries — skipping frontmatter check" >&2
+		return 0
+	fi
+	
+	# Check each staged agent file
+	for agent_file in "$src_agents"/*-agent.md; do
+		[ -f "$agent_file" ] || continue
+		
+		agent_name=$(basename "$agent_file" "-agent.md")
+		
+		# Only check staged files (files that are being committed)
+		if ! git diff --cached --name-only | grep -q "src/agents/${agent_name}-agent.md"; then
+			continue
+		fi
+		
+		# Get frontmatter model and effort
+		fm_model=$(extract_fm "$agent_file" "model" 2>/dev/null || true)
+		fm_effort=$(extract_fm "$agent_file" "effort" 2>/dev/null || true)
+		
+		# Get canonical values
+		canonical=$(lookup_agent_metadata "$agent_name" "$agents_map")
+		if [ -z "$canonical" ]; then
+			# Agent not in docs/AGENTS.md — skip (may be a new agent being added)
+			continue
+		fi
+		
+		docs_model=$(echo "$canonical" | cut -d'|' -f1)
+		docs_effort=$(echo "$canonical" | cut -d'|' -f2)
+		
+		# Compare model
+		if [ -n "$fm_model" ] && [ "$fm_model" != "$docs_model" ]; then
+			echo "❌ pre-commit: $agent_file model mismatch" >&2
+			echo "   frontmatter: model: $fm_model" >&2
+			echo "   docs/AGENTS.md: model: $docs_model" >&2
+			echo "   Fix: update frontmatter or docs/AGENTS.md to match" >&2
+			errors=$((errors + 1))
+		fi
+		
+		# Compare effort
+		if [ -n "$fm_effort" ] && [ "$fm_effort" != "$docs_effort" ]; then
+			echo "❌ pre-commit: $agent_file effort mismatch" >&2
+			echo "   frontmatter: effort: $fm_effort" >&2
+			echo "   docs/AGENTS.md: effort: $docs_effort" >&2
+			echo "   Fix: update frontmatter or docs/AGENTS.md to match" >&2
+			errors=$((errors + 1))
+		fi
+	done
+	
+	return $errors
+}
+
+# Run validation (only if docs/AGENTS.md and src/agents/ exist)
+REPO_ROOT_HOOK=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+if [ -f "$REPO_ROOT_HOOK/docs/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]; then
+	if ! validate_agent_frontmatter "$REPO_ROOT_HOOK"; then
+		echo "" >&2
+		echo "💡 To bypass this check (emergency only): BYPASS_HOOK_VALIDATION=true git commit" >&2
+		ERRORS=$((ERRORS + 1))
+	fi
+fi
+# ─── End: Agent frontmatter consistency check ────────────────────────────────
+
 # ── 2. Secret detection ────────────────────────────────────────────────────────
 # Scan staged files for common secret patterns
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)

@@ -2,6 +2,17 @@
 
 Renders **agentic-engineers** configuration into **π.dev** integration harness.
 
+## Prerequisites
+
+- **Python 3.8+** — required
+- **PyYAML** — optional but recommended (enables YAML validation of `pi.yml`)
+  ```bash
+  pip install pyyaml
+  # or: pip3 install pyyaml
+  ```
+  Without PyYAML, the renderer will skip YAML validation and print a warning.
+  All other functionality (file rendering, JSON validation, status, uninstall) works without it.
+
 ## What It Does
 
 The renderer generates three critical files in `~/.pi/agent/`:
