@@ -49,21 +49,9 @@ CONFIG_SENTINEL='// _managed_by: agentic-engineers renderer/scripts/render-openc
 # Sentinel HTML comment line 1 of AGENTS.md.
 RULES_SENTINEL='<!-- managed by agentic-engineers render-opencode.sh'
 
-list_source_skills() {
-	local d
-	for d in "$SRC_SKILLS"/*/; do
-		[ -f "$d/SKILL.md" ] || continue
-		basename "$d"
-	done
-}
-
-list_source_agents() {
-	local f
-	for f in "$SRC_AGENTS"/*-agent.md; do
-		[ -f "$f" ] || continue
-		basename "$f" "-agent.md"
-	done
-}
+# Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 
 # Map agentic-engineers canonical model id → OpenCode provider/model id.
 #
@@ -102,33 +90,6 @@ effort_to_temperature() {
 		high|max)   echo "0.5" ;;
 		*)          echo "0.3" ;;
 	esac
-}
-
-# Extract a frontmatter field value: extract_fm <file> <key>
-extract_fm() {
-	awk -v key="$2" '
-		/^---$/ { fm = !fm; next }
-		fm && $0 ~ "^"key":" {
-			sub("^"key":[ \t]*", "", $0)
-			sub(/[ \t]+$/, "", $0)
-			print
-			exit
-		}
-	' "$1"
-}
-
-# Strip source frontmatter (everything between first two --- lines), leaving body
-strip_fm() {
-	awk '
-		/^---$/ { if (++count == 2) { in_body = 1; next } else next }
-		in_body { print }
-	' "$1"
-}
-
-# Extract Model: line from agent body if frontmatter doesn't have it
-extract_body_model() {
-	grep -m1 -E "^\*?\*?Model\*?\*?:" "$1" 2>/dev/null \
-		| sed -E 's/.*[Mm]odel[^:]*:[ *]*//; s/\*+$//; s/[ \t]+$//'
 }
 
 # Parse docs/AGENTS.md primary roster table for a given role's (model, effort, description).

@@ -25,14 +25,9 @@ MARKER=".agentic-engine{service-name}"
 
 [ -d "$SRC_SKILLS" ] || { echo "❌ no source: $SRC_SKILLS" >&2; exit 1; }
 
-# Enumerate source skills (dirs containing SKILL.md)
-list_source_skills() {
-	local d
-	for d in "$SRC_SKILLS"/*/; do
-		[ -f "$d/SKILL.md" ] || continue
-		basename "$d"
-	done
-}
+# Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 
 case "$MODE" in
 	--uninstall)
