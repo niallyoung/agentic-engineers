@@ -483,10 +483,313 @@ For each workflow, write the DELEGATE and HANDBACK blocks that would be exchange
 
 ---
 
-## When to NOT Use DELEGATE/HANDBACK
+---
 
-- Orchestrator solo work (routing, status checks) — no DELEGATE needed
-- One-off questions or clarifications — use natural language
-- Internal reasoning within a single agent response — no markup needed
+## Parallel Delegation Protocol (Phase 2)
 
-DELEGATE/HANDBACK is for work handoff between agents.
+### Overview
+
+Parallel delegation allows agents to decompose tasks into independent child tasks that execute concurrently. This is enabled by Phase 2 of the queue-management system.
+
+**Key concepts:**
+- **Parent task** — original task that creates children
+- **Child task** — sub-task created by parent, linked via `parent_task_id`
+- **Task tier** — depth in hierarchy (0=root, 1=child, 2=grandchild, max 5)
+- **Result aggregation** — Orchestrator waits for all children, combines results
+
+### Creating Sub-Tasks (DELEGATE)
+
+When an agent creates a sub-task, include these fields in the DELEGATE block:
+
+```yaml
+---
+handoff_type: DELEGATE
+task_id: subtask-stripe-analysis-001
+role: engineer
+model: claude-haiku-4-5
+effort: high
+scope: "Analyze Stripe payment service for security risks and performance bottlenecks..."
+context:
+  - Parent task: payment-analysis-001
+  - Repo: stripe-integration/
+  - Focus areas: Payment processing, webhook handling, error recovery
+plan:
+  1. Review payment processing code (src/payments/)
+  2. Check dependency versions for known CVEs
+  3. Analyze webhook security (rate limiting, signature validation)
+  4. Document findings in security report
+success_criteria:
+  - Security report completed
+  - All CVEs documented
+  - Recommendations provided
+parent_task_id: payment-analysis-001        # NEW: Link to parent
+task_tier: 1                                # NEW: Auto-calculated
+---
+```
+
+**New mandatory fields (when creating sub-tasks):**
+- `parent_task_id` — Task ID of the parent task (must exist in queue)
+- `task_tier` — Depth in hierarchy (auto-calculated; do not set manually)
+
+**Validation:**
+- Parent must exist in `incoming/`, `processing/`, or `done/`
+- Cannot link to self: `task_id != parent_task_id`
+- Cannot create cycles: parent must not be descendant of child
+- Child scope must overlap parent scope by ≥20%
+
+### Returning Results (HANDBACK)
+
+When a parent task completes with children, the HANDBACK includes aggregated results:
+
+```yaml
+---
+handoff_type: HANDBACK
+task_id: payment-analysis-001
+status: complete
+deliverables:
+  - Analysis report: payment-analysis-report.md
+  - Aggregated findings: 6 total risks, 9 mitigations
+children_created:
+  - payment-analysis-stripe-001
+  - payment-analysis-paypal-001
+  - payment-analysis-crypto-001
+children_results:
+  payment-analysis-stripe-001:
+    status: complete
+    output:
+      risks: 2
+      mitigations: 3
+      critical_findings: ["webhook validation missing", "rate limiting weak"]
+    quality: 92
+  payment-analysis-paypal-001:
+    status: complete
+    output:
+      risks: 1
+      mitigations: 2
+      critical_findings: ["dependency outdated"]
+    quality: 88
+  payment-analysis-crypto-001:
+    status: complete
+    output:
+      risks: 3
+      mitigations: 4
+      critical_findings: ["key rotation not implemented", "entropy weak"]
+    quality: 85
+children_failed: []
+result_aggregation_status: all_complete
+tokens_in: 2400
+tokens_out: 1850
+model: claude-sonnet-4-6
+effort: high
+duration_minutes: 45
+escalations: 0
+notes: "All three services analyzed in parallel. Stripe has highest risk profile. Recommend immediate action on webhook validation."
+---
+```
+
+**New fields in HANDBACK:**
+- `children_created` — List of child task IDs created
+- `children_results` — Dict of results keyed by task_id, each with `status`, `output`, `quality`
+- `children_failed` — List of child task IDs that failed or were blocked
+- `result_aggregation_status` — `all_complete`, `partial`, or `timed_out`
+
+### Quality Score Aggregation
+
+Child quality scores are **effort-weighted averages**:
+
+```
+weighted_quality = Σ(quality_i × weight_i) / Σ(weight_i)
+```
+
+| Effort | Weight |
+|--------|--------|
+| high   | 3×     |
+| medium | 2×     |
+| low    | 1×     |
+
+**Example:** 3 children with scores `[92, 88, 85]` and efforts `[high, high, medium]`:
+```
+numerator = (92 × 3) + (88 × 3) + (85 × 2) = 276 + 264 + 170 = 710
+denominator = 3 + 3 + 2 = 8
+weighted_quality = 710 / 8 = 88.75
+```
+
+### Orchestrator Aggregation Workflow
+
+The Orchestrator automatically:
+
+1. **Detects parent tasks** — checks for `parent_task_id` in child tasks
+2. **Waits for children** — polls `done/` with 60-minute timeout
+3. **Aggregates results:**
+   - Quality: effort-weighted average
+   - Tokens: sum of all children
+   - Cost: sum of all children
+4. **Writes parent HANDBACK** with `children_results` populated
+5. **Moves to done/** — parent task complete
+
+**Timeout behavior:**
+- Default: 60 minutes
+- If timeout occurs: `result_aggregation_status = timed_out`
+- Available results included in `children_results`
+- Failed children listed in `children_failed`
+
+### Failure Modes
+
+**Partial (default):**
+```yaml
+result_aggregation_status: partial
+children_failed: [payment-analysis-paypal-001]
+children_results:
+  payment-analysis-stripe-001:
+    status: complete
+    quality: 92
+  payment-analysis-paypal-001:
+    status: failed
+    quality: 0
+  payment-analysis-crypto-001:
+    status: complete
+    quality: 85
+```
+→ Parent continues; quality is averaged over successful children only
+
+**All-or-nothing:**
+```yaml
+result_aggregation_status: partial
+children_failed: [payment-analysis-paypal-001]
+# Caller decides whether to fail parent
+```
+→ Caller (e.g., Orchestrator) decides whether to fail parent task
+
+**Timeout:**
+```yaml
+result_aggregation_status: timed_out
+children_results:
+  payment-analysis-stripe-001:
+    status: complete
+    quality: 92
+  payment-analysis-paypal-001:
+    status: null  # Still in processing/
+  payment-analysis-crypto-001:
+    status: complete
+    quality: 85
+```
+→ Partial results included; missing children not yet complete
+
+### Constraints & Validation
+
+| Constraint | Value | Error |
+|-----------|-------|-------|
+| Max depth (task_tier) | 5 | `ValueError: task_tier exceeds maximum` |
+| Max children per parent | 10 | `RuntimeError: already has N children (max 10)` |
+| Max tasks per session | 100 | `RuntimeError: Rate limit exceeded` |
+
+**Validation rules:**
+- `parent_task_id` must exist in any queue state
+- Cannot link to self: `task_id != parent_task_id`
+- Cannot create cycles (validator prevents)
+- Child scope must overlap parent scope by ≥20%
+
+### Example: Three-Child Parallel Analysis
+
+**Parent task (created by Orchestrator):**
+```yaml
+---
+handoff_type: DELEGATE
+task_id: payment-analysis-001
+role: senior_engineer
+model: claude-sonnet-4-6
+effort: high
+scope: "Analyze all three payment services (Stripe, PayPal, Crypto) for security risks..."
+plan:
+  1. Create three sub-tasks (one per service)
+  2. Wait for all to complete
+  3. Aggregate findings into consolidated report
+---
+```
+
+**Senior Engineer creates three children:**
+```python
+from skills.queue_management.scripts.queue_ops import QueueOperations
+
+ops = QueueOperations(queue_dir="/path/to/queue")
+
+for service in ["stripe", "paypal", "crypto"]:
+    ops.create_delegate(
+        task_id=f"payment-analysis-{service}-001",
+        role="engineer",
+        scope=f"Analyze {service} payment service for security risks...",
+        plan=["Review code", "Check deps", "Document findings"],
+        context=f"Parent task: payment-analysis-001",
+        parent_task_id="payment-analysis-001",
+    )
+```
+
+**Orchestrator detects 3 children, routes to 3 Engineers in parallel:**
+- Engineer 1 → Stripe analysis (1 hour)
+- Engineer 2 → PayPal analysis (1 hour)
+- Engineer 3 → Crypto analysis (1 hour)
+- **Wall-clock: 1 hour (vs. 3 hours sequential)**
+
+**Orchestrator aggregates results:**
+```yaml
+children_created:
+  - payment-analysis-stripe-001
+  - payment-analysis-paypal-001
+  - payment-analysis-crypto-001
+children_results:
+  payment-analysis-stripe-001:
+    status: complete
+    quality: 92
+  payment-analysis-paypal-001:
+    status: complete
+    quality: 88
+  payment-analysis-crypto-001:
+    status: complete
+    quality: 85
+result_aggregation_status: all_complete
+# Quality = (92×3 + 88×3 + 85×3) / 9 = 88.33
+```
+
+### Best Practices
+
+✅ **DO:**
+- Use for naturally decomposable work (multiple services, repos, domains)
+- Limit children to 3-10 per parent (more = coordination overhead)
+- Set realistic timeouts (60 min default usually fine)
+- Monitor token consumption (parallel = more concurrent usage)
+- Use effort levels to weight results appropriately
+- Document parent-child relationship in DELEGATE context
+
+❌ **DON'T:**
+- Create circular dependencies (validator prevents this)
+- Go deeper than tier 5 (validator prevents this)
+- Create >10 children per parent (validator prevents this)
+- Use for sequential work (defeats the purpose)
+- Ignore failed children (check `children_failed` in HANDBACK)
+- Manually set `task_tier` (auto-calculated)
+
+### Troubleshooting
+
+**Q: Child task is stuck in "processing"**
+A: Check Orchestrator logs. If no agent picked it up, queue may be full. Check `artifacts/queue/processing/` for stuck tasks. Escalate to Principal Engineer if >2 hours stuck.
+
+**Q: Aggregation quality score seems wrong**
+A: Verify effort levels in child HANDBACKs. Quality is effort-weighted; high-effort children have 3× weight. Use formula: `Σ(quality × weight) / Σ(weight)`.
+
+**Q: Parent task timed out waiting for children**
+A: Default timeout is 60 minutes. If children need more time, increase `timeout_minutes` in Orchestrator config. Check if children are blocked (see `children_failed`).
+
+**Q: Can I create sub-tasks of sub-tasks?**
+A: Yes, up to tier 5 (5 levels deep). Each level auto-increments `task_tier`. Validator prevents cycles.
+
+**Q: What if 2 of 3 children fail?**
+A: `result_aggregation_status = partial`, `children_failed = [task_id_1, task_id_2]`. Parent continues with 1 successful result. Quality score reflects only successful children.
+
+**Q: How do I know when parallel is better than sequential?**
+A: Use parallel when:
+- Work can be split into independent sub-tasks
+- Sub-tasks take similar time (no bottleneck)
+- Wall-clock time matters more than token cost
+- You have 3+ sub-tasks (overhead not worth it for 1-2)
+
+---
