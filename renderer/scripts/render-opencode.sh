@@ -210,6 +210,7 @@ write_config() {
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
+  "default_agent": "orchestrator",
   "compaction": {
     "auto": true,
     "reserved": 30000
