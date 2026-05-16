@@ -1,7 +1,7 @@
 {
   "title": "Agentic Engineers — Orchestrator Overview",
   "uid": "agentic-engineers-orchestrator",
-  "version": 1,
+  "version": 2,
   "schemaVersion": 38,
   "refresh": "30s",
   "time": {"from": "now-1h", "to": "now"},
@@ -225,6 +225,279 @@
           "legendFormat": "Validation Errors/s"
         }
       ]
+    },
+    {
+      "id": 12,
+      "title": "Token Throughput (input/output/cached)",
+      "description": "Real-time token consumption breakdown: input tokens, output tokens, and cached tokens",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+      "targets": [
+        {
+          "expr": "rate(orchestrator_tokens_input_total[1m])",
+          "legendFormat": "Input Tokens/s"
+        },
+        {
+          "expr": "rate(orchestrator_tokens_output_total[1m])",
+          "legendFormat": "Output Tokens/s"
+        },
+        {
+          "expr": "rate(orchestrator_tokens_cached_total[1m])",
+          "legendFormat": "Cached Tokens/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short", "custom": {"lineWidth": 2}}
+      },
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table"}
+      }
+    },
+    {
+      "id": 13,
+      "title": "Token Usage by Model",
+      "description": "Pie chart showing token distribution across different models (Haiku, Sonnet, Opus)",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+      "targets": [
+        {
+          "expr": "sum(orchestrator_tokens_total{model=~\"haiku.*\"}) by (model)",
+          "legendFormat": "Haiku"
+        },
+        {
+          "expr": "sum(orchestrator_tokens_total{model=~\"sonnet.*\"}) by (model)",
+          "legendFormat": "Sonnet"
+        },
+        {
+          "expr": "sum(orchestrator_tokens_total{model=~\"opus.*\"}) by (model)",
+          "legendFormat": "Opus"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "pieType": "pie",
+        "displayLabels": ["name", "percent"],
+        "legend": {"displayMode": "list", "placement": "right"}
+      }
+    },
+    {
+      "id": 14,
+      "title": "Tokens per Task (histogram)",
+      "description": "Distribution of token usage per task: P25, P50, P75, P95, P99",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.25, rate(orchestrator_tokens_per_task_bucket[5m]))",
+          "legendFormat": "P25"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(orchestrator_tokens_per_task_bucket[5m]))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.75, rate(orchestrator_tokens_per_task_bucket[5m]))",
+          "legendFormat": "P75"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(orchestrator_tokens_per_task_bucket[5m]))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(orchestrator_tokens_per_task_bucket[5m]))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short", "custom": {"lineWidth": 2}}
+      },
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table"}
+      }
+    },
+    {
+      "id": 15,
+      "title": "Cache Hit Rate",
+      "description": "Percentage of cached tokens vs total tokens consumed",
+      "type": "gauge",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+      "targets": [
+        {
+          "expr": "(sum(orchestrator_tokens_cached_total) / sum(orchestrator_tokens_total)) * 100",
+          "legendFormat": "Cache Hit %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 20},
+              {"color": "green", "value": 40}
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 16,
+      "title": "Daily Cost (USD)",
+      "description": "Total cost of token consumption for the current day",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 44},
+      "targets": [
+        {
+          "expr": "sum(orchestrator_cost_total)",
+          "legendFormat": "Daily Cost"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 100},
+              {"color": "red", "value": 500}
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "colorMode": "background",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 17,
+      "title": "Cost by Role",
+      "description": "Pie chart showing cost distribution across different agent roles",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 44},
+      "targets": [
+        {
+          "expr": "sum(orchestrator_cost_total{role=\"engineer\"}) by (role)",
+          "legendFormat": "Engineer"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{role=\"senior_engineer\"}) by (role)",
+          "legendFormat": "Senior Engineer"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{role=\"lead_engineer\"}) by (role)",
+          "legendFormat": "Lead Engineer"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{role=\"principal_engineer\"}) by (role)",
+          "legendFormat": "Principal Engineer"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{role=\"quality_engineer\"}) by (role)",
+          "legendFormat": "Quality Engineer"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{role=\"security_engineer\"}) by (role)",
+          "legendFormat": "Security Engineer"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "pieType": "pie",
+        "displayLabels": ["name", "percent"],
+        "legend": {"displayMode": "list", "placement": "right"}
+      }
+    },
+    {
+      "id": 18,
+      "title": "Cost by Model",
+      "description": "Pie chart showing cost distribution across different LLM models",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 52},
+      "targets": [
+        {
+          "expr": "sum(orchestrator_cost_total{model=~\"haiku.*\"}) by (model)",
+          "legendFormat": "Haiku"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{model=~\"sonnet.*\"}) by (model)",
+          "legendFormat": "Sonnet"
+        },
+        {
+          "expr": "sum(orchestrator_cost_total{model=~\"opus.*\"}) by (model)",
+          "legendFormat": "Opus"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "pieType": "pie",
+        "displayLabels": ["name", "percent"],
+        "legend": {"displayMode": "list", "placement": "right"}
+      }
+    },
+    {
+      "id": 19,
+      "title": "Cost per Task (histogram)",
+      "description": "Distribution of task costs: P25, P50, P75, P95, P99",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 52},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.25, rate(orchestrator_cost_per_task_bucket[5m]))",
+          "legendFormat": "P25"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(orchestrator_cost_per_task_bucket[5m]))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.75, rate(orchestrator_cost_per_task_bucket[5m]))",
+          "legendFormat": "P75"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(orchestrator_cost_per_task_bucket[5m]))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(orchestrator_cost_per_task_bucket[5m]))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "currencyUSD", "custom": {"lineWidth": 2}}
+      },
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table"}
+      }
+    },
+    {
+      "id": 20,
+      "title": "Cost Trend (7 days)",
+      "description": "Daily cost trend over the last 7 days",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 60},
+      "targets": [
+        {
+          "expr": "sum(increase(orchestrator_cost_total[1d])) by (day)",
+          "legendFormat": "Daily Cost"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "currencyUSD", "custom": {"lineWidth": 2, "fillOpacity": 20}}
+      },
+      "options": {
+        "legend": {"calcs": ["mean", "max", "min"], "displayMode": "table"},
+        "tooltip": {"mode": "multi"}
+      }
     }
   ]
 }

@@ -545,13 +545,203 @@ class TestAlertManager:
         assert "SLOBreach" in names
 
     def test_exception_in_condition_does_not_fire(self):
+         manager = AlertManager()
+         manager.add_rule(AlertRule(
+             name="BrokenAlert",
+             description="Broken condition",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: 1 / 0,  # will raise
+             for_minutes=0,
+         ))
+         alerts = manager.evaluate({})
+         assert len(alerts) == 0
+
+
+# ===========================================================================
+# Token Cost Anomaly Alert Tests
+# ===========================================================================
+
+class TestTokenCostAnomalyAlerts:
+    """Tests for cost anomaly detection alerts."""
+
+    def test_daily_cost_high_alert_fires(self):
+        """Alert fires when daily cost exceeds $100."""
         manager = AlertManager()
         manager.add_rule(AlertRule(
-            name="BrokenAlert",
-            description="Broken condition",
+            name="TokenCostDailyHigh",
+            description="Daily token cost exceeds $100",
             severity=AlertSeverity.WARNING,
-            condition=lambda m: 1 / 0,  # will raise
+            condition=lambda m: m.get("daily_token_cost", 0) > 100,
+            for_minutes=0,  # No duration requirement for testing
+        ))
+        alerts = manager.evaluate({"daily_token_cost": 150.50})
+        assert len(alerts) == 1
+        assert alerts[0].name == "TokenCostDailyHigh"
+        assert alerts[0].severity == AlertSeverity.WARNING
+
+    def test_daily_cost_high_alert_does_not_fire_below_threshold(self):
+        """Alert does not fire when daily cost is below $100."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCostDailyHigh",
+            description="Daily token cost exceeds $100",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("daily_token_cost", 0) > 100,
             for_minutes=0,
         ))
-        alerts = manager.evaluate({})
+        alerts = manager.evaluate({"daily_token_cost": 75.25})
         assert len(alerts) == 0
+
+    def test_cost_per_task_high_alert_fires(self):
+        """Alert fires when cost per task exceeds $5."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCostPerTaskHigh",
+            description="Cost per task exceeds $5",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("cost_per_task", 0) > 5.0,
+            for_minutes=0,  # No duration requirement for testing
+        ))
+        alerts = manager.evaluate({"cost_per_task": 7.50})
+        assert len(alerts) == 1
+        assert alerts[0].name == "TokenCostPerTaskHigh"
+
+    def test_cost_per_task_high_alert_does_not_fire_below_threshold(self):
+        """Alert does not fire when cost per task is below $5."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCostPerTaskHigh",
+            description="Cost per task exceeds $5",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("cost_per_task", 0) > 5.0,
+            for_minutes=0,
+        ))
+        alerts = manager.evaluate({"cost_per_task": 3.25})
+        assert len(alerts) == 0
+
+    def test_cache_hit_rate_low_alert_fires(self):
+        """Alert fires when cache hit rate drops below 50%."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCacheHitRateLow",
+            description="Cache hit rate below 50%",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("cache_hit_rate", 1.0) < 0.5,
+            for_minutes=0,  # No duration requirement for testing
+        ))
+        alerts = manager.evaluate({"cache_hit_rate": 0.35})
+        assert len(alerts) == 1
+        assert alerts[0].name == "TokenCacheHitRateLow"
+
+    def test_cache_hit_rate_low_alert_does_not_fire_above_threshold(self):
+        """Alert does not fire when cache hit rate is above 50%."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCacheHitRateLow",
+            description="Cache hit rate below 50%",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("cache_hit_rate", 1.0) < 0.5,
+            for_minutes=0,
+        ))
+        alerts = manager.evaluate({"cache_hit_rate": 0.75})
+        assert len(alerts) == 0
+
+    def test_token_usage_anomaly_alert_fires(self):
+        """Alert fires when token usage is > 2.5σ from mean."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenUsageAnomaly",
+            description="Token usage anomaly detected (> 2.5σ from mean)",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("token_usage_sigma", 0) > 2.5,
+            for_minutes=0,  # No duration requirement for testing
+        ))
+        alerts = manager.evaluate({"token_usage_sigma": 3.2})
+        assert len(alerts) == 1
+        assert alerts[0].name == "TokenUsageAnomaly"
+
+    def test_token_usage_anomaly_alert_does_not_fire_below_threshold(self):
+        """Alert does not fire when token usage is within 2.5σ."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenUsageAnomaly",
+            description="Token usage anomaly detected (> 2.5σ from mean)",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("token_usage_sigma", 0) > 2.5,
+            for_minutes=0,
+        ))
+        alerts = manager.evaluate({"token_usage_sigma": 1.8})
+        assert len(alerts) == 0
+
+    def test_multiple_cost_alerts_can_fire_simultaneously(self):
+        """Multiple cost anomaly alerts can fire at the same time."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCostDailyHigh",
+            description="Daily token cost exceeds $100",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("daily_token_cost", 0) > 100,
+            for_minutes=0,
+        ))
+        manager.add_rule(AlertRule(
+            name="TokenCostPerTaskHigh",
+            description="Cost per task exceeds $5",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("cost_per_task", 0) > 5.0,
+            for_minutes=0,
+        ))
+        manager.add_rule(AlertRule(
+            name="TokenCacheHitRateLow",
+            description="Cache hit rate below 50%",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("cache_hit_rate", 1.0) < 0.5,
+            for_minutes=0,
+        ))
+        
+        metrics = {
+            "daily_token_cost": 150.0,
+            "cost_per_task": 6.5,
+            "cache_hit_rate": 0.40,
+        }
+        alerts = manager.evaluate(metrics)
+        assert len(alerts) == 3
+        alert_names = {a.name for a in alerts}
+        assert alert_names == {
+            "TokenCostDailyHigh",
+            "TokenCostPerTaskHigh",
+            "TokenCacheHitRateLow",
+        }
+
+    def test_cost_anomaly_alert_annotations(self):
+        """Cost anomaly alerts include proper annotations."""
+        manager = AlertManager()
+        manager.add_rule(AlertRule(
+            name="TokenCostDailyHigh",
+            description="Daily token cost exceeds $100",
+            severity=AlertSeverity.WARNING,
+            condition=lambda m: m.get("daily_token_cost", 0) > 100,
+            for_minutes=0,
+            annotations={
+                "runbook_url": "docs/runbooks/token-cost-high.md",
+                "summary": "Daily token cost is high",
+                "impact": "Cost control",
+            },
+        ))
+        alerts = manager.evaluate({"daily_token_cost": 150.0})
+        assert len(alerts) == 1
+        alert = alerts[0]
+        assert alert.annotations["runbook_url"] == "docs/runbooks/token-cost-high.md"
+        assert alert.annotations["impact"] == "Cost control"
+
+    def test_create_default_alert_rules_includes_cost_anomalies(self):
+        """Default alert rules include all cost anomaly alerts."""
+        rules = create_default_alert_rules()
+        rule_names = {r.name for r in rules}
+        
+        cost_anomaly_alerts = {
+            "TokenCostDailyHigh",
+            "TokenCostPerTaskHigh",
+            "TokenCacheHitRateLow",
+            "TokenUsageAnomaly",
+        }
+        assert cost_anomaly_alerts.issubset(rule_names)

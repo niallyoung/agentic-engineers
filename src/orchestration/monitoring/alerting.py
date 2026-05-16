@@ -181,77 +181,126 @@ class AlertManager:
 
 
 def create_default_alert_rules() -> List[AlertRule]:
-    """
-    Create the standard Orchestrator alert rules.
+     """
+     Create the standard Orchestrator alert rules.
 
-    Returns:
-        List of AlertRule definitions.
-    """
-    return [
-        AlertRule(
-            name="HighErrorRate",
-            description="Error rate exceeds 5% — investigate immediately",
-            severity=AlertSeverity.CRITICAL,
-            condition=lambda m: m.get("error_rate", 0) > 0.05,
-            for_minutes=5,
-            annotations={
-                "runbook_url": "docs/runbooks/high-error-rate.md",
-                "summary": "Orchestrator error rate is critically high",
-            },
-        ),
-        AlertRule(
-            name="LowQualityScore",
-            description="Average quality score below 70",
-            severity=AlertSeverity.WARNING,
-            condition=lambda m: m.get("avg_quality_score", 100) < 70,
-            for_minutes=10,
-            annotations={
-                "runbook_url": "docs/runbooks/low-quality-score.md",
-                "summary": "Task quality scores are degraded",
-            },
-        ),
-        AlertRule(
-            name="QueueDepthHigh",
-            description="Queue depth exceeds 100 tasks",
-            severity=AlertSeverity.WARNING,
-            condition=lambda m: m.get("queue_depth", 0) > 100,
-            for_minutes=5,
-            annotations={
-                "runbook_url": "docs/runbooks/queue-depth-high.md",
-                "summary": "Task queue is backing up",
-            },
-        ),
-        AlertRule(
-            name="QueueDepthCritical",
-            description="Queue depth exceeds 500 tasks — system overloaded",
-            severity=AlertSeverity.CRITICAL,
-            condition=lambda m: m.get("queue_depth", 0) > 500,
-            for_minutes=2,
-            annotations={
-                "runbook_url": "docs/runbooks/queue-depth-high.md",
-                "summary": "Queue critically overloaded",
-            },
-        ),
-        AlertRule(
-            name="HighRetryRate",
-            description="Task retry rate exceeds 20%",
-            severity=AlertSeverity.WARNING,
-            condition=lambda m: m.get("retry_rate", 0) > 0.20,
-            for_minutes=15,
-            annotations={
-                "runbook_url": "docs/runbooks/high-retry-rate.md",
-                "summary": "Many tasks requiring retries",
-            },
-        ),
-        AlertRule(
-            name="SLOBreach",
-            description="One or more SLOs are breached",
-            severity=AlertSeverity.PAGE,
-            condition=lambda m: m.get("slo_breached", False),
-            for_minutes=0,
-            annotations={
-                "runbook_url": "docs/runbooks/slo-breach.md",
-                "summary": "SLO breach detected — immediate action required",
-            },
-        ),
-    ]
+     Returns:
+         List of AlertRule definitions.
+     """
+     return [
+         AlertRule(
+             name="HighErrorRate",
+             description="Error rate exceeds 5% — investigate immediately",
+             severity=AlertSeverity.CRITICAL,
+             condition=lambda m: m.get("error_rate", 0) > 0.05,
+             for_minutes=5,
+             annotations={
+                 "runbook_url": "docs/runbooks/high-error-rate.md",
+                 "summary": "Orchestrator error rate is critically high",
+             },
+         ),
+         AlertRule(
+             name="LowQualityScore",
+             description="Average quality score below 70",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("avg_quality_score", 100) < 70,
+             for_minutes=10,
+             annotations={
+                 "runbook_url": "docs/runbooks/low-quality-score.md",
+                 "summary": "Task quality scores are degraded",
+             },
+         ),
+         AlertRule(
+             name="QueueDepthHigh",
+             description="Queue depth exceeds 100 tasks",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("queue_depth", 0) > 100,
+             for_minutes=5,
+             annotations={
+                 "runbook_url": "docs/runbooks/queue-depth-high.md",
+                 "summary": "Task queue is backing up",
+             },
+         ),
+         AlertRule(
+             name="QueueDepthCritical",
+             description="Queue depth exceeds 500 tasks — system overloaded",
+             severity=AlertSeverity.CRITICAL,
+             condition=lambda m: m.get("queue_depth", 0) > 500,
+             for_minutes=2,
+             annotations={
+                 "runbook_url": "docs/runbooks/queue-depth-high.md",
+                 "summary": "Queue critically overloaded",
+             },
+         ),
+         AlertRule(
+             name="HighRetryRate",
+             description="Task retry rate exceeds 20%",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("retry_rate", 0) > 0.20,
+             for_minutes=15,
+             annotations={
+                 "runbook_url": "docs/runbooks/high-retry-rate.md",
+                 "summary": "Many tasks requiring retries",
+             },
+         ),
+         AlertRule(
+             name="SLOBreach",
+             description="One or more SLOs are breached",
+             severity=AlertSeverity.PAGE,
+             condition=lambda m: m.get("slo_breached", False),
+             for_minutes=0,
+             annotations={
+                 "runbook_url": "docs/runbooks/slo-breach.md",
+                 "summary": "SLO breach detected — immediate action required",
+             },
+         ),
+         # ===== Token Cost Anomaly Alerts =====
+         AlertRule(
+             name="TokenCostDailyHigh",
+             description="Daily token cost exceeds $100",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("daily_token_cost", 0) > 100,
+             for_minutes=5,
+             annotations={
+                 "runbook_url": "docs/runbooks/token-cost-high.md",
+                 "summary": "Daily token cost is high",
+                 "impact": "Cost control",
+             },
+         ),
+         AlertRule(
+             name="TokenCostPerTaskHigh",
+             description="Cost per task exceeds $5",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("cost_per_task", 0) > 5.0,
+             for_minutes=10,
+             annotations={
+                 "runbook_url": "docs/runbooks/token-cost-high.md",
+                 "summary": "Average cost per task is high",
+                 "impact": "Cost optimization",
+             },
+         ),
+         AlertRule(
+             name="TokenCacheHitRateLow",
+             description="Cache hit rate below 50%",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("cache_hit_rate", 1.0) < 0.5,
+             for_minutes=15,
+             annotations={
+                 "runbook_url": "docs/runbooks/cache-hit-rate-low.md",
+                 "summary": "Token cache effectiveness is degraded",
+                 "impact": "Cost and performance",
+             },
+         ),
+         AlertRule(
+             name="TokenUsageAnomaly",
+             description="Token usage anomaly detected (> 2.5σ from mean)",
+             severity=AlertSeverity.WARNING,
+             condition=lambda m: m.get("token_usage_sigma", 0) > 2.5,
+             for_minutes=5,
+             annotations={
+                 "runbook_url": "docs/runbooks/token-usage-anomaly.md",
+                 "summary": "Unusual token usage pattern detected",
+                 "impact": "Cost and performance",
+             },
+         ),
+     ]

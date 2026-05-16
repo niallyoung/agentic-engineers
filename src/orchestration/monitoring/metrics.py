@@ -276,10 +276,42 @@ def create_orchestrator_metrics(registry: MetricsRegistry) -> Dict[str, object]:
             buckets=[10, 20, 30, 40, 50, 60, 70, 80, 85, 90, 95, 100],
         ),
 
-        # Token usage
+        # Token usage (legacy, kept for compatibility)
         "tokens_total": registry.counter(
             "orchestrator_tokens_total",
             "Total tokens consumed across all tasks",
+        ),
+        
+        # Token breakdown counters
+        "tokens_input_total": registry.counter(
+            "orchestrator_tokens_input_total",
+            "Total input tokens consumed across all tasks",
+        ),
+        "tokens_output_total": registry.counter(
+            "orchestrator_tokens_output_total",
+            "Total output tokens consumed across all tasks",
+        ),
+        "tokens_cached_total": registry.counter(
+            "orchestrator_tokens_cached_total",
+            "Total cached tokens read across all tasks",
+        ),
+        
+        # Cost tracking
+        "cost_usd_total": registry.counter(
+            "orchestrator_cost_usd_total",
+            "Total cost in USD across all tasks",
+        ),
+        
+        # Token distribution histograms
+        "tokens_per_task": registry.histogram(
+            "orchestrator_tokens_per_task",
+            "Distribution of tokens consumed per task",
+            buckets=[100, 500, 1000, 5000, 10000, 50000, 100000],
+        ),
+        "cost_per_task": registry.histogram(
+            "orchestrator_cost_per_task",
+            "Distribution of cost per task in USD",
+            buckets=[0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0],
         ),
 
         # Error counters
@@ -290,5 +322,96 @@ def create_orchestrator_metrics(registry: MetricsRegistry) -> Dict[str, object]:
         "validation_errors": registry.counter(
             "orchestrator_validation_errors_total",
             "Total DELEGATE/HANDBACK validation errors",
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Token and Cost Metrics (with labels)
+# ---------------------------------------------------------------------------
+
+def create_token_metrics(registry: MetricsRegistry) -> Dict[str, object]:
+    """
+    Create token metrics with role and model labels.
+    
+    Returns a dict of metric objects for tracking token usage by role and model.
+    """
+    return {
+        # Token counters by role
+        "tokens_input_by_role": registry.counter(
+            "orchestrator_tokens_input_by_role",
+            "Input tokens consumed by role",
+        ),
+        "tokens_output_by_role": registry.counter(
+            "orchestrator_tokens_output_by_role",
+            "Output tokens consumed by role",
+        ),
+        "tokens_cached_by_role": registry.counter(
+            "orchestrator_tokens_cached_by_role",
+            "Cached tokens read by role",
+        ),
+        
+        # Token counters by model
+        "tokens_input_by_model": registry.counter(
+            "orchestrator_tokens_input_by_model",
+            "Input tokens consumed by model",
+        ),
+        "tokens_output_by_model": registry.counter(
+            "orchestrator_tokens_output_by_model",
+            "Output tokens consumed by model",
+        ),
+        
+        # Token histograms
+        "tokens_per_task_histogram": registry.histogram(
+            "orchestrator_tokens_per_task",
+            "Distribution of total tokens per task",
+            buckets=[100, 500, 1000, 5000, 10000, 50000, 100000],
+        ),
+    }
+
+
+def create_cost_metrics(registry: MetricsRegistry) -> Dict[str, object]:
+    """
+    Create cost metrics with role, model, and task type labels.
+    
+    Returns a dict of metric objects for tracking costs by various dimensions.
+    """
+    return {
+        # Cost counters by role
+        "cost_usd_by_role": registry.counter(
+            "orchestrator_cost_usd_by_role",
+            "Total cost in USD by role",
+        ),
+        
+        # Cost counters by model
+        "cost_usd_by_model": registry.counter(
+            "orchestrator_cost_usd_by_model",
+            "Total cost in USD by model",
+        ),
+        
+        # Cost counters by task type
+        "cost_usd_by_task_type": registry.counter(
+            "orchestrator_cost_usd_by_task_type",
+            "Total cost in USD by task type",
+        ),
+        
+        # Cost gauge by date (daily aggregation)
+        "cost_usd_daily": registry.gauge(
+            "orchestrator_cost_usd_daily",
+            "Daily cost in USD",
+        ),
+        
+        # Cost histograms
+        "cost_per_task_histogram": registry.histogram(
+            "orchestrator_cost_per_task",
+            "Distribution of cost per task in USD",
+            buckets=[0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0],
+        ),
+        
+        # Cost efficiency metrics
+        "cost_per_quality_point": registry.histogram(
+            "orchestrator_cost_per_quality_point",
+            "Cost per quality point achieved",
+            buckets=[0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1],
         ),
     }
