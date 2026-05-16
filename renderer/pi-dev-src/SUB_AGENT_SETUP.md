@@ -1,29 +1,61 @@
-# Pi Sub-Agent Support Setup Guide
+# Pi.dev Sub-Agent Setup Guide
 
-## ✅ Configuration Complete
+## Overview
 
-Your Pi installation at `~/.pi/agent/` is now configured for sub-agent orchestration with **9 specialized agent roles**.
+This guide documents the agentic-engineers configuration for the **pi.dev** coding agent harness.
+The renderer copies files from `renderer/pi-dev-src/` to `~/.pi/agent/` verbatim.
 
-### Files Created/Modified
-
-1. **`/Users/niall/.pi/agent/pi.yml`** - Full sub-agent configuration
-2. **`/Users/niall/.pi/agent/settings.json`** - Updated with extensions, packages, skills
+**Last Updated:** 2026-05-16
 
 ---
 
-## Available Sub-Agents
+## ⚠️ Known Limitations
 
-| Agent | Model | Best For | Scope |
-|-------|-------|----------|-------|
-| **Engineer** | Haiku | Feature implementation, bug fixes | Single file/module |
-| **Senior Engineer** | Sonnet | Complex design, debugging | Multi-service, logic |
-| **Lead Engineer** | Sonnet | Code review, quality gates | Validation, review |
-| **Security Engineer** | Sonnet | Vulnerability analysis, compliance | Security decisions |
-| **Principal Engineer** | Opus | Architecture, strategy | Organization-wide |
-| **Quality Engineer** | Sonnet | Testing strategy, coverage | Test decisions |
-| **Model Engineer** | Sonnet | Token optimization, cost analysis | Performance, budget |
-| **Spec Engineer** | Sonnet | Spec compliance, drift detection | Validation |
-| **Healing Engineer** | Sonnet | System debugging, health | Issue investigation |
+Before proceeding, understand these important limitations:
+
+### 1. Sub-Agent Support is SPECULATIVE
+
+The `pi.yml` routing rules and `settings.json` extensions/packages/skills are based on
+research into the pi.dev API and are **NOT verified against the actual pi.dev runtime**.
+These features may have no effect.
+
+**What this means:**
+- The `routing:` section in `pi.yml` (conditions like `"security-scoped"`) may not be recognized
+- The `extensions:` and `packages:` in `settings.json` may not be recognized
+- The `skills:` list in `settings.json` may not be recognized
+
+**What IS known to work:**
+- `SYSTEM.md` — pi.dev reads this as the system prompt
+- `AGENTS.md` — pi.dev reads this as agent role definitions
+- `settings.json` — `defaultModel`, `defaultProvider`, `theme`, `compaction` are standard settings
+
+### 2. No Content Transformation
+
+Unlike the OpenCode and Claude Code harnesses, the π.dev renderer does **not** transform
+`src/agents/` or `src/skills/`. It copies a manually-maintained set of files verbatim.
+This means:
+- Source files must be manually kept in sync with `docs/AGENTS.md`
+- Model IDs are set directly in `settings.json` and `pi.yml`
+
+### 3. Hardcoded Paths in This Document
+
+This document previously contained hardcoded user paths. It now uses generic paths.
+Substitute your actual home directory where `~` appears.
+
+---
+
+## Available Agent Roles (8 Canonical)
+
+| Agent | Model | Effort | Best For | Scope |
+|-------|-------|--------|----------|-------|
+| **Orchestrator** | claude-haiku-4.5 | low | Task routing, queue management | Routing only |
+| **Engineer** | claude-haiku-4.5 | high | Feature implementation, bug fixes | Single file/module |
+| **Senior Engineer** | claude-sonnet-4-20250514 | high | Complex design, debugging | Multi-service, logic |
+| **Lead Engineer** | claude-sonnet-4-20250514 | high | Code review, quality gates | Validation, review |
+| **Quality Engineer** | claude-sonnet-4-20250514 | medium | Post-impl quality gate | Quality verification |
+| **Security Engineer** | claude-opus-4-20250514 | max | Vulnerability analysis, compliance | Security only |
+| **Principal Engineer** | claude-opus-4-20250514 | high | Architecture, strategy | Organization-wide |
+| **Model Engineer** | claude-sonnet-4-20250514 | high | Token optimization, cost analysis | Performance, budget |
 
 ---
 
@@ -89,32 +121,89 @@ Please HANDBACK with:
 
 ---
 
-## Automatic Task Routing
+## Task Routing Decision Tree
 
-The system automatically routes tasks based on priority:
+Route tasks using this priority order:
 
-1. **Security-scoped?** → **Security Engineer**
-2. **Cross-service architecture?** → **Principal Engineer**
-3. **Code review/validation?** → **Lead Engineer**
-4. **Complex/unscoped?** → **Senior Engineer** (design) → **Engineer** (execution)
-5. **Testing strategy?** → **Quality Engineer**
+1. **Security-scoped?** → **Security Engineer** (block all other routes)
+2. **Cross-service architecture (>2 repos)?** → **Principal Engineer**
+3. **Complex coding WITHOUT pre-written plan?** → **Senior Engineer** (to plan first)
+4. **Code review/validation?** → **Lead Engineer** or **Quality Engineer**
+5. **Well-planned, low-medium complexity?** → **Engineer**
 6. **Cost/optimization?** → **Model Engineer**
-7. **Debugging/health?** → **Healing Engineer**
-8. **Spec validation?** → **Spec Engineer**
-9. **Default** → **Engineer** (with context)
+7. **Default** → **Engineer** (with complete context)
 
 ---
 
-## Collecting Metrics
+## Installed Files
 
-After each HANDBACK, metrics are automatically collected:
+After running `make install-pi`, these files are installed to `~/.pi/agent/`:
 
-- ✅ **Tokens used** (for cost analysis)
-- ✅ **Time spent** (for efficiency tracking)
-- ✅ **Quality score** (for output validation)
-- ✅ **Completion status** (pass/fail/blockers)
+| File | Purpose | Verified? |
+|------|---------|-----------|
+| `SYSTEM.md` | System prompt for Orchestrator | ✅ Yes |
+| `AGENTS.md` | Agent role definitions | ✅ Yes |
+| `settings.json` | Core settings (model, theme, compaction) | ✅ Partial |
+| `pi.yml` | Sub-agent configuration | ⚠️ Speculative |
+| `SUB_AGENT_SETUP.md` | This file | ✅ Yes |
 
-These feed into cost-quality optimization decisions.
+---
+
+## Verification
+
+To verify the installation:
+
+```bash
+# Check installed files
+ls -la ~/.pi/agent/
+
+# Check settings
+cat ~/.pi/agent/settings.json
+
+# Check system prompt
+head -5 ~/.pi/agent/SYSTEM.md
+```
+
+Expected output for `settings.json`:
+- `defaultModel`: `"claude-sonnet-4-20250514"`
+- `defaultProvider`: `"anthropic"`
+- `compaction.enabled`: `true`
+
+---
+
+## Troubleshooting
+
+### Model not found errors
+
+If pi.dev reports a model not found:
+1. Check `settings.json` `defaultModel` value
+2. Verify the model ID is supported by your pi.dev subscription
+3. Update `settings.json` `defaultModel` to a supported model
+4. Current model IDs: `claude-haiku-4.5`, `claude-sonnet-4-20250514`, `claude-opus-4-20250514`
+
+### Sub-agent routing not working
+
+The routing rules in `pi.yml` are speculative. If they don't work:
+1. Use the DELEGATE pattern manually (describe the task to the appropriate agent)
+2. Reference the routing decision tree above
+3. The system prompt in `SYSTEM.md` guides the Orchestrator's routing behavior
+
+### Configuration sync issues
+
+If you update `docs/AGENTS.md` in the main repo:
+1. Update `renderer/pi-dev-src/AGENTS.md` to match
+2. Update `renderer/pi-dev-src/SYSTEM.md` with new model IDs
+3. Update `renderer/pi-dev-src/pi.yml` with new model IDs
+4. Update `renderer/pi-dev-src/settings.json` with new default model
+5. Run `make install-pi` to deploy changes
+
+### Re-installing
+
+The π.dev renderer is idempotent:
+```bash
+make install-pi    # install or re-install
+make uninstall-pi  # remove managed files
+```
 
 ---
 
@@ -134,44 +223,19 @@ Before marking tasks complete, verify:
 **Total Budget**: 200,000 tokens
 
 **Model Allocation**:
-- **Haiku** (fast/cheap): Simple tasks, routine work
-- **Sonnet** (standard): Complex tasks, architecture, code review
-- **Opus** (premium): Critical decisions, expert analysis
+- **Haiku** (fast/cheap): Routing, simple tasks, routine work
+- **Sonnet** (standard): Complex tasks, architecture, code review, quality gates
+- **Opus** (premium): Security analysis, cross-service architecture
 
 **Optimization Strategy**: Quality-first (maintain high quality, monitor costs)
 
 ---
 
-## Verification
-
-To verify configuration is working:
-
-```bash
-cat /Users/niall/.pi/agent/settings.json
-cat /Users/niall/.pi/agent/pi.yml
-```
-
-Expected output:
-- `extensions`: `["agent-orchestrator", "specialized-agents"]`
-- `packages`: `["orchestration-framework"]`
-- `skills`: All 5 skills listed
-- `pi.yml`: Full agent definitions
-
----
-
-## Next Steps
-
-1. **Start delegating tasks** using the DELEGATE pattern above
-2. **Monitor token usage** via metrics collection
-3. **Optimize agent selection** based on task type
-4. **Collect learnings** from each HANDBACK
-5. **Run A/B tests** on agent configurations as needed
-
----
-
 ## References
 
-- **System Prompt**: `/Users/niall/.pi/agent/SYSTEM.md`
-- **Agent Roles**: `/Users/niall/.pi/agent/AGENTS.md`
-- **Configuration**: `/Users/niall/.pi/agent/pi.yml`
-- **Settings**: `/Users/niall/.pi/agent/settings.json`
+- **System Prompt**: `~/.pi/agent/SYSTEM.md`
+- **Agent Roles**: `~/.pi/agent/AGENTS.md`
+- **Configuration**: `~/.pi/agent/pi.yml`
+- **Settings**: `~/.pi/agent/settings.json`
+- **Canonical Roles**: `docs/AGENTS.md` in the agentic-engineers repo
+- **Install Guide**: `renderer/PI-DEV-RENDERER.md`

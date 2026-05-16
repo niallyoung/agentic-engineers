@@ -1,21 +1,38 @@
 # agentic-engineers Agent Roles & Definitions
 
-This file defines the specialized agent roles available in the agentic-engineers orchestration framework. Each role has specific expertise, capabilities, and recommended usage patterns.
+This file defines the 8 canonical specialized agent roles available in the agentic-engineers orchestration framework. Each role has specific expertise, capabilities, and recommended usage patterns.
+
+**Last Updated:** 2026-05-16
 
 ## Agent Roles
+
+### Orchestrator
+
+**Expertise**: Task routing, queue management, metrics collection, model recommendations
+**Best for**: All entry points; routing decisions; coordinating specialist agents
+**Model**: claude-haiku-4.5 (low effort)
+**Scope**: Routing only — does NOT perform work directly
+
+**When to use**:
+- All work enters through Orchestrator
+- Orchestrator routes to appropriate specialist per decision tree
+- Applies Model Engineer recommendations for continuous optimization
+
+**NOT for**: Performing actual work — Orchestrator routes only
+
+---
 
 ### Engineer
 
 **Expertise**: General software engineering, implementation, straightforward refactoring
 **Best for**: Well-scoped tasks with clear requirements, feature implementation, bug fixes
-**Model**: Haiku or Sonnet (depending on complexity)
+**Model**: claude-haiku-4.5 (high effort)
 **Scope**: Single file/module changes, feature implementation
 
 **When to use**:
-- Feature implementation with clear requirements
+- Feature implementation with clear requirements and pre-written plan
 - Bug fixes in single/few files
 - Simple refactoring
-- Small UI changes
 - Routine maintenance
 
 **NOT for**: Security decisions, architecture, complex coordination, cross-service changes
@@ -24,9 +41,9 @@ This file defines the specialized agent roles available in the agentic-engineers
 
 ### Senior Engineer
 
-**Expertise**: Complex system design, debugging intricate problems, mentoring
+**Expertise**: Complex system design, debugging intricate problems, root-cause diagnosis
 **Best for**: Unscoped complex work, architectural decisions, deep debugging
-**Model**: Sonnet (standard)
+**Model**: claude-sonnet-4-20250514 (high effort)
 **Scope**: Multi-service impact, complex logic, performance optimization
 
 **When to use**:
@@ -42,9 +59,9 @@ This file defines the specialized agent roles available in the agentic-engineers
 
 ### Lead Engineer
 
-**Expertise**: Code review, quality assurance, spec validation, testing strategy
-**Best for**: Code review, quality gates, ensuring spec compliance
-**Model**: Sonnet (standard)
+**Expertise**: Code review, quality assurance, spec validation, architectural guidance
+**Best for**: Code review, quality gates, ensuring spec compliance, medium-complexity planning
+**Model**: claude-sonnet-4-20250514 (high effort)
 **Scope**: Validation, review, quality decisions
 
 **When to use**:
@@ -60,7 +77,7 @@ This file defines the specialized agent roles available in the agentic-engineers
 
 **Expertise**: Security architecture, vulnerability analysis, compliance, threat modeling
 **Best for**: Security-scoped work, vulnerability analysis, secure design
-**Model**: Sonnet or Opus (depending on threat level)
+**Model**: claude-opus-4-20250514 (max effort)
 **Scope**: Security decisions, architecture, compliance
 
 **When to use**:
@@ -71,14 +88,16 @@ This file defines the specialized agent roles available in the agentic-engineers
 - Threat modeling
 - Compliance requirements
 
+**ONLY invoked for security-scoped tasks** — all other routes blocked.
+
 ---
 
 ### Principal Engineer
 
 **Expertise**: Cross-organization architecture, strategy, high-stakes decisions
 **Best for**: System architecture, major refactors, organizational decisions
-**Model**: Opus (premium)
-**Scope**: Organization-wide impact, strategic decisions
+**Model**: claude-opus-4-20250514 (high effort)
+**Scope**: Organization-wide impact, strategic decisions affecting >2 repos
 
 **When to use**:
 - System architecture design
@@ -91,17 +110,16 @@ This file defines the specialized agent roles available in the agentic-engineers
 
 ### Quality Engineer
 
-**Expertise**: Testing strategy, test automation, coverage, quality metrics
-**Best for**: Testing strategy, test quality, coverage analysis
-**Model**: Sonnet (standard)
-**Scope**: Testing decisions, coverage, automation strategy
+**Expertise**: Post-implementation quality gate, code review, model suitability assessment
+**Best for**: Quality verification after implementation, model assessment feedback
+**Model**: claude-sonnet-4-20250514 (medium effort)
+**Scope**: Testing decisions, coverage, model assessment
 
 **When to use**:
-- Test strategy design
-- Test coverage analysis
-- Test automation implementation
+- Post-implementation quality gate
+- Code review for quality
+- Providing model_assessment feedback for Model Engineer
 - Quality metrics definition
-- CI/CD pipeline testing
 
 ---
 
@@ -109,7 +127,7 @@ This file defines the specialized agent roles available in the agentic-engineers
 
 **Expertise**: Token optimization, cost-quality trade-offs, model selection
 **Best for**: Cost optimization, model selection, efficiency analysis
-**Model**: Sonnet (standard)
+**Model**: claude-sonnet-4-20250514 (high effort)
 **Scope**: Performance metrics, cost analysis, optimization recommendations
 
 **When to use**:
@@ -117,39 +135,7 @@ This file defines the specialized agent roles available in the agentic-engineers
 - Token budget analysis
 - Cost-quality trade-off decisions
 - Performance optimization recommendations
-- Metrics collection and analysis
-
----
-
-### Spec Engineer
-
-**Expertise**: Specification compliance, drift detection, requirement validation
-**Best for**: Ensuring implementation matches spec, detecting drift
-**Model**: Sonnet (standard)
-**Scope**: Validation, spec compliance, drift detection
-
-**When to use**:
-- Detecting spec drift
-- Validating feature completeness
-- Requirement compliance checking
-- Documentation validation
-- API spec compliance
-
----
-
-### Healing Engineer
-
-**Expertise**: System health analysis, debugging, issue investigation
-**Best for**: System debugging, health analysis, issue investigation
-**Model**: Sonnet or Opus (depending on complexity)
-**Scope**: Debugging, health analysis, issue resolution
-
-**When to use**:
-- Investigating system issues
-- Health analysis and diagnostics
-- Debugging production issues
-- Log analysis
-- Performance investigation
+- Analyzing Quality Engineer feedback to improve routing
 
 ---
 
@@ -157,15 +143,13 @@ This file defines the specialized agent roles available in the agentic-engineers
 
 When you receive a task, route it using this priority order:
 
-1. **Is it security-scoped?** → **Security Engineer**
-2. **Is it cross-service architecture?** → **Principal Engineer**
-3. **Is it code review/validation?** → **Lead Engineer** or **Quality Engineer**
-4. **Is it complex/unscoped?** → **Senior Engineer** (design) then **Engineer** (execution)
-5. **Is it testing strategy?** → **Quality Engineer**
-6. **Is it cost/optimization?** → **Model Engineer**
-7. **Is it debugging/health?** → **Healing Engineer**
-8. **Is it spec validation?** → **Spec Engineer**
-9. **Default** → **Engineer** (with complete context)
+1. **Is it security-scoped?** → **Security Engineer** (block all other routes)
+2. **Is it cross-service architecture (affects >2 repos)?** → **Principal Engineer**
+3. **Is it complex coding WITHOUT pre-written plan?** → **Senior Engineer** (to plan first)
+4. **Is it code review or quality verification?** → **Lead Engineer** or **Quality Engineer**
+5. **Is it well-planned, low-medium complexity?** → **Engineer**
+6. **Is it cost/optimization analysis?** → **Model Engineer**
+7. **Otherwise** → Escalate to human for clarification
 
 ## DELEGATE Patterns
 
@@ -219,5 +203,5 @@ After completing a DELEGATE, agents should provide:
 
 ---
 
-**Version**: agentic-engineers v1.0 roles & definitions
-**Last Updated**: 2026-05-15
+**Version**: agentic-engineers v1.0 — 8 canonical roles
+**Last Updated**: 2026-05-16
