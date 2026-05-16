@@ -3,7 +3,7 @@
 #
 # Inputs:  $1 = REPO_ROOT (agentic-engineers repo root)
 #          $2 = COPILOT root (e.g., $HOME/.copilot)
-#          $3 = optional: --uninstall | --status
+#          $3 = optional: --uninstall | --status | --stream | --stream=json
 #
 # Behavior: copies any directory under $REPO_ROOT/skills/ that contains a SKILL.md
 # into $COPILOT/skills/<name>/. Top-level loose .md files in skills/ are skipped
@@ -12,6 +12,10 @@
 #
 # A marker file (.agentic-engine{service-name}) is written to each managed skill so
 # uninstall can identify what to remove.
+#
+# Streaming modes:
+#   --stream      : Human-readable progress with per-skill timing (ANSI colors if TTY)
+#   --stream=json : Structured JSON-lines output for CI/CD pipelines (delegates to Python helper)
 
 set -euo pipefail
 
@@ -28,6 +32,30 @@ MARKER=".agentic-engine{service-name}"
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
+
+# Helper function for streaming output
+_stream_emit() {
+	local mode="$1" type="$2" skill="$3" data="$4"
+	[ -z "$mode" ] && return 0  # No-op in default mode
+
+	local ts
+	ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+	if [ "$mode" = "human" ]; then
+		# ANSI progress indicator (suppressed if not a TTY)
+		if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+			case "$type" in
+				start)    printf "\r  ⏳ %-30s" "$skill" ;;
+				complete) printf "\r  ✅ %-30s\n" "$skill" ;;
+				skip)     printf "\r  ⚠️  %-30s\n" "$skill" ;;
+				error)    printf "\r  ❌ %-30s\n" "$skill" ;;
+				summary)  : ;;  # handled by main echo
+			esac
+		fi
+	fi
+	# json mode is handled by Python helper (exec'd above)
+}
+
 
 case "$MODE" in
 	--uninstall)
@@ -66,24 +94,78 @@ case "$MODE" in
 		echo "  --- $ok in sync, $drift drift, $missing missing, $foreign foreign ---"
 		;;
 
-	install|"")
+	install|""|--stream|--stream=json)
+		# Determine output mode
+		STREAM_MODE=""
+		if [ "$MODE" = "--stream" ]; then
+			STREAM_MODE="human"
+		elif [ "$MODE" = "--stream=json" ]; then
+			STREAM_MODE="json"
+			# Delegate entirely to Python helper
+			exec python3 "$(dirname "$0")/../../src/harnesses/copilot_cli/streaming.py" \
+				"$SRC_SKILLS" "$DST_SKILLS" "$MARKER"
+		fi
+
 		echo "📦 Rendering skills → $DST_SKILLS/..."
 		mkdir -p "$DST_SKILLS"
 		count=0
+		total_bytes=0
+		install_start=$(date +%s)
+
 		for name in $(list_source_skills); do
 			src="$SRC_SKILLS/$name"
 			dst="$DST_SKILLS/$name"
-			# If destination exists and is NOT managed by us, refuse to overwrite
+
+			# Foreign skill protection (unchanged)
 			if [ -d "$dst" ] && [ ! -f "$dst/$MARKER" ]; then
+				_stream_emit "$STREAM_MODE" "skip" "$name" "{}"
 				echo "  ⚠️  skipping $name — exists at $dst and is not managed by us"
 				continue
 			fi
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
+
+			# Emit start event
+			skill_start=$(date +%s)
+			_stream_emit "$STREAM_MODE" "start" "$name" "{\"src\":\"$src\"}"
+
+			# Streaming rsync: use --progress for human mode (more compatible than --info=progress2)
+			# For non-streaming mode, use standard rsync
+			if [ "$STREAM_MODE" = "human" ]; then
+				rsync -a --delete --progress \
+					--exclude='.DS_Store' --exclude='.git' \
+					"$src/" "$dst/" || {
+					_stream_emit "$STREAM_MODE" "error" "$name" \
+						"{\"message\":\"rsync failed with exit $?\"}"
+					echo "  ❌ $name — rsync failed" >&2
+					continue
+				}
+			else
+				rsync -a --delete --exclude='.DS_Store' --exclude='.git' \
+					"$src/" "$dst/" || {
+					echo "  ❌ $name — rsync failed" >&2
+					continue
+				}
+			fi
+
+			# Write marker only after successful rsync
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$MARKER"
-			echo "  rendered $name"
+
+			# Collect stats
+			skill_end=$(date +%s)
+			skill_duration=$(( skill_end - skill_start ))
+			skill_bytes=$(du -sk "$dst" 2>/dev/null | cut -f1 || echo 0)
+			total_bytes=$(( total_bytes + skill_bytes ))
+
+			_stream_emit "$STREAM_MODE" "complete" "$name" \
+				"{\"duration_s\":$skill_duration,\"kb\":$skill_bytes}"
+			echo "  rendered $name (${skill_duration}s)"
 			count=$((count + 1))
 		done
-		echo "✅ Rendered $count skill(s) to $DST_SKILLS/"
+
+		install_end=$(date +%s)
+		install_duration=$(( install_end - install_start ))
+		_stream_emit "$STREAM_MODE" "summary" "" \
+			"{\"count\":$count,\"total_kb\":$total_bytes,\"duration_s\":$install_duration}"
+		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
 		# 2. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
