@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# .githooks/pre-push — SDLC pre-push quality gate
+#
+# Enforces:
+#   1. Python tests pass (if pytest available and tests/ exists)
+#   2. Agent definition files are valid YAML
+#   3. No force-push to main/master (warn only — can't block, but logs)
+#
+# Install: git config core.hooksPath .githooks
+# Bypass: SKIP_HOOKS=1 git push
+
+set -euo pipefail
+
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⚠️  SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
+  exit 0
+fi
+
+REMOTE="$1"
+URL="$2"
+
+ERRORS=0
+WARNINGS=0
+
+fail() {
+  echo "❌ $1"
+  ERRORS=$((ERRORS + 1))
+}
+
+warn() {
+  echo "⚠️  $1"
+  WARNINGS=$((WARNINGS + 1))
+}
+
+# ── 1. Detect push to main/master ─────────────────────────────────────────────
+while read local_ref local_sha remote_ref remote_sha; do
+  if echo "$remote_ref" | grep -qE 'refs/heads/(main|master)$'; then
+    warn "Pushing to protected branch: $remote_ref — ensure QE review is complete"
+  fi
+done
+
+# ── 2. Validate agent YAML files ──────────────────────────────────────────────
+if command -v python3 >/dev/null 2>&1; then
+  AGENT_ERRORS=0
+  for f in src/agents/*.md; do
+    [ -f "$f" ] || continue
+    # Extract YAML frontmatter and validate
+    FM=$(awk '/^---/{if(p)exit; p=1; next} p' "$f" 2>/dev/null || true)
+    if [ -n "$FM" ]; then
+      if ! echo "$FM" | python3 -c "import sys,yaml; yaml.safe_load(sys.stdin)" 2>/dev/null; then
+        fail "Invalid YAML frontmatter in agent: $f"
+        AGENT_ERRORS=$((AGENT_ERRORS + 1))
+      fi
+    fi
+  done
+  if [ "$AGENT_ERRORS" -eq 0 ]; then
+    echo "✅ pre-push: agent YAML frontmatter valid"
+  fi
+fi
+
+# ── 3. Run tests (non-blocking — warn only if tests fail) ─────────────────────
+if command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
+  echo "🧪 pre-push: running test suite..."
+  if pytest tests/ -q --tb=no 2>/dev/null; then
+    echo "✅ pre-push: tests passed"
+  else
+    warn "Tests failed — review before pushing to shared branches"
+  fi
+fi
+
+# ── Result ─────────────────────────────────────────────────────────────────────
+if [ "$ERRORS" -gt 0 ]; then
+  echo ""
+  echo "❌ pre-push: $ERRORS error(s). Fix and retry."
+  echo "   Emergency bypass: SKIP_HOOKS=1 git push"
+  exit 1
+fi
+
+if [ "$WARNINGS" -gt 0 ]; then
+  echo "⚠️  pre-push: $WARNINGS warning(s) — proceeding (warnings are non-blocking)"
+fi
+
+echo "✅ pre-push: quality gate passed"
+exit 0

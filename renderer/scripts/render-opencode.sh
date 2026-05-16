@@ -352,6 +352,11 @@ case "$MODE" in
 			else echo "  ⚠️  agent $name (foreign)"; foreign=$((foreign + 1)); fi
 		done
 		echo "  agents: $ok ok / $missing missing / $foreign foreign"
+		# Git hooks
+		hooks_path=$(git -C "$REPO_ROOT" config core.hooksPath 2>/dev/null || true)
+		if [ "$hooks_path" = ".githooks" ]; then echo "  ✅ git hooks (core.hooksPath = .githooks)"
+		elif [ -n "$hooks_path" ]; then echo "  ⚠️  git hooks (core.hooksPath = $hooks_path, expected .githooks)"
+		else echo "  ❌ git hooks (core.hooksPath not set — run render-opencode.sh or /hooks-install)"; fi
 		;;
 
 	install|"")
@@ -467,6 +472,17 @@ case "$MODE" in
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
+
+		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
+		# This enforces SDLC compliance at commit/push time for the repo itself.
+		if [ -d "$REPO_ROOT/.githooks" ]; then
+			echo "📦 Configuring git hooks → $REPO_ROOT/.githooks/..."
+			git -C "$REPO_ROOT" config core.hooksPath .githooks
+			for hook in "$REPO_ROOT"/.githooks/*; do
+				[ -f "$hook" ] && chmod +x "$hook"
+			done
+			echo "✅ Git hooks configured (core.hooksPath = .githooks)"
+		fi
 		;;
 
 	*)
