@@ -1,0 +1,230 @@
+{
+  "title": "Agentic Engineers — Orchestrator Overview",
+  "uid": "agentic-engineers-orchestrator",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "tags": ["agentic-engineers", "orchestrator"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tasks Total",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "orchestrator_tasks_total",
+          "legendFormat": "Total Tasks"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "colorMode": "background",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Task Success Rate",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [
+        {
+          "expr": "rate(orchestrator_tasks_completed_total[5m]) / rate(orchestrator_tasks_total[5m])",
+          "legendFormat": "Success Rate"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            {"color": "red", "value": 0},
+            {"color": "yellow", "value": 0.90},
+            {"color": "green", "value": 0.95}
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "percentunit"}
+      }
+    },
+    {
+      "id": 3,
+      "title": "Error Rate",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "rate(orchestrator_errors_total[5m]) / rate(orchestrator_tasks_total[5m])",
+          "legendFormat": "Error Rate"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            {"color": "green", "value": 0},
+            {"color": "yellow", "value": 0.01},
+            {"color": "red", "value": 0.05}
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {"unit": "percentunit"}
+      }
+    },
+    {
+      "id": 4,
+      "title": "Queue Depth",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "orchestrator_queue_depth",
+          "legendFormat": "Queue Depth"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            {"color": "green", "value": 0},
+            {"color": "yellow", "value": 50},
+            {"color": "red", "value": 100}
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Average Quality Score",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "targets": [
+        {
+          "expr": "orchestrator_quality_score_sum / orchestrator_quality_score_count",
+          "legendFormat": "Avg Quality"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            {"color": "red", "value": 0},
+            {"color": "yellow", "value": 70},
+            {"color": "green", "value": 85}
+          ]
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Task Throughput (tasks/min)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [
+        {
+          "expr": "rate(orchestrator_tasks_total[1m]) * 60",
+          "legendFormat": "Tasks/min"
+        },
+        {
+          "expr": "rate(orchestrator_tasks_completed_total[1m]) * 60",
+          "legendFormat": "Completed/min"
+        },
+        {
+          "expr": "rate(orchestrator_tasks_failed_total[1m]) * 60",
+          "legendFormat": "Failed/min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "reqpm"}
+      }
+    },
+    {
+      "id": 7,
+      "title": "Task Duration P50/P95/P99",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(orchestrator_task_duration_seconds_bucket[5m]))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(orchestrator_task_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(orchestrator_task_duration_seconds_bucket[5m]))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "s"}
+      }
+    },
+    {
+      "id": 8,
+      "title": "Token Usage",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [
+        {
+          "expr": "rate(orchestrator_tokens_total[5m]) * 300",
+          "legendFormat": "Tokens/5min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"}
+      }
+    },
+    {
+      "id": 9,
+      "title": "Queue Depth Over Time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [
+        {
+          "expr": "orchestrator_queue_depth",
+          "legendFormat": "Pending"
+        },
+        {
+          "expr": "orchestrator_queue_processing",
+          "legendFormat": "Processing"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Routing Latency",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(orchestrator_routing_latency_seconds_bucket[5m]))",
+          "legendFormat": "P95 Routing Latency"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "s"}
+      }
+    },
+    {
+      "id": 11,
+      "title": "Validation Errors",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "targets": [
+        {
+          "expr": "rate(orchestrator_validation_errors_total[5m])",
+          "legendFormat": "Validation Errors/s"
+        }
+      ]
+    }
+  ]
+}
