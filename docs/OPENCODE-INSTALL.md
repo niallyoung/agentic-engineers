@@ -278,13 +278,14 @@ If you have an old install from the Python renderer or a hand-edited install, fo
    cp -r ~/.config/opencode.backup-*/skills/my-domain/ ~/.config/opencode/skills/
    ```
 
-**Why not just uninstall the old one?** The old install may not have marker files, so `uninstall-opencode` won't recognize it as managed. Use `uninstall-opencode-legacy` as a fallback if needed:
+**Why not just uninstall the old one?** The old install may not have marker files, so `uninstall-opencode` won't recognize it as managed. In that case, back it up and remove it manually:
 
 ```bash
-make uninstall-opencode-legacy
+mv ~/.config/opencode ~/.config/opencode.backup-$(date -u +%Y%m%dT%H%M%SZ)
+make install-opencode
 ```
 
-This removes files matching the old renderer's patterns, but use with caution — it may remove foreign files if naming overlaps.
+This preserves your old install for inspection while letting the renderer write a clean managed tree.
 
 ## Troubleshooting
 
