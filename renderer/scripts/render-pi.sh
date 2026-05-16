@@ -44,7 +44,7 @@ case "$MODE" in
 			exit 0
 		fi
 		
-		python3 "$RENDERER_SCRIPT" "$RENDERER_SRC" "$PI" --uninstall
+		python3 "$RENDERER_SCRIPT" --src "$RENDERER_SRC" --dest "$PI" --uninstall
 		
 		# Remove marker
 		if [ -f "$PI_AGENT/$MARKER" ]; then
@@ -56,14 +56,14 @@ case "$MODE" in
 
 	--status)
 		echo "📋 Checking installation status at $PI_AGENT/..."
-		python3 "$RENDERER_SCRIPT" "$RENDERER_SRC" "$PI" --status
+		python3 "$RENDERER_SCRIPT" --src "$RENDERER_SRC" --dest "$PI" --status
 		;;
 
 	install|"")
 		echo "📦 Installing agentic-engineers to $PI_AGENT/..."
 		mkdir -p "$PI_AGENT"
 		
-		python3 "$RENDERER_SCRIPT" "$RENDERER_SRC" "$PI"
+		python3 "$RENDERER_SCRIPT" --src "$RENDERER_SRC" --dest "$PI"
 		
 		# Write marker
 		date -u +"%Y-%m-%dT%H:%M:%SZ" > "$PI_AGENT/$MARKER"

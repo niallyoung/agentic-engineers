@@ -131,11 +131,7 @@ json_escape() {
 		|| sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e ':a;N;$!ba;s/\n/ /g'
 }
 
-# YAML-escape: produce a safe single-line value. Strategy: replace double-quotes with
-# single-quotes and strip newlines so the value is safe inside double-quoted YAML.
-yaml_escape_inline() {
-	tr '\n' ' ' | sed -e 's/"/'\''/g' -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//'
-}
+# yaml_escape_inline() is defined in lib.sh (sourced above)
 
 # Derive a docs URL from the repo's git remote (best-effort).
 derive_docs_url() {

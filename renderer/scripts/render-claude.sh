@@ -44,74 +44,7 @@ map_model() {
 	esac
 }
 
-# Parse docs/AGENTS.md canonical agent definitions table.
-# Returns a map of agent_name → "model|effort|description"
-# Reads the markdown table starting with "| Role | Model | Effort"
-# and extracts: role (normalized to lowercase with hyphens), model, effort, and use-when description.
-parse_agents_md() {
-	local agents_file="$1"
-	local agent_name model effort description
-	
-	if [ ! -f "$agents_file" ]; then
-		echo "error: $agents_file not found" >&2
-		return 1
-	fi
-	
-	# Extract table rows (skip header and separator lines)
-	# Table format: | **RoleName** | claude-model-X-Y | effort | $cost | description |
-	awk '
-		/^\| \*\*[A-Za-z]/ {
-			# Extract fields from markdown table row
-			# Split by | and extract fields
-			gsub(/^\| /, "")  # remove leading |
-			gsub(/ \|$/, "")  # remove trailing |
-			
-			# Split by | to get fields
-			n = split($0, fields, "|")
-			if (n < 5) next
-			
-			# Trim whitespace from each field
-			for (i = 1; i <= n; i++) {
-				gsub(/^[ \t]+|[ \t]+$/, "", fields[i])
-			}
-			
-			# Extract role (field 1), model (field 2), effort (field 3), skip cost (field 4), use-when (field 5)
-			role = fields[1]
-			model = fields[2]
-			effort = fields[3]
-			description = fields[5]
-			
-			# Normalize role: remove ** markers, convert to lowercase, replace spaces with hyphens
-			gsub(/\*\*/, "", role)
-			role_lower = tolower(role)
-			gsub(/ /, "-", role_lower)
-			
-			# Normalize model: trim and keep as-is
-			gsub(/^[ \t]+|[ \t]+$/, "", model)
-			
-			# Normalize effort: trim and keep as-is
-			gsub(/^[ \t]+|[ \t]+$/, "", effort)
-			
-			# Normalize description: trim and keep as-is
-			gsub(/^[ \t]+|[ \t]+$/, "", description)
-			
-			# Output: agent_name|model|effort|description
-			if (role_lower && model && effort && description) {
-				print role_lower "|" model "|" effort "|" description
-			}
-		}
-	' "$agents_file"
-}
-
-# Lookup canonical agent metadata from parsed AGENTS.md
-# Usage: lookup_agent_metadata <agent_name> <agents_map_file>
-# Returns: "model|effort|description" or empty if not found
-lookup_agent_metadata() {
-	local agent_name="$1"
-	local agents_map="$2"
-	
-	grep "^${agent_name}|" "$agents_map" | cut -d'|' -f2-
-}
+# parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
 
 case "$MODE" in
 	--uninstall)
@@ -223,15 +156,16 @@ case "$MODE" in
 			desc=$(echo "$canonical_metadata" | cut -d'|' -f3-)
 			model=$(map_model "$model_raw")
 
-			{
-				echo "---"
-				echo "name: $name"
-				echo "description: ${desc//\"/\'}"
-				[ -n "$model" ] && echo "model: $model"
-				echo "---"
-				echo
-				strip_fm "$src_file"
-			} > "$dst_file"
+		{
+			echo "---"
+			echo "name: $name"
+			desc_escaped=$(printf '%s' "$desc" | yaml_escape_inline)
+			printf 'description: "%s"\n' "$desc_escaped"
+			[ -n "$model" ] && echo "model: $model"
+			echo "---"
+			echo
+			strip_fm "$src_file"
+		} > "$dst_file"
 
 			echo "$name" >> "$AGENT_MANIFEST.tmp"
 			count_a=$((count_a + 1))

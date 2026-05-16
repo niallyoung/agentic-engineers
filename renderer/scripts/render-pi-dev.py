@@ -30,11 +30,18 @@ Examples:
 import os
 import sys
 import json
-import yaml
 import shutil
+import argparse
 from pathlib import Path
 from typing import Dict, Tuple, List
 from datetime import datetime
+
+# Graceful PyYAML import with fallback
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
 
 
 class PiDevRenderer:
@@ -60,9 +67,7 @@ class PiDevRenderer:
         self.src_dir = Path(src_dir)
         self.dest_dir = Path(dest_dir)
         self.agent_dir = self.dest_dir / "agent"
-        
-        # Ensure destination directories exist
-        self.agent_dir.mkdir(parents=True, exist_ok=True)
+        # Do NOT create directories here — defer to render_all()
     
     def copy_file(self, src_name: str, dest_name: str = None) -> bool:
         """Copy a file from source to destination"""
@@ -88,11 +93,24 @@ class PiDevRenderer:
             return False
     
     def validate_yaml(self, filename: str) -> bool:
-        """Validate YAML file structure"""
+        """Validate YAML file structure.
+        
+        Returns True if valid, False if invalid.
+        Returns True (with warning) if PyYAML is not installed — validation skipped.
+        """
         file_path = self.agent_dir / filename
         
         if not file_path.exists():
             return False
+        
+        if not YAML_AVAILABLE:
+            print(
+                f"⚠️  Skipping YAML validation for {filename}: "
+                "PyYAML not installed.\n"
+                "   Install it with: pip install pyyaml\n"
+                "   (YAML validation is optional — install will proceed)"
+            )
+            return True  # Non-fatal: proceed without validation
         
         try:
             with open(file_path, 'r') as f:
@@ -178,6 +196,9 @@ class PiDevRenderer:
         
         print(f"Source: {self.src_dir}")
         print(f"Destination: {self.agent_dir}\n")
+        
+        # Create destination directory only when actually rendering (not in __init__)
+        self.agent_dir.mkdir(parents=True, exist_ok=True)
         
         rendered = 0
         errors = 0
@@ -294,42 +315,118 @@ class PiDevRenderer:
 
 
 def main():
-    # Parse arguments
-    uninstall_mode = "--uninstall" in sys.argv
-    status_mode = "--status" in sys.argv
-    
-    # Remove flags from argv for positional arg parsing
-    argv = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
-    
-    if len(argv) < 1:
-        # Default: render from renderer/pi-dev-src to ~/.pi
-        script_dir = Path(__file__).parent.parent
-        src_dir = script_dir / "pi-dev-src"
-        dest_dir = Path.home() / ".pi"
-    elif len(argv) == 1:
-        # Single arg: could be source or destination
-        # If it looks like a home dir path, treat as destination
-        if "/.pi" in argv[0] or argv[0].endswith(".pi"):
-            script_dir = Path(__file__).parent.parent
-            src_dir = script_dir / "pi-dev-src"
-            dest_dir = Path(argv[0])
-        else:
-            src_dir = Path(argv[0])
-            dest_dir = Path.home() / ".pi"
+    parser = argparse.ArgumentParser(
+        description="π.dev Harness Renderer — renders agentic-engineers config to ~/.pi/agent/",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Render from default source to ~/.pi
+  python3 render-pi-dev.py
+
+  # Render with explicit flags (unambiguous)
+  python3 render-pi-dev.py --src /path/to/source --dest ~/.pi
+
+  # Render with positional args (src then dest, backward-compatible)
+  python3 render-pi-dev.py /path/to/source ~/.pi
+
+  # Uninstall
+  python3 render-pi-dev.py --uninstall
+  python3 render-pi-dev.py --dest ~/.pi --uninstall
+
+  # Status check
+  python3 render-pi-dev.py --status
+  python3 render-pi-dev.py --dest ~/.pi --status
+        """
+    )
+
+    # Named flags (unambiguous, preferred)
+    parser.add_argument(
+        "--src",
+        default=None,
+        metavar="DIR",
+        help="Source directory containing pi-dev-src files (default: renderer/pi-dev-src/)"
+    )
+    parser.add_argument(
+        "--dest",
+        default=None,
+        metavar="DIR",
+        help="Destination base directory (default: ~/.pi)"
+    )
+
+    # Mode flags
+    parser.add_argument(
+        "--uninstall",
+        action="store_true",
+        help="Remove managed files from destination"
+    )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help="Check installation status without making changes"
+    )
+
+    # Backward-compatible positional args (two-arg form only — no heuristic)
+    parser.add_argument(
+        "src_pos",
+        nargs="?",
+        default=None,
+        metavar="SRC_DIR",
+        help="Source directory (positional, use --src for clarity)"
+    )
+    parser.add_argument(
+        "dest_pos",
+        nargs="?",
+        default=None,
+        metavar="DEST_DIR",
+        help="Destination directory (positional, use --dest for clarity)"
+    )
+
+    args = parser.parse_args()
+
+    # Resolve source directory:
+    # Priority: --src flag > src_pos (only if dest_pos also provided) > default
+    script_dir = Path(__file__).parent.parent
+    default_src = script_dir / "pi-dev-src"
+    default_dest = Path.home() / ".pi"
+
+    if args.src is not None:
+        src_dir = Path(args.src)
+    elif args.src_pos is not None and args.dest_pos is not None:
+        # Two positional args: unambiguous (src, dest)
+        src_dir = Path(args.src_pos)
+    elif args.src_pos is not None and args.dest_pos is None:
+        # Single positional arg: DEPRECATED heuristic path
+        # Emit a deprecation warning and refuse to guess
+        print(
+            "⚠️  Ambiguous invocation: single positional argument provided.\n"
+            "   Cannot determine if this is a source or destination directory.\n"
+            "   Use explicit flags instead:\n"
+            f"     --src {args.src_pos}   (if this is the source directory)\n"
+            f"     --dest {args.src_pos}  (if this is the destination directory)\n",
+            file=sys.stderr
+        )
+        return 2
     else:
-        # Two args: source and destination
-        src_dir = Path(argv[0])
-        dest_dir = Path(argv[1])
-    
+        src_dir = default_src
+
+    # Resolve destination directory:
+    # Priority: --dest flag > dest_pos (only if src_pos also provided) > default
+    if args.dest is not None:
+        dest_dir = Path(args.dest)
+    elif args.src_pos is not None and args.dest_pos is not None:
+        dest_dir = Path(args.dest_pos)
+    else:
+        dest_dir = default_dest
+
     # Ensure paths are absolute
     src_dir = src_dir.resolve()
     dest_dir = dest_dir.resolve()
-    
+
     renderer = PiDevRenderer(str(src_dir), str(dest_dir))
-    
-    if uninstall_mode:
+
+    if args.uninstall:
         return renderer.uninstall()
-    elif status_mode:
+    elif args.status:
         return renderer.status()
     else:
         return renderer.render_all()
