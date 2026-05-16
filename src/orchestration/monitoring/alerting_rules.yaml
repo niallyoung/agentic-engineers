@@ -116,3 +116,60 @@ groups:
           summary: "Elevated DELEGATE/HANDBACK validation errors"
           description: "Validation error rate is {{ $value }}/s."
           runbook_url: "docs/runbooks/validation-errors.md"
+
+      # -----------------------------------------------------------------------
+      # Token Cost Anomaly Alerts
+      # -----------------------------------------------------------------------
+      - alert: TokenCostDailyHigh
+        expr: |
+          increase(orchestrator_cost_usd_total[24h]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          cost_anomaly: "true"
+        annotations:
+          summary: "Daily token cost exceeds $100"
+          description: "Daily cost is ${{ $value | humanize }}. Review token usage patterns."
+          runbook_url: "docs/runbooks/token-cost-high.md"
+
+      - alert: TokenCostPerTaskHigh
+        expr: |
+          (increase(orchestrator_cost_usd_total[1h]) / rate(orchestrator_tasks_total[1h])) > 5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          cost_anomaly: "true"
+        annotations:
+          summary: "Cost per task exceeds $5"
+          description: "Average cost per task is ${{ $value | humanize }}. Investigate task complexity."
+          runbook_url: "docs/runbooks/token-cost-high.md"
+
+      - alert: TokenCacheHitRateLow
+        expr: |
+          (rate(orchestrator_tokens_cached_total[5m]) / 
+           (rate(orchestrator_tokens_input_total[5m]) + rate(orchestrator_tokens_output_total[5m]))) < 0.5
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          cost_anomaly: "true"
+        annotations:
+          summary: "Token cache hit rate below 50%"
+          description: "Cache effectiveness is {{ $value | humanizePercentage }}. Cache performance is degraded."
+          runbook_url: "docs/runbooks/cache-hit-rate-low.md"
+
+      - alert: TokenUsageAnomaly
+        expr: |
+          (abs(orchestrator_tokens_total - avg_over_time(orchestrator_tokens_total[7d])) 
+           / stddev_over_time(orchestrator_tokens_total[7d])) > 2.5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          cost_anomaly: "true"
+        annotations:
+          summary: "Token usage anomaly detected (> 2.5σ from mean)"
+          description: "Current usage is {{ $value }}σ above normal. Investigate unusual patterns."
+          runbook_url: "docs/runbooks/token-usage-anomaly.md"
