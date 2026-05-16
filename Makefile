@@ -1,5 +1,6 @@
 .PHONY: help install install-copilot install-claude install-pi install-opencode \
-        uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode status \
+        uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
+        uninstall-opencode-legacy status status-opencode \
         verify validate-opencode clean render-claude render-copilot render-pi render-all
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -20,6 +21,7 @@ help:
 	@echo "  uninstall-pi        Remove from ~/.pi/ (managed only)"
 	@echo "  uninstall-all       All four (including ~/.config/opencode/)"
 	@echo "  uninstall-opencode  Remove from ~/.config/opencode/ (agentic-engineers only)"
+	@echo "  uninstall-opencode-legacy  Remove legacy install if relocated (managed markers only)"
 	@echo ""
 	@echo "Render targets (generate dist/ from source):"
 	@echo "  render-claude       Generate dist/claude/ (provider-specific)"
@@ -29,6 +31,7 @@ help:
 	@echo ""
 	@echo "Diagnostic:"
 	@echo "  status              Check installation status (all 4 harnesses)"
+	@echo "  status-opencode     Check ~/.config/opencode/ install status"
 	@echo "  verify              Verify framework structure"
 	@echo "  validate-opencode   Validate OpenCode config generation"
 	@echo "  clean               Remove build artifacts"
@@ -86,10 +89,15 @@ verify: ## Verify framework structure and tests (SPEC-compliant)
 	@! grep -E "^\s+@(bash|sh|python).*scripts" $(REPO_ROOT)/Makefile | grep -v "renderer/scripts" | grep -q . || (echo "❌ SPEC VIOLATION: Makefile invokes external scripts" && exit 1) || true
 	@echo "✅ SPEC compliance verified (renderer/scripts exempted for build-time installation only)"
 
-validate-opencode: ## Validate OpenCode config generation (schema check only)
-	@echo "🔍 Validating OpenCode config generation..."
-	@python3 "$(REPO_ROOT)/renderer/generate-opencode-configs.py" "$(REPO_ROOT)" /tmp/opencode-validate --validate-only
-	@echo "✅ OpenCode schema validation passed"
+validate-opencode: ## Validate OpenCode config generation (status + JSON schema check)
+	@echo "🔍 Validating OpenCode install at ~/.config/opencode/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
+	@if [ -f "$(HOME)/.config/opencode/opencode.json" ]; then \
+		(command -v jq >/dev/null && jq -e . "$(HOME)/.config/opencode/opencode.json" >/dev/null) \
+		|| python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$(HOME)/.config/opencode/opencode.json"; \
+		echo "✅ opencode.json is valid JSON"; \
+	fi
+	@echo "✅ OpenCode validation complete"
 
 clean: ## Clean build artifacts (no external scripts)
 	@echo "🧹 Cleaning artifacts..."
@@ -106,19 +114,14 @@ install-pi: render-pi ## Install π.dev harness to ~/.pi/agent/
 	@echo "✅ Installation to ~/.pi/ complete"
 
 install-opencode: ## Install agents & skills to ~/.config/opencode/
-	@echo "📦 Installing agentic-engineers agents & skills to ~/.config/opencode/..."
-	@mkdir -p "$(HOME)/.config/opencode"
-	@python3 "$(REPO_ROOT)/renderer/generate-opencode-configs.py" "$(REPO_ROOT)" "$(HOME)/.config/opencode"
+	@echo "📦 Installing agentic-engineers to ~/.config/opencode/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode"
 	@echo "✅ Installation to ~/.config/opencode/ complete"
-	@echo ""
-	@echo "📋 Installed configurations:"
-	@echo "  Agents:  ~/.config/opencode/agents/"
-	@echo "  Skills:  ~/.config/opencode/skills/ (organized by domain)"
 	@echo ""
 	@echo "ℹ️  To use in OpenCode:"
 	@echo "  - Reference agents via @{agent-name} (e.g., @orchestrator, @engineer)"
 	@echo "  - Skills automatically discovered via skill tool"
-	@echo "  - See ~/.config/opencode/ for full configuration"
+	@echo "  - Global rules in ~/.config/opencode/AGENTS.md (user overrides → AGENTS.md.local)"
 
 uninstall-all: uninstall-copilot uninstall-claude uninstall-pi uninstall-opencode ## Remove from all 4 locations
 	@echo "✅ Uninstall complete"
@@ -127,21 +130,22 @@ uninstall-pi: ## Remove from ~/.pi/ (managed only)
 	@echo "🧹 Uninstalling from ~/.pi/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi" --uninstall
 
-uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/
-	@echo "🧹 Removing agentic-engineers agents & skills from ~/.config/opencode/..."
-	@rm -rf "$(HOME)/.config/opencode/agents/orchestrator.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/senior-engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/lead-engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/quality-engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/principal-engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/security-engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/agents/model-engineer.md"
-	@rm -rf "$(HOME)/.config/opencode/skills/orchestrator"
-	@rm -rf "$(HOME)/.config/opencode/skills/execution"
-	@rm -rf "$(HOME)/.config/opencode/skills/validation"
-	@rm -rf "$(HOME)/.config/opencode/skills/summary"
-	@echo "✅ Removal complete"
+uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only)
+	@echo "🧹 Uninstalling from ~/.config/opencode/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --uninstall
+
+uninstall-opencode-legacy: ## Remove managed install from ~/.opencode/ (only if it has our markers)
+	@echo "🧹 Checking for legacy install at ~/.opencode/..."
+	@if [ -d "$(HOME)/.opencode" ] && \
+	   { [ -f "$(HOME)/.opencode/agents/.agentic-engine{service-name}" ] || \
+	     grep -q '_managed_by.*agentic-engineers' "$(HOME)/.opencode/opencode.json" 2>/dev/null; }; then \
+		bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.opencode" --uninstall; \
+	else \
+		echo "  ℹ️  No managed agentic-engineers install found at ~/.opencode/ — nothing to do"; \
+	fi
+
+status-opencode: ## Status of ~/.config/opencode/ install
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
 
 render-pi: ## Generate ~/.pi/agent/ config (π.dev harness)
 	@echo "🔨 Rendering π.dev harness configuration..."
@@ -161,9 +165,4 @@ status: ## Check installation status (all 4 harnesses)
 	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi" --status
 	@echo ""
 	@echo "📋 Installation status for ~/.config/opencode/:"
-	@if [ -d "$(HOME)/.config/opencode/agents" ] && [ -d "$(HOME)/.config/opencode/skills" ]; then \
-		echo "  ✅ Agents: ~/.config/opencode/agents/ ($$(ls -1 $(HOME)/.config/opencode/agents/*.md 2>/dev/null | wc -l) configs)"; \
-		echo "  ✅ Skills: ~/.config/opencode/skills/ ($$(find $(HOME)/.config/opencode/skills -name SKILL.md 2>/dev/null | wc -l) definitions)"; \
-	else \
-		echo "  ❌ Not installed"; \
-	fi
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
