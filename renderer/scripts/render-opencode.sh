@@ -6,7 +6,7 @@
 #          $3 = optional: --uninstall | --status
 #
 # Renders:
-#   - opencode.json  → managed config (compaction tuning, permission lockdown, instructions ref)
+#   - opencode.jsonc  → managed config (compaction tuning, permission lockdown, instructions ref)
 #   - AGENTS.md      → global rules entry-point (framework intro + mandatory constraints)
 #   - Skills:        src/skills/<name>/  (containing SKILL.md)  →  $OPENCODE/skills/<name>/
 #                    (OpenCode skill format == Claude Code skill format == agentic-engineers skill format)
@@ -21,7 +21,7 @@
 #   documented ~/.opencode/ fallback. Pass the path you want explicitly.
 #
 # Mirrors render-claude.sh in style and safety model. OpenCode-specific divergences:
-#   1. Emits opencode.json + AGENTS.md (Claude Code has neither — uses CLAUDE.md only).
+#   1. Emits opencode.jsonc + AGENTS.md (Claude Code has neither — uses CLAUDE.md only).
 #   2. Agent frontmatter schema is OpenCode-specific (mode/model/temperature/permission).
 #   3. Model IDs are fully-qualified provider/model strings (claude-foo-X.Y dotted).
 
@@ -36,13 +36,16 @@ SRC_AGENTS="$REPO_ROOT/src/agents"
 DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
 DST_SKILLS="$OPENCODE/skills"
 DST_AGENTS="$OPENCODE/agents"
-DST_CONFIG="$OPENCODE/opencode.json"
+DST_CONFIG="$OPENCODE/opencode.jsonc"
 DST_RULES="$OPENCODE/AGENTS.md"
 SKILL_MARKER=".agentic-engine{service-name}"
 # Agents are single files; we use a sidecar manifest to track managed names.
 AGENT_MANIFEST="$DST_AGENTS/.agentic-engine{service-name}"
-# Sentinel field embedded in opencode.json so we can detect ours vs foreign.
-CONFIG_SENTINEL='"_managed_by": "agentic-engineers renderer/scripts/render-opencode.sh'
+# Sentinel string embedded as a JSONC comment so we can detect ours vs foreign.
+# Top-level non-schema keys are rejected by OpenCode's strict config validator
+# (additionalProperties: false on Config). Using `.jsonc` + `//` comment keeps
+# the marker without breaking schema validation.
+CONFIG_SENTINEL='// _managed_by: agentic-engineers renderer/scripts/render-opencode.sh'
 # Sentinel HTML comment line 1 of AGENTS.md.
 RULES_SENTINEL='<!-- managed by agentic-engineers render-opencode.sh'
 
@@ -189,7 +192,7 @@ derive_docs_url() {
 	echo "$url"
 }
 
-# Write opencode.json (lockdown config).
+# Write opencode.jsonc (lockdown config).
 #
 # Notes on compaction (verified against upstream packages/opencode/src/session/overflow.ts):
 #   - Default `compaction.reserved` is 20000. We bump to 30000 to leave more headroom
@@ -199,12 +202,12 @@ derive_docs_url() {
 #     compaction occurs, so user retains visibility.
 write_config() {
 	if [ -f "$DST_CONFIG" ] && ! grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then
-		echo "  ⚠️  skipping opencode.json — foreign at $DST_CONFIG"
+		echo "  ⚠️  skipping opencode.jsonc — foreign at $DST_CONFIG"
 		return
 	fi
 	cat > "$DST_CONFIG" <<'EOF'
+// _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
 {
-  "_managed_by": "agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install",
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "compaction": {
@@ -269,7 +272,7 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 - \`agents/\` — 8 subagents; invoke via \`@<agent-name>\` or the task tool
   (e.g. \`@orchestrator\`, \`@engineer\`, \`@security-engineer\`).
 - \`skills/\` — workflow modules loaded on demand via the skill tool.
-- \`opencode.json\` — managed config (compaction, permissions); do not edit.
+- \`opencode.jsonc\` — managed config (compaction, permissions); do not edit.
 - \`AGENTS.md.local\` — *optional, user-authored*; if present, OpenCode loads
   it after this file. Use it for personal overrides that survive re-render.
 
@@ -309,7 +312,7 @@ case "$MODE" in
 			done < "$AGENT_MANIFEST"
 			rm -f "$AGENT_MANIFEST"
 		fi
-		# opencode.json (only if ours)
+		# opencode.jsonc (only if ours)
 		removed_cfg=0
 		if [ -f "$DST_CONFIG" ] && grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then
 			rm -f "$DST_CONFIG"; removed_cfg=1
@@ -323,10 +326,10 @@ case "$MODE" in
 		;;
 
 	--status)
-		# opencode.json
-		if [ ! -f "$DST_CONFIG" ]; then echo "  ❌ opencode.json (not installed)"
-		elif grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then echo "  ✅ opencode.json"
-		else echo "  ⚠️  opencode.json (foreign)"; fi
+		# opencode.jsonc
+		if [ ! -f "$DST_CONFIG" ]; then echo "  ❌ opencode.jsonc (not installed)"
+		elif grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then echo "  ✅ opencode.jsonc"
+		else echo "  ⚠️  opencode.jsonc (foreign)"; fi
 		# AGENTS.md
 		if [ ! -f "$DST_RULES" ]; then echo "  ❌ AGENTS.md (not installed)"
 		elif head -n1 "$DST_RULES" | grep -q "$RULES_SENTINEL"; then echo "  ✅ AGENTS.md"
