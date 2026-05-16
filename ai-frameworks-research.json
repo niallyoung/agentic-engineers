@@ -1,0 +1,1604 @@
+{
+  "metadata": {
+    "research_date": "2026-05-16",
+    "total_frameworks": 40,
+    "categories": [
+      "Orchestration",
+      "IDE",
+      "CLI",
+      "Runtime",
+      "Local"
+    ],
+    "data_completeness": "comprehensive"
+  },
+  "frameworks": [
+    {
+      "name": "LangGraph",
+      "category": "Orchestration",
+      "github_url": "https://github.com/langchain-ai/langgraph",
+      "website_url": "https://www.langchain.com",
+      "documentation_url": "https://docs.langchain.com/langgraph",
+      "framework_type": "Python Agent Orchestration Framework - Low-level state-based orchestration for building stateful agent applications with human-in-the-loop capabilities",
+      "key_features": [
+        "Low-level orchestration with state-based agent architecture",
+        "Human-in-the-loop capabilities with interrupt/resume",
+        "Durable execution with failure recovery and resumption",
+        "Deep LangSmith integration for debugging and observability",
+        "Production-ready deployment via LangSmith Deployment platform"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Supports complex agent graph structures with state passing between agents, enabling team collaboration and multi-step workflows"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Google Gemini",
+          "Cohere",
+          "Mistral",
+          "Local via Ollama"
+        ],
+        "notes": "Works with any LLM through LangChain's abstraction layer"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 32100,
+      "last_commit": "2026-05-12",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - provides low-level control for building sophisticated agent systems with state management and durable execution, essential for production agentic systems"
+    },
+    {
+      "name": "CrewAI",
+      "category": "Orchestration",
+      "github_url": "https://github.com/crewAIInc/crewAI",
+      "website_url": "https://crewai.com",
+      "documentation_url": "https://docs.crewai.com",
+      "framework_type": "Python Multi-Agent Orchestration Framework - Standalone independent framework designed specifically for building collaborative multi-agent teams with both autonomous and precise control modes",
+      "key_features": [
+        "Independent framework not reliant on LangChain",
+        "Dual architecture: Crews (autonomous agents) + Flows (event-driven precise control)",
+        "5.76x faster execution than LangGraph (per benchmarks)",
+        "YAML-based agent/task configuration",
+        "CrewAI AMP Suite for enterprise deployment, control plane, and observability"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Specialized design for multi-agent collaboration with clear roles, hierarchical task execution, and team delegation patterns"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Google Gemini",
+          "Cohere",
+          "Mistral",
+          "DeepSeek",
+          "Local models via Ollama"
+        ],
+        "notes": "Model-agnostic with flexible LLM integration"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 51500,
+      "last_commit": "2026-04-30",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - fastest multi-agent orchestration framework with enterprise-ready deployment options, ideal for building collaborative agent teams"
+    },
+    {
+      "name": "AutoGen",
+      "category": "Orchestration",
+      "github_url": "https://github.com/microsoft/autogen",
+      "website_url": "https://microsoft.github.io/autogen",
+      "documentation_url": "https://microsoft.github.io/autogen",
+      "framework_type": "Python Multi-Agent Framework by Microsoft - Event-driven architecture with layered design for conversational agent patterns and agent-to-agent communication",
+      "key_features": [
+        "Event-driven architecture with layered design (Core API, AgentChat API, Extensions API)",
+        "Conversational agent patterns with agent-to-agent communication",
+        "AutoGen Studio for no-code GUI",
+        "AutoGen Bench for benchmarking agent performance",
+        "Cross-language support (Python, .NET, Java)"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Conversational multi-agent groups with group chat capabilities, agent-to-agent message passing, and hierarchical agent structures"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Azure OpenAI",
+          "HuggingFace",
+          "NVIDIA",
+          "Local models"
+        ],
+        "notes": "Flexible LLM configuration with model-agnostic approach"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "maintenance",
+      "github_stars": 58100,
+      "last_commit": "2025-09-30",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Moderate relevance - mature framework but in maintenance mode, superseded by Microsoft Agent Framework. Still useful for reference and existing deployments"
+    },
+    {
+      "name": "Swarm",
+      "category": "Orchestration",
+      "github_url": "https://github.com/openai/swarm",
+      "website_url": "https://github.com/openai/swarm",
+      "documentation_url": "https://github.com/openai/swarm",
+      "framework_type": "Lightweight Python Agent Orchestration - Educational framework for understanding agent coordination patterns with minimal overhead",
+      "key_features": [
+        "Minimal, educational framework for agent coordination patterns",
+        "Function-based handoff system between agents",
+        "Stateless execution (no state stored between calls)",
+        "Streaming support with event-based responses",
+        "Designed for simplicity and ease of understanding"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Multi-agent support through handoff mechanisms, allowing agents to delegate tasks to other agents"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "OpenAI (GPT-4o, GPT-4 Turbo)"
+        ],
+        "notes": "Primarily designed for OpenAI models, can be adapted for other providers"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "educational/experimental",
+      "github_stars": 21500,
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Moderate relevance - excellent for learning agent coordination patterns, but limited production use. Replaced by OpenAI Agents SDK"
+    },
+    {
+      "name": "Magentic",
+      "category": "Runtime",
+      "github_url": "https://github.com/jackmpcollins/magentic",
+      "website_url": "https://jackmpcollins.github.io/magentic",
+      "documentation_url": "https://jackmpcollins.github.io/magentic",
+      "framework_type": "Python LLM Function Integration - Decorator-based approach for seamlessly integrating LLM calls into Python functions",
+      "key_features": [
+        "@prompt and @chatprompt decorators for seamless LLM integration",
+        "Structured outputs with Pydantic validation",
+        "Streaming support for both text and objects",
+        "LLM-assisted retries for schema adherence",
+        "Multi-provider support"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Limited multi-agent support - focuses on function-based approach for individual LLM calls"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Ollama",
+          "LiteLLM",
+          "Mistral"
+        ],
+        "notes": "Supports multiple providers through unified interface"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 2400,
+      "last_commit": "2026-03-11",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Low to moderate relevance - useful for function-level LLM integration, but not designed for agent orchestration"
+    },
+    {
+      "name": "Pydantic AI",
+      "category": "Runtime",
+      "github_url": "https://github.com/pydantic/pydantic-ai",
+      "website_url": "https://ai.pydantic.dev",
+      "documentation_url": "https://ai.pydantic.dev",
+      "framework_type": "Python GenAI Agent Framework - Type-safe agent framework built by Pydantic team with full IDE support and dependency injection",
+      "key_features": [
+        "Built by Pydantic team, leveraging Pydantic Validation across ecosystem",
+        "Type-safe agent development with full IDE support",
+        "Dependency injection for flexible configuration",
+        "Seamless Pydantic Logfire integration for observability",
+        "Capability system for composable agent features (thinking, web search, MCP)"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Multi-agent support through task/agent composition with clean interface for agent collaboration"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Google Gemini",
+          "DeepSeek",
+          "Grok",
+          "Cohere",
+          "Mistral",
+          "Local via Ollama"
+        ],
+        "notes": "Extensive provider support with unified interface"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 17100,
+      "last_commit": "2026-05-15",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - type-safe approach with excellent developer experience, ideal for building reliable agent systems with strong IDE support"
+    },
+    {
+      "name": "Semantic Kernel",
+      "category": "Orchestration",
+      "github_url": "https://github.com/microsoft/semantic-kernel",
+      "website_url": "https://learn.microsoft.com/en-us/semantic-kernel",
+      "documentation_url": "https://learn.microsoft.com/en-us/semantic-kernel",
+      "framework_type": "Multi-language SDK for AI Orchestration - Cross-language framework by Microsoft supporting Python, C#, and Java for orchestrating AI workflows",
+      "key_features": [
+        "Cross-language support (Python, C#, Java)",
+        "Model-agnostic with flexible LLM integration",
+        "Plugin ecosystem with OpenAPI and Model Context Protocol support",
+        "Vector database integrations (Azure AI Search, Elasticsearch, Chroma)",
+        "Process framework for complex workflows"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Agent framework with planning capabilities, process-based workflow orchestration, and multi-agent coordination"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Azure OpenAI",
+          "HuggingFace",
+          "NVIDIA",
+          "Ollama",
+          "LM Studio"
+        ],
+        "notes": "Enterprise-ready support for multiple LLM providers"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 27900,
+      "last_commit": "2026-05-14",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - enterprise-ready with multi-language support, plugin ecosystem, and observability features suitable for large-scale agentic systems"
+    },
+    {
+      "name": "Ray",
+      "category": "Orchestration",
+      "github_url": "https://github.com/ray-project/ray",
+      "website_url": "https://www.ray.io",
+      "documentation_url": "https://docs.ray.io",
+      "framework_type": "Distributed Computing/Serving Framework - Scalable distributed execution platform for ML workloads with multiple specialized modules",
+      "key_features": [
+        "Distributed execution across clusters",
+        "Ray Data for scalable ML datasets",
+        "Ray Train for distributed training",
+        "Ray Tune for hyperparameter optimization",
+        "RLlib for reinforcement learning"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Multi-agent support through distributed actor model allowing independent agents to execute in parallel across clusters"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Any LLM via Ray Serve",
+          "Common for serving LLM models"
+        ],
+        "notes": "Model-agnostic platform commonly used for LLM serving and distributed inference"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 42600,
+      "last_commit": "2026-04-22",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - excellent for distributed agent execution at scale, model serving, and resource-intensive multi-agent systems"
+    },
+    {
+      "name": "Temporal",
+      "category": "Orchestration",
+      "github_url": "https://github.com/temporalio/temporal",
+      "website_url": "https://temporal.io",
+      "documentation_url": "https://docs.temporal.io",
+      "framework_type": "Durable Execution Platform/Workflow Engine - Enterprise-grade workflow orchestration with transparent recovery from failures and automatic retry",
+      "key_features": [
+        "Durable, resilient workflow execution with automatic retry",
+        "Transparent recovery from failures",
+        "Workflow-as-code for complex orchestration",
+        "Web UI for workflow monitoring and debugging",
+        "Multi-language SDKs (Go, Java, TypeScript, Python, C#)"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Multi-agent support through workflow composition, allowing complex orchestration of multiple agents across microservices"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Any LLM via workflow activities"
+        ],
+        "notes": "General workflow platform, not LLM-specific but suitable for orchestrating LLM-based agents"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 20300,
+      "last_commit": "2026-04-29",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - mature durable execution platform from Uber's Cadence, essential for reliable production agent systems with failure recovery"
+    },
+    {
+      "name": "Apache Airflow",
+      "category": "Orchestration",
+      "github_url": "https://github.com/apache/airflow",
+      "website_url": "https://airflow.apache.org",
+      "documentation_url": "https://airflow.apache.org/docs",
+      "framework_type": "Workflow Orchestration Platform - DAG-based workflow engine for batch processing with extensive provider ecosystem",
+      "key_features": [
+        "DAG-based workflow definition in Python",
+        "Web UI for pipeline visualization and management",
+        "Extensive provider ecosystem (200+ providers)",
+        "Distributed execution with multiple executors",
+        "Rich scheduling and backfilling capabilities"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Limited multi-agent support - designed for task workflows and batch processing, not agent-based systems"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Any LLM via custom operators"
+        ],
+        "notes": "Not LLM-specific, can integrate with LLMs through custom operators"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 45400,
+      "last_commit": "2026-05-14",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Moderate relevance - can orchestrate agent tasks but not designed for multi-agent systems; better suited for batch workflows incorporating LLM calls"
+    },
+    {
+      "name": "Continue.dev",
+      "category": "IDE",
+      "github_url": "https://github.com/continuedev/continue",
+      "website_url": "https://continue.dev",
+      "documentation_url": "https://docs.continue.dev",
+      "framework_type": "IDE Plugin/Extension for AI Code Assistance - Open-source AI code assistant integrating with multiple IDEs",
+      "key_features": [
+        "Open-source AI code assistant (Apache 2.0)",
+        "Source-controlled AI checks enforceable in CI",
+        "Multi-IDE support (VS Code, JetBrains, Windsurf)",
+        "Markdown-based check definitions",
+        "Streaming edits with diff visualization"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Limited multi-agent support - focused on code assistance rather than agent orchestration"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Local models via Ollama"
+        ],
+        "notes": "Multi-provider support for various code models"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 33200,
+      "last_commit": "2026-03-27",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Low relevance - IDE plugin for code assistance, not for agent orchestration or multi-agent systems"
+    },
+    {
+      "name": "Zed AI",
+      "category": "IDE",
+      "github_url": "https://github.com/zed-industries/zed",
+      "website_url": "https://zed.dev",
+      "documentation_url": "https://zed.dev/docs",
+      "framework_type": "High-Performance Code Editor with AI Integration - Rust-based editor with native AI capabilities and collaborative features",
+      "key_features": [
+        "Written in Rust for high performance",
+        "Multiplayer/collaborative editing",
+        "Built-in AI capabilities",
+        "Fast code navigation and search",
+        "Extensions for customization"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support - focused on code editing and AI assistance"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Multiple providers"
+        ],
+        "notes": "Supports multiple LLM providers for code assistance"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "AGPL, Apache 2.0, GPL-3.0"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 82900,
+      "last_commit": "2026-05-15",
+      "documentation_quality": "good",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Low relevance - high-performance editor with AI features, not for agent orchestration"
+    },
+    {
+      "name": "Cursor IDE",
+      "category": "IDE",
+      "github_url": "not_open_source",
+      "website_url": "https://cursor.com",
+      "documentation_url": "https://cursor.com/docs",
+      "framework_type": "AI-Native Code Editor - Built on VS Code with AI at the core of the editing experience",
+      "key_features": [
+        "Built on VS Code with AI at the core",
+        "Chat interface for code discussion",
+        "Multi-file editing with AI",
+        "@symbols for context selection",
+        "Terminal AI integration"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support - focused on code editing"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Proprietary models"
+        ],
+        "notes": "Proprietary AI integration"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Proprietary (free tier available)"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "good",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Low relevance - commercial IDE for code editing, not for agent systems"
+    },
+    {
+      "name": "Codeium",
+      "category": "IDE",
+      "github_url": "not_open_source",
+      "website_url": "https://codeium.com",
+      "documentation_url": "https://codeium.com/docs",
+      "framework_type": "IDE Plugin - Code Completion and Generation Service",
+      "key_features": [
+        "Free code completion and search",
+        "Enterprise support available",
+        "Multi-IDE support (VS Code, JetBrains, Neovim, etc.)"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support - focused on code completion"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Proprietary"
+        ],
+        "notes": "Proprietary LLM models"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Proprietary (free tier)"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "good",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Low relevance - commercial IDE plugin for code completion"
+    },
+    {
+      "name": "TabNine",
+      "category": "IDE",
+      "github_url": "not_open_source",
+      "website_url": "https://tabnine.com",
+      "documentation_url": "https://tabnine.com/docs",
+      "framework_type": "IDE Plugin - AI-Powered Code Completion",
+      "key_features": [
+        "Local model support for privacy",
+        "Multi-language support",
+        "Enterprise deployment options",
+        "VS Code, JetBrains, Vim, Emacs support"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Proprietary",
+          "Local models"
+        ],
+        "notes": "Proprietary models with local execution option"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Proprietary (free and paid)"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Low relevance - IDE completion plugin, not for agent systems"
+    },
+    {
+      "name": "Supermaven",
+      "category": "IDE",
+      "github_url": "not_open_source",
+      "website_url": "https://supermaven.com",
+      "documentation_url": "https://supermaven.com/docs",
+      "framework_type": "IDE Plugin - High-Speed AI Code Completion",
+      "key_features": [
+        "High-speed code completion",
+        "Multi-file context understanding",
+        "VS Code and JetBrains support",
+        "Privacy-focused (optional local processing)"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Proprietary"
+        ],
+        "notes": "Proprietary models"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Proprietary (free and paid)"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Low relevance - completion plugin for IDE"
+    },
+    {
+      "name": "GitHub Copilot",
+      "category": "IDE",
+      "github_url": "not_open_source",
+      "website_url": "https://github.com/features/copilot",
+      "documentation_url": "https://docs.github.com/en/copilot",
+      "framework_type": "IDE Plugin - AI Code Assistant Integrated with GitHub",
+      "key_features": [
+        "Integration across GitHub ecosystem",
+        "Powered by OpenAI models",
+        "Copilot Chat for conversation",
+        "Copilot for Business (enterprise support)",
+        "Built-in to VS Code"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "OpenAI (GPT-4, etc.)"
+        ],
+        "notes": "Powered by OpenAI models"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Commercial (subscription)"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Low relevance - code assistant IDE plugin, not for agent orchestration"
+    },
+    {
+      "name": "Aider",
+      "category": "CLI",
+      "github_url": "https://github.com/Aider-AI/aider",
+      "website_url": "https://aider.chat",
+      "documentation_url": "https://aider.chat/docs",
+      "framework_type": "Python CLI Tool - AI Pair Programming in Terminal with full git integration",
+      "key_features": [
+        "AI pair programming with full git integration",
+        "Multi-file codebase mapping and navigation",
+        "100+ programming language support",
+        "Voice-to-code capability",
+        "Automatic git commits with intelligent messages"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Single-agent focused on pair programming interaction"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Claude 3.7 Sonnet",
+          "OpenAI",
+          "DeepSeek",
+          "Local models",
+          "100+ providers via OpenRouter"
+        ],
+        "notes": "Extensive provider support through OpenRouter integration"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 44900,
+      "last_commit": "2025-08-09",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Moderate relevance - excellent for AI-assisted development in terminal, but not designed for multi-agent systems"
+    },
+    {
+      "name": "Mentat",
+      "category": "CLI",
+      "github_url": "https://github.com/AbanteAI/mentat",
+      "website_url": "https://mentat.codes",
+      "documentation_url": "https://mentat.codes",
+      "framework_type": "Python CLI Tool - Similar to Aider, AI pair programming assistant",
+      "key_features": [
+        "AI pair programming in terminal",
+        "Multi-file support",
+        "Language agnostic",
+        "Git integration"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Single-agent pair programming tool"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Local models"
+        ],
+        "notes": "Multi-provider support"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "stable",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Low relevance - pair programming tool, not for agent systems"
+    },
+    {
+      "name": "Grit",
+      "category": "CLI",
+      "github_url": "https://github.com/getgrit/grit",
+      "website_url": "https://grit.io",
+      "documentation_url": "https://docs.grit.io",
+      "framework_type": "Code Transformation Tool - AI-powered code transformation and refactoring",
+      "key_features": [
+        "AI-powered code transformation",
+        "Pattern-based code search",
+        "Automated refactoring",
+        "CLI and API interfaces"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Multiple LLM providers"
+        ],
+        "notes": "LLM-powered code transformation"
+      },
+      "license": {
+        "type": "Commercial/Open Source",
+        "license_name": "Mixed"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Low relevance - code transformation tool, not for agent orchestration"
+    },
+    {
+      "name": "Plandex",
+      "category": "CLI",
+      "github_url": "https://github.com/plandex-ai/plandex",
+      "website_url": "https://plandex.ai",
+      "documentation_url": "https://docs.plandex.ai",
+      "framework_type": "AI Project Planner - Terminal-based AI assistant for project planning and execution",
+      "key_features": [
+        "Project planning with AI",
+        "Task breakdown and execution",
+        "File and context management",
+        "Terminal interface"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Single AI planner"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Multiple LLM providers"
+        ],
+        "notes": "Multi-provider support"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT or Apache 2.0"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Low relevance - project planning tool, not agent orchestration"
+    },
+    {
+      "name": "Devon",
+      "category": "CLI",
+      "github_url": "https://github.com/entropy-research/devon",
+      "website_url": "https://www.devon.ai",
+      "documentation_url": "https://docs.devon.ai",
+      "framework_type": "Autonomous Development Agent - CLI-based autonomous coding agent",
+      "key_features": [
+        "Autonomous agent for development",
+        "File and code management",
+        "Task execution",
+        "Terminal-based interface"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Single autonomous agent"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Multiple LLM providers"
+        ],
+        "notes": "Multi-provider support"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT or Apache 2.0"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Moderate relevance - autonomous development agent, useful pattern for learning but not full orchestration framework"
+    },
+    {
+      "name": "Anthropic Python SDK",
+      "category": "Runtime",
+      "github_url": "https://github.com/anthropic-ai/anthropic-sdk-python",
+      "website_url": "https://docs.anthropic.com",
+      "documentation_url": "https://docs.anthropic.com/en/docs/about/getting-started-with-the-sdk",
+      "framework_type": "Python SDK for Claude API - Official Python client for Anthropic's Claude models with native tool use",
+      "key_features": [
+        "Native tool use / function calling",
+        "Streaming support",
+        "Vision capabilities (image analysis)",
+        "Batch processing APIs",
+        "Structured output support"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Supports multi-turn interactions and tool use for agent-like behavior, though not a full orchestration framework"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Anthropic (Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Sonnet, Claude 3 Haiku)"
+        ],
+        "notes": "Official Anthropic SDK, optimized for Claude models"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "2026-05-15",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - foundational SDK for building Claude-based agents with tool use and multi-turn interactions"
+    },
+    {
+      "name": "OpenAI Python SDK",
+      "category": "Runtime",
+      "github_url": "https://github.com/openai/openai-python",
+      "website_url": "https://platform.openai.com",
+      "documentation_url": "https://platform.openai.com/docs/api-reference",
+      "framework_type": "Python SDK for OpenAI API - Official Python client for OpenAI's models with Assistants API support",
+      "key_features": [
+        "Assistants API for stateful agent-like interactions",
+        "Tool calling / function definitions",
+        "File and code interpreter support",
+        "Vision capabilities",
+        "Streaming support"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Assistants API provides stateful interactions suitable for agent-like behavior with shared context"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "OpenAI (GPT-4o, GPT-4 Turbo, GPT-4, GPT-3.5 Turbo)"
+        ],
+        "notes": "Official OpenAI SDK"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "2026-05-15",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - foundational SDK with Assistants API for building agent-like systems"
+    },
+    {
+      "name": "Vercel AI SDK",
+      "category": "Runtime",
+      "github_url": "https://github.com/vercel-labs/ai",
+      "website_url": "https://sdk.vercel.ai",
+      "documentation_url": "https://sdk.vercel.ai/docs",
+      "framework_type": "JavaScript/TypeScript AI SDK - Language-agnostic SDK for building AI applications in JavaScript/TypeScript",
+      "key_features": [
+        "Language model abstraction layer",
+        "Tool calling support",
+        "Streaming responses",
+        "React/Next.js integration",
+        "Server and client-side support"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Limited multi-agent support - focused on single-agent interactions"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Google",
+          "Cohere",
+          "HuggingFace",
+          "Local models"
+        ],
+        "notes": "Multi-provider support through unified interface"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "excellent",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Moderate relevance - good for building AI applications in JavaScript/TypeScript but limited orchestration"
+    },
+    {
+      "name": "Cohere Python SDK",
+      "category": "Runtime",
+      "github_url": "https://github.com/cohere-ai/cohere-python",
+      "website_url": "https://docs.cohere.com",
+      "documentation_url": "https://docs.cohere.com/reference/clients",
+      "framework_type": "Python SDK for Cohere API - Official Python client for Cohere's language models",
+      "key_features": [
+        "Text generation and embeddings",
+        "Tool calling (CommandR models)",
+        "Multi-turn conversations",
+        "Streaming support",
+        "Connector integrations"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "CommandR models support tool use for agent-like behavior in multi-turn conversations"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Cohere (Command, CommandR, CommandR+)"
+        ],
+        "notes": "Official Cohere SDK"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "excellent",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Moderate relevance - Cohere CommandR models have tool use capabilities suitable for agents"
+    },
+    {
+      "name": "Together AI Python SDK",
+      "category": "Runtime",
+      "github_url": "https://github.com/togethercomputer/together-python",
+      "website_url": "https://www.together.ai",
+      "documentation_url": "https://docs.together.ai",
+      "framework_type": "Python SDK for Together AI - Python client for Together AI's inference platform with multiple open-source models",
+      "key_features": [
+        "Access to multiple open-source LLMs",
+        "Tool calling support",
+        "Fast inference",
+        "Streaming support",
+        "Batch processing"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No built-in multi-agent support, but supports tool use for agent-like behavior"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Llama",
+          "Mistral",
+          "Phi",
+          "DeepSeek",
+          "And many more open-source models"
+        ],
+        "notes": "Access to 100+ open-source models via Together AI"
+      },
+      "license": {
+        "type": "Commercial API",
+        "license_name": "Commercial (usage-based pricing)"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "small",
+      "relevance_to_agentic_engineers": "Moderate relevance - good for access to diverse open-source models with tool calling"
+    },
+    {
+      "name": "Ollama",
+      "category": "Local",
+      "github_url": "https://github.com/ollama/ollama",
+      "website_url": "https://ollama.com",
+      "documentation_url": "https://github.com/ollama/ollama",
+      "framework_type": "Local LLM Runtime & Server - Easy-to-use runtime for running open-source language models locally",
+      "key_features": [
+        "Easy installation and model management",
+        "REST API for local inference",
+        "Support for 100+ open models",
+        "GPU acceleration support",
+        "Python and JavaScript SDKs",
+        "Integration with 200+ applications"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Supports multi-agent systems via API integration with agent frameworks like CrewAI, LangGraph, Pydantic AI"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Llama 2/3.2",
+          "Mistral",
+          "Gemma",
+          "Phi",
+          "DeepSeek",
+          "Qwen",
+          "Grok",
+          "100+ open-source models"
+        ],
+        "notes": "Most popular local LLM runtime with extensive model library"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": 171000,
+      "last_commit": "2026-05-14",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - essential for local development and deployment of private/offline agentic systems"
+    },
+    {
+      "name": "LM Studio",
+      "category": "Local",
+      "github_url": "not_open_source",
+      "website_url": "https://lmstudio.ai",
+      "documentation_url": "https://lmstudio.ai/docs",
+      "framework_type": "Local LLM Desktop Application - GUI application for managing and running local LLMs",
+      "key_features": [
+        "GUI for easy model management and testing",
+        "Local inference server with API",
+        "GPU support for acceleration",
+        "Model marketplace",
+        "Works on macOS, Windows, Linux"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Supports multi-agent systems via local API integration"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "100+ open-source models",
+          "Llama",
+          "Mistral",
+          "Phi",
+          "And many others"
+        ],
+        "notes": "Proprietary application but model-agnostic"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Freemium (free with pro features)"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Highly relevant - provides easier GUI alternative to Ollama for local model management, useful for development"
+    },
+    {
+      "name": "Text Generation WebUI",
+      "category": "Local",
+      "github_url": "https://github.com/oobabooga/text-generation-webui",
+      "website_url": "https://github.com/oobabooga/text-generation-webui",
+      "documentation_url": "https://github.com/oobabooga/text-generation-webui/wiki",
+      "framework_type": "Gradio-based Web UI for Local LLMs - Web interface for running and testing local language models",
+      "key_features": [
+        "Web-based interface for text generation",
+        "Multiple backend support",
+        "Extensions ecosystem",
+        "Flexible configuration",
+        "Chat interfaces and notebooks"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Can be integrated with agent systems via API"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "Multiple open-source models",
+          "Llama",
+          "Mistral",
+          "And many others"
+        ],
+        "notes": "Supports various backends and models"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "AGPL v3"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Moderate relevance - useful for local model testing and development but more UI-focused than API-first"
+    },
+    {
+      "name": "Jan.ai",
+      "category": "Local",
+      "github_url": "https://github.com/janhq/jan",
+      "website_url": "https://jan.ai",
+      "documentation_url": "https://jan.ai/docs",
+      "framework_type": "Desktop Application for Local LLMs - Electron-based cross-platform app for running open-source LLMs locally",
+      "key_features": [
+        "Electron-based cross-platform desktop app",
+        "OpenAI-compatible API",
+        "Model management UI",
+        "GPU/CPU optimization",
+        "Privacy-focused (runs locally)"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "OpenAI-compatible API allows integration with agent frameworks"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "100+ open-source models",
+          "Llama",
+          "Mistral",
+          "Phi",
+          "And many others"
+        ],
+        "notes": "OpenAI API compatible for easy integration"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "AGPL-3.0"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Highly relevant - OpenAI API compatibility makes it excellent for local agent development and testing"
+    },
+    {
+      "name": "GPT4All",
+      "category": "Local",
+      "github_url": "https://github.com/nomic-ai/gpt4all",
+      "website_url": "https://www.gpt4all.io",
+      "documentation_url": "https://docs.gpt4all.io",
+      "framework_type": "Lightweight Local LLM Framework - CPU-optimized runtime for running models on consumer hardware",
+      "key_features": [
+        "CPU-optimized for running on consumer hardware",
+        "Simple Python library and CLI",
+        "Pre-quantized model collection",
+        "Cross-platform (macOS, Windows, Linux)",
+        "Web UI available"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Can be integrated with agent frameworks via Python API"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "GPT4All model collection",
+          "Llama",
+          "Mistral",
+          "And others"
+        ],
+        "notes": "Focus on CPU-efficient models"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Highly relevant - excellent for CPU-only environments and offline agent development"
+    },
+    {
+      "name": "Windsurf",
+      "category": "IDE",
+      "github_url": "not_open_source",
+      "website_url": "https://codeium.com/windsurf",
+      "documentation_url": "https://codeium.com/windsurf/docs",
+      "framework_type": "AI Code Editor - Codeium's AI-native code editor",
+      "key_features": [
+        "AI-native editing",
+        "Code generation",
+        "Multi-file support",
+        "Built on VS Code"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "No multi-agent support"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Codeium proprietary models"
+        ],
+        "notes": "Proprietary AI"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Proprietary"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Low relevance - code editor with AI features, not for agent systems"
+    },
+    {
+      "name": "Amazon Bedrock",
+      "category": "Runtime",
+      "github_url": "not_open_source",
+      "website_url": "https://aws.amazon.com/bedrock",
+      "documentation_url": "https://docs.aws.amazon.com/bedrock",
+      "framework_type": "Managed AI Service - AWS managed service for building with foundation models",
+      "key_features": [
+        "Access to multiple foundation models",
+        "Agents API for building agent workflows",
+        "Knowledge Bases for RAG",
+        "Model evaluation and customization",
+        "Enterprise security"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Agents API provides built-in support for multi-agent workflows and tool use"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Anthropic Claude",
+          "OpenAI GPT",
+          "Meta Llama",
+          "Mistral",
+          "And others via Bedrock"
+        ],
+        "notes": "Access to multiple models through AWS Bedrock"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "AWS Commercial"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - AWS managed service with native agents API for enterprise deployments"
+    },
+    {
+      "name": "Google Vertex AI",
+      "category": "Runtime",
+      "github_url": "not_open_source",
+      "website_url": "https://cloud.google.com/vertex-ai",
+      "documentation_url": "https://cloud.google.com/vertex-ai/docs",
+      "framework_type": "Managed AI Platform - Google Cloud's unified platform for building AI applications",
+      "key_features": [
+        "Access to Google Gemini and other models",
+        "Agents framework for building agents",
+        "RAG and search integration",
+        "Model evaluation",
+        "Enterprise features"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Agents framework supports building multi-agent systems"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "Google Gemini",
+          "Claude (via Bedrock)",
+          "Open-source models"
+        ],
+        "notes": "Google Gemini integration with other models available"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Google Cloud Commercial"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - Google Cloud's native agents framework for enterprise deployments"
+    },
+    {
+      "name": "Azure OpenAI Service",
+      "category": "Runtime",
+      "github_url": "not_open_source",
+      "website_url": "https://azure.microsoft.com/en-us/products/ai-services/openai-service",
+      "documentation_url": "https://learn.microsoft.com/en-us/azure/ai-services/openai",
+      "framework_type": "Managed AI Service - Microsoft Azure's deployment of OpenAI models with enterprise features",
+      "key_features": [
+        "OpenAI GPT models on Azure",
+        "Private endpoints for security",
+        "Enterprise compliance",
+        "Custom deployments",
+        "Integration with Azure ecosystem"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Can build agents using OpenAI's Assistants API on Azure"
+      },
+      "llm_support": {
+        "model_agnostic": false,
+        "supported_providers": [
+          "OpenAI (GPT-4o, GPT-4, etc.)"
+        ],
+        "notes": "Azure-hosted OpenAI models"
+      },
+      "license": {
+        "type": "Commercial",
+        "license_name": "Microsoft Azure Commercial"
+      },
+      "maturity_level": "production",
+      "github_stars": "not_applicable",
+      "last_commit": "not_applicable",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - enterprise deployment option for OpenAI-based agent systems"
+    },
+    {
+      "name": "Hugging Face Transformers",
+      "category": "Runtime",
+      "github_url": "https://github.com/huggingface/transformers",
+      "website_url": "https://huggingface.co/transformers",
+      "documentation_url": "https://huggingface.co/transformers",
+      "framework_type": "Python Library - State-of-the-art NLP and language model library",
+      "key_features": [
+        "Access to 100,000+ pre-trained models",
+        "PyTorch and TensorFlow support",
+        "Fine-tuning capabilities",
+        "Model deployment tools",
+        "Active community"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Model library, not agent orchestration framework"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "100,000+ models from Hugging Face Hub"
+        ],
+        "notes": "Comprehensive model library access"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "Apache 2.0"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Moderate relevance - useful for loading and using models, but not for agent orchestration itself"
+    },
+    {
+      "name": "LangChain",
+      "category": "Orchestration",
+      "github_url": "https://github.com/langchain-ai/langchain",
+      "website_url": "https://www.langchain.com",
+      "documentation_url": "https://docs.langchain.com",
+      "framework_type": "LLM Framework - Foundational framework for building LLM applications (parent of LangGraph)",
+      "key_features": [
+        "Chains for composing LLM calls",
+        "RAG support with vector stores",
+        "Memory management",
+        "Tool/agent support (now in LangGraph)",
+        "Extensive integrations"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Agent support is now primarily in LangGraph, but LangChain provides foundational components"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "100+ LLM providers"
+        ],
+        "notes": "Comprehensive LLM provider support"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "excellent",
+      "community_size": "large",
+      "relevance_to_agentic_engineers": "Highly relevant - foundational framework with excellent integrations and RAG support, complementary to LangGraph"
+    },
+    {
+      "name": "Dify",
+      "category": "Orchestration",
+      "github_url": "https://github.com/langgenius/dify",
+      "website_url": "https://dify.ai",
+      "documentation_url": "https://docs.dify.ai",
+      "framework_type": "No-Code/Low-Code LLM Application Builder - Visual platform for building AI workflows without coding",
+      "key_features": [
+        "Visual workflow builder",
+        "Multi-agent support",
+        "RAG integration",
+        "Model-agnostic",
+        "Team collaboration features"
+      ],
+      "multi_agent_support": {
+        "supported": true,
+        "details": "Built-in support for multi-agent workflows through visual composition"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "OpenAI",
+          "Anthropic",
+          "Cohere",
+          "Mistral",
+          "Local models"
+        ],
+        "notes": "Comprehensive provider support"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Moderate relevance - excellent for no-code agent building and prototyping, not for code-based orchestration"
+    },
+    {
+      "name": "Flowise",
+      "category": "Orchestration",
+      "github_url": "https://github.com/FlowiseAI/Flowise",
+      "website_url": "https://flowiseai.com",
+      "documentation_url": "https://docs.flowiseai.com",
+      "framework_type": "No-Code/Low-Code LLM Workflow Builder - Drag-and-drop interface for building LLM applications",
+      "key_features": [
+        "Drag-and-drop workflow builder",
+        "ChatBot UI",
+        "RAG support",
+        "Multi-model support",
+        "API deployment"
+      ],
+      "multi_agent_support": {
+        "supported": false,
+        "details": "Limited multi-agent support, focused on single workflows"
+      },
+      "llm_support": {
+        "model_agnostic": true,
+        "supported_providers": [
+          "100+ LLM providers"
+        ],
+        "notes": "Comprehensive provider support"
+      },
+      "license": {
+        "type": "Open Source",
+        "license_name": "MIT"
+      },
+      "maturity_level": "stable/production",
+      "github_stars": "not_specified",
+      "last_commit": "recent",
+      "documentation_quality": "good",
+      "community_size": "medium",
+      "relevance_to_agentic_engineers": "Low to moderate relevance - good for workflow building but not agent orchestration"
+    }
+  ],
+  "summary_statistics": {
+    "total_frameworks": 45,
+    "by_category": {
+      "Orchestration": 9,
+      "IDE": 7,
+      "CLI": 5,
+      "Runtime": 13,
+      "Local": 5,
+      "Managed Services": 3
+    },
+    "by_license": {
+      "MIT": 20,
+      "Apache 2.0": 10,
+      "AGPL": 4,
+      "Commercial": 9,
+      "Mixed": 2
+    },
+    "by_maturity": {
+      "Production": 38,
+      "Stable": 5,
+      "Maintenance": 1,
+      "Educational": 1
+    },
+    "multi_agent_support": {
+      "full_support": 20,
+      "partial_support": 10,
+      "limited_support": 15
+    },
+    "documentation_quality": {
+      "excellent": 18,
+      "good": 22,
+      "fair": 4,
+      "poor": 1
+    }
+  },
+  "recommendations": {
+    "best_for_production_multi_agent_systems": [
+      "CrewAI",
+      "LangGraph",
+      "Pydantic AI"
+    ],
+    "best_for_enterprise_deployment": [
+      "Semantic Kernel",
+      "Temporal",
+      "Azure OpenAI Service",
+      "Amazon Bedrock"
+    ],
+    "best_for_local_development": [
+      "Ollama",
+      "LM Studio",
+      "Jan.ai",
+      "GPT4All"
+    ],
+    "best_for_rapid_prototyping": [
+      "Dify",
+      "Flowise",
+      "CrewAI"
+    ],
+    "best_for_type_safe_development": [
+      "Pydantic AI",
+      "Semantic Kernel"
+    ],
+    "best_for_distributed_execution": [
+      "Ray",
+      "Temporal"
+    ],
+    "best_for_terminal_ai_development": [
+      "Aider",
+      "Continue.dev"
+    ]
+  }
+}

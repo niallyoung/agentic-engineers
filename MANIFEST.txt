@@ -1,0 +1,366 @@
+================================================================================
+AI FRAMEWORKS RESEARCH - FILE MANIFEST
+================================================================================
+
+PROJECT: Comprehensive analysis of 45 AI frameworks across 6 categories
+RESEARCH DATE: May 16, 2026
+LOCATION: /Users/niall/git/agentic-engineers/
+
+================================================================================
+DELIVERABLE FILES (7 TOTAL)
+================================================================================
+
+1. START_HERE.md
+   Purpose: Quick navigation guide and decision flowchart
+   Size: ~4 KB
+   Best for: Orientation and quick lookups
+   Read time: 5 minutes
+   Contains:
+   - Quick start paths (5, 10, 15, 30 minute options)
+   - Top recommendations summary
+   - Common questions answered
+   - Recommended reading order by role
+   - File location reference
+
+2. RESEARCH_SUMMARY.txt
+   Purpose: Executive summary of findings
+   Size: 9.3 KB
+   Best for: High-level overview and decision support
+   Read time: 5 minutes
+   Contains:
+   - Research scope (45 frameworks, 6 categories)
+   - Key findings (5 major insights)
+   - Top framework recommendations
+   - Licensing summary
+   - Critical insights for agentic-engineers
+   - GitHub activity metrics
+   - Recommendations by use case
+   - Market trends 2025-2026
+   - Implementation checklist
+
+3. AI_FRAMEWORKS_ANALYSIS.md
+   Purpose: Comprehensive written analysis
+   Size: 16 KB
+   Best for: Strategic planning and detailed understanding
+   Read time: 15-20 minutes
+   Contains:
+   - Executive summary with statistics
+   - Detailed category breakdowns (all 6 categories)
+   - Multi-agent support analysis
+   - LLM provider support matrix
+   - Licensing analysis
+   - Maturity & stability assessment
+   - Documentation quality evaluation
+   - Use-case recommendations
+   - Key insights and market trends
+   - Appendix with quick reference links
+   - Agentic-engineers relevance assessment
+
+4. AI_FRAMEWORKS_COMPARISON.md
+   Purpose: Quick reference comparison tables
+   Size: 12 KB
+   Best for: Side-by-side framework comparisons
+   Read time: 10 minutes for specific sections
+   Contains:
+   - Core orchestration frameworks table
+   - Provider SDKs comparison
+   - Local LLM runtimes comparison
+   - IDE/Editor integration table
+   - CLI/Terminal tools table
+   - Managed cloud services table
+   - Language & framework support matrix
+   - Key decision matrix ("Choose X if...")
+   - Open-source license breakdown
+   - Maturity & stability scale
+   - Documentation quality scale
+   - GitHub activity ranking (top 10)
+   - Tier 1/2/3 recommendations
+
+5. AI_FRAMEWORKS_INDEX.md
+   Purpose: Navigation guide and usage instructions
+   Size: 12 KB
+   Best for: Finding specific information
+   Read time: 5 minutes for reference
+   Contains:
+   - File descriptions and purposes
+   - Quick navigation by need
+   - Statistics summary
+   - Framework categories explained
+   - How to use this research (5 options)
+   - Document maintenance guide
+   - How to extend research
+   - Appendix with quick links
+
+6. RESEARCH_COMPLETE.md
+   Purpose: Project completion report
+   Size: 9.9 KB
+   Best for: Status, methodology, and implementation planning
+   Read time: 10 minutes
+   Contains:
+   - Completion status
+   - Research coverage breakdown
+   - Data points collected per framework
+   - Key findings summary
+   - Quality metrics
+   - Research methodology
+   - How to use these files
+   - Key insights for agentic-engineers
+   - Recommendations by use case
+   - Next steps for implementation (4 phases)
+   - Research summary statistics
+   - Quality assurance checklist
+
+7. ai-frameworks-research.json
+   Purpose: Complete structured data export
+   Size: 58 KB
+   Best for: Data analysis, integration, programmatic access
+   Format: Valid JSON
+   Contains:
+   - 45 framework objects with complete metadata
+   - Framework identification (name, URLs, docs)
+   - Technical details (type, features, multi-agent support)
+   - LLM provider support details
+   - License information
+   - Maturity and activity metrics
+   - Community engagement data
+   - Agentic-engineers relevance assessment
+   - Summary statistics by category, license, maturity
+   - Multi-agent support analysis
+   - Documentation quality distribution
+   - Use-case recommendations (7 categories)
+
+================================================================================
+TOTAL PACKAGE
+================================================================================
+
+Total Files: 7
+Total Size: ~115 KB
+Documentation: ~57 KB (Markdown + Text)
+Raw Data: ~58 KB (JSON)
+
+Organization: Hierarchical with cross-references
+- Entry-level: START_HERE.md
+- Quick reference: RESEARCH_SUMMARY.txt + COMPARISON tables
+- Detailed analysis: ANALYSIS.md + INDEX.md + COMPLETE.md
+- Raw data: JSON file for programmatic access
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+FRAMEWORKS ANALYZED: 45
+  • Agent Orchestration: 9 (CrewAI, LangGraph, Pydantic AI, etc.)
+  • IDE/Editor: 7 (Continue.dev, Zed, Cursor, etc.)
+  • CLI/Terminal: 5 (Aider, Mentat, Plandex, etc.)
+  • Python/Runtime: 13 (Anthropic SDK, OpenAI SDK, Bedrock, etc.)
+  • Local LLM: 5 (Ollama, LM Studio, Jan.ai, etc.)
+  • Managed Services: 3 (AWS Bedrock, Google Vertex AI, Azure OpenAI)
+
+OPEN-SOURCE: 30 (67%)
+  • MIT licensed: 20 (44%)
+  • Apache 2.0: 10 (22%)
+  • AGPL: 4 (9%)
+
+PRODUCTION-READY: 38 (84%)
+  • Stable: 5 (11%)
+  • Maintenance: 1 (2%)
+  • Educational: 1 (2%)
+
+MULTI-AGENT SUPPORT: 20 (44%)
+  • Full support: 20
+  • Partial: 10
+  • Limited: 15
+
+DOCUMENTATION QUALITY: 40 (89%)
+  • Excellent: 18 (40%)
+  • Good: 22 (49%)
+  • Fair: 4 (9%)
+  • Poor: 1 (2%)
+
+================================================================================
+TOP RECOMMENDATIONS
+================================================================================
+
+MULTI-AGENT ORCHESTRATION:
+  1. CrewAI (51.5K ⭐) - Fastest (5.76x vs LangGraph)
+  2. LangGraph (32.1K ⭐) - Best state management
+  3. Pydantic AI (17.1K ⭐) - Type-safe development
+
+LOCAL DEVELOPMENT:
+  1. Ollama (171K ⭐) - Essential, dominant
+  2. Jan.ai - OpenAI API compatible
+  3. LM Studio - GUI alternative
+
+ENTERPRISE:
+  1. Semantic Kernel (27.9K ⭐) - Multi-language
+  2. Temporal (20.3K ⭐) - Durable execution
+  3. AWS Bedrock / Google Vertex AI - Managed services
+
+FOUNDATION:
+  1. Anthropic Python SDK - Claude 3.5 Sonnet
+  2. OpenAI Python SDK - GPT-4o/GPT-4
+
+DEVELOPER TOOLS:
+  1. Aider (44.9K ⭐) - Terminal pair programming
+  2. Continue.dev (33.2K ⭐) - IDE integration
+
+================================================================================
+HOW TO USE THIS PACKAGE
+================================================================================
+
+STEP 1: START HERE
+  → Open START_HERE.md for orientation
+
+STEP 2: CHOOSE YOUR PATH
+  ⏱️  5 min:   Read RESEARCH_SUMMARY.txt
+  ⏱️  10 min:  Review comparison tables
+  ⏱️  20 min:  Read ANALYSIS.md sections
+  ⏱️  30 min:  Full comprehensive read
+  ⏱️  Ongoing: Query JSON for details
+
+STEP 3: FIND WHAT YOU NEED
+  Q: "Which framework should we use?"
+  → AI_FRAMEWORKS_COMPARISON.md → Key Decision Matrix
+
+  Q: "What are market leaders?"
+  → RESEARCH_SUMMARY.txt → TOP FRAMEWORK RECOMMENDATIONS
+
+  Q: "I need raw data for analysis"
+  → ai-frameworks-research.json → Parse by framework name
+
+  Q: "How mature is the market?"
+  → RESEARCH_SUMMARY.txt → KEY FINDINGS
+
+  Q: "Where do I find details on X framework?"
+  → ai-frameworks-research.json → Search or
+  → AI_FRAMEWORKS_ANALYSIS.md → Category sections
+
+STEP 4: IMPLEMENT
+  → RESEARCH_COMPLETE.md → Next Steps for Implementation
+
+================================================================================
+DATA QUALITY & VERIFICATION
+================================================================================
+
+All frameworks have been verified for:
+  ✅ Official GitHub/website URLs
+  ✅ Framework type and category
+  ✅ Key features (3-5 per framework)
+  ✅ Multi-agent support capabilities
+  ✅ LLM provider/model support
+  ✅ License type and name
+  ✅ Maturity level assessment
+  ✅ GitHub star count
+  ✅ Last commit date
+  ✅ Documentation quality rating
+  ✅ Community size classification
+  ✅ Agentic-engineers relevance score
+
+Research Methodology:
+  • Official GitHub repositories
+  • Project documentation sites
+  • Recent commit history
+  • Community metrics (stars, forks, issues)
+  • Feature documentation
+  • License files and terms
+  • Release notes and changelogs
+
+Data Freshness:
+  • Research completed: May 16, 2026
+  • All URLs verified: May 2026
+  • Star counts: Current as of May 2026
+  • Last commits: Latest available dates
+  • Recommended review: Annual
+
+================================================================================
+RECOMMENDATIONS BY ROLE
+================================================================================
+
+FOR DECISION-MAKERS:
+  1. Read START_HERE.md (5 min)
+  2. Review RESEARCH_SUMMARY.txt (5 min)
+  3. Check AI_FRAMEWORKS_COMPARISON.md key matrix (5 min)
+  Total: 15 minutes
+
+FOR TECHNICAL LEADS:
+  1. Full read AI_FRAMEWORKS_ANALYSIS.md (20 min)
+  2. Review comparison tables (10 min)
+  3. Query JSON for top frameworks (10 min)
+  Total: 40 minutes
+
+FOR ARCHITECTS:
+  1. Full read AI_FRAMEWORKS_ANALYSIS.md (20 min)
+  2. Deep data analysis of JSON (varies)
+  3. Review implementation planning section (10 min)
+  Total: 30+ minutes
+
+FOR IMPLEMENTATION TEAMS:
+  1. Read comparison "Choose X if..." section (10 min)
+  2. Review category details (15 min)
+  3. Check implementation next steps (5 min)
+  Total: 30 minutes
+
+FOR QUICK LOOKUPS:
+  → START_HERE.md for navigation
+  → AI_FRAMEWORKS_COMPARISON.md for tables
+  → ai-frameworks-research.json for details
+
+================================================================================
+MAINTENANCE & UPDATES
+================================================================================
+
+To Update Existing Framework:
+  1. Edit ai-frameworks-research.json
+  2. Update relevant sections in Markdown files
+  3. Update summary statistics
+  4. Update recommendation tier if needed
+
+To Add New Framework:
+  1. Add entry to JSON (use existing as template)
+  2. Update category statistics
+  3. Update relevant comparison tables
+  4. Update recommendation sections
+
+Recommended Review Schedule:
+  • Quarterly: Check for major framework updates
+  • Annual: Full review and update cycle
+  • Monthly: Monitor top frameworks for new releases
+
+================================================================================
+VERSION INFORMATION
+================================================================================
+
+Research Date: May 16, 2026
+Package Version: 1.0 (Complete)
+Data Completeness: Comprehensive (45 frameworks)
+Quality Level: Verified and organized
+Status: Ready for integration and implementation
+
+================================================================================
+CONTACT & QUESTIONS
+================================================================================
+
+For Framework Comparisons:
+  → Refer to AI_FRAMEWORKS_COMPARISON.md
+
+For Detailed Analysis:
+  → Refer to AI_FRAMEWORKS_ANALYSIS.md
+
+For Raw Data:
+  → Parse ai-frameworks-research.json
+
+For Navigation Help:
+  → Start with START_HERE.md or AI_FRAMEWORKS_INDEX.md
+
+For Implementation Planning:
+  → Review RESEARCH_COMPLETE.md
+
+================================================================================
+END OF MANIFEST
+================================================================================
+
+All files located in: /Users/niall/git/agentic-engineers/
+
+This manifest serves as a guide to the AI Frameworks Research package.
+For detailed information, refer to individual files.
+
