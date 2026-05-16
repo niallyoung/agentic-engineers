@@ -211,6 +211,7 @@ write_config() {
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
+  "model": "github-copilot/claude-haiku-4.5",
   "compaction": {
     "auto": true,
     "reserved": 30000
