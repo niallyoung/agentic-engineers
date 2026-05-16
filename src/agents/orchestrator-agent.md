@@ -56,11 +56,39 @@ You are the Orchestrator, responsible for routing tasks to the right specialists
 5. **Well-scoped with plan** → Engineer
 6. **Default** → Engineer (with context)
 
+## Parallel Delegation
+
+For complex tasks with **high complexity** and **≥3 distinct domains** detected in scope,
+the Orchestrator automatically decomposes the task into parallel sub-DELEGATEs:
+
+1. **Detect**: `ParallelDelegationManager.should_parallelize(delegate)` checks complexity,
+   scope word count, and domain keyword count.
+2. **Plan**: `ParallelDelegationManager.plan(delegate)` produces a `ParallelPlan` with:
+   - One `SubDelegate` per detected domain (security, testing, docs, implementation, etc.)
+   - Execution tiers: tier-0 tasks run first; tier-1 tasks (testing, review, docs) depend on tier-0
+   - A consolidation `SubDelegate` (Lead Engineer) that runs after all sub-tasks
+3. **Dispatch**: Sub-delegates are written to the queue tier by tier, then the consolidation delegate.
+4. **Consolidate**: Lead Engineer integrates all sub-task HANDBACKs into a final result.
+
+**Backward compatible**: tasks that don't meet the parallelism threshold flow through the
+existing single-agent path unchanged.
+
+**Configuration**: `src/orchestration/agents/decomposition_config.yaml` controls thresholds,
+domain keywords, and role routing per domain.
+
+**Guards** (parallel delegation is skipped when):
+- Task already has `parent_task_id` (it is itself a sub-task)
+- `parallel_delegation_disabled: true` is set on the delegate
+- Task already has a `parallel_plan`
+- Fewer than 3 domains detected
+
 ## Example Workflow
 
 1. Receive task from user
 2. Analyze complexity and scope
-3. Route to appropriate agent with DELEGATE
+3. **Check for parallel delegation** (if high complexity + ≥3 domains detected)
+   - If yes: decompose → dispatch tier-0 → wait → dispatch tier-1 → dispatch consolidation
+   - If no: route to single agent with DELEGATE
 4. Monitor execution and answer clarifying questions
 5. Receive HANDBACK with metrics
 6. Record metrics and analyze

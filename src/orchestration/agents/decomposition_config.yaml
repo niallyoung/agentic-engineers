@@ -1,0 +1,192 @@
+# Parallel Delegation Decomposition Configuration
+# Controls how the Orchestrator splits complex tasks into parallel sub-tasks.
+# All fields are optional — missing fields fall back to built-in defaults.
+
+# -----------------------------------------------------------------------
+# Thresholds
+# -----------------------------------------------------------------------
+
+# Minimum complexity level that qualifies for parallel splitting.
+# Accepted values: "low" | "medium" | "high"
+min_complexity_for_parallel: high
+
+# Minimum number of words in the scope field before considering parallel split.
+min_scope_word_count: 20
+
+# Maximum number of sub-tasks generated per parallel plan.
+max_sub_tasks: 10
+
+# Minimum sub-tasks required (plans with fewer domains are not split).
+min_sub_tasks: 2
+
+# Number of distinct domains that must be detected before splitting.
+parallelism_threshold: 3
+
+# -----------------------------------------------------------------------
+# Domain keyword detection
+# Each domain is detected when ANY of its keywords appear in the scope/context.
+# -----------------------------------------------------------------------
+
+domain_keywords:
+  security:
+    - security
+    - auth
+    - encrypt
+    - secret
+    - permission
+    - vulnerability
+    - threat
+    - cve
+    - injection
+    - xss
+  testing:
+    - test
+    - spec
+    - coverage
+    - unit test
+    - integration test
+    - e2e
+    - pytest
+    - jest
+    - fixture
+  documentation:
+    - doc
+    - readme
+    - comment
+    - docstring
+    - changelog
+    - guide
+    - tutorial
+    - wiki
+  implementation:
+    - implement
+    - code
+    - build
+    - create
+    - add
+    - develop
+    - write
+    - feature
+  review:
+    - review
+    - audit
+    - validate
+    - check
+    - verify
+    - assess
+    - inspect
+  infrastructure:
+    - deploy
+    - ci
+    - cd
+    - pipeline
+    - docker
+    - k8s
+    - infra
+    - terraform
+    - ansible
+  database:
+    - database
+    - schema
+    - migration
+    - query
+    - index
+    - model
+    - orm
+    - sql
+  api:
+    - api
+    - endpoint
+    - route
+    - rest
+    - graphql
+    - grpc
+    - interface
+    - swagger
+    - openapi
+  configuration:
+    - config
+    - setting
+    - env
+    - yaml
+    - json
+    - toml
+    - dotenv
+  refactor:
+    - refactor
+    - cleanup
+    - restructure
+    - reorganize
+    - rename
+    - extract
+    - consolidate
+
+# -----------------------------------------------------------------------
+# Role routing per domain
+# Determines which agent role, model, and effort level handles each domain.
+# -----------------------------------------------------------------------
+
+role_routing:
+  security:
+    role: security_engineer
+    model: claude-opus-4-5
+    effort: high
+  testing:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: medium
+  documentation:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: low
+  implementation:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: medium
+  review:
+    role: quality_engineer
+    model: claude-sonnet-4-6
+    effort: medium
+  infrastructure:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: medium
+  database:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: medium
+  api:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: medium
+  configuration:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: low
+  refactor:
+    role: senior_engineer
+    model: claude-sonnet-4-6
+    effort: high
+  default:
+    role: engineer
+    model: claude-haiku-4-5
+    effort: medium
+
+# -----------------------------------------------------------------------
+# Dependency rules
+# -----------------------------------------------------------------------
+
+# Domains that must wait for implementation-tier tasks to finish first.
+depends_on_implementation:
+  - testing
+  - review
+  - documentation
+
+# Domain pairs that are always safe to run in parallel.
+always_parallel_pairs:
+  - [security, documentation]
+  - [testing, documentation]
+  - [infrastructure, documentation]
+  - [security, testing]
+  - [api, database]
+  - [configuration, documentation]
