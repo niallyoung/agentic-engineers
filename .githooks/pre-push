@@ -2,9 +2,12 @@
 # .githooks/pre-push — SDLC pre-push quality gate
 #
 # Enforces:
-#   1. Python tests pass (if pytest available and tests/ exists)
-#   2. Agent definition files are valid YAML
-#   3. No force-push to main/master (warn only — can't block, but logs)
+#   1. Agent YAML validation (agents/*.md frontmatter)
+#   2. Test suite execution (pytest)
+#   3. Documentation consistency (SPEC.md, AGENTS.md, etc.)
+#   4. Workflow validation (GitHub Actions YAML)
+#   5. Main/master push warnings
+#   6. DELEGATE/HANDBACK protocol compliance
 #
 # Install: git config core.hooksPath .githooks
 # Bypass: SKIP_HOOKS=1 git push
@@ -21,64 +24,320 @@ URL="$2"
 
 ERRORS=0
 WARNINGS=0
+CHECKS_PASSED=0
+CHECKS_FAILED=0
+
+# Color codes
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
 fail() {
-  echo "❌ $1"
+  echo -e "${RED}❌${NC} $1"
   ERRORS=$((ERRORS + 1))
+  CHECKS_FAILED=$((CHECKS_FAILED + 1))
 }
 
 warn() {
-  echo "⚠️  $1"
+  echo -e "${YELLOW}⚠️ ${NC} $1"
   WARNINGS=$((WARNINGS + 1))
 }
 
-# ── 1. Detect push to main/master ─────────────────────────────────────────────
+pass() {
+  echo -e "${GREEN}✅${NC} $1"
+  CHECKS_PASSED=$((CHECKS_PASSED + 1))
+}
+
+info() {
+  echo -e "${BLUE}ℹ️ ${NC} $1"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. DETECT PUSH TO MAIN/MASTER
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "📋 Pre-push validation starting..."
+echo ""
+
+PUSHING_TO_PROTECTED=0
 while read local_ref local_sha remote_ref remote_sha; do
   if echo "$remote_ref" | grep -qE 'refs/heads/(main|master)$'; then
-    warn "Pushing to protected branch: $remote_ref — ensure QE review is complete"
+    PUSHING_TO_PROTECTED=1
+    warn "Pushing to protected branch: $remote_ref"
+    warn "Ensure Quality Engineer review is complete before merge"
   fi
 done
 
-# ── 2. Validate agent YAML files ──────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. VALIDATE AGENT YAML FRONTMATTER
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "🤖 Validating agent definitions..."
+
+AGENT_YAML_ERRORS=0
 if command -v python3 >/dev/null 2>&1; then
-  AGENT_ERRORS=0
-  for f in src/agents/*.md; do
-    [ -f "$f" ] || continue
-    # Extract YAML frontmatter and validate
-    FM=$(awk '/^---/{if(p)exit; p=1; next} p' "$f" 2>/dev/null || true)
-    if [ -n "$FM" ]; then
-      if ! echo "$FM" | python3 -c "import sys,yaml; yaml.safe_load(sys.stdin)" 2>/dev/null; then
-        fail "Invalid YAML frontmatter in agent: $f"
-        AGENT_ERRORS=$((AGENT_ERRORS + 1))
+  # Check src/agents/*.md files
+  if [ -d "src/agents" ]; then
+    for f in src/agents/*.md; do
+      [ -f "$f" ] || continue
+      
+      # Skip README files
+      if [[ "$f" == *"README"* ]]; then
+        continue
       fi
+      
+      # Extract YAML frontmatter (between --- markers)
+      FM=$(awk '/^---/{if(p)exit; p=1; next} p' "$f" 2>/dev/null || true)
+      
+      if [ -n "$FM" ]; then
+        # Validate YAML syntax
+        if ! echo "$FM" | python3 -c "import sys,yaml; yaml.safe_load(sys.stdin)" 2>/dev/null; then
+          fail "Invalid YAML frontmatter in agent: $f"
+          AGENT_YAML_ERRORS=$((AGENT_YAML_ERRORS + 1))
+        fi
+        
+        # Validate required fields: name, model (role and effort are in markdown content)
+        for field in "name" "model"; do
+          if ! echo "$FM" | grep -q "^$field:"; then
+            fail "Missing required field '$field' in agent: $f"
+            AGENT_YAML_ERRORS=$((AGENT_YAML_ERRORS + 1))
+          fi
+        done
+      fi
+    done
+    
+    if [ "$AGENT_YAML_ERRORS" -eq 0 ]; then
+      pass "Agent YAML frontmatter valid"
     fi
-  done
-  if [ "$AGENT_ERRORS" -eq 0 ]; then
-    echo "✅ pre-push: agent YAML frontmatter valid"
   fi
 fi
 
-# ── 3. Run tests (non-blocking — warn only if tests fail) ─────────────────────
-if command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
-  echo "🧪 pre-push: running test suite..."
-  if pytest tests/ -q --tb=no 2>/dev/null; then
-    echo "✅ pre-push: tests passed"
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. VALIDATE WORKFLOW FILES (GitHub Actions)
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "🔄 Validating workflow files..."
+
+WORKFLOW_ERRORS=0
+if command -v python3 >/dev/null 2>&1; then
+  if [ -d ".github/workflows" ]; then
+    for f in .github/workflows/*.yml .github/workflows/*.yaml; do
+      [ -f "$f" ] || continue
+      
+      # Validate YAML syntax
+      if ! python3 -c "import sys,yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+        fail "Invalid YAML in workflow: $f"
+        WORKFLOW_ERRORS=$((WORKFLOW_ERRORS + 1))
+      fi
+      
+      # Check for required workflow fields
+      if ! grep -q "^name:" "$f"; then
+        fail "Missing 'name' field in workflow: $f"
+        WORKFLOW_ERRORS=$((WORKFLOW_ERRORS + 1))
+      fi
+      
+      if ! grep -q "^on:" "$f"; then
+        fail "Missing 'on' (trigger) field in workflow: $f"
+        WORKFLOW_ERRORS=$((WORKFLOW_ERRORS + 1))
+      fi
+    done
+    
+    if [ "$WORKFLOW_ERRORS" -eq 0 ] && [ -d ".github/workflows" ] && [ "$(ls -1 .github/workflows/*.{yml,yaml} 2>/dev/null | wc -l)" -gt 0 ]; then
+      pass "Workflow files valid"
+    fi
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. VALIDATE DOCUMENTATION CONSISTENCY
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "📚 Validating documentation consistency..."
+
+DOC_ERRORS=0
+
+# Check for SPEC.md
+if [ ! -f "docs/SPEC.md" ]; then
+  fail "docs/SPEC.md not found"
+  DOC_ERRORS=$((DOC_ERRORS + 1))
+else
+  # Validate SPEC.md has required sections
+  if ! grep -q "^# " docs/SPEC.md; then
+    fail "docs/SPEC.md missing top-level heading"
+    DOC_ERRORS=$((DOC_ERRORS + 1))
+  fi
+  
+  if ! grep -q "version:" docs/SPEC.md; then
+    fail "docs/SPEC.md missing version field"
+    DOC_ERRORS=$((DOC_ERRORS + 1))
+  fi
+fi
+
+# Check for AGENTS.md
+if [ ! -f "docs/AGENTS.md" ]; then
+  fail "docs/AGENTS.md not found"
+  DOC_ERRORS=$((DOC_ERRORS + 1))
+else
+  # Validate AGENTS.md has required sections
+  if ! grep -q "^# " docs/AGENTS.md; then
+    fail "docs/AGENTS.md missing top-level heading"
+    DOC_ERRORS=$((DOC_ERRORS + 1))
+  fi
+fi
+
+# Check for README.md
+if [ ! -f "README.md" ]; then
+  fail "README.md not found"
+  DOC_ERRORS=$((DOC_ERRORS + 1))
+fi
+
+if [ "$DOC_ERRORS" -eq 0 ]; then
+  pass "Documentation files present and valid"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. VALIDATE DELEGATE/HANDBACK PROTOCOL COMPLIANCE
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "📦 Validating DELEGATE/HANDBACK protocol..."
+
+PROTOCOL_ERRORS=0
+if command -v python3 >/dev/null 2>&1; then
+  # Check artifacts/delegates/ for DELEGATE files
+  if [ -d "artifacts/delegates" ]; then
+    for f in artifacts/delegates/*/*.yaml artifacts/delegates/*/*.yml; do
+      [ -f "$f" ] || continue
+      
+      # Validate YAML syntax
+      if ! python3 -c "import sys,yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+        fail "Invalid YAML in DELEGATE: $f"
+        PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        continue
+      fi
+      
+      # Check for required DELEGATE fields
+      for field in "handoff_type" "task_id" "role" "model"; do
+        if ! grep -q "^$field:" "$f"; then
+          fail "Missing required field '$field' in DELEGATE: $f"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+      done
+    done
+  fi
+  
+  # Check artifacts/queue/processing/ for HANDBACK files
+  if [ -d "artifacts/queue/processing" ]; then
+    for f in artifacts/queue/processing/*.yaml artifacts/queue/processing/*.yml; do
+      [ -f "$f" ] || continue
+      
+      # Validate YAML syntax
+      if ! python3 -c "import sys,yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+        fail "Invalid YAML in HANDBACK: $f"
+        PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        continue
+      fi
+      
+      # Check for required HANDBACK fields
+      for field in "handoff_type" "task_id" "status"; do
+        if ! grep -q "^$field:" "$f"; then
+          fail "Missing required field '$field' in HANDBACK: $f"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+      done
+    done
+  fi
+  
+  if [ "$PROTOCOL_ERRORS" -eq 0 ]; then
+    pass "DELEGATE/HANDBACK protocol valid"
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. RUN TEST SUITE
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "🧪 Running test suite..."
+
+TEST_ERRORS=0
+# Skip pytest if SKIP_PYTEST is set (for testing the hook itself)
+if [ "${SKIP_PYTEST:-}" != "1" ] && command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
+  # Run pytest with quiet output and timeout
+  # Skip test_git_hooks.py as it can hang during hook execution
+  if timeout 30 pytest tests/ -q --tb=line --ignore=tests/test_git_hooks.py 2>/dev/null; then
+    pass "All tests passed"
   else
-    warn "Tests failed — review before pushing to shared branches"
+    PYTEST_EXIT=$?
+    if [ "$PYTEST_EXIT" -eq 124 ]; then
+      warn "Test suite timed out (>30s) — review before pushing"
+    else
+      warn "Some tests failed — review before pushing to shared branches"
+    fi
+    TEST_ERRORS=$((TEST_ERRORS + 1))
   fi
+elif [ -d "tests" ]; then
+  warn "pytest not found or skipped — skipping test execution"
 fi
 
-# ── Result ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. VALIDATE SPEC COMPLIANCE (No external scripts except renderer/)
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "🔐 Validating SPEC compliance..."
+
+SPEC_ERRORS=0
+
+# Check for orchestration/scripts/ (should not exist)
+if [ -d "orchestration/scripts" ] && [ "$(find orchestration/scripts -type f \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | wc -l)" -gt 0 ]; then
+  fail "External scripts found in orchestration/scripts/ — violates SPEC.md"
+  SPEC_ERRORS=$((SPEC_ERRORS + 1))
+fi
+
+# Check for orchestration/config/*.cron (should not exist)
+if [ -d "orchestration/config" ] && [ "$(find orchestration/config -name "*.cron" -type f 2>/dev/null | wc -l)" -gt 0 ]; then
+  fail "Cron files found in orchestration/config/ — violates SPEC.md"
+  SPEC_ERRORS=$((SPEC_ERRORS + 1))
+fi
+
+# Check Makefile for direct script invocations (except renderer/)
+if grep -E "^\s+@(bash|sh|python).*scripts" Makefile 2>/dev/null | grep -v "renderer/scripts" | grep -q . ; then
+  fail "Makefile invokes external scripts (not in renderer/) — violates SPEC.md"
+  SPEC_ERRORS=$((SPEC_ERRORS + 1))
+fi
+
+if [ "$SPEC_ERRORS" -eq 0 ]; then
+  pass "SPEC compliance verified"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. SUMMARY
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📊 Pre-push validation summary:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Checks passed: $CHECKS_PASSED"
+echo "  Checks failed: $CHECKS_FAILED"
+echo "  Errors:       $ERRORS"
+echo "  Warnings:     $WARNINGS"
+echo ""
+
 if [ "$ERRORS" -gt 0 ]; then
+  echo -e "${RED}❌ pre-push: $ERRORS error(s) found. Fix and retry.${NC}"
   echo ""
-  echo "❌ pre-push: $ERRORS error(s). Fix and retry."
   echo "   Emergency bypass: SKIP_HOOKS=1 git push"
+  echo ""
   exit 1
 fi
 
 if [ "$WARNINGS" -gt 0 ]; then
-  echo "⚠️  pre-push: $WARNINGS warning(s) — proceeding (warnings are non-blocking)"
+  echo -e "${YELLOW}⚠️  pre-push: $WARNINGS warning(s) — proceeding (warnings are non-blocking)${NC}"
+  echo ""
 fi
 
-echo "✅ pre-push: quality gate passed"
+echo -e "${GREEN}✅ pre-push: quality gate passed${NC}"
+echo ""
+
 exit 0

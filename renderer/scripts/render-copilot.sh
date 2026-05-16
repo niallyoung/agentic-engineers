@@ -84,6 +84,20 @@ case "$MODE" in
 			count=$((count + 1))
 		done
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/"
+
+		# 2. Git hooks: configure core.hooksPath and ensure hooks are executable
+		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
+		# Note: Copilot uses the same git repo as OpenCode/Claude, so hooks are shared.
+		if [ -d "$REPO_ROOT/.githooks" ]; then
+			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
+			git -C "$REPO_ROOT" config core.hooksPath .githooks
+			for hook in "$REPO_ROOT"/.githooks/*; do
+				[ -f "$hook" ] && chmod +x "$hook"
+			done
+			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
+		else
+			echo "⚠️  git hooks not found at $REPO_ROOT/.githooks — skipping"
+		fi
 		;;
 
 	*)

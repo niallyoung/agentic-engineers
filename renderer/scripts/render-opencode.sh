@@ -475,13 +475,16 @@ case "$MODE" in
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# This enforces SDLC compliance at commit/push time for the repo itself.
+		# Hooks are installed from REPO_ROOT/.githooks to enforce consistency across all harnesses.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
-			echo "📦 Configuring git hooks → $REPO_ROOT/.githooks/..."
+			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
 			git -C "$REPO_ROOT" config core.hooksPath .githooks
 			for hook in "$REPO_ROOT"/.githooks/*; do
 				[ -f "$hook" ] && chmod +x "$hook"
 			done
-			echo "✅ Git hooks configured (core.hooksPath = .githooks)"
+			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
+		else
+			echo "⚠️  git hooks not found at $REPO_ROOT/.githooks — skipping"
 		fi
 		;;
 

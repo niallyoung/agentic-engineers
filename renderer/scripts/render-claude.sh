@@ -238,6 +238,20 @@ case "$MODE" in
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
+
+		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
+		# Claude Code harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
+		# Note: Claude Code uses the same git repo as OpenCode, so hooks are shared.
+		if [ -d "$REPO_ROOT/.githooks" ]; then
+			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
+			git -C "$REPO_ROOT" config core.hooksPath .githooks
+			for hook in "$REPO_ROOT"/.githooks/*; do
+				[ -f "$hook" ] && chmod +x "$hook"
+			done
+			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
+		else
+			echo "⚠️  git hooks not found at $REPO_ROOT/.githooks — skipping"
+		fi
 		;;
 
 	*)

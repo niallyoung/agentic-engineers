@@ -491,7 +491,7 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 
 ### Quality Engineer
 
-**HANDBACK (emit):**
+**Standard HANDBACK (emit):**
 - Always include `qe_feedback` block with `model_assessment`, `confidence`, and coverage assessment
 - Record `qe_model_assessment` as: `haiku_suitable | sonnet_suitable | opus_required | over_engineered`
 - Flag cost anomalies in `qe_feedback` (cost overrun >50%, unexpected escalations)
@@ -528,6 +528,53 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 
 ---
 
+## Git Hook Workflow
+
+### Pre-Commit Hook Integration
+
+The pre-commit hook (`.githooks/pre-commit`) enforces SPEC.md compliance and quality gates at commit time. It runs as a standalone bash script (not via the DELEGATE/HANDBACK queue — hooks must be synchronous and fast).
+
+**Flow:**
+1. Developer runs `git commit`
+2. Pre-commit hook validates staged files (SPEC compliance, secrets, YAML validity)
+3. Hook exits 0 (allow) or 1 (block) based on validation results
+4. Commit proceeds or is blocked with error message
+
+### What the Pre-Commit Hook Checks
+
+| Check | Severity |
+|-------|----------|
+| No `.py`/`.sh` in `orchestration/scripts/` | ❌ BLOCK |
+| No `.cron` in `orchestration/config/` | ❌ BLOCK |
+| No `subprocess`/`os.system`/`exec` in agent code | ❌ BLOCK |
+| Secret detection (API keys, passwords, tokens) | ❌ BLOCK |
+| YAML/JSON validity | ❌ BLOCK |
+| No bypass markers in committed code | ⚠️ WARN |
+| DELEGATE/HANDBACK field validation (if YAML files) | ❌ BLOCK |
+
+### Emergency Bypass
+
+```bash
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"  # bypass DELEGATE/HANDBACK validation only
+SKIP_HOOKS=1 git commit -m "emergency: reason"                 # bypass all pre-commit checks
+```
+
+### Installation
+
+```bash
+make install          # installs hooks + renders agents/skills
+# or manually:
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
+```
+
+### Reference
+
+- **[docs/SDLC-HOOKS.md](SDLC-HOOKS.md)** — Complete hook reference
+- **[docs/BYPASS-PROCEDURES.md](BYPASS-PROCEDURES.md)** — Emergency bypass procedures
+
+---
+
 ## Protocol Reference
 
 | Resource | Purpose |
@@ -542,9 +589,165 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 
 ---
 
+## Workflow Enforcement Points
+
+The DELEGATE/HANDBACK protocol is enforced at three critical gates via git hooks:
+
+### Pre-Commit Hook (SPEC & Quality)
+
+**What agents must ensure before committing:**
+- ✅ SPEC.md compliance (no external scripts, cron files, process execution)
+- ✅ No secrets in code (API keys, passwords, tokens)
+- ✅ Valid YAML/JSON syntax
+- ✅ No bypass markers in code
+
+**What happens on violation:**
+- ❌ Commit is blocked
+- Error message shows what failed
+- Agent must fix and re-commit
+
+**Bypass (emergency only):**
+```bash
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"
+```
+
+### Commit-Msg Hook (Protocol Compliance)
+
+**What agents must ensure in commit message:**
+- ✅ Message length ≥10 characters
+- ✅ Conventional commit format (optional but encouraged)
+- ✅ Task ID format: YYYY-MM-DD-kebab-case (optional but encouraged)
+- ✅ If DELEGATE/HANDBACK present: all required fields present
+- ✅ If SKIP_HOOKS mentioned: reason documented
+
+**What happens on violation:**
+- ❌ Commit is blocked
+- Error message shows what failed
+- Agent must fix message and re-commit
+
+**Bypass (emergency only):**
+```bash
+SKIP_COMMIT_MSG_HOOK=true git commit -m "message"
+```
+
+### Pre-Push Hook (Final Quality Gate)
+
+**What agents must ensure before pushing:**
+- ✅ Agent YAML frontmatter valid (src/agents/*.md)
+- ✅ Workflow files valid (.github/workflows/*.yml)
+- ✅ Documentation files present (SPEC.md, AGENTS.md, README.md)
+- ✅ DELEGATE/HANDBACK files valid (artifacts/)
+- ✅ Test suite passing (pytest if available)
+- ✅ SPEC compliance verified
+
+**What happens on violation:**
+- ❌ Push is blocked (for errors)
+- ⚠️ Warning shown (for test failures, protected branch)
+- Agent must fix and re-push
+
+**Bypass (emergency only):**
+```bash
+SKIP_HOOKS=1 git push
+```
+
+### Integration with DELEGATE/HANDBACK Protocol
+
+The hooks enforce protocol compliance at commit time:
+
+```
+DELEGATE Created
+    ↓
+[pre-commit hook]
+├─ Validate YAML syntax
+├─ Validate required fields: task_id, role, scope, plan, success_criteria
+├─ Validate task_id format: YYYY-MM-DD-kebab-case
+└─ BLOCK if invalid
+
+[commit-msg hook]
+├─ Validate DELEGATE block if present in message
+├─ Validate all required fields present
+└─ BLOCK if invalid
+
+[pre-push hook]
+├─ Validate all DELEGATE files in artifacts/
+├─ Validate YAML syntax
+├─ Validate required fields
+└─ BLOCK if invalid
+
+DELEGATE Committed & Pushed
+    ↓
+Agent Executes
+    ↓
+HANDBACK Created
+    ↓
+[pre-commit hook]
+├─ Validate YAML syntax
+├─ Validate required fields: task_id, status, deliverables, tests, quality_score
+├─ Validate status value: complete|failed|partial|blocked
+└─ BLOCK if invalid
+
+[commit-msg hook]
+├─ Validate HANDBACK block if present in message
+├─ Validate all required fields present
+└─ BLOCK if invalid
+
+[pre-push hook]
+├─ Validate all HANDBACK files in artifacts/
+├─ Validate YAML syntax
+├─ Validate required fields
+└─ BLOCK if invalid
+
+HANDBACK Committed & Pushed
+    ↓
+Quality Engineer Reviews
+    ↓
+Metrics Recorded
+```
+
+### Role Responsibilities for Enforcement
+
+**Orchestrator:**
+- Creates DELEGATE with all required fields
+- Ensures YAML syntax is valid
+- Ensures task_id format is correct
+- Ensures scope, plan, success_criteria are clear
+
+**Agent (Engineer, Senior Engineer, etc.):**
+- Reads and validates DELEGATE before executing
+- Creates HANDBACK with all required fields
+- Ensures YAML syntax is valid
+- Ensures status value is valid (complete|failed|partial|blocked)
+- Ensures quality_score is honest (0-100)
+- Ensures deliverables match scope
+
+**Quality Engineer:**
+- Validates HANDBACK structure
+- Verifies deliverables match scope
+- Checks test results
+- Assesses code quality
+- Scores using formula
+- Provides model assessment feedback
+
+**All Contributors:**
+- Run hooks before committing
+- Document bypass reason if emergency bypass needed
+- Create follow-up task to fix root cause
+- Re-enable hooks after emergency bypass
+
+### Full Documentation
+
+For comprehensive enforcement documentation, see:
+- **[docs/SDLC-HOOKS.md](../SDLC-HOOKS.md)** — Complete hook reference
+- **[docs/WORKFLOW.md](../WORKFLOW.md)** — Full SDLC lifecycle with 7 gates
+- **[docs/TROUBLESHOOTING.md](../TROUBLESHOOTING.md)** — Troubleshooting guide
+- **[docs/BYPASS-PROCEDURES.md](../BYPASS-PROCEDURES.md)** — Emergency bypass procedures
+
+---
+
 ## Update Log
 
 - **2026-04-19:** Initial AGENTS.md created (vendor-neutral) during {service-name}/{example-service}/{example-service} security hardening cycle.
 - **2026-04-24:** Added Model Engineer role (Phase 2C) with autonomous optimization feedback loop. QE now provides model_assessment feedback. Orchestrator applies Model Engineer recommendations for continuous cost/quality improvement.
 - **2026-05-09:** Added Protocol Compliance Expectations section (Week 4). Per-role DELEGATE/HANDBACK/Metrics/Escalation protocol responsibilities defined. Cross-references to ORCHESTRATION-PROTOCOL.md added.
+- **2026-05-16:** Added Git Hook Workflow section documenting pre-commit hook checks, bypass procedures, and installation. Added Workflow Enforcement Points section covering all three git hooks and their integration with the DELEGATE/HANDBACK protocol. Cross-references to docs/SDLC-HOOKS.md, docs/WORKFLOW.md, docs/TROUBLESHOOTING.md, and docs/BYPASS-PROCEDURES.md.
 - **Recommendation:** Review this guide quarterly and update tier assignments based on new model releases and Model Engineer recommendation trends.
