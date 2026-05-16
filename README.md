@@ -406,6 +406,176 @@ The Orchestrator will pick it up and delegate to the Engineer.
 
 ---
 
+## 🔧 Harness Implementations
+
+The framework ships four harness renderers that install agents and skills into platform-specific directories. Choose the harness that matches your AI coding tool.
+
+### Comparison Table
+
+| Feature | π.dev | OpenCode | Claude Code | Copilot CLI |
+|---------|:-----:|:--------:|:-----------:|:-----------:|
+| **Agents rendered** | ⚠️ Static | ✅ Dynamic | ✅ Dynamic | ⚠️ Legacy |
+| **Skills rendered** | ❌ None | ✅ 14 skills | ✅ 14 skills | ✅ 14 skills |
+| **Managed config** | ⚠️ Static | ✅ opencode.jsonc | ❌ N/A | ❌ N/A |
+| **Global rules** | ⚠️ Static | ✅ AGENTS.md | ❌ N/A | ❌ N/A |
+| **Model mapping** | ⚠️ Stale | ✅ Full provider IDs | ⚠️ Tier names | ❌ N/A |
+| **Uninstall** | ✅ | ✅ | ✅ | ✅ Skills only |
+| **Drift detection** | ✅ | ✅ | ✅ | ✅ |
+| **Foreign file protection** | ⚠️ Partial | ✅ Full | ✅ Full | ✅ Skills |
+| **Install location** | `~/.pi/agent/` | `~/.config/opencode/` | `~/.claude/` | `~/.copilot/skills/` |
+| **Compliance** | ⚠️ Low-Medium | ✅ High | ✅ Medium-High | ✅ Medium |
+
+### OpenCode Harness (Recommended)
+
+**Best for:** OpenCode users. Most complete implementation with full agent + skill rendering, managed config, and global rules.
+
+```bash
+# Install
+make install-opencode
+
+# Verify
+make status-opencode
+
+# Full validation (status + JSON schema check)
+make validate-opencode
+
+# Uninstall (removes agentic-engineers configs only)
+make uninstall-opencode
+```
+
+**What gets installed:**
+- `~/.config/opencode/opencode.jsonc` — Managed config (compaction, permissions, model registry)
+- `~/.config/opencode/AGENTS.md` — Global rules (queue protocol, mandatory constraints)
+- `~/.config/opencode/agents/*.md` — 8 specialized agents with OpenCode frontmatter
+- `~/.config/opencode/skills/*/` — 14 reusable skills
+
+**Usage:**
+```
+@orchestrator  # Invoke orchestrator agent
+@engineer      # Invoke engineer agent
+/skill         # Load a skill via the skill tool
+```
+
+**Known limitations:**
+- Model IDs are hardcoded for the `github-copilot/` provider. Users with `anthropic/` provider need different IDs.
+- `docs/AGENTS.md` table parsing is sensitive to formatting changes.
+
+**See:** [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md)
+
+---
+
+### Claude Code Harness
+
+**Best for:** Claude Code users. Renders all 8 agents and 14 skills with Claude Code-compatible frontmatter.
+
+```bash
+# Install
+make install-claude
+
+# Status
+bash renderer/scripts/render-claude.sh "$PWD" ~/.claude --status
+
+# Uninstall
+make uninstall-claude
+```
+
+**What gets installed:**
+- `~/.claude/agents/*.md` — 8 specialized agents (Claude Code subagent format)
+- `~/.claude/skills/*/` — 14 reusable skills
+
+**Usage:**
+```
+@engineer      # Invoke engineer agent
+@orchestrator  # Invoke orchestrator
+```
+
+**Known limitations:**
+- Model mapping uses tier names (`haiku`, `sonnet`, `opus`) rather than version-specific IDs.
+- No dedicated install documentation (see `docs/INSTALL.md` for basics).
+- Model/description metadata comes from source frontmatter, not the canonical `docs/AGENTS.md` table.
+
+---
+
+### Copilot CLI Harness
+
+**Best for:** GitHub Copilot CLI users. Skills only — Copilot CLI does not support custom agents.
+
+```bash
+# Install
+make install-copilot
+
+# Status
+bash renderer/scripts/render-copilot.sh "$PWD" ~/.copilot --status
+
+# Uninstall
+make uninstall-copilot
+```
+
+**What gets installed:**
+- `~/.copilot/skills/*/` — 14 reusable skills
+
+**Usage:**
+Skills are available via the Copilot CLI skill invocation mechanism. Custom agents are not supported by this platform.
+
+**Known limitations:**
+- Skills only — no agent rendering.
+- No dedicated install documentation.
+- The `render-copilot-agents.py` script exists but is not invoked by the root Makefile and may not be compatible with the current Copilot CLI agent format.
+
+---
+
+### π.dev Harness
+
+**Best for:** π.dev users. Installs a static system prompt, agent context, and settings.
+
+```bash
+# Install
+make install-pi
+
+# Status
+make status  # includes π.dev status
+
+# Uninstall
+make uninstall-pi
+```
+
+**What gets installed:**
+- `~/.pi/agent/SYSTEM.md` — System prompt (replaces π.dev default)
+- `~/.pi/agent/AGENTS.md` — Agent role definitions
+- `~/.pi/agent/settings.json` — Model and UI settings
+- `~/.pi/agent/pi.yml` — Sub-agent orchestration config (speculative)
+- `~/.pi/agent/SUB_AGENT_SETUP.md` — Usage documentation
+
+**Usage:**
+```bash
+cd /your/project
+pi  # π.dev loads SYSTEM.md as system prompt automatically
+```
+
+**Known limitations:**
+- Source files in `renderer/pi-dev-src/` are manually maintained and may be stale (uses older model IDs, documents 9 roles vs. the canonical 8).
+- Sub-agent routing in `pi.yml` is speculative — not verified against the π.dev runtime API.
+- `settings.json` packages/extensions/skills fields are unverified.
+- Requires `pyyaml` Python package.
+
+**See:** [renderer/PI-DEV-RENDERER.md](renderer/PI-DEV-RENDERER.md)
+
+---
+
+### Recommended Use Cases
+
+| Scenario | Recommended Harness |
+|----------|-------------------|
+| Using OpenCode as your AI coding tool | **OpenCode** |
+| Using Claude Code (Anthropic's CLI) | **Claude Code** |
+| Using GitHub Copilot CLI | **Copilot CLI** |
+| Using π.dev | **π.dev** |
+| Want the most complete implementation | **OpenCode** |
+| Want skills only (minimal footprint) | **Copilot CLI** |
+| Using multiple tools | Run multiple harnesses — they install to separate directories |
+
+---
+
 ## 📦 Installation Details
 
 ### Copilot
