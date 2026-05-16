@@ -1,0 +1,108 @@
+// agentic-engineers OpenCode configuration
+// Integrates git hooks with OpenCode commands for SDLC enforcement
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [".opencode/AGENTS.md"],
+  "default_agent": "orchestrator",
+  "model": "github-copilot/claude-haiku-4.5",
+  
+  // Compaction settings for token efficiency
+  "compaction": {
+    "auto": true,
+    "reserved": 30000
+  },
+
+  // Permission model for tool access
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "task": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "webfetch": "allow"
+  },
+
+  // Agent configuration
+  "agent": {
+    "orchestrator": {
+      "model": "github-copilot/claude-haiku-4.5"
+    }
+  },
+
+  // OpenCode commands for SDLC workflow
+  "command": {
+    "sdlc-check": {
+      "description": "Validate SDLC workflow compliance — check queue, DELEGATEs, and HANDBACKs",
+      "agent": "orchestrator",
+      "subtask": true
+    },
+    "hooks-install": {
+      "description": "Install git enforcement hooks (core.hooksPath = .githooks)",
+      "agent": "orchestrator"
+    },
+    "queue-status": {
+      "description": "Review pending DELEGATEs and HANDBACKs in the queue",
+      "agent": "orchestrator",
+      "subtask": true
+    }
+  },
+
+  // Provider configuration (GitHub Copilot)
+  "provider": {
+    "github-copilot": {
+      "models": {
+        "claude-opus-4.6": {
+          "id": "claude-opus-4.6",
+          "name": "Claude Opus 4.6",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000005,
+            "output": 0.000025,
+            "cache_read": 0.0000005,
+            "cache_write": 0.00000625
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 128000
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-haiku-4.5": {
+          "id": "claude-haiku-4.5",
+          "name": "Claude Haiku 4.5",
+          "family": "claude",
+          "release_date": "2025-04-01",
+          "attachment": false,
+          "reasoning": false,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.0000008,
+            "output": 0.000004,
+            "cache_read": 0.0000001,
+            "cache_write": 0.000001
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text"],
+            "output": ["text"]
+          },
+          "status": "active"
+        }
+      }
+    }
+  }
+}

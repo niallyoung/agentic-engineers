@@ -37,13 +37,8 @@ if [ "$TOOL" = "bash" ]; then
   fi
 
   # Block modifications to global enforcement infrastructure
-  if echo "$CMD" | grep -qE '(rm|mv|cp.*>)\s+.*\.github/hooks/'; then
-    deny "BLOCKED: Cannot modify .github/hooks/ — enforcement infrastructure is protected."
-  fi
-
-  # Block modifications to {service-name} repo
-  if echo "$CMD" | grep -qE '(rm|mv)\s+.*{service-name}/'; then
-    deny "BLOCKED: Cannot modify {service-name} — enforcement infrastructure is protected."
+  if echo "$CMD" | grep -qE '(rm|mv|cp.*>)\s+.*\.githooks/'; then
+    deny "BLOCKED: Cannot modify .githooks/ — enforcement infrastructure is protected."
   fi
 
   # Prompt on force push
@@ -55,11 +50,8 @@ fi
 # Block edits to hook and guard files
 if [ "$TOOL" = "edit" ] || [ "$TOOL" = "create" ]; then
   FILEPATH=$(echo "$ARGS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('path',''))" 2>/dev/null || echo "")
-  if echo "$FILEPATH" | grep -qE '\.github/hooks/'; then
-    deny "BLOCKED: Cannot edit .github/hooks/ files — enforcement infrastructure is protected."
-  fi
-  if echo "$FILEPATH" | grep -qE '{service-name}/(hooks|scripts)/'; then
-    deny "BLOCKED: Cannot edit {service-name} enforcement files."
+  if echo "$FILEPATH" | grep -qE '\.githooks/'; then
+    deny "BLOCKED: Cannot edit .githooks/ files — enforcement infrastructure is protected."
   fi
 fi
 

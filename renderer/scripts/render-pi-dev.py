@@ -119,6 +119,52 @@ class PiDevRenderer:
             print(f"❌ JSON validation failed for {filename}: {e}")
             return False
     
+    def _install_git_hooks(self) -> bool:
+        """Install git hooks from source repo to enforce SDLC compliance
+        
+        Pi.dev harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
+        Returns True if hooks were installed or already present, False if not found.
+        """
+        import subprocess
+        
+        # Try to find the repo root by looking for .git directory
+        repo_root = self.src_dir
+        while repo_root != repo_root.parent:
+            if (repo_root / ".git").exists():
+                break
+            repo_root = repo_root.parent
+        
+        if not (repo_root / ".git").exists():
+            print(f"⚠️  Git repository not found (expected .git in {repo_root})")
+            return False
+        
+        hooks_dir = repo_root / ".githooks"
+        if not hooks_dir.exists():
+            print(f"⚠️  Git hooks not found at {hooks_dir}")
+            return False
+        
+        try:
+            # Configure git to use .githooks directory
+            subprocess.run(
+                ["git", "-C", str(repo_root), "config", "core.hooksPath", ".githooks"],
+                check=True,
+                capture_output=True
+            )
+            
+            # Make all hooks executable
+            for hook_file in hooks_dir.glob("*"):
+                if hook_file.is_file():
+                    hook_file.chmod(0o755)
+            
+            print(f"✅ Git hooks installed (core.hooksPath = .githooks)")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️  Failed to configure git hooks: {e}")
+            return False
+        except Exception as e:
+            print(f"⚠️  Error installing git hooks: {e}")
+            return False
+    
     def render_all(self) -> int:
         """Render all config files"""
         
@@ -149,9 +195,15 @@ class PiDevRenderer:
         self.validate_yaml("pi.yml")
         self.validate_json("settings.json")
         
+        # Install git hooks from source repo
+        print(f"\n{'='*70}")
+        print("Installing git hooks...\n")
+        
+        hooks_installed = self._install_git_hooks()
+        
         print(f"\n{'='*70}")
         print(f"Rendering complete!")
-        print(f"✅ {rendered} files rendered, ❌ {errors} errors")
+        print(f"✅ {rendered} files rendered, ❌ {errors} errors, hooks: {'✅' if hooks_installed else '⚠️'}")
         print(f"{'='*70}\n")
         
         if errors == 0:

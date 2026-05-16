@@ -124,6 +124,76 @@ The queue-first model ensures all work is tracked, routable, optimizable, and au
 
 ---
 
+## SDLC ENFORCEMENT HOOKS (MANDATORY)
+
+**Git hooks are required for all contributors.** They enforce SPEC.md compliance and quality gates at commit and push time.
+
+### What Hooks Enforce
+
+| Hook | Enforces | Severity |
+|------|----------|----------|
+| **pre-commit** | SPEC compliance (no external scripts, cron files, process execution) | ❌ BLOCK |
+| **pre-commit** | Secret detection (API keys, passwords, tokens) | ❌ BLOCK |
+| **pre-commit** | YAML/JSON validity | ❌ BLOCK |
+| **commit-msg** | Message format and length | ❌ BLOCK |
+| **commit-msg** | DELEGATE/HANDBACK protocol compliance | ❌ BLOCK |
+| **pre-push** | Agent YAML frontmatter validity | ❌ BLOCK |
+| **pre-push** | Test suite execution | ⚠️ WARN |
+| **pre-push** | Documentation consistency | ❌ BLOCK |
+
+### Installation
+
+Hooks are installed automatically by `make install`:
+
+```bash
+make install
+```
+
+Or manually:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
+```
+
+### Bypassing Hooks
+
+Bypassing hooks requires **documented justification** and is only permitted for genuine emergencies:
+
+```bash
+# Bypass SPEC/secret checks
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"
+
+# Bypass all pre-commit checks
+SKIP_HOOKS=1 git commit -m "emergency: reason"
+
+# Bypass pre-push checks
+SKIP_HOOKS=1 git push
+```
+
+**Every bypass MUST include:**
+- Documented reason (what's the emergency?)
+- Approver name (who authorized this?)
+- Follow-up task (how will this be fixed?)
+
+**Never bypass for:**
+- Lazy commits that violate SPEC
+- Avoiding code review
+- Skipping tests
+- Committing secrets
+- Routine work
+
+### Full Reference
+
+See [docs/SDLC-HOOKS.md](SDLC-HOOKS.md) for comprehensive hook documentation including:
+- Complete list of all checks
+- Exact error messages
+- Troubleshooting guide (30+ scenarios)
+- Bypass procedures and authorization
+- Audit trail requirements
+
+---
+
 ## DOG-FOOD PRINCIPLE: Self-Improving Through Continuous Feedback
 
 **Core Design Principle (New in Phase 5.10):**
@@ -965,58 +1035,46 @@ All agent-to-agent communication uses DELEGATE/HANDBACK markup:
 
 ---
 
-## Quality Gates (Phase 6)
+## SDLC Enforcement Hooks
 
-The pre-commit hook integrates with the Quality Engineer agent to block commits on quality failures.
+Git hooks enforce SPEC.md compliance and quality gates at commit and push time. Hooks are standalone bash scripts in `.githooks/` — they do **not** delegate to agents via the queue (hooks must be synchronous and fast).
 
-### Flow
+### Hook Summary
 
-1. Developer runs `git commit`
-2. Pre-commit hook (`.githooks/pre-commit`) writes a quality-gate DELEGATE to `artifacts/queue/incoming/`
-3. Orchestrator priority-routes to Quality Engineer (Sonnet, medium effort)
-4. Quality Engineer runs Tier 1/2 checks, returns HANDBACK with `assessment: PASS|FAIL`
-5. Hook evaluates `assessment`: exit 0 (allow) or exit 1 (block + error details)
-6. Infrastructure failures → warn only, never block commit
+| Hook | Trigger | Enforces | Severity |
+|------|---------|----------|----------|
+| **pre-commit** | Before `git commit` | SPEC compliance, secrets, YAML validity, DELEGATE/HANDBACK format | ❌ BLOCK |
+| **commit-msg** | After commit message | Message format (≥10 chars), SKIP_HOOKS documentation | ❌ BLOCK |
+| **pre-push** | Before `git push` | Agent YAML frontmatter, test suite, protected branch warning | ❌ BLOCK / ⚠️ WARN |
 
-### Quality Check Tiers
+### Installation
 
-| Tier | Trigger | Checks | Timeout |
-|------|---------|--------|---------|
-| **Tier 1** | All commits | lint, type-check, secret detection, YAML validity | <20s |
-| **Tier 2** | Code files staged (`.py`, `.ts`, `.js`, `.go`) | unit tests (changed modules), coverage delta | <60s |
-| **Tier 3** | `main` branch or `QG_TIER=3` flag | full test suite, integration tests, e2e | <300s |
-
-### HANDBACK Evaluation Logic
-
-```
-assessment: PASS    → allow commit (exit 0)
-assessment: FAIL    → block commit (exit 1) + display quality_gate_failures
-assessment: <other> → warn + allow commit (exit 0)
-HANDBACK missing after 90s timeout → warn + allow commit (exit 0)
-```
-
-### SPEC Exemption
-
-Pre-commit hooks are classified as **build/setup-time operations** (same exemption as `renderer/scripts/`, `make install`). The hook does NOT invoke agents directly — it writes a DELEGATE YAML to the queue and polls for the HANDBACK result. All quality evaluation logic remains inside the agent system.
-
-### Activation
+Hooks are installed automatically by `make install`:
 
 ```bash
-make install-hooks   # activate quality gate pre-commit hook
-make verify-hooks    # validate hooks are installed correctly
+make install
+# or manually:
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
 ```
 
 ### Emergency Bypass
 
 ```bash
-git commit --no-verify   # bypass all hooks (emergencies only; logged in span data)
-QG_ENABLED=false git commit  # disable quality gate for this commit (warns)
-QG_TIMEOUT=30 git commit     # reduce timeout for local development
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"  # bypass DELEGATE/HANDBACK validation only
+SKIP_HOOKS=1 git commit -m "emergency: reason"                 # bypass all pre-commit checks
+SKIP_HOOKS=1 git push                                          # bypass pre-push checks
 ```
 
-### Reference
+See `docs/BYPASS-PROCEDURES.md` for full bypass procedures and authorization requirements.
 
-Full architecture specification: `docs/architecture/quality-gates.md`
+### Full Reference
+
+See `docs/SDLC-HOOKS.md` for comprehensive hook documentation including:
+- Full check details and error messages
+- Troubleshooting guide
+- Cross-harness support matrix
+- Bypass procedures
 
 ---
 
@@ -1033,7 +1091,7 @@ Full architecture specification: `docs/architecture/quality-gates.md`
 | Artifact Indexing | Model Engineer SKILL | Generate artifacts/index.json | ✅ Phase 5.10 |
 | Cost Optimization | Model Engineer | Feedback analysis + ranking | ✅ Active |
 | Escalation Handling | Orchestrator + Lead Engineer | Per decision tree + unblock | ✅ Active |
-| **Quality Gate** | **Pre-commit hook + Quality Engineer** | **DELEGATE → HANDBACK evaluation → block/allow** | **📋 Phase 6** |
+| **SDLC Hooks** | **All contributors** | **`.githooks/` bash scripts** | **✅ Active** |
 
 ---
 
@@ -1085,6 +1143,13 @@ Root-level duplicate directories (`orchestration/`, `skills/`, `config/`) were r
 Import statements use: `from src.orchestration.agents import ...`
 
 For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITORY-STRUCTURE.md).
+
+---
+
+## Update Log
+
+- **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements.
+- **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, bypass procedures, and references to docs/SDLC-HOOKS.md.
 
 ---
 

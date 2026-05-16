@@ -289,6 +289,64 @@ Status: READY FOR PRODUCTION
 
 ---
 
+## 🔒 SDLC Enforcement
+
+The framework enforces quality and compliance through **3 git hooks** that validate code at commit and push time.
+
+### Git Hooks Overview
+
+| Hook | Trigger | Enforces |
+|------|---------|----------|
+| **pre-commit** | Before `git commit` | SPEC.md compliance, secret detection, YAML validity |
+| **commit-msg** | After commit message | Message format, DELEGATE/HANDBACK protocol |
+| **pre-push** | Before `git push` | Agent YAML, tests, documentation, protocol compliance |
+
+### Quick Installation
+
+Hooks are installed automatically by `make install`:
+
+```bash
+make install          # Installs hooks + renders agents/skills
+```
+
+Or manually:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
+```
+
+### Quick Bypass Reference
+
+**For genuine emergencies only:**
+
+```bash
+# Bypass SPEC/secret checks only
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"
+
+# Bypass all pre-commit checks
+SKIP_HOOKS=1 git commit -m "emergency: reason"
+
+# Bypass pre-push checks
+SKIP_HOOKS=1 git push
+
+# Bypass ALL hooks (strongly discouraged)
+git commit --no-verify -m "message"
+```
+
+**Important:** Every bypass MUST be documented in the commit message with reason and approver.
+
+### Full Documentation
+
+For comprehensive hook documentation, see:
+
+- **[docs/SDLC-HOOKS.md](docs/SDLC-HOOKS.md)** — Complete hook reference with all checks and error messages
+- **[docs/WORKFLOW.md](docs/WORKFLOW.md)** — Full SDLC lifecycle with 7 enforcement gates
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — Troubleshooting guide for 30+ scenarios
+- **[docs/BYPASS-PROCEDURES.md](docs/BYPASS-PROCEDURES.md)** — Emergency bypass procedures and authorization
+
+---
+
 ## 📁 Repository Structure
 
 ```
