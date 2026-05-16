@@ -1,6 +1,6 @@
 .PHONY: help install install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        uninstall-opencode-legacy status status-opencode \
+        status status-opencode \
         verify validate-opencode clean render-claude render-copilot render-pi render-all
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -21,7 +21,6 @@ help:
 	@echo "  uninstall-pi        Remove from ~/.pi/ (managed only)"
 	@echo "  uninstall-all       All four (including ~/.config/opencode/)"
 	@echo "  uninstall-opencode  Remove from ~/.config/opencode/ (agentic-engineers only)"
-	@echo "  uninstall-opencode-legacy  Remove legacy install if relocated (managed markers only)"
 	@echo ""
 	@echo "Render targets (generate dist/ from source):"
 	@echo "  render-claude       Generate dist/claude/ (provider-specific)"
@@ -133,17 +132,6 @@ uninstall-pi: ## Remove from ~/.pi/ (managed only)
 uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only)
 	@echo "🧹 Uninstalling from ~/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --uninstall
-
-uninstall-opencode-legacy: ## Remove managed install from ~/.opencode/ (only if it has our markers)
-	@echo "🧹 Checking for legacy install at ~/.opencode/..."
-	@if [ -d "$(HOME)/.opencode" ] && \
-	   { [ -f "$(HOME)/.opencode/agents/.agentic-engine{service-name}" ] || \
-	     grep -q '_managed_by.*agentic-engineers' "$(HOME)/.opencode/opencode.json" 2>/dev/null || \
-	     grep -q '_managed_by.*agentic-engineers' "$(HOME)/.opencode/opencode.jsonc" 2>/dev/null; }; then \
-		bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.opencode" --uninstall; \
-	else \
-		echo "  ℹ️  No managed agentic-engineers install found at ~/.opencode/ — nothing to do"; \
-	fi
 
 status-opencode: ## Status of ~/.config/opencode/ install
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
