@@ -28,23 +28,13 @@ SKILL_MARKER=".agentic-engine{service-name}"
 # Agents are single files; we use a sidecar manifest to track managed names.
 AGENT_MANIFEST="$DST_AGENTS/.agentic-engine{service-name}"
 
-list_source_skills() {
-	local d
-	for d in "$SRC_SKILLS"/*/; do
-		[ -f "$d/SKILL.md" ] || continue
-		basename "$d"
-	done
-}
-
-list_source_agents() {
-	local f
-	for f in "$SRC_AGENTS"/*-agent.md; do
-		[ -f "$f" ] || continue
-		basename "$f" "-agent.md"
-	done
-}
+# Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 
 # Map "claude-haiku-4-5" → "haiku", "claude-sonnet-4-6" → "sonnet", "claude-opus-4-7" → "opus"
+# Claude Code accepts short tier names rather than fully-qualified provider/model IDs.
+# Note: does not distinguish between minor versions (e.g., sonnet-4-5 vs sonnet-4-6).
 map_model() {
 	case "$1" in
 		*haiku*) echo "haiku" ;;
@@ -54,30 +44,73 @@ map_model() {
 	esac
 }
 
-# Extract a frontmatter field value: extract_fm <file> <key>
-extract_fm() {
-	awk -v key="$2" '
-		/^---$/ { fm = !fm; next }
-		fm && $0 ~ "^"key":" {
-			sub("^"key":[ \t]*", "", $0)
-			sub(/[ \t]+$/, "", $0)
-			print
-			exit
-		}
-	' "$1"
-}
-
-# Strip source frontmatter (everything between first two --- lines), leaving body
-strip_fm() {
+# Parse docs/AGENTS.md canonical agent definitions table.
+# Returns a map of agent_name → "model|effort|description"
+# Reads the markdown table starting with "| Role | Model | Effort"
+# and extracts: role (normalized to lowercase with hyphens), model, effort, and use-when description.
+parse_agents_md() {
+	local agents_file="$1"
+	local agent_name model effort description
+	
+	if [ ! -f "$agents_file" ]; then
+		echo "error: $agents_file not found" >&2
+		return 1
+	fi
+	
+	# Extract table rows (skip header and separator lines)
+	# Table format: | **RoleName** | claude-model-X-Y | effort | $cost | description |
 	awk '
-		/^---$/ { if (++count == 2) { in_body = 1; next } else next }
-		in_body { print }
-	' "$1"
+		/^\| \*\*[A-Za-z]/ {
+			# Extract fields from markdown table row
+			# Split by | and extract fields
+			gsub(/^\| /, "")  # remove leading |
+			gsub(/ \|$/, "")  # remove trailing |
+			
+			# Split by | to get fields
+			n = split($0, fields, "|")
+			if (n < 5) next
+			
+			# Trim whitespace from each field
+			for (i = 1; i <= n; i++) {
+				gsub(/^[ \t]+|[ \t]+$/, "", fields[i])
+			}
+			
+			# Extract role (field 1), model (field 2), effort (field 3), skip cost (field 4), use-when (field 5)
+			role = fields[1]
+			model = fields[2]
+			effort = fields[3]
+			description = fields[5]
+			
+			# Normalize role: remove ** markers, convert to lowercase, replace spaces with hyphens
+			gsub(/\*\*/, "", role)
+			role_lower = tolower(role)
+			gsub(/ /, "-", role_lower)
+			
+			# Normalize model: trim and keep as-is
+			gsub(/^[ \t]+|[ \t]+$/, "", model)
+			
+			# Normalize effort: trim and keep as-is
+			gsub(/^[ \t]+|[ \t]+$/, "", effort)
+			
+			# Normalize description: trim and keep as-is
+			gsub(/^[ \t]+|[ \t]+$/, "", description)
+			
+			# Output: agent_name|model|effort|description
+			if (role_lower && model && effort && description) {
+				print role_lower "|" model "|" effort "|" description
+			}
+		}
+	' "$agents_file"
 }
 
-# Extract Model: line from agent body if frontmatter doesn't have it
-extract_body_model() {
-	grep -m1 -E "^\*?\*?Model\*?\*?:" "$1" 2>/dev/null | sed -E 's/.*[Mm]odel[^:]*:[ *]*//; s/\*+$//; s/[ \t]+$//'
+# Lookup canonical agent metadata from parsed AGENTS.md
+# Usage: lookup_agent_metadata <agent_name> <agents_map_file>
+# Returns: "model|effort|description" or empty if not found
+lookup_agent_metadata() {
+	local agent_name="$1"
+	local agents_map="$2"
+	
+	grep "^${agent_name}|" "$agents_map" | cut -d'|' -f2-
 }
 
 case "$MODE" in
@@ -142,6 +175,23 @@ case "$MODE" in
 			count_s=$((count_s + 1))
 		done
 
+		# 2. Parse canonical agent definitions from docs/AGENTS.md
+		echo "📖 Parsing canonical agent definitions from docs/AGENTS.md..."
+		AGENTS_MD="$REPO_ROOT/docs/AGENTS.md"
+		AGENTS_MAP=$(mktemp)
+		trap "rm -f '$AGENTS_MAP'" EXIT
+		
+		if [ ! -f "$AGENTS_MD" ]; then
+			echo "❌ error: $AGENTS_MD not found" >&2
+			exit 1
+		fi
+		
+		parse_agents_md "$AGENTS_MD" > "$AGENTS_MAP"
+		if [ ! -s "$AGENTS_MAP" ]; then
+			echo "❌ error: failed to parse agent definitions from $AGENTS_MD" >&2
+			exit 1
+		fi
+
 		# 2. Agents: transform frontmatter, write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
 		: > "$AGENT_MANIFEST.tmp"
@@ -160,15 +210,17 @@ case "$MODE" in
 				continue
 			fi
 
-			# Pull description; fallback to first non-empty body line
-			desc=$(extract_fm "$src_file" "description")
-			if [ -z "$desc" ]; then
-				desc=$(strip_fm "$src_file" | awk 'NF{print; exit}')
+			# Lookup canonical metadata from docs/AGENTS.md
+			canonical_metadata=$(lookup_agent_metadata "$name" "$AGENTS_MAP")
+			if [ -z "$canonical_metadata" ]; then
+				echo "  ⚠️  skipping agent $name — not found in docs/AGENTS.md"
+				continue
 			fi
-			# Pull model: frontmatter > body Model: line
-			fm_model=$(extract_fm "$src_file" "model")
-			body_model=$(extract_body_model "$src_file")
-			model_raw="${fm_model:-$body_model}"
+			
+			# Parse canonical metadata: model|effort|description
+			model_raw=$(echo "$canonical_metadata" | cut -d'|' -f1)
+			effort=$(echo "$canonical_metadata" | cut -d'|' -f2)
+			desc=$(echo "$canonical_metadata" | cut -d'|' -f3-)
 			model=$(map_model "$model_raw")
 
 			{
