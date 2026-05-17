@@ -1,7 +1,7 @@
 # Documentation Index
 
-**Last Updated:** 2026-05-17  
-**Total docs:** ~145 files in `docs/`, 17 in `docs/archive/`
+**Last Updated:** 2026-05-18  
+**Total docs:** ~130 files in `docs/`, 3 active archive subdirs + 1 deprecated
 
 ---
 
