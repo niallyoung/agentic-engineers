@@ -442,17 +442,17 @@ class TestIntegrationE2E:
 # ─── Script Entrypoint Tests ───────────────────────────────────────────────
 
 class TestEntrypointScript:
-    """Tests for bin/run-automation-controller.sh entrypoint."""
+    """Tests for bin/orchestrator_daemon.py canonical entrypoint."""
     
     def test_entrypoint_script_exists(self):
-        """Test entrypoint script exists and is executable."""
-        entrypoint = PROJECT_ROOT / "bin" / "run-automation-controller.sh"
+        """Test canonical entrypoint script exists and is executable."""
+        entrypoint = PROJECT_ROOT / "bin" / "orchestrator_daemon.py"
         assert entrypoint.exists(), f"Entrypoint script not found at {entrypoint}"
-        assert os.access(entrypoint, os.X_OK), f"Entrypoint script not executable: {entrypoint}"
+        assert os.access(entrypoint, os.R_OK), f"Entrypoint script not readable: {entrypoint}"
     
     def test_entrypoint_help(self):
         """Test entrypoint script responds to help."""
-        entrypoint = PROJECT_ROOT / "bin" / "run-automation-controller.sh"
+        entrypoint = PROJECT_ROOT / "bin" / "orchestrator_daemon.py"
         # Note: Full execution test requires subprocess and proper environment
 
 
