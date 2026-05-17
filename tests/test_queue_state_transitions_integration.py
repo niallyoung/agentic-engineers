@@ -252,9 +252,143 @@ def test_move_task_error_handling():
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+def test_move_task_delegate_prefixed_filename():
+    """
+    Regression test for the DELEGATE-prefix filename bug.
+    
+    Scenario: filename is 'DELEGATE-opencode-config-validation.yaml'
+              task_id in YAML is '2026-05-17-opencode-config-validation'
+    
+    The old code did `if task_id in task_file` which evaluates:
+        '2026-05-17-opencode-config-validation' in 'DELEGATE-opencode-config-validation.yaml'
+        → False  (date prefix not in filename)
+    
+    The fix: pass filename= explicitly to move_task so it uses the file directly.
+    """
+    temp_dir = tempfile.mkdtemp(prefix="queue_delegate_prefix_")
+    try:
+        queue_manager = QueueManager(queue_dir=temp_dir)
+        
+        # Simulate the real-world scenario: DELEGATE-prefixed filename, date-prefixed task_id
+        task_data = {
+            "handoff_type": "DELEGATE",
+            "task_id": "2026-05-17-opencode-config-validation",
+            "role": "Engineer",
+            "model": "claude-sonnet-4-6",
+            "effort": "medium",
+            "scope": "Validate opencode configuration",
+            "plan": ["Step 1", "Step 2"],
+            "success_criteria": ["Config validated"]
+        }
+        
+        incoming_filename = "DELEGATE-opencode-config-validation.yaml"
+        task_id = "2026-05-17-opencode-config-validation"
+        
+        # Write task to incoming with DELEGATE-prefixed filename
+        incoming_path = queue_manager.incoming_dir / incoming_filename
+        with open(incoming_path, 'w') as f:
+            yaml.dump(task_data, f, default_flow_style=False, sort_keys=False)
+        
+        # Verify old substring search would FAIL (this is the bug)
+        assert task_id not in incoming_filename, (
+            f"Sanity check: '{task_id}' should NOT be a substring of '{incoming_filename}' "
+            f"(this confirms the bug scenario)"
+        )
+        
+        # Fix: pass filename= explicitly — should succeed
+        result = queue_manager.move_task(
+            task_id=task_id,
+            from_state="incoming",
+            to_state="processing",
+            filename=incoming_filename
+        )
+        
+        assert result["success"] is True
+        assert result["moved_from"] == "incoming"
+        assert result["moved_to"] == "processing"
+        assert result["task_id"] == task_id
+        
+        # Verify file moved
+        assert not incoming_path.exists()
+        processing_path = queue_manager.processing_dir / incoming_filename
+        assert processing_path.exists()
+        
+        # Verify audit trail
+        with open(processing_path, 'r') as f:
+            moved_task = yaml.safe_load(f)
+        assert "_audit_trail" in moved_task
+        assert moved_task["_audit_trail"][0]["from_state"] == "incoming"
+        assert moved_task["_audit_trail"][0]["to_state"] == "processing"
+        
+        # Now move processing → done using filename from move_result
+        processing_filename = result["filename"]
+        result2 = queue_manager.move_task(
+            task_id=task_id,
+            from_state="processing",
+            to_state="done",
+            filename=processing_filename,
+            metadata={"decision": "PROCEED", "status": "complete"}
+        )
+        assert result2["success"] is True
+        
+        done_path = queue_manager.done_dir / f"{task_id}-PROCEED.yaml"
+        assert done_path.exists()
+        
+        print("✓ Regression test passed: DELEGATE-prefixed filename with date-prefixed task_id")
+    
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def test_move_task_error_message_shows_available_files():
+    """
+    Test that FileNotFoundError now includes helpful diagnostic info:
+    available files list and a hint about filename vs task_id mismatch.
+    """
+    temp_dir = tempfile.mkdtemp(prefix="queue_error_msg_")
+    try:
+        queue_manager = QueueManager(queue_dir=temp_dir)
+        
+        # Create a file with DELEGATE prefix
+        task_data = {"handoff_type": "DELEGATE", "task_id": "2026-05-17-foo", "role": "Engineer"}
+        with open(queue_manager.incoming_dir / "DELEGATE-foo.yaml", 'w') as f:
+            yaml.dump(task_data, f)
+        
+        # Try to find by task_id (old-style, will fail because date prefix mismatch)
+        try:
+            queue_manager.move_task(
+                task_id="2026-05-17-foo",
+                from_state="incoming",
+                to_state="processing"
+                # No filename= — old-style substring search
+            )
+            assert False, "Should have raised FileNotFoundError"
+        except FileNotFoundError as e:
+            error_msg = str(e)
+            # New error message should include available files and a hint
+            assert "DELEGATE-foo.yaml" in error_msg, f"Error should list available files, got: {error_msg}"
+            assert "Hint" in error_msg, f"Error should include a hint, got: {error_msg}"
+        
+        # Now try with explicit filename — should succeed
+        result = queue_manager.move_task(
+            task_id="2026-05-17-foo",
+            from_state="incoming",
+            to_state="processing",
+            filename="DELEGATE-foo.yaml"
+        )
+        assert result["success"] is True
+        
+        print("✓ Error message test passed: helpful diagnostics in FileNotFoundError")
+    
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     test_move_task_integration_incoming_to_processing()
     test_move_task_integration_processing_to_done()
     test_move_task_integration_full_workflow()
     test_move_task_error_handling()
+    test_move_task_delegate_prefixed_filename()
+    test_move_task_error_message_shows_available_files()
     print("\n✅ All integration tests passed!")

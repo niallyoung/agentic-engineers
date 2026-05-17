@@ -183,6 +183,31 @@ json.loads(content)
   done
 fi
 
+# ─── Section: OpenCode harness config validation ─────────────────────────────
+# Security-critical: opencode.jsonc errors have broken the OpenCode CLI twice
+# (see docs/OPENCODE-CONFIG-INVESTIGATION.md). When the file is staged, run
+# the full schema validator (src/opencode/config_validator.py) and BLOCK the
+# commit on any ERROR finding. Warnings are surfaced but do not block.
+#
+# Bypass: BYPASS_HOOK_VALIDATION=true git commit  (emergency only)
+if git diff --cached --name-only | grep -qE '^opencode\.jsonc$'; then
+  if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
+    warn "BYPASS_HOOK_VALIDATION=true — skipping opencode.jsonc validation"
+  elif [ -f "$REPO_ROOT_HOOK/src/opencode/config_validator.py" ] && command -v python3 >/dev/null 2>&1; then
+    echo "🔒 Validating staged opencode.jsonc…"
+    # Validate the STAGED content (not the working tree) so amendments are caught.
+    staged_tmp="$(mktemp -t opencode.jsonc.staged.XXXXXX)"
+    trap "rm -f '$staged_tmp'" EXIT
+    git show ":opencode.jsonc" > "$staged_tmp" 2>/dev/null || true
+    if ! ( cd "$REPO_ROOT_HOOK" && python3 -m src.opencode.config_validator "$staged_tmp" ); then
+      fail "opencode.jsonc validation failed — see errors above (see docs/OPENCODE-CONFIG-COMMON-MISTAKES.md)"
+    fi
+  else
+    warn "opencode.jsonc staged but validator not available — install src/opencode/config_validator.py"
+  fi
+fi
+# ─── End: OpenCode harness config validation ─────────────────────────────────
+
 # ── 4. No bypass markers in committed code ────────────────────────────────────
 for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|sh|bash)$' || true); do
   [ -f "$f" ] || continue
