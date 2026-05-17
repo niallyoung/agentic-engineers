@@ -1040,36 +1040,6 @@ class OrchestratorAgent(Agent):
         
         return metrics
 
-        """
-        Execute one polling cycle: check for incoming tasks and process them.
-
-        Unlike ``poll_and_process()`` (which loops until idle), this method
-        runs *exactly one* cycle — inspect the queue, process all currently
-        available tasks, and return.  Callers (tests, schedulers, external
-        loops) can call it repeatedly as needed.
-
-        When ``self.agent_invoker`` is set (AgentInvoker instance), tasks are
-        delegated to real agent subprocesses via ``invoke_agent()``.
-        Otherwise the existing stub-based ``agent.execute()`` path is used.
-
-        Returns:
-            Dict with keys:
-                - tasks_processed: int
-                - tasks_success: int
-                - tasks_escalated: int
-        """
-        incoming_tasks = self.queue_manager.list_incoming_tasks()
-
-        for filename in incoming_tasks:
-            self._process_task(filename)
-            self.last_task_time = time.time()
-
-        return {
-            "tasks_processed": self.tasks_processed,
-            "tasks_success": self.tasks_success,
-            "tasks_escalated": self.tasks_escalated,
-        }
-
     def run_poll_cycle(self) -> Dict:
         """
         Execute a single polling cycle — list all incoming tasks and process each.
@@ -1160,15 +1130,7 @@ class OrchestratorAgent(Agent):
                 self._handle_quality_escalation(filename, delegate, validation)
                 return
 
-            if validation.routing_decision == RoutingDecision.LOW:
-                # Route to Principal Engineer for redesign
-                print(f"   🔄 LOW quality score ({validation.quality_score}/100) — routing to Principal Engineer")
-                role = "principal_engineer"
-            elif validation.routing_decision == RoutingDecision.MEDIUM:
-                # Route to Lead Engineer for refinement
-                print(f"   🔄 MEDIUM quality score ({validation.quality_score}/100) — routing to Lead Engineer")
-                role = "lead_engineer"
-            # HIGH: proceed with original role as-is
+            role = self._quality_override_role(role, validation)
             
             # 3. Move to processing queue using move_task (atomic with audit trail)
             move_result = self.queue_manager.move_task(
@@ -1321,6 +1283,25 @@ class OrchestratorAgent(Agent):
             # Archive failed task for debugging
             self.queue_manager.archive_task(filename)
             print(f"   ✓ Archived for debugging")
+
+    def _quality_override_role(self, role: str, validation) -> str:
+        """
+        Override the task role based on pre-routing quality validation.
+
+        - LOW quality  → principal_engineer (redesign required)
+        - MEDIUM quality → lead_engineer (refinement required)
+        - HIGH quality → keep original role
+
+        Returns the (possibly overridden) role string.
+        """
+        if validation.routing_decision == RoutingDecision.LOW:
+            print(f"   🔄 LOW quality score ({validation.quality_score}/100) — routing to Principal Engineer")
+            return "principal_engineer"
+        if validation.routing_decision == RoutingDecision.MEDIUM:
+            print(f"   🔄 MEDIUM quality score ({validation.quality_score}/100) — routing to Lead Engineer")
+            return "lead_engineer"
+        # HIGH: proceed with original role as-is
+        return role
 
     def _handle_quality_escalation(self, filename: str, delegate: Dict, validation) -> None:
         """

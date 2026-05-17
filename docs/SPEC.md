@@ -1146,12 +1146,73 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 
 ---
 
+## Phase 3: Token Visibility & Budget Checking (Complete)
+
+**Status:** ✅ Complete as of 2026-05-17
+
+### Token Visibility Requirements
+
+1. **Real-time token tracking** across all agents and subagents in a session
+   - Orchestrator sees only ~27% of actual token usage
+   - Subagents account for ~73% of usage
+   - Tracking must aggregate across all nested sessions
+
+2. **CLI commands** for token visibility:
+   - `opencode-tokens --session <id>` — Usage by agent
+   - `opencode-budget --session <id> --limit N` — Budget status
+   - `opencode-subagents --session <id>` — List all subagents
+
+3. **Database queries** via SQLite at `~/.local/share/opencode/opencode.db`:
+   - Session hierarchy (parent_id relationships)
+   - Token counts per session
+   - Depth calculation via recursive CTE
+
+### Budget Checking Requirements
+
+1. **Budget limits** configurable per session or per task
+2. **Alert thresholds** (e.g., alert at 80% consumed)
+3. **Graceful degradation** — agents report `status: blocked` when approaching limit
+4. **DELEGATE budget field** — optional `budget_tokens` field in DELEGATE
+
+### Cost Attribution Requirements
+
+1. **Per-role cost tracking** — costs attributed to specific agent roles
+2. **Per-task cost tracking** — costs linked to task_id for audit trail
+3. **Shadow mode** — dry-run delegation that estimates costs without executing
+4. **Token cost alerts** — configurable alerts on cost thresholds
+
+### Production Deployment Requirements
+
+1. **AutomationController** — continuous polling loop with signal handling
+2. **4 deployment scenarios** — standalone, systemd, Docker, Kubernetes
+3. **Health monitoring** — queue state visibility, stuck task detection
+4. **Metrics export** — Prometheus-compatible metrics for Grafana dashboards
+
+### Implementation
+
+- `opencode-tokens` CLI: `src/tools/opencode_tokens.py`
+- `opencode-budget` CLI: `src/tools/opencode_budget.py`
+- `opencode-subagents` CLI: `src/tools/opencode_subagents.py`
+- AutomationController: `src/orchestration/agents/automation_controller.py`
+- Production entrypoint: `bin/run-automation-controller.sh`
+
+### Documentation
+
+- [docs/QUICK-START-TOKEN-VISIBILITY.md](QUICK-START-TOKEN-VISIBILITY.md)
+- [docs/QUICK-START-BUDGET-CHECKING.md](QUICK-START-BUDGET-CHECKING.md)
+- [docs/QUICK-START-PRODUCTION-DEPLOYMENT.md](QUICK-START-PRODUCTION-DEPLOYMENT.md)
+- [docs/TOKEN-COST-MONITORING.md](TOKEN-COST-MONITORING.md)
+- [docs/USAGE-BUDGET-MANAGER.md](USAGE-BUDGET-MANAGER.md)
+
+---
+
 ## Update Log
 
 - **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements.
 - **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, bypass procedures, and references to docs/SDLC-HOOKS.md.
+- **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section. Documents token tracking requirements, budget checking requirements, cost attribution, production deployment requirements, and implementation references.
 
 ---
 
-**Document Status:** Specification complete. Implementation in progress (Phase 5.10/6).  
+**Document Status:** Specification current. Phase 3 complete. Phase 6 span capture in progress.  
 **Maintenance:** Update when agent roles, models, routing rules, or SKILLS change.

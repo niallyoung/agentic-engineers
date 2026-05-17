@@ -1,44 +1,53 @@
-# Agentic Engineers: Production Multi-Agent Orchestration Framework
+# Agentic Engineers
 
-A complete, production-ready multi-agent system with 8 specialized roles, queue-based delegation, quality gates, and autonomous feedback loops. All work flows through a **SPEC-enforced queue protocol** with full observability and cost optimization.
+A production-ready multi-agent orchestration framework with 8 specialized AI roles, queue-based delegation, quality gates, and autonomous cost optimization feedback loops.
 
-**Status:** ✅ **PRODUCTION READY** — All 6 phases complete, 1047+ tests passing, end-to-end queue protocol verified.
+**Status:** ✅ **PRODUCTION READY** — Phases 1–6 complete, 1047+ tests passing, end-to-end queue protocol verified.
 
 ---
 
-## 🎯 Overview
+## What It Is
 
-**Agentic Engineers** is a framework for building autonomous, self-improving multi-agent systems. It solves the orchestration problem:
+**Agentic Engineers** solves the multi-agent coordination problem:
 
-- **How do you coordinate 8+ specialized AI agents** without creating spaghetti code?
-- **How do you enforce quality gates** across all agents consistently?
+- **How do you coordinate 8+ specialized AI agents** without spaghetti code?
+- **How do you enforce quality gates** consistently across all agents?
 - **How do you optimize cost** while maintaining quality?
-- **How do you stay within token budgets** while handling unlimited work?
+- **How do you stay within token budgets** across unlimited work?
 
-**The answer:** A queue-based ORCHESTRATOR-FIRST architecture where:
-1. **All work enters a queue** as DELEGATE tasks (SPEC-compliant format)
-2. **Orchestrator polls continuously** and routes to appropriate specialists
-3. **Each agent returns a HANDBACK** with results + metrics
-4. **Quality gates validate** all work before moving to done
-5. **Metrics feed back** into model selection and routing optimization
+**The answer:** A queue-based ORCHESTRATOR-FIRST architecture:
 
-**Result:** Fully autonomous, auditable system that routes work optimally and gets cheaper every day.
+1. All work enters a queue as DELEGATE tasks (SPEC-compliant YAML)
+2. Orchestrator polls continuously and routes to the right specialist
+3. Each agent returns a HANDBACK with results + metrics
+4. Quality gates validate all work before moving to done
+5. Metrics feed back into model selection and routing optimization
 
 ---
 
-## 🏗️ Architecture
+## 8 Specialized Roles
 
-### ORCHESTRATOR-FIRST Execution Model
+| Role | Model | Purpose |
+|------|-------|---------|
+| **Orchestrator** | Haiku | Routes all work via decision tree; never does work itself |
+| **Engineer** | Haiku | Executes well-scoped, pre-planned tasks |
+| **Senior Engineer** | Sonnet | Analyzes unscoped work; produces detailed plans |
+| **Lead Engineer** | Sonnet | Code review (8-point checklist); architectural guidance |
+| **Quality Engineer** | Sonnet | Post-implementation validation; model suitability assessment |
+| **Security Engineer** | Opus | Threat modeling; vulnerability assessment |
+| **Principal Engineer** | Opus | Cross-service architecture; major refactors |
+| **Model Engineer** | Sonnet | Analyzes metrics; optimizes routing and model selection |
 
-All work flows through the Orchestrator:
+---
+
+## Architecture
 
 ```
 User Task
    ↓
-[~/.copilot/queue/incoming/] ← DELEGATE
+[artifacts/queue/incoming/] ← DELEGATE
    ↓
 [Orchestrator Agent]
-   ├─ Detects context (Copilot vs Claude)
    ├─ Routes via AGENTS.md decision tree
    ├─ Spawns appropriate specialist
    └─ Waits for HANDBACK
@@ -49,1543 +58,301 @@ User Task
    └─ Returns HANDBACK
    ↓
 [Quality Gates validate]
-   └─ If quality_score ≥ threshold → move to done/
+   └─ quality_score ≥ threshold → done/
       else → REWORK or ESCALATE
    ↓
-[~/.copilot/queue/done/] ← Results + Metrics
-```
-
-### 8 Specialized Roles
-
-| Role | Model | Complexity | Purpose |
-|------|-------|------------|---------|
-| **Orchestrator** | Haiku | - | Routes all work via AGENTS.md decision tree |
-| **Engineer** | Haiku | Low-Medium | Executes well-scoped, planned tasks |
-| **Senior Engineer** | Sonnet | Medium-High | Analyzes unscoped work, produces detailed plans |
-| **Lead Engineer** | Sonnet | Medium | Code review (8-point checklist) |
-| **Quality Engineer** | Sonnet | Medium | Post-implementation validation |
-| **Security Engineer** | Opus | High | Threat modeling, vulnerability assessment |
-| **Principal Engineer** | Opus | High | Cross-service architecture, major refactors |
-| **Model Engineer** | Haiku | Low | Analyzes metrics, optimizes routing & models |
-
-### Dog-Food Philosophy: Self-Improving Through Continuous Feedback
-
-**Core Design Principle:** *We use the agents and quality systems we build to improve the agents and quality systems themselves.*
-
-This creates exponential improvement through immediate feedback loops:
-
-```
-Traditional:     Code → Test (delayed) → Feedback (delayed) → Fix
-Dog-Food:        Code → Quality gate (immediate) → Escalation → Better tools → Next code (better)
-```
-
-**Why it matters:**
-- **Feedback time:** Reduced from weeks to minutes
-- **Improvement cycle:** Exponential, not linear
-- **Quality gates validate themselves:** Layer 3 validates the validators
-- **Agent code feeds back:** Immediately informs routing optimization
-- **Model Engineer learns:** From every escalation and metric
-
-**In practice (Phase 5.10):**
-1. We built better quality gates (checklist enforcement, escalation thresholds)
-2. Those gates validated the code that built them
-3. Escalation feedback goes to Model Engineer
-4. Next agent task uses improved routing
-5. Cycle repeats → exponential improvement
-
-This philosophy is embedded throughout the system:
-- **AGENTS.md:** Every agent validates itself through quality gates
-- **Quality Gates:** Validate agent code that improves quality gates
-- **Model Engineer:** Feeds optimization data back into routing
-- **HANDBACK:** Includes metrics that improve Model Engineer decisions
-
-**Result:** Agentic-engineers gets cheaper and better every day automatically.
-
----
-
-## 📁 Repository Structure
-
-**Optimized for clarity and maintainability** (see [Architecture Decision](docs/decisions/ADR-structure-2025-05-09.md)):
-
-```
-agentic-engineers/
-│
-├── src/                          # ✅ ALL source code and configuration
-│   ├── agents/                   # Agent definitions (*.md files)
-│   ├── skills/                   # Skill implementations (SKILL.md)
-│   ├── orchestration/            # Orchestration logic (Python modules)
-│   │   ├── agents/               # Routing, delegation, validation
-│   │   └── tools/                # Orchestration utilities
-│   ├── config/                   # Configuration (centralized)
-│   │   ├── models.yaml           # Model registry & assignments
-│   │   ├── MODEL_ASSIGNMENTS_LOCKED.md
-│   │   ├── QUICK_REFERENCE.md
-│   │   └── CONFIG-README.md
-│   └── tools/                    # Shared tools directory
-│
-├── docs/                         # ✅ ALL documentation
-│   ├── SPEC.md                   # Protocol specification
-│   ├── PROTOCOL.md               # Queue protocol documentation
-│   ├── REPOSITORY-STRUCTURE.md   # Full directory reference
-│   ├── architecture/             # Architecture decisions (ADRs)
-│   ├── guides/                   # Implementation guides
-│   ├── reference/                # Design patterns and standards
-│   ├── operations/               # Operational reference
-│   ├── examples/                 # Example configurations
-│   └── specs/                    # Protocol specification docs
-│
-├── tests/                        # ✅ Test suite (pytest)
-│   ├── test_*.py                 # Unit & integration tests
-│   └── [1047+ tests passing]
-│
-├── renderer/                     # ✅ Build/installation system
-│   ├── scripts/                  # Rendering logic
-│   │   ├── render-opencode.sh    # → ~/.config/opencode/ (agents + skills + config)
-│   │   ├── render-claude.sh      # → ~/.claude/ (agents + skills)
-│   │   ├── render-copilot.sh     # → ~/.copilot/skills/ (skills only)
-│   │   ├── render-pi.sh          # → ~/.pi/agent/ (π.dev wrapper)
-│   │   ├── render-pi-dev.py      # → ~/.pi/agent/ (π.dev Python renderer)
-│   │   ├── lib.sh                # Shared Bash functions
-│   │   └── render-copilot-agents.py  # Legacy (not invoked by default)
-│   ├── hooks/                    # GitHub/enforcement hooks
-│   ├── instructions/             # Global instructions
-│   └── workflows/                # Reusable GitHub Actions
-│
-├── dist/                         # Build artifacts (gitignored)
-├── README.md                     # This file
-├── Makefile                      # Build targets
-└── conftest.py                   # pytest configuration
-```
-
-### 📚 Documentation Guide
-
-Key documentation:
-
-- **Repository Layout:** [docs/REPOSITORY-STRUCTURE.md](docs/REPOSITORY-STRUCTURE.md)
-- **Specification:** [docs/SPEC.md](docs/SPEC.md)
-- **Queue Protocol:** [docs/PROTOCOL.md](docs/PROTOCOL.md)
-- **Archived Docs:** [docs/archive/README.md](docs/archive/README.md)
-
-### Why This Structure
-
-✅ **Single source tree:** All source code under `src/` (agents, skills, orchestration, config)  
-✅ **Clear separation:** Source (`src/`), docs (`docs/`), tests (`tests/`), build (`renderer/`)  
-✅ **No duplication:** Root-level `orchestration/`, `skills/`, `config/` duplicates removed  
-✅ **Easy navigation:** Max 3 directory levels to find anything  
-✅ **Scalable:** Can grow without polluting root directory  
-
-See [docs/decisions/ADR-structure-2025-05-09.md](docs/decisions/ADR-structure-2025-05-09.md) for full design rationale.
-
----
-
-### Queue Protocol: DELEGATE ↔ HANDBACK
-
-**DELEGATE** (user → orchestrator):
-```yaml
-handoff_type: DELEGATE
-task_id: 2026-05-03-my-task          # Unique identifier
-role: Engineer                         # Target role per AGENTS.md
-model: claude-haiku-4.5               # Optional override
-effort: low|medium|high|max            # Effort estimation
-scope: |                               # What's in scope
-  Clear description of work needed.
-context:                               # Background info
-  - Key files: path/to/files
-  - Related PRs: #123
-plan:                                  # Step-by-step instructions
-  - 1. First step
-  - 2. Second step
-success_criteria:                      # How to verify "done"
-  - All tests passing
-  - README updated
-```
-
-**HANDBACK** (agent → orchestrator):
-```yaml
-handoff_type: HANDBACK
-task_id: 2026-05-03-my-task
-agent: Engineer
-status: COMPLETE|ESCALATE|REWORK
-quality_score: 95                      # 0-100
-metrics:
-  tokens_used: 12500
-  duration: 342s
-  test_coverage: 94%
-  confidence: 0.98
-result: |
-  Summary of work completed.
-  Key files modified: src/api.py, tests/api_test.py
-next_steps: |
-  Optional follow-up work if any.
+[artifacts/queue/done/] ← Results + Metrics
 ```
 
 ### Queue States
 
 ```
 incoming/      ← New DELEGATE tasks
-  ↓ (picked up by Orchestrator)
-processing/    ← Tasks being worked on (metadata only)
-  ↓ (agent completes work)
-done/          ← Completed tasks with HANDBACK results
-                 (archived, full audit trail)
-```
-
-### Queue Protocol in Action
-
-Phase 0-6 completed execution:
-- ✅ Manual polling verified (8 delegated tasks, 4,611+ lines of architecture)
-- ✅ Continuous polling automation (AutomationController, signal handling)
-- ✅ Production integration (bin/run-automation-controller.sh, 4 deployment scenarios)
-- ✅ Quality gates (3-layer validation: DELEGATE structure, routing quality, HANDBACK validation)
-- ✅ Queue enforcement (ORCHESTRATOR-FIRST enforced at runtime, non-bypassable)
-- ✅ Pure orchestrator (zero business logic, 100% routing + delegation)
-- ✅ Model centralization (single source of truth: models.yaml)
-
-**Status:** 1047+ tests, all passing. End-to-end queue protocol verified at scale.
-
----
-
-## 📋 Orchestration Protocol
-
-The **Orchestration Protocol** governs how work flows between agents — from the moment a
-DELEGATE task is created to when the HANDBACK result is accepted and metrics are recorded.
-
-### Protocol Highlights
-
-| Feature | Detail |
-|---------|--------|
-| **Pre-flight validation** | Groups A/B/C checks block bad DELEGATEs before any tokens are spent |
-| **3-layer quality scoring** | Format (40%) + Content (35%) + Quality (25%) = composite 0–100 score |
-| **5-band routing** | 90–100 merge · 80–89 merge · 70–79 Lead review · 60–69 rework · <60 escalate |
-| **Retry cap** | `MAX_RETRIES = 2` hard limit; escalates to Principal Engineer on overflow |
-| **Metrics collection** | 35-field canonical record per task → Model Engineer optimization |
-| **Pre-commit enforcement** | Hook blocks non-compliant DELEGATEs at commit time |
-
-### Protocol Documents
-
-| Document | Purpose |
-|----------|---------|
-| [`orchestration/ORCHESTRATION-PROTOCOL.md`](orchestration/ORCHESTRATION-PROTOCOL.md) | **Master reference** — all 13 sections (source of truth) |
-| [`orchestration/AGENT-ONBOARDING.md`](orchestration/AGENT-ONBOARDING.md) | Onboarding checklist — read before assuming any agent role |
-| [`orchestration/PROTOCOL-QUICK-REFERENCE.md`](orchestration/PROTOCOL-QUICK-REFERENCE.md) | One-page cheat sheet for daily use |
-| [`orchestration/PROTOCOL-IMPLEMENTATION-STATUS.md`](orchestration/PROTOCOL-IMPLEMENTATION-STATUS.md) | Implementation status, metrics, and rollout plan |
-| [`orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md`](orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gates detail and re-work policy |
-
-### Run the Protocol Compliance Audit
-
-```bash
-python3 src/orchestration/tools/protocol_audit.py
-```
-
-Expected output when fully compliant:
-```
-==================================================
-  PROTOCOL COMPLIANCE AUDIT
-==================================================
-...
-Compliance Score: 100/100 ✅
-Status: READY FOR PRODUCTION
+  ↓ (Orchestrator picks up)
+processing/    ← Tasks being worked on
+  ↓ (agent completes)
+done/          ← Completed tasks with full audit trail
 ```
 
 ---
 
-## 🔒 SDLC Enforcement
+## Quick Start
 
-The framework enforces quality and compliance through **3 git hooks** that validate code at commit and push time.
-
-### Git Hooks Overview
-
-| Hook | Trigger | Enforces |
-|------|---------|----------|
-| **pre-commit** | Before `git commit` | SPEC.md compliance, secret detection, YAML validity |
-| **commit-msg** | After commit message | Message format, DELEGATE/HANDBACK protocol |
-| **pre-push** | Before `git push` | Agent YAML, tests, documentation, protocol compliance |
-
-### Quick Installation
-
-Hooks are installed automatically by `make install`:
+### Installation
 
 ```bash
-make install          # Installs hooks + renders agents/skills
-```
-
-Or manually:
-
-```bash
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
-```
-
-### Quick Bypass Reference
-
-**For genuine emergencies only:**
-
-```bash
-# Bypass SPEC/secret checks only
-BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"
-
-# Bypass all pre-commit checks
-SKIP_HOOKS=1 git commit -m "emergency: reason"
-
-# Bypass pre-push checks
-SKIP_HOOKS=1 git push
-
-# Bypass ALL hooks (strongly discouraged)
-git commit --no-verify -m "message"
-```
-
-**Important:** Every bypass MUST be documented in the commit message with reason and approver.
-
-### Full Documentation
-
-For comprehensive hook documentation, see:
-
-- **[docs/SDLC-HOOKS.md](docs/SDLC-HOOKS.md)** — Complete hook reference with all checks and error messages
-- **[docs/WORKFLOW.md](docs/WORKFLOW.md)** — Full SDLC lifecycle with 7 enforcement gates
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — Troubleshooting guide for 30+ scenarios
-- **[docs/BYPASS-PROCEDURES.md](docs/BYPASS-PROCEDURES.md)** — Emergency bypass procedures and authorization
-
----
-
-## 📁 Repository Structure
-
-```
-agentic-engineers/
-├── src/                              # All source files
-│   ├── agents/                       # Agent definitions (.md) + implementations
-│   ├── skills/                       # Skill implementations (with SKILL.md)
-│   ├── roles/                        # Role definitions
-│   ├── orchestration/                # Orchestrator logic (Python)
-│   │   ├── agents/                   # Core agent Python package
-│   │   └── tools/                    # CLI utilities (protocol_audit, lead_review)
-│   └── tools/                        # Utility scripts
-├── docs/                             # All documentation
-│   ├── SPEC.md                       # Core specification
-│   ├── PROTOCOL.md                   # Delegate/Handback protocol
-│   ├── AGENTS.md                     # Agent routing reference
-│   ├── ONBOARDING.md                 # New agent/dev onboarding
-│   ├── guides/                       # How-to guides
-│   └── decisions/                    # Architecture Decision Records (ADRs)
-├── tests/                            # All test files
-├── renderer/                         # Build system (renders to ~/.copilot/ ~/.claude/)
-├── config/                           # Configuration files
-├── operations/                       # Operational docs and metrics
-├── data/                             # Queue data (incoming/processing/done)
-├── .github/                          # GitHub Actions workflows
-├── README.md                         # This file
-├── Makefile                          # Build, install, verify targets
-├── models.yaml                       # Model configuration
-└── .gitignore                        # Excludes logs/, artifacts/, temp/
-```
-
----
-
-## 🚀 Quick Start
-
-### Installation (One-Time)
-
-```bash
-git clone https://github.com/{your-org}/agentic-engineers.git
+git clone https://github.com/niallyoung/agentic-engineers.git
 cd agentic-engineers
 
-# Install to both Copilot and Claude
-make install
-
-# Or specific platform
-make install-copilot    # ~/.copilot/ only
-make install-claude     # ~/.claude/ only
-
-# Verify installation
-make status
+make install-opencode    # OpenCode → ~/.config/opencode/ (recommended)
+make install-claude      # Claude Code → ~/.claude/
+make install-copilot     # Copilot CLI → ~/.copilot/skills/
+make install             # All harnesses
 ```
-
-**What `make install` does:**
-1. Renders all skills from `src/skills/` → `~/.copilot/skills/` and `~/.claude/skills/`
-2. Renders all agents from `src/agents/` → agent definitions
-3. Creates agent configurations and manifests
-4. Marks installed files for safe uninstall
-5. Leaves user files untouched
-
-### Running the Orchestrator
-
-#### With Copilot
-
-```bash
-copilot --agent orchestrator
-```
-
-The Orchestrator will:
-- Auto-detect queue at `~/.copilot/queue/`
-- Begin polling for DELEGATE tasks
-- Route to appropriate specialist agents
-- Wait for HANDBACK results
-- Move tasks through queue states
-- Continue until idle (60s timeout)
-
-#### With Claude
-
-```bash
-claude ask "You are the Orchestrator agent. Begin polling ~/.claude/queue/incoming/ and delegate all tasks."
-```
-
-Or in Claude Code (chat with extended context):
-1. Load `setup/copilot-instructions.md` (enforcement rules)
-2. Load `AGENTS.md` (routing decision tree)
-3. Tell Claude: "Act as the Orchestrator. Start polling and delegating."
 
 ### Create a Task
 
 ```bash
-mkdir -p ~/.copilot/queue/incoming
-
-cat > ~/.copilot/queue/incoming/2026-05-03-my-task.yaml <<'EOF'
+cat > artifacts/queue/incoming/2026-05-17-my-task.yaml <<'EOF'
 ---
 handoff_type: DELEGATE
-task_id: 2026-05-03-my-task
+task_id: 2026-05-17-my-task
 role: Engineer
-model: claude-haiku-4.5
+model: claude-haiku-4-5
 effort: low
 scope: |
-  Add validation to the API gateway.
-  Check request headers, validate JWT tokens, reject invalid requests.
+  Add input validation to the API gateway.
 context:
-  - Key files: src/api.py, src/auth.py
-  - Related: PR #123 (user auth refactor)
+  - Key files: src/api.py
 plan:
-  - 1. Read current API validation logic
-  - 2. Add JWT validation middleware
-  - 3. Write tests for validation
-  - 4. Update API docs
-  - 5. Commit with message "feat: add JWT validation to API"
+  - 1. Read current validation logic
+  - 2. Add request header validation
+  - 3. Write tests
+  - 4. Commit
 success_criteria:
-  - All new tests passing (100% coverage for new code)
-  - README updated with auth section
-  - Code review quality score ≥ 90/100
+  - All tests passing
+  - New validation covered by tests
 EOF
 ```
 
-The Orchestrator will pick it up and delegate to the Engineer.
+### Run the Orchestrator
 
----
-
-## 🔧 Harness Implementations
-
-The framework ships four harness renderers that install agents and skills into platform-specific directories. Choose the harness that matches your AI coding tool.
-
-**Last Updated:** 2026-05-16
-
-### Comparison Table (Post-Improvements)
-
-| Feature | π.dev | OpenCode | Claude Code | Copilot CLI |
-|---------|:-----:|:--------:|:-----------:|:-----------:|
-| **Agents rendered** | ⚠️ Static | ✅ Dynamic | ✅ Dynamic | ❌ Not supported |
-| **Skills rendered** | ❌ None | ✅ 14 skills | ✅ 14 skills | ✅ 14 skills |
-| **Managed config** | ⚠️ Static | ✅ opencode.jsonc | ❌ N/A | ❌ N/A |
-| **Global rules** | ⚠️ Static | ✅ AGENTS.md | ❌ N/A | ❌ N/A |
-| **Model mapping** | ✅ Current IDs | ✅ Full provider IDs | ✅ Tier names | ❌ N/A |
-| **Canonical 8 roles** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ N/A |
-| **Uninstall** | ✅ | ✅ | ✅ | ✅ Skills only |
-| **Drift detection** | ✅ | ✅ | ✅ | ✅ |
-| **Foreign file protection** | ⚠️ Partial | ✅ Full | ✅ Full | ✅ Skills |
-| **Install location** | `~/.pi/agent/` | `~/.config/opencode/` | `~/.claude/` | `~/.copilot/skills/` |
-| **Compliance** | ✅ Medium | ✅ High | ✅ High | ✅ Medium-High |
-
-### OpenCode Harness (Recommended)
-
-**Best for:** OpenCode users. Most complete implementation with full agent + skill rendering, managed config, and global rules.
-
-```bash
-# Install
-make install-opencode
-
-# Verify
-make status-opencode
-
-# Full validation (status + JSON schema check)
-make validate-opencode
-
-# Uninstall (removes agentic-engineers configs only)
-make uninstall-opencode
-```
-
-**What gets installed:**
-- `~/.config/opencode/opencode.jsonc` — Managed config (compaction, permissions, model registry)
-- `~/.config/opencode/AGENTS.md` — Global rules (queue protocol, mandatory constraints)
-- `~/.config/opencode/agents/*.md` — 8 specialized agents with OpenCode frontmatter
-- `~/.config/opencode/skills/*/` — 14 reusable skills
-
-**Usage:**
+**OpenCode:**
 ```
 @orchestrator  # Invoke orchestrator agent
-@engineer      # Invoke engineer agent
-/skill         # Load a skill via the skill tool
 ```
 
-**Known limitations:**
-- Model IDs are hardcoded for the `github-copilot/` provider. Users with `anthropic/` provider need different IDs.
-- `docs/AGENTS.md` table parsing is sensitive to formatting changes.
-
-**See:** [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md)
+**Claude Code:**
+```bash
+claude ask "You are the Orchestrator. Begin polling artifacts/queue/incoming/ and delegate all tasks."
+```
 
 ---
 
-### Claude Code Harness
+## Harness Support
 
-**Best for:** Claude Code users. Renders all 8 agents and 14 skills with Claude Code-compatible frontmatter.
+| Feature | OpenCode | Claude Code | Copilot CLI | π.dev |
+|---------|:--------:|:-----------:|:-----------:|:-----:|
+| Agents rendered | ✅ 8 | ✅ 8 | ❌ | ⚠️ Static |
+| Skills rendered | ✅ 14 | ✅ 14 | ✅ 14 | ❌ |
+| Managed config | ✅ | ❌ | ❌ | ⚠️ |
+| Install path | `~/.config/opencode/` | `~/.claude/` | `~/.copilot/skills/` | `~/.pi/agent/` |
+
+**Recommended:** OpenCode — most complete implementation.
 
 ```bash
-# Install
-make install-claude
-
-# Status
-make status
-
-# Uninstall
-make uninstall-claude
+make install-opencode    # Install
+make status-opencode     # Verify
+make uninstall-opencode  # Remove (only removes agentic-engineers files)
 ```
 
-**What gets installed:**
-- `~/.claude/agents/*.md` — 8 specialized agents (Claude Code subagent format)
-- `~/.claude/skills/*/` — 14 reusable skills
-
-**Usage:**
-```
-@engineer      # Invoke engineer agent
-@orchestrator  # Invoke orchestrator
-```
-
-**Known limitations:**
-- Model mapping uses tier names (`haiku`, `sonnet`, `opus`) rather than version-specific IDs.
-- No config file or global rules file (use `CLAUDE.md` in your project root).
-
-**See:** [docs/CLAUDE-INSTALL.md](docs/CLAUDE-INSTALL.md)
+See [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) and [docs/CLAUDE-INSTALL.md](docs/CLAUDE-INSTALL.md).
 
 ---
 
-### Copilot CLI Harness
+## DELEGATE / HANDBACK Protocol
 
-**Best for:** GitHub Copilot CLI users. Skills only — Copilot CLI does not support custom agents.
+**DELEGATE** (task assignment):
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-17-fix-auth          # Unique: YYYY-MM-DD-slug
+role: Engineer                         # Target role
+model: claude-haiku-4-5               # Optional override
+effort: low|medium|high|max
+scope: |
+  Clear description of work needed.
+context:
+  - Key files: src/auth.py
+plan:
+  - 1. Read current auth logic
+  - 2. Fix token validation
+  - 3. Write tests
+success_criteria:
+  - All tests passing
+  - Auth edge cases covered
+```
+
+**HANDBACK** (task result):
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-17-fix-auth
+agent: Engineer
+status: COMPLETE|ESCALATE|REWORK
+quality_score: 95
+metrics:
+  tokens_used: 12500
+  duration: 342s
+  test_coverage: 94%
+result: |
+  Fixed token validation in src/auth.py.
+  Added 3 test cases covering expiry edge cases.
+```
+
+---
+
+## Token Visibility & Budget Checking (Phase 3)
+
+Real-time token tracking across all agents and subagents:
 
 ```bash
-# Install (skills only)
-make install-copilot
+# Real-time token usage by agent
+opencode-tokens --session <session-id>
 
-# Status
-make status
+# Budget status check
+opencode-budget --session <session-id> --limit 200000
 
-# Uninstall
-make uninstall-copilot
+# List all subagents in session
+opencode-subagents --session <session-id>
 ```
 
-**What gets installed:**
-- `~/.copilot/skills/*/` — 14 reusable skills
+**Key insight:** Orchestrator sees only ~27% of actual token usage. Subagents account for ~73%. Always monitor at the session level.
 
-**Usage:**
-Skills are available via the Copilot CLI skill invocation mechanism. Custom agents are not supported by this platform.
+**Recommended token allocation:**
 
-**Known limitations:**
-- Skills only — no agent rendering (Copilot CLI platform limitation).
-- No dedicated install documentation.
+| Role | Tokens | % |
+|------|--------|---|
+| Orchestrator (Haiku, low) | 60k | 30% |
+| Engineer (Haiku, high) | 80k | 40% |
+| Quality Engineer (Sonnet, medium) | 30k | 15% |
+| Senior Engineer (Sonnet, high) | 20k | 10% |
+| Other roles | 10k | 5% |
+
+See [docs/QUICK-START-TOKEN-VISIBILITY.md](docs/QUICK-START-TOKEN-VISIBILITY.md) and [docs/QUICK-START-BUDGET-CHECKING.md](docs/QUICK-START-BUDGET-CHECKING.md).
 
 ---
 
-### π.dev Harness
+## Quality Gates (3 Layers)
 
-**Best for:** π.dev users. Installs a static system prompt, agent context, and settings.
+| Layer | Weight | Checks |
+|-------|--------|--------|
+| DELEGATE Structure | 40% | task_id format, role validity, scope clarity, plan completeness |
+| Task Routing Quality | 35% | correct agent selection, confidence scoring |
+| HANDBACK Validation | 25% | success_criteria met, quality_score ≥ threshold, metrics present |
+
+**Routing by score:**
+- 90–100: Move to done immediately
+- 80–89: Move to done with notes
+- 70–79: Route to Lead Engineer for review
+- 60–69: Issue rework DELEGATE (max 2 retries)
+- <60: Escalate to Principal Engineer
+
+---
+
+## SDLC Enforcement
+
+Three git hooks enforce quality at commit/push time:
+
+| Hook | Trigger | Enforces |
+|------|---------|----------|
+| **pre-commit** | `git commit` | SPEC compliance, secret detection, YAML validity |
+| **commit-msg** | After commit message | Message format, DELEGATE/HANDBACK protocol |
+| **pre-push** | `git push` | Agent YAML, tests, documentation, protocol compliance |
 
 ```bash
-# Install
-make install-pi
-
-# Status
-make status  # includes π.dev status
-
-# Uninstall
-make uninstall-pi
+make install    # Installs hooks automatically
+# or manually:
+git config core.hooksPath .githooks
 ```
 
-**What gets installed:**
-- `~/.pi/agent/SYSTEM.md` — System prompt (replaces π.dev default)
-- `~/.pi/agent/AGENTS.md` — Agent role definitions (8 canonical roles)
-- `~/.pi/agent/settings.json` — Model and UI settings
-- `~/.pi/agent/pi.yml` — Sub-agent orchestration config (speculative)
-- `~/.pi/agent/SUB_AGENT_SETUP.md` — Usage documentation and known limitations
-
-**Usage:**
+Emergency bypass (document reason in commit message):
 ```bash
-cd /your/project
-pi  # π.dev loads SYSTEM.md as system prompt automatically
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"
+SKIP_HOOKS=1 git push
 ```
 
-**Known limitations:**
-- Source files are manually maintained (not generated from `src/agents/`)
-- Sub-agent routing in `pi.yml` is speculative — not verified against the π.dev runtime API
-- `settings.json` packages/extensions/skills fields are unverified
-- Requires `pyyaml` Python package
-
-**See:** [renderer/PI-DEV-RENDERER.md](renderer/PI-DEV-RENDERER.md)
-
 ---
 
-### Recommended Use Cases
-
-| Scenario | Recommended Harness |
-|----------|-------------------|
-| Using OpenCode as your AI coding tool | **OpenCode** |
-| Using Claude Code (Anthropic's CLI) | **Claude Code** |
-| Using GitHub Copilot CLI | **Copilot CLI** |
-| Using π.dev | **π.dev** |
-| Want the most complete implementation | **OpenCode** |
-| Want skills only (minimal footprint) | **Copilot CLI** |
-| Using multiple tools | Run multiple harnesses — they install to separate directories |
-
----
-
-## 📦 Installation Details
-
-**Last Updated: 2026-05-16**
-
-### Platform-Specific Installation
+## Testing
 
 ```bash
-make install-opencode    # OpenCode → ~/.config/opencode/ (agents + skills + config)
-make install-claude      # Claude Code → ~/.claude/ (agents + skills)
-make install-copilot     # Copilot CLI → ~/.copilot/skills/ (skills only)
-make install-pi          # π.dev → ~/.pi/agent/ (static files)
-make install             # All 4 harnesses
-```
-
-**What gets installed per harness:**
-
-| Harness | Agents | Skills | Config | Install Path |
-|---------|--------|--------|--------|--------------|
-| OpenCode | ✅ 8 agents | ✅ 14 skills | ✅ opencode.jsonc + AGENTS.md | `~/.config/opencode/` |
-| Claude Code | ✅ 8 agents | ✅ 14 skills | ❌ N/A | `~/.claude/` |
-| Copilot CLI | ❌ Not supported | ✅ 14 skills | ❌ N/A | `~/.copilot/skills/` |
-| π.dev | ⚠️ Static | ❌ None | ⚠️ Static | `~/.pi/agent/` |
-
-### Status & Uninstall
-
-```bash
-# Check installation status (all harnesses)
-make status
-
-# Uninstall (removes only agentic-engineers managed files)
-make uninstall-opencode
-make uninstall-claude
-make uninstall-copilot
-make uninstall-pi
-make uninstall-all
-```
-
-### Installation Documentation
-
-| Harness | Guide |
-|---------|-------|
-| OpenCode | [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) |
-| Claude Code | [docs/CLAUDE-INSTALL.md](docs/CLAUDE-INSTALL.md) |
-| π.dev | [renderer/PI-DEV-RENDERER.md](renderer/PI-DEV-RENDERER.md) |
-| Copilot CLI | See Copilot CLI Harness section above |
-
----
-
-## 📚 Key Concepts
-
-### DELEGATE Format
-
-A DELEGATE task specifies work to be done:
-- **task_id:** Unique identifier (date-based: YYYY-MM-DD-slug)
-- **role:** Target agent role (decision tree routes to right specialist)
-- **effort:** Estimated complexity (low/medium/high/max)
-- **scope:** What's in scope, what's out of scope
-- **context:** Background, related files, prior work
-- **plan:** Step-by-step instructions for the agent
-- **success_criteria:** How to verify work is complete
-
-See `orchestration/HANDOFF.md` for complete format and examples.
-
-### HANDBACK Format
-
-An agent returns a HANDBACK when complete:
-- **task_id:** Same as DELEGATE (links work together)
-- **agent:** Which agent executed the task
-- **status:** COMPLETE, ESCALATE, or REWORK
-- **quality_score:** 0-100 rating of work quality
-- **metrics:** tokens_used, duration, test_coverage, confidence
-- **result:** Summary of work completed + files modified
-- **next_steps:** Any follow-up work needed
-
-All HANDBACKs flow into feedback loops:
-- **Model Engineer:** Token efficiency, routing confidence
-- **Quality Gate Aggregator:** Quality trends, threshold adjustments
-- **Config Enforcement Verifier:** Fix success rates by issue type
-
-### Routing Decision Tree
-
-AGENTS.md defines the decision tree for routing tasks:
-
-```
-1. Is this security-scoped?
-   → YES: Security Engineer (Opus)
-
-2. Is this cross-service?
-   → YES: Principal Engineer (Opus)
-
-3. Is this code review/validation?
-   → YES: Lead Engineer (Sonnet) OR Quality Engineer (Sonnet)
-
-4. Is this complex + unscoped?
-   → YES: Senior Engineer (Sonnet) → produces plan
-
-5. Is this well-scoped + has plan?
-   → YES: Engineer (Haiku) → executes plan
-
-6. Default → Engineer (Haiku)
-```
-
-Confidence scoring (0.70-0.95) increases for:
-- Clear task descriptions
-- Explicit scope boundaries
-- Specific decision criteria
-- Tasks matching known agent strengths
-
-### Queue States
-
-**incoming/** — New DELEGATE tasks (not yet picked up)
-- Format: YAML files with DELEGATE structure
-- Named by task_id: `2026-05-03-my-task.yaml`
-- Polled by Orchestrator every 5-10 seconds
-
-**processing/** — Active tasks (Orchestrator has picked up)
-- Contains metadata about what's being worked on
-- Prevents duplicate work
-- Cleared when task completes (moves to done/)
-
-**done/** — Completed tasks with results
-- Contains original DELEGATE + HANDBACK
-- Full audit trail (never deleted)
-- Metrics extracted for feedback loops
-
-### Quality Gates (3 Layers)
-
-**Layer 1: DELEGATE Structure (40% weight)**
-- 11 validation rules
-- Checks: task_id format, role validity, scope clarity, plan completeness
-- If invalid → auto-REWORK with correction suggestions
-
-**Layer 2: Task Routing Quality (35% weight)**
-- 7 validation rules
-- Checks: proper agent selection per decision tree, confidence scoring
-- Automatic routing based on quality score
-
-**Layer 3: HANDBACK Validation (25% weight)**
-- 9 validation rules
-- Checks: success_criteria met, quality_score ≥ threshold, metrics present
-- If incomplete → REWORK or ESCALATE
-
-Overall quality score = (L1 × 0.40) + (L2 × 0.35) + (L3 × 0.25)
-
----
-
-## 🧪 Testing
-
-**Status:** 400+ tests, all passing (100%)
-
-### Run All Tests
-
-```bash
-make test                  # Run full test suite
-make test-quick            # Quick smoke tests
-make coverage              # Generate coverage report
-```
-
-### Test Coverage by Phase
-
-| Phase | Component | Tests | Status |
-|-------|-----------|-------|--------|
-| 1 | AutomationController | 32 | ✅ 32/32 PASS |
-| 2 | Integration Suite | 19 | ✅ 19/19 PASS |
-| 3 | QualityValidator | 158 | ✅ 158/158 PASS |
-| 4 | QueueEnforcement | 38 | ✅ 38/38 PASS |
-| 5 | Pure Orchestrator | 90+ | ✅ 90+/90+ PASS |
-| 6 | ModelResolver | 63 | ✅ 63/63 PASS |
-| **TOTAL** | **All Components** | **400+** | **✅ 400+/400+ PASS** |
-
-### Quality Metrics
-
-- **Test Success Rate:** 100% (all tests passing)
-- **Code Quality Score:** 98/100 average
-- **Confidence Score:** 99/100 average
-- **Documentation:** 95/100 completeness
-- **Production Readiness:** 99/100
-
----
-
-## 📖 Documentation
-
-### Core Documents
-
-| Document | Purpose | Read Time |
-|----------|---------|-----------|
-| **[MANIFEST.md](MANIFEST.md)** | Complete file listing & navigation | 10 min |
-| **[AGENTS.md](AGENTS.md)** | 8 roles + routing decision tree | 15 min |
-| **[SKILLS.md](SKILLS.md)** | 38 domain-specific skills by role | 20 min |
-| **[ENTRYPOINT.md](ENTRYPOINT.md)** | Standard execution model & workflow | 10 min |
-| **[INSTALL.md](INSTALL.md)** | Installation guide (Copilot + Claude) | 5 min |
-| **[guides/CLAUDE.md](guides/CLAUDE.md)** | Team context & integration | 10 min |
-| **[guides/INDEX.md](guides/INDEX.md)** | Complete file index by topic | 15 min |
-
-### Orchestration Details
-
-- **[orchestration/HANDOFF.md](orchestration/HANDOFF.md)** — DELEGATE/HANDBACK format + examples
-- **[orchestration/QUEUE-PROTOCOL.md](orchestration/QUEUE-PROTOCOL.md)** — Queue mechanics + state machine
-- **[orchestration/QUALITY.md](orchestration/QUALITY.md)** — Quality gates (3-layer validation)
-- **[config/QUICK_REFERENCE.md](config/QUICK_REFERENCE.md)** — 1-page cheat sheet (print + reference)
-
-### Phase Completion
-
-- **[Phase 0-6 Complete](IMMEDIATE-ACTION-REQUIRED.md)** — All phases delivered, production-ready
-- **[Design Deliverables](DESIGN-DELIVERABLES.md)** — What was built and why
-- **[Session Artifacts](~/.copilot/session-state/32684a2a-53cd-4fc8-a449-44efe818ac3b/)** — Full session history and decisions
-
----
-
-## 🔍 Verification
-
-```bash
-# Verify framework structure + SPEC compliance
-make verify
-
-# Check installation status (Copilot + Claude)
-make status
-
-# Run quick sanity tests
-make test-quick
-
-# Generate detailed coverage report
-make coverage
+make test          # Full test suite (1047+ tests)
+make test-quick    # Quick smoke tests
+make coverage      # Coverage report
+make verify        # SPEC compliance check
 ```
 
 ---
 
-## 🔄 Framework Integration
+## Repository Structure
 
-**Status:** ⏸️ **PAUSED** — Research complete. No implementation until explicitly approved.
-
-Comprehensive research on 45 AI agent frameworks has been completed (May 2026). Top recommendations:
-
-| Tier | Framework | Stars | Use Case |
-|------|-----------|-------|----------|
-| **1** | CrewAI | 51.5K | Multi-agent orchestration (5.76x faster) |
-| **1** | LangGraph | 32.1K | State management & durability |
-| **1** | Pydantic AI | 17.1K | Type-safe agent development |
-| **1** | Ollama | 171K | Local LLM runtime |
-| **2** | Semantic Kernel | 27.9K | Enterprise multi-language |
-| **2** | Temporal | 20.3K | Durable execution |
-
-**To opt-in:** Add framework integration tasks to [TODO.md](TODO.md#framework-integration) and notify `@orchestrator`.
-
-📚 **Full research:** [docs/FRAMEWORKS/](docs/FRAMEWORKS/) — analysis, comparison tables, integration strategy, raw data (45 frameworks, ~170KB)
+```
+agentic-engineers/
+├── src/                    # All source code
+│   ├── agents/             # Agent definitions (*.md)
+│   ├── skills/             # Skill implementations
+│   ├── orchestration/      # Orchestration logic (Python)
+│   └── config/             # Configuration (models.yaml)
+├── docs/                   # All documentation
+│   ├── SPEC.md             # Protocol specification (source of truth)
+│   ├── AGENTS.md           # Agent routing reference
+│   ├── HANDOFF.md          # DELEGATE/HANDBACK format
+│   ├── INDEX.md            # Documentation index
+│   └── archive/            # Archived docs
+├── tests/                  # Test suite (pytest)
+├── renderer/               # Build/installation system
+│   └── scripts/            # render-opencode.sh, render-claude.sh, etc.
+├── artifacts/              # Queue data (incoming/processing/done)
+├── README.md               # This file
+├── Makefile                # Build targets
+└── TODO.md                 # Current work items
+```
 
 ---
 
-## 📚 Documentation
+## Key Documentation
 
 | Document | Purpose |
 |----------|---------|
 | [docs/SPEC.md](docs/SPEC.md) | Protocol specification (source of truth) |
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Queue protocol documentation |
-| [docs/AGENTS.md](docs/AGENTS.md) | Agent routing reference |
-| [docs/FRAMEWORKS/](docs/FRAMEWORKS/) | AI frameworks research & integration strategy |
-| [docs/archive/](docs/archive/) | Archived documentation |
-
----
-
-## 🎬 Next Steps
-
-### For New Users
-
-1. Read **README.md** (this file) — 10 min
-2. Read **[MANIFEST.md](MANIFEST.md)** — 10 min
-3. Run `make install` — 2 min
-4. Run `copilot --agent orchestrator` — see it work
-5. Create a test DELEGATE task and watch routing
-
-### For Integration
-
-1. Configure your queue namespace (copilot vs claude) in startup script
-2. Load **[setup/copilot-instructions.md](setup/copilot-instructions.md)** enforcement rules
-3. Set up continuous polling (see **[ENTRYPOINT.md](ENTRYPOINT.md)** for daemon setup)
-4. Create custom skills in `skills/` as needed
-5. Monitor metrics in `~/.copilot/queue/done/` for optimization
-
-### For Extending
-
-1. Add new agents in `orchestration/agents/`
-2. Update routing decision tree in **[AGENTS.md](AGENTS.md)**
-3. Define skills in **[SKILLS.md](SKILLS.md)**
-4. Add tests for new agents
-5. Run `make test` + `make verify`
-6. Commit with `git commit -m "feat: add new agent"`
-
----
-
-## 📊 Architecture & Components
-
-### Core Components Delivered (All Phases 0-6)
-
-**Orchestration Pipeline:**
-1. **Orchestrator** → Pure coordination (poll → delegate → wait → process)
-2. **AutomationController** → While-true polling loop with signal handling
-3. **RoutingAgent** → Translates AGENTS.md decision tree to routing logic
-4. **QueueManager** → Atomic state transitions (incoming → processing → done)
-5. **DecisionEngine** → Validates success criteria per task
-6. **QualityValidator** → 3-layer validation + automatic routing
-
-**Configuration & Optimization:**
-7. **QueueEnforcementMiddleware** → Enforces queue-only invocation
-8. **ModelResolver** → Centralized model configuration (models.yaml)
-9. **MetricsCollector** → Captures token usage, time, quality scores
-
-**Deployment:**
-- Production entrypoint: `bin/run-automation-controller.sh`
-- 4 deployment scenarios (standalone, systemd, Docker, Kubernetes)
-- Troubleshooting playbook with 10 common issues + solutions
-
----
-
-## 📝 Configuration
-
-### models.yaml (Single Source of Truth)
-
-```yaml
-roles:
-  Engineer:
-    model: claude-haiku-4.5
-    effort_level: low
-    cost_per_task: 0.01
-  Senior Engineer:
-    model: claude-sonnet-4.6
-    effort_level: medium
-    cost_per_task: 0.05
-  # ... 8 roles total
-```
-
-### Environment Overrides
-
-```bash
-# Override model for specific role
-ENGINEER_MODEL=claude-sonnet-4.6 copilot --agent orchestrator
-
-# Override polling interval
-ORCHESTRATOR_POLL_INTERVAL=10 copilot --agent orchestrator
-
-# Override idle timeout
-ORCHESTRATOR_IDLE_TIMEOUT=120 copilot --agent orchestrator
-```
-
-See **[config/MODEL_ASSIGNMENTS_LOCKED.md](config/MODEL_ASSIGNMENTS_LOCKED.md)** for cost breakdown and optimization strategy.
-├── operations/              Metrics & optimization
-│   ├── METRICS.md
-│   └── TOKENADVISOR.md
-├── skills/                  Role-based skills (38 total)
-│   ├── orchestrator/skills/
-│   ├── engineer/skills/
-│   ├── senior-engineer/skills/
-│   ├── lead-engineer/skills/
-│   ├── principal-engineer/skills/
-│   ├── security-engineer/skills/
-│   ├── quality-engineer/skills/
-│   ├── model-engineer/skills/
-│   └── shared/skills/
-├── dist/                    Rendered distributions
-│   ├── claude/              For ~/.claude/ installation
-│   └── copilot/             For ~/.copilot/ installation
-├── scripts/                 Installation scripts
-│   ├── install-claude.sh
-│   └── install-copilot.sh
-└── Makefile                 Build & install targets
-```
-
----
-
-## 🚀 Installation Deep Dive
-
-### What Happens When You Run `make install`
-
-**Build-Time (One-Time):**
-```bash
-make install              # This calls renderer/scripts/
-```
-
-The Makefile invokes shell scripts (exempted from "no scripts" rule) to:
-1. Scan `skills/` for directories containing `SKILL.md`
-2. Copy each skill to `~/.copilot/skills/` and `~/.claude/skills/`
-3. Scan `orchestration/agents/` for agent definitions
-4. Copy each agent to `~/.copilot/agents/` and `~/.claude/agents/`
-5. Create marker file (`.agentic-engine{service-name}`) on each installed item
-6. Marker ensures `make uninstall` only removes OUR files, not user files
-
-**Exemptions to "No External Scripts" Rule:**
-- `renderer/scripts/` — Build-time rendering scripts (ALLOWED)
-- `make install*` and `make render*` targets (ALLOWED)
-- Everything else must be agent SKILLs via queue-based DELEGATE/HANDBACK
-
-See `docs/SPEC.md` for full SPEC compliance details.
-
-**Runtime (Always Queue-Based):**
-- Queue work by creating a DELEGATE block in `~/.copilot/queue/incoming/{task_id}.yaml`
-- Orchestrator polls the queue and routes tasks to appropriate agent SKILLs
-- Agent processes work and returns HANDBACK in `~/.copilot/queue/done/`
-- **See [ENTRYPOINT.md](ENTRYPOINT.md) for complete workflow details**
-- NO external scripts, NO manual invocation, NO exceptions
-
-### Fresh Install Scenario
-
-**You just cloned the repo:**
-
-```bash
-git clone https://github.com/{your-org}/agentic-engineers.git
-cd agentic-engineers
-
-# 1. Install (renders skills & agents to user's home)
-make install
-
-# Check status
-make status
-# Output: ✅ skill ab-testing, ✅ skill metrics-etl, ...
-
-# 2. Queue a task (Orchestrator automatically polls and processes)
-cat > ~/.copilot/queue/incoming/example-task.yaml <<'EOF'
----
-task_id: example-2026-05-02
-description: "Example task to test queue-based delegation"
-role: engineer
-priority: medium
-scope: "Create and test a simple function"
-EOF
-
-# 4. Monitor in queue
-ls ~/.copilot/queue/processing/    # In progress
-ls ~/.copilot/queue/done/          # Completed
-cat ~/.copilot/queue/done/*.yaml   # View results
-```
-
-### What's NOT Changed
-
-- ❌ `renderer/scripts/` are NOT agent SKILLs (they're build tools)
-- ❌ `make install` is NOT a queue task (it's pre-bootstrap)
-- ❌ Nothing external runs after installation (except Orchestrator agent)
-
----
-
-## 🏗️ Architecture: Build vs Runtime
-
-### Build-Time (One-Time: `make install`)
-```
-Makefile targets (install, render)
-    ↓
-renderer/scripts/render-*.sh (external scripts - ALLOWED)
-    ↓
-Renders to ~/.copilot/ and ~/.claude/
-    ↓
-System ready for Orchestrator
-```
-
-**Why scripts allowed here:**
-- Pre-bootstrap (queue doesn't exist yet)
-- Trusted installation scripts
-- No observability or metrics needed
-- Clearly separated from runtime
-
-### Runtime (Continuous: Queue-Based)
-```
-DELEGATE in queue/incoming/
-    ↓
-Orchestrator polls & reads
-    ↓
-Routes to appropriate Agent
-    ↓
-Agent executes (via agent SKILL)
-    ↓
-HANDBACK in queue/done/
-    ↓
-Fully auditable, routable, optimizable
-```
-
-**Zero external scripts in runtime:**
-- All logic is agent SKILLS
-- Everything flows through queue
-- Complete audit trail
-- Self-improving via feedback loops
-
-### Installation vs Operation
-
-| Aspect | Installation | Operation |
-|--------|--------------|-----------|
-| Frequency | One-time: `make install` | Continuous: Queue polling |
-| Script Use | Shell scripts OK (build tools) | NO scripts (agent-based only) |
-| Entry Point | Makefile target | Orchestrator queue polling |
-| Auditing | Not needed (bootstrapping) | Complete audit trail (queue) |
-| Use Case | Get system ready | All actual work |
-
----
-
-**New to the system?** Start here:
-1. [`setup/copilot-instructions.md`](setup/copilot-instructions.md) — Enforcement rules, learning path (READ FIRST!)
-2. [`config/QUICK_REFERENCE.md`](config/QUICK_REFERENCE.md) — 1-page cheat sheet with roles & routing rules
-3. [`guides/CLAUDE.md`](guides/CLAUDE.md) — Team context & integration
-4. Print items 1-2, reference during execution
-
-**Auto-Load:** When you invoke "agentic-engineers", all files load automatically (setup + config + guides + orchestration + operations + skills + reference).
-
----
-
-## 📊 Visual Workflow Diagrams
-
-**Want to see how work moves through the system?**
-
-- **[WORKFLOW.md](WORKFLOW.md)** — Comprehensive diagram with example flow showing:
-  - System architecture with all agent types
-  - Complete example: feature implementation from intake through merge
-  - DELEGATE/HANDBACK message formats with actual data
-  - Parallel quality gate execution (Testing, Healing, Security, Metrics)
-  - Decision points and escalation paths
-  - ~15-minute read for full understanding
-
-- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** — One-page quick reference with:
-  - Architecture overview diagram
-  - Agent responsibilities table
-  - Decision trees (routing, aggregation)
-  - Example timeline (feature from start to deploy)
-  - Communication patterns
-  - Key metrics
-  - ~5-minute read for quick lookup
-
----
-
-## Quick Start (5 Minutes)
-
-### 1. Understand the Model
-
-```bash
-cat orchestration/AGENTS.md | head -50
-```
-
-The 7 roles, cost tiers, and routing rules.
-
-### 2. Understand How Work Gets Done
-
-```bash
-cat orchestration/HANDOFF.md | head -100
-```
-
-DELEGATE/HANDBACK markup protocol for compact handoffs.
-
-### 3. See the Skills
-
-```bash
-ls -1 skills/*/skills/
-```
-
-22 specialized skills (implementation, testing, security, etc.)
-
-### 4. Check Quality Standards
-
-```bash
-cat orchestration/QUALITY.md
-```
-
-Tier 1/2/3 checklists that prevent bad merges.
-
-### 5. Understand Cost Optimization
-
-```bash
-cat operations/TOKENADVISOR.md | head -50
-ls skills/orchestrator/skills/model-engineer-automation.md
-ls skills/orchestrator/skills/ab-test-automation.md
-```
-
-How the system automatically improves model selection and cost.
-
----
-
-## Directory Map
-
-| Path | Purpose |
-|------|---------|
-| **orchestration/** | Agent routing, handoff protocol, quality gates, budget monitoring |
-| `AGENTS.md` | 7-role model + routing decision tree |
-| `HANDOFF.md` | DELEGATE/HANDBACK markup spec |
-| `QUALITY.md` | Tier 1/2/3 quality checklists |
-| `USAGE-BUDGET-MANAGER.md` | Real-time token usage monitoring skill |
-| `USAGE-BUDGET-INTEGRATION.md` | Budget integration with Orchestrator workflow |
-| **operations/** | Metrics infrastructure + automation |
-| `METRICS.md` | Per-task JSON + session JSONL schemas |
-| `TOKENADVISOR.md` | Daily metrics analysis framework |
-| **skills/** | 38 role-based and shared skills |
-| `orchestrator/skills/` | 11 skills (routing, automation, optimization) |
-| `engineer/skills/` | 5 skills (implementation, testing, UI, handlers, tools) |
-| `senior-engineer/skills/` | 2 skills (complex coding, APIs) |
-| `lead-engineer/skills/` | 1 skill (code review) |
-| `principal-engineer/skills/` | 3 skills (architecture, design decisions, tradeoffs) |
-| `security-engineer/skills/` | 3 skills (threat modeling, vulnerabilities, architecture review) |
-| `quality-engineer/skills/` | 4 skills (analysis, quorum voting, E2E, overview) |
-| `model-engineer/skills/` | 5 skills (analysis, recommendations, comparisons, feedback) |
-| `shared/skills/` | 4 skills (GitHub, git workflow, CDK, SigV4) |
-| **guides/SYSTEM_INTEGRATION.md** | 12-month roadmap + full architecture |
-| **guides/CLAUDE.md** | Team context & integration |
-
----
-
-## The Workflow (Queue-Based Delegation)
-
-### 1. Task Enters Queue
-
-```
-Task arrives → ~/.copilot/queue/incoming/{task_id}.yaml
-Example: "Fix token timeout in {example-service}"
-```
-
-### 2. Orchestrator Polls & Routes
-
-```
-Orchestrator (harness agent) polls every 30-60 seconds:
-├─ Reads AGENTS.md routing rules
-├─ Applies decision tree (complexity? scope? security?)
-├─ Creates DELEGATE block (HANDOFF.md format)
-└─ Sends to appropriate role agent
-```
-
-### 3. Agent Executes
-
-```
-Engineer (or other role) receives DELEGATE:
-├─ Reads scope, context, plan, success_criteria
-├─ Reads SKILLS.md for role-specific guidance
-├─ Executes work (Engineer can use Red-Green TDD)
-└─ Returns HANDBACK with:
-   - deliverables (what changed)
-   - tests (make verify status)
-   - tokens_in, tokens_out (metrics)
-   - duration_minutes
-   - escalations (if any)
-```
-
-### 4. Orchestrator Routes HANDBACK
-
-```
-Orchestrator polls ~/.copilot/queue/processing/:
-├─ If status=complete → route to Quality Engineer
-├─ If status=blocked → escalate to Lead/Senior Engineer
-└─ Otherwise → determine next steps
-```
-
-### 5. Quality Engineer Verifies
-
-```
-Quality Engineer runs Tier 1/2/3 checklist:
-├─ Tests pass? Lint clean? Coverage maintained?
-├─ No scope creep? No security issues?
-├─ Model assessment (was Haiku suitable?)
-└─ Moves to ~/.copilot/queue/done/{task_id}-{decision}.yaml
-   (PASS, FAIL/REWORK, or ESCALATE)
-```
-
-### 6. Orchestrator Decides Next Step
-
-```
-Orchestrator polls ~/.copilot/queue/done/:
-├─ PROCEED → merge to main
-├─ REWORK → create new DELEGATE with feedback
-└─ ESCALATE → promote to higher role (Senior/Lead/Principal)
-```
-
-### 7. Feedback Loop (Async)
-
-```
-Model Engineer (runs periodically):
-├─ Analyzes QE feedback from completed tasks
-├─ Builds confidence scores per model/task-type
-├─ Generates routing recommendations
-└─ Orchestrator uses for next similar task
-   (self-improving optimization)
-```
+| [docs/AGENTS.md](docs/AGENTS.md) | Agent routing reference + decision tree |
+| [docs/HANDOFF.md](docs/HANDOFF.md) | DELEGATE/HANDBACK format + examples |
+| [docs/QUEUE-PROTOCOL.md](docs/QUEUE-PROTOCOL.md) | Queue mechanics |
+| [docs/SKILLS.md](docs/SKILLS.md) | Skills overview |
+| [docs/INDEX.md](docs/INDEX.md) | Complete documentation index |
+| [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) | OpenCode installation guide |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Troubleshooting (30+ scenarios) |
 
 ---
 
 ## Cost Optimization (Self-Improving)
 
-Every task contributes to metrics → improves future recommendations.
-
-**Example:**
+Every task contributes metrics → Model Engineer analyzes → routing improves:
 
 ```
-Day 1: Task "medium-complexity auth"
-  → Routed to Haiku high-effort (recommended baseline)
-  → Completed: quality 90, cost $0.13, tokens 18.5K
-  → Metrics recorded
-
-Day 2: TokenAdvisor analyzes
-  → Haiku is 88-92 quality on auth (proven)
-  → Model Engineer confidence: 92%
-
-Day 7: Same task type arrives
-  → Model Engineer recommends Haiku (high confidence)
-  → Cost is known ($0.13), quality is known (90)
-  → Same task routed optimally
-
-Day 30: A/B test completes
-  → Tested Sonnet on auth (was question mark)
-  → Sonnet: quality 94, cost $0.16 (23% more expensive)
-  → Decision: Keep Haiku for medium-complexity, upgrade to Sonnet for high-complexity
-
-Day 60: New model released (Haiku 4.6)
-  → Run 5-task eval on low-complexity
-  → If quality ≥ current AND cost ≤ current → upgrade all
-  → Automatic model shift down, cost improvements
+Task completes → Quality Engineer assesses model suitability
+    ↓
+Model Engineer analyzes: quality/cost/tokens/QE feedback
+    ↓
+Generates ranked recommendations (rank_1 to rank_3)
+    ↓
+Orchestrator applies rank_1 for next similar task
+    ↓
+System gets cheaper and better automatically
 ```
 
-**Result:** 25-30% cost reduction while maintaining/improving quality.
+**Target:** 15–25% cost reduction over 3 months through better routing.
 
 ---
 
-## The 8 Roles (Quick Reference)
+## Framework Integration Research
 
-| Role | Model | Cost | Primary Use |
-|------|-------|------|-------------|
-| **Orchestrator** | Haiku | 60% of spend | Route tasks, manage queue, apply recommendations |
-| **Engineer** | Haiku | 18% of spend | Execute well-planned tasks (low-medium complexity) |
-| **Senior Engineer** | Sonnet | 7% of spend | Complex coding, planning, diagnosis |
-| **Lead Engineer** | Sonnet | 2% of spend | Code review, unblock stuck tasks |
-| **Principal Engineer** | Opus | 1% of spend | Cross-service architecture |
-| **Security Engineer** | Opus | 1% of spend | Security audits, threat modeling |
-| **Quality Engineer** | Sonnet | 8% of spend | Quality gate verification, model assessment |
-| **Model Engineer** | Sonnet | 3% of spend | Analyze feedback, optimize routing |
+Comprehensive research on 45 AI frameworks completed (May 2026). Status: **⏸️ PAUSED** — no implementation until explicitly approved.
 
-**Orchestrator:** Runs in harness, polls queue every 30-60s. Routes per AGENTS.md decision tree.
+Top recommendations: CrewAI (51.5K★), LangGraph (32.1K★), Pydantic AI (17.1K★).
 
-**Quality Engineer:** Verifies Tier 1/2/3 checklist. Assesses model suitability for Model Engineer feedback loop.
-
-**See:** `orchestration/AGENTS.md` (role definitions)  
-**See:** `orchestration/SKILLS.md` (role-specific workflows)  
-**See:** `orchestration/QUEUE-PROTOCOL.md` (queue mechanics)
-
----
-
-## Key Concepts
-
-### Queue-Based Delegation
-
-Work flows through a simple 3-state queue:
-
-```
-incoming/          → New tasks waiting for routing
-  ↓
-processing/        → Work assigned to agents (awaiting HANDBACK)
-  ↓
-done/              → Completed work (PROCEED/REWORK/ESCALATE)
-```
-
-Agents don't know about each other; the queue is the mediator.
-Queue coordination via `~/.copilot/queue/` for both individual operations and auditability.
-
-### DELEGATE/HANDBACK Protocol
-
-Compact structured markup:
-
-**Orchestrator → Engineer (DELEGATE):**
-```yaml
-task_id: 2026-04-24-fix-timeout
-role: Engineer
-model: claude-haiku-4-5
-scope: Fix token timeout in {example-service}; no Cognito changes
-context:
-  - File: lambda/api/main.go:92
-  - Root cause: Client clock skew
-plan:
-  1. Write test showing grace period behavior
-  2. Modify line 92 for 30s grace window
-  3. Run "make verify"
-success_criteria:
-  - Tests pass, coverage maintained
-  - Mobile e2e tests pass
-```
-
-**Engineer → Orchestrator (HANDBACK):**
-```yaml
-task_id: 2026-04-24-fix-timeout
-status: complete
-deliverables:
-  - Modified: lambda/api/main.go:92
-  - Added: lambda/api/main_test.go:145 (TestTokenGrace)
-tests:
-  - "make verify": PASS (47 tests, 89% coverage)
-tokens_in: 1200
-tokens_out: 820
-model: claude-haiku-4-5
-duration_minutes: 18
-escalations: 0
-```
-
-### Quality Gates (Mandatory)
-
-**Tier 1 (all tasks):**
-- Lint + tests pass
-- No new errors
-- In-scope changes only
-- Tests added for new code
-- No production hazards
-
-**Tier 2 (Senior+):**
-- Coverage ≥80%
-- Documentation of decisions
-- Plan completeness
-
-**Tier 3 (Principal/Security):**
-- Architecture adherence
-- IAM correctness
-- Cross-service contracts
-
-Prevent bad code from merging.
-
-### Metrics & Feedback
-
-Every task produces metrics → daily analysis → model recommendations improve → next task better routed.
-
-```
-Task metrics:
-  tokens_in, tokens_out
-  quality_score
-  cost_usd
-  escalations
-  duration_minutes
-
-Stored in: ~/.claude/metrics/YYYY-MM-DD/
-
-Analyzed daily:
-  TokenAdvisor Scheduler (17:00)
-  → Daily digest + anomalies + opportunities
-
-Updated based on analysis:
-  Model Engineer confidence scores
-  A/B test proposals
-  Model assignment table
-
-Next task routed:
-  With updated model recommendations
-  Self-improving loop
-```
+Full research: [docs/FRAMEWORKS/](docs/FRAMEWORKS/)
 
 ---
 
 ## When to Use This System
 
 ✅ **Good fit:**
-- Codebases with 5+ services (multi-repo coordination)
-- Teams wanting cost optimization (feedback loops)
-- High-quality outputs (quality gates, quorum voting)
-- Autonomous operation (schedulers, automation)
+- Codebases with 5+ services needing multi-agent coordination
+- Teams wanting autonomous cost optimization
+- High-quality output requirements (quality gates, escalation paths)
+- Autonomous operation with full audit trail
 
 ❌ **Not needed:**
 - Single-file changes ("fix typo in README")
-- Simple tasks (<30 min)
-- Low-stakes work (no cost/quality concerns)
-
----
-
-## Key Files
-
-| File | Read if... |
-|------|-----------|
-| `orchestration/AGENTS.md` | You need to understand routing rules |
-| `orchestration/HANDOFF.md` | You're handing off work to an agent |
-| `orchestration/QUALITY.md` | You're reviewing code (quality gates) |
-| `operations/METRICS.md` | You want to understand metrics schema |
-| `operations/TOKENADVISOR.md` | You want to understand cost analysis |
-| `guides/SYSTEM_INTEGRATION.md` | You want the full 12-month roadmap |
-| `guides/CLAUDE.md` | You're a new team member (start here) |
-| `skills/*/skills/*.md` | You need details on a specific skill |
-
----
-
-## Operational Automation (Phase 2E+)
-
-The system runs itself daily:
-
-```
-09:00 - A/B Test Automation
-        Proposes tests from Model Engineer recommendations
-        
-10:00 - Model Engineer Automation
-        Analyzes incoming task → recommends best model
-        
-17:00 - TokenAdvisor Scheduler
-        Reads metrics from past 24h
-        Generates daily digest + opportunities
-        
-18:00 - Orchestrator
-        Routes next batch with recommended models
-```
-
-**Result:** Self-improving system with no manual intervention needed.
-
----
-
-## Integration
-
-**This system integrates with:**
-- ✅ User/Copilot interface (receives tasks)
-- ✅ Code repositories (git clone, edit, push)
-- ✅ GitHub Actions CI (runs tests post-push)
-- ✅ Local metrics storage (~/.claude/metrics/)
-
-**This system does NOT require:**
-- ❌ Cloud databases
-- ❌ Slack/email (user-initiated)
-- ❌ External APIs
-- ❌ Special infrastructure
-
-Fully autonomous, local, self-contained.
-
----
-
-## Year 1 Projections
-
-| Metric | Baseline | Month 3 | Month 6 | Month 12 |
-|--------|----------|---------|---------|----------|
-| Cost/task | $0.21 | $0.17 | $0.16 | $0.15 |
-| Annual cost | $252 | $204 | $192 | $180 |
-| Reduction | 0% | 19% | 24% | 29% |
-| Quality | 85-90 | 90-93 | 91-94 | 91-95 |
-| Throughput | 200 tasks/mo | 250-300 | 300-350 | 350-400 |
-
----
-
-## Next Steps
-
-1. **Load context:** Read `docs/guides/CLAUDE.md` + `docs/AGENTS.md`
-2. **Understand routing:** Memorize the 5-step decision tree
-3. **Study your role:** Read your role's `src/skills/*/` subdirectory
-4. **Practice:** Run 1-2 sample tasks with feedback
-5. **Operationalize:** Set up metrics directory + cron jobs for automations
-
-See `docs/guides/SYSTEM_INTEGRATION.md` for detailed Week 1-4 deployment checklist.
-
----
-
-## Support
-
-- **Questions about routing?** → See `docs/AGENTS.md`
-- **Questions about handoffs?** → See `docs/HANDOFF.md`
-- **Questions about a skill?** → See `src/skills/<role>/`
-- **Questions about quality?** → See `docs/QUALITY.md`
-- **Questions about costs?** → See `operations/TOKENADVISOR.md`
-- **Questions about roadmap?** → See `docs/guides/SYSTEM_INTEGRATION.md`
-- **New team member?** → Start with `docs/guides/CLAUDE.md`
-
----
-
-**This directory is complete, self-contained, and production-ready.**
-
-Load `agentic-engineers/` as a unit. Everything you need is here.
+- Simple tasks under 30 minutes
+- Low-stakes work with no cost/quality concerns

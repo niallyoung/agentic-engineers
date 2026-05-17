@@ -32,9 +32,29 @@ import sys
 import json
 import shutil
 import argparse
+import time
 from pathlib import Path
 from typing import Dict, Tuple, List
 from datetime import datetime
+
+
+# ---------------------------------------------------------------------------
+# ANSI color helpers — suppressed when NO_COLOR is set or stdout is not a TTY
+# ---------------------------------------------------------------------------
+def _use_color() -> bool:
+    return sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+def _green(s: str) -> str:
+    return f"\033[32m{s}\033[0m" if _use_color() else s
+
+def _yellow(s: str) -> str:
+    return f"\033[33m{s}\033[0m" if _use_color() else s
+
+def _red(s: str) -> str:
+    return f"\033[31m{s}\033[0m" if _use_color() else s
+
+def _dim(s: str) -> str:
+    return f"\033[2m{s}\033[0m" if _use_color() else s
 
 # Graceful PyYAML import with fallback
 try:
@@ -187,7 +207,7 @@ class PiDevRenderer:
         """Render all config files"""
         
         if not self.src_dir.exists():
-            print(f"❌ Source directory not found: {self.src_dir}")
+            print(f"{_red('❌')} Source directory not found: {self.src_dir}")
             return 1
         
         print(f"\n{'='*70}")
@@ -202,10 +222,15 @@ class PiDevRenderer:
         
         rendered = 0
         errors = 0
+        install_start = time.time()
         
         for filename in self.MANAGED_FILES:
-            if self.copy_file(filename):
+            file_start = time.time()
+            ok = self.copy_file(filename)
+            elapsed = time.time() - file_start
+            if ok:
                 rendered += 1
+                print(f"  {_green('✅')} {filename} {_dim(f'({elapsed:.2f}s)')}")
             else:
                 errors += 1
         
@@ -222,9 +247,10 @@ class PiDevRenderer:
         
         hooks_installed = self._install_git_hooks()
         
+        install_duration = time.time() - install_start
         print(f"\n{'='*70}")
         print(f"Rendering complete!")
-        print(f"✅ {rendered} files rendered, ❌ {errors} errors, hooks: {'✅' if hooks_installed else '⚠️'}")
+        print(f"{_green('✅')} {rendered} files rendered, {_red('❌') if errors else ''}{errors} errors, hooks: {_green('✅') if hooks_installed else _yellow('⚠️')} {_dim(f'({install_duration:.1f}s total)')}")
         print(f"{'='*70}\n")
         
         if errors == 0:
