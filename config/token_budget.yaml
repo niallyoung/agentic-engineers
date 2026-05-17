@@ -1,0 +1,33 @@
+# Token Budget Configuration
+# Defines spending limits and enforcement thresholds for token consumption
+# across orchestrator sessions and daily operations.
+
+budget:
+  # Maximum USD spend per session (single orchestrator run)
+  session_usd: 5.00
+  
+  # Maximum USD spend per calendar day (24-hour window)
+  daily_usd: 20.00
+  
+  # Warning threshold: percentage of budget at which to emit warnings
+  # Example: 70% means warn when 70% of budget is consumed
+  warn_pct: 70
+  
+  # Critical threshold: percentage at which to escalate to critical alerts
+  # Example: 90% means critical when 90% of budget is consumed
+  critical_pct: 90
+  
+  # Block threshold: percentage at which to block new task execution
+  # Example: 100% means block when 100% (full budget) is consumed
+  block_pct: 100
+
+# Display configuration for budget status reporting
+display:
+  # Display mode: "compact" (single line) or "detailed" (multi-line with breakdown)
+  mode: compact
+  
+  # Show budget status line after each task execution
+  show_per_task: true
+  
+  # Show comprehensive budget summary at end of session
+  show_session_summary: true
