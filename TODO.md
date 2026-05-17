@@ -1,7 +1,7 @@
 # TODO: agentic-engineers
 
-**Last Updated:** 2026-05-17  
-**Status:** Active — Phase G (Documentation Refresh) in progress
+**Last Updated:** 2026-05-18  
+**Status:** Active — Phase G Complete, Doc Consolidation Round 2 + Phase H in progress
 
 ---
 
@@ -37,25 +37,35 @@
 
 ---
 
-## 🔴 IN PROGRESS
+## ✅ COMPLETED
 
-### Phase G: Documentation Refresh (This Sprint)
+### Phase G: Documentation Refresh (Completed 2026-05-18)
 
 - [x] **DOC-AUDIT-001:** Create `docs/DOCUMENTATION-AUDIT.md`
 - [x] **DOC-README-001:** Rewrite README.md (<500 lines, accurate, current)
 - [x] **DOC-TODO-001:** Refresh TODO.md with current May 2026 status
-- [ ] **DOC-SPEC-001:** Update SPEC.md with Phase 3 token visibility requirements
-- [ ] **DOC-QS-001:** Create `docs/QUICK-START-TOKEN-VISIBILITY.md`
-- [ ] **DOC-QS-002:** Create `docs/QUICK-START-BUDGET-CHECKING.md`
-- [ ] **DOC-QS-003:** Create `docs/QUICK-START-PRODUCTION-DEPLOYMENT.md`
-- [ ] **DOC-INDEX-001:** Create `docs/INDEX.md` (master documentation index)
-- [ ] **DOC-ARCHIVE-001:** Move root-level `*_IMPLEMENTATION.md` files to `docs/archive/phase-reports/`
+- [x] **DOC-SPEC-001:** Update SPEC.md with Phase 3 token visibility requirements
+- [x] **DOC-QS-001:** Create `docs/QUICK-START-TOKEN-VISIBILITY.md`
+- [x] **DOC-QS-002:** Create `docs/QUICK-START-BUDGET-CHECKING.md`
+- [x] **DOC-QS-003:** Create `docs/QUICK-START-PRODUCTION-DEPLOYMENT.md`
+- [x] **DOC-INDEX-001:** Create `docs/INDEX.md` (master documentation index)
+- [x] **DOC-ARCHIVE-001:** Move root-level `*_IMPLEMENTATION.md` files to `docs/archive/phase-reports/`
 
 ---
 
-## 🟡 NEXT UP (Phase H)
+## 🔴 IN PROGRESS
 
-### Test Coverage Improvements
+### Doc Consolidation Round 2 (This Sprint)
+
+Audit and consolidate unnecessary documentation to reduce tracked files and improve maintainability.
+
+- [ ] **CONSOLIDATION-001:** Audit all `docs/` for redundancy, staleness, and unnecessary files
+- [ ] **CONSOLIDATION-002:** Remove/merge redundant documentation
+- [ ] **CONSOLIDATION-003:** Update cross-references and links
+- [ ] **CONSOLIDATION-004:** Verify no broken links or orphaned files
+
+### Phase H: Test Coverage Improvements (Starting)
+
 - [ ] **COVERAGE-001:** Add test files for 0% coverage modules
   - Modules: artifact_manager, delegate_validator, gray_zone_reviewer, metrics_writer, spec_validator, workflow, lead_review_cli
   - Target: 85%+ coverage per module
@@ -125,8 +135,9 @@
 | 1–6: Core Framework | ✅ Complete | 100% |
 | Phase 3: Token Visibility | ✅ Complete | 100% |
 | Phase B–E: Skills & Harness | ✅ Complete | 100% |
-| Phase G: Documentation Refresh | 🔄 In Progress | ~40% |
-| Phase H: Test Coverage | ⏳ Planned | 0% |
+| Phase G: Documentation Refresh | ✅ Complete | 100% |
+| Doc Consolidation Round 2 | 🔄 In Progress | ~0% |
+| Phase H: Test Coverage | 🔄 In Progress | ~0% |
 | Phase I: Standards Compliance | ⏳ Planned | 0% |
 | Framework Integration | ⏸️ Paused | Research only |
 
