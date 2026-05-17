@@ -55,9 +55,7 @@ This enables `from src.skills.agent_creator import ...` style imports in tests.
 - `bin/run-automation-controller.sh` — shell wrapper for automation controller
 - `bin/orchestrator-autopilot.sh` — legacy bash autopilot loop
 
-**Canonical entry point**: `bin/orchestrator_daemon.py`
-
-Updated `tests/test_automation_integration.py::TestEntrypointScript` to reference `orchestrator_daemon.py`.
+**Note**: Standalone daemon approach (orchestrator_daemon.py, AutomationController) was removed during architectural review. The Orchestrator is a sub-agent invoked via OpenCode harness mode, not a standalone polling process. All work flows through the DELEGATE/HANDBACK protocol.
 
 ### 6. Archived Utility Scripts (Step 7)
 
@@ -89,8 +87,9 @@ Documents all archived content with descriptions and archive dates.
 ### 9. Fixed Test Assertions (Step 10)
 
 Updated tests to match new `TaskRouter` behavior:
-- `tests/orchestration/test_queue_polling_daemon.py`: Removed `assert agent is not None` (TaskRouter now returns `None` for agent instance)
-- `tests/test_automation_integration.py`: Updated `TestEntrypointScript` to reference canonical `orchestrator_daemon.py`
+- Removed `assert agent is not None` (TaskRouter now returns `None` for agent instance)
+- Removed tests for standalone daemon (orchestrator_daemon.py, AutomationController)
+- Removed tests for automation module (automation.py)
 
 ## Test Results
 

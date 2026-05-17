@@ -3,10 +3,10 @@ Phase 6 Validation Tests — End-to-End Workflow with Sample Tasks
 
 Tests the complete orchestrator workflow:
 1. Create sample tasks in queue
-2. Run orchestrator daemon
+2. Invoke orchestrator via OpenCode
 3. Verify tasks are processed
 4. Check quality metrics
-5. Validate continuous polling
+5. Validate protocol compliance
 """
 
 import pytest
