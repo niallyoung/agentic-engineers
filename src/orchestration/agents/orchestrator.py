@@ -12,6 +12,7 @@ This is the ONLY way work flows through agentic-engineers.
 """
 
 import os
+import logging
 import yaml
 import json
 import time
@@ -35,7 +36,12 @@ from .quality_validator import QualityValidator, RoutingDecision
 from .delegate_validator import validate_delegate_pre_flight
 from .metrics_writer import MetricsWriter
 from .gray_zone_reviewer import analyze_handback_for_gray_zone
+from ..monitoring.metrics import MetricsRegistry
+from ..monitoring.token_tracker import TokenTracker
+from ..monitoring.orchestrator_cli import OrchestratorCLI
+from ..monitoring.budget_checker import BudgetStatus, BudgetResult
 
+logger = logging.getLogger(__name__)
 
 # Protocol constants
 MAX_RETRIES = 2  # Maximum number of retries before escalation to Principal Engineer
@@ -684,6 +690,8 @@ class OrchestratorAgent(Agent):
         idle_timeout: int = 60,
         agent_invoker=None,
         quality_validator: Optional["QualityValidator"] = None,
+        budget_config_path: Optional[Path] = None,
+        no_color: Optional[bool] = None,
     ):
         super().__init__(ORCHESTRATOR_CONFIG)
         self.queue_manager = QueueManager(queue_dir, agent_context)
@@ -699,7 +707,27 @@ class OrchestratorAgent(Agent):
         self.quality_validator = quality_validator or QualityValidator()
         # Task state tracking for retry management
         self.task_state = {}  # Maps task_id -> {retry_count, quality_score, failure_reasons}
+
+        # Initialize token tracking and CLI monitoring
+        self.metrics_registry = MetricsRegistry()
+        self.token_tracker = TokenTracker(self.metrics_registry)
+        _no_color = no_color if no_color is not None else (os.environ.get("NO_COLOR") is not None)
+        self.orchestrator_cli = OrchestratorCLI(
+            token_tracker=self.token_tracker,
+            budget_config_path=budget_config_path or Path("config/token_budget.yaml"),
+            no_color=_no_color,
+            on_budget_exceeded=self._handle_budget_exceeded,
+        )
     
+    def _handle_budget_exceeded(self, budget_result: BudgetResult) -> None:
+        """Called when budget threshold is exceeded."""
+        if budget_result.status == BudgetStatus.BLOCKED:
+            logger.error(f"BLOCKED: {budget_result.message}")
+        elif budget_result.status == BudgetStatus.CRITICAL:
+            logger.warning(f"CRITICAL budget: {budget_result.message}")
+        else:
+            logger.warning(f"Budget alert ({budget_result.status.value}): {budget_result.message}")
+
     def _init_task_state(self, task_id: str) -> Dict:
         """Initialize task state for retry tracking."""
         if task_id not in self.task_state:
@@ -1064,11 +1092,18 @@ class OrchestratorAgent(Agent):
             self._process_task(filename)
             self.last_task_time = time.time()
 
+        stats = self.token_tracker.get_stats()
         return {
             "tasks_processed": tasks_this_cycle,
             "tasks_success": self.tasks_success,
             "tasks_escalated": self.tasks_escalated,
             "tasks_failed": 0,
+            "tokens": {
+                "input": stats.total_input_tokens,
+                "output": stats.total_output_tokens,
+                "cached": stats.total_cached_tokens,
+                "cost_usd": stats.total_cost_usd,
+            },
         }
 
     def poll_and_process(self):
@@ -1098,7 +1133,12 @@ class OrchestratorAgent(Agent):
             for filename in incoming_tasks:
                 self._process_task(filename)
                 self.last_task_time = time.time()
-    
+
+        # Print session summary at end of polling loop
+        print("\n" + "=" * 60)
+        self.orchestrator_cli.print_session_summary()
+        print("=" * 60)
+
     def _process_task(self, filename: str):
         """Process a single task from queue."""
         print(f"\n📋 Processing task: {filename}")
@@ -1253,7 +1293,18 @@ class OrchestratorAgent(Agent):
                 metadata=handback  # HANDBACK metadata attached to task
             )
             print(f"   ✓ Moved to done queue with decision: {decision} (audit: {len(move_done_result['audit_trail'])} entries)")
-            
+
+            # 7.5 Record token metrics via OrchestratorCLI (skip synthetic HANDBACKs)
+            if handback and not handback.get("_synthetic"):
+                try:
+                    self.orchestrator_cli.on_task_complete(effective_delegate, handback)
+                except Exception as cli_err:
+                    logger.warning(f"OrchestratorCLI.on_task_complete failed: {cli_err}")
+
+            # Check if new tasks should be blocked due to budget exhaustion
+            if self.orchestrator_cli.should_block_new_tasks():
+                logger.error("Budget exhausted — new tasks will be blocked")
+
             # Update metrics
             self.tasks_processed += 1
             if decision == "PROCEED":

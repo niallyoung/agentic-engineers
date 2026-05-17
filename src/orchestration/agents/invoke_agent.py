@@ -24,7 +24,10 @@ import uuid
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.orchestration.monitoring.token_tracker import TokenTracker
 
 
 # ─── Exceptions ──────────────────────────────────────────────────────────────
@@ -106,6 +109,7 @@ class AgentInvoker:
         spans_dir: Optional[Path] = None,
         poll_interval: Optional[int] = None,
         effort_timeouts: Optional[Dict[str, int]] = None,
+        token_tracker: Optional["TokenTracker"] = None,
     ):
         """
         Args:
@@ -117,6 +121,8 @@ class AgentInvoker:
             poll_interval: Seconds between HANDBACK file checks. Defaults to 30.
             effort_timeouts: Override default per-effort-level timeouts.
                              Useful for tests with short timeouts.
+            token_tracker: Optional TokenTracker instance for recording token metrics.
+                          If provided, token metrics will be recorded for each real HANDBACK.
         """
         self.processing_dir = Path(processing_dir)
         self.delegates_dir = (
@@ -128,6 +134,7 @@ class AgentInvoker:
             poll_interval if poll_interval is not None else self.DEFAULT_POLL_INTERVAL
         )
         self.effort_timeouts: Dict[str, int] = effort_timeouts or dict(self.EFFORT_TIMEOUTS)
+        self._token_tracker = token_tracker
 
         # Ensure directories exist
         self.processing_dir.mkdir(parents=True, exist_ok=True)
@@ -303,6 +310,10 @@ class AgentInvoker:
 
         # 11. Write SPAN
         self._write_span(delegate, handback, span_start, span_end, span_status=span_status)
+
+        # 12. Record token metrics if tracker is available and HANDBACK is real
+        if self._token_tracker and not handback.get("_synthetic"):
+            self._record_token_metrics(delegate, handback)
 
         return handback
 
@@ -522,3 +533,42 @@ class AgentInvoker:
         except Exception as exc:
             print(f"   [invoke_agent] Warning: Failed to write SPAN: {exc}")
             return None
+
+    def _record_token_metrics(self, delegate: Dict, handback: Dict) -> None:
+        """
+        Record token metrics from a real HANDBACK to the TokenTracker.
+
+        Extracts task_id, agent/role, tokens_in, tokens_out, tokens_cached,
+        and cost_usd from the HANDBACK and records them via the tracker.
+
+        This method is only called for real (non-synthetic) HANDBACKs.
+
+        Args:
+            delegate: DELEGATE block (contains task_id, role)
+            handback: HANDBACK block (contains tokens_in, tokens_out, cost_usd, etc.)
+        """
+        try:
+            task_id = delegate.get("task_id", "unknown")
+            role = delegate.get("role", "unknown")
+            
+            # Normalize agent name: "Senior Engineer" → "senior-engineer"
+            agent = role.lower().replace(" ", "-")
+            
+            # Extract token counts (defaults to 0 if missing)
+            tokens_in = handback.get("tokens_in", 0)
+            tokens_out = handback.get("tokens_out", 0)
+            tokens_cached = handback.get("tokens_cached", 0)
+            cost_usd = handback.get("cost_usd", 0.0)
+            
+            # Record the metrics
+            self._token_tracker.record_task_tokens(
+                task_id=task_id,
+                agent=agent,
+                input_tokens=tokens_in,
+                output_tokens=tokens_out,
+                cached_tokens=tokens_cached,
+                cost_usd=cost_usd,
+            )
+        except Exception as exc:
+            # Log but don't propagate — token tracking failures should not block
+            print(f"   [invoke_agent] Warning: Failed to record token metrics: {exc}")
