@@ -20,6 +20,13 @@ REPO_ROOT="${1:?usage: render-claude.sh REPO_ROOT CLAUDE_DIR [--uninstall|--stat
 CLAUDE="${2:?usage: render-claude.sh REPO_ROOT CLAUDE_DIR [--uninstall|--status]}"
 MODE="${3:-install}"
 
+# ANSI color helpers — suppressed when NO_COLOR is set or stdout is not a TTY
+_use_color() { [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; }
+_green()  { _use_color && printf '\033[32m%s\033[0m' "$1" || printf '%s' "$1"; }
+_yellow() { _use_color && printf '\033[33m%s\033[0m' "$1" || printf '%s' "$1"; }
+_red()    { _use_color && printf '\033[31m%s\033[0m' "$1" || printf '%s' "$1"; }
+_dim()    { _use_color && printf '\033[2m%s\033[0m'  "$1" || printf '%s' "$1"; }
+
 SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
 DST_SKILLS="$CLAUDE/skills"
@@ -97,14 +104,21 @@ case "$MODE" in
 		# 1. Skills: rsync directories with SKILL.md
 		echo "📦 Rendering skills → $DST_SKILLS/..."
 		count_s=0
+		install_start=$(date +%s)
 		for name in $(list_source_skills); do
 			src="$SRC_SKILLS/$name"; dst="$DST_SKILLS/$name"
 			if [ -d "$dst" ] && [ ! -f "$dst/$SKILL_MARKER" ]; then
-				echo "  ⚠️  skipping skill $name — foreign"
+				echo "  $(_yellow "⚠️  skipping skill $name — foreign")"
 				continue
 			fi
+			skill_start=$(date +%s)
+			_use_color && printf '\r  ⏳ %-30s' "$name"
 			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
+			skill_end=$(date +%s)
+			skill_duration=$(( skill_end - skill_start ))
+			_use_color && printf '\r'
+			echo "  $(_green "✅") $name $(_dim "(${skill_duration}s)")"
 			count_s=$((count_s + 1))
 		done
 
@@ -135,18 +149,18 @@ case "$MODE" in
 
 			# Refuse to overwrite a foreign agent
 			if [ -f "$dst_file" ] && [ -f "$AGENT_MANIFEST" ] && ! grep -qx "$name" "$AGENT_MANIFEST"; then
-				echo "  ⚠️  skipping agent $name — foreign at $dst_file"
+				echo "  $(_yellow "⚠️  skipping agent $name — foreign at $dst_file")"
 				continue
 			fi
 			if [ -f "$dst_file" ] && [ ! -f "$AGENT_MANIFEST" ]; then
-				echo "  ⚠️  skipping agent $name — pre-existing file (no manifest yet); move it aside and re-run"
+				echo "  $(_yellow "⚠️  skipping agent $name — pre-existing file (no manifest yet); move it aside and re-run")"
 				continue
 			fi
 
 			# Lookup canonical metadata from docs/AGENTS.md
 			canonical_metadata=$(lookup_agent_metadata "$name" "$AGENTS_MAP")
 			if [ -z "$canonical_metadata" ]; then
-				echo "  ⚠️  skipping agent $name — not found in docs/AGENTS.md"
+				echo "  $(_yellow "⚠️  skipping agent $name — not found in docs/AGENTS.md")"
 				continue
 			fi
 			
@@ -168,10 +182,13 @@ case "$MODE" in
 		} > "$dst_file"
 
 			echo "$name" >> "$AGENT_MANIFEST.tmp"
+			echo "  $(_green "✅") agent $name"
 			count_a=$((count_a + 1))
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
-		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
+		install_end=$(date +%s)
+		install_duration=$(( install_end - install_start ))
+		echo "✅ Rendered $count_s skill(s), $count_a agent(s) $(_dim "(${install_duration}s total)")"
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# Claude Code harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.

@@ -1,0 +1,33 @@
+deployment:
+  mode: gradual_rollout  # dry_run | shadow | gradual_rollout | production
+
+  dry_run:
+    enabled: false
+    collect_metrics: true
+
+  shadow:
+    enabled: false
+    traffic_pct: 10
+
+  gradual_rollout:
+    enabled: true
+    stages:
+      - traffic_pct: 10
+        duration_hours: 24
+      - traffic_pct: 25
+        duration_hours: 24
+      - traffic_pct: 50
+        duration_hours: 24
+      - traffic_pct: 75
+        duration_hours: 24
+      - traffic_pct: 100
+        duration_hours: 0  # permanent — no automatic advancement
+
+  monitoring:
+    enabled: true
+    alert_on_errors: true
+    alert_on_performance_degradation: true
+
+  rollback:
+    enabled: true
+    auto_rollback_on_critical_error: true
