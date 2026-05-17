@@ -441,7 +441,8 @@ class QueueManager:
         task_id: str,
         from_state: str,
         to_state: str,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        filename: Optional[str] = None
     ) -> Dict:
         """
         Move task between states with atomic transitions and audit trail.
@@ -511,16 +512,37 @@ class QueueManager:
             else:
                 raise ValueError(f"Unknown to_state: {to_state}")
             
-            # Find task file containing task_id
+            # Find task file: use explicit filename if provided, otherwise search by task_id
             task_filename = None
             from_state_tasks = sorted([f.name for f in from_dir.glob("*.yaml")])
-            for task_file in from_state_tasks:
-                if task_id in task_file:
-                    task_filename = task_file
-                    break
             
-            if not task_filename:
-                raise FileNotFoundError(f"Task '{task_id}' not found in '{from_state}' state")
+            if filename is not None:
+                # Explicit filename provided — use directly if it exists
+                if filename in from_state_tasks:
+                    task_filename = filename
+                else:
+                    available = from_state_tasks
+                    raise FileNotFoundError(
+                        f"Task file '{filename}' not found in '{from_state}' state "
+                        f"(directory: {from_dir}). "
+                        f"Available files: {available}"
+                    )
+            else:
+                # Search by task_id substring match (backward compatibility)
+                for task_file in from_state_tasks:
+                    if task_id in task_file:
+                        task_filename = task_file
+                        break
+                
+                if not task_filename:
+                    available = from_state_tasks
+                    raise FileNotFoundError(
+                        f"Task '{task_id}' not found in '{from_state}' state "
+                        f"(directory: {from_dir}). "
+                        f"Available files: {available}. "
+                        f"Hint: if the filename uses a different naming convention than the task_id "
+                        f"(e.g. 'DELEGATE-foo.yaml' vs '2026-05-17-foo'), pass filename= explicitly."
+                    )
             
             # Read and validate task file integrity
             from_path = from_dir / task_filename
@@ -1137,6 +1159,7 @@ class OrchestratorAgent(Agent):
                 task_id=task_id,
                 from_state="incoming",
                 to_state="processing",
+                filename=filename,
                 metadata={
                     "routing_info": {
                         "role": role,
@@ -1197,6 +1220,7 @@ class OrchestratorAgent(Agent):
                     task_id=task_id,
                     from_state="processing",
                     to_state="done",
+                    filename=move_result.get("filename"),
                     metadata=handback
                 )
                 self.tasks_processed += 1
@@ -1252,6 +1276,7 @@ class OrchestratorAgent(Agent):
                 task_id=task_id,
                 from_state="processing",
                 to_state="done",
+                filename=move_result.get("filename"),
                 metadata=handback  # HANDBACK metadata attached to task
             )
             print(f"   ✓ Moved to done queue with decision: {decision} (audit: {len(move_done_result['audit_trail'])} entries)")
