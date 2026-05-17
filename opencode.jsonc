@@ -35,16 +35,19 @@
     "sdlc-check": {
       "description": "Validate SDLC workflow compliance — check queue, DELEGATEs, and HANDBACKs",
       "agent": "orchestrator",
-      "subtask": true
+      "subtask": true,
+      "template": "Validate SDLC workflow compliance by checking the queue status, reviewing all pending DELEGATEs and HANDBACKs, verifying protocol compliance, and ensuring no protocol violations."
     },
     "hooks-install": {
       "description": "Install git enforcement hooks (core.hooksPath = .githooks)",
-      "agent": "orchestrator"
+      "agent": "orchestrator",
+      "template": "Install and configure git enforcement hooks from .githooks/ directory. Set core.hooksPath = .githooks and verify all hooks are executable and properly configured."
     },
     "queue-status": {
       "description": "Review pending DELEGATEs and HANDBACKs in the queue",
       "agent": "orchestrator",
-      "subtask": true
+      "subtask": true,
+      "template": "Review the current state of the task queue. List all pending DELEGATEs and HANDBACKs, their status, age, and any issues that need attention."
     }
   },
 
