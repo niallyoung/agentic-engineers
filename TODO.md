@@ -53,56 +53,65 @@
 
 ---
 
-## 🔴 IN PROGRESS
+## ✅ COMPLETED
 
-### Doc Consolidation Round 2 (This Sprint)
+### Doc Consolidation Round 2 (Completed 2026-05-18)
 
-Audit and consolidate unnecessary documentation to reduce tracked files and improve maintainability.
-
-- [ ] **CONSOLIDATION-001:** Audit all `docs/` for redundancy, staleness, and unnecessary files
-- [ ] **CONSOLIDATION-002:** Remove/merge redundant documentation
-- [ ] **CONSOLIDATION-003:** Update cross-references and links
-- [ ] **CONSOLIDATION-004:** Verify no broken links or orphaned files
-
-### Phase H: Test Coverage Improvements (Starting)
-
-- [ ] **COVERAGE-001:** Add test files for 0% coverage modules
-  - Modules: artifact_manager, delegate_validator, gray_zone_reviewer, metrics_writer, spec_validator, workflow, lead_review_cli
-  - Target: 85%+ coverage per module
-  - Effort: 1 week | Owner: Quality Engineer
-
-- [ ] **TDD-001:** Fix remaining failing tests per TDD-ROADMAP.md
-  - Priority order in `docs/TDD-ROADMAP.md` P0 section
-  - Effort: 3-4 days | Owner: Lead Engineer + Engineer
-
-### Skills Implementation
-- [ ] **SKILL-TODO-001:** Implement todo-maintenance skill
-  - Auto-sync queue DELEGATEs ↔ TODO.md on HANDBACK received
-  - Effort: 1-2 days | Owner: Engineer
-
-- [ ] **SKILL-DOC-QUALITY-001:** Implement doc-quality skill
-  - Link validation, cross-ref checks, staleness flagging
-  - Constraint: Exclude SPEC.md from all checks
-  - Effort: 2-3 days | Owner: Quality Engineer
-
-### Documentation Cleanup
-- [ ] **CLEANUP-001:** Archive PHASE-3/4 planning docs
-  - Move ~12 files to `docs/archive/phase-planning/`
-  - Effort: 1-2 hours | Owner: Engineer
-
-- [ ] **CLEANUP-002:** Reduce tracked files to <150
-  - Current: ~240 → Target: <150
-  - Effort: 1 day | Owner: Senior Engineer
+- [x] **CONSOLIDATION-001:** Audit all `docs/` for redundancy, staleness, and unnecessary files
+- [x] **CONSOLIDATION-002:** Remove/merge redundant documentation
+- [x] **CONSOLIDATION-003:** Update cross-references and links
+- [x] **CONSOLIDATION-004:** Verify no broken links or orphaned files
+- [x] **CONSOLIDATION-MANIFEST:** Created consolidation manifest with restoration instructions
 
 ---
 
-## 🔵 PLANNED (Phase I+)
+## 🔴 IN PROGRESS
 
-### Standards Compliance
+### Phase H: Test Coverage Improvements (Delegated 2026-05-18)
+
+- [ ] **COVERAGE-001:** Add test files for 0% coverage modules (14 modules, 1,361 stmts)
+  - TIER 1: core_protocol_validator, protocol_audit, healer-metrics-analyzer, queue_manager, test_validators
+  - TIER 2: test_rate_limiting, test_queue_ops, testing_harness, AGENT-IMPLEMENTATION-TEMPLATE
+  - TIER 3: test_integration, orchestrator_testing_harness, errors, conftest, test_core_protocol_validator
+  - Target: 85%+ overall, all modules ≥80%
+  - Effort: 32.5 hours | Owner: Quality Engineer
+  - Deadline: 2026-05-24
+  - Task ID: 2026-05-18-phase-h-test-coverage
+
+### Phase I: Standards Compliance (Delegated 2026-05-18)
+
 - [ ] **STANDARDS-001:** Update SPEC.md with external standards section
   - Add: AGENTS.md, Claude Code, GitHub Copilot, agentskills.io
   - Authority: spec-management skill (Principal/Lead approval)
-  - Effort: 1 day | Owner: Principal Engineer
+  - Effort: 1-2 days | Owner: Principal Engineer
+  - Deadline: 2026-05-20
+  - Task ID: 2026-05-18-phase-i-standards-compliance
+
+- [ ] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
+  - Full standards alignment matrix, compliance checklist, implementation roadmap
+  - Effort: Included in STANDARDS-001
+  - Owner: Principal Engineer
+
+### Skills Implementation (Delegated 2026-05-18)
+
+- [ ] **SKILL-TODO-001:** Implement todo-maintenance skill
+  - Auto-sync queue DELEGATEs ↔ TODO.md on HANDBACK received
+  - Bidirectional sync, conflict detection, weekly reporting
+  - Effort: 1-2 days | Owner: Engineer
+  - Deadline: 2026-05-20
+  - Task ID: 2026-05-18-skill-todo-maintenance
+
+- [ ] **SKILL-DOC-QUALITY-001:** Implement doc-quality skill
+  - Link validation, cross-ref checks, staleness flagging
+  - Quality metrics, HTML+Markdown reports, CI/CD integration
+  - Constraint: Exclude SPEC.md from all checks
+  - Effort: 2-3 days | Owner: Quality Engineer
+  - Deadline: 2026-05-22
+  - Task ID: 2026-05-18-skill-doc-quality
+
+---
+
+## 🔵 PLANNED (Phase J+)
 
 - [ ] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
   - Full standards alignment, compliance matrix, roadmap
@@ -136,9 +145,11 @@ Audit and consolidate unnecessary documentation to reduce tracked files and impr
 | Phase 3: Token Visibility | ✅ Complete | 100% |
 | Phase B–E: Skills & Harness | ✅ Complete | 100% |
 | Phase G: Documentation Refresh | ✅ Complete | 100% |
-| Doc Consolidation Round 2 | 🔄 In Progress | ~0% |
-| Phase H: Test Coverage | 🔄 In Progress | ~0% |
-| Phase I: Standards Compliance | ⏳ Planned | 0% |
+| Doc Consolidation Round 2 | ✅ Complete | 100% |
+| Phase H: Test Coverage | 🔄 Delegated | ~0% (Quality Engineer) |
+| Phase I: Standards Compliance | 🔄 Delegated | ~0% (Principal Engineer) |
+| Skills: todo-maintenance | 🔄 Delegated | ~0% (Engineer) |
+| Skills: doc-quality | 🔄 Delegated | ~0% (Quality Engineer) |
 | Framework Integration | ⏸️ Paused | Research only |
 
 ---
