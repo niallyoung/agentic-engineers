@@ -109,6 +109,18 @@
   - Deadline: 2026-05-22
   - Task ID: 2026-05-18-skill-doc-quality
 
+### Market Comparison Enhancement (Delegated 2026-05-18)
+
+- [ ] **COMPARISON-001:** Add Steve Yegge's Gastown to market comparison
+  - Research Gastown framework (resource-aware agent orchestration)
+  - Add to README.md Quick Comparison Table
+  - Create detailed Gastown section (500+ words)
+  - Document strengths/weaknesses/best-use-cases
+  - Update comparison context (resource-aware paradigm)
+  - Effort: 1-2 days | Owner: Engineer
+  - Deadline: 2026-05-20
+  - Task ID: 2026-05-18-gastown-comparison
+
 ---
 
 ## 🔵 PLANNED (Phase J+)
@@ -150,6 +162,7 @@
 | Phase I: Standards Compliance | 🔄 Delegated | ~0% (Principal Engineer) |
 | Skills: todo-maintenance | 🔄 Delegated | ~0% (Engineer) |
 | Skills: doc-quality | 🔄 Delegated | ~0% (Quality Engineer) |
+| Market: Gastown Comparison | 🔄 Delegated | ~0% (Engineer) |
 | Framework Integration | ⏸️ Paused | Research only |
 
 ---
