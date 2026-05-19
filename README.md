@@ -340,23 +340,25 @@ System gets cheaper and better automatically
 
 **Agentic Engineers** is a production-ready multi-agent orchestration framework. Here's how it stacks up against the industry:
 
+**Note:** This comparison now includes resource-aware frameworks like Gastown, reflecting an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
+
 #### Quick Comparison Table
 
-| Aspect | Agentic Engineers | CrewAI | LangGraph | AutoGen | OpenAI Agents SDK |
-|--------|-------------------|--------|-----------|---------|-------------------|
-| **Architecture** | Queue-based orchestrator-first | Distributed (Crews + Flows) | Low-level graph | Layered/monolithic | Lightweight primitives |
-| **Protocol** | DELEGATE/HANDBACK (mandatory) | Flexible (optional structure) | State graphs | Event-driven | Handoff-based |
-| **Quality Gates** | 3-layer validation (40/35/25) | Integrated | Comprehensive | Minimal | Integrated |
-| **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning |
-| **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination |
-| **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low |
-| **Production Ready** | ✅ Yes (1047+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) |
-| **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium |
-| **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes |
-| **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in |
-| **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing |
-| **Harness Support** | 3+ (OpenCode, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only |
-| **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited |
+| Aspect | Agentic Engineers | CrewAI | LangGraph | AutoGen | OpenAI Agents SDK | Gastown |
+|--------|-------------------|--------|-----------|---------|-------------------|---------|
+| **Architecture** | Queue-based orchestrator-first | Distributed (Crews + Flows) | Low-level graph | Layered/monolithic | Lightweight primitives | Resource-aware (Mayor + Polecats) |
+| **Protocol** | DELEGATE/HANDBACK (mandatory) | Flexible (optional structure) | State graphs | Event-driven | Handoff-based | Git hooks + Beads (issue tracking) |
+| **Quality Gates** | 3-layer validation (40/35/25) | Integrated | Comprehensive | Minimal | Integrated | Resource-focused (gas budgets) |
+| **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning | Built-in resource budgeting |
+| **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination | Resource-aware scheduling |
+| **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low | Medium (Mayor + Hooks) |
+| **Production Ready** | ✅ Yes (1047+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) |
+| **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium | Growing (emerging) |
+| **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based |
+| **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation |
+| **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing | Built-in (gas tracking) |
+| **Harness Support** | 3+ (OpenCode, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) |
+| **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited | Federated (Wasteland network) |
 
 ### Detailed Framework Analysis
 
@@ -480,6 +482,70 @@ System gets cheaper and better automatically
 
 ---
 
+#### 🏭 Gastown (15.4K ⭐, Active Development)
+
+**Overview:**
+Gastown is a resource-aware multi-agent orchestration system created by Steve Yegge (Google, Amazon, Grab engineer). It introduces a novel "gas" metaphor for resource budgeting, treating computational resources like fuel for vehicles. The framework coordinates multiple AI coding agents (Claude Code, GitHub Copilot, Codex, Gemini) through a persistent workspace manager with git-backed hooks for durable execution.
+
+**Architecture:**
+- **Mayor 🎩** - Your primary AI coordinator with full workspace context
+- **Polecats 🦨** - Worker agents with persistent identity but ephemeral sessions
+- **Hooks 🪝** - Git worktree-based persistent storage for agent work
+- **Convoys 🚚** - Work tracking units bundling multiple beads (issues)
+- **Beads 📿** - Git-backed issue tracking system storing work state
+- **Witness/Deacon 🐕** - Three-tier watchdog system for agent health monitoring
+- **Refinery 🏭** - Per-rig merge queue processor using Bors-style bisecting
+- **Wasteland 🏜️** - Federated work coordination network linking Gas Towns through DoltHub
+
+**Key Innovation - "Gas" Resource Budgeting:**
+Unlike traditional frameworks that treat resources as unlimited, Gastown explicitly models computational resources as constrained. Each agent gets a "gas budget" (tokens, API calls, time) that must be managed. This paradigm shift enables:
+- Predictable cost control without manual tuning
+- Automatic capacity-aware scheduling
+- Resource-aware escalation when agents approach limits
+- Federated reputation system (Wasteland) tracking work quality and efficiency across towns
+
+**Strengths:**
+- ✅ **Resource-first design:** Built-in gas budgeting prevents runaway costs; agents operate within explicit constraints
+- ✅ **Multi-runtime support:** Works with Claude Code, GitHub Copilot, Codex, Gemini, and others (not locked to single provider)
+- ✅ **Durable execution via git:** Hooks use git worktrees for reliable persistence; work survives crashes and restarts
+- ✅ **Sophisticated monitoring:** Three-tier watchdog (Witness/Deacon/Dogs) detects stuck agents and triggers recovery
+- ✅ **Federated coordination:** Wasteland network enables multi-town work sharing with portable reputation stamps
+- ✅ **Formula-driven workflows:** TOML-based formulas enable repeatable, trackable processes (similar to Agentic Engineers' DELEGATE/HANDBACK)
+- ✅ **Active development:** 15.4K stars, 7,284 commits, v1.1.0 released May 2026 with continuous improvements
+- ✅ **Production-proven:** Used for autonomous software development at scale (20-50+ concurrent agents)
+- ✅ **Real-time monitoring:** TUI-based activity feed and web dashboard for visibility across all agents
+
+**Weaknesses:**
+- ❌ **Emerging ecosystem:** Smaller community than CrewAI/LangGraph/AutoGen; fewer third-party integrations
+- ❌ **Go-first implementation:** While npm package available, primary language is Go (vs. Python-native frameworks)
+- ❌ **Learning curve on Beads:** Requires understanding of git hooks, Beads issue tracking, and formula system
+- ❌ **Less mature quality gates:** Resource budgeting is primary validation; lacks Agentic Engineers' 3-layer quality scoring
+- ❌ **Federated complexity:** Wasteland federation adds operational overhead for teams not needing multi-town coordination
+
+**Best For:**
+- Teams prioritizing resource-aware autonomous operation (cost predictability over flexibility)
+- Multi-runtime environments needing Claude + Copilot + Codex coordination
+- Autonomous software development at scale (20+ concurrent agents)
+- Organizations wanting federated work sharing (Wasteland network)
+- Projects requiring durable execution with git-backed persistence
+- Teams comfortable with Go infrastructure and git-based workflows
+
+**Comparison vs. Agentic Engineers:**
+
+| Dimension | Agentic Engineers | Gastown |
+|-----------|-------------------|---------|
+| **Resource Model** | Token tracking + Model Engineer optimization | Gas budgets (explicit constraints) |
+| **Primary Validation** | Quality gates (3-layer scoring) | Resource budgeting (gas limits) |
+| **Persistence** | File-based queue (YAML) | Git worktrees (git-backed) |
+| **Coordination** | Orchestrator-first routing | Mayor + Convoys (distributed) |
+| **Scaling Pattern** | Orchestrator bottleneck mitigation | Federated (Wasteland network) |
+| **Runtime Support** | 3+ (OpenCode, Claude, Copilot) | 4+ (Claude, Copilot, Codex, Gemini) |
+| **Learning Curve** | Steep (protocol-heavy) | Medium (Mayor + Hooks + Beads) |
+| **Community** | Small (internal) | Growing (15.4K stars, active) |
+| **Best For** | Quality + audit trail | Cost control + multi-runtime |
+
+---
+
 ### Unique Differentiators of Agentic Engineers
 
 1. **Mandatory Orchestrator Entry Point:** Unlike CrewAI/LangGraph where any agent can spawn children, this enforces single routing decision point → prevents spaghetti code, ensures consistent cost tracking
@@ -515,6 +581,9 @@ System gets cheaper and better automatically
 | **Rapid prototyping, voice agents** | OpenAI Agents SDK | Minimal setup, voice/realtime support |
 | **Cost-conscious autonomous operation** | Agentic Engineers | Model Engineer feedback loop (15-25% reduction) |
 | **Strict compliance & audit requirements** | Agentic Engineers | Full audit trail, quality gates, escalation paths |
+| **Resource-aware multi-agent coordination** | Gastown | Gas budgeting, durable git-backed execution, multi-runtime |
+| **Autonomous software development at scale** | Gastown | 20-50+ agents, federated coordination (Wasteland) |
+| **Multi-runtime (Claude + Copilot + Codex)** | Gastown | Native support for 4+ AI coding agents |
 
 ---
 

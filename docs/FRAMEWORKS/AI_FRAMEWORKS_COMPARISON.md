@@ -16,6 +16,28 @@
 
 ---
 
+## Resource-Aware Orchestration Frameworks (Emerging Paradigm)
+
+**Note:** A new category of frameworks emerging in 2025-2026 that treat computational resources (tokens, API calls, time) as first-class constraints. These frameworks explicitly model resource budgets and enable cost-predictable autonomous operation.
+
+| Framework | Type | GitHub | Stars | License | Maturity | Multi-Runtime | Resource Model | Learn More |
+|-----------|------|--------|-------|---------|----------|---------------|----------------|-----------|
+| **Gastown** | Resource-Aware Orchestration | [repo](https://github.com/gastownhall/gastown) | 15.4K | MIT | Production (v1.1.0) | ⭐⭐⭐⭐⭐ (Claude, Copilot, Codex, Gemini) | Gas budgets (explicit constraints) | [docs](https://github.com/gastownhall/gastown/blob/main/README.md) |
+| **Agentic Engineers** | Resource-Aware + Quality Gates | [repo](https://github.com/niallyoung/agentic-engineers) | Internal | MIT | Production (Phase 6) | ⭐⭐⭐ (OpenCode, Claude, Copilot) | Token tracking + Model Engineer optimization | [docs](https://github.com/niallyoung/agentic-engineers/blob/main/README.md) |
+
+### Key Differences: Resource-Aware vs. Traditional Orchestration
+
+| Aspect | Traditional (CrewAI, LangGraph, AutoGen) | Resource-Aware (Gastown, Agentic Engineers) |
+|--------|----------------------------------------|-------------------------------------------|
+| **Resource Model** | Unlimited (manual tuning) | Explicit budgets (automatic governance) |
+| **Cost Predictability** | Manual (requires expertise) | Built-in (gas/token budgets) |
+| **Scaling Pattern** | Horizontal (more agents) | Resource-constrained (bounded) |
+| **Failure Mode** | Runaway costs | Graceful degradation (within budget) |
+| **Monitoring** | Post-hoc (after overspend) | Real-time (during execution) |
+| **Optimization** | Manual tuning | Autonomous (feedback loops) |
+
+---
+
 ## Provider SDKs (Foundation Layer)
 
 | Framework | Type | Language | Primary LLM | GitHub | License | Maturity | Tool Use | Learn More |
