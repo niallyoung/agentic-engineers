@@ -39,6 +39,34 @@
 
 ## ✅ COMPLETED
 
+### Skills Implementation (Completed 2026-05-19)
+
+- [x] **SKILL-TODO-001:** Implement todo-maintenance skill
+  - ✅ Auto-sync queue DELEGATEs ↔ TODO.md on HANDBACK received
+  - ✅ Bidirectional sync, conflict detection, weekly reporting
+  - ✅ 20/20 tests passing (100%), 80% coverage
+  - ✅ Quality: 92/100, Confidence: 95%
+  - Completed: 2026-05-19 | Owner: Engineer
+
+- [x] **SKILL-DOC-QUALITY-001:** Implement doc-quality skill
+  - ✅ Link validation, cross-ref checks, staleness flagging
+  - ✅ Quality metrics, HTML+Markdown reports, CI/CD integration
+  - ✅ SPEC.md excluded from all checks (5 dedicated tests)
+  - ✅ 52/52 tests passing (100%), >80% coverage
+  - ✅ Quality: 94/100, Confidence: 94%
+  - Completed: 2026-05-19 | Owner: Quality Engineer
+
+### Market Comparison Enhancement (Completed 2026-05-19)
+
+- [x] **COMPARISON-001:** Add Steve Yegge's Gastown to market comparison
+  - ✅ Research Gastown framework (15.4K stars, v1.1.0, May 2026)
+  - ✅ Added to README.md Quick Comparison Table (6 columns)
+  - ✅ Created detailed Gastown section (600+ words, lines 337-587)
+  - ✅ Documented 9 strengths + 5 weaknesses + 6 use-cases
+  - ✅ Updated comparison context (resource-aware paradigm)
+  - ✅ Quality: 94/100, Confidence: 94%
+  - Completed: 2026-05-19 | Owner: Engineer
+
 ### Phase G: Documentation Refresh (Completed 2026-05-18)
 
 - [x] **DOC-AUDIT-001:** Create `docs/DOCUMENTATION-AUDIT.md`
@@ -65,61 +93,57 @@
 
 ---
 
-## 🔴 IN PROGRESS
+## 🔴 IN PROGRESS / BLOCKED
 
-### Phase H: Test Coverage Improvements (Delegated 2026-05-18)
+### Phase H: Test Coverage Improvements (Status: ABORTED, Retry Planned)
 
 - [ ] **COVERAGE-001:** Add test files for 0% coverage modules (14 modules, 1,361 stmts)
-  - TIER 1: core_protocol_validator, protocol_audit, healer-metrics-analyzer, queue_manager, test_validators
-  - TIER 2: test_rate_limiting, test_queue_ops, testing_harness, AGENT-IMPLEMENTATION-TEMPLATE
-  - TIER 3: test_integration, orchestrator_testing_harness, errors, conftest, test_core_protocol_validator
-  - Target: 85%+ overall, all modules ≥80%
-  - Effort: 32.5 hours | Owner: Quality Engineer
-  - Deadline: 2026-05-24
-  - Task ID: 2026-05-18-phase-h-test-coverage
+  - Status: ABORTED (2026-05-19) — Task too complex for single session (32.5 hours)
+  - Recommendation: Split into 3 smaller tasks (TIER 1, TIER 2, TIER 3)
+  - Retry Plan: Start with TIER 1 (5 modules, 588 stmts, 8 hours) → TIER 2 → TIER 3
+  - Original Deadline: 2026-05-24
+  - New Deadline: 2026-05-23 (after split)
 
-### Phase I: Standards Compliance (Delegated 2026-05-18)
+### Phase H-TIER1: Test Coverage (Critical Modules) — PLANNED
+
+- [ ] **COVERAGE-TIER1:** Add tests for 5 critical modules (588 stmts)
+  - Modules: core_protocol_validator (150), protocol_audit (201), healer-metrics-analyzer (137), queue_manager (96), test_validators (104)
+  - Target: All modules ≥90% coverage
+  - Effort: 8 hours | Owner: Quality Engineer | Model: claude-sonnet-4-6
+  - Deadline: 2026-05-21
+  - Status: PENDING (queued after Phase I completes)
+
+### Phase H-TIER2: Test Coverage (Important Modules) — PLANNED
+
+- [ ] **COVERAGE-TIER2:** Add tests for 4 important modules (251 stmts)
+  - Modules: test_rate_limiting (69), test_queue_ops (63), testing_harness (56), AGENT-IMPLEMENTATION-TEMPLATE (63)
+  - Target: All modules ≥80% coverage
+  - Effort: 6 hours | Owner: Quality Engineer | Model: claude-sonnet-4-6
+  - Deadline: 2026-05-22
+  - Status: PENDING (after TIER 1 completes)
+
+### Phase H-TIER3: Test Coverage (Optional Modules) — PLANNED
+
+- [ ] **COVERAGE-TIER3:** Add tests for 5 optional modules (522 stmts)
+  - Modules: test_integration (42), orchestrator_testing_harness (36), errors (13), conftest (5), test_core_protocol_validator (324)
+  - Target: All modules ≥80% coverage
+  - Effort: 4 hours | Owner: Quality Engineer | Model: claude-sonnet-4-6
+  - Deadline: 2026-05-23
+  - Status: PENDING (after TIER 2 completes)
+
+### Phase I: Standards Compliance (Status: IN PROGRESS)
 
 - [ ] **STANDARDS-001:** Update SPEC.md with external standards section
-  - Add: AGENTS.md, Claude Code, GitHub Copilot, agentskills.io
-  - Authority: spec-management skill (Principal/Lead approval)
-  - Effort: 1-2 days | Owner: Principal Engineer
+  - Status: DELEGATED (2026-05-18) — Principal Engineer task in progress
+  - Expected: SPEC.md updated + STANDARDS.md created (500+ lines)
   - Deadline: 2026-05-20
   - Task ID: 2026-05-18-phase-i-standards-compliance
+  - Owner: Principal Engineer
 
 - [ ] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
   - Full standards alignment matrix, compliance checklist, implementation roadmap
-  - Effort: Included in STANDARDS-001
+  - Included in STANDARDS-001
   - Owner: Principal Engineer
-
-### Skills Implementation (Delegated 2026-05-18)
-
-- [ ] **SKILL-TODO-001:** Implement todo-maintenance skill
-  - Auto-sync queue DELEGATEs ↔ TODO.md on HANDBACK received
-  - Bidirectional sync, conflict detection, weekly reporting
-  - Effort: 1-2 days | Owner: Engineer
-  - Deadline: 2026-05-20
-  - Task ID: 2026-05-18-skill-todo-maintenance
-
-- [ ] **SKILL-DOC-QUALITY-001:** Implement doc-quality skill
-  - Link validation, cross-ref checks, staleness flagging
-  - Quality metrics, HTML+Markdown reports, CI/CD integration
-  - Constraint: Exclude SPEC.md from all checks
-  - Effort: 2-3 days | Owner: Quality Engineer
-  - Deadline: 2026-05-22
-  - Task ID: 2026-05-18-skill-doc-quality
-
-### Market Comparison Enhancement (Delegated 2026-05-18)
-
-- [ ] **COMPARISON-001:** Add Steve Yegge's Gastown to market comparison
-  - Research Gastown framework (resource-aware agent orchestration)
-  - Add to README.md Quick Comparison Table
-  - Create detailed Gastown section (500+ words)
-  - Document strengths/weaknesses/best-use-cases
-  - Update comparison context (resource-aware paradigm)
-  - Effort: 1-2 days | Owner: Engineer
-  - Deadline: 2026-05-20
-  - Task ID: 2026-05-18-gastown-comparison
 
 ---
 
@@ -158,11 +182,14 @@
 | Phase B–E: Skills & Harness | ✅ Complete | 100% |
 | Phase G: Documentation Refresh | ✅ Complete | 100% |
 | Doc Consolidation Round 2 | ✅ Complete | 100% |
-| Phase H: Test Coverage | 🔄 Delegated | ~0% (Quality Engineer) |
-| Phase I: Standards Compliance | 🔄 Delegated | ~0% (Principal Engineer) |
-| Skills: todo-maintenance | 🔄 Delegated | ~0% (Engineer) |
-| Skills: doc-quality | 🔄 Delegated | ~0% (Quality Engineer) |
-| Market: Gastown Comparison | 🔄 Delegated | ~0% (Engineer) |
+| Skills: todo-maintenance | ✅ Complete | 100% (92/100 quality) |
+| Skills: doc-quality | ✅ Complete | 100% (94/100 quality) |
+| Market: Gastown Comparison | ✅ Complete | 100% (94/100 quality) |
+| Phase H: Test Coverage | 🔴 Aborted | ~0% (retry planned: TIER 1/2/3) |
+| Phase H-TIER1: Critical Modules | ⏳ Planned | 0% (queued) |
+| Phase H-TIER2: Important Modules | ⏳ Planned | 0% (queued) |
+| Phase H-TIER3: Optional Modules | ⏳ Planned | 0% (queued) |
+| Phase I: Standards Compliance | 🔄 In Progress | ~10% (Principal Engineer) |
 | Framework Integration | ⏸️ Paused | Research only |
 
 ---
