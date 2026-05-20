@@ -127,6 +127,15 @@ EOF
 claude ask "You are the Orchestrator. Begin polling artifacts/queue/incoming/ and delegate all tasks."
 ```
 
+**Copilot CLI (Pro Tip):**
+```bash
+# Add this alias to your shell config (~/.bashrc, ~/.zshrc, etc.)
+alias copilot='copilot --allow-all --autopilot --agent orchestrator $*'
+
+# Then use it directly:
+copilot "Create a new feature for user authentication"
+```
+
 ---
 
 ## Harness Support
