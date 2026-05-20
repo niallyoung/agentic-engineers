@@ -129,12 +129,25 @@ claude ask "You are the Orchestrator. Begin polling artifacts/queue/incoming/ an
 
 **Copilot CLI (Pro Tip):**
 ```bash
-# Add this alias to your shell config (~/.bashrc, ~/.zshrc, etc.)
-alias copilot='copilot --allow-all --autopilot --agent orchestrator $*'
+# Add these aliases to your shell config (~/.bashrc, ~/.zshrc, ~/.bash_profile, etc.)
+alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
+alias opencode="opencode --agent orchestrator $*"
 
-# Then use it directly:
+# Verify aliases are set:
+$ tail -2 ~/.bash_profile
+alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
+alias opencode="opencode --agent orchestrator $*"
+
+# Then use them directly:
 copilot "Create a new feature for user authentication"
+opencode "Analyze test coverage gaps"
 ```
+
+**Flags Explained:**
+- `--allow-all`: Accept all suggestions without prompting
+- `--autopilot`: Run in autonomous mode (no user interaction)
+- `--agent orchestrator`: Route all tasks to the Orchestrator agent
+- `$*`: Pass all command-line arguments to the command
 
 ---
 
