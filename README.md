@@ -90,42 +90,7 @@ make install-copilot     # Copilot CLI → ~/.copilot/skills/
 make install             # All harnesses
 ```
 
-### Create a Task
-
-```bash
-cat > artifacts/queue/incoming/2026-05-17-my-task.yaml <<'EOF'
----
-handoff_type: DELEGATE
-task_id: 2026-05-17-my-task
-role: Engineer
-model: claude-haiku-4-5
-effort: low
-scope: |
-  Add input validation to the API gateway.
-context:
-  - Key files: src/api.py
-plan:
-  - 1. Read current validation logic
-  - 2. Add request header validation
-  - 3. Write tests
-  - 4. Commit
-success_criteria:
-  - All tests passing
-  - New validation covered by tests
-EOF
-```
-
 ### Run the Orchestrator
-
-**OpenCode:**
-```
-@orchestrator  # Invoke orchestrator agent
-```
-
-**Claude Code:**
-```bash
-claude ask "You are the Orchestrator. Begin polling artifacts/queue/incoming/ and delegate all tasks."
-```
 
 **Copilot CLI (Pro Tip):**
 ```bash
