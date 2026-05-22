@@ -83,7 +83,10 @@ def _parse_frontmatter(text: str) -> dict[str, Any] | None:
                 result[k.strip()] = v.strip()
         return result
 
-    return yaml.safe_load(frontmatter_text) or {}
+    try:
+        return yaml.safe_load(frontmatter_text) or {}
+    except yaml.YAMLError as exc:
+        raise ValueError(f"YAML parse error: {exc}") from exc
 
 
 def _load_agents_md(src_dir: Path) -> str:

@@ -104,24 +104,81 @@ def _collect_skill_files(skills_dir: Path) -> list[Path]:
     return sorted(skills_dir.rglob("*.md"))
 
 
-def _extract_skill_paths_from_skills_md(skills_md_content: str, repo_root: Path) -> set[Path]:
+def _is_path_safe(path_to_check: Path, repo_root: Path) -> bool:
+    """
+    Validate that a path stays within the repository boundary after resolving symlinks.
+    
+    CRITICAL: This function resolves symlinks FIRST, preventing symlink attacks.
+    
+    Rejects:
+    - Paths that resolve outside repo_root (including through symlinks)
+    - Broken symlinks (OSError)
+    - Symlink loops (RuntimeError)
+    - (Paths containing '..' are checked before calling this function)
+    """
+    try:
+        # CRITICAL: Resolve symlinks and relative paths FIRST
+        fully_resolved = path_to_check.resolve()
+        # Ensure the fully resolved path is within repo_root
+        fully_resolved.relative_to(repo_root.resolve())
+        return True
+    except (ValueError, OSError, RuntimeError):
+        # ValueError: Path is outside repo_root
+        # OSError: Broken symlink or permission issue
+        # RuntimeError: Symlink loop detected
+        return False
+
+
+def _extract_skill_paths_from_skills_md(skills_md_content: str, repo_root: Path) -> tuple[set[Path], list[ValidationError]]:
     """
     Parse src/SKILLS.md and extract all file paths referenced in tables.
 
     Looks for markdown table cells containing paths like:
       `src/skills/...`  or  skills/...
+    
+    Returns: (valid_paths, validation_errors)
     """
     referenced: set[Path] = set()
+    errors: list[ValidationError] = []
 
     # Match table cells containing file paths: | `src/skills/foo/bar.md` |
     pattern = re.compile(r"\|\s*`?(src/skills/[^`|\s]+\.md)`?\s*\|", re.IGNORECASE)
 
     for match in pattern.finditer(skills_md_content):
         raw_path = match.group(1).strip().strip("`")
-        resolved = repo_root / raw_path
-        referenced.add(resolved)
+        
+        # Security Fix 4: Reject absolute paths explicitly
+        if raw_path.startswith('/'):
+            errors.append(ValidationError(
+                None, "ERROR",
+                f"src/SKILLS.md path '{raw_path}' is absolute. Only relative paths within repository allowed."
+            ))
+            continue
+        
+        # Security Fix 3: Component-based validation for ".." segments
+        # Check if any path component is ".." or if path would escape boundary
+        path_components = Path(raw_path).parts
+        if '..' in path_components:
+            errors.append(ValidationError(
+                None, "ERROR",
+                f"src/SKILLS.md contains invalid path '{raw_path}': paths with '..' segments are not allowed"
+            ))
+            continue
+        
+        # Construct the full path and validate it stays within repo
+        path_obj = repo_root / raw_path
+        
+        # Security Fix 1: _is_path_safe now resolves symlinks before boundary checking
+        if not _is_path_safe(path_obj, repo_root):
+            errors.append(ValidationError(
+                None, "ERROR",
+                f"src/SKILLS.md path '{raw_path}' resolves outside repository boundary (possibly through symlink). Only relative paths within {repo_root.name}/ are allowed."
+            ))
+            continue
+        
+        referenced.add(path_obj)
 
-    return referenced
+    return referenced, errors
 
 
 # ---------------------------------------------------------------------------
@@ -214,10 +271,12 @@ def validate_registry_completeness(
     Check that:
     1. All paths in src/SKILLS.md exist on disk
     2. All SKILL.md files on disk are registered in src/SKILLS.md
+    3. All paths in src/SKILLS.md are safe (no directory traversal)
     """
     errors: list[ValidationError] = []
 
-    referenced_paths = _extract_skill_paths_from_skills_md(skills_md_content, repo_root)
+    referenced_paths, path_validation_errors = _extract_skill_paths_from_skills_md(skills_md_content, repo_root)
+    errors.extend(path_validation_errors)
 
     # Check all referenced paths exist
     for ref_path in sorted(referenced_paths):
