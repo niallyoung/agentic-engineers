@@ -25,7 +25,7 @@ A production-ready multi-agent orchestration framework with 8 specialized AI rol
 
 1. [DELEGATE/HANDBACK Protocol Enforces Quality](https://github.com/niallyoung/agentic-engineers#1-delegatehandback-protocol-enforces-quality) — 90+/100 quality, 40-60% faster, 80% fewer iterations
 2. [Token Efficiency: 40-60% Reduction via Smart Model Selection](https://github.com/niallyoung/agentic-engineers#2-token-efficiency-40-60-reduction-via-smart-model-selection) — 65% cost savings vs. all-Opus
-3. [Parallel Sub-Agent Execution at Scale](https://github.com/niallyoung/agentic-engineers#3-parallel-sub-agent-execution-at-scale) — 36+ concurrent agents, 5-tier hierarchies
+3. [Parallel Sub-Agent Execution at Scale](https://github.com/niallyoung/agentic-engineers#3-parallel-sub-agent-execution-at-scale) — tens to hundreds of concurrent agents, 5-tier hierarchies
 
 ---
 
@@ -120,6 +120,8 @@ make install-claude      # Install agents to ~/.claude/
 make install-pi          # Install to ~/.pi/agent/
 ```
 
+**Why Experimental:** π.dev uses static agent configuration (no dynamic agent registration like OpenCode and Claude Code). Agent configuration is defined at installation time and cannot be modified at runtime. This limitation makes it less suitable for rapidly evolving multi-agent systems but suitable for testing static configurations.
+
 **Option 5: All Harnesses (Parallel Installation)**
 ```bash
 make install             # Install all 4 harnesses at once
@@ -205,38 +207,10 @@ The Orchestrator will:
 **Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization.
 
 **Tested Capacity:**
-- ✅ **36 concurrent agents** from single parent (observed in production)
+- ✅ **Tens to hundreds of concurrent agents** from single parent (observed in production)
 - ✅ **100+ sub-agents** in parallel delegation chains
 - ✅ **5-tier deep hierarchies** (parent → children → grandchildren → etc.)
 - ✅ **Automatic aggregation** of quality scores, tokens, costs
-
-**Real-World Example:**
-```
-Parent Task: "Audit security in 10 microservices"
-  ├─ Child 1: Analyze service-a (Security Engineer)
-  ├─ Child 2: Analyze service-b (Security Engineer)
-  ├─ Child 3: Analyze service-c (Security Engineer)
-  ... (10 total, all running in parallel)
-  └─ Aggregation: Combine results, generate unified report
-
-Wall-clock time: 1 hour (all parallel)
-Sequential equivalent: 10 hours (one at a time)
-Token cost: Same (6000 tokens total)
-Benefit: 9 hours saved, same cost
-```
-
-**How It Works:**
-- Parent task creates child tasks with `parent_task_id` field
-- Orchestrator detects parent-child relationships
-- Children run concurrently (no waiting)
-- Results aggregated when all children complete
-- Quality score is effort-weighted average
-
-See [docs/PARALLEL-DELEGATION-GUIDE.md](docs/PARALLEL-DELEGATION-GUIDE.md) for detailed patterns.
-
----
-
-## Model Configuration & Customization
 
 ### Current Defaults (Optimized for GitHub Copilot + Anthropic)
 
@@ -369,84 +343,6 @@ success_criteria:
 - ✅ Cost Optimization: Recommend cheaper models based on historical quality
 
 **For Now:** Use environment variables or edit `src/config/models.yaml` directly.
-
----
-
-## Key Benefits & Discoveries
-
-### 1. DELEGATE/HANDBACK Protocol Enforces Quality
-
-**Discovery:** Structured handoff protocol (mandatory scope, plan, success_criteria) dramatically improves output quality and reduces rework.
-
-**Benefits:**
-- ✅ **Higher Quality Output:** 90+/100 average quality score (vs. 70-80 without protocol)
-- ✅ **Faster Turnaround:** 40-60% reduction in task completion time (clear scope eliminates ambiguity)
-- ✅ **Fewer Iterations:** 80% reduction in rework/escalations (success criteria prevent scope creep)
-- ✅ **Better Context:** Structured context (files, dependencies, constraints) prevents false starts
-
-**Why It Works:**
-- Orchestrator must write clear scope before delegating (forces clarity)
-- Engineer receives concrete plan with numbered steps (no guessing)
-- Success criteria are testable (no subjective "looks good")
-- HANDBACK includes metrics (quality score, tokens, duration) for continuous improvement
-
-### 2. Token Efficiency: 40-60% Reduction via Smart Model Selection
-
-**Discovery:** Well-scoped, pre-planned work can be executed by cheaper models (Haiku) with same quality as expensive models (Opus), but 60% cheaper.
-
-**Real-World Data:**
-- **Haiku (claude-haiku-4-5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
-- **Sonnet (claude-sonnet-4-6):** $0.09 per task, needed for complex analysis and planning
-- **Opus (claude-opus-4-6/4-7):** $0.15 per task, only for security/architecture decisions
-
-**Cost Breakdown (Typical Workflow):**
-| Phase | Model | Cost | % of Total | Reason |
-|-------|-------|------|-----------|--------|
-| Routing (Orchestrator) | Haiku | $0.03 | 3% | Low-effort routing |
-| Implementation (Engineer) | Haiku | $0.05 | 5% | Well-scoped, pre-planned |
-| Quality Review | Sonnet | $0.09 | 9% | Validation, feedback |
-| Planning (if needed) | Sonnet | $0.09 | 9% | Complex analysis |
-| Optimization | Sonnet | $0.09 | 9% | Model Engineer feedback |
-| Architecture/Security | Opus | $0.15 | 65% | Only when needed |
-
-**Token Savings Example:**
-- **Without protocol:** All tasks → Opus (max reasoning) = $0.15 × 100 tasks = $15.00
-- **With protocol:** Haiku (90 tasks) + Sonnet (8 tasks) + Opus (2 tasks) = $0.05×90 + $0.09×8 + $0.15×2 = $5.22
-- **Savings:** 65% reduction ($9.78 saved)
-
-### 3. Parallel Sub-Agent Execution at Scale
-
-**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization.
-
-**Tested Capacity:**
-- ✅ **36 concurrent agents** from single parent (observed in production)
-- ✅ **100+ sub-agents** in parallel delegation chains
-- ✅ **5-tier deep hierarchies** (parent → children → grandchildren → etc.)
-- ✅ **Automatic aggregation** of quality scores, tokens, costs
-
-**Real-World Example:**
-```
-Parent Task: "Audit security in 10 microservices"
-  ├─ Child 1: Analyze service-a (Security Engineer)
-  ├─ Child 2: Analyze service-b (Security Engineer)
-  ├─ Child 3: Analyze service-c (Security Engineer)
-  ... (10 total, all running in parallel)
-  └─ Aggregation: Combine results, generate unified report
-
-Wall-clock time: 1 hour (all parallel)
-Sequential equivalent: 10 hours (one at a time)
-Token cost: Same (6000 tokens total)
-Benefit: 9 hours saved, same cost
-```
-
-**How It Works:**
-- Parent task creates child tasks with `parent_task_id` field
-- Orchestrator detects parent-child relationships
-- Children run concurrently (no waiting)
-- Results aggregated when all children complete
-- Quality score is effort-weighted average
-
-See [docs/PARALLEL-DELEGATION-GUIDE.md](docs/PARALLEL-DELEGATION-GUIDE.md) for detailed patterns.
 
 ---
 
@@ -1147,74 +1043,6 @@ Full research: [docs/FRAMEWORKS/AI_FRAMEWORKS_COMPARISON.md](docs/FRAMEWORKS/AI_
 - Single-file changes ("fix typo in README")
 - Simple tasks under 30 minutes
 - Low-stakes work with no cost/quality concerns
-
----
-
-## REMOVED
-
-This framework (`agentic-engineers`) started from the reference-impl reference impl
-([REMOVED/agentic-engineers](https://github.com/REMOVED/agentic-engineers))
-and diverges significantly in architecture, tooling, and autonomy model.
-
-### Side-by-Side Comparison
-
-| Dimension | agentic-engineers (reference-impl) | agentic-engineers |
-|-----------|------------------------|------------------------------|
-| **Architecture** | Harness-based (Copilot CLI + Claude Code) | Queue-based (`DELEGATE`/`HANDBACK` + OpenCode) |
-| **Agent Roster** | 9 roles | 8 roles — adds **Model Engineer** |
-| **Autonomy Model** | "High-Water Mark" (human approval gates) | Reduced-autonomy (pause when queue empty) |
-| **Decision Protocol** | `DECISION-MAKING.md` (formal thresholds) | Simpler, action-oriented `DECISION-MAKING.md` |
-| **Handover Packet** | Markdown spec in `AGENTS.md` | YAML-first spec; ACK protocol enforced |
-| **Skills Library** | ~15 skills | 40+ skills organized by category |
-| **Skill Registration** | `SKILLS.md` matrix | `SKILLS.md` matrix + role→skill mappings |
-| **Rendering** | Bash + Make token substitution | Python renderer + YAML frontmatter validation |
-| **Token Tracking** | `TOKEN_METRICS.md` spec | `TOKEN_METRICS.md` + **Model Engineer feedback loop** |
-| **Quality Gates** | Quality Orchestrator + Quality Engineer | Same + monitoring dashboards + `quality_score` aggregate |
-| **CLI Permissions** | `CLI-PERMISSIONS.md` (tool matrix) | `CLI-PERMISSIONS.md` + OpenCode-specific entries |
-| **Parallel Agents** | Up to 36 concurrent (observed) | 100+ sub-agents; effort-weighted quality aggregate |
-| **Primary Runtime** | GitHub Copilot CLI | OpenCode (primary), Copilot CLI, Claude Code |
-
-### What Was Ported from reference-impl
-
-The following patterns were adopted (not copied verbatim) from the reference-impl implementation:
-
-| Pattern | reference-impl Source | Adapted As |
-|---------|-----------|------------|
-| Handover Packet protocol (fields, ACK) | `AGENTS.md` | `src/AGENTS.md` — YAML-first, cleaner field names |
-| Decision-making thresholds | `DECISION-MAKING.md` | `src/DECISION-MAKING.md` — simplified to 3 tiers |
-| Skill matrix concept | `SKILLS.md` | `src/SKILLS.md` — 40+ skills with role assignments |
-| Token metrics schema | `TOKEN_METRICS.md` | `src/TOKEN_METRICS.md` — integrated with Model Engineer |
-| CLI permission matrix | `CLI-PERMISSIONS.md` | `src/CLI-PERMISSIONS.md` — adds OpenCode entries |
-| Quality gates (lint → test → build) | Quality Orchestrator role | Preserved; adds `quality_score` aggregation |
-| `TODO.md` as canonical task tracker | `TODO.md.template` | `TODO.md` + `src/TODO.md.template` |
-| Conventional commit discipline | `CONTRIBUTING.md` | Adopted unchanged |
-
-### Improvements
-
-1. **Queue-Based Architecture** — All work enters `artifacts/queue/incoming/` as SPEC-compliant YAML.
-   The Orchestrator polls and routes; no agent-to-agent short-circuits. reference-impl's harness-based approach
-   couples agents to the CLI runtime; the queue decouples them entirely.
-
-2. **Model Engineer Role** — A dedicated Sonnet-class agent that reads `HANDBACK` metrics and
-   autonomously recommends model/effort adjustments. reference-impl has no equivalent. This closes the
-   cost-optimization loop without human intervention.
-
-3. **Reduced Autonomy Mode** — Agents pause when the queue is empty rather than inventing scope.
-   reference-impl's "High-Water Mark" requires explicit human approval gates; reduced autonomy is lighter-weight
-   and prevents runaway cost without blocking every decision.
-
-4. **40+ Skill Library** — reference-impl ships ~15 skills. This framework organizes 40+ skills by category
-   (patterns, architecture, optimization, security, integrations) with explicit role→skill mappings
-   in `src/SKILLS.md`.
-
-5. **Monitoring Dashboards** — Real-time metrics tracking with visual dashboards for task completion,
-   cost, and quality. reference-impl has no equivalent visibility layer.
-
-6. **Python Renderer** — `renderer/` uses Python + YAML frontmatter validation instead of bash
-   token substitution. Easier to extend, catches broken skill references before install.
-
-7. **Effort-Weighted Quality Aggregation** — When parallel sub-agents return, quality scores are
-   weighted by effort level. One high-quality + nine low-quality children don't average to mediocre.
 
 ---
 
