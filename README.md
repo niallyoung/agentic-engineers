@@ -29,8 +29,8 @@ A production-ready multi-agent orchestration framework with 8 specialized AI rol
 |------|------|-------|---------|----------|--------|-----------|---------|
 | 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4-5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
 | 2️⃣ | **Engineer** | Haiku | claude-haiku-4-5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
-| 3️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
-| 4️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
+| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
+| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
 | 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
 | 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
 | 7️⃣ | **Principal Engineer** | Opus | claude-opus-4-6 | ✅ Yes | High | $0.15 | Cross-service architecture; major refactors |
