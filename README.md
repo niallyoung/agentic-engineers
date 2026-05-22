@@ -1070,3 +1070,167 @@ Full research: [docs/FRAMEWORKS/AI_FRAMEWORKS_COMPARISON.md](docs/FRAMEWORKS/AI_
 - Single-file changes ("fix typo in README")
 - Simple tasks under 30 minutes
 - Low-stakes work with no cost/quality concerns
+
+---
+
+## REMOVED
+
+This framework (`agentic-engineers`) started from the reference-impl reference impl
+([REMOVED/agentic-engineers](https://github.com/REMOVED/agentic-engineers))
+and diverges significantly in architecture, tooling, and autonomy model.
+
+### Side-by-Side Comparison
+
+| Dimension | agentic-engineers (reference-impl) | agentic-engineers |
+|-----------|------------------------|------------------------------|
+| **Architecture** | Harness-based (Copilot CLI + Claude Code) | Queue-based (`DELEGATE`/`HANDBACK` + OpenCode) |
+| **Agent Roster** | 9 roles | 8 roles — adds **Model Engineer** |
+| **Autonomy Model** | "High-Water Mark" (human approval gates) | Reduced-autonomy (pause when queue empty) |
+| **Decision Protocol** | `DECISION-MAKING.md` (formal thresholds) | Simpler, action-oriented `DECISION-MAKING.md` |
+| **Handover Packet** | Markdown spec in `AGENTS.md` | YAML-first spec; ACK protocol enforced |
+| **Skills Library** | ~15 skills | 40+ skills organized by category |
+| **Skill Registration** | `SKILLS.md` matrix | `SKILLS.md` matrix + role→skill mappings |
+| **Rendering** | Bash + Make token substitution | Python renderer + YAML frontmatter validation |
+| **Token Tracking** | `TOKEN_METRICS.md` spec | `TOKEN_METRICS.md` + **Model Engineer feedback loop** |
+| **Quality Gates** | Quality Orchestrator + Quality Engineer | Same + monitoring dashboards + `quality_score` aggregate |
+| **CLI Permissions** | `CLI-PERMISSIONS.md` (tool matrix) | `CLI-PERMISSIONS.md` + OpenCode-specific entries |
+| **Parallel Agents** | Up to 36 concurrent (observed) | 100+ sub-agents; effort-weighted quality aggregate |
+| **Primary Runtime** | GitHub Copilot CLI | OpenCode (primary), Copilot CLI, Claude Code |
+
+### What Was Ported from reference-impl
+
+The following patterns were adopted (not copied verbatim) from the reference-impl implementation:
+
+| Pattern | reference-impl Source | Adapted As |
+|---------|-----------|------------|
+| Handover Packet protocol (fields, ACK) | `AGENTS.md` | `src/AGENTS.md` — YAML-first, cleaner field names |
+| Decision-making thresholds | `DECISION-MAKING.md` | `src/DECISION-MAKING.md` — simplified to 3 tiers |
+| Skill matrix concept | `SKILLS.md` | `src/SKILLS.md` — 40+ skills with role assignments |
+| Token metrics schema | `TOKEN_METRICS.md` | `src/TOKEN_METRICS.md` — integrated with Model Engineer |
+| CLI permission matrix | `CLI-PERMISSIONS.md` | `src/CLI-PERMISSIONS.md` — adds OpenCode entries |
+| Quality gates (lint → test → build) | Quality Orchestrator role | Preserved; adds `quality_score` aggregation |
+| `TODO.md` as canonical task tracker | `TODO.md.template` | `TODO.md` + `src/TODO.md.template` |
+| Conventional commit discipline | `CONTRIBUTING.md` | Adopted unchanged |
+
+### Improvements
+
+1. **Queue-Based Architecture** — All work enters `artifacts/queue/incoming/` as SPEC-compliant YAML.
+   The Orchestrator polls and routes; no agent-to-agent short-circuits. reference-impl's harness-based approach
+   couples agents to the CLI runtime; the queue decouples them entirely.
+
+2. **Model Engineer Role** — A dedicated Sonnet-class agent that reads `HANDBACK` metrics and
+   autonomously recommends model/effort adjustments. reference-impl has no equivalent. This closes the
+   cost-optimization loop without human intervention.
+
+3. **Reduced Autonomy Mode** — Agents pause when the queue is empty rather than inventing scope.
+   reference-impl's "High-Water Mark" requires explicit human approval gates; reduced autonomy is lighter-weight
+   and prevents runaway cost without blocking every decision.
+
+4. **40+ Skill Library** — reference-impl ships ~15 skills. This framework organizes 40+ skills by category
+   (patterns, architecture, optimization, security, integrations) with explicit role→skill mappings
+   in `src/SKILLS.md`.
+
+5. **Monitoring Dashboards** — Real-time metrics tracking with visual dashboards for task completion,
+   cost, and quality. reference-impl has no equivalent visibility layer.
+
+6. **Python Renderer** — `renderer/` uses Python + YAML frontmatter validation instead of bash
+   token substitution. Easier to extend, catches broken skill references before install.
+
+7. **Effort-Weighted Quality Aggregation** — When parallel sub-agents return, quality scores are
+   weighted by effort level. One high-quality + nine low-quality children don't average to mediocre.
+
+---
+
+## Core Protocol Documents
+
+All protocol documents live in `src/` and are installed into each harness by `make install-*`.
+
+| Document | Purpose | Key Section |
+|----------|---------|-------------|
+| [`src/AGENTS.md`](src/AGENTS.md) | Agent roster, routing decision tree, Handover Packet spec, ACK protocol | Delegation Model |
+| [`src/DECISION-MAKING.md`](src/DECISION-MAKING.md) | Autonomous decision thresholds, escalation tiers, root-cause principle | Decision Tiers |
+| [`src/SKILLS.md`](src/SKILLS.md) | 40+ skill matrix with role→skill assignments and registration status | Skill Matrix |
+| [`src/TOKEN_METRICS.md`](src/TOKEN_METRICS.md) | Token usage schema, daily/weekly/monthly tracking, per-role cost attribution | Metrics Schema |
+| [`src/CLI-PERMISSIONS.md`](src/CLI-PERMISSIONS.md) | Tool access by role (GitHub, Buildkite, Atlassian, OpenCode-specific) | Permission Matrix |
+
+### Handover Packet — Quick Reference
+
+Every delegation follows this structure (see full spec in `src/AGENTS.md`):
+
+```yaml
+---
+handoff_type: DELEGATE          # or HANDBACK / ESCALATE
+task_id: YYYY-MM-DD-short-slug
+role: senior-engineer           # target role from AGENTS.md roster
+model: claude-sonnet-4-6        # optional override
+files:
+  - path/to/relevant/file.py
+context: |
+  What the receiving agent needs to know (background, constraints).
+acceptance:
+  - Criterion 1 — testable, not subjective
+  - Criterion 2
+```
+
+Receiving agents **must ACK** before working:
+
+```
+✅ Senior Engineer ACK — TASK-NNN
+```
+
+### Decision Tiers — Quick Reference
+
+See full thresholds in `src/DECISION-MAKING.md`:
+
+| Tier | When | Action |
+|------|------|--------|
+| **Autonomous** | Routine implementation, tests, docs | Proceed without asking |
+| **Pause & Confirm** | Irreversible changes (delete data, push to prod, security-adjacent) | Block; surface to human |
+| **Escalate** | Cross-repo coordination, hard root cause, architecture decisions | Route to higher role |
+
+**Core principle:** Fix root causes, not symptoms. If a workaround is tempting, escalate.
+
+---
+
+## Installation Verification
+
+After running `make install` (or a harness-specific target), verify the installation is complete:
+
+```bash
+# 1. Confirm harness files were rendered
+make verify                         # runs all checks below
+
+# 2. OpenCode harness
+ls ~/.config/opencode/AGENTS.md     # agent roster installed
+ls ~/.config/opencode/SKILLS.md     # skill matrix installed
+opencode --version                  # OpenCode reachable
+
+# 3. Copilot CLI harness
+ls ~/.copilot/skills/agentic-engineer/orchestrator/SKILL.md
+ls ~/.copilot/skills/agentic-engineer/engineer/SKILL.md
+ls ~/.copilot/skills/agentic-engineer/senior-engineer/SKILL.md
+
+# 4. Queue directories exist
+ls artifacts/queue/incoming/
+ls artifacts/queue/processing/
+ls artifacts/queue/done/
+
+# 5. Protocol docs installed (OpenCode example)
+for doc in AGENTS DECISION-MAKING SKILLS TOKEN_METRICS CLI-PERMISSIONS; do
+  test -f ~/.config/opencode/${doc}.md && echo "✅ ${doc}.md" || echo "❌ ${doc}.md MISSING"
+done
+
+# 6. Smoke-test the Orchestrator
+opencode "What roles are available and what is the current queue depth?"
+# Expected: lists 8 roles; reports queue depth 0
+```
+
+### Common Issues
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| `SKILL.md` not found in Copilot | `make install-copilot` not run | `make install-copilot` |
+| Orchestrator routes all tasks to Engineer | `DECISION-MAKING.md` not installed | `make install-opencode` |
+| Model Engineer never fires | Queue missing `artifacts/queue/done/` dir | `make init-queue` |
+| Skills show as `[MISSING]` in matrix | Skill file deleted or renamed | `make verify-skills` |
+| Token metrics not updating | `TOKEN_METRICS.md` path mismatch | Check `src/config/models.yaml` `metrics_path` |
