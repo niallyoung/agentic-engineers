@@ -1,0 +1,79 @@
+# TODO
+
+> **Protocol:** This file is the canonical task list. Agents read it at session start.
+> The Orchestrator **pauses** when all tasks are Done or this file is empty.
+> All work-in-progress must be recorded here — session state does not survive restarts.
+
+---
+
+## In Progress
+
+- [ ] `TASK-NNN` [Role]: [Short description] — `path/to/file.py:line-range`
+
+---
+
+## Pending
+
+- [ ] `TASK-NNN` [Role]: [Short description] — `path/to/file.py:line-range`
+- [ ] `TASK-NNN` [Role]: [Short description] — context: [relevant context]
+
+---
+
+## Blocked
+
+- [ ] `TASK-NNN` [Role]: [Short description] — **BLOCKED:** [reason, what is needed to unblock]
+
+---
+
+## Done
+
+- [x] `TASK-NNN` [Role]: [Short description] — completed [date]
+
+---
+
+## Notes
+
+<!-- Any session context, decisions made, findings to carry forward -->
+
+---
+
+## Task ID Format
+
+`TASK-NNN` where NNN is a zero-padded integer (e.g. TASK-001, TASK-012, TASK-100).
+
+Increment from the highest existing ID — never reuse IDs.
+
+## Task Line Format
+
+```
+- [ ] `TASK-NNN` [Role]: [Short description] — `path/to/file.py:line-range`
+```
+
+Required fields:
+- **Task ID** — unique, sequential (TASK-001, TASK-002, ...)
+- **Role** — which agent is assigned (Orchestrator, Engineer, Senior, Lead, Principal, Security, QE, ME)
+- **Description** — one line, action-oriented ("Add retry logic to S3 client")
+- **File ref** — `path/to/file:line-range` or `context: [description]`
+
+## Status Transitions
+
+```
+Pending → In Progress → Done
+                      ↘ Blocked (with reason)
+```
+
+Rules:
+- Move task to **In Progress** before starting work
+- Move to **Done** only after CI passes and HANDBACK is written
+- Move to **Blocked** with an explicit reason — never leave silently blocked
+
+## DELEGATE / TODO Mapping
+
+Each `TASK-NNN` in TODO.md corresponds to a DELEGATE file:
+
+```
+~/.copilot/queue/incoming/TASK-NNN.yaml  ← in-flight
+~/.copilot/queue/done/TASK-NNN-handback.yaml  ← completed
+```
+
+When a HANDBACK is received, update TODO.md immediately.
