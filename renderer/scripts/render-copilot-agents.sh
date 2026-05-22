@@ -1,13 +1,19 @@
 #!/bin/bash
-# Render Copilot CLI agents from src/agents to ~/.copilot/agents
+# Render Copilot CLI agents from src/agents to specified destination
 # This script converts canonical agent definitions to Copilot CLI format
+#
+# Usage: render-copilot-agents.sh REPO_ROOT [DEST_ROOT]
+#   REPO_ROOT  : Path to agentic-engineers repository
+#   DEST_ROOT  : Destination root (default: $HOME/.copilot)
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+PROJECT_ROOT="${1:?Usage: render-copilot-agents.sh REPO_ROOT [DEST_ROOT]}"
+DEST_ROOT="${2:-$HOME/.copilot}"
+
 SRC_AGENTS="$PROJECT_ROOT/src/agents"
-DEST_AGENTS="${COPILOT_HOME:-$HOME/.copilot}/agents"
+DEST_AGENTS="$DEST_ROOT/agents"
 
 echo ""
 echo "🎨 Rendering Copilot CLI Agents"

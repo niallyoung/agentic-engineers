@@ -84,9 +84,9 @@ model: {frontmatter['model']}
             print(f"❌ Source directory not found: {self.src_dir}")
             return 1
         
-        # Get all .md files except README
+        # Get all .md files except README files
         all_files = list(self.src_dir.glob('*.md'))
-        agent_files = [f for f in all_files if f.name != 'README.md']
+        agent_files = [f for f in all_files if f.name != 'README.md' and not f.name.endswith('README.md')]
         if not agent_files:
             print(f"❌ No agent definitions found in {self.src_dir}")
             return 1
