@@ -13,7 +13,7 @@ help:
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
-	@echo "  install-copilot     Install rendered skills → ~/.copilot/ (skills only; Copilot CLI does not support custom agents)"
+	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-pi          Install π.dev harness → ~/.pi/"
 	@echo "  install-opencode    Install agents & skills → ~/.config/opencode/ (OpenCode-compatible)"
 	@echo ""
@@ -51,20 +51,21 @@ install: install-copilot install-claude install-pi install-opencode ## Install t
 	@echo "Next: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
 
-install-copilot: render-copilot ## Install rendered skills → ~/.copilot/ (skills only; Copilot CLI does not support custom agents)
-	@echo "ℹ️  Note: Copilot CLI does not support custom agents; installing skills only."
-	@echo "📦 Installing skills → ~/.copilot/..."
+install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
+	@echo "ℹ️  Copilot CLI now supports custom agents!"
+	@echo "📦 Installing agents & skills → ~/.copilot/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(HOME)/.copilot"
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot"
-	@echo "✅ Installation to ~/.copilot/ complete (skills only)"
+	@echo "✅ Installation to ~/.copilot/ complete (agents + skills)"
 
 install-claude: render-claude ## Install rendered agents → ~/.claude/
 	@echo "📦 Installing agentic-engineers to ~/.claude/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude"
 	@echo "✅ Installation to ~/.claude/ complete"
 
-# Note: Copilot CLI does not support custom agents. Only skills are installed.
-# The render-copilot-agents.sh/py scripts exist for legacy/experimental use but
-# are NOT invoked here. To install agents, use install-claude or install-opencode.
+# Copilot CLI now supports custom agents. Agents are rendered alongside skills.
+# render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
+# Both are called by make install-copilot for complete agent + skill installation.
 
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only)
 	@echo "🧹 Uninstalling from ~/.copilot/..."
@@ -76,13 +77,16 @@ uninstall-claude: ## Remove from ~/.claude/ (managed only)
 
 
 
-render-copilot: ## Generate dist/copilot/ (provider-specific)
-	@echo "🔨 Rendering agents for Copilot..."
+render-copilot: ## Generate dist/copilot/ with agents + skills (provider-specific)
+	@echo "🔨 Rendering agents and skills for Copilot..."
 	@mkdir -p "$(REPO_ROOT)/dist/copilot"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/copilot"
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/copilot"
 	@echo "🔍 Validating rendered Copilot config..."
-	@test -f "$(REPO_ROOT)/dist/copilot/copilot-instructions.md" || (echo "❌ copilot-instructions.md not rendered" && exit 1)
-	@echo "   ✓ Copilot instructions validated"
+	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ agents directory not rendered" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@echo "   ✓ Copilot agents validated"
+	@echo "   ✓ Copilot skills validated"
 	@echo "✅ Copilot rendering complete (see dist/copilot/)"
 
 render-claude: ## Generate dist/claude/ (provider-specific)
@@ -90,7 +94,8 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 	@mkdir -p "$(REPO_ROOT)/dist/claude"
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/claude"
 	@echo "🔍 Validating rendered Claude config..."
-	@test -f "$(REPO_ROOT)/dist/claude/CLAUDE.md" || (echo "❌ CLAUDE.md not rendered" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ agents directory not rendered" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ skills directory not rendered" && exit 1)
 	@echo "   ✓ Claude config validated"
 	@echo "✅ Claude rendering complete (see dist/claude/)"
 

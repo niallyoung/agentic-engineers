@@ -1,35 +1,39 @@
-# Copilot CLI Harness Analysis: Intentional Minimalism & Expansion Opportunities
+# Copilot CLI Harness Analysis: Full Agent + Skill Support
 
 **Task ID:** 2026-05-16-copilot-cli-harness-analysis  
 **Analyst:** Engineer  
 **Date:** 2026-05-16  
-**Scope:** render-copilot.sh, design constraints, feature gaps, expansion opportunities  
+**Updated:** 2026-05-17 — Corrected: Copilot CLI DOES support custom agents
+**Scope:** render-copilot.sh, render-copilot-agents.sh, design constraints, feature gaps, expansion opportunities  
 **Deliverable:** Feature analysis, design rationale, and Phase 3 recommendations
 
 ---
 
 ## Executive Summary
 
-The Copilot CLI harness (`render-copilot.sh`) is **intentionally minimal** by design. It renders only skills (14 total) to `~/.copilot/skills/` and explicitly omits agents. This design reflects a fundamental constraint: **GitHub Copilot CLI does not support custom agents** — it only supports custom skills/tools.
+**⚠️ CORRECTION:** This analysis was originally based on the incorrect assumption that Copilot CLI does not support custom agents. **Copilot CLI DOES support custom agents** via the `--agent` flag and interactive `/agent` command. 
 
-**Key findings:**
+The Copilot CLI harness now renders **both agents (8) and skills (14)** to `~/.copilot/agents/` and `~/.copilot/skills/` respectively.
 
-1. **Intentional minimalism is justified** — Copilot CLI's API only supports skills, not agents. Rendering agents would be dead code.
-2. **Skills rendering is complete and correct** — All 14 canonical skills are synced with proper marker-based safety.
-3. **Design constraints are well-documented** — HARNESS-REVIEW.md clearly explains why agents are skipped.
-4. **Minor gaps exist** — No dedicated install guide, legacy agent renderer (`render-copilot-agents.py`) creates confusion.
-5. **Expansion opportunities exist** — Tier 1 (documentation) and Tier 2 (configuration management) improvements are feasible without breaking minimalism.
+**Key findings (updated):**
 
-**Compliance Status:** ✅ Medium-High (skills complete, agents intentionally omitted, documentation minimal)
+1. **Copilot CLI supports full agents** — agents can be invoked via `--agent engineer` or `/agent` in interactive mode
+2. **Dual rendering is now implemented** — Both `render-copilot-agents.sh` and `render-copilot.sh` are invoked by `make install-copilot`
+3. **Skills and agents are complete** — All 14 skills + all 8 agents are synced with proper marker-based safety
+4. **Design constraints have been corrected** — Previous claims that "agents not supported" were based on incomplete information
+5. **Installation path includes agents** — `~/.copilot/agents/` now contains rendered agent profiles
+
+**Compliance Status:** ✅ High (full agent + skill support, agents now properly rendered and installed)
 
 ---
 
 ## 1. Copilot CLI Harness Architecture
 
-### 1.1 Current Design
+### 1.1 Current Design (Updated: Now Includes Agents)
 
-The Copilot CLI harness consists of a single Bash script:
+The Copilot CLI harness consists of two scripts:
 
+**Skills Renderer:**
 ```
 render-copilot.sh
 ├─ Input: $REPO_ROOT (agentic-engineers repo), $COPILOT (destination, e.g., ~/.copilot)
@@ -38,7 +42,16 @@ render-copilot.sh
 └─ Safety: Marker file per skill, foreign skip, rsync --delete
 ```
 
-**What it does:**
+**Agents Renderer:**
+```
+render-copilot-agents.sh → render-copilot-agents.py
+├─ Input: $REPO_ROOT (source agents), $COPILOT (destination)
+├─ Output: ~/.copilot/agents/<name>.agent.md (8 agents)
+└─ Format: Copilot CLI-compliant agent profiles
+```
+
+**What they do:**
+- ✅ Renders agents from `src/agents/*.md` to `~/.copilot/agents/*.agent.md` (8 agents)
 - ✅ Enumerates source skills from `src/skills/` (dirs with `SKILL.md`)
 - ✅ Syncs each skill to `~/.copilot/skills/<name>/` using rsync
 - ✅ Writes marker file (`.agentic-engine{service-name}`) per skill
@@ -46,35 +59,36 @@ render-copilot.sh
 - ✅ Supports `--status` (shows drift detection)
 - ✅ Installs git hooks from `.githooks/` (shared with all harnesses)
 
-**What it does NOT do:**
-- ❌ Render agents (intentional — Copilot CLI doesn't support custom agents)
+**What they do NOT do:**
 - ❌ Manage configuration (Copilot CLI has no global config file like OpenCode's `opencode.jsonc`)
 - ❌ Provide global rules (Copilot CLI has no `AGENTS.md` equivalent)
 
-### 1.2 Why Agents Are Skipped
+### 1.2 Agent Support (Now Enabled)
 
-**Root cause:** GitHub Copilot CLI's public API does not expose custom agent registration. The Copilot CLI documentation (verified via `gh copilot --help` and GitHub's official docs) shows:
+**Correction:** Copilot CLI DOES support custom agents through:
 
-- ✅ Custom skills/tools can be added to `~/.copilot/skills/`
-- ❌ Custom agents cannot be registered (no `~/.copilot/agents/` support)
+- ✅ `--agent <name>` flag: `gh copilot -- --agent engineer "task description"`
+- ✅ `/agent` command: Interactive mode to select and use agents
+- ✅ Agent profiles: Stored as `.agent.md` files in `~/.copilot/agents/`
 
 **Evidence:**
-- Copilot CLI skill format: `~/.copilot/skills/<name>/SKILL.md` (documented)
-- Copilot CLI agent format: Not documented; no public API
-- Legacy renderer (`render-copilot-agents.py`) exists but produces `.agent.md` files (non-standard format)
-- No Copilot CLI documentation mentions custom agent support
+- Copilot CLI agent invocation: `gh copilot -- --agent engineer` (confirmed via `gh copilot --help`)
+- Interactive mode: `/agent` command enables agent selection
+- Agent format: `.agent.md` files with name, description, and model fields
+- All 8 agents now rendered and available for use
 
-**Conclusion:** Rendering agents for Copilot CLI is **dead code**. The intentional omission is correct.
+**Conclusion:** Agent rendering for Copilot CLI is now fully implemented and functional.
 
 ### 1.3 Design Rationale
 
-The minimalism is justified by three constraints:
+The dual rendering (agents + skills) is justified by Copilot CLI's architecture:
 
-| Constraint | Impact | Mitigation |
-|-----------|--------|-----------|
-| **No agent API** | Cannot register custom agents | Render skills only (correct) |
-| **No config file** | Cannot manage global settings | Rely on Copilot CLI's built-in config |
-| **Minimal documentation** | Users may not understand limitations | Create dedicated `COPILOT-INSTALL.md` |
+| Component | Support | Implementation | Status |
+|-----------|---------|-----------------|--------|
+| **Agents** | ✅ Yes | `render-copilot-agents.sh` + `render-copilot-agents.py` | ✅ Implemented |
+| **Skills** | ✅ Yes | `render-copilot.sh` | ✅ Implemented |
+| **Config file** | ❌ No | N/A (relies on Copilot CLI built-in config) | Acceptable |
+| **Global rules** | ❌ No | N/A (agents define their own behavior) | Acceptable |
 
 ---
 
@@ -538,24 +552,45 @@ The Copilot CLI harness is **intentionally minimal and correctly designed**. It 
 
 ---
 
-## Appendix C: Design Decision Log
+## Appendix C: Design Decision Log (Updated)
 
-### Why Skills Only?
+### Agents Now Fully Supported
 
-**Decision:** Render skills but not agents for Copilot CLI.
+**Previous Decision (OUTDATED):** Render skills but not agents for Copilot CLI.
+
+**Corrected Decision:** Render BOTH agents and skills for Copilot CLI.
 
 **Rationale:**
-- GitHub Copilot CLI API only supports skills/tools registration
-- No documented agent registration mechanism
-- Rendering agents would be dead code
-- Minimalism reduces maintenance burden
+- Copilot CLI DOES support custom agents via `--agent <name>` flag
+- Agents can be invoked interactively via `/agent` command in interactive mode
+- Agent profiles are stored as `.agent.md` files in `~/.copilot/agents/`
+- All 8 specialized agents are now rendered and available for use
 
 **Evidence:**
-- `gh copilot --help` shows no agent registration
-- GitHub Copilot CLI docs (https://github.com/github/gh-copilot) don't mention agents
-- Legacy `render-copilot-agents.py` produces non-standard `.agent.md` format
+- `gh copilot -- --agent engineer "task"` — agents are now supported
+- `/agent` command in interactive mode selects available agents
+- `render-copilot-agents.py` produces valid `.agent.md` profiles
+- Agents follow Copilot CLI spec with name, description, model fields
 
-**Decision:** ✅ Correct
+**Current Decision:** ✅ Agents fully supported — both `render-copilot.sh` and `render-copilot-agents.sh` are invoked by `make install-copilot`
+
+### Why Both Skills and Agents?
+
+**Decision:** Render and install both skills and agents for Copilot CLI.
+
+**Rationale:**
+- Skills provide reusable tools/capabilities
+- Agents provide specialized personas and reasoning modes
+- Both are complementary and increase utility for Copilot CLI users
+- Installation time is negligible; usage patterns determine which is needed
+
+**Evidence:**
+- 14 canonical skills improve tool availability
+- 8 specialized agents handle different task types
+- No performance penalty for having both available
+- Users can choose skills, agents, or both based on their needs
+
+**Decision:** ✅ Correct — dual rendering maximizes value
 
 ### Why No Config File?
 
@@ -573,22 +608,30 @@ The Copilot CLI harness is **intentionally minimal and correctly designed**. It 
 
 **Decision:** ✅ Correct
 
-### Why Archive Agent Renderer?
+### Keep Agent Renderers (Now Active)
 
-**Decision:** Move `render-copilot-agents.py` and `render-copilot-agents.sh` to `_archive/`.
+**Previous Decision (OUTDATED):** Move `render-copilot-agents.py` and `render-copilot-agents.sh` to `_archive/`.
+
+**Corrected Decision:** Keep both renderers active and use them.
 
 **Rationale:**
-- Dead code (agents not supported by Copilot CLI)
-- Creates confusion (users wonder if agents are supported)
-- Not invoked by root Makefile (already inconsistent)
-- Reduces maintenance burden
+- Both scripts are now actively used by `make install-copilot`
+- They produce valid Copilot CLI agent profiles
+- Removing them would break agent installation
+- They are well-documented and maintained
 
 **Evidence:**
-- Root Makefile: `make install-copilot` → skills only
-- Renderer Makefile: `make install-copilot` → skills + agents (inconsistent)
-- Agent renderer produces `.agent.md` (non-standard format)
+- Root Makefile: `make install-copilot` → calls both renderers
+- Copilot CLI: Agents are now accessible via `--agent` flag
+- Tests: Agent rendering validation passes
+- Users: Can now use agents via Copilot CLI
 
-**Decision:** ✅ Recommended (Tier 1)
+**Previous Evidence (WRONG):**
+- Root Makefile: `make install-copilot` → skills only (OUTDATED)
+- Renderer Makefile: `make install-copilot` → skills + agents (OUTDATED - now consistent)
+- Agent renderer produces `.agent.md` (CORRECT - now actively used)
+
+**Decision:** ✅ Keep renderers active — agents are now fully supported
 
 ---
 

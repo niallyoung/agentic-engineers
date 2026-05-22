@@ -105,10 +105,12 @@ make install-opencode    # Install agents + skills to ~/.config/opencode/
 make status-opencode     # Verify installation
 ```
 
-**Option 2: Copilot CLI (Skills Only - No Custom Agents)**
+**Option 2: Copilot CLI (Full Agent + Skill Support)**
 ```bash
-make install-copilot     # Install skills to ~/.copilot/
+make install-copilot     # Install agents + skills to ~/.copilot/
 ```
+
+Use agents via: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
 
 **Option 3: Claude Code (Local with Full Agent Support)**
 ```bash
@@ -352,7 +354,7 @@ success_criteria:
 
 | Feature | OpenCode | Claude Code | Copilot CLI | π.dev |
 |---------|:--------:|:-----------:|:-----------:|:-----:|
-| **Agents Support** | ✅ Full (8) | ✅ Full (8) | ❌ Skills only | ⚠️ Static config |
+| **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
 | **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
 | **Managed Config** | ✅ Full | ❌ Manual | ❌ Manual | ⚠️ Experimental |
 | **IDE/CLI** | CLI | IDE | CLI | IDE |
@@ -386,15 +388,16 @@ make uninstall-claude    # Remove
 - 📍 Location: `~/.claude/`
 
 #### 3. Copilot CLI (Command Line)
-**Best for:** CLI-first workflows with skills only
+**Best for:** CLI-first workflows with full agent + skill support
 ```bash
-make install-copilot     # Install skills (agents not supported by Copilot CLI)
+make install-copilot     # Install agents + skills to ~/.copilot/
 make uninstall-copilot   # Remove
 ```
-- ❌ No agent support (Copilot CLI limitation)
+- ✅ Full agent support (8 specialized roles)
 - ✅ Skills available (14)
-- ❌ No managed config
+- ✅ Managed configuration
 - 📍 Location: `~/.copilot/`
+- 💡 Usage: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
 
 #### 4. π.dev (Experimental)
 **Best for:** Testing and experimental configurations
@@ -1138,9 +1141,9 @@ test -d ~/.claude && echo "✅ Claude Code harness installed" || echo "❌ Not i
 ### Copilot CLI Harness
 
 ```bash
-# Verify Copilot CLI harness installation (skills only - no custom agents)
-ls ~/.copilot/skills/agentic-engineer/      # Skills namespace
-ls ~/.copilot/skills/agentic-engineer/orchestrator/SKILL.md  # Example skill
+# Verify Copilot CLI harness installation (agents + skills)
+ls ~/.copilot/agents/                     # Agents directory
+ls ~/.copilot/skills/agentic-engineer/    # Skills namespace
 test -d ~/.copilot && echo "✅ Copilot CLI harness installed" || echo "❌ Not installed"
 ```
 
