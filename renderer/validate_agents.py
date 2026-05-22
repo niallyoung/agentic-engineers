@@ -197,6 +197,9 @@ def validate_agents(
         all_errors.extend(findings)
         checked += 1
 
+    # Also validate HANDBACK metrics requirements in AGENTS.md
+    all_errors.extend(validate_handback_schema(src_dir, strict=strict))
+
     errors = [e for e in all_errors if e.level == "ERROR"]
     warnings = [e for e in all_errors if e.level == "WARNING"]
 
@@ -214,6 +217,47 @@ def validate_agents(
         print(f"⚠️  0 errors, {len(warnings)} warning(s)")
 
     return len(errors), len(warnings)
+
+
+def validate_handback_schema(src_dir: Path, strict: bool = False) -> list[ValidationError]:
+    """Verify AGENTS.md documents the HANDBACK metrics schema.
+
+    HANDBACK packets must include a metrics block with:
+      - tokens_used
+      - tokens_estimated
+      - efficiency_ratio
+      - model_used
+      - duration_ms
+      - quality_score  (0.0–1.0, self-assessed by agent)
+
+    This validates the protocol documentation, not runtime HANDBACK files.
+    """
+    errors: list[ValidationError] = []
+    agents_md_path = src_dir / "AGENTS.md"
+
+    if not agents_md_path.exists():
+        return errors  # Already caught elsewhere
+
+    content = agents_md_path.read_text(encoding="utf-8")
+
+    required_handback_fields = [
+        "tokens_used",
+        "tokens_estimated",
+        "efficiency_ratio",
+        "model_used",
+        "duration_ms",
+        "quality_score",
+    ]
+
+    for field in required_handback_fields:
+        if field not in content:
+            level = "WARNING"
+            errors.append(ValidationError(
+                agents_md_path, level,
+                f"AGENTS.md HANDBACK schema missing '{field}' field documentation"
+            ))
+
+    return errors
 
 
 # ---------------------------------------------------------------------------
