@@ -77,3 +77,10 @@ node_modules/
 # COPILOT SPECIFIC
 # ============================================================================
 .copilot/session-state/
+
+# ============================================================================
+# TASK TRACKING (active working copy — use src/TODO.md.template as the format)
+# ============================================================================
+# Uncomment the line below to gitignore the active TODO.md.
+# By default TODO.md IS committed so it can be the resume point across sessions.
+# /TODO.md
