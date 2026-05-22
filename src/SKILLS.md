@@ -157,7 +157,7 @@
 | Security Engineer | `src/skills/roles/security-engineer.md` | Security | Full Security Engineer role definition |
 | Senior Engineer | `src/skills/roles/senior-engineer.md` | Senior | Full Senior Engineer role definition |
 
-### Category 12: Standalone Capability Skills (12 skills)
+### Category 12: Standalone Capability Skills (13 skills)
 
 | Skill | File | Roles | Purpose |
 |-------|------|-------|---------|
