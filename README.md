@@ -21,6 +21,12 @@ A production-ready multi-agent orchestration framework with 8 specialized AI rol
 4. Quality gates validate all work before moving to done
 5. Metrics feed back into model selection and routing optimization
 
+### Key Benefits & Discoveries
+
+1. [DELEGATE/HANDBACK Protocol Enforces Quality](https://github.com/niallyoung/agentic-engineers#1-delegatehandback-protocol-enforces-quality) — 90+/100 quality, 40-60% faster, 80% fewer iterations
+2. [Token Efficiency: 40-60% Reduction via Smart Model Selection](https://github.com/niallyoung/agentic-engineers#2-token-efficiency-40-60-reduction-via-smart-model-selection) — 65% cost savings vs. all-Opus
+3. [Parallel Sub-Agent Execution at Scale](https://github.com/niallyoung/agentic-engineers#3-parallel-sub-agent-execution-at-scale) — 36+ concurrent agents, 5-tier hierarchies
+
 ---
 
 ## 8 Specialized Roles
@@ -153,13 +159,6 @@ The Orchestrator will:
 ---
 
 ## Key Benefits & Discoveries
-
-**Quick Overview:**
-- 1. DELEGATE/HANDBACK Protocol Enforces Quality (90+/100 quality, 40-60% faster, 80% fewer iterations)
-- 2. Token Efficiency: 40-60% Reduction via Smart Model Selection (65% cost savings vs. all-Opus)
-- 3. Parallel Sub-Agent Execution at Scale (36+ concurrent agents, 5-tier hierarchies)
-
-*(Detailed sections below)*
 
 ### 1. DELEGATE/HANDBACK Protocol Enforces Quality
 
