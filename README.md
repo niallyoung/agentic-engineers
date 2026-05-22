@@ -2,8 +2,6 @@
 
 A production-ready multi-agent orchestration framework with 8 specialized AI roles, queue-based delegation, quality gates, and autonomous cost optimization feedback loops.
 
-**Status:** ✅ **PRODUCTION READY** — Phases 1–6 complete, 1047+ tests passing, end-to-end queue protocol verified.
-
 ---
 
 ## What It Is
