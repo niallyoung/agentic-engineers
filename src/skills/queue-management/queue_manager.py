@@ -43,11 +43,10 @@ class QueueManager:
     # Required fields for QUEUE-PROTOCOL
     REQUIRED_FIELDS = ["task_id", "role", "scope", "plan", "success_criteria"]
 
-    # Valid roles (from AGENTS.md)
+    # Valid roles (from AGENTS.md — 8 canonical roles)
     VALID_ROLES = [
         "Engineer", "Senior Engineer", "Lead Engineer", "Principal Engineer",
-        "Quality Engineer", "Security Engineer", "Healing Engineer",
-        "Model Engineer", "Orchestrator",
+        "Quality Engineer", "Security Engineer", "Model Engineer", "Orchestrator",
     ]
 
     def __init__(

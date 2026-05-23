@@ -22,7 +22,7 @@ class DelegateValidator:
         """
         self.queue_path = Path(queue_path)
 
-        # Valid roles
+        # Valid roles (8 canonical from AGENTS.md)
         self.valid_roles = {
             "Engineer",
             "Senior Engineer",
@@ -30,10 +30,8 @@ class DelegateValidator:
             "Principal Engineer",
             "Quality Engineer",
             "Security Engineer",
-            "Healing Engineer",
             "Model Engineer",
             "Orchestrator",
-            "Spec Engineer",
         }
 
         # Valid effort levels
