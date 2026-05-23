@@ -1,7 +1,7 @@
 # Agentic Engineers Repository - Comprehensive Overview
 
 **Date:** May 16, 2026  
-**Repository:** /Users/niall/git/agentic-engineers  
+**Repository:** {REPO_ROOT}  
 **Status:** Production Ready (1047+ tests passing)
 
 ---
@@ -11,7 +11,7 @@
 ### Top-Level Directory Structure
 
 ```
-/Users/niall/git/agentic-engineers/
+{REPO_ROOT}/
 ├── src/                              # Source code and canonical definitions
 │   ├── agents/                       # Agent role definitions (canonical)
 │   ├── skills/                       # Skill implementations for agents
@@ -96,7 +96,7 @@ Transforms source definitions into harness-specific formats:
 
 ### AGENTS.md (Primary Agent Reference)
 
-**Location:** `/Users/niall/git/agentic-engineers/docs/AGENTS.md` (550 lines)
+**Location:** `{REPO_ROOT}/docs/AGENTS.md` (550 lines)
 
 **Contents:**
 - 8 primary agent roles with model/effort/cost assignments
@@ -143,7 +143,7 @@ Transforms source definitions into harness-specific formats:
 
 ### SKILLS.md (Agent Skill Definitions)
 
-**Location:** `/Users/niall/git/agentic-engineers/docs/SKILLS.md` (690 lines)
+**Location:** `{REPO_ROOT}/docs/SKILLS.md` (690 lines)
 
 **Contents:**
 - Validation & error handling patterns
@@ -183,7 +183,7 @@ Transforms source definitions into harness-specific formats:
 
 ## 3. CURRENT MAKE/BUILD/INSTALLATION TARGETS AND SCRIPTS
 
-### Main Makefile (/Users/niall/git/agentic-engineers/Makefile)
+### Main Makefile ({REPO_ROOT}/Makefile)
 
 **Install Targets:**
 ```make
@@ -241,7 +241,7 @@ make help                # Show available targets
 - renderer/scripts/render-pi-dev.py
 ```
 
-### Renderer Makefile (/Users/niall/git/agentic-engineers/renderer/Makefile)
+### Renderer Makefile ({REPO_ROOT}/renderer/Makefile)
 
 **Install Targets:**
 ```make
@@ -280,7 +280,7 @@ make status              # Drift report across all targets
 ### Agent Organization (Canonical in src/agents/)
 
 **Source Files (Provider-Agnostic):**
-- Located: `/Users/niall/git/agentic-engineers/src/agents/*.md`
+- Located: `{REPO_ROOT}/src/agents/*.md`
 - Format: YAML frontmatter + Markdown
 - Each agent has 3 required frontmatter fields:
   - `name` — Display name
@@ -440,14 +440,14 @@ artifacts/
 
 **Level 1: Main Makefile (User-Facing)**
 ```bash
-cd /Users/niall/git/agentic-engineers
+cd {REPO_ROOT}
 make install              # Complete installation
 make verify              # Verify + run tests
 ```
 
 **Level 2: Renderer Makefile (Build System)**
 ```bash
-cd /Users/niall/git/agentic-engineers/renderer
+cd {REPO_ROOT}/renderer
 make install             # Render + install to all 3 harnesses
 ```
 
@@ -502,12 +502,12 @@ renderer/scripts/render-pi.sh [REPO_ROOT] [INSTALL_PATH] [--uninstall|--status]
 
 ### Test Suite
 
-**Location:** `/Users/niall/git/agentic-engineers/tests/`
+**Location:** `{REPO_ROOT}/tests/`
 
 **Invoked by:**
 ```bash
 make verify              # Main entry point
-cd /Users/niall/git/agentic-engineers && python3 -m pytest tests/ -q --tb=short
+cd {REPO_ROOT} && python3 -m pytest tests/ -q --tb=short
 ```
 
 **Test Coverage:**
@@ -631,7 +631,7 @@ cd /Users/niall/git/agentic-engineers && python3 -m pytest tests/ -q --tb=short
 
 ### One-Command Installation
 ```bash
-cd /Users/niall/git/agentic-engineers
+cd {REPO_ROOT}
 make install
 ```
 

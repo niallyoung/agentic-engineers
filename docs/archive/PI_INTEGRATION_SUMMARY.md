@@ -260,7 +260,7 @@ Status:
 
 ### Installation (All 3 Harnesses)
 ```bash
-cd /Users/niall/git/agentic-engineers
+cd {REPO_ROOT}
 make install              # Installs to ~/.copilot/, ~/.claude/, ~/.pi/
 ```
 

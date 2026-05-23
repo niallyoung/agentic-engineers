@@ -52,7 +52,7 @@ Ensures 100% backward compatibility with existing orchestrator:
 
 **Files**:
 - `bin/orchestrator_daemon.py` — Daemon entry point
-- `/Users/niall/.config/opencode/agents/orchestrator.md` — Updated with polling instructions
+- `~/.config/opencode/agents/orchestrator.md` — Updated with polling instructions
 
 **How to use**:
 ```bash
@@ -353,7 +353,7 @@ while True:
 A: Use the daemon script: `python bin/orchestrator_daemon.py --idle-timeout 60`
 
 **Q: Tests fail with import errors**  
-A: Set PYTHONPATH: `export PYTHONPATH=/Users/niall/git/agentic-engineers:$PYTHONPATH`
+A: Set PYTHONPATH: `export PYTHONPATH={REPO_ROOT}:$PYTHONPATH`
 
 **Q: Quality metrics show low scores**  
 A: Ensure quality_baseline is set: `quality_baseline=90` in DELEGATE

@@ -9,7 +9,7 @@
 
 ## 📦 Deliverables Overview
 
-All research files have been generated in `/Users/niall/git/agentic-engineers/`:
+All research files have been generated in `{REPO_ROOT}/`:
 
 | # | File | Size | Purpose | Read Time | Audience |
 |---|------|------|---------|-----------|----------|
@@ -635,6 +635,6 @@ A: IDE-only tools, experimental frameworks, redundant options
 
 ---
 
-**All research files available in:** `/Users/niall/git/agentic-engineers/`
+**All research files available in:** `{REPO_ROOT}/`
 
 **Total Research Value:** Comprehensive market analysis to guide agentic-engineers framework selection and integration strategy.

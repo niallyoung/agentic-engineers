@@ -205,7 +205,7 @@ sessions/              (directory)
 
 ### Test Installation
 ```bash
-cd /Users/niall/git/agentic-engineers
+cd {REPO_ROOT}
 make install-pi
 ```
 
