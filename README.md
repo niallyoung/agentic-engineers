@@ -454,6 +454,646 @@ result: |
 
 ---
 
+## How to Delegate Work
+
+### Delegation Syntax Guide
+
+Users interact with the system using natural English prompts. The framework automatically converts these into structured DELEGATE/HANDBACK protocols:
+
+**Simple Sequential Delegation:**
+```
+delegate: task1; task2; task3
+```
+
+**Parallel Execution:**
+```
+delegate parallel: task1; task2; task3
+```
+
+**Hierarchical (Nested Multi-Tier):**
+```
+delegate:
+  - Phase 1: task1 (senior-engineer)
+  - Phase 2 (parallel):
+    - task2 (engineer)
+    - task3 (engineer)
+    - task4 (engineer)
+  - Phase 3: review (lead-engineer)
+```
+
+**Task Dependencies:**
+```
+delegate:
+  - task1 (engineer) → outputs plan
+  - task2 (engineer, blocked on task1)
+  - task3 (engineer, blocked on task2)
+```
+
+---
+
+### Example 1: Simple Implementation Task
+
+**You type:**
+```
+delegate: implement user login feature with bcrypt password hashing and JWT token generation
+```
+
+**Orchestrator creates DELEGATE:**
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-user-login
+role: Engineer
+model: claude-haiku-4-5
+effort: high
+scope: |
+  Implement user login feature with bcrypt password hashing and JWT token generation.
+  Should support login, token refresh, and logout endpoints.
+context:
+  - Key files: src/auth/, src/middleware/
+  - Dependencies: bcrypt, PyJWT
+  - API base path: /api/v1/auth
+plan:
+  - 1. Review existing authentication structure
+  - 2. Implement bcrypt password hashing for user registration
+  - 3. Create JWT token generation and validation logic
+  - 4. Implement login endpoint with credentials verification
+  - 5. Implement token refresh endpoint
+  - 6. Implement logout endpoint (token blacklist)
+  - 7. Add comprehensive tests for all edge cases
+  - 8. Document API endpoints
+success_criteria:
+  - All tests passing (>90% coverage)
+  - Login/logout/refresh endpoints working
+  - Tokens expire correctly
+  - Invalid credentials rejected
+  - Password hashing verified
+```
+
+**Engineer executes and returns HANDBACK:**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-user-login
+agent: Engineer
+status: COMPLETE
+quality_score: 94
+metrics:
+  tokens_used: 18200
+  duration: 487s
+  test_coverage: 92%
+  files_modified: 4
+  tests_added: 12
+deliverables:
+  - src/auth/hashing.py (bcrypt integration)
+  - src/auth/tokens.py (JWT generation/validation)
+  - src/routes/auth.py (endpoints)
+  - tests/test_auth.py (12 test cases)
+test_results:
+  - Login with correct credentials: PASS
+  - Login with wrong password: PASS (correctly rejected)
+  - Login with nonexistent user: PASS (correctly rejected)
+  - Token expiry handling: PASS
+  - Token refresh: PASS
+  - Logout token blacklist: PASS
+  - Edge cases (empty fields, SQL injection attempts): PASS
+result: |
+  Implemented complete JWT-based authentication system with bcrypt hashing.
+  All 12 tests passing. Ready for code review.
+```
+
+---
+
+### Example 2: Sequential Multi-Task Workflow
+
+**You type:**
+```
+delegate: design cache invalidation strategy for product catalog; implement Redis integration; write integration tests; update system documentation
+```
+
+**Orchestrator creates 4 sequential DELEGATEs:**
+
+**DELEGATE 1 - Design (routes to Senior Engineer for planning):**
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-cache-design
+role: Senior Engineer
+effort: high
+scope: |
+  Design a cache invalidation strategy for the product catalog.
+  Consider TTL-based, event-based, and hybrid approaches.
+  Document tradeoffs and recommend optimal strategy.
+plan:
+  - 1. Analyze current catalog update patterns
+  - 2. Research cache invalidation strategies (TTL, event-based, hybrid)
+  - 3. Model traffic patterns and cache effectiveness
+  - 4. Document strategy with tradeoffs
+success_criteria:
+  - Strategy document complete
+  - Tradeoffs clearly explained
+  - Recommendation justified
+  - Ready for implementation
+```
+
+**Senior Engineer returns HANDBACK:**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-cache-design
+agent: Senior Engineer
+status: COMPLETE
+quality_score: 92
+metrics:
+  tokens_used: 22400
+  duration: 523s
+deliverables:
+  - docs/CACHE_STRATEGY.md (comprehensive design doc)
+result: |
+  Designed hybrid cache invalidation: TTL (15min) + event-based for catalog updates.
+  Estimated 87% hit rate with <2s staleness on updates.
+  Document includes fallback strategies and monitoring approach.
+```
+
+**DELEGATE 2 - Implementation (blocked on DELEGATE 1):**
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-redis-implementation
+role: Engineer
+effort: high
+scope: |
+  Implement Redis integration following the cache invalidation strategy from task 2026-05-20-cache-design.
+  Implement TTL-based caching with event-driven invalidation.
+context:
+  - Design reference: docs/CACHE_STRATEGY.md
+  - Services: catalog-service, product-service
+  - Redis instance: redis://cache-prod:6379
+plan:
+  - 1. Set up Redis client in catalog-service
+  - 2. Implement cache layer with TTL (15 minutes)
+  - 3. Implement event listeners for product updates
+  - 4. Add cache invalidation on product/category changes
+  - 5. Implement cache warming on service startup
+  - 6. Add cache health checks and metrics
+success_criteria:
+  - Redis integration tested
+  - Cache invalidation triggers correctly
+  - Metrics exported (hit rate, latency)
+  - Graceful degradation if Redis unavailable
+```
+
+**Engineer returns HANDBACK:**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-redis-implementation
+agent: Engineer
+status: COMPLETE
+quality_score: 93
+metrics:
+  tokens_used: 19800
+  duration: 612s
+  files_modified: 5
+deliverables:
+  - src/cache/redis_client.py
+  - src/catalog/cache_layer.py
+  - src/listeners/cache_invalidation.py
+result: |
+  Implemented Redis caching with 15-min TTL and event-driven invalidation.
+  Verified cache hit rates >85% in testing. Graceful fallback implemented.
+```
+
+**DELEGATE 3 & 4** - Tests and docs complete the workflow sequentially.
+
+**Final Aggregated Metrics:**
+```
+Total effort: 4 tasks (design + impl + tests + docs)
+Total duration: ~2.5 hours
+Combined tokens: 87,400 (< 100k budget)
+Overall quality: 92.5/100
+Status: ALL COMPLETE - Ready for staging deployment
+```
+
+---
+
+### Example 3: Parallel Task Execution
+
+**You type:**
+```
+delegate parallel: audit security in user-service; audit security in payment-service; audit security in order-service
+```
+
+**Orchestrator launches 3 Security Engineers in parallel:**
+
+**DELEGATE 1, 2, 3** (all launched simultaneously):
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-security-audit-1
+role: Security Engineer
+model: claude-opus-4-7
+effort: max
+scope: |
+  Perform comprehensive security audit of user-service.
+  Check for OWASP Top 10 vulnerabilities, authentication/authorization flaws,
+  data handling practices, and dependency vulnerabilities.
+context:
+  - Service: src/services/user-service/
+  - API: /api/v1/users/*
+  - Key files: src/services/user-service/routes.py, handlers.py, models.py
+plan:
+  - 1. Review authentication and authorization implementation
+  - 2. Check for injection vulnerabilities (SQL, command, etc.)
+  - 3. Audit session management and token handling
+  - 4. Review error handling and logging practices
+  - 5. Scan dependencies for known vulnerabilities
+  - 6. Check data encryption and storage practices
+  - 7. Document findings with severity ratings
+success_criteria:
+  - All OWASP Top 10 checked
+  - Vulnerabilities ranked by severity
+  - Fix recommendations provided
+  - Report delivered
+```
+
+**All 3 Security Engineers return HANDBACKs in parallel:**
+
+**HANDBACK 1 (user-service):**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-security-audit-1
+agent: Security Engineer
+status: COMPLETE
+quality_score: 96
+metrics:
+  tokens_used: 28500
+  duration: 445s
+deliverables:
+  - reports/security-audit-user-service.md (8 findings)
+result: |
+  Found 2 HIGH severity issues (SQL injection risk, weak JWT validation),
+  3 MEDIUM severity (missing rate limiting, insufficient error handling),
+  3 LOW severity (dependency updates recommended).
+  All findings include fix recommendations and severity justifications.
+```
+
+**HANDBACK 2 (payment-service):**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-security-audit-2
+agent: Security Engineer
+status: COMPLETE
+quality_score: 98
+metrics:
+  tokens_used: 31200
+  duration: 512s
+deliverables:
+  - reports/security-audit-payment-service.md (2 findings)
+result: |
+  Found 1 HIGH severity (PCI compliance violation in logging),
+  1 MEDIUM severity (insufficient API key rotation).
+  Payment service has strong encryption and secure API design overall.
+```
+
+**HANDBACK 3 (order-service):**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-security-audit-3
+agent: Security Engineer
+status: COMPLETE
+quality_score: 94
+metrics:
+  tokens_used: 26800
+  duration: 478s
+deliverables:
+  - reports/security-audit-order-service.md (5 findings)
+result: |
+  Found 1 HIGH severity (broken access control on order updates),
+  3 MEDIUM severity, 1 LOW severity.
+  Order service requires authorization improvements.
+```
+
+**Aggregated Results (all 3 complete in parallel):**
+```
+Wall-clock time: ~512 seconds (fastest parallel task)
+Sequential equivalent: ~1435 seconds (would take 3x longer)
+Parallelism speedup: 2.8x faster
+Combined findings: 15 total (2 critical, 6 high, 5 medium, 2 low)
+Next step: Route findings to engineers for fixing
+```
+
+---
+
+### Example 4: Advanced Multi-Tier Decomposition
+
+**You type:**
+```
+delegate:
+  - Principal Engineer: Design microservices architecture for new payment system
+  - Parallel implementation (blocked on design):
+    - Engineer: Implement payment processor service
+    - Engineer: Implement order service
+    - Engineer: Implement webhook handler service
+  - Lead Engineer: Code review all 3 services
+  - Security Engineer: Threat model the payment flow
+  - Commit and push if all reviews pass
+```
+
+**Orchestrator creates hierarchical DELEGATEs:**
+
+**TIER 1 - Architecture Design:**
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-payment-arch
+role: Principal Engineer
+model: claude-opus-4-7
+effort: high
+scope: |
+  Design microservices architecture for new payment system.
+  Include: payment processor, order service, webhook handler, database schemas.
+  Consider: scalability, failure modes, eventual consistency, PCI compliance.
+plan:
+  - 1. Document system requirements and constraints
+  - 2. Design service boundaries and communication patterns
+  - 3. Define data schemas and API contracts
+  - 4. Design failure handling and retry logic
+  - 5. Design monitoring and audit logging
+success_criteria:
+  - Architecture document complete
+  - Service APIs clearly defined
+  - Database schemas specified
+  - Deployment topology clear
+```
+
+**Principal Engineer returns design HANDBACK:**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-payment-arch
+agent: Principal Engineer
+status: COMPLETE
+quality_score: 97
+deliverables:
+  - docs/PAYMENT_ARCHITECTURE.md
+  - docs/SERVICE_APIS.md
+  - docs/DATABASE_SCHEMAS.sql
+result: |
+  Designed 3-service architecture with async event bus for communication.
+  Each service has clear boundaries and API contracts.
+  Schemas support PCI compliance and audit logging.
+```
+
+**TIER 2 - Parallel Implementation (blocked on TIER 1):**
+
+**DELEGATE 2a, 2b, 2c** (all launched simultaneously after architecture complete):
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-payment-processor
+role: Engineer
+effort: high
+scope: |
+  Implement payment processor service following architecture from 2026-05-20-payment-arch.
+  Handle: payment authorization, capture, refunds, status tracking.
+context:
+  - Architecture ref: docs/PAYMENT_ARCHITECTURE.md
+  - API ref: docs/SERVICE_APIS.md
+plan:
+  - 1. Set up service skeleton and endpoints
+  - 2. Implement payment authorization flow
+  - 3. Implement capture, refund, and status tracking
+  - 4. Add event publishing for order service
+  - 5. Implement comprehensive error handling
+  - 6. Add audit logging for compliance
+success_criteria:
+  - All endpoints tested
+  - Event publishing verified
+  - Audit logs complete
+  - Error cases handled
+```
+
+**Similar DELEGATEs for order-service and webhook-handler (2b, 2c)**
+
+**All 3 Engineers return HANDBACKs in parallel:**
+```
+HANDBACK 2a (payment-processor): COMPLETE, quality 93
+HANDBACK 2b (order-service): COMPLETE, quality 94
+HANDBACK 2c (webhook-handler): COMPLETE, quality 92
+```
+
+**TIER 3 - Code Review (Lead Engineer, blocked on TIER 2):**
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-payment-review
+role: Lead Engineer
+scope: |
+  Code review all 3 payment services against 8-point checklist:
+  1. Correctness (logic, error handling)
+  2. Test coverage (>85%)
+  3. Security (no injection, auth verified)
+  4. Performance (no N+1, proper indexing)
+  5. Maintainability (clear code, documentation)
+  6. Architecture alignment (follows design doc)
+  7. Monitoring (metrics, logging, tracing)
+  8. API contract adherence
+context:
+  - Services: payment-processor, order-service, webhook-handler
+  - Design ref: docs/PAYMENT_ARCHITECTURE.md
+plan:
+  - 1. Review payment-processor implementation
+  - 2. Review order-service implementation
+  - 3. Review webhook-handler implementation
+  - 4. Check all tests and coverage
+  - 5. Verify event bus integration
+  - 6. Provide feedback or approval
+success_criteria:
+  - All 8 points checked for each service
+  - Feedback documented
+  - Approval or rework request issued
+```
+
+**Lead Engineer returns HANDBACK:**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-payment-review
+agent: Lead Engineer
+status: COMPLETE
+quality_score: 95
+feedback: |
+  ✅ APPROVED with minor suggestions:
+  - payment-processor: Add rate limiting on auth endpoint
+  - order-service: Improve error message clarity
+  - webhook-handler: Add idempotency checks
+  All services meet quality threshold. Ready for security review.
+```
+
+**TIER 4 - Security Review (Security Engineer, blocked on TIER 3):**
+```yaml
+handoff_type: DELEGATE
+task_id: 2026-05-20-payment-threat-model
+role: Security Engineer
+scope: |
+  Threat model the payment flow. Check for:
+  - OWASP Top 10 vulnerabilities
+  - PCI compliance violations
+  - Authentication/authorization flaws
+  - Data exposure risks
+  - Injection vectors
+plan:
+  - 1. Map data flow across services
+  - 2. Identify trust boundaries
+  - 3. Check PCI compliance
+  - 4. Audit token handling
+  - 5. Review audit logging
+success_criteria:
+  - Threat model document complete
+  - All vulnerabilities identified
+  - Risk ratings assigned
+  - Mitigation strategies provided
+```
+
+**Security Engineer returns HANDBACK:**
+```yaml
+handoff_type: HANDBACK
+task_id: 2026-05-20-payment-threat-model
+agent: Security Engineer
+status: COMPLETE
+quality_score: 96
+result: |
+  Threat model complete. No HIGH severity issues found.
+  3 MEDIUM severity items (all mitigated with provided recommendations).
+  Overall security posture: STRONG. PCI compliance verified.
+```
+
+**TIER 5 - Final Integration (Orchestrator):**
+```
+✅ All tiers complete:
+  - TIER 1: Architecture designed
+  - TIER 2: 3 services implemented in parallel
+  - TIER 3: Lead review approved
+  - TIER 4: Security approved
+
+HANDBACK SUMMARY:
+  Task ID: 2026-05-20-payment-system
+  Status: COMPLETE
+  Total duration: 3.2 hours
+  Total tokens: 142,500 (<200k budget)
+  Quality score: 94.2/100
+  
+NEXT STEPS:
+  1. Commit: git commit -m "feat: payment system implementation"
+  2. Push: git push origin feature/payment-system
+  3. Create PR for main branch
+```
+
+---
+
+### Real-World Scenarios
+
+#### Scenario A: Bug Fix + Testing
+
+**You type:**
+```
+delegate: fix authentication bug in OAuth handler where token validation skips expiry check; write regression tests to prevent recurrence; verify no other auth paths are affected; update security documentation; commit and push
+```
+
+**What happens:**
+1. **Engineer** fixes the token validation bug and writes tests (487s, quality 94)
+2. **Quality Engineer** runs comprehensive auth flow tests to verify no regressions (234s, quality 96)
+3. **Security Engineer** audits all auth paths for similar issues (312s, quality 97)
+4. **Lead Engineer** code review to ensure fix is correct (156s, quality 98)
+5. Orchestrator commits and pushes if all reviews pass
+
+**Total time:** ~30 minutes | **Cost:** $0.32 | **Quality:** 96.3/100
+
+---
+
+#### Scenario B: Feature Development
+
+**You type:**
+```
+delegate:
+  - Senior Engineer: Design API schema for new reporting feature
+  - Parallel implementation (blocked on design):
+    - Engineer: Implement report generation service
+    - Engineer: Implement data aggregation pipeline
+    - Engineer: Implement export formats (CSV, PDF, JSON)
+  - Quality Engineer: Load test reporting pipeline with 100k reports
+  - Lead Engineer: Code review API and implementations
+  - Deploy to staging if all checks pass
+```
+
+**What happens:**
+1. **Senior Engineer** designs schema and API (523s)
+2. **3 Engineers** build services in parallel (612s each)
+3. **Quality Engineer** load tests (445s, validates 100k reports generate in <5s)
+4. **Lead Engineer** reviews all code (298s)
+5. Orchestrator deploys to staging on success
+
+**Total time:** ~40 minutes | **Cost:** $0.58 | **Quality:** 93.2/100
+
+---
+
+#### Scenario C: Cross-Service Refactor
+
+**You type:**
+```
+delegate parallel:
+  - Principal Engineer: Evaluate cache invalidation strategies
+  - Senior Engineer: Design new event bus architecture
+  - Parallel implementation (blocked on design):
+    - Engineer: Refactor service-a for new bus
+    - Engineer: Refactor service-b for new bus
+    - Engineer: Refactor service-c for new bus
+  - Quality Engineer: Integration testing (end-to-end)
+  - Commit and push if all tests pass
+```
+
+**What happens:**
+1. **Principal Engineer** evaluates strategies (445s)
+2. **Senior Engineer** designs event bus (523s)
+3. **3 Engineers** refactor services in parallel (612s each)
+4. **Quality Engineer** runs full integration tests (667s)
+5. Orchestrator commits on success
+
+**Total time:** ~28 minutes (parallel execution) | **Cost:** $1.12 | **Quality:** 94.1/100
+
+---
+
+#### Scenario D: Security Hardening
+
+**You type:**
+```
+delegate:
+  - Security Engineer: Audit codebase for OWASP Top 10 vulnerabilities
+  - Parallel fixes (for each vulnerability):
+    - Engineer: Fix SQL injection in user search
+    - Engineer: Fix XSS in profile display
+    - Engineer: Fix CSRF in API endpoints
+    - Engineer: Fix broken access control in admin panel
+  - Security Engineer: Verify all fixes are complete
+  - Commit and push with security approval
+```
+
+**What happens:**
+1. **Security Engineer** audits codebase, finds 4 vulnerabilities (578s)
+2. **4 Engineers** fix vulnerabilities in parallel (487s each)
+3. **Security Engineer** verifies fixes (234s)
+4. Orchestrator commits and pushes with security sign-off
+
+**Total time:** ~20 minutes (parallel fixes) | **Cost:** $0.87 | **Quality:** 96.8/100
+
+---
+
+### Delegation Best Practices
+
+**✅ DO:**
+- Be specific about what you want ("implement user login with bcrypt" not "fix auth")
+- Break large tasks into parallel subtasks when independent
+- Use multi-tier delegation for complex workflows
+- Include acceptance criteria in prompts (e.g., "load test with 100k records")
+- Let the Orchestrator route to the right specialist
+
+**❌ DON'T:**
+- Make prompts too vague ("fix everything in the auth system")
+- Delegate to specific roles unless necessary (let Orchestrator decide)
+- Ignore quality scores (they indicate whether output is production-ready)
+- Skip delegation for well-scoped, straightforward tasks (direct CLI is faster)
+
+---
+
 ## Token Visibility & Budget Checking (Phase 3)
 
 Real-time token tracking across all agents and subagents:

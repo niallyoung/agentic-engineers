@@ -381,7 +381,7 @@ python3 --version  # Should be 3.9+
 ```bash
 # Test GitHub access
 gh auth status
-gh repo view REMOVED/agentic-engineers
+gh repo view niallyoung/agentic-engineers
 
 # Test Buildkite access
 bk auth status
