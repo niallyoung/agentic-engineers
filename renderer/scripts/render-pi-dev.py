@@ -208,6 +208,8 @@ class PiDevRenderer:
         
         if not self.src_dir.exists():
             print(f"{_red('❌')} Source directory not found: {self.src_dir}")
+            print(f"    Working directory: {Path.cwd()}", file=sys.stderr)
+            print(f"    Script location: {Path(__file__).resolve()}", file=sys.stderr)
             return 1
         
         print(f"\n{'='*70}")
@@ -411,9 +413,18 @@ Examples:
 
     # Resolve source directory:
     # Priority: --src flag > src_pos (only if dest_pos also provided) > default
-    script_dir = Path(__file__).parent.parent
+    # SECURITY FIX: Resolve __file__ to absolute path first (handles symlinks correctly on all platforms)
+    script_path = Path(__file__).resolve()
+    script_dir = script_path.parent.parent
     default_src = script_dir / "pi-dev-src"
-    default_dest = Path.home() / ".pi"
+    
+    # SECURITY FIX: Handle missing HOME environment variable (containers, restricted envs)
+    try:
+        default_dest = Path.home() / ".pi"
+    except RuntimeError:
+        # Fallback if HOME is not set in restricted environments
+        default_dest = Path("/tmp") / ".pi"
+        print(f"⚠️  HOME not set, using fallback destination: {default_dest}", file=sys.stderr)
 
     if args.src is not None:
         src_dir = Path(args.src)
