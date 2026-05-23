@@ -7,19 +7,42 @@ Usage:
   get_version.py            — Get current version from git tags
   get_version.py next-patch — Get next patch version
   get_version.py next-minor — Get next minor version
+
+Version Source Priority:
+  1. Git tags (primary source of truth)
+  2. Hardcoded fallback "0.8.0" (for offline/no-git scenarios)
 """
 
 import sys
 import subprocess
+from pathlib import Path
 from packaging import version as pkg_version
+
+def get_repo_root():
+    """Get repository root directory for git operations."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except:
+        pass
+    
+    # Fallback: assume script is in repo_root/scripts/
+    script_dir = Path(__file__).parent
+    return str(script_dir.parent)
 
 def run_git(cmd):
     """Run git command and return output."""
+    repo_root = get_repo_root()
     result = subprocess.run(
         ["git"] + cmd,
         capture_output=True,
         text=True,
-        cwd="/Users/niall/git/agentic-engineers"
+        cwd=repo_root
     )
     if result.returncode != 0:
         raise RuntimeError(f"Git command failed: {' '.join(cmd)}\n{result.stderr}")
@@ -36,7 +59,12 @@ def get_latest_tag():
     return None
 
 def get_current_version():
-    """Get current version from git tags (primary) or VERSION file (fallback)."""
+    """Get current version from git tags (primary) or hardcoded fallback.
+    
+    Priority:
+      1. Latest git tag (primary, always authoritative)
+      2. Hardcoded fallback "0.8.0" (for offline/no-git scenarios)
+    """
     # Primary source: git tags (always accurate, no sync issues)
     try:
         tag = get_latest_tag()
@@ -45,14 +73,7 @@ def get_current_version():
     except:
         pass
     
-    # Fallback: VERSION file (for offline/no-git scenarios)
-    try:
-        with open("/Users/niall/git/agentic-engineers/VERSION") as f:
-            return f.read().strip()
-    except:
-        pass
-    
-    # Last resort: hardcoded default
+    # Last resort: hardcoded default (first release version)
     return "0.8.0"
 
 def get_next_version(bump_type="patch"):

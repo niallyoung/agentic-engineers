@@ -30,15 +30,14 @@ The CI/CD pipeline (`.github/workflows/ci.yml`) automatically:
    - Attaches tag
    - Makes release publicly visible
 
-4. **Git tags are the primary source of truth**
+4. **Git tags are the primary and only source of truth**
    - `setup.py` reads version from git tags (via `get_version.py`)
-   - VERSION file is updated manually or via workflow for documentation only
+   - No manual VERSION file to maintain — everything is automatic
    - This eliminates sync issues by making tags the authoritative version
 
 ### Files Involved
 
-- **VERSION** — Current version (e.g., `0.8.0`)
-- **setup.py** — Package version (reads from VERSION file)
+- **Git tags** — Primary version source (created automatically by CI/CD)
 - **.github/workflows/ci.yml** — Automatic tagging and release
 - **scripts/get_version.py** — Version utility (read/bump versions)
 
@@ -63,19 +62,15 @@ The CI/CD pipeline (`.github/workflows/ci.yml`) automatically:
   - Pushes all to repository
 
 #### 3. Version Source Priority
-- **Primary:** Git tags (always current, read by `setup.py` via `get_version.py`)
-- **Fallback:** VERSION file (for offline scenarios)
-- **Last resort:** Hardcoded default (0.8.0)
+- **Primary & Only Source:** Git tags (authoritative, read by `setup.py` via `get_version.py`)
+- **Last resort:** Hardcoded fallback (0.8.0) — for offline/no-git scenarios only
 
-This ensures `setup.py` always reflects the latest tagged version automatically, with no sync gaps between VERSION file and git tags.
+**Note:** The VERSION file has been removed as it was stale and unnecessary. Git tags are the single source of truth. The hardcoded "0.8.0" fallback ensures installations work even without git history (e.g., distributions, shallow clones).
 
 ### Reading Current Version
 
 ```bash
-# Get version from VERSION file
-cat VERSION
-
-# Or use the utility script
+# Use the utility script to get version from git tags
 python3 scripts/get_version.py
 
 # Get next patch version

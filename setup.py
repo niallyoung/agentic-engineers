@@ -6,7 +6,12 @@ from pathlib import Path
 import subprocess
 
 def get_version():
-    """Get version from get_version.py (reads git tags as primary source)."""
+    """Get version from git tags (primary source via get_version.py).
+    
+    Priority:
+      1. get_version.py script (reads git tags as primary source)
+      2. Hardcoded fallback "0.8.0" (for offline/no-git scenarios)
+    """
     try:
         script_path = Path(__file__).parent / "scripts" / "get_version.py"
         result = subprocess.run(
@@ -20,12 +25,7 @@ def get_version():
     except Exception:
         pass
     
-    # Fallback: read VERSION file
-    version_file = Path(__file__).parent / "VERSION"
-    if version_file.exists():
-        return version_file.read_text().strip()
-    
-    # Last resort
+    # Last resort: hardcoded fallback (first release version)
     return "0.8.0"
 
 setup(
