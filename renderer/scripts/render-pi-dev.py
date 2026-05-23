@@ -343,12 +343,6 @@ class PiDevRenderer:
 
 
 def main():
-    # DEBUG: Detailed tracing for CI troubleshooting
-    import os
-    print(f"[DEBUG] main() called with argv={sys.argv}", file=sys.stderr)
-    print(f"[DEBUG] CWD={os.getcwd()}, __file__={__file__}", file=sys.stderr)
-    sys.stderr.flush()
-    
     parser = argparse.ArgumentParser(
         description="π.dev Harness Renderer — renders agentic-engineers config to ~/.pi/agent/",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -417,10 +411,6 @@ Examples:
 
     args = parser.parse_args()
     
-    # DEBUG: Trace after successful parsing
-    sys.stderr.write(f"[TRACE] parse_args() succeeded with: --src={args.src}, --dest={args.dest}, --uninstall={args.uninstall}, --status={args.status}, src_pos={args.src_pos}, dest_pos={args.dest_pos}\n")
-    sys.stderr.flush()
-
     # Resolve source directory:
     # Priority: --src flag > src_pos (only if dest_pos also provided) > default
     # SECURITY FIX: Use robust path resolution that works in all environments
@@ -430,42 +420,29 @@ Examples:
     
     def find_pi_dev_src():
         """Find pi-dev-src directory using multiple strategies"""
-        results = []
-        
         # Strategy 1: __file__-based resolution
         try:
             script_path = Path(__file__).resolve()
             candidate = script_path.parent.parent / "pi-dev-src"
-            exists = candidate.exists()
-            results.append(f"Strategy1(__file__={__file__}): {candidate} exists={exists}")
-            if exists:
+            if candidate.exists():
                 return candidate
-        except (NameError, AttributeError) as e:
-            results.append(f"Strategy1 failed: {e}")
+        except (NameError, AttributeError):
+            pass
         
         # Strategy 2: Look in current working directory
         cwd_candidate = Path.cwd() / "renderer" / "pi-dev-src"
-        cwd_exists = cwd_candidate.exists()
-        results.append(f"Strategy2(cwd={Path.cwd()}): {cwd_candidate} exists={cwd_exists}")
-        if cwd_exists:
+        if cwd_candidate.exists():
             return cwd_candidate
         
         # Strategy 3: Search upward from current working directory
         current = Path.cwd()
-        for i in range(5):  # Look up to 5 levels
+        for _ in range(5):  # Look up to 5 levels
             candidate = current / "renderer" / "pi-dev-src"
-            candidate_exists = candidate.exists()
-            results.append(f"Strategy3.{i}(current={current}): {candidate} exists={candidate_exists}")
-            if candidate_exists:
+            if candidate.exists():
                 return candidate
             if current.parent == current:  # Reached filesystem root
                 break
             current = current.parent
-        
-        # Log all strategies for debugging
-        for r in results:
-            sys.stderr.write(f"  find_pi_dev_src: {r}\n")
-        sys.stderr.flush()
         
         # Default fallback (will fail with clear error in render_all())
         return Path.cwd() / "renderer" / "pi-dev-src"
@@ -512,25 +489,14 @@ Examples:
     # Ensure paths are absolute
     src_dir = src_dir.resolve()
     dest_dir = dest_dir.resolve()
-    
-    # DEBUG: Trace resolved paths before creating renderer
-    sys.stderr.write(f"[TRACE] Resolved paths: src_dir={src_dir} (exists={src_dir.exists()}), dest_dir={dest_dir}\n")
-    sys.stderr.flush()
 
     renderer = PiDevRenderer(str(src_dir), str(dest_dir))
     
-    # DEBUG: Trace final execution path
     if args.uninstall:
-        sys.stderr.write(f"[TRACE] Executing: uninstall()\n")
-        sys.stderr.flush()
         return renderer.uninstall()
     elif args.status:
-        sys.stderr.write(f"[TRACE] Executing: status()\n")
-        sys.stderr.flush()
         return renderer.status()
     else:
-        sys.stderr.write(f"[TRACE] Executing: render_all()\n")
-        sys.stderr.flush()
         return renderer.render_all()
 
 
