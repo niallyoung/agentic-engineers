@@ -7,6 +7,7 @@ rate limiting, and validation.
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
@@ -17,6 +18,29 @@ from .rate_limiter import RateLimiter
 from .consistency import AtomicQueueOps
 from .subtask_validators import SubTaskValidator
 
+# ---------------------------------------------------------------------------
+# queue-isolation integration (optional — graceful fallback)
+# ---------------------------------------------------------------------------
+_QUEUE_ISOLATION_SCRIPTS = (
+    Path(__file__).parent.parent.parent  # src/skills/
+    / "_meta" / "queue-isolation" / "scripts"
+)
+
+def _try_import_queue_isolation():
+    """Attempt to import queue_isolation; return module or None on failure."""
+    try:
+        if str(_QUEUE_ISOLATION_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(_QUEUE_ISOLATION_SCRIPTS))
+        import queue_isolation as _qi  # noqa: PLC0415
+        return _qi
+    except ImportError:
+        return None
+
+
+class QueueOperations:
+    """Atomic queue operations for DELEGATE/HANDBACK workflow."""
+_DEFAULT_QUEUE_PATH = "~/.agentic-engineers/artifacts"
+
 
 class QueueOperations:
     """Atomic queue operations for DELEGATE/HANDBACK workflow."""
@@ -24,14 +48,27 @@ class QueueOperations:
     def __init__(
         self,
         session_id: str,
-        queue_path: str = "~/.copilot/queue",
+        queue_path: str = _DEFAULT_QUEUE_PATH,
+        harness: Optional[str] = None,
     ):
         """
         Initialize with session isolation.
 
+        When the ``queue-isolation`` skill is available **and** no explicit
+        ``queue_path`` override is provided, the queue is automatically scoped to
+        ``~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/``.
+
+        Passing an explicit ``queue_path`` (e.g., a temporary directory in tests)
+        bypasses queue-isolation and uses the legacy session-subdirectory layout
+        so that existing tests and deployments remain unaffected.
+
         Args:
             session_id: Unique session identifier
-            queue_path: Root path for queue directories
+            queue_path: Root path for queue directories.  Defaults to
+                        ``~/.agentic-engineers/artifacts``.  Override in tests with
+                        a ``tempfile.TemporaryDirectory`` path.
+            harness: AI harness override (auto-detected from env if omitted).
+                     Only used when queue-isolation is active.
 
         Raises:
             ValueError: If session_id is empty
@@ -40,11 +77,25 @@ class QueueOperations:
             raise ValueError("session_id must be a non-empty string")
 
         self.session_id = session_id
-        self.queue_path = Path(queue_path).expanduser()
-        self.session_queue_path = self.queue_path / session_id
+        _using_default_path = (queue_path == _DEFAULT_QUEUE_PATH)
 
-        # Ensure queue directories exist
-        self._ensure_queue_dirs()
+        # Use queue-isolation only when no explicit queue_path override is given
+        qi = _try_import_queue_isolation() if _using_default_path else None
+        if qi is not None:
+            resolved_harness = harness or qi.detect_harness()
+            self.harness = resolved_harness
+            queue_root = qi.get_queue_path(session_id, resolved_harness)
+            # Initialise the full directory structure (idempotent)
+            qi.init_queue_structure(session_id, resolved_harness)
+            self.queue_path = queue_root.parent.parent  # <base>/artifacts/
+            self.session_queue_path = queue_root         # .../queue/
+        else:
+            # ---- Legacy / explicit-override path ----
+            self.harness = harness or "local"
+            self.queue_path = Path(queue_path).expanduser()
+            self.session_queue_path = self.queue_path / session_id
+            # Ensure queue directories exist
+            self._ensure_queue_dirs()
 
         # Initialize components
         self.validator = DelegateValidator(queue_path=self.session_queue_path)
