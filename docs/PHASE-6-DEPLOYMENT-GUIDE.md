@@ -54,7 +54,7 @@ pytest tests/orchestration/test_regression_and_production_readiness.py -v
 
 **Files Changed**:
 - `bin/orchestrator_daemon.py` — New daemon entry point
-- `/Users/niall/.config/opencode/agents/orchestrator.md` — Updated with polling instructions
+- `~/.config/opencode/agents/orchestrator.md` — Updated with polling instructions
 
 **How it works**:
 ```bash
@@ -244,7 +244,7 @@ python bin/orchestrator_daemon.py --idle-timeout 60 --poll-interval 5
 
 **Solution**: Ensure Python path is correct:
 ```bash
-export PYTHONPATH=/Users/niall/git/agentic-engineers:$PYTHONPATH
+export PYTHONPATH={REPO_ROOT}:$PYTHONPATH
 pytest tests/orchestration/ -v
 ```
 
@@ -265,7 +265,7 @@ If issues arise post-deployment:
 
 1. **Revert orchestrator.md**:
    ```bash
-   git checkout HEAD~1 /Users/niall/.config/opencode/agents/orchestrator.md
+   git checkout HEAD~1 ~/.config/opencode/agents/orchestrator.md
    ```
 
 2. **Disable daemon invocation**:

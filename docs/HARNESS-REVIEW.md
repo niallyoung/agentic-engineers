@@ -214,7 +214,7 @@ This creates `~/.pi/agent/` even when running `--status` or `--uninstall`. For s
 | `AGENTS.md` | ⚠️ Stale | Documents 9 roles (includes Spec Engineer, Healing Engineer) vs. canonical 8 |
 | `settings.json` | ⚠️ Stale | Uses `claude-3-5-sonnet-20241022` (old model ID); references non-existent pi.dev packages/extensions |
 | `pi.yml` | ⚠️ Speculative | Uses `claude-3-5-opus-20250514` (non-existent model ID); routing rules use unverified pi.dev condition strings |
-| `SUB_AGENT_SETUP.md` | ⚠️ Stale | Hardcodes `/Users/niall/.pi/agent/` paths; documents 9 roles |
+| `SUB_AGENT_SETUP.md` | ⚠️ Stale | Hardcodes `~/.pi/agent/` paths; documents 9 roles |
 
 **Critical issue: `settings.json` references unverified pi.dev features**
 ```json

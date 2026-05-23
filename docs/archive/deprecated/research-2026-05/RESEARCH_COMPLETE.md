@@ -277,7 +277,7 @@ Use: Ollama (local) + Together AI (open-source)
 
 ## File Locations
 
-All files are located in: `/Users/niall/git/agentic-engineers/`
+All files are located in: `{REPO_ROOT}/`
 
 ```
 ai-frameworks-research.json          # Full structured data

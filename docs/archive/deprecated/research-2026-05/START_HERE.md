@@ -166,7 +166,7 @@ START: What do you need?
 
 ## 📍 File Locations
 
-All files are in: `/Users/niall/git/agentic-engineers/`
+All files are in: `{REPO_ROOT}/`
 
 ```
 ├── ai-frameworks-research.json       ← Raw data (JSON)

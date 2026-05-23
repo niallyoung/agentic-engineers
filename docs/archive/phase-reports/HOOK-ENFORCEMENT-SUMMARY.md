@@ -123,7 +123,7 @@ The agentic-engineers framework now enforces SDLC compliance via 4 git hooks dep
 ```bash
 make install
 # or
-./renderer/scripts/render-opencode.sh /Users/niall/git/agentic-engineers ~/.opencode
+./renderer/scripts/render-opencode.sh {REPO_ROOT} ~/.opencode
 ```
 
 **Verification:**
@@ -144,7 +144,7 @@ ls -la .githooks/          # should show: pre-commit, commit-msg, pre-push, post
 
 **Installation Flow:**
 ```bash
-./renderer/scripts/render-claude.sh /Users/niall/git/agentic-engineers ~/.claude
+./renderer/scripts/render-claude.sh {REPO_ROOT} ~/.claude
 ```
 
 **Verification:**
@@ -164,7 +164,7 @@ git config core.hooksPath  # should output: .githooks
 
 **Installation Flow:**
 ```bash
-python3 renderer/scripts/render-pi-dev.py /Users/niall/git/agentic-engineers ~/.pi
+python3 renderer/scripts/render-pi-dev.py {REPO_ROOT} ~/.pi
 ```
 
 **Verification:**
@@ -188,7 +188,7 @@ git config core.hooksPath  # should output: .githooks
 
 **Installation Flow:**
 ```bash
-./renderer/scripts/render-copilot.sh /Users/niall/git/agentic-engineers
+./renderer/scripts/render-copilot.sh {REPO_ROOT}
 ```
 
 **Verification:**
