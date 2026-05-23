@@ -3,9 +3,10 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v0.33.2
+## [Unreleased] - v0.33.3
 
-No unreleased changes.
+### Fixed
+- clean up [Unreleased] section in CHANGELOG
 
 ## [v0.33.2] - 2026-05-24
 
