@@ -30,9 +30,10 @@ The CI/CD pipeline (`.github/workflows/ci.yml`) automatically:
    - Attaches tag
    - Makes release publicly visible
 
-4. **Updates VERSION file** (read by `setup.py`)
-   - Tracks current version for documentation
-   - Used by `scripts/get_version.py`
+4. **Git tags are the primary source of truth**
+   - `setup.py` reads version from git tags (via `get_version.py`)
+   - VERSION file is updated manually or via workflow for documentation only
+   - This eliminates sync issues by making tags the authoritative version
 
 ### Files Involved
 
@@ -61,9 +62,12 @@ The CI/CD pipeline (`.github/workflows/ci.yml`) automatically:
   - Creates GitHub Release with changelog
   - Pushes all to repository
 
-#### 3. Version File Update
-- After tag is created, GitHub Actions updates `VERSION` file
-- This ensures `setup.py` always reflects the latest tagged version
+#### 3. Version Source Priority
+- **Primary:** Git tags (always current, read by `setup.py` via `get_version.py`)
+- **Fallback:** VERSION file (for offline scenarios)
+- **Last resort:** Hardcoded default (0.8.0)
+
+This ensures `setup.py` always reflects the latest tagged version automatically, with no sync gaps between VERSION file and git tags.
 
 ### Reading Current Version
 

@@ -36,15 +36,24 @@ def get_latest_tag():
     return None
 
 def get_current_version():
-    """Get current version from VERSION file or git tags."""
+    """Get current version from git tags (primary) or VERSION file (fallback)."""
+    # Primary source: git tags (always accurate, no sync issues)
+    try:
+        tag = get_latest_tag()
+        if tag:
+            return tag.lstrip("v")
+    except:
+        pass
+    
+    # Fallback: VERSION file (for offline/no-git scenarios)
     try:
         with open("/Users/niall/git/agentic-engineers/VERSION") as f:
             return f.read().strip()
     except:
-        tag = get_latest_tag()
-        if tag:
-            return tag.lstrip("v")
-        return "0.8.0"
+        pass
+    
+    # Last resort: hardcoded default
+    return "0.8.0"
 
 def get_next_version(bump_type="patch"):
     """Get next version."""
