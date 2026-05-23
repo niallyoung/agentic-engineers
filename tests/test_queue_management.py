@@ -11,7 +11,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Import the skill module (will exist after implementation)
-# from src.skills.queue_management.queue_manager import QueueManager
+import importlib
+qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+QueueManager = qm_mod_queue_manager.QueueManager
 
 
 class TestQueueManagerParsing:
@@ -19,7 +21,9 @@ class TestQueueManagerParsing:
 
     def test_parse_json_spec_valid(self):
         """Parse valid JSON task specification."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         spec = {
             "task_id": "test-task-001",
@@ -36,7 +40,9 @@ class TestQueueManagerParsing:
 
     def test_parse_json_spec_missing_required_field(self):
         """Reject JSON spec with missing required fields."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         spec = {
             "task_id": "test-task-001",
@@ -50,7 +56,9 @@ class TestQueueManagerParsing:
 
     def test_parse_cli_args_valid(self):
         """Parse valid CLI arguments."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         args = [
             "--task-id", "cli-task-001",
@@ -65,7 +73,9 @@ class TestQueueManagerParsing:
 
     def test_parse_cli_args_missing_required(self):
         """Reject CLI args with missing required parameters."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         args = ["--task-id", "cli-task-001"]
         # Missing --role
@@ -80,7 +90,10 @@ class TestQueueProtocolValidator:
 
     def test_validate_spec_all_required_fields(self):
         """Validate spec has all required QUEUE-PROTOCOL fields."""
-        from src.skills.queue_management.queue_manager import QueueManager, ValidationError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        ValidationError = qm_mod_queue_manager.ValidationError
         
         spec = {
             "task_id": "valid-task",
@@ -96,7 +109,10 @@ class TestQueueProtocolValidator:
 
     def test_validate_spec_invalid_task_id_format(self):
         """Reject invalid task_id format (must be kebab-case)."""
-        from src.skills.queue_management.queue_manager import QueueManager, ValidationError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        ValidationError = qm_mod_queue_manager.ValidationError
         
         spec = {
             "task_id": "InvalidTaskID",  # Not kebab-case
@@ -112,7 +128,10 @@ class TestQueueProtocolValidator:
 
     def test_validate_spec_invalid_role(self):
         """Reject invalid role."""
-        from src.skills.queue_management.queue_manager import QueueManager, ValidationError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        ValidationError = qm_mod_queue_manager.ValidationError
         
         spec = {
             "task_id": "valid-task",
@@ -128,7 +147,10 @@ class TestQueueProtocolValidator:
 
     def test_validate_spec_plan_not_empty(self):
         """Reject spec with empty plan."""
-        from src.skills.queue_management.queue_manager import QueueManager, ValidationError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        ValidationError = qm_mod_queue_manager.ValidationError
         
         spec = {
             "task_id": "valid-task",
@@ -148,7 +170,9 @@ class TestDelegateGenerator:
 
     def test_generate_delegate_creates_file(self):
         """Generate DELEGATE JSON file in correct location."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             qm = QueueManager(queue_dir=tmpdir)
@@ -168,7 +192,9 @@ class TestDelegateGenerator:
 
     def test_delegate_file_has_required_fields(self):
         """DELEGATE file contains required QUEUE-PROTOCOL fields."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             qm = QueueManager(queue_dir=tmpdir)
@@ -199,7 +225,9 @@ class TestTodoMdUpdater:
 
     def test_add_todo_entry_creates_entry(self):
         """Add entry to TODO.md in correct phase section."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             todo_path = os.path.join(tmpdir, "TODO.md")
@@ -230,7 +258,9 @@ class TestTodoMdUpdater:
 
     def test_todo_entry_format_has_all_fields(self):
         """TODO.md entry includes task_id, description, effort, owner."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             todo_path = os.path.join(tmpdir, "TODO.md")
@@ -265,7 +295,10 @@ class TestDuplicateDetection:
 
     def test_detect_duplicate_in_existing_queue(self):
         """Detect duplicate task_id in existing queue files."""
-        from src.skills.queue_management.queue_manager import QueueManager, DuplicateTaskError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        DuplicateTaskError = qm_mod_queue_manager.DuplicateTaskError
         
         with tempfile.TemporaryDirectory() as tmpdir:
             incoming_dir = os.path.join(tmpdir, "incoming")
@@ -283,7 +316,10 @@ class TestDuplicateDetection:
 
     def test_detect_duplicate_in_todo_md(self):
         """Detect duplicate task_id in TODO.md."""
-        from src.skills.queue_management.queue_manager import QueueManager, DuplicateTaskError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        DuplicateTaskError = qm_mod_queue_manager.DuplicateTaskError
         
         with tempfile.TemporaryDirectory() as tmpdir:
             todo_path = os.path.join(tmpdir, "TODO.md")
@@ -298,7 +334,9 @@ class TestDuplicateDetection:
 
     def test_no_duplicate_when_unique(self):
         """Allow unique task_id."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             qm = QueueManager(queue_dir=tmpdir)
@@ -312,7 +350,9 @@ class TestGitIntegration:
 
     def test_git_commit_both_files(self):
         """Commit both DELEGATE and TODO.md atomically."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             # Initialize git repo
@@ -352,7 +392,9 @@ class TestCliInterface:
 
     def test_cli_add_to_queue_happy_path(self):
         """CLI: add-to-queue command with all required args."""
-        from src.skills.queue_management.cli import add_to_queue_cli
+        import importlib
+        qm_mod_cli = importlib.import_module("src.skills.queue-management.cli")
+        add_to_queue_cli = qm_mod_cli.add_to_queue_cli
         
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create necessary directories
@@ -393,7 +435,9 @@ class TestCliInterface:
 
     def test_cli_with_json_file(self):
         """CLI: add-to-queue with JSON spec file."""
-        from src.skills.queue_management.cli import add_to_queue_cli
+        import importlib
+        qm_mod_cli = importlib.import_module("src.skills.queue-management.cli")
+        add_to_queue_cli = qm_mod_cli.add_to_queue_cli
         
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create spec file
@@ -444,7 +488,10 @@ class TestErrorHandling:
 
     def test_error_message_validation_failure(self):
         """Clear error message for validation failure."""
-        from src.skills.queue_management.queue_manager import QueueManager, ValidationError
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
+        ValidationError = qm_mod_queue_manager.ValidationError
         
         spec = {
             "task_id": "BadTaskID",  # Not kebab-case
@@ -463,7 +510,9 @@ class TestErrorHandling:
 
     def test_error_message_duplicate_detection(self):
         """Clear error message for duplicate task_id."""
-        from src.skills.queue_management.queue_manager import (
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        ( = qm_mod_queue_manager.(
             QueueManager, DuplicateTaskError
         )
         
@@ -487,7 +536,9 @@ class TestErrorHandling:
 
     def test_cli_error_file_not_found(self):
         """CLI error handling for missing spec file."""
-        from src.skills.queue_management.cli import add_to_queue_cli
+        import importlib
+        qm_mod_cli = importlib.import_module("src.skills.queue-management.cli")
+        add_to_queue_cli = qm_mod_cli.add_to_queue_cli
         
         args = ["--spec-file", "/nonexistent/file.json"]
         result = add_to_queue_cli(args)
@@ -497,7 +548,9 @@ class TestErrorHandling:
 
     def test_cli_error_invalid_json(self):
         """CLI error handling for invalid JSON in spec file."""
-        from src.skills.queue_management.cli import add_to_queue_cli
+        import importlib
+        qm_mod_cli = importlib.import_module("src.skills.queue-management.cli")
+        add_to_queue_cli = qm_mod_cli.add_to_queue_cli
         
         with tempfile.TemporaryDirectory() as tmpdir:
             spec_file = os.path.join(tmpdir, "bad.json")
@@ -512,7 +565,9 @@ class TestErrorHandling:
 
     def test_cli_error_missing_required_cli_args(self):
         """CLI error when required args are missing."""
-        from src.skills.queue_management.cli import add_to_queue_cli
+        import importlib
+        qm_mod_cli = importlib.import_module("src.skills.queue-management.cli")
+        add_to_queue_cli = qm_mod_cli.add_to_queue_cli
         
         args = ["--task-id", "test"]  # Missing --role and --scope
         result = add_to_queue_cli(args)
@@ -522,7 +577,9 @@ class TestErrorHandling:
 
     def test_cli_with_optional_args(self):
         """CLI: add-to-queue with optional effort and priority args."""
-        from src.skills.queue_management.cli import add_to_queue_cli
+        import importlib
+        qm_mod_cli = importlib.import_module("src.skills.queue-management.cli")
+        add_to_queue_cli = qm_mod_cli.add_to_queue_cli
         
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create queue and TODO directories
@@ -568,7 +625,9 @@ class TestIntegrationFullWorkflow:
 
     def test_full_workflow_add_task_to_queue(self):
         """Full workflow: Parse → Validate → Generate → Add TODO → Commit."""
-        from src.skills.queue_management.queue_manager import QueueManager
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        QueueManager = qm_mod_queue_manager.QueueManager
         
         with tempfile.TemporaryDirectory() as tmpdir:
             # Setup git repo
@@ -604,7 +663,9 @@ class TestIntegrationFullWorkflow:
 
     def test_workflow_rejects_invalid_spec(self):
         """Workflow rejects invalid spec early."""
-        from src.skills.queue_management.queue_manager import (
+        import importlib
+        qm_mod_queue_manager = importlib.import_module("src.skills.queue-management.queue_manager")
+        ( = qm_mod_queue_manager.(
             QueueManager, ValidationError
         )
         
