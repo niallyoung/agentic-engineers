@@ -57,6 +57,23 @@ A production-ready multi-agent orchestration framework with 8 specialized AI rol
 
 ---
 
+## Support This Project
+
+If Agentic Engineers saves you time, money, or complexity, consider supporting independent development:
+
+<div align="center">
+
+| Bitcoin (On-Chain) | Lightning (Instant) |
+|:---:|:---:|
+| ![Bitcoin QR](docs/assets/bitcoin-qr.png) | ![Lightning QR](docs/assets/lightning-qr.png) |
+| **Pay what you like** | **Zero fee • Instant** |
+
+</div>
+
+Every satoshi helps. Thank you for believing in open-source multi-agent systems.
+
+---
+
 ## Architecture
 
 ```
