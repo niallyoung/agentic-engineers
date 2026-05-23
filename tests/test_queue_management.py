@@ -410,7 +410,8 @@ class TestCliInterface:
             os.system("git config user.name 'Test'")
             
             # Mock QueueManager initialization to use temp dirs
-            from src.skills.queue_management import queue_manager as qm_module
+            import importlib
+            qm_module = importlib.import_module("src.skills.queue-management.queue_manager")
             
             original_init = qm_module.QueueManager.__init__
             
@@ -463,17 +464,18 @@ class TestCliInterface:
             os.system("git init >/dev/null 2>&1")
             os.system("git config user.email 'test@test.com'")
             os.system("git config user.name 'Test'")
-            
+             
             # Mock QueueManager initialization
-            from src.skills.queue_management import queue_manager as qm_module
-            
+            import importlib
+            qm_module = importlib.import_module("src.skills.queue-management.queue_manager")
+             
             original_init = qm_module.QueueManager.__init__
-            
+             
             def mock_init(self, queue_dir_arg=None, todo_path_arg=None):
                 original_init(self, queue_dir=queue_dir, todo_path=todo_path)
-            
+             
             qm_module.QueueManager.__init__ = mock_init
-            
+             
             try:
                 args = ["--spec-file", spec_file]
                 
@@ -592,17 +594,18 @@ class TestErrorHandling:
             os.system("git init >/dev/null 2>&1")
             os.system("git config user.email 'test@test.com'")
             os.system("git config user.name 'Test'")
-            
+             
             # Mock QueueManager initialization
-            from src.skills.queue_management import queue_manager as qm_module
-            
+            import importlib
+            qm_module = importlib.import_module("src.skills.queue-management.queue_manager")
+             
             original_init = qm_module.QueueManager.__init__
-            
+             
             def mock_init(self, queue_dir_arg=None, todo_path_arg=None):
                 original_init(self, queue_dir=queue_dir, todo_path=todo_path)
-            
+             
             qm_module.QueueManager.__init__ = mock_init
-            
+             
             try:
                 args = [
                     "--task-id", "cli-optional-args",
