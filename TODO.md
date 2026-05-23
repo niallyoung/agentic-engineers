@@ -183,6 +183,10 @@
 - [ ] **FRAMEWORK-005:** Pydantic AI type-safe agents
 
 ### Future Features
+- [ ] **COMPARISON-002:** Update orchestration framework comparisons to include Gas City
+  - Gas City v1.0.0 released late April 2026 (refinement of Gastown by Steve Yegge)
+  - Add to README.md Quick Comparison Table and detailed analysis
+  - Effort: 2-3 hours | Owner: Engineer
 - [ ] **MONITORING-001:** Automated document quality monitoring
   - Continuous link validation, staleness detection (30+ days)
 - [ ] **ORCHESTRATOR-001:** Continuous compliance validation

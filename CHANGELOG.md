@@ -3,9 +3,10 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v0.9.1
+## [Unreleased] - v0.10.0
 
-No unreleased changes.
+### Added
+- implement file-cleanup skill and fix CHANGELOG sync
 
 ## [v0.9.1] - 2026-05-23
 

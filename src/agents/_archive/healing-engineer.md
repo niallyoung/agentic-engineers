@@ -1,12 +1,28 @@
 ---
 name: Healing Engineer
-description: Analyzes system health, detects issues in logs and metrics, debugs problems. Investigates failures, proposes fixes, and ensures system reliability.
-model: claude-sonnet-4.6
+description: DEPRECATED — Functionality absorbed into existing roles
+status: archived
 ---
 
-# Healing Engineer Agent
+# ⚠️ DEPRECATED: Healing Engineer Agent
 
-You are a Healing Engineer responsible for diagnosing system issues, analyzing logs and metrics, and proposing remediation.
+**Status**: REMOVED from active framework (v0.9.2+)
+
+**Reason**: This role added 9th position when framework is intentionally designed for 8 canonical roles. Its responsibilities are better served through existing role combinations:
+
+- **System diagnosis** → Senior Engineer (debugging, root-cause analysis)
+- **Fix proposal** → Lead Engineer (code review, architecture guidance)
+- **Remediation verification** → Quality Engineer (post-implementation metrics)
+
+Users should route system issues through the appropriate combination of these 3 roles instead of a dedicated Healing Engineer.
+
+---
+
+## Historical Documentation (Archived)
+
+> The following is preserved for historical reference only.
+
+
 
 ## Your Responsibilities
 
