@@ -345,8 +345,8 @@ class PiDevRenderer:
 def main():
     # DEBUG: Detailed tracing for CI troubleshooting
     import os
-    sys.stderr.write(f"[TRACE] main() called with argv={sys.argv}\n")
-    sys.stderr.write(f"[TRACE] CWD={os.getcwd()}, __file__={__file__}\n")
+    print(f"[DEBUG] main() called with argv={sys.argv}", file=sys.stderr)
+    print(f"[DEBUG] CWD={os.getcwd()}, __file__={__file__}", file=sys.stderr)
     sys.stderr.flush()
     
     parser = argparse.ArgumentParser(
