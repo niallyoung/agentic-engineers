@@ -627,6 +627,57 @@ Reduced autonomy is about **when agents stop working on the current task**, not 
 
 ---
 
+## Task Orchestration: Parallelization & Decision Protocol
+
+**All agents** must default to the autonomous task execution pattern defined in
+`src/skills/_meta/task-orchestration/SKILL.md`:
+
+> **Maximize throughput by parallelizing all independent tasks.**  
+> **Pause only for genuine decisions — never for task sequencing.**
+
+### Using the task-orchestration Skill
+
+```python
+from src.skills._meta.task_orchestration.scripts.task_orchestrator import (
+    Task, TaskType, classify_task, can_parallelize,
+    generate_decision_shorthand, parse_decision_response,
+)
+```
+
+### Decision Points vs. Task Sequencing
+
+| Type | Definition | Agent action |
+|------|-----------|--------------|
+| **Task sequencing** | Ordering or prioritisation of independent items | Always autonomous — never ask the user |
+| **Genuine decision** | Irreversible architectural or technology choice | Always pause — present shorthand and wait |
+
+### Quick Reference
+
+```
+✅ Parallelize:   classify_task(desc) == AUTONOMOUS  AND  can_parallelize(tasks) == True
+⏸  Pause & ask:  classify_task(desc) == DECISION_NEEDED
+🔗 Run in order:  classify_task(desc) == SEQUENTIAL_ONLY  OR  can_parallelize(tasks) == False
+```
+
+### Decision Shorthand Protocol
+
+When a genuine decision must be presented:
+
+```
+1a. Option one
+1b. Option two
+1c. Option three
+```
+
+User responds: `1b` (or `1a, 2c, 3b` for multiple concurrent decisions).
+
+Parse with: `parse_decision_response("1b")` → `{1: "b"}`
+
+**See:** `src/skills/_meta/task-orchestration/SKILL.md` for the full pattern,
+examples, and Python API reference.
+
+---
+
 ## SKILLS: Role-Specific Execution Details
 
 ### Engineer
