@@ -15,3 +15,6 @@ repo_root = str(Path(__file__).parent.absolute())
 # Ensure repo root is in sys.path (at beginning for priority)
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
+
+# Also ensure PYTHONPATH environment variable is set
+os.environ['PYTHONPATH'] = repo_root + os.pathsep + os.environ.get('PYTHONPATH', '')
