@@ -75,9 +75,29 @@ See `.github/workflows/ci.yml` for full configuration. Key settings:
 - `tag_prefix`: `v` (creates tags like `v0.8.0`)
 - `release_branches`: main (only tags main branch)
 
+## Current Status
+
+✅ **Workflow deployed and active** at `.github/workflows/ci.yml`
+
+**Test Execution Status:** The quality gate successfully exercises all Makefile targets (lint, test, verify) on every main push. However, the test suite currently has pre-existing failures in test modules:
+- `test_agent_creator.py` - Missing skill module imports
+- `test_queue_management.py` - Missing skill module imports  
+- `test_git_hooks.py` - Missing .git/hooks directory in CI
+- `test_spec_management.py` - Missing skill module imports
+
+These failures exist locally as well and are unrelated to the CI workflow itself. They need to be fixed in the codebase to enable automatic tagging.
+
 ## Next Steps
 
-1. Commit the workflow: `git add .github/workflows/ci.yml && git commit -m "ci: add GitHub Actions CI/CD workflow"`
-2. Push to main: `git push origin main`
-3. Workflow runs automatically
-4. First tag will be `v0.8.0`
+**To enable automatic tagging on main pushes:**
+1. Fix failing test modules to eliminate ModuleNotFoundError and FileNotFoundError
+2. Once all tests pass, the next push to main will:
+   - Run quality gate (lint + test + verify)
+   - If all pass, automatically create tag `v0.8.0`
+   - Subsequent commits will increment: `v0.8.1`, `v0.9.0`, etc. (semantic versioning)
+
+## Configuration Notes
+
+- **PYTHONPATH handling:** Set dynamically in Makefile (`test` target) using `REPO_ROOT` variable, not hardcoded
+- **pytest configuration:** `pytest.ini` configured with `pythonpath = .` for test discovery
+- **Makefile:** Uses `git rev-parse --show-toplevel` for dynamic repo root detection
