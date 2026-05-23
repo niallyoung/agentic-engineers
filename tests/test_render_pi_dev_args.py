@@ -22,6 +22,13 @@ def run_renderer(*args):
         [sys.executable, str(RENDERER)] + list(args),
         capture_output=True, text=True
     )
+    # DEBUG: Print captured output for troubleshooting
+    if result.returncode != 0:
+        print(f"\n[SUBPROCESS] Failed with rc={result.returncode}, args={args}")
+        if result.stdout:
+            print(f"[SUBPROCESS] STDOUT:\n{result.stdout}")
+        if result.stderr:
+            print(f"[SUBPROCESS] STDERR:\n{result.stderr}")
     return result.returncode, result.stdout, result.stderr
 
 
