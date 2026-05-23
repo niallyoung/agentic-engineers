@@ -501,4 +501,18 @@ Examples:
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:
+        # Enhanced error diagnostics for CI/CD troubleshooting
+        import traceback
+        print(f"\n❌ FATAL ERROR: {e}", file=sys.stderr)
+        print(f"\nEnvironment Diagnostics:", file=sys.stderr)
+        print(f"  Python: {sys.version}", file=sys.stderr)
+        print(f"  CWD: {os.getcwd()}", file=sys.stderr)
+        print(f"  __file__: {__file__}", file=sys.stderr)
+        print(f"  sys.argv: {sys.argv}", file=sys.stderr)
+        print(f"  HOME: {os.environ.get('HOME', 'NOT SET')}", file=sys.stderr)
+        print(f"\nTraceback:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
