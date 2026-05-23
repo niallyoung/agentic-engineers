@@ -5,8 +5,30 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] - v0.10.0
 
+No unreleased changes.
+
+## [v0.10.0] - 2026-05-23
+
 ### Added
-- implement file-cleanup skill and fix CHANGELOG sync
+- Multi-harness queue isolation with session-based artifacts (`~/.agentic-engineers/artifacts/{sessionID}/{harness}/`)
+- Task orchestration skill for autonomous parallel task execution (framework-level, 64 tests)
+- Implement file-cleanup skill and fix CHANGELOG sync (60 TDD tests, 3 safe deletions)
+
+### Changed
+- Consolidate repository structure: archive 28 historical docs, unify config/orchestration.yaml
+- Render workflow: standardize render-to-dist, install-to-harness (all skills render to dist/ first)
+- Add cost management TODOs (COST-001 to COST-004) for June 1 deadline when subsidies end
+- Update orchestrator-agent.md with autonomous parallelization section (parallelize by default, only pause for decisions)
+
+### Removed
+- Healing Engineer role (9th role not in canonical spec, adds no proportional value)
+- Remove "Spec Engineer" from validators (also not in canonical 8-role spec)
+- Delete duplicate ORCHESTRATOR_CLI_QUICK_REFERENCE.md at root (kept in docs/)
+
+### Security
+- Multi-harness queue isolation ensures complete artifact separation by sessionID/harness
+- Security audit passed on all 5 commits: no PII, no credentials, no injection risks
+- Git operations skill uses safe subprocess calls with proper quoting (no shell injection)
 
 ## [v0.9.1] - 2026-05-23
 

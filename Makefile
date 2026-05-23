@@ -206,7 +206,7 @@ validate-skills: ## Validate skill definition files (frontmatter + SKILLS.md reg
 
 validate-renders: ## Verify all src/skills/ have corresponding dist/ outputs (fails if out of sync)
 	@echo "🔍 Validating dist/ renders are in sync with src/skills/..."
-	@python3 "$(REPO_ROOT)/scripts/validate_renders.py" "$(REPO_ROOT)" || (echo "❌ Render validation failed — run 'make render-all' to regenerate" && exit 1)
+	@python3 "$(REPO_ROOT)/renderer/scripts/validate_renders.py" "$(REPO_ROOT)" || (echo "❌ Render validation failed — run 'make render-all' to regenerate" && exit 1)
 	@echo "✅ Render validation complete"
 
 lint: ## Lint Python, Shell, and YAML files
