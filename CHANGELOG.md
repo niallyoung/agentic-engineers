@@ -1,16 +1,34 @@
 # Changelog
 
+All notable changes to this project are documented here.
+This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v0.8.2
+## [Unreleased] - v0.9.1
+
+No unreleased changes.
+
+## [v0.9.1] - 2026-05-23
+
+### Changed
+- move version-manager to src/skills/ (refactor)
+
+
+## [v0.9.0] - 2026-05-23
+
+### Added
+- implement semantic versioning as local workflow skill
+
+
+## [v0.8.3] - 2026-05-23
+
+### Miscellaneous
+- remove stale VERSION file, make versioning git-tag-only
+
+
+## [v0.8.2] - 2026-05-23
 
 ### Fixed
 - use git tags as primary version source
-
-### Changed
-- remove stale VERSION file, make versioning git-tag-only
-
-All notable changes to this project are documented here.
-This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [v0.33.1] - 2026-05-23
 ### Fixed
