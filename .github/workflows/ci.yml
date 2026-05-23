@@ -30,6 +30,8 @@ jobs:
 
       - name: Test
         run: make test
+        env:
+          PYTHONPATH: ${{ github.workspace }}
 
       - name: Verify
         run: make verify
