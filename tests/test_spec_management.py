@@ -98,38 +98,43 @@ class SpecVersion:
 # ============================================================================
 
 @pytest.fixture
-def spec_manager():
+def spec_manager(request):
     """Instantiate SpecManager for testing"""
-    from src.skills.spec_management.scripts.spec_manager import SpecManager
-    return SpecManager()
+    import importlib
+    spec_mgmt = importlib.import_module('src.skills.spec-management.scripts.spec_manager')
+    return spec_mgmt.SpecManager()
 
 
 @pytest.fixture
-def audit_logger():
+def audit_logger(request):
     """Instantiate AuditLogger for testing"""
-    from src.skills.spec_management.scripts.audit_logger import AuditLogger
-    return AuditLogger()
+    import importlib
+    audit_log = importlib.import_module('src.skills.spec-management.scripts.audit_logger')
+    return audit_log.AuditLogger()
 
 
 @pytest.fixture
-def authorizer():
+def authorizer(request):
     """Instantiate Authorizer for testing"""
-    from src.skills.spec_management.scripts.authorizer import Authorizer
-    return Authorizer()
+    import importlib
+    auth = importlib.import_module('src.skills.spec-management.scripts.authorizer')
+    return auth.Authorizer()
 
 
 @pytest.fixture
-def impact_analyzer():
+def impact_analyzer(request):
     """Instantiate ImpactAnalyzer for testing"""
-    from src.skills.spec_management.scripts.impact_analyzer import ImpactAnalyzer
-    return ImpactAnalyzer()
+    import importlib
+    impact = importlib.import_module('src.skills.spec-management.scripts.impact_analyzer')
+    return impact.ImpactAnalyzer()
 
 
 @pytest.fixture
-def changelog_generator():
+def changelog_generator(request):
     """Instantiate ChangelogGenerator for testing"""
-    from src.skills.spec_management.scripts.changelog_generator import ChangelogGenerator
-    return ChangelogGenerator()
+    import importlib
+    changelog = importlib.import_module('src.skills.spec-management.scripts.changelog_generator')
+    return changelog.ChangelogGenerator()
 
 
 @pytest.fixture

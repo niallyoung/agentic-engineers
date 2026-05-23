@@ -29,32 +29,32 @@ from typing import List, Dict, Optional
 # Imported lazily so RED tests can be collected even before implementation exists
 def _import_module():
     import sys
+    import importlib
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from src.skills.spec_validator.scripts.spec_validator import (
-        SpecParser,
-        SpecSection,
-        Requirement,
-        Feature,
-        Constraint,
-        SpecDocument,
-        DiffAnalyzer,
-        DiffHunk,
-        DiffAnalysis,
-        ComplianceChecker,
-        Violation,
-        ViolationSeverity,
-        ComplianceResult,
-        GapDetector,
-        Gap,
-        GapType,
-        RollbackDetection,
-        ComplianceReporter,
-        ComplianceReport,
-        ReportFormat,
-        SpecValidator,
-        ValidationMode,
-        ValidationResult,
-    )
+    spec_validator_module = importlib.import_module('src.skills.spec-validator.scripts.spec_validator')
+    SpecParser = spec_validator_module.SpecParser
+    SpecSection = spec_validator_module.SpecSection
+    Requirement = spec_validator_module.Requirement
+    Feature = spec_validator_module.Feature
+    Constraint = spec_validator_module.Constraint
+    SpecDocument = spec_validator_module.SpecDocument
+    DiffAnalyzer = spec_validator_module.DiffAnalyzer
+    DiffHunk = spec_validator_module.DiffHunk
+    DiffAnalysis = spec_validator_module.DiffAnalysis
+    ComplianceChecker = spec_validator_module.ComplianceChecker
+    Violation = spec_validator_module.Violation
+    ViolationSeverity = spec_validator_module.ViolationSeverity
+    ComplianceResult = spec_validator_module.ComplianceResult
+    GapDetector = spec_validator_module.GapDetector
+    Gap = spec_validator_module.Gap
+    GapType = spec_validator_module.GapType
+    RollbackDetection = spec_validator_module.RollbackDetection
+    ComplianceReporter = spec_validator_module.ComplianceReporter
+    ComplianceReport = spec_validator_module.ComplianceReport
+    ReportFormat = spec_validator_module.ReportFormat
+    SpecValidator = spec_validator_module.SpecValidator
+    ValidationMode = spec_validator_module.ValidationMode
+    ValidationResult = spec_validator_module.ValidationResult
     return (
         SpecParser, SpecSection, Requirement, Feature, Constraint, SpecDocument,
         DiffAnalyzer, DiffHunk, DiffAnalysis,
