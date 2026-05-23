@@ -119,6 +119,9 @@ class TestGitHooksConfiguration:
     def test_all_hooks_are_bash_scripts(self):
         """Verify all hooks are bash scripts"""
         for hook in GITHOOKS_DIR.glob("*"):
+            # Skip markdown documentation files
+            if hook.suffix == '.md':
+                continue
             if hook.is_file() and hook.stat().st_mode & 0o111:
                 content = hook.read_text()
                 assert content.startswith("#!/usr/bin/env bash") or content.startswith("#!/bin/bash"), \

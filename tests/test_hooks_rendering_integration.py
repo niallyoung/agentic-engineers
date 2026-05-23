@@ -47,6 +47,9 @@ class TestHooksExist:
         hooks_dir = repo_root / '.githooks'
         
         for hook_file in hooks_dir.glob('*'):
+            # Skip markdown documentation files
+            if hook_file.suffix == '.md':
+                continue
             if hook_file.is_file():
                 with open(hook_file) as f:
                     first_line = f.readline()
