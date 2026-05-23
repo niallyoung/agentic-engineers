@@ -43,6 +43,7 @@ def _run_validate(repo_root_override: Path) -> subprocess.CompletedProcess:
         [sys.executable, str(REPO_ROOT / "renderer" / "scripts" / "validate_renders.py"), str(repo_root_override)],
         capture_output=True,
         text=True,
+        cwd=str(REPO_ROOT),
     )
 
 
@@ -232,9 +233,10 @@ class TestInstallValidation:
         # We test the validation logic in validate_renders.py instead of running make
         # (running make against a fake repo is brittle — test the underlying script).
         result = subprocess.run(
-            [sys.executable, str(repo_root / "scripts" / "validate_renders.py"), str(fake_repo)],
+            [sys.executable, str(repo_root / "renderer" / "scripts" / "validate_renders.py"), str(fake_repo)],
             capture_output=True,
             text=True,
+            cwd=str(repo_root),
         )
         # Should fail (exit 1) because dist/ doesn't exist
         assert result.returncode == 1
