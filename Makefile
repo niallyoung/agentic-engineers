@@ -2,7 +2,7 @@
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
         status status-opencode \
         verify validate-opencode validate-agents validate-skills clean \
-        render-claude render-copilot render-pi render-all \
+        render-claude render-copilot render-pi render-opencode render-all \
         lint test quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -28,7 +28,8 @@ help:
 	@echo "  render-claude       Generate dist/claude/ (provider-specific)"
 	@echo "  render-copilot      Generate dist/copilot/ (provider-specific)"
 	@echo "  render-pi           Generate ~/.pi/agent/ config (π.dev harness)"
-	@echo "  render-all          All three"
+	@echo "  render-opencode     Generate dist/opencode/ (OpenCode-compatible)"
+	@echo "  render-all          All four"
 	@echo ""
 	@echo "Diagnostic:"
 	@echo "  status              Check installation status (all 4 harnesses)"
@@ -240,7 +241,7 @@ install-pi: render-pi ## Install π.dev harness to ~/.pi/agent/
 	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi"
 	@echo "✅ Installation to ~/.pi/ complete"
 
-install-opencode: ## Install agents & skills to ~/.config/opencode/
+install-opencode: render-opencode ## Install agents & skills to ~/.config/opencode/
 	@echo "📦 Installing agentic-engineers to ~/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode"
 	@echo "✅ Installation to ~/.config/opencode/ complete"
@@ -269,7 +270,18 @@ render-pi: ## Generate ~/.pi/agent/ config (π.dev harness)
 	@python3 "$(REPO_ROOT)/renderer/scripts/render-pi-dev.py" "$(REPO_ROOT)/renderer/pi-dev-src" "$(HOME)/.pi"
 	@echo "✅ π.dev harness rendering complete"
 
-render-all: render-copilot render-claude render-pi ## Generate config for all 3 harnesses
+render-opencode: ## Generate dist/opencode/ with agents + skills (provider-specific)
+	@echo "🔨 Rendering agents and skills for OpenCode..."
+	@mkdir -p "$(REPO_ROOT)/dist/opencode"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/opencode"
+	@echo "🔍 Validating rendered OpenCode config..."
+	@test -d "$(REPO_ROOT)/dist/opencode/agents" || (echo "❌ agents directory not rendered" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/opencode/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@echo "   ✓ OpenCode agents validated"
+	@echo "   ✓ OpenCode skills validated"
+	@echo "✅ OpenCode rendering complete (see dist/opencode/)"
+
+render-all: render-copilot render-claude render-pi render-opencode ## Generate config for all 4 harnesses
 
 status: ## Check installation status (all 4 harnesses)
 	@echo "📋 Installation status for ~/.copilot/:"
