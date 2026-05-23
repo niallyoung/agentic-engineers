@@ -343,6 +343,12 @@ class PiDevRenderer:
 
 
 def main():
+    # DEBUG: Detailed tracing for CI troubleshooting
+    import os
+    sys.stderr.write(f"[TRACE] main() called with argv={sys.argv}\n")
+    sys.stderr.write(f"[TRACE] CWD={os.getcwd()}, __file__={__file__}\n")
+    sys.stderr.flush()
+    
     parser = argparse.ArgumentParser(
         description="π.dev Harness Renderer — renders agentic-engineers config to ~/.pi/agent/",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -410,6 +416,10 @@ Examples:
     )
 
     args = parser.parse_args()
+    
+    # DEBUG: Trace after successful parsing
+    sys.stderr.write(f"[TRACE] parse_args() succeeded with: --src={args.src}, --dest={args.dest}, --uninstall={args.uninstall}, --status={args.status}, src_pos={args.src_pos}, dest_pos={args.dest_pos}\n")
+    sys.stderr.flush()
 
     # Resolve source directory:
     # Priority: --src flag > src_pos (only if dest_pos also provided) > default
@@ -502,14 +512,25 @@ Examples:
     # Ensure paths are absolute
     src_dir = src_dir.resolve()
     dest_dir = dest_dir.resolve()
+    
+    # DEBUG: Trace resolved paths before creating renderer
+    sys.stderr.write(f"[TRACE] Resolved paths: src_dir={src_dir} (exists={src_dir.exists()}), dest_dir={dest_dir}\n")
+    sys.stderr.flush()
 
     renderer = PiDevRenderer(str(src_dir), str(dest_dir))
-
+    
+    # DEBUG: Trace final execution path
     if args.uninstall:
+        sys.stderr.write(f"[TRACE] Executing: uninstall()\n")
+        sys.stderr.flush()
         return renderer.uninstall()
     elif args.status:
+        sys.stderr.write(f"[TRACE] Executing: status()\n")
+        sys.stderr.flush()
         return renderer.status()
     else:
+        sys.stderr.write(f"[TRACE] Executing: render_all()\n")
+        sys.stderr.flush()
         return renderer.render_all()
 
 
