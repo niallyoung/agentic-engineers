@@ -40,18 +40,18 @@ def repo_root() -> Path:
 def _run_validate(repo_root_override: Path) -> subprocess.CompletedProcess:
     """Run validate_renders.py against a given repo root and return the result."""
     return subprocess.run(
-        [sys.executable, str(REPO_ROOT / "scripts" / "validate_renders.py"), str(repo_root_override)],
+        [sys.executable, str(REPO_ROOT / "renderer" / "scripts" / "validate_renders.py"), str(repo_root_override)],
         capture_output=True,
         text=True,
     )
 
 
 class TestValidateRenders:
-    """Tests for scripts/validate_renders.py."""
+    """Tests for renderer/scripts/validate_renders.py."""
 
     def test_validate_renders_script_exists(self, repo_root):
-        assert (repo_root / "scripts" / "validate_renders.py").exists(), (
-            "scripts/validate_renders.py must exist"
+        assert (repo_root / "renderer" / "scripts" / "validate_renders.py").exists(), (
+            "renderer/scripts/validate_renders.py must exist"
         )
 
     def test_validate_renders_passes_with_real_dist(self, repo_root):
