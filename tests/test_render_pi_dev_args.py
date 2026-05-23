@@ -18,9 +18,13 @@ RENDERER = Path(__file__).parent.parent / "renderer" / "scripts" / "render-pi-de
 
 def run_renderer(*args):
     """Run renderer with given args, return (returncode, stdout, stderr)"""
+    # FIX: Set explicit working directory for subprocess to avoid Python 3.11 path resolution errors
+    # in CI containers where CWD might be invalid or contain unresolvable symlinks (CWE-59)
+    repo_root = Path(__file__).parent.parent
     result = subprocess.run(
         [sys.executable, str(RENDERER)] + list(args),
-        capture_output=True, text=True
+        capture_output=True, text=True,
+        cwd=str(repo_root)  # Ensure subprocess runs from known-good directory
     )
     # DEBUG: Print captured output for troubleshooting
     if result.returncode != 0:
