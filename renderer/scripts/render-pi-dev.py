@@ -420,29 +420,42 @@ Examples:
     
     def find_pi_dev_src():
         """Find pi-dev-src directory using multiple strategies"""
+        results = []
+        
         # Strategy 1: __file__-based resolution
         try:
             script_path = Path(__file__).resolve()
             candidate = script_path.parent.parent / "pi-dev-src"
-            if candidate.exists():
+            exists = candidate.exists()
+            results.append(f"Strategy1(__file__={__file__}): {candidate} exists={exists}")
+            if exists:
                 return candidate
-        except (NameError, AttributeError):
-            pass
+        except (NameError, AttributeError) as e:
+            results.append(f"Strategy1 failed: {e}")
         
         # Strategy 2: Look in current working directory
         cwd_candidate = Path.cwd() / "renderer" / "pi-dev-src"
-        if cwd_candidate.exists():
+        cwd_exists = cwd_candidate.exists()
+        results.append(f"Strategy2(cwd={Path.cwd()}): {cwd_candidate} exists={cwd_exists}")
+        if cwd_exists:
             return cwd_candidate
         
         # Strategy 3: Search upward from current working directory
         current = Path.cwd()
-        for _ in range(5):  # Look up to 5 levels
+        for i in range(5):  # Look up to 5 levels
             candidate = current / "renderer" / "pi-dev-src"
-            if candidate.exists():
+            candidate_exists = candidate.exists()
+            results.append(f"Strategy3.{i}(current={current}): {candidate} exists={candidate_exists}")
+            if candidate_exists:
                 return candidate
             if current.parent == current:  # Reached filesystem root
                 break
             current = current.parent
+        
+        # Log all strategies for debugging
+        for r in results:
+            sys.stderr.write(f"  find_pi_dev_src: {r}\n")
+        sys.stderr.flush()
         
         # Default fallback (will fail with clear error in render_all())
         return Path.cwd() / "renderer" / "pi-dev-src"
