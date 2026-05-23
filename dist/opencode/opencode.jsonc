@@ -1,0 +1,56 @@
+// _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "default_agent": "orchestrator",
+  "model": "github-copilot/claude-haiku-4.5",
+  "compaction": {
+    "auto": true,
+    "reserved": 30000
+  },
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "task": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "webfetch": "allow"
+  },
+  "agent": {
+    "orchestrator": {
+      "model": "github-copilot/claude-haiku-4.5"
+    }
+  },
+  "provider": {
+    "github-copilot": {
+      "models": {
+        "claude-opus-4.6": {
+          "id": "claude-opus-4.6",
+          "name": "Claude Opus 4.6",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000005,
+            "output": 0.000025,
+            "cache_read": 0.0000005,
+            "cache_write": 0.00000625
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 128000
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        }
+      }
+    }
+  }
+}

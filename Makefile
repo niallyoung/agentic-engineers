@@ -1,7 +1,7 @@
 .PHONY: help install install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
         status status-opencode \
-        verify validate-opencode validate-agents validate-skills clean \
+        verify validate-opencode validate-agents validate-skills validate-renders clean \
         render-claude render-copilot render-pi render-opencode render-all \
         lint test quality-gate
 
@@ -38,6 +38,7 @@ help:
 	@echo "  validate-opencode   Validate OpenCode config generation"
 	@echo "  validate-agents     Validate agent YAML frontmatter + AGENTS.md registration"
 	@echo "  validate-skills     Validate skill frontmatter + SKILLS.md registry completeness"
+	@echo "  validate-renders    Verify all src/skills/ have corresponding dist/ outputs"
 	@echo "  clean               Remove build artifacts"
 	@echo ""
 	@echo "Quality & Testing:"
@@ -53,15 +54,33 @@ install: install-copilot install-claude install-pi install-opencode ## Install t
 	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
 
 install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
-	@echo "ℹ️  Copilot CLI now supports custom agents!"
-	@echo "📦 Installing agents & skills → ~/.copilot/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(HOME)/.copilot"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot"
+	@echo "📋 Validating dist/copilot/ is populated..."
+	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ dist/copilot/skills/ missing — run 'make render-copilot' first" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ dist/copilot/agents/ missing — run 'make render-copilot' first" && exit 1)
+	@echo "   ✓ dist/copilot/ validated"
+	@echo "📦 Installing from dist/copilot/ → ~/.copilot/..."
+	@mkdir -p "$(HOME)/.copilot"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(HOME)/.copilot/"
+	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
+		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
+		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
+	fi
 	@echo "✅ Installation to ~/.copilot/ complete (agents + skills)"
 
 install-claude: render-claude ## Install rendered agents → ~/.claude/
-	@echo "📦 Installing agentic-engineers to ~/.claude/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude"
+	@echo "📋 Validating dist/claude/ is populated..."
+	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ dist/claude/skills/ missing — run 'make render-claude' first" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ dist/claude/agents/ missing — run 'make render-claude' first" && exit 1)
+	@echo "   ✓ dist/claude/ validated"
+	@echo "📦 Installing from dist/claude/ → ~/.claude/..."
+	@mkdir -p "$(HOME)/.claude"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/claude/" "$(HOME)/.claude/"
+	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
+		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
+		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
+	fi
 	@echo "✅ Installation to ~/.claude/ complete"
 
 # Copilot CLI now supports custom agents. Agents are rendered alongside skills.
@@ -185,6 +204,11 @@ validate-skills: ## Validate skill definition files (frontmatter + SKILLS.md reg
 	@python3 "$(REPO_ROOT)/renderer/validate_skills.py" || (echo "❌ Skill validation failed — fix errors above" && exit 1)
 	@echo "✅ Skill validation complete"
 
+validate-renders: ## Verify all src/skills/ have corresponding dist/ outputs (fails if out of sync)
+	@echo "🔍 Validating dist/ renders are in sync with src/skills/..."
+	@python3 "$(REPO_ROOT)/scripts/validate_renders.py" "$(REPO_ROOT)" || (echo "❌ Render validation failed — run 'make render-all' to regenerate" && exit 1)
+	@echo "✅ Render validation complete"
+
 lint: ## Lint Python, Shell, and YAML files
 	@echo "🔍 Linting Python files (syntax check)..."
 	@find "$(REPO_ROOT)/src" -name "*.py" -type f -exec python3 -m py_compile {} \; 2>&1 | grep -v "^$$" || echo "   ✓ Python syntax OK"
@@ -216,7 +240,7 @@ test: ## Run pytest test suite with coverage
 	@echo ""
 	@echo "✅ Tests complete. HTML coverage report: htmlcov/index.html"
 
-quality-gate: lint test verify ## Pre-push quality checks (lint + test + verify)
+quality-gate: lint test verify validate-renders ## Pre-push quality checks (lint + test + verify + render validation)
 	@echo ""
 	@echo "✅✅✅ Quality gate PASSED ✅✅✅"
 	@echo ""
@@ -224,8 +248,9 @@ quality-gate: lint test verify ## Pre-push quality checks (lint + test + verify)
 	@echo "  - Linting: PASS"
 	@echo "  - Tests: PASS"
 	@echo "  - Verification: PASS"
+	@echo "  - Render validation: PASS"
 	@echo ""
-	@echo "Next: git push"
+	@echo "Next: git push && git push --tags"
 
 clean: ## Clean build artifacts (no external scripts)
 	@echo "🧹 Cleaning artifacts..."
@@ -236,14 +261,29 @@ clean: ## Clean build artifacts (no external scripts)
 
 .DEFAULT_GOAL := help
 
-install-pi: render-pi ## Install π.dev harness to ~/.pi/agent/
-	@echo "📦 Installing agentic-engineers to ~/.pi/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi"
+install-pi: render-pi ## Install π.dev harness from dist/pi/ → ~/.pi/
+	@echo "📋 Validating dist/pi/ is populated..."
+	@test -d "$(REPO_ROOT)/dist/pi" || (echo "❌ dist/pi/ missing — run 'make render-pi' first" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/pi/agent/SYSTEM.md" || (echo "❌ dist/pi/agent/SYSTEM.md missing — run 'make render-pi' first" && exit 1)
+	@echo "   ✓ dist/pi/ validated"
+	@echo "📦 Installing from dist/pi/ → ~/.pi/..."
+	@mkdir -p "$(HOME)/.pi"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(HOME)/.pi/"
 	@echo "✅ Installation to ~/.pi/ complete"
 
 install-opencode: render-opencode ## Install agents & skills to ~/.config/opencode/
-	@echo "📦 Installing agentic-engineers to ~/.config/opencode/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode"
+	@echo "📋 Validating dist/opencode/ is populated..."
+	@test -d "$(REPO_ROOT)/dist/opencode/skills" || (echo "❌ dist/opencode/skills/ missing — run 'make render-opencode' first" && exit 1)
+	@test -d "$(REPO_ROOT)/dist/opencode/agents" || (echo "❌ dist/opencode/agents/ missing — run 'make render-opencode' first" && exit 1)
+	@echo "   ✓ dist/opencode/ validated"
+	@echo "📦 Installing from dist/opencode/ → ~/.config/opencode/..."
+	@mkdir -p "$(HOME)/.config/opencode"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(HOME)/.config/opencode/"
+	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
+		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
+		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
+	fi
 	@echo "✅ Installation to ~/.config/opencode/ complete"
 	@echo ""
 	@echo "ℹ️  To use in OpenCode:"
@@ -265,10 +305,14 @@ uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (manage
 status-opencode: ## Status of ~/.config/opencode/ install
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
 
-render-pi: ## Generate ~/.pi/agent/ config (π.dev harness)
-	@echo "🔨 Rendering π.dev harness configuration..."
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-pi-dev.py" "$(REPO_ROOT)/renderer/pi-dev-src" "$(HOME)/.pi"
-	@echo "✅ π.dev harness rendering complete"
+render-pi: ## Generate dist/pi/ config (π.dev harness)
+	@echo "🔨 Rendering π.dev harness configuration → dist/pi/..."
+	@mkdir -p "$(REPO_ROOT)/dist/pi"
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-pi-dev.py" "$(REPO_ROOT)/renderer/pi-dev-src" "$(REPO_ROOT)/dist/pi"
+	@echo "🔍 Validating rendered π.dev config..."
+	@test -f "$(REPO_ROOT)/dist/pi/agent/SYSTEM.md" || (echo "❌ dist/pi/agent/SYSTEM.md not rendered" && exit 1)
+	@echo "   ✓ π.dev config validated"
+	@echo "✅ π.dev harness rendering complete (see dist/pi/)"
 
 render-opencode: ## Generate dist/opencode/ with agents + skills (provider-specific)
 	@echo "🔨 Rendering agents and skills for OpenCode..."
