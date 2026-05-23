@@ -413,10 +413,41 @@ Examples:
 
     # Resolve source directory:
     # Priority: --src flag > src_pos (only if dest_pos also provided) > default
-    # SECURITY FIX: Resolve __file__ to absolute path first (handles symlinks correctly on all platforms)
-    script_path = Path(__file__).resolve()
-    script_dir = script_path.parent.parent
-    default_src = script_dir / "pi-dev-src"
+    # SECURITY FIX: Use robust path resolution that works in all environments
+    #   1. Try __file__ resolution first (works in most cases)
+    #   2. Fall back to cwd-based resolution if needed
+    #   3. Search upward for pi-dev-src if all else fails
+    
+    def find_pi_dev_src():
+        """Find pi-dev-src directory using multiple strategies"""
+        # Strategy 1: __file__-based resolution
+        try:
+            script_path = Path(__file__).resolve()
+            candidate = script_path.parent.parent / "pi-dev-src"
+            if candidate.exists():
+                return candidate
+        except (NameError, AttributeError):
+            pass
+        
+        # Strategy 2: Look in current working directory
+        cwd_candidate = Path.cwd() / "renderer" / "pi-dev-src"
+        if cwd_candidate.exists():
+            return cwd_candidate
+        
+        # Strategy 3: Search upward from current working directory
+        current = Path.cwd()
+        for _ in range(5):  # Look up to 5 levels
+            candidate = current / "renderer" / "pi-dev-src"
+            if candidate.exists():
+                return candidate
+            if current.parent == current:  # Reached filesystem root
+                break
+            current = current.parent
+        
+        # Default fallback (will fail with clear error in render_all())
+        return Path.cwd() / "renderer" / "pi-dev-src"
+    
+    default_src = find_pi_dev_src()
     
     # SECURITY FIX: Handle missing HOME environment variable (containers, restricted envs)
     try:
