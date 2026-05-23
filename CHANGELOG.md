@@ -3,57 +3,54 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v0.10.1
+## [Unreleased] - v0.10.0
 
-No unreleased changes.
+### Added
+- implement file-cleanup skill and fix CHANGELOG sync
+- multi-harness queue isolation with session artifacts
 
-## [v0.10.0] - 2026-05-23
+### Fixed
+- move validate_renders to renderer/ for SPEC compliance
+- update test paths after validate_renders move to renderer/scripts/
+
+### Changed
+- consolidate repo structure, archive historical docs
+- remove Healing Engineer role (role bloat, no value)
+- remove automatic tag creation from CI, keep release creation
+- render-to-dist, install-to-harness, git-push-tags
+
+### Documentation
+- add cost management todos for June 1 deadline
+
+## [v0.33.2] - 2026-05-24
 
 ### Added
 - Multi-harness queue isolation with session-based artifacts (`~/.agentic-engineers/artifacts/{sessionID}/{harness}/`)
 - Task orchestration skill for autonomous parallel task execution (framework-level, 64 tests)
-- Implement file-cleanup skill and fix CHANGELOG sync (60 TDD tests, 3 safe deletions)
+- Cost management framework TODOs (COST-001 to COST-004, June 1 deadline)
 
 ### Changed
 - Consolidate repository structure: archive 28 historical docs, unify config/orchestration.yaml
 - Render workflow: standardize render-to-dist, install-to-harness (all skills render to dist/ first)
-- Add cost management TODOs (COST-001 to COST-004) for June 1 deadline when subsidies end
-- Update orchestrator-agent.md with autonomous parallelization section (parallelize by default, only pause for decisions)
+- Remove automatic tag creation from CI workflow (local versioning now authoritative)
+- Update orchestrator-agent.md with autonomous parallelization section
+
+### Fixed
+- Move validate_renders.py to renderer/scripts/ (SPEC.md compliance)
+- Update test paths for renderer/scripts location
 
 ### Removed
 - Healing Engineer role (9th role not in canonical spec, adds no proportional value)
-- Remove "Spec Engineer" from validators (also not in canonical 8-role spec)
-- Delete duplicate ORCHESTRATOR_CLI_QUICK_REFERENCE.md at root (kept in docs/)
+- Spec Engineer references (not in canonical 8-role spec)
+- GitHub Actions auto-tagging job (use local version-manager skill instead)
 
 ### Security
 - Multi-harness queue isolation ensures complete artifact separation by sessionID/harness
-- Security audit passed on all 5 commits: no PII, no credentials, no injection risks
-- Git operations skill uses safe subprocess calls with proper quoting (no shell injection)
-
-## [v0.9.1] - 2026-05-23
-
-### Changed
-- move version-manager to src/skills/ (refactor)
-
-
-## [v0.9.0] - 2026-05-23
-
-### Added
-- implement semantic versioning as local workflow skill
-
-
-## [v0.8.3] - 2026-05-23
-
-### Miscellaneous
-- remove stale VERSION file, make versioning git-tag-only
-
-
-## [v0.8.2] - 2026-05-23
-
-### Fixed
-- use git tags as primary version source
+- Security audit passed: no PII, no credentials, no injection risks
+- Git operations skill uses safe subprocess calls with proper quoting
 
 ## [v0.33.1] - 2026-05-23
+
 ### Fixed
 - add subprocess output debugging to test runner
 - set explicit cwd in subprocess for CI compatibility
@@ -67,8 +64,8 @@ No unreleased changes.
 - debug: add detailed execution traces for CI troubleshooting
 - debug: improve error diagnostics with [DEBUG] markers to stderr
 
-
 ## [v0.33.0] - 2026-05-23
+
 ### Added
 - add semantic versioning with automatic releases
 
@@ -85,8 +82,8 @@ No unreleased changes.
 ### Miscellaneous
 - debug: add verbose path resolution logging to diagnose CI failures
 
-
 ## [v0.32.4] - 2026-05-23
+
 ### Fixed
 - configure git to preserve symlinks in CI
 - enable symlinks in workflow checkout
