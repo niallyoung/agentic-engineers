@@ -26,26 +26,23 @@ from typing import List
 # ---------------------------------------------------------------------------
 def _import():
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from src.skills.agent_creator.scripts.agent_creator import (
-        # Data models
-        AgentConfig,
-        ValidationError,
-        CreationResult,
-        CreationStatus,
-        DependencyGraph,
-        # Core classes
-        ConfigValidator,
-        TemplateGenerator,
-        DependencyValidator,
-        IntegrationChecker,
-        AgentCreator,
-        # Constants
-        ALLOWED_ROLES,
-        ALLOWED_EFFORTS,
-        ALLOWED_MODELS,
-        DEFAULT_MODEL,
-        DEFAULT_EFFORT,
-    )
+    import importlib
+    agent_creator_module = importlib.import_module('src.skills.agent-creator.scripts.agent_creator')
+    AgentConfig = agent_creator_module.AgentConfig
+    ValidationError = agent_creator_module.ValidationError
+    CreationResult = agent_creator_module.CreationResult
+    CreationStatus = agent_creator_module.CreationStatus
+    DependencyGraph = agent_creator_module.DependencyGraph
+    ConfigValidator = agent_creator_module.ConfigValidator
+    TemplateGenerator = agent_creator_module.TemplateGenerator
+    DependencyValidator = agent_creator_module.DependencyValidator
+    IntegrationChecker = agent_creator_module.IntegrationChecker
+    AgentCreator = agent_creator_module.AgentCreator
+    ALLOWED_ROLES = agent_creator_module.ALLOWED_ROLES
+    ALLOWED_EFFORTS = agent_creator_module.ALLOWED_EFFORTS
+    ALLOWED_MODELS = agent_creator_module.ALLOWED_MODELS
+    DEFAULT_MODEL = agent_creator_module.DEFAULT_MODEL
+    DEFAULT_EFFORT = agent_creator_module.DEFAULT_EFFORT
     return (
         AgentConfig, ValidationError, CreationResult, CreationStatus,
         DependencyGraph,
