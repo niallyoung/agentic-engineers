@@ -1,0 +1,157 @@
+# Pi Agent Configuration for agentic-engineers
+# Configures the 8 canonical agent roles for the pi.dev harness.
+#
+# IMPORTANT — SPECULATIVE FEATURES:
+# The sub-agent routing rules and extensions in this file are based on research
+# into the pi.dev API and are NOT verified against the actual pi.dev runtime.
+# The routing conditions (e.g., "security-scoped") and extension names
+# (e.g., "agent-orchestrator") may have no effect in the actual runtime.
+#
+# What IS known to work: pi.dev reads settings.json and SYSTEM.md for core
+# configuration. The agent definitions below document the intended roles.
+#
+# See SUB_AGENT_SETUP.md for full limitations and troubleshooting.
+
+version: "1.0"
+
+# Core settings
+core:
+  defaultProvider: "anthropic"
+  defaultModel: "claude-sonnet-4-20250514"
+  thinking:
+    enabled: true
+    level: "medium"
+
+# SPECULATIVE: Sub-agent extensions — not verified against pi.dev runtime
+extensions:
+  # Agent Orchestration Framework
+  - name: "agent-orchestrator"
+    version: "1.0"
+    capabilities:
+      - task-routing
+      - agent-delegation
+      - metrics-collection
+      - handback-processing
+
+  # Specialized Agent Roles (8 canonical roles)
+  - name: "specialized-agents"
+    version: "1.0"
+    agents:
+      - id: "orchestrator"
+        role: "Orchestrator"
+        model: "claude-haiku-4.5"
+        effort: "low"
+        expertise: "Task routing, queue management, metrics collection"
+        scope: "Routing only — does not perform work"
+
+      - id: "engineer"
+        role: "Engineer"
+        model: "claude-haiku-4.5"
+        effort: "high"
+        expertise: "General implementation, straightforward refactoring"
+        scope: "Single file/module changes"
+
+      - id: "senior-engineer"
+        role: "Senior Engineer"
+        model: "claude-sonnet-4-20250514"
+        effort: "high"
+        expertise: "Complex system design, debugging, root-cause diagnosis"
+        scope: "Multi-service, complex logic"
+
+      - id: "lead-engineer"
+        role: "Lead Engineer"
+        model: "claude-sonnet-4-20250514"
+        effort: "high"
+        expertise: "Code review, quality assurance, architectural guidance"
+        scope: "Validation, review, quality gates"
+
+      - id: "quality-engineer"
+        role: "Quality Engineer"
+        model: "claude-sonnet-4-20250514"
+        effort: "medium"
+        expertise: "Post-implementation quality gate, model assessment"
+        scope: "Quality verification, model suitability assessment"
+
+      - id: "principal-engineer"
+        role: "Principal Engineer"
+        model: "claude-opus-4-20250514"
+        effort: "high"
+        expertise: "Cross-organization architecture, strategy"
+        scope: "Organization-wide impact, decisions affecting >2 repos"
+
+      - id: "security-engineer"
+        role: "Security Engineer"
+        model: "claude-opus-4-20250514"
+        effort: "max"
+        expertise: "Security architecture, vulnerability analysis, threat modeling"
+        scope: "Security decisions only — all other routes blocked"
+
+      - id: "model-engineer"
+        role: "Model Engineer"
+        model: "claude-sonnet-4-20250514"
+        effort: "high"
+        expertise: "Token optimization, cost-quality trade-offs, model selection"
+        scope: "Performance metrics, cost analysis, optimization recommendations"
+
+# SPECULATIVE: Task routing rules — conditions not verified against pi.dev runtime
+routing:
+  rules:
+    - condition: "security-scoped"
+      agent: "security-engineer"
+      priority: 1
+
+    - condition: "cross-service-architecture"
+      agent: "principal-engineer"
+      priority: 2
+
+    - condition: "code-review-or-validation"
+      agent: "lead-engineer"
+      priority: 3
+
+    - condition: "complex-unscoped"
+      agent: "senior-engineer"
+      priority: 4
+
+    - condition: "quality-verification"
+      agent: "quality-engineer"
+      priority: 5
+
+    - condition: "cost-optimization"
+      agent: "model-engineer"
+      priority: 6
+
+# SPECULATIVE: Skills — not verified against pi.dev runtime
+skills:
+  - name: "delegate"
+    description: "Delegate task to sub-agent with full context"
+
+  - name: "handback"
+    description: "Receive task results from sub-agent with metrics"
+
+  - name: "route-task"
+    description: "Route task to appropriate agent based on decision tree"
+
+  - name: "collect-metrics"
+    description: "Collect tokens, time, quality metrics from delegations"
+
+  - name: "verify-completion"
+    description: "Run tests/linters to verify task completion"
+
+# SPECULATIVE: Packages — not verified against pi.dev runtime
+packages:
+  - name: "orchestration-framework"
+    version: "1.0"
+    modules:
+      - "delegation"
+      - "metrics"
+      - "routing"
+      - "validation"
+
+# Optimization settings
+optimization:
+  tokenBudget: 200000
+  costQualityTradeoff: "quality-first"
+  modelSelection:
+    haiku: "routing-and-simple-tasks"
+    sonnet: "complex-tasks-and-review"
+    opus: "security-and-architecture"
