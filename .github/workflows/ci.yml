@@ -31,15 +31,18 @@ jobs:
 
       - name: Install git hooks
         run: |
+          # Configure git to use .githooks directory for hooks
+          git config core.hooksPath .githooks
           mkdir -p .git/hooks
-          # Copy custom hooks from .githooks to .git/hooks
+          # Copy custom hooks from .githooks to .git/hooks for fallback
           for hook in pre-commit commit-msg post-merge pre-push; do
             if [ -f ".githooks/$hook" ]; then
               cp ".githooks/$hook" ".git/hooks/$hook"
               chmod +x ".git/hooks/$hook"
             fi
           done
-          echo "Git hooks installed:"
+          echo "Git hooks configured:"
+          git config core.hooksPath
           ls -lh .git/hooks/{pre-commit,commit-msg,post-merge,pre-push} 2>/dev/null || echo "Some hooks missing"
 
       - name: Lint
