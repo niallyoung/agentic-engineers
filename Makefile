@@ -208,7 +208,7 @@ lint: ## Lint Python, Shell, and YAML files
 
 test: ## Run pytest test suite with coverage
 	@echo "🧪 Running pytest test suite..."
-	@cd "$(REPO_ROOT)" && PYTHONPATH="$(REPO_ROOT):$(PYTHONPATH)" python3 -m pytest tests/ \
+	@"$(REPO_ROOT)/run_pytest.sh" tests/ \
 		--cov=src \
 		--cov-report=term-missing:skip-covered \
 		--cov-report=html:htmlcov \
