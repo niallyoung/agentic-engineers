@@ -182,6 +182,47 @@
 - [ ] **FRAMEWORK-004:** CrewAI orchestration layer documentation
 - [ ] **FRAMEWORK-005:** Pydantic AI type-safe agents
 
+### Cost & Usage Management (🚨 HIGH PRIORITY — June 1 deadline)
+> **Context:** As of June 1, 2026 (8 days from NOW), all LLM providers charge per usage token + time, not flat subscription. Framework users need cost controls, visibility, and multi-provider optimization. April 2026 usage equivalent to $550 USD in AI credits (GitHub Copilot subsidy was ~$39 AUD/month equivalent).
+
+- [ ] **COST-001:** Implement cost budgeting & enforcement skill
+  - Per-session, per-hour, per-day, per-week, per-month cost caps (configurable in credits/$)
+  - Track actual spend vs. budget + alert at 50%, 75%, 90%, 100%
+  - Graceful degradation: warn before blocking, then block at hard limits
+  - Support provider-agnostic cost models (different rates per provider)
+  - Effort: 3-4 days | Owner: Senior Engineer + Model Engineer
+  - **Critical:** Must be ready by June 1
+
+- [ ] **COST-002:** Multi-provider cost aggregation & reporting
+  - Aggregate spend across Claude (Anthropic), GPT (OpenAI), Gemini (Google), GitHub Copilot, OpenCode
+  - Per-provider cost breakdown, efficiency metrics (cost per task, cost per test, etc.)
+  - Weekly/monthly spend reports with trend analysis
+  - Effort: 2-3 days | Owner: Metrics + Model Engineer
+  - **Critical:** Must be ready by June 1
+
+- [ ] **COST-003:** Model selection optimization across providers
+  - Detect which provider offers best cost/quality for given task
+  - Route to cheaper provider when quality delta is acceptable
+  - Track provider-specific model performance (Haiku vs Claude-3.5-Sonnet vs GPT-4 mini, etc.)
+  - Effort: 2-3 days | Owner: Model Engineer
+  - **Critical:** Must be ready by June 1
+
+- [ ] **COST-004:** Local model support (Ollama, llama.cpp, Apple MLX, NVidia)
+  - **Phase 1 (Planning):** Define harness architecture for local LLMs
+    - How agents connect to local Ollama instance
+    - Fallback logic when local unavailable (route to cloud)
+    - Cost accounting (local = $0 but slower)
+    - Model availability detection + auto-selection
+  - **Phase 2 (Minimal impl):** Ollama integration (most popular local runtime)
+    - Detect Ollama instance (localhost:11434 or env var)
+    - List available models, select best-fit by size/quality
+    - Route Haiku-class tasks to local, Sonnet/Opus to cloud when local insufficient
+    - Fallback: if local model not available, use cloud
+  - **Phase 3 (Future):** llama.cpp, Apple MLX, NVidia CUDA support
+  - Effort: Phase 1: 1-2 days (planning) | Phase 2: 3-5 days (impl) | Phase 3: TBD
+  - Owner: Principal/Senior Engineer
+  - **Strategic:** Local models → 95% cost reduction long-term, essential for users running on local hardware
+
 ### Future Features
 - [ ] **COMPARISON-002:** Update orchestration framework comparisons to include Gas City
   - Gas City v1.0.0 released late April 2026 (refinement of Gastown by Steve Yegge)
