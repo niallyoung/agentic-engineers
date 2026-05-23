@@ -216,6 +216,30 @@ for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|sh|b
   fi
 done
 
+# ─── Section: Version manager — update CHANGELOG [Unreleased] section ────────
+# Non-blocking: runs version-manager to update CHANGELOG with [Unreleased] section
+# Failures don't prevent commit (development workflow convenience)
+#
+# To disable: touch .git/hooks/skip-version-manager
+if [ ! -f ".git/hooks/skip-version-manager" ] && command -v python3 >/dev/null 2>&1; then
+  REPO_ROOT_VERSION=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  
+  # Check if update-changelog.py exists
+  if [ -f "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" ]; then
+    if python3 "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" --auto 2>/dev/null; then
+      # If CHANGELOG was updated, stage it for commit
+      if git diff --name-only | grep -q "^CHANGELOG.md$"; then
+        git add CHANGELOG.md
+        echo "📋 version-manager: Updated CHANGELOG.md [Unreleased] section"
+      fi
+    else
+      # Non-blocking: just warn
+      echo "⚠️  version-manager: Could not update CHANGELOG (continuing anyway)" >&2
+    fi
+  fi
+fi
+# ─── End: Version manager section ──────────────────────────────────────────────
+
 # ── Result ─────────────────────────────────────────────────────────────────────
 if [ "$ERRORS" -gt 0 ]; then
   echo ""
