@@ -32,6 +32,17 @@ class RollbackManager:
     """Tracks SPEC.md versions and enables rollback."""
     
     def __init__(self, version_dir: str = "$REPO_ROOT/artifacts/spec-versions"):
+        # Resolve $REPO_ROOT in path
+        if "$REPO_ROOT" in version_dir:
+            import os
+            repo_root = os.getenv("REPO_ROOT", "")
+            if not repo_root:
+                # Fallback: find artifacts relative to this script
+                # This file is at src/skills/spec-management/scripts/rollback_manager.py
+                # So we need to go up 5 levels to repo root
+                version_dir = str(Path(__file__).parent.parent.parent.parent.parent / "artifacts" / "spec-versions")
+            else:
+                version_dir = version_dir.replace("$REPO_ROOT", repo_root)
         self.version_dir = Path(version_dir)
         self.version_dir.mkdir(parents=True, exist_ok=True)
         self._history: List[SpecVersion] = []

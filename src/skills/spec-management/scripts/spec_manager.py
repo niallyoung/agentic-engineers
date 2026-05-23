@@ -63,6 +63,17 @@ class SpecManager:
     """
     
     def __init__(self, spec_path: str = "$REPO_ROOT/docs/SPEC.md"):
+        # Resolve $REPO_ROOT in path
+        if "$REPO_ROOT" in spec_path:
+            import os
+            repo_root = os.getenv("REPO_ROOT", "")
+            if not repo_root:
+                # Fallback: find SPEC.md relative to this script
+                # This file is at src/skills/spec-management/scripts/spec_manager.py
+                # So we need to go up 5 levels to repo root
+                spec_path = str(Path(__file__).parent.parent.parent.parent.parent / "docs" / "SPEC.md")
+            else:
+                spec_path = spec_path.replace("$REPO_ROOT", repo_root)
         self.spec_path = Path(spec_path)
         self.validator = ChangeValidator()
         self.authorizer = Authorizer()
