@@ -29,9 +29,7 @@ jobs:
         run: make lint
 
       - name: Test
-        run: make test
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        run: PYTHONPATH=${{ github.workspace }} make test
 
       - name: Verify
         run: make verify
