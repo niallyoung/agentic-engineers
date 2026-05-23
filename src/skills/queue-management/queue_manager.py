@@ -8,9 +8,25 @@ import json
 import os
 import re
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# ---------------------------------------------------------------------------
+# queue-isolation integration (optional — graceful fallback if not importable)
+# ---------------------------------------------------------------------------
+_QUEUE_ISOLATION_SCRIPTS = Path(__file__).parent.parent / "_meta" / "queue-isolation" / "scripts"
+
+def _try_import_queue_isolation():
+    """Attempt to import queue_isolation; return module or None on failure."""
+    try:
+        if str(_QUEUE_ISOLATION_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(_QUEUE_ISOLATION_SCRIPTS))
+        import queue_isolation as _qi  # noqa: PLC0415
+        return _qi
+    except ImportError:
+        return None
 
 
 # Custom exceptions
@@ -61,13 +77,34 @@ class QueueManager:
 
     @staticmethod
     def _get_default_queue_dir() -> str:
-        """Get default queue directory from ~/.copilot/queue/incoming/."""
+        """Get default queue directory using queue-isolation for harness/session scoping.
+
+        Uses ``queue_isolation.get_queue_path()`` when the queue-isolation skill is
+        available (preferred).  Falls back to the legacy ``~/.copilot/queue/`` path
+        so that existing deployments are not broken.
+
+        Isolation path:
+            ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/incoming/
+
+        Legacy fallback path:
+            ~/.copilot/queue/{session_id}/incoming/
+        """
+        qi = _try_import_queue_isolation()
+        if qi is not None:
+            session_id = qi.get_session_id()
+            harness = qi.detect_harness()
+            queue_root = qi.get_queue_path(session_id, harness)
+            # Initialise the full structure (idempotent)
+            qi.init_queue_structure(session_id, harness)
+            return str(queue_root / "incoming")
+
+        # ---- Legacy fallback (backward compatibility) ----
         session_id = os.environ.get("COPILOT_SESSION_ID")
         if not session_id:
             session_id = os.environ.get("CLAUDE_SESSION_ID")
         if not session_id:
-            session_id = "local"  # Fallback
-        
+            session_id = "local"
+
         queue_base = os.path.expanduser("~/.copilot/queue")
         return os.path.join(queue_base, session_id, "incoming")
 

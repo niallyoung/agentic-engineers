@@ -62,9 +62,12 @@ artifacts/
 # ============================================================================
 # BUILD & TEMPORARY
 # ============================================================================
-dist/
+# NOTE: dist/ is intentionally NOT ignored — it is the render output that is
+# committed as the single source of truth for skill/agent artifacts.
+# See RENDERING.md for the full src/ → dist/ → ~/.harness/ flow.
 *.tmp
 temp/
+# .claude is outside the repo (harness install target) — not committed here
 .claude
 
 # ============================================================================
@@ -84,6 +87,14 @@ node_modules/
 # Uncomment the line below to gitignore the active TODO.md.
 # By default TODO.md IS committed so it can be the resume point across sessions.
 # /TODO.md
+# ============================================================================
+# AGENTIC-ENGINEERS RUNTIME ARTIFACTS (DO NOT COMMIT)
+# ============================================================================
+# Multi-harness queue isolation: session-scoped artifacts live here.
+# Structure: ~/.agentic-engineers/artifacts/{sessionID}/{harness}/
+# Never commit — contains local queue state, metadata, and task files.
+.agentic-engineers/
+
 src/skills/agent_creator
 src/skills/queue_management
 src/skills/spec_management
