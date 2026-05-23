@@ -3,24 +3,9 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v0.10.0
+## [Unreleased] - v0.33.2
 
-### Added
-- implement file-cleanup skill and fix CHANGELOG sync
-- multi-harness queue isolation with session artifacts
-
-### Fixed
-- move validate_renders to renderer/ for SPEC compliance
-- update test paths after validate_renders move to renderer/scripts/
-
-### Changed
-- consolidate repo structure, archive historical docs
-- remove Healing Engineer role (role bloat, no value)
-- remove automatic tag creation from CI, keep release creation
-- render-to-dist, install-to-harness, git-push-tags
-
-### Documentation
-- add cost management todos for June 1 deadline
+No unreleased changes.
 
 ## [v0.33.2] - 2026-05-24
 
