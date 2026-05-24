@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - aggressive cleanup - delete obsolete files and reorganize
 - clean up [Unreleased] section in CHANGELOG
+- fix CHANGELOG update logic to track all commits
 - fix TOCTOU race condition in concurrent HANDBACK file writes
 - refocus CONTRIBUTING.md on framework-based delegation
 - resolve CI path evaluation errors in tests
