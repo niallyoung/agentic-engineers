@@ -50,7 +50,8 @@ SECRET_FIELD_NAMES = {
 
 # Minimum entropy threshold (bits per character)
 # Typical random: 4-5, passwords: 2-3.5, real words: 1-1.5
-MIN_ENTROPY_THRESHOLD = 3.5
+# Raised to 4.5 to reduce false positives on legitimate identifiers
+MIN_ENTROPY_THRESHOLD = 4.5
 
 # Files to skip (false positive whitelist)
 # These are legitimate framework/library files that trigger false positives

@@ -11,6 +11,7 @@
 - Phase 4 - E2E, rollback, monitoring
 
 ### Fixed
+- add cache.py to entropy detector whitelist
 - adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
 - don't use filename as field_name in entropy detection
