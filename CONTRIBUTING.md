@@ -40,6 +40,52 @@ All framework extensions run through the validation pipeline automatically. See 
 
 ---
 
+## Versioning Workflow
+
+**Automatic CHANGELOG Management:**
+
+The `version-manager` skill runs automatically on every commit via pre-commit hook:
+- ✅ Parses your commit message (conventional commits format)
+- ✅ Automatically updates `CHANGELOG.md` [Unreleased] section
+- ✅ Groups commits by type (feat, fix, docs, etc.)
+- ✅ Calculates next semantic version
+
+**You don't need to manually edit CHANGELOG.md** — it's automated. Just write descriptive commit messages:
+
+```bash
+git commit -m "feat(skills): add cache invalidation"      # → Added section
+git commit -m "fix(agents): resolve race condition"      # → Fixed section
+git commit -m "docs: update installation guide"          # → Documentation section
+```
+
+**If CHANGELOG doesn't update:**
+```bash
+# Manually trigger version-manager
+python3 skills/version-manager/scripts/update-changelog.py --verbose
+
+# Review changes
+git diff CHANGELOG.md
+
+# Stage and commit
+git add CHANGELOG.md
+git commit --amend  # Add to current commit
+```
+
+**CI validates CHANGELOG consistency:**
+- ✅ All commits must have corresponding CHANGELOG entries
+- ✅ [Unreleased] section must match commits since last release tag
+- ✅ Semantic version calculation must be correct
+
+If CI fails on CHANGELOG validation:
+```bash
+python3 scripts/validate_changelog_ci.py  # See what's missing
+python3 skills/version-manager/scripts/update-changelog.py --force
+git add CHANGELOG.md
+git commit --amend
+```
+
+---
+
 ## Testing
 
 ```bash

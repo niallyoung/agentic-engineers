@@ -6,7 +6,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased] - v0.33.3
 
 ### Fixed
+- aggressive cleanup - delete obsolete files and reorganize
 - clean up [Unreleased] section in CHANGELOG
+- fix TOCTOU race condition in concurrent HANDBACK file writes
+- refocus CONTRIBUTING.md on framework-based delegation
+- resolve CI path evaluation errors in tests
+- simplify CONTRIBUTING.md — defer to framework and meta-skills
+
+### Documentation
+- comprehensive audit report and archive organization
 
 ## [v0.33.2] - 2026-05-24
 
