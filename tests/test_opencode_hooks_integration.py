@@ -128,8 +128,9 @@ class TestGitHooksConfiguration:
                     f"{hook.name} should be a bash script"
 
 
+@pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24). Commands were not actively used in current workflow.")
 class TestOpenCodeCommands:
-    """Test OpenCode command files"""
+    """Test OpenCode command files (SKIPPED: commands deleted in cleanup)"""
 
     def test_sdlc_check_command_exists(self):
         """Verify /sdlc-check command file exists"""
@@ -246,6 +247,7 @@ class TestOpenCodeIntegrationWorkflow:
         assert git_hooks_path == ".githooks", \
             f"git config should have .githooks, got {git_hooks_path}"
 
+    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
     def test_commands_reference_enforcement_hooks(self):
         """Verify OpenCode commands reference the enforcement hooks"""
         hooks_install = OPENCODE_COMMANDS_DIR / "hooks-install.md"
@@ -257,6 +259,7 @@ class TestOpenCodeIntegrationWorkflow:
         assert ".githooks" in content, \
             "hooks-install command should reference .githooks"
 
+    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
     def test_sdlc_check_references_hooks(self):
         """Verify sdlc-check command validates hooks"""
         sdlc_check = OPENCODE_COMMANDS_DIR / "sdlc-check.md"
@@ -266,6 +269,7 @@ class TestOpenCodeIntegrationWorkflow:
         assert "git" in content.lower() or "hook" in content.lower(), \
             "sdlc-check command should validate git hooks"
 
+    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
     def test_queue_status_references_artifacts(self):
         """Verify queue-status command checks queue artifacts"""
         queue_status = OPENCODE_COMMANDS_DIR / "queue-status.md"
@@ -347,6 +351,7 @@ class TestFullIntegration:
         assert "command" in config, "Config should have commands"
         assert "permission" in config, "Config should have permissions"
 
+    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
     def test_hooks_and_commands_work_together(self):
         """Verify hooks and OpenCode commands are coordinated"""
         # hooks-install command should match actual git config
