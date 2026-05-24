@@ -5,6 +5,7 @@
 
 ### Added
 - add file-sync analysis and pre-gate security framework
+- restore file-sync and pre-gate implementations
 
 ### Fixed
 - aggressive cleanup - delete obsolete files and reorganize

@@ -40,14 +40,39 @@ All framework extensions run through the validation pipeline automatically. See 
 
 ---
 
-## Versioning Workflow
+## Working with Background Agents
 
-**Automatic CHANGELOG Management:**
+When using background agents (e.g., `skill-creator`, `agent-creator`) to create implementation files:
 
-The `version-manager` skill runs automatically on every commit via pre-commit hook:
-- ✅ Parses your commit message (conventional commits format)
-- ✅ Automatically updates `CHANGELOG.md` [Unreleased] section
-- ✅ Groups commits by type (feat, fix, docs, etc.)
+**Background agents MUST explicitly commit their files to git.** This ensures:
+- ✅ Created files persist beyond the agent's session
+- ✅ Tests aren't lost to bytecode caching
+- ✅ HANDBACK includes proof of commitment (commit SHA)
+- ✅ Orchestrator can validate files actually reached git
+
+**Read:** [`docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md`](docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md) for the detailed protocol agents must follow.
+
+**Read:** [`docs/FILE-LOSS-PREVENTION.md`](docs/FILE-LOSS-PREVENTION.md) for comprehensive prevention mechanisms and troubleshooting.
+
+---
+
+## Preventing Orphaned Files
+
+The framework automatically validates:
+
+1. **Pre-commit hook** — Rejects any `.pyc` bytecode (never staged)
+2. **Pytest plugin** — Verifies all tests come from `.py` source (not cache)
+3. **CI/CD validation** — Checks no orphaned bytecode in commits
+4. **HANDBACK schema** — Requires `commit_sha` for file-creating agents
+
+**If you encounter issues with missing files:**
+- See [`docs/FILE-LOSS-PREVENTION.md#troubleshooting`](docs/FILE-LOSS-PREVENTION.md#troubleshooting)
+- Common cause: Agent didn't commit files before session ended
+- Fix: Recreate files or manually commit
+
+---
+
+
 - ✅ Calculates next semantic version
 
 **You don't need to manually edit CHANGELOG.md** — it's automated. Just write descriptive commit messages:

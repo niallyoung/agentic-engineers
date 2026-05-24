@@ -182,6 +182,66 @@ subtask_fields:
     example: "all_complete"
 
 optional_fields:
+  # ─ File Commitment Tracking (Background Agents) ───────────────────────────────
+  # When background agents (skill-creator, agent-creator) create files,
+  # they must explicitly stage and commit them. These fields track that commitment.
+  
+  committed_files:
+    type: array
+    items:
+      type: string
+    description: "List of files created/modified and committed to git (absolute paths)"
+    only_for: ["background agents", "skill-creator", "agent-creator"]
+    validation:
+      - "Must match files listed in deliverables field (if present)"
+      - "Populated when agent explicitly stages and commits files"
+    example:
+      - "src/skills/new-skill/SKILL.md"
+      - "src/skills/new-skill/scripts/main.py"
+      - "src/skills/new-skill/scripts/test.py"
+      - "src/skills/new-skill/scripts/__init__.py"
+  
+  commit_sha:
+    type: string
+    pattern: "^[0-9a-f]{40}$"
+    description: "Git commit SHA where files were committed (must exist in git history)"
+    only_for: ["background agents creating files"]
+    validation:
+      - "REQUIRED if status='complete' and committed_files is non-empty"
+      - "Must be valid SHA-1 hash (40 hex characters)"
+      - "Must exist in git log: git cat-file -t <sha> must return 'commit'"
+      - "Orchestrator MUST validate this SHA exists before accepting HANDBACK"
+    example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
+    
+  commit_validation:
+    type: object
+    optional: true
+    description: "Validation result of commit (populated by orchestrator)"
+    properties:
+      validated_at:
+        type: string
+        format: "iso8601 timestamp"
+        description: "When orchestrator validated the commit"
+        
+      valid:
+        type: boolean
+        description: "True if commit SHA exists and all files are present"
+        
+      files_in_commit:
+        type: array
+        items: string
+        description: "Files actually found in this commit (via git show --stat)"
+        
+      validation_errors:
+        type: array
+        items: string
+        description: "If valid=false, list of validation errors"
+        example:
+          - "Commit SHA not found in git history"
+          - "File 'src/skills/new-skill/main.py' missing from commit"
+  
+  # ─ Summary & Other Optional Fields ─────────────────────────────────────────────
+  
   summary:
     type: string
     description: "1-2 sentence executive summary of work completed"
