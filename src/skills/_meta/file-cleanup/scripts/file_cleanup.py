@@ -679,15 +679,42 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=None,
         help="Root directory to scan (default: current working directory).",
     )
+    parser.add_argument(
+        "--skip-pre-gate",
+        action="store_true",
+        help="Skip pre-gate validation (not recommended for --execute mode).",
+    )
 
     args = parser.parse_args(argv)
 
+    root = args.root or Path.cwd()
+
+    # ------------------------------------------------------------------
+    # Pre-gate validation (for execute mode unless explicitly skipped)
+    # ------------------------------------------------------------------
+    if args.execute and not args.skip_pre_gate:
+        try:
+            from .pre_gate_validator import PreGateValidator
+        except ImportError:
+            try:
+                from pre_gate_validator import PreGateValidator  # type: ignore[no-redef]
+            except ImportError:
+                PreGateValidator = None  # type: ignore[assignment,misc]
+
+        if PreGateValidator is not None:
+            validator = PreGateValidator(root)
+            can_proceed, reason = validator.validate()
+            if not can_proceed:
+                print(f"\n❌  {reason}\n")
+                return 1
+            print(f"\n✅  Pre-gate passed: {reason}\n")
+
     if args.dry_run:
         mode = "dry-run"
-        result = run_cleanup(root=args.root, dry_run=True, analysis_only=False)
+        result = run_cleanup(root=root, dry_run=True, analysis_only=False)
     elif args.analysis_only:
         mode = "analysis-only"
-        result = run_cleanup(root=args.root, dry_run=True, analysis_only=True)
+        result = run_cleanup(root=root, dry_run=True, analysis_only=True)
     else:  # --execute
         confirm = input(
             "⚠️  This will permanently delete untracked files. "
@@ -697,7 +724,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print("Aborted.")
             return 1
         mode = "execute"
-        result = run_cleanup(root=args.root, dry_run=False, analysis_only=False)
+        result = run_cleanup(root=root, dry_run=False, analysis_only=False)
 
     _print_result(result, mode)
     return 0
