@@ -56,6 +56,7 @@ MIN_ENTROPY_THRESHOLD = 3.5
 # These are legitimate framework/library files that trigger false positives
 WHITELISTED_FILES = {
     'auth.py',  # Legitimate authentication module
+    'cache.py',  # Legitimate caching module
 }
 
 

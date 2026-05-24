@@ -13,6 +13,7 @@
 ### Fixed
 - adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
+- don't use filename as field_name in entropy detection
 - export ArtifactMemoryStore and resolve __init__.py imports
 - remove duplicate path setup in test file
 - remove version from [Unreleased] (final fix)
