@@ -2,16 +2,56 @@
 
 
 
-## [Unreleased] - v0.34.1
+## [Unreleased] - v0.35.0
+
+### Added
+- Phase 2 - Orchestrator and invoke-agent routing
+- Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
+- Phase 3 - Test migration and multi-harness isolation
+- Phase 4 - E2E, rollback, monitoring
+
+### Fixed
+- add cache.py to entropy detector whitelist
+- add required SPEC.md sections for security compliance
+- adjust CHANGELOG validation to match version-manager design
+- commit renderer/lib/render-lib.sh as source
+- disable pure entropy detection, keep pattern matching
+- don't use filename as field_name in entropy detection
+- export ArtifactMemoryStore and resolve __init__.py imports
+- raise entropy threshold from 3.5 to 4.5 to reduce false positives
+- remove duplicate path setup in test file
+- remove version from [Unreleased] (final fix)
+- remove version number from [Unreleased] section
+- repair versioning sync corruption and add validation
+- resolve pytest import issue for nested skill modules
+- resolve pytest module resolution for nested skill packages
+- update CI Python 3.11 for Ubuntu 24.04 compatibility
+- update upload-artifact to v4 (deprecated v3)
+- use absolute REPO_ROOT paths in test_render_pipeline.py
+- whitelist src/auth.py in entropy detector to reduce false positives
+
+### Documentation
+- add SPEC.md to root directory for security compliance
+- remove [Unreleased] placeholder - versions released
+
+## [v0.34.0] - 2026-05-24
+
+### Added
+- Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
+- Workflow-review skill: generates workflow diagrams, validates delegation chains
+- Security hardening: 6 modules (PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement)
 
 ### Fixed
 - commit renderer/lib/render-lib.sh as source
 - remove duplicate path setup in test file
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
+- fix CHANGELOG versioning sync (v0.34.0 was listed below v0.33.3, [Unreleased] had version number)
 
 ### Documentation
-- remove [Unreleased] placeholder - versions released
+- docs/RENDERING.md: comprehensive harness lifecycle documentation
+- docs/FEEDBACK-LOOPS.md: post-merge feedback loop patterns
+- docs/SKILLS-AVAILABLE.md: skill index with 17 skills
 
 ## [v0.33.3] - 2026-05-24
 
@@ -27,19 +67,6 @@
 - aggressive cleanup - delete obsolete files and reorganize
 - refocus CONTRIBUTING.md on framework-based delegation
 - simplify CONTRIBUTING.md — defer to framework and meta-skills
-## [v0.34.0] - 2026-05-24
-
-### Added
-- File-sync skill: analyze repository scripts for utility, integration, and reusability
-- File-cleanup pre-gate security framework: 6-layer file loss prevention system
-
-### Fixed
-- Implement 6-layer file loss prevention framework (pre-commit hook, pytest audit, HANDBACK validation)
-- Correct bash syntax in pre-commit hook for .pyc detection
-
-### Documentation
-- BACKGROUND-AGENT-COMMIT-PROTOCOL.md: mandatory finalization steps for background agents
-- FILE-LOSS-PREVENTION.md: comprehensive 8-solution framework overview
 
 ## [v0.33.2] - 2026-05-24
 

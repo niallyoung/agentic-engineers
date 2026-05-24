@@ -37,6 +37,29 @@ from ..monitoring.budget_checker import BudgetStatus, BudgetResult
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
+# PHASE 1: Queue Isolation Integration
+# ============================================================================
+
+def _try_import_queue_isolation():
+    """
+    Attempt to import queue_isolation module.
+    
+    Returns the module if available, None if import fails.
+    This allows graceful fallback to legacy paths if queue-isolation is unavailable.
+    """
+    try:
+        from src.skills._meta.queue_isolation.scripts import queue_isolation as qi
+        return qi
+    except ImportError:
+        logger.debug("queue-isolation module not available, will use legacy paths")
+        return None
+
+
+# Module-level cache of queue_isolation availability
+_QUEUE_ISOLATION = _try_import_queue_isolation()
+
 # Protocol constants
 MAX_RETRIES = 2  # Maximum number of retries before escalation to Principal Engineer
 TASK_STATE_KEYS = {'retry_count', 'quality_score', 'last_failure_reasons', 'retry_context'}
@@ -396,76 +419,170 @@ class QueueManager:
             raise
     
     def __init__(self, queue_dir: Optional[str] = None, agent_context: Optional[str] = None):
-        # Detect session-id early
-        try:
-            self.session_id = self.detect_session_id()
-        except RuntimeError as e:
-            print(f"   ⚠️  Warning: {e}. Falling back to generic session handling.")
-            # Fallback: use a placeholder for testing/migration purposes
-            self.session_id = "default"
+        """
+        Initialize QueueManager with dual-path support (Phase 1 migration).
         
-        # Use explicit queue_dir, or auto-detect based on agent context
-        if queue_dir:
-            base_queue_dir = Path(queue_dir).expanduser()
-            self.agent_context = agent_context or self.detect_agent_context()
-        else:
-            # Auto-detect agent context
-            self.agent_context = agent_context or self.detect_agent_context()
+        Priority:
+        1. Try queue-isolation (new path: ~/.agentic-engineers/artifacts/)
+        2. Fall back to legacy paths (~/.copilot/queue/ or ~/.claude/queue/)
+        
+        This ensures backward compatibility while gradually adopting the new path structure.
+        """
+        # ========================================================================
+        # PHASE 1: Try queue-isolation (new path)
+        # ========================================================================
+        self._using_isolation = False
+        self.session_id = None
+        
+        if _QUEUE_ISOLATION is not None:
+            try:
+                # Get session ID and harness from environment
+                self.session_id = _QUEUE_ISOLATION.get_session_id()
+                harness = _QUEUE_ISOLATION.detect_harness()
+                
+                # Initialize queue structure (creates directories if needed)
+                _QUEUE_ISOLATION.init_queue_structure(self.session_id, harness)
+                
+                # Get the queue path from queue-isolation
+                queue_root = _QUEUE_ISOLATION.get_queue_path(self.session_id, harness)
+                
+                # Set up queue directories (new path structure)
+                self.session_queue_dir = queue_root
+                self.base_dir = queue_root.parent.parent  # artifacts/
+                self._using_isolation = True
+                self.agent_context = agent_context or harness
+                
+                logger.debug(
+                    f"QueueManager: Using queue-isolation. "
+                    f"session_id={self.session_id}, harness={harness}, "
+                    f"path={self.session_queue_dir}"
+                )
+                
+            except Exception as e:
+                logger.warning(
+                    f"queue-isolation initialization failed, falling back to legacy paths: {e}"
+                )
+                self._using_isolation = False
+                # Fall through to legacy code below
+        
+        # ========================================================================
+        # PHASE 2: Fallback to legacy paths (backward compatibility)
+        # ========================================================================
+        if not self._using_isolation:
+            # Detect session-id early
+            try:
+                if self.session_id is None:
+                    self.session_id = self.detect_session_id()
+            except RuntimeError as e:
+                logger.warning(f"Could not detect session ID, using fallback: {e}")
+                # Fallback: use a placeholder for testing/migration purposes
+                self.session_id = "default"
             
-            # Build queue path based on context
-            if self.agent_context == 'claude':
-                claude_queue = Path("~/.claude/queue").expanduser()
-                repo_queue = Path("artifacts/queue")
-                if claude_queue.exists():
-                    base_queue_dir = claude_queue
-                elif repo_queue.exists():
-                    base_queue_dir = repo_queue
-                else:
-                    base_queue_dir = claude_queue
-            else:  # copilot
-                copilot_queue = Path("~/.copilot/queue").expanduser()
-                repo_queue = Path("artifacts/queue")
-                if copilot_queue.exists():
-                    base_queue_dir = copilot_queue
-                elif repo_queue.exists():
-                    base_queue_dir = repo_queue
-                else:
-                    base_queue_dir = copilot_queue
+            # Use explicit queue_dir, or auto-detect based on agent context
+            if queue_dir:
+                base_queue_dir = Path(queue_dir).expanduser()
+                self.agent_context = agent_context or self.detect_agent_context()
+            else:
+                # Auto-detect agent context
+                self.agent_context = agent_context or self.detect_agent_context()
+                
+                # Build queue path based on context
+                if self.agent_context == 'claude':
+                    claude_queue = Path("~/.claude/queue").expanduser()
+                    repo_queue = Path("artifacts/queue")
+                    if claude_queue.exists():
+                        base_queue_dir = claude_queue
+                    elif repo_queue.exists():
+                        base_queue_dir = repo_queue
+                    else:
+                        base_queue_dir = claude_queue
+                else:  # copilot or other
+                    copilot_queue = Path("~/.copilot/queue").expanduser()
+                    repo_queue = Path("artifacts/queue")
+                    if copilot_queue.exists():
+                        base_queue_dir = copilot_queue
+                    elif repo_queue.exists():
+                        base_queue_dir = repo_queue
+                    else:
+                        base_queue_dir = copilot_queue
+            
+            # Store the base queue directory (for migrations)
+            self.base_dir = base_queue_dir
+            
+            # Now set the session-id partitioned queue directory BEFORE migration
+            self.session_queue_dir = self.base_dir / self.session_id
+            
+            logger.debug(
+                f"QueueManager: Using legacy paths. "
+                f"session_id={self.session_id}, agent_context={self.agent_context}, "
+                f"path={self.session_queue_dir}"
+            )
         
-        # Store the base queue directory (for migrations)
-        self.base_dir = base_queue_dir
-        
-        # Now set the session-id partitioned queue directory BEFORE migration
-        self.session_queue_dir = self.base_dir / self.session_id
+        # ========================================================================
+        # Initialize queue subdirectories (same for both paths)
+        # ========================================================================
         self.incoming_dir = self.session_queue_dir / "incoming"
         self.processing_dir = self.session_queue_dir / "processing"
         self.done_dir = self.session_queue_dir / "done"
-        
-        # Migrate legacy queue structure if needed
-        self.migrate_legacy_queue()
-        
+        self.failed_dir = self.session_queue_dir / "failed"
+        self.archive_dir = self.session_queue_dir / "archive"
+         
+        # Migrate legacy queue structure if needed (legacy paths only)
+        if not self._using_isolation:
+            self.migrate_legacy_queue()
+         
         # Ensure queue structure exists after migration
         self._ensure_queue_structure()
-        print(f"   Queue Manager initialized: {self.session_queue_dir} (session_id={self.session_id}, agent_context={self.agent_context})")
+        
+        # Log initialization
+        logger.info(
+            f"QueueManager initialized: {self.session_queue_dir} "
+            f"(session_id={self.session_id}, using_isolation={self._using_isolation}, "
+            f"agent_context={self.agent_context})"
+        )
+        print(
+            f"   Queue Manager initialized: {self.session_queue_dir} "
+            f"(session_id={self.session_id}, using_isolation={self._using_isolation})"
+        )
     
+    
+    def get_legacy_queue_path(self) -> Path:
+        """
+        Get what the legacy queue path would be (for debugging/migration).
+        
+        Returns the path to ~/.copilot/queue/{session_id}/ regardless of current path.
+        Useful for verifying migration status and debugging path issues.
+        
+        Returns:
+            Path: The legacy queue path (may or may not exist)
+        """
+        return Path.home() / ".copilot" / "queue" / self.session_id
     
     def _ensure_queue_structure(self):
         """Ensure all queue directories exist."""
-        for dir_path in [self.incoming_dir, self.processing_dir, self.done_dir]:
+        for dir_path in [self.incoming_dir, self.processing_dir, self.done_dir, self.failed_dir, self.archive_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
     
     # Queue path accessor methods (session-aware)
     def get_incoming_queue_dir(self) -> Path:
         """Return the incoming queue directory for this session."""
         return self.incoming_dir
-    
+     
     def get_processing_queue_dir(self) -> Path:
         """Return the processing queue directory for this session."""
         return self.processing_dir
-    
+     
     def get_done_queue_dir(self) -> Path:
         """Return the done queue directory for this session."""
         return self.done_dir
+     
+    def get_failed_queue_dir(self) -> Path:
+        """Return the failed queue directory for this session."""
+        return self.failed_dir
+     
+    def get_archive_queue_dir(self) -> Path:
+        """Return the archive queue directory for this session."""
+        return self.archive_dir
     
     
     def list_incoming_tasks(self) -> List[str]:
@@ -512,11 +629,10 @@ class QueueManager:
         return str(done_path)
     
     def archive_task(self, filename: str) -> str:
-        """Archive failed task (for debugging)."""
+        """Archive failed task (for debugging) to archive/ directory in queue_root."""
         incoming_path = self.incoming_dir / filename
-        archive_dir = self.base_dir / "archive"
-        archive_dir.mkdir(exist_ok=True)
-        archive_path = archive_dir / f"{datetime.now().isoformat()}_{filename}"
+        self.archive_dir.mkdir(exist_ok=True, parents=True)
+        archive_path = self.archive_dir / f"{datetime.now().isoformat()}_{filename}"
         shutil.move(str(incoming_path), str(archive_path))
         return str(archive_path)
     
@@ -562,8 +678,9 @@ class QueueManager:
         # Validate state transitions
         valid_transitions = {
             "incoming": ["processing"],
-            "processing": ["done"],
-            "done": []
+            "processing": ["done", "failed"],
+            "done": [],
+            "failed": ["archive"]
         }
         
         if from_state not in valid_transitions:
@@ -583,9 +700,11 @@ class QueueManager:
                 from_dir = self.processing_dir
             elif from_state == "done":
                 from_dir = self.done_dir
+            elif from_state == "failed":
+                from_dir = self.failed_dir
             else:
                 raise ValueError(f"Unknown from_state: {from_state}")
-            
+             
             # Get destination directory
             if to_state == "incoming":
                 to_dir = self.incoming_dir
@@ -593,6 +712,10 @@ class QueueManager:
                 to_dir = self.processing_dir
             elif to_state == "done":
                 to_dir = self.done_dir
+            elif to_state == "failed":
+                to_dir = self.failed_dir
+            elif to_state == "archive":
+                to_dir = self.archive_dir
             else:
                 raise ValueError(f"Unknown to_state: {to_state}")
             
