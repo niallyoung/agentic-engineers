@@ -100,17 +100,54 @@ def main():
         if args.verbose:
             print(f"🔢 Next version: {next_version}")
         
-        # Generate unreleased section
-        unreleased_section = generate_unreleased_section(next_version, commits)
-        
         # Read current CHANGELOG
         current_content = read_changelog(changelog_path)
         
-        # Check if already up-to-date
-        if "[Unreleased] - v" + next_version in current_content and not args.force:
-            if args.verbose:
-                print("✅ CHANGELOG already has [Unreleased] section with correct version")
-            return 0
+        # Check if already up-to-date: compare actual commits vs. what's recorded
+        # Extract messages from the current [Unreleased] section to check if new commits were added
+        import re
+        unreleased_match = re.search(
+            r"## \[Unreleased\] - v[0-9.]+\n(.*?)(?=\n## \[|$)",
+            current_content,
+            re.DOTALL
+        )
+        
+        commits_are_current = False
+        if unreleased_match and not args.force:
+            unreleased_block = unreleased_match.group(1)
+            
+            # Extract commit descriptions from current CHANGELOG
+            # Look for lines that start with "- " (bullet points)
+            recorded_messages = set()
+            for line in unreleased_block.split("\n"):
+                line = line.strip()
+                if line.startswith("- "):
+                    recorded_messages.add(line[2:])  # Remove "- " prefix
+            
+            # Extract messages from actual commits
+            actual_messages = set()
+            from changelog_updater import group_commits_by_type
+            groups = group_commits_by_type(commits)
+            for commit_type, messages in groups.items():
+                for msg in messages:
+                    actual_messages.add(msg)
+            
+            # Compare: are all actual messages in recorded messages?
+            if actual_messages and actual_messages == recorded_messages:
+                commits_are_current = True
+                if args.verbose:
+                    print(f"✅ CHANGELOG up-to-date: all {len(commits)} commits already recorded")
+                return 0
+            elif args.verbose and actual_messages:
+                missing = actual_messages - recorded_messages
+                extra = recorded_messages - actual_messages
+                if missing:
+                    print(f"ℹ️  New commits not in CHANGELOG: {missing}")
+                if extra:
+                    print(f"ℹ️  Recorded commits no longer present: {extra}")
+        
+        # Generate unreleased section
+        unreleased_section = generate_unreleased_section(next_version, commits)
         
         # Prepare new content (simple insertion for now)
         from changelog_updater import insert_unreleased_section
