@@ -33,4 +33,8 @@ setup(
     version=get_version(),
     packages=find_packages(),
     python_requires=">=3.7",
+    install_requires=[
+        "cryptography>=41.0.0",
+        "pyyaml>=6.0",
+    ],
 )
