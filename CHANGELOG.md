@@ -2,7 +2,7 @@
 
 
 
-## [Unreleased]
+## [Unreleased] - v0.35.0
 
 ### Added
 - Phase 2 - Orchestrator and invoke-agent routing
@@ -13,6 +13,7 @@
 ### Fixed
 - adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
+- export ArtifactMemoryStore and resolve __init__.py imports
 - remove duplicate path setup in test file
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
