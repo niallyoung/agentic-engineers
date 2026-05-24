@@ -15,9 +15,7 @@
 ### Documentation
 - add missing HEAD commit to [Unreleased] section in CHANGELOG
 - comprehensive audit report and archive organization
-
-All notable changes to this project are documented here.
-This project adheres to [Semantic Versioning](https://semver.org/).
+- finalize v0.33.3 CHANGELOG entry (remove [Unreleased] placeholder)
 
 ## [v0.33.3] - 2026-05-24
 
