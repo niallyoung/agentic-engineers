@@ -2,6 +2,10 @@
 
 A production-ready multi-agent orchestration framework with 8 specialized AI roles, queue-based delegation, quality gates, and autonomous cost optimization feedback loops.
 
+NOTE: oops, as is always the way my ~/.copilot/ config shat itself and hid some missing pieces - COMING SOON Mon 25th hopefully 🤦‍♂️🙇‍♂️
+Like many of thse frameworks, we're wrestling a) models; and now b) harness and provider updates... :\ 
+brb
+
 ---
 
 ## What It Is
