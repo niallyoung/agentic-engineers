@@ -1,8 +1,9 @@
 """
 conftest.py — pytest configuration for agentic-engineers
 
-Ensures the repo root is on sys.path so that:
+Ensures the repo root and nested skill paths are on sys.path so that:
   from src.orchestration.agents.X import Y
+  from scripts.queue_ops import QueueOperations  # from queue-management skill
 works when running tests from the repo root or any subdirectory.
 """
 import sys
@@ -16,6 +17,17 @@ repo_root = str(Path(__file__).parent.absolute())
 # Ensure repo root is in sys.path (at beginning for priority)
 if repo_root not in sys.path:
    sys.path.insert(0, repo_root)
+
+# Also add nested skill paths for test imports
+nested_paths = [
+    os.path.join(repo_root, "src", "skills", "queue-management"),
+    os.path.join(repo_root, "src", "skills", "file-sync"),
+    os.path.join(repo_root, "src", "skills", "pre-gate-security"),
+]
+
+for path in nested_paths:
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.insert(0, path)
 
 # Also ensure PYTHONPATH environment variable is set
 os.environ['PYTHONPATH'] = repo_root + os.pathsep + os.environ.get('PYTHONPATH', '')

@@ -4,7 +4,8 @@
 
 ## [Unreleased] - v0.34.0
 
-No unreleased changes.
+### Documentation
+- remove [Unreleased] placeholder - versions released
 
 ## [v0.33.3] - 2026-05-24
 
