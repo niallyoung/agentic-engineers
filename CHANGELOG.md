@@ -10,6 +10,7 @@
 ### Fixed
 - commit renderer/lib/render-lib.sh as source
 - remove duplicate path setup in test file
+- repair versioning sync corruption and add validation
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
 - update CI Python 3.11 for Ubuntu 24.04 compatibility
@@ -17,9 +18,6 @@
 
 ### Documentation
 - remove [Unreleased] placeholder - versions released
-
-### Miscellaneous
-- Merge branch 'feature/workflow-improvements-and-security'
 
 ## [v0.34.0] - 2026-05-24
 
