@@ -216,43 +216,65 @@ for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|sh|b
   fi
 done
 
-# ─── Section: Version manager — update CHANGELOG [Unreleased] section ────────
-# Runs version-manager to update CHANGELOG with [Unreleased] section
-# If substantive code changes are made, CHANGELOG MUST be updated (advisory warning)
+# ─── Section: Version manager — DISABLED (CI/CD-driven versioning) ──────────────
+# 
+# NOTE: version-manager is DISABLED for the following reasons:
+# 
+# 1. VERSIONING STRATEGY: Project uses CI/CD-driven semantic versioning
+#    - Git tags are created automatically by CI/CD pipeline
+#    - Semantic version calculated by mathieudutour/github-tag-action
+#    - GitHub Release created automatically from tags
+#    - See VERSIONING.md for full strategy
 #
-# Bypass: touch .git/hooks/skip-version-manager (then commit normally)
-if [ ! -f ".git/hooks/skip-version-manager" ] && command -v python3 >/dev/null 2>&1; then
-  REPO_ROOT_VERSION=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-  
-  # Check if update-changelog.py exists
-  if [ -f "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" ]; then
-    # Run version-manager to auto-update CHANGELOG
-    if python3 "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" --auto 2>/dev/null; then
-      # If CHANGELOG was updated, stage it for commit
-      if git diff --name-only | grep -q "^CHANGELOG.md$"; then
-        git add CHANGELOG.md
-        echo "📋 version-manager: Updated CHANGELOG.md [Unreleased] section"
-      fi
-    else
-      # Script error, but non-blocking (continue with commit)
-      warn "version-manager: Could not update CHANGELOG (continuing anyway)"
-    fi
-    
-    # Check if substantive code files were modified but CHANGELOG wasn't updated
-    # (This is advisory, not blocking, to allow flexibility for docs-only or test-only changes)
-    STAGED_CODE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(src/|skills/|tests/)' | grep -v CHANGELOG || true)
-    CHANGELOG_UPDATED=$(git diff --cached --name-only | grep -q "^CHANGELOG.md$" && echo "yes" || echo "no")
-    
-    if [ -n "$STAGED_CODE_FILES" ] && [ "$CHANGELOG_UPDATED" = "no" ]; then
-      # Code changed but CHANGELOG not in staged files
-      warn "⚠️  Code files changed but CHANGELOG not staged. Run:"
-      warn "    python3 skills/version-manager/scripts/update-changelog.py --verbose"
-      warn "    git add CHANGELOG.md"
-      warn "    git commit --amend (or make a new commit)"
-    fi
-  fi
-fi
-# ─── End: Version manager section ──────────────────────────────────────────────
+# 2. DESIGN MISMATCH: version-manager was designed for LOCAL versioning workflows
+#    - Designed to maintain [Unreleased] sections on every commit
+#    - Intended for projects where developers manually tag releases
+#    - Contradicts CI/CD-driven approach where tags are auto-created
+#
+# 3. SOLUTION: Keep CHANGELOG clean (only released versions)
+#    - No [Unreleased] sections (git tags are source of truth)
+#    - Developers commit normally without version tracking burden
+#    - CHANGELOG stays simple and consistent
+#
+# The version-manager skill still exists in src/skills/version-manager/ and can be
+# invoked manually if needed in future, but should NOT run automatically on commits.
+#
+# See: CHANGELOG-FIX-PLAN.md for detailed analysis
+#      VERSIONING.md for versioning strategy
+#      src/skills/version-manager/SKILL.md for version-manager design
+
+# if [ ! -f ".git/hooks/skip-version-manager" ] && command -v python3 >/dev/null 2>&1; then
+#   REPO_ROOT_VERSION=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+#   
+#   # Check if update-changelog.py exists
+#   if [ -f "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" ]; then
+#     # Run version-manager to auto-update CHANGELOG
+#     if python3 "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" --auto 2>/dev/null; then
+#       # If CHANGELOG was updated, stage it for commit
+#       if git diff --name-only | grep -q "^CHANGELOG.md$"; then
+#         git add CHANGELOG.md
+#         echo "📋 version-manager: Updated CHANGELOG.md [Unreleased] section"
+#       fi
+#     else
+#       # Script error, but non-blocking (continue with commit)
+#       warn "version-manager: Could not update CHANGELOG (continuing anyway)"
+#     fi
+#     
+#     # Check if substantive code files were modified but CHANGELOG wasn't updated
+#     # (This is advisory, not blocking, to allow flexibility for docs-only or test-only changes)
+#     STAGED_CODE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(src/|skills/|tests/)' | grep -v CHANGELOG || true)
+#     CHANGELOG_UPDATED=$(git diff --cached --name-only | grep -q "^CHANGELOG.md$" && echo "yes" || echo "no")
+#     
+#     if [ -n "$STAGED_CODE_FILES" ] && [ "$CHANGELOG_UPDATED" = "no" ]; then
+#       # Code changed but CHANGELOG not in staged files
+#       warn "⚠️  Code files changed but CHANGELOG not staged. Run:"
+#       warn "    python3 skills/version-manager/scripts/update-changelog.py --verbose"
+#       warn "    git add CHANGELOG.md"
+#       warn "    git commit --amend (or make a new commit)"
+#     fi
+#   fi
+# fi
+# ─── End: Version manager section (DISABLED) ──────────────────────────────────────
 
 # ─── Section: Orphaned Bytecode Check ──────────────────────────────────────
 # CRITICAL for file loss prevention: Reject commits with orphaned .pyc files

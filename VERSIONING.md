@@ -41,6 +41,21 @@ The CI/CD pipeline (`.github/workflows/ci.yml`) automatically:
 - **.github/workflows/ci.yml** — Automatic tagging and release
 - **scripts/get_version.py** — Version utility (read/bump versions)
 
+### Why No [Unreleased] Sections in CHANGELOG?
+
+The CHANGELOG does NOT contain `[Unreleased]` sections because:
+
+1. **Git tags are the source of truth** - Versions are determined by CI/CD from commit messages, not by manual CHANGELOG entries
+2. **No developer versioning burden** - Developers don't maintain version numbers; they just commit code
+3. **Incompatible workflow** - `[Unreleased]` sections are designed for local versioning workflows (manual releases), not CI/CD-driven workflows (automatic releases)
+4. **Single source of truth** - Git tags (created by CI/CD) are the authoritative version; CHANGELOG is just documentation
+
+**Example:**
+- ❌ WRONG: Developer manually maintains `## [Unreleased] - v0.35.0` in CHANGELOG, then CI/CD creates the tag
+- ✅ RIGHT: CI/CD creates git tag `v0.35.0` from commits; CHANGELOG is updated manually later (optional) as release notes documentation
+
+See `CHANGELOG-FIX-PLAN.md` for detailed analysis of why `version-manager` pre-commit hook was disabled.
+
 ### How Versioning Works
 
 #### 1. Local Development

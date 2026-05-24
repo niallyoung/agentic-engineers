@@ -1,193 +1,111 @@
-# Phase 2: Security Hardening Implementation Plan
+# Implementation Plan: Fix CHANGELOG [Unreleased] Issue
 
-## Overview
-Implement 3 critical security issues + 10 workflow security gaps to harden the agentic-engineers framework.
+## Summary
 
-## Critical Security Issues (1-3)
+The project uses **CI/CD-driven semantic versioning** where git tags are created automatically by CI/CD. However, `version-manager` was designed for **local versioning workflows** and automatically injects `[Unreleased]` sections on every commit, causing a design mismatch.
 
-### 1. PKI Signing for DELEGATE/HANDBACK Payloads
-**Goal:** Cryptographically sign all protocol payloads to prevent tampering.
+**Root cause:** version-manager pre-commit hook contradicts the actual versioning strategy.
 
-**Implementation:**
-- `src/orchestration/security/pki_signer.py` - RSA signature generation/verification
-  - Generate RSA keypair on first run
-  - Sign DELEGATE/HANDBACK blocks with private key
-  - Verify signatures during validation
-  - Store public key in .github for CI/CD verification
+**Solution:** Disable version-manager from auto-running on commits. Keep CHANGELOG with only released versions.
 
-- Update `quality_validator.py` to check PKI signatures
-- Add signature fields to delegate-schema.yaml and handback-schema.yaml
+## Phase 1: Disable version-manager in pre-commit hook
 
-**Tests:**
-- `tests/test_security_pki_signing.py`
-  - Generate keypair
-  - Sign and verify payloads
-  - Detect tampering
-  - Invalid signature rejection
+**File:** `.githooks/pre-commit` (lines 468-493)
 
-### 2. Entropy-Based Secret Detection
-**Goal:** Detect credentials in code before commit using entropy analysis.
+**What to do:**
+1. Locate the "Version manager — update CHANGELOG" section
+2. Comment out the entire section (all 29 lines)
+3. Keep the comment explaining WHY it's disabled
 
-**Implementation:**
-- `src/orchestration/security/entropy_detector.py`
-  - Calculate Shannon entropy for each string
-  - Pattern matching (AWS_SECRET, DATABASE_PASSWORD, etc.)
-  - Threshold-based detection (entropy > 3.5 bits/char)
-  - Exclude common high-entropy legitimate patterns
+**Rationale:**
+- version-manager contradicts CI/CD-driven workflow
+- Developers shouldn't maintain [Unreleased] sections
+- Git tags are source of truth
 
-- Update git pre-commit hook to run detector
-- Add `opencode-scan-secrets` CLI command
+## Phase 2: Clean CHANGELOG.md
 
-**Tests:**
-- `tests/test_security_entropy_detection.py`
-  - Real credentials (AWS, DB, API keys)
-  - False positive handling
-  - Pattern detection
-  - Exclusion lists
+**File:** `CHANGELOG.md`
 
-### 3. Agent Identity Verification
-**Goal:** Prevent spoofing in DELEGATE/HANDBACK chains.
+**What to do:**
+1. Remove all `## [Unreleased]` sections
+2. Keep only released versions (## [v0.34.0], ## [v0.33.3], etc.)
+3. Remove empty sections (no ### subsections without content)
 
-**Implementation:**
-- `src/orchestration/security/agent_identity.py`
-  - Generate unique agent identity on startup
-  - Sign all messages with agent private key
-  - Verify sender identity during routing
-  - Maintain identity trust chain
+**Example:**
+```markdown
+# Changelog
 
-- Add `agent_id` and `agent_signature` to protocol
-- Update orchestrator to verify chains
+## [v0.34.0] - 2026-05-24
 
-**Tests:**
-- `tests/test_security_agent_identity.py`
-  - Identity generation
-  - Chain verification
-  - Spoofing detection
-  - Identity revocation
+### Added
+- File-sync skill: analyze repository scripts for utility
+...
 
-## Workflow Security Gaps (4-13)
+## [v0.33.3] - 2026-05-24
+...
+```
 
-### 4. Mandatory Security Gate in Merge Flow
-- Create `.github/workflows/security-gate.yml`
-- Pre-merge security checks: credentials, vulnerabilities, SPEC.md compliance
-- Block merge if security checks fail
+## Phase 3: Update VERSIONING.md
 
-### 5. SPEC.md Drift Detection
-- `src/orchestration/security/spec_drift_detector.py`
-- Compare code changes against SPEC.md requirements
-- Flag undocumented changes before merge
-- Integration with CI/CD
+**File:** `VERSIONING.md`
 
-### 6. Audit Logging for Protocol Transitions
-- `src/orchestration/security/audit_logger.py`
-- Log all DELEGATE/HANDBACK state transitions
-- Immutable audit trail (append-only)
-- Query interface for audit reports
+**What to add:**
+1. New section: "Why No [Unreleased] Section"
+2. Explain: CI/CD-driven versioning doesn't need [Unreleased] tracking
+3. Note: version-manager was designed for different workflow
+4. Clarify: Git tags are single source of truth
 
-### 7. Rate Limiting on Sub-Agent Invocations
-- `src/orchestration/security/rate_limiter.py`
-- Per-agent rate limits (default: 10/min)
-- Per-role rate limits (default: 50/min)
-- Configurable thresholds
+## Phase 4: Verification
 
-### 8. Token Budget Enforcement
-- `src/orchestration/security/budget_enforcer.py`
-- Track token spend per agent per day/week/month
-- Enforce hard limits
-- Alert at 75%, 90% thresholds
+**Test that fix works:**
+1. Make a test commit: `git commit -m "test: verify version-manager disabled"`
+2. Check that pre-commit hook runs (other checks still work)
+3. Verify CHANGELOG.md is NOT modified/staged
+4. Verify no [Unreleased] appears in CHANGELOG
 
-### 9. Post-Merge Canary Health Monitoring
-- `.github/workflows/canary-monitor.yml`
-- Monitor for deployment health post-merge
-- Automated rollback on failure detection
-- Health metrics dashboard
+**Success indicators:**
+- ✅ Pre-commit hook completes successfully
+- ✅ CHANGELOG is NOT auto-updated
+- ✅ No new [Unreleased] entries
+- ✅ CHANGELOG remains clean
 
-### 10. Credentials Scanning in CI/CD
-- GitHub Secret Scanning integration
-- GHAS (Advanced Security) integration
-- Dependency vulnerability scanning
+## Files to Change
 
-### 11. Protocol Validation Hardening
-- Add cryptographic proof-of-work for expensive operations
-- Add timestamp validation (prevent replay attacks)
-- Add nonce validation (prevent replay attacks)
+1. `.githooks/pre-commit` - Comment out version-manager section
+2. `CHANGELOG.md` - Remove [Unreleased] entries
+3. `VERSIONING.md` - Document the decision
 
-### 12. Secure Secret Storage
-- Integration with GitHub Secrets
-- Encryption at rest for local config
-- Secret rotation policies
+## Rollback Plan
 
-### 13. Compliance Audit Trail
-- Automated SPEC.md compliance checks
-- Compliance reports generation
-- Audit log analysis
+If something goes wrong:
+1. Restore `.githooks/pre-commit` from git history
+2. Restore `CHANGELOG.md` from git history
+3. Revert `VERSIONING.md` changes
 
-## Implementation Order
+## Timeline
 
-1. **Phase 1 (Foundations - 4 hours)**
-   - Security module structure
-   - PKI keypair generation
-   - Entropy detector core
-   - Agent identity framework
+- Phase 1: 5 minutes (edit pre-commit hook)
+- Phase 2: 5 minutes (clean CHANGELOG)
+- Phase 3: 5 minutes (update docs)
+- Phase 4: 5 minutes (verify)
+- **Total: 20 minutes**
 
-2. **Phase 2 (Protocol Integration - 3 hours)**
-   - Update DELEGATE/HANDBACK schemas
-   - Quality validator updates
-   - Pre-commit hook updates
+---
 
-3. **Phase 3 (Workflow Gates - 3 hours)**
-   - Security gate workflow
-   - SPEC.md drift detection
-   - Audit logging system
+## Decision Log
 
-4. **Phase 4 (Enforcement - 3 hours)**
-   - Rate limiting
-   - Budget enforcement
-   - Canary monitoring
+**Why disable rather than fix version-manager?**
+- version-manager is designed for local version workflows
+- Project uses CI/CD-driven workflow (different paradigm)
+- Fixing version-manager would add complexity without matching workflow
+- Disabling is simpler, aligns with actual process, is durable
 
-5. **Phase 5 (Testing - 4 hours)**
-   - Comprehensive security tests
-   - Integration tests
-   - Test coverage ≥90%
+**Why not remove version-manager entirely?**
+- Skill might be useful for future CI/CD enhancements
+- Keep it in codebase for reference
+- Just disable auto-run on commits
 
-## Files to Create/Modify
-
-### New Files
-- `src/orchestration/security/__init__.py`
-- `src/orchestration/security/pki_signer.py`
-- `src/orchestration/security/entropy_detector.py`
-- `src/orchestration/security/agent_identity.py`
-- `src/orchestration/security/audit_logger.py`
-- `src/orchestration/security/rate_limiter.py`
-- `src/orchestration/security/budget_enforcer.py`
-- `src/orchestration/security/spec_drift_detector.py`
-- `tests/test_security_pki_signing.py`
-- `tests/test_security_entropy_detection.py`
-- `tests/test_security_agent_identity.py`
-- `tests/test_security_workflow_gates.py`
-- `.github/workflows/security-gate.yml`
-- `.github/workflows/canary-monitor.yml`
-
-### Modified Files
-- `src/orchestration/agents/quality_validator.py` - Add PKI checks
-- `src/orchestration/delegate-schema.yaml` - Add signature field
-- `src/orchestration/handback-schema.yaml` - Add signature field
-- `.githooks/pre-commit` - Add entropy detection
-- `src/orchestration/__init__.py` - Export security modules
-
-## Success Criteria
-
-1. ✅ All 3 critical security issues implemented
-2. ✅ All 10 workflow security gaps addressed
-3. ✅ 15+ new security tests passing
-4. ✅ Test coverage ≥90% for security modules
-5. ✅ No existing tests broken (2631 passing → 2631+ passing)
-6. ✅ CI/CD workflows updated with security gates
-7. ✅ HANDBACK with status: PASS
-
-## Risk Mitigation
-
-- **Breaking changes:** Backward compatibility through schema versioning
-- **Performance:** Security checks are minimal overhead (<10ms per DELEGATE)
-- **False positives:** Exclusion lists for legitimate high-entropy patterns
-- **Integration:** Gradual rollout with feature flags
+**Why keep version-manager skill around?**
+- May be useful in future if workflow changes
+- Doesn't hurt to keep (disabled)
+- Provides reference implementation for similar projects

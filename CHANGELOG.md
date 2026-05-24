@@ -1,28 +1,31 @@
 # Changelog
 
-
-
-## [Unreleased] - v0.35.0
+## [v0.34.0] - 2026-05-24
 
 ### Added
+- File-sync skill: analyze repository scripts for utility, integration, and reusability
+- File-cleanup pre-gate security framework: 6-layer file loss prevention system
 - Phase 2 - Orchestrator and invoke-agent routing
 - Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
 - Phase 3 - Test migration and multi-harness isolation
 - Phase 4 - E2E, rollback, monitoring
+- centralized session memory architecture
+- targets and queue documentation
 
 ### Fixed
-- adjust CHANGELOG validation to match version-manager design
+- Implement 6-layer file loss prevention framework (pre-commit hook, pytest audit, HANDBACK validation)
+- Correct bash syntax in pre-commit hook for .pyc detection
 - commit renderer/lib/render-lib.sh as source
 - export ArtifactMemoryStore and resolve __init__.py imports
 - remove duplicate path setup in test file
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
-- fix CHANGELOG versioning sync (v0.34.0 was listed below v0.33.3, [Unreleased] had version number)
+- update CI Python 3.11 for Ubuntu 24.04 compatibility
+- use absolute REPO_ROOT paths in test_render_pipeline.py
 
 ### Documentation
-- docs/RENDERING.md: comprehensive harness lifecycle documentation
-- docs/FEEDBACK-LOOPS.md: post-merge feedback loop patterns
-- docs/SKILLS-AVAILABLE.md: skill index with 17 skills
+- BACKGROUND-AGENT-COMMIT-PROTOCOL.md: mandatory finalization steps for background agents
+- FILE-LOSS-PREVENTION.md: comprehensive 8-solution framework overview
 
 ## [v0.33.3] - 2026-05-24
 

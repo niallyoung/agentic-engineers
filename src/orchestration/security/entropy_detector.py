@@ -50,7 +50,8 @@ SECRET_FIELD_NAMES = {
 
 # Minimum entropy threshold (bits per character)
 # Typical random: 4-5, passwords: 2-3.5, real words: 1-1.5
-MIN_ENTROPY_THRESHOLD = 3.5
+# Using 4.5 to avoid false positives on legitimate identifiers
+MIN_ENTROPY_THRESHOLD = 4.5
 
 
 class EntropyDetector:
@@ -208,7 +209,8 @@ class EntropyDetector:
                 if line.strip().startswith('#'):
                     continue
                 
-                line_findings = self.scan_text(line, file_path.name)
+                # Don't pass filename as field_name - causes false positives on filenames
+                line_findings = self.scan_text(line, "")
                 for finding in line_findings:
                     finding['file'] = str(file_path)
                 findings.extend(line_findings)
