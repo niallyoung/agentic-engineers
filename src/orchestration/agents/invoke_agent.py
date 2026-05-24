@@ -19,6 +19,7 @@ Design references:
 import os
 import signal
 import subprocess
+import sys
 import time
 import uuid
 import yaml
@@ -28,6 +29,24 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.orchestration.monitoring.token_tracker import TokenTracker
+
+# Import queue-isolation API for path management
+_QUEUE_ISOLATION = None
+try:
+    # First try direct import
+    from src.skills._meta.queue_isolation.scripts import queue_isolation as qi
+    _QUEUE_ISOLATION = qi
+except ImportError:
+    try:
+        # Fallback: add scripts directory to path and import
+        import sys
+        queue_isolation_path = Path(__file__).parent.parent.parent / "skills" / "_meta" / "queue-isolation" / "scripts"
+        sys.path.insert(0, str(queue_isolation_path))
+        import queue_isolation as qi
+        _QUEUE_ISOLATION = qi
+    except ImportError:
+        qi = None  # Graceful fallback if queue-isolation unavailable
+        _QUEUE_ISOLATION = None
 
 
 # ─── Exceptions ──────────────────────────────────────────────────────────────
@@ -110,25 +129,62 @@ class AgentInvoker:
         poll_interval: Optional[int] = None,
         effort_timeouts: Optional[Dict[str, int]] = None,
         token_tracker: Optional["TokenTracker"] = None,
+        session_id: Optional[str] = None,
+        harness: Optional[str] = None,
     ):
         """
         Args:
             processing_dir: Queue processing directory; polled for HANDBACK files.
+                           Can be an explicit path or None to use queue-isolation.
             delegates_dir: Where DELEGATE YAML files are written for reference.
-                           Defaults to ``<processing_dir>/../delegates``.
+                          If not provided, uses queue-isolation: 
+                          `~/.agentic-engineers/artifacts/{sid}/{harness}/delegates/`.
             spans_dir: Root directory for SPAN files.
                        Defaults to ``artifacts/``.
             poll_interval: Seconds between HANDBACK file checks. Defaults to 30.
             effort_timeouts: Override default per-effort-level timeouts.
-                             Useful for tests with short timeouts.
+                            Useful for tests with short timeouts.
             token_tracker: Optional TokenTracker instance for recording token metrics.
-                          If provided, token metrics will be recorded for each real HANDBACK.
+                         If provided, token metrics will be recorded for each real HANDBACK.
+            session_id: Session ID for queue isolation. If not provided, auto-detected
+                       via queue-isolation (AGENTIC_SESSION_ID, CLAUDE_SESSION_ID, etc.).
+            harness: Harness type for queue isolation (local, claude, gpt, copilot).
+                    If not provided, auto-detected via queue-isolation.
         """
-        self.processing_dir = Path(processing_dir)
-        self.delegates_dir = (
-            Path(delegates_dir) if delegates_dir
-            else self.processing_dir.parent / "delegates"
-        )
+        # Auto-detect session_id and harness if not provided
+        self.session_id = session_id
+        self.harness = harness
+        
+        # If queue-isolation is available, use it for auto-detection and path construction
+        if qi is not None:
+            if not self.session_id:
+                self.session_id = qi.get_session_id()
+            if not self.harness:
+                self.harness = qi.detect_harness()
+            
+            # Construct unified queue path using queue-isolation API
+            self.queue_root = qi.get_queue_path(self.session_id, self.harness)
+            
+            # Set processing_dir from queue_root if not explicitly provided
+            if processing_dir is None:
+                self.processing_dir = self.queue_root / "processing"
+            else:
+                # Allow explicit override for backward compatibility / testing
+                self.processing_dir = Path(processing_dir)
+            
+            # Set delegates_dir as sibling to queue_root if not explicitly provided
+            if delegates_dir is None:
+                self.delegates_dir = self.queue_root.parent / "delegates"
+            else:
+                self.delegates_dir = Path(delegates_dir)
+        else:
+            # Fallback: use explicit paths (no queue-isolation available)
+            self.processing_dir = Path(processing_dir) if processing_dir else Path("queue/processing")
+            self.delegates_dir = (
+                Path(delegates_dir) if delegates_dir
+                else self.processing_dir.parent / "delegates"
+            )
+        
         self.spans_dir = Path(spans_dir) if spans_dir else Path("artifacts")
         self.poll_interval = (
             poll_interval if poll_interval is not None else self.DEFAULT_POLL_INTERVAL
@@ -185,9 +241,15 @@ class AgentInvoker:
         # 2. Record SPAN start time
         span_start = datetime.now()
 
-        # 3. Build environment with DELEGATE_PATH
+        # 3. Build environment with DELEGATE_PATH and session context
         env = os.environ.copy()
         env["DELEGATE_PATH"] = str(delegate_path)
+        
+        # Pass session context for nested agent calls
+        if self.session_id:
+            env["SESSION_ID"] = self.session_id
+        if self.harness:
+            env["HARNESS"] = self.harness
 
         # 4. Spawn subprocess (non-blocking)
         try:

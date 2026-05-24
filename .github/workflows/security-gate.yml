@@ -1,0 +1,129 @@
+name: Security Gate
+
+on:
+  pull_request:
+    branches: [main, develop, feature/*]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-checks:
+    name: Security Pre-Merge Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for diff analysis
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml cryptography pytest
+          pip install -e .
+
+      - name: Entropy-based credential scanning
+        run: |
+          python3 << 'EOF'
+          import sys
+          from src.orchestration.security import EntropyDetector
+          from pathlib import Path
+          
+          detector = EntropyDetector()
+          findings = []
+          
+          # Scan all Python files in src/
+          for py_file in Path('src').rglob('*.py'):
+              file_findings = detector.scan_file(py_file)
+              findings.extend(file_findings)
+          
+          if findings:
+              print("❌ Security: Credentials detected in code!")
+              for f in findings[:10]:  # Show first 10
+                  print(f"  {f['file']}:{f.get('line', '?')}: {f['reason']}")
+              sys.exit(1)
+          else:
+              print("✅ Security: No credentials detected")
+          EOF
+
+      - name: SPEC.md compliance check
+        run: |
+          python3 << 'EOF'
+          import json
+          from pathlib import Path
+          
+          # Check that SPEC.md exists and is not modified in ways that break requirements
+          spec_file = Path('SPEC.md')
+          if not spec_file.exists():
+              print("❌ Security: SPEC.md not found")
+              exit(1)
+          
+          # Verify key sections exist
+          content = spec_file.read_text()
+          required_sections = [
+              '# Specification',
+              'Core Requirements',
+              'Quality Gates',
+          ]
+          
+          missing = [s for s in required_sections if s not in content]
+          if missing:
+              print(f"❌ Security: Missing SPEC.md sections: {missing}")
+              exit(1)
+          
+          print("✅ Security: SPEC.md compliance verified")
+          EOF
+
+      - name: Dependency vulnerability scan
+        run: |
+          pip install safety
+          safety check --json || true  # Warn but don't fail yet
+
+      - name: YAML schema validation
+        run: |
+          python3 << 'EOF'
+          import yaml
+          from pathlib import Path
+          
+          yaml_files = [
+              'src/orchestration/delegate-schema.yaml',
+              'src/orchestration/handback-schema.yaml',
+          ]
+          
+          for yml_file in yaml_files:
+              try:
+                  Path(yml_file).read_text()
+                  yaml.safe_load(Path(yml_file).read_text())
+              except Exception as e:
+                  print(f"❌ Invalid YAML in {yml_file}: {e}")
+                  exit(1)
+          
+          print("✅ Security: All YAML schemas valid")
+          EOF
+
+      - name: Security test execution
+        run: |
+          python3 -m pytest tests/test_security_core.py -v --tb=short
+
+      - name: Report security status
+        if: success()
+        run: |
+          echo "✅ All security pre-merge checks passed"
+          echo "- Credential scanning: PASS"
+          echo "- SPEC.md compliance: PASS"
+          echo "- YAML validation: PASS"
+          echo "- Security tests: PASS"
+
+      - name: Report security failures
+        if: failure()
+        run: |
+          echo "❌ Security pre-merge checks FAILED"
+          echo "Please address security issues before merging"
+          exit 1

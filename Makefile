@@ -1,8 +1,8 @@
 .PHONY: help install install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
         status status-opencode \
-        verify validate-opencode validate-agents validate-skills validate-renders clean \
-        render-claude render-copilot render-pi render-opencode render-all \
+        verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
+        render-claude render-copilot render-pi render-opencode render-specs render-all \
         lint test quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -29,7 +29,7 @@ help:
 	@echo "  render-copilot      Generate dist/copilot/ (provider-specific)"
 	@echo "  render-pi           Generate ~/.pi/agent/ config (π.dev harness)"
 	@echo "  render-opencode     Generate dist/opencode/ (OpenCode-compatible)"
-	@echo "  render-all          All four"
+	@echo "  render-all          All four + specs"
 	@echo ""
 	@echo "Diagnostic:"
 	@echo "  status              Check installation status (all 4 harnesses)"
@@ -39,6 +39,7 @@ help:
 	@echo "  validate-agents     Validate agent YAML frontmatter + AGENTS.md registration"
 	@echo "  validate-skills     Validate skill frontmatter + SKILLS.md registry completeness"
 	@echo "  validate-renders    Verify all src/skills/ have corresponding dist/ outputs"
+	@echo "  validate-specs      Verify dist/specs/ is deployed and valid"
 	@echo "  clean               Remove build artifacts"
 	@echo ""
 	@echo "Quality & Testing:"
@@ -335,7 +336,20 @@ render-opencode: ## Generate dist/opencode/ with agents + skills (provider-speci
 	@echo "   ✓ OpenCode skills validated"
 	@echo "✅ OpenCode rendering complete (see dist/opencode/)"
 
-render-all: render-copilot render-claude render-pi render-opencode ## Generate config for all 4 harnesses
+render-all: render-copilot render-claude render-pi render-opencode render-specs ## Generate config for all 4 harnesses + specs
+
+render-specs: ## Generate dist/specs/ (SPEC.md + orchestration YAML files)
+	@echo "🔨 Rendering orchestration specs → dist/specs/..."
+	@mkdir -p "$(REPO_ROOT)/dist/specs"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-specs.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist"
+	@echo "🔍 Validating rendered specs..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-specs.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist" --validate
+	@echo "✅ Spec rendering complete (see dist/specs/)"
+
+validate-specs: ## Verify dist/specs/ is deployed and all spec files are valid
+	@echo "🔍 Validating spec deployment at dist/specs/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-specs.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist" --validate || (echo "❌ Spec validation failed — run 'make render-specs' to regenerate" && exit 1)
+	@echo "✅ Spec validation complete"
 
 status: ## Check installation status (all 4 harnesses)
 	@echo "📋 Installation status for ~/.copilot/:"
