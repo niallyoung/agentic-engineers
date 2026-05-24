@@ -14,6 +14,7 @@
 - add cache.py to entropy detector whitelist
 - adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
+- disable pure entropy detection, keep pattern matching
 - don't use filename as field_name in entropy detection
 - export ArtifactMemoryStore and resolve __init__.py imports
 - raise entropy threshold from 3.5 to 4.5 to reduce false positives
