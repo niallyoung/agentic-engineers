@@ -2,7 +2,10 @@
 
 
 
-## [Unreleased] - v0.34.1
+## [Unreleased] - v0.35.0
+
+### Added
+- Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
 
 ### Fixed
 - commit renderer/lib/render-lib.sh as source
