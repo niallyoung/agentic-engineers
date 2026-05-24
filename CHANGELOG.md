@@ -10,6 +10,7 @@
 ### Fixed
 - commit renderer/lib/render-lib.sh as source
 - remove duplicate path setup in test file
+- remove version number from [Unreleased] section
 - repair versioning sync corruption and add validation
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
