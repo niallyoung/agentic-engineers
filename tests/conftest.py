@@ -19,6 +19,18 @@ import shutil
 from pathlib import Path
 from typing import Dict, Optional
 
+# Import queue test helpers (fixtures for isolated/legacy queues)
+from tests.helpers.queue_test_helpers import (
+    isolated_queue_env,
+    isolated_queue_copilot,
+    isolated_queue_claude,
+    legacy_queue_env,
+    queue_test_env,
+    assert_queue_path_is_isolated,
+    assert_queue_path_is_legacy,
+    assert_queue_subdirs_exist,
+)
+
 
 # ---------------------------------------------------------------------------
 # Test Source Audit (Solution 3: Prevent bytecode cache loading)
