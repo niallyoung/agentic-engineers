@@ -11,8 +11,8 @@ class TestChangelogFormat:
         changelog = Path(__file__).parent.parent / "CHANGELOG.md"
         assert changelog.exists(), "CHANGELOG.md not found in repository root"
 
-    def test_unreleased_section_has_no_version(self):
-        """[Unreleased] section must not have a version number."""
+    def test_unreleased_section_format(self):
+        """[Unreleased] section must have correct format (with or without version)."""
         changelog = Path(__file__).parent.parent / "CHANGELOG.md"
         content = changelog.read_text()
         
@@ -21,9 +21,10 @@ class TestChangelogFormat:
         assert unreleased_match, "[Unreleased] section not found"
         
         unreleased_line = unreleased_match.group(0)
-        # Should be exactly "## [Unreleased]" with no version number
-        assert unreleased_line == "## [Unreleased]", \
-            f"[Unreleased] must have no version number. Found: {unreleased_line}"
+        # Should match pattern: ## [Unreleased] or ## [Unreleased] - vX.Y.Z
+        # (version-manager skill adds version during commits)
+        assert re.match(r'^## \[Unreleased\](\s*- v\d+\.\d+\.\d+)?$', unreleased_line), \
+            f"[Unreleased] must match format '## [Unreleased]' or '## [Unreleased] - vX.Y.Z'. Found: {unreleased_line}"
 
     def test_version_entries_have_correct_format(self):
         """All version entries must follow ## [vX.Y.Z] - YYYY-MM-DD format."""
