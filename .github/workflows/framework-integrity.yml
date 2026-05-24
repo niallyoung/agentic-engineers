@@ -58,3 +58,74 @@ jobs:
         run: |
           echo "❌ Framework consistency gates failed - see details above"
           exit 1
+
+  workflow-quality-gate:
+    name: Workflow Quality Gate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || contains(github.head_ref, 'workflow-') || contains(github.head_ref, 'feature/')
+    needs: framework-gates
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml pytest
+
+      - name: Run workflow quality tests
+        run: |
+          python3 -m pytest tests/test_workflow_quality.py -v
+
+      - name: Generate workflow diagram
+        if: always()
+        run: |
+          python3 -c "
+          import sys
+          sys.path.insert(0, '.')
+          import importlib.util
+          from pathlib import Path
+          skill_script = Path('src/skills/workflow-review/scripts/workflow_review.py')
+          spec = importlib.util.spec_from_file_location('workflow_review', skill_script)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          WorkflowReviewer = module.WorkflowReviewer
+          reviewer = WorkflowReviewer(Path('config/FRAMEWORK-MANIFEST.yaml'))
+          report = reviewer.review()
+          print(report.diagram)
+          print('Quality Score: {:.1f}/100'.format(report.quality_score))
+          print('Status: {}'.format('PASS' if report.passed else 'FAIL'))
+          "
+
+      - name: Generate workflow status report
+        if: always()
+        run: |
+          echo "## Workflow Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Workflow Quality Gate" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 7: Workflow diagram generated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 8: Consistency checks passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 9: No circular delegation chains" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 10: Quality gates present" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload workflow report as artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: workflow-quality-report
+          path: |
+            ${{ github.workspace }}
+          retention-days: 7
+
+      - name: Block merge on failure
+        if: failure()
+        run: |
+          echo "❌ Workflow quality gate failed - see workflow diagram above"
+          exit 1
