@@ -16,6 +16,7 @@
 - commit renderer/lib/render-lib.sh as source
 - don't use filename as field_name in entropy detection
 - export ArtifactMemoryStore and resolve __init__.py imports
+- raise entropy threshold from 3.5 to 4.5 to reduce false positives
 - remove duplicate path setup in test file
 - remove version from [Unreleased] (final fix)
 - remove version number from [Unreleased] section

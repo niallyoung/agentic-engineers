@@ -155,11 +155,9 @@ class EntropyDetector:
             if entropy > 2.0:  # Lower threshold for suspicious field names
                 return True, f"Suspicious field '{field_name}' with high entropy ({entropy:.2f})"
         
-        # Check entropy (lowest confidence)
-        if not self.is_excluded(str(value)):
-            entropy = self.calculate_entropy(str(value))
-            if entropy > self.entropy_threshold:
-                return True, f"High entropy ({entropy:.2f} bits/char, threshold: {self.entropy_threshold})"
+        # NOTE: Pure entropy detection disabled due to excessive false positives
+        # from legitimate class names, identifiers, etc. Pattern-based detection
+        # is more reliable and has fewer false positives.
         
         return False, None
     
