@@ -50,15 +50,7 @@ SECRET_FIELD_NAMES = {
 
 # Minimum entropy threshold (bits per character)
 # Typical random: 4-5, passwords: 2-3.5, real words: 1-1.5
-# Raised to 4.5 to reduce false positives on legitimate identifiers
-MIN_ENTROPY_THRESHOLD = 4.5
-
-# Files to skip (false positive whitelist)
-# These are legitimate framework/library files that trigger false positives
-WHITELISTED_FILES = {
-    'auth.py',  # Legitimate authentication module
-    'cache.py',  # Legitimate caching module
-}
+MIN_ENTROPY_THRESHOLD = 3.5
 
 
 class EntropyDetector:
@@ -155,9 +147,11 @@ class EntropyDetector:
             if entropy > 2.0:  # Lower threshold for suspicious field names
                 return True, f"Suspicious field '{field_name}' with high entropy ({entropy:.2f})"
         
-        # NOTE: Pure entropy detection disabled due to excessive false positives
-        # from legitimate class names, identifiers, etc. Pattern-based detection
-        # is more reliable and has fewer false positives.
+        # Check entropy (lowest confidence)
+        if not self.is_excluded(str(value)):
+            entropy = self.calculate_entropy(str(value))
+            if entropy > self.entropy_threshold:
+                return True, f"High entropy ({entropy:.2f} bits/char, threshold: {self.entropy_threshold})"
         
         return False, None
     
@@ -204,10 +198,6 @@ class EntropyDetector:
         Returns:
             List of findings
         """
-        # Skip whitelisted files (known false positives)
-        if file_path.name in WHITELISTED_FILES:
-            return []
-        
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
@@ -218,9 +208,7 @@ class EntropyDetector:
                 if line.strip().startswith('#'):
                     continue
                 
-                # Don't use filename as field_name to avoid false positives
-                # from high-entropy filenames like auth.py, cache.py, etc.
-                line_findings = self.scan_text(line, field_name="")
+                line_findings = self.scan_text(line, file_path.name)
                 for finding in line_findings:
                     finding['file'] = str(file_path)
                 findings.extend(line_findings)

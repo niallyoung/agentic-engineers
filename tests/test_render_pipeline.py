@@ -239,12 +239,12 @@ class TestRendererLibConsolidation:
 
     def test_render_lib_sh_exists(self):
         """Unified render library must exist at renderer/lib/render-lib.sh"""
-        assert (REPO_ROOT / "renderer/lib/render-lib.sh").exists(), \
+        assert Path("renderer/lib/render-lib.sh").exists(), \
             "renderer/lib/render-lib.sh not found — unified render library missing"
 
     def test_lib_sh_is_shim_sourcing_render_lib(self):
         """renderer/scripts/lib.sh must be a shim that sources render-lib.sh"""
-        lib_path = REPO_ROOT / "renderer/scripts/lib.sh"
+        lib_path = Path("renderer/scripts/lib.sh")
         assert lib_path.exists(), "renderer/scripts/lib.sh not found"
         content = lib_path.read_text()
         # Shim should source render-lib.sh (not define all functions inline)
@@ -253,13 +253,13 @@ class TestRendererLibConsolidation:
 
     def test_render_lib_has_list_source_specs(self):
         """render-lib.sh must expose list_source_specs for spec entity enumeration"""
-        content = (REPO_ROOT / "renderer/lib/render-lib.sh").read_text()
+        content = Path("renderer/lib/render-lib.sh").read_text()
         assert "list_source_specs" in content, \
             "render-lib.sh missing list_source_specs function"
 
     def test_render_lib_has_validate_functions(self):
         """render-lib.sh must expose validation functions"""
-        content = (REPO_ROOT / "renderer/lib/render-lib.sh").read_text()
+        content = Path("renderer/lib/render-lib.sh").read_text()
         assert "validate_frontmatter" in content, \
             "render-lib.sh missing validate_frontmatter function"
         assert "validate_entity_structure" in content, \
@@ -267,7 +267,7 @@ class TestRendererLibConsolidation:
 
     def test_render_specs_script_exists(self):
         """render-specs.sh must exist for spec deployment pipeline"""
-        assert (REPO_ROOT / "renderer/scripts/render-specs.sh").exists(), \
+        assert Path("renderer/scripts/render-specs.sh").exists(), \
             "renderer/scripts/render-specs.sh not found — spec deployment pipeline missing"
 
 
@@ -276,43 +276,43 @@ class TestSpecDeployment:
 
     def test_dist_specs_directory_exists(self):
         """dist/specs/ directory must exist after render-specs"""
-        dist_specs = REPO_ROOT / "dist/specs"
+        dist_specs = Path("dist/specs")
         assert dist_specs.exists(), \
             "dist/specs/ not found — run 'make render-specs' to generate"
 
     def test_dist_specs_has_spec_md(self):
         """dist/specs/SPEC.md must be deployed"""
-        dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
+        spec_file = Path("dist/specs/SPEC.md")
+        if not Path("dist/specs").exists():
             pytest.skip("dist/specs/ not found — run 'make render-specs' first")
-        assert (dist_specs / "SPEC.md").exists(), "dist/specs/SPEC.md not found — SPEC.md not deployed"
+        assert spec_file.exists(), "dist/specs/SPEC.md not found — SPEC.md not deployed"
 
     def test_dist_specs_has_framework_manifest(self):
         """dist/specs/FRAMEWORK-MANIFEST.yaml must be deployed"""
-        dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
+        manifest = Path("dist/specs/FRAMEWORK-MANIFEST.yaml")
+        if not Path("dist/specs").exists():
             pytest.skip("dist/specs/ not found — run 'make render-specs' first")
-        assert (dist_specs / "FRAMEWORK-MANIFEST.yaml").exists(), \
+        assert manifest.exists(), \
             "dist/specs/FRAMEWORK-MANIFEST.yaml not found — manifest not deployed"
 
     def test_dist_specs_has_orchestration_yaml(self):
         """dist/specs/orchestration.yaml must be deployed"""
-        dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
+        orch = Path("dist/specs/orchestration.yaml")
+        if not Path("dist/specs").exists():
             pytest.skip("dist/specs/ not found — run 'make render-specs' first")
-        assert (dist_specs / "orchestration.yaml").exists(), "dist/specs/orchestration.yaml not found"
+        assert orch.exists(), "dist/specs/orchestration.yaml not found"
 
     def test_dist_specs_marker_exists(self):
         """dist/specs/ must have the management marker file"""
-        dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
+        marker = Path("dist/specs/.agentic-engine-specs")
+        if not Path("dist/specs").exists():
             pytest.skip("dist/specs/ not found — run 'make render-specs' first")
-        assert (dist_specs / ".agentic-engine-specs").exists(), \
+        assert marker.exists(), \
             "dist/specs/.agentic-engine-specs marker missing — run 'make render-specs'"
 
     def test_spec_md_has_frontmatter(self):
         """Deployed SPEC.md must have valid YAML frontmatter"""
-        spec_file = REPO_ROOT / "dist/specs/SPEC.md"
+        spec_file = Path("dist/specs/SPEC.md")
         if not spec_file.exists():
             pytest.skip("dist/specs/SPEC.md not found")
         content = spec_file.read_text()
@@ -324,7 +324,7 @@ class TestSpecDeployment:
     def test_framework_manifest_is_valid_yaml(self):
         """FRAMEWORK-MANIFEST.yaml must be parseable YAML"""
         import yaml
-        manifest = REPO_ROOT / "dist/specs/FRAMEWORK-MANIFEST.yaml"
+        manifest = Path("dist/specs/FRAMEWORK-MANIFEST.yaml")
         if not manifest.exists():
             pytest.skip("dist/specs/FRAMEWORK-MANIFEST.yaml not found")
         try:
@@ -336,8 +336,8 @@ class TestSpecDeployment:
 
     def test_spec_source_matches_deployed(self):
         """Deployed SPEC.md must match source docs/SPEC.md"""
-        src = REPO_ROOT / "docs/SPEC.md"
-        dst = REPO_ROOT / "dist/specs/SPEC.md"
+        src = Path("docs/SPEC.md")
+        dst = Path("dist/specs/SPEC.md")
         if not src.exists() or not dst.exists():
             pytest.skip("SPEC.md source or deployed copy not found")
         assert src.read_text() == dst.read_text(), \
@@ -349,35 +349,35 @@ class TestHarnessLifecycleDocs:
 
     def test_rendering_md_exists(self):
         """docs/RENDERING.md must exist"""
-        assert (REPO_ROOT / "docs/RENDERING.md").exists(), \
+        assert Path("docs/RENDERING.md").exists(), \
             "docs/RENDERING.md not found — harness lifecycle documentation missing"
 
     def test_rendering_md_covers_build_time(self):
         """RENDERING.md must cover build-time rendering phase"""
-        content = (REPO_ROOT / "docs/RENDERING.md").read_text()
+        content = Path("docs/RENDERING.md").read_text()
         assert "build" in content.lower() or "render" in content.lower(), \
             "docs/RENDERING.md should document build-time rendering"
 
     def test_rendering_md_covers_runtime(self):
         """RENDERING.md must cover runtime loading phase"""
-        content = (REPO_ROOT / "docs/RENDERING.md").read_text()
+        content = Path("docs/RENDERING.md").read_text()
         assert "runtime" in content.lower(), \
             "docs/RENDERING.md should document runtime loading"
 
     def test_feedback_loops_md_exists(self):
         """docs/FEEDBACK-LOOPS.md must exist"""
-        assert (REPO_ROOT / "docs/FEEDBACK-LOOPS.md").exists(), \
+        assert Path("docs/FEEDBACK-LOOPS.md").exists(), \
             "docs/FEEDBACK-LOOPS.md not found — post-merge feedback loop documentation missing"
 
     def test_feedback_loops_md_covers_qe_findings(self):
         """FEEDBACK-LOOPS.md must cover QE finding scenario"""
-        content = (REPO_ROOT / "docs/FEEDBACK-LOOPS.md").read_text()
+        content = Path("docs/FEEDBACK-LOOPS.md").read_text()
         assert "qe" in content.lower() or "quality" in content.lower(), \
             "docs/FEEDBACK-LOOPS.md should cover QE finding feedback triggers"
 
     def test_feedback_loops_md_has_delegate_schema(self):
         """FEEDBACK-LOOPS.md must show feedback DELEGATE schema"""
-        content = (REPO_ROOT / "docs/FEEDBACK-LOOPS.md").read_text()
+        content = Path("docs/FEEDBACK-LOOPS.md").read_text()
         assert "feedback_context" in content, \
             "docs/FEEDBACK-LOOPS.md should define the feedback_context DELEGATE field"
 
