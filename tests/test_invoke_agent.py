@@ -102,11 +102,26 @@ def make_valid_handback(task_id="2026-01-01-test-task", role="Engineer") -> Dict
 
 
 def write_handback_after_delay(handback_path: Path, handback: Dict, delay: float):
-    """Helper: write HANDBACK file to path after a delay (in a thread)."""
+    """Helper: write HANDBACK file to path after a delay (in a thread).
+
+    Uses an atomic write strategy: YAML is written to a sibling ``.tmp``
+    file first, then ``os.replace()`` renames it to the final path.
+    ``os.replace()`` is atomic on POSIX filesystems, so the poller will
+    never observe an empty or partially-written HANDBACK file — the file
+    either does not exist yet, or is complete.
+
+    This prevents the TOCTOU race condition where:
+      1. ``open(path, 'w')`` creates the file on disk (empty),
+      2. the polling loop sees ``path.exists() == True``,
+      3. ``read_text()`` returns ``""`` → ``yaml.safe_load("")`` → ``None``,
+      4. ``isinstance(None, dict)`` is ``False`` → ``HandbackValidationError``.
+    """
     def _write():
         time.sleep(delay)
-        with open(handback_path, 'w') as f:
+        tmp_path = handback_path.with_suffix('.tmp')
+        with open(tmp_path, 'w') as f:
             yaml.dump(handback, f, default_flow_style=False, sort_keys=False)
+        os.replace(tmp_path, handback_path)  # atomic rename on POSIX
     t = threading.Thread(target=_write, daemon=True)
     t.start()
     return t

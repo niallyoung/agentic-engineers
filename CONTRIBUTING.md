@@ -48,9 +48,46 @@ python3 -m pytest tests/ -q
 
 # With coverage
 python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
+
+# Concurrent/race-condition guard (required before push)
+python3 -m pytest tests/test_invoke_agent.py::TestConcurrentInvocations -v --tb=short
 ```
 
 All new code must have tests. CI enforces >85% coverage.
+
+### Parallel & Concurrent Test Validation
+
+The `TestConcurrentInvocations` test class validates that concurrent agent
+invocations work correctly under thread concurrency. This test class guards
+against a class of **TOCTOU race conditions** where a HANDBACK file poller
+reads an empty file that is still being written by a writer thread.
+
+**Run it before every push:**
+
+```bash
+make test-concurrent
+```
+
+Or equivalently:
+
+```bash
+python3 -m pytest tests/test_invoke_agent.py::TestConcurrentInvocations -v --tb=short
+```
+
+The pre-push hook (`.githooks/pre-push`) runs this automatically. If it fails
+locally it **will** fail in CI — do not bypass with `SKIP_HOOKS=1` unless you
+have an unrelated emergency.
+
+**Root cause history:** CI builds were failing with
+`HandbackValidationError('HANDBACK file does not contain a YAML mapping (dict)')`
+because `open(path, 'w')` creates the file on disk before `yaml.dump()` writes
+its content. The poller saw `path.exists() == True`, read an empty file, and
+failed validation. The fix is:
+
+1. **Test helper** (`write_handback_after_delay`): atomic write via `os.replace`
+   after writing to a `.tmp` sibling file.
+2. **Production code** (`_read_and_validate_handback`): returns `None` for empty
+   files instead of raising, signalling the polling loop to continue retrying.
 
 ---
 

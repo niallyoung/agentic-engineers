@@ -245,16 +245,22 @@ class AgentInvoker:
 
             # Check for HANDBACK file (may raise HandbackValidationError)
             if handback_path.exists():
-                handback = self._read_and_validate_handback(handback_path, task_id)
-                break
+                result = self._read_and_validate_handback(handback_path, task_id)
+                if result is not None:
+                    # File is fully written and valid — done polling
+                    handback = result
+                    break
+                # else: file exists but was empty (TOCTOU race) — continue polling
 
             # Check process state
             exit_code = process.poll()
             if exit_code is not None:
                 # Process has exited — do one final HANDBACK check
                 if handback_path.exists():
-                    handback = self._read_and_validate_handback(handback_path, task_id)
-                    break
+                    result = self._read_and_validate_handback(handback_path, task_id)
+                    if result is not None:
+                        handback = result
+                        break
                 if exit_code != 0:
                     crashed = True
                     break
@@ -331,9 +337,14 @@ class AgentInvoker:
         self,
         handback_path: Path,
         expected_task_id: str,
-    ) -> Dict:
+    ) -> Optional[Dict]:
         """
         Read and validate a HANDBACK YAML file.
+
+        Returns:
+            Validated HANDBACK dict, or ``None`` if the file exists but is
+            empty (the writer has not yet flushed its content — TOCTOU race).
+            The polling loop should continue polling when ``None`` is returned.
 
         Raises:
             HandbackValidationError: File has invalid YAML, missing required
@@ -349,6 +360,11 @@ class AgentInvoker:
             data = yaml.safe_load(raw)
         except yaml.YAMLError as exc:
             raise HandbackValidationError(f"Invalid YAML in HANDBACK file: {exc}")
+
+        if data is None:
+            # File exists but is empty — it is still being written (TOCTOU race).
+            # Return None to signal "not ready yet"; the polling loop will retry.
+            return None  # type: ignore[return-value]
 
         if not isinstance(data, dict):
             raise HandbackValidationError(
