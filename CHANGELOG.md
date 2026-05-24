@@ -5,30 +5,7 @@
 ## [Unreleased] - v0.35.0
 
 ### Added
-- persistent queue in ~/.agentic-engineers/{harness}/{session-id}/queue/ (#1)
-
-### Fixed
-- adjust CHANGELOG validation to match version-manager design
-- commit renderer/lib/render-lib.sh as source
-- export ArtifactMemoryStore and resolve __init__.py imports
-- remove duplicate path setup in test file
-- resolve pytest import issue for nested skill modules
-- resolve pytest module resolution for nested skill packages
-- update CI Python 3.11 for Ubuntu 24.04 compatibility
-
-### Documentation
-- remove [Unreleased] placeholder - versions released
-
-### Miscellaneous
-- Update README with note on missing pieces and updates (#2)
-- Update README.md (#5)
-
-## [v0.34.0] - 2026-05-24
-
-### Added
 - Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
-- Workflow-review skill: generates workflow diagrams, validates delegation chains
-- Security hardening: 6 modules (PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement)
 
 ### Fixed
 - commit renderer/lib/render-lib.sh as source
