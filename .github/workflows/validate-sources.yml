@@ -1,0 +1,176 @@
+name: Validate Source Integrity
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  check-orphaned-bytecode:
+    name: Check for Orphaned Bytecode
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git checks
+      
+      - name: 🔍 Check for orphaned .pyc files
+        run: |
+          echo "Checking for orphaned .pyc files in git..."
+          echo ""
+          
+          ORPHANED_COUNT=0
+          
+          # Find all .pyc files tracked in git (should be gitignored)
+          echo "1️⃣  Checking for committed .pyc files..."
+          while IFS= read -r pyc_file; do
+            if [ -n "$pyc_file" ]; then
+              echo "   ❌ ERROR: .pyc file in git (should be gitignored): $pyc_file"
+              ORPHANED_COUNT=$((ORPHANED_COUNT + 1))
+            fi
+          done < <(git ls-files '*.pyc' 2>/dev/null || true)
+          
+          # Find all .pyc in __pycache__ on disk and check for missing source
+          echo ""
+          echo "2️⃣  Checking for orphaned bytecode without source..."
+          while IFS= read -r pyc_dir; do
+            if [ -z "$pyc_dir" ]; then continue; fi
+            
+            parent_dir=$(dirname "$pyc_dir")
+            
+            for pyc in $(find "$pyc_dir" -name "*.pyc" 2>/dev/null); do
+              # Extract source filename from bytecode path
+              # __pycache__/module.cpython-37.pyc -> module.py
+              base_name=$(basename "$pyc" | sed 's/\.cpython-.*.pyc/.py/')
+              py_path="$parent_dir/$base_name"
+              
+              # Check if source exists on disk
+              if [[ ! -f "$py_path" ]]; then
+                # Also check if source is in git
+                if ! git ls-files "$py_path" > /dev/null 2>&1; then
+                  echo "   ❌ ERROR: Orphaned bytecode without source"
+                  echo "      Bytecode: $pyc"
+                  echo "      Expected source: $py_path"
+                  ORPHANED_COUNT=$((ORPHANED_COUNT + 1))
+                fi
+              fi
+            done
+          done < <(find . -type d -name __pycache__ -not -path "*/.git/*" 2>/dev/null)
+          
+          echo ""
+          if [ "$ORPHANED_COUNT" -gt 0 ]; then
+            echo "❌ Found $ORPHANED_COUNT orphaned bytecode issue(s)"
+            exit 1
+          fi
+          
+          echo "✅ No orphaned bytecode found"
+          exit 0
+
+  verify-test-sources:
+    name: Verify Test Sources Exist
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pytest pyyaml -q
+      
+      - name: 🧪 Verify all test sources exist
+        run: |
+          echo "Checking test source integrity..."
+          echo ""
+          
+          # Clear cache to force fresh test discovery
+          rm -rf .pytest_cache __pycache__
+          echo "🧹 Cleared .pytest_cache"
+          
+          # Run pytest collection (tests only, no execution)
+          echo "📦 Collecting tests..."
+          pytest tests/ --collect-only -q --tb=short 2>&1 | tee /tmp/collection.log
+          
+          COLLECTION_EXIT=$?
+          
+          if [ "$COLLECTION_EXIT" -ne 0 ]; then
+            echo ""
+            echo "❌ Test collection failed (missing sources or bytecode issues)"
+            echo ""
+            echo "Common causes:"
+            echo "  1. Test source .py file deleted but .pyc remains in __pycache__"
+            echo "  2. Background agent created .pyc without committing .py source"
+            echo ""
+            echo "Fix:"
+            echo "  rm -rf .pytest_cache __pycache__"
+            echo "  pytest --cache-clear"
+            exit 1
+          fi
+          
+          # Count collected tests
+          test_count=$(grep -c "test session starts" /tmp/collection.log || echo "0")
+          echo ""
+          echo "✅ All test sources verified (collected successfully)"
+          exit 0
+
+  check-skill-integrity:
+    name: Check Skill/Agent File Integrity
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 🔍 Verify skill/agent test-implementation pairs
+        run: |
+          echo "Checking skill/agent test-implementation pairs..."
+          echo ""
+          
+          INTEGRITY_ERRORS=0
+          
+          # Find all _test.py files in skills/
+          for test_file in $(find skills/ -name '*_test.py' 2>/dev/null); do
+            # Extract directory and base name
+            skill_dir=$(dirname "$test_file")
+            test_base=$(basename "$test_file" _test.py)
+            impl_file="$skill_dir/${test_base}.py"
+            
+            # Check if implementation exists
+            if [[ ! -f "$impl_file" ]]; then
+              # Check if it's an __init__.py or other module
+              if [[ "$impl_file" != *"__init__.py" ]]; then
+                echo "⚠️  Test file without implementation:"
+                echo "   Test: $test_file"
+                echo "   Expected impl: $impl_file"
+                INTEGRITY_ERRORS=$((INTEGRITY_ERRORS + 1))
+              fi
+            fi
+            
+            # Verify both files are in git
+            if ! git ls-files "$test_file" > /dev/null 2>&1; then
+              echo "❌ ERROR: Test file not in git: $test_file"
+              INTEGRITY_ERRORS=$((INTEGRITY_ERRORS + 1))
+            fi
+            
+            if [[ -f "$impl_file" ]]; then
+              if ! git ls-files "$impl_file" > /dev/null 2>&1; then
+                echo "❌ ERROR: Implementation file not in git: $impl_file"
+                INTEGRITY_ERRORS=$((INTEGRITY_ERRORS + 1))
+              fi
+            fi
+          done
+          
+          echo ""
+          if [ "$INTEGRITY_ERRORS" -gt 0 ]; then
+            echo "❌ Found $INTEGRITY_ERRORS file integrity issue(s)"
+            echo ""
+            echo "Background agents must commit both test and implementation files together."
+            exit 1
+          fi
+          
+          echo "✅ All skill/agent test-implementation pairs verified"
+          exit 0

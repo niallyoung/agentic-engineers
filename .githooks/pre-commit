@@ -254,6 +254,107 @@ if [ ! -f ".git/hooks/skip-version-manager" ] && command -v python3 >/dev/null 2
 fi
 # ─── End: Version manager section ──────────────────────────────────────────────
 
+# ─── Section: Orphaned Bytecode Check ──────────────────────────────────────
+# CRITICAL for file loss prevention: Reject commits with orphaned .pyc files
+# or .pyc without corresponding .py source.
+#
+# Background: Background agents create Python files. If .pyc exists without
+# .py source (or .pyc is newer than .py), pytest can load tests from bytecode
+# cache, masking the missing source files until tests fail later.
+#
+# Prevention: This check ensures:
+#   1. No .pyc files are ever staged for commit (bytecode = gitignore)
+#   2. No test sources from .pyc with missing .py
+#   3. Warn if .pyc newer than .py (indicates stale .py)
+#
+
+echo ""
+echo "🔒 Validating source file integrity..."
+
+SOURCE_ERRORS=0
+SOURCE_WARNINGS=0
+
+# Check 1: No .pyc files staged (bytecode should NEVER be committed)
+if git diff --cached --name-only | grep -qE '\.pyc$'; then
+    STAGED_PYC=$(git diff --cached --name-only | grep '\.pyc$' || true)
+    for f in $STAGED_PYC; do
+        fail "Staged .pyc file detected (bytecode must not be version controlled): $f"
+        fail "  Fix: git reset HEAD $f && echo '*.pyc' >> .gitignore"
+        SOURCE_ERRORS=$((SOURCE_ERRORS + 1))
+    done
+fi
+
+# Check 2: For each .py being staged, check for timestamp mismatch with .pyc
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
+for py_file in $STAGED_PY; do
+    [ -f "$py_file" ] || continue
+    
+    dir=$(dirname "$py_file")
+    base=$(basename "$py_file" .py)
+    
+    # Try to find corresponding .pyc in __pycache__
+    for pyc in "$dir"/__pycache__/"${base}"*.pyc 2>/dev/null; do
+        if [ -f "$pyc" ]; then
+            # Compare timestamps (platform-specific)
+            if command -v stat >/dev/null 2>&1; then
+                # Try GNU stat (Linux)
+                py_mtime=$(stat -c %Y "$py_file" 2>/dev/null || true)
+                pyc_mtime=$(stat -c %Y "$pyc" 2>/dev/null || true)
+                
+                # Fall back to BSD stat (macOS) if GNU stat fails
+                if [ -z "$py_mtime" ]; then
+                    py_mtime=$(stat -f %m "$py_file" 2>/dev/null || echo 0)
+                    pyc_mtime=$(stat -f %m "$pyc" 2>/dev/null || echo 0)
+                fi
+                
+                # Check if .pyc is newer than .py (suggests .py not regenerated)
+                if [ "$pyc_mtime" -gt "$py_mtime" ] 2>/dev/null; then
+                    warn "⚠️  Bytecode newer than source (stale .py?): $py_file"
+                    warn "    .pyc file: $pyc"
+                    warn "    Consider: rm -rf $dir/__pycache__ && python3 -m py_compile $py_file"
+                    SOURCE_WARNINGS=$((SOURCE_WARNINGS + 1))
+                fi
+            fi
+        fi
+    done
+done
+
+# Check 3: For test files being added, verify source implementation exists
+STAGED_TESTS=$(git diff --cached --name-only --diff-filter=A | grep '_test\.py$' || true)
+for test_file in $STAGED_TESTS; do
+    if [ ! -f "$test_file" ]; then
+        fail "Test file not found on disk (cannot verify implementation): $test_file"
+        SOURCE_ERRORS=$((SOURCE_ERRORS + 1))
+        continue
+    fi
+    
+    # For test files in skills/, verify corresponding implementation is staged
+    if [[ "$test_file" == skills/* ]]; then
+        test_dir=$(dirname "$test_file")
+        test_base=$(basename "$test_file" _test.py)
+        impl_file="$test_dir/${test_base}.py"
+        
+        # Check if implementation file is being added alongside test
+        if [ ! -f "$impl_file" ]; then
+            warn "⚠️  Test file without implementation (may be from orphaned .pyc): $test_file"
+            warn "    Expected implementation: $impl_file"
+            SOURCE_WARNINGS=$((SOURCE_WARNINGS + 1))
+        fi
+    fi
+done
+
+if [ "$SOURCE_ERRORS" -gt 0 ]; then
+    fail "$SOURCE_ERRORS source file integrity issue(s) found"
+fi
+
+if [ "$SOURCE_WARNINGS" -gt 0 ]; then
+    echo "⚠️  $SOURCE_WARNINGS warning(s) in source file integrity check"
+fi
+
+echo "✅ Source file integrity check passed"
+
+# ─── End: Orphaned Bytecode Check ──────────────────────────────────────────────
+
 # ── Result ─────────────────────────────────────────────────────────────────────
 if [ "$ERRORS" -gt 0 ]; then
   echo ""
