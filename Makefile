@@ -240,7 +240,17 @@ test: ## Run pytest test suite with coverage
 	@echo ""
 	@echo "✅ Tests complete. HTML coverage report: htmlcov/index.html"
 
-quality-gate: lint test verify validate-renders ## Pre-push quality checks (lint + test + verify + render validation)
+test-concurrent: ## Run concurrent invocation tests (race condition guard)
+	@echo "🔀 Running concurrent invocation tests (race condition guard)..."
+	@echo "   Validates that HANDBACK file writes are atomic and the poller"
+	@echo "   never reads a partially-written file under thread concurrency."
+	@cd "$(REPO_ROOT)" && python3 -m pytest \
+		tests/test_invoke_agent.py::TestConcurrentInvocations \
+		-v --tb=short
+	@echo ""
+	@echo "✅ Concurrent tests passed — no race conditions detected"
+
+quality-gate: lint test test-concurrent verify validate-renders ## Pre-push quality checks (lint + test + concurrent + verify + render validation)
 	@echo ""
 	@echo "✅✅✅ Quality gate PASSED ✅✅✅"
 	@echo ""
