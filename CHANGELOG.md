@@ -2,12 +2,13 @@
 
 
 
-## [Unreleased] - v0.35.0
+## [Unreleased]
 
 ### Added
 - persistent queue in ~/.agentic-engineers/{harness}/{session-id}/queue/ (#1)
 
 ### Fixed
+- adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
 - remove duplicate path setup in test file
 - resolve pytest import issue for nested skill modules
