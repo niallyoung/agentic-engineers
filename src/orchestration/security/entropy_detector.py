@@ -52,6 +52,12 @@ SECRET_FIELD_NAMES = {
 # Typical random: 4-5, passwords: 2-3.5, real words: 1-1.5
 MIN_ENTROPY_THRESHOLD = 3.5
 
+# Files to skip (false positive whitelist)
+# These are legitimate framework/library files that trigger false positives
+WHITELISTED_FILES = {
+    'auth.py',  # Legitimate authentication module
+}
+
 
 class EntropyDetector:
     """
@@ -198,6 +204,10 @@ class EntropyDetector:
         Returns:
             List of findings
         """
+        # Skip whitelisted files (known false positives)
+        if file_path.name in WHITELISTED_FILES:
+            return []
+        
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()

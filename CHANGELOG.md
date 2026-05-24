@@ -21,6 +21,7 @@
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
 - update CI Python 3.11 for Ubuntu 24.04 compatibility
+- update upload-artifact to v4 (deprecated v3)
 - use absolute REPO_ROOT paths in test_render_pipeline.py
 
 ### Documentation
