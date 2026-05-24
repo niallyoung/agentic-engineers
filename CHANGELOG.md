@@ -1,9 +1,25 @@
 # Changelog
 
+
+## [Unreleased] - v0.33.3
+
+### Fixed
+- aggressive cleanup - delete obsolete files and reorganize
+- clean up [Unreleased] section in CHANGELOG
+- fix CHANGELOG update logic to track all commits
+- fix TOCTOU race condition in concurrent HANDBACK file writes
+- refocus CONTRIBUTING.md on framework-based delegation
+- resolve CI path evaluation errors in tests
+- simplify CONTRIBUTING.md — defer to framework and meta-skills
+
+### Documentation
+- add missing HEAD commit to [Unreleased] section in CHANGELOG
+- comprehensive audit report and archive organization
+
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - v0.33.3
+## [v0.33.3] - 2026-05-24
 
 ### Fixed
 - aggressive cleanup - delete obsolete files and reorganize
