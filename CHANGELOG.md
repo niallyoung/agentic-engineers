@@ -8,36 +8,44 @@
 - restore file-sync and pre-gate implementations
 
 ### Fixed
-- aggressive cleanup - delete obsolete files and reorganize
-- clean up [Unreleased] section in CHANGELOG
-- fix CHANGELOG update logic to track all commits
-- fix TOCTOU race condition in concurrent HANDBACK file writes
+- correct bash syntax in pre-commit hook for .pyc detection
 - implement 6-layer file loss prevention framework
-- refocus CONTRIBUTING.md on framework-based delegation
-- resolve CI path evaluation errors in tests
-- simplify CONTRIBUTING.md — defer to framework and meta-skills
-
-### Documentation
-- add missing HEAD commit to [Unreleased] section in CHANGELOG
-- comprehensive audit report and archive organization
-- finalize v0.33.3 CHANGELOG entry (remove [Unreleased] placeholder)
 
 ### Miscellaneous
 - add file-sync analysis and pre-gate security framework"
 
 ## [v0.33.3] - 2026-05-24
 
+### Added
+- restore file-sync and pre-gate implementations (102 tests: file-sync skill + file-cleanup pre-gate framework)
+
 ### Fixed
-- aggressive cleanup - delete obsolete files and reorganize
-- clean up [Unreleased] section in CHANGELOG
-- fix CHANGELOG update logic to track all commits
+- correct bash syntax in pre-commit hook for .pyc detection
+- implement 6-layer file loss prevention framework
 - fix TOCTOU race condition in concurrent HANDBACK file writes
-- refocus CONTRIBUTING.md on framework-based delegation
+- fix CHANGELOG update logic to track all commits
 - resolve CI path evaluation errors in tests
+- aggressive cleanup - delete obsolete files and reorganize
+- refocus CONTRIBUTING.md on framework-based delegation
 - simplify CONTRIBUTING.md — defer to framework and meta-skills
+- clean up [Unreleased] section in CHANGELOG
 
 ### Documentation
 - comprehensive audit report and archive organization
+
+## [v0.34.0] - 2026-05-24
+
+### Added
+- File-sync skill: analyze repository scripts for utility, integration, and reusability
+- File-cleanup pre-gate security framework: 6-layer file loss prevention system
+
+### Fixed
+- Implement 6-layer file loss prevention framework (pre-commit hook, pytest audit, HANDBACK validation)
+- Correct bash syntax in pre-commit hook for .pyc detection
+
+### Documentation
+- BACKGROUND-AGENT-COMMIT-PROTOCOL.md: mandatory finalization steps for background agents
+- FILE-LOSS-PREVENTION.md: comprehensive 8-solution framework overview
 
 ## [v0.33.2] - 2026-05-24
 
