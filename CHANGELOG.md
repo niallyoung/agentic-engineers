@@ -12,6 +12,7 @@
 
 ### Fixed
 - add cache.py to entropy detector whitelist
+- add required SPEC.md sections for security compliance
 - adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
 - disable pure entropy detection, keep pattern matching
