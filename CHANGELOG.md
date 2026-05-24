@@ -8,6 +8,7 @@
 - Phase 2 - Orchestrator and invoke-agent routing
 - Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
 - Phase 3 - Test migration and multi-harness isolation
+- Phase 4 - E2E, rollback, monitoring
 
 ### Fixed
 - adjust CHANGELOG validation to match version-manager design
