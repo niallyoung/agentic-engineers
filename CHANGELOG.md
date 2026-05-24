@@ -6,6 +6,7 @@
 
 ### Fixed
 - resolve pytest import issue for nested skill modules
+- resolve pytest module resolution for nested skill packages
 
 ### Documentation
 - remove [Unreleased] placeholder - versions released
