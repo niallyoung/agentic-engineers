@@ -30,6 +30,7 @@
 - whitelist src/auth.py in entropy detector to reduce false positives
 
 ### Documentation
+- add SPEC.md to root directory for security compliance
 - remove [Unreleased] placeholder - versions released
 
 ## [v0.34.0] - 2026-05-24

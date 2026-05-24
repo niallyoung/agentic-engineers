@@ -1267,3 +1267,31 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 
 **Document Status:** Specification current. Phase 3 complete. Phase 6 span capture in progress.  
 **Maintenance:** Update when agent roles, models, routing rules, or SKILLS change.
+
+---
+
+## Specification
+
+This document defines the operational specification for the Agentic Engineers framework, including the orchestrator-first execution model, agent routing, queue management, security requirements, and compliance gates.
+
+---
+
+## Core Requirements
+
+1. **Orchestrator-First Execution**: All work must flow through the Orchestrator agent. No direct agent invocation is permitted.
+2. **Queue-Based Delegation**: Tasks are queued in session-partitioned directories and processed by agents.
+3. **Audit Trails**: Complete audit trails must be maintained for all DELEGATE/HANDBACK operations.
+4. **Quality Gates**: All completed work must pass Quality Engineer verification before completion.
+5. **Security Compliance**: All code must pass entropy-based credential detection and pattern matching.
+6. **Version Management**: Changes are tracked via CHANGELOG and semantic versioning.
+
+---
+
+## Quality Gates
+
+1. **Pre-Commit Gates**: Verify code integrity, SPEC compliance, and pre-push validation
+2. **Security Gates**: Entropy detection, SPEC.md compliance, dependency scanning
+3. **Framework Integrity**: Ensure consistency across all framework files
+4. **Source Validation**: Verify test sources and skill/agent file integrity
+5. **Quality Engineer Review**: Final validation of output quality and correctness
+6. **Post-Merge Validation**: Continuous monitoring for regressions and quality drift
