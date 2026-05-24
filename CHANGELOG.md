@@ -5,8 +5,10 @@
 ## [Unreleased] - v0.34.1
 
 ### Fixed
+- remove duplicate path setup in test file
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
+- write framework consistency test files and configuration artifacts
 
 ### Documentation
 - remove [Unreleased] placeholder - versions released

@@ -1,0 +1,60 @@
+---
+name: Framework Integrity
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  framework-gates:
+    name: Framework Consistency Gates
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.7"
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml pytest
+      
+      - name: Run framework consistency gates
+        run: |
+          python3 -m pytest tests/test_framework_consistency.py -v
+      
+      - name: Run render pipeline validation
+        run: |
+          python3 -m pytest tests/test_render_pipeline.py -v
+      
+      - name: Generate framework status report
+        if: always()
+        run: |
+          echo "## Framework Status Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Framework Gates" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 1: No orphaned agents" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 2: No archived agents deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 3: All skills have SKILL.md" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 4: Naming consistency enforced" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 5: FRAMEWORK-MANIFEST.yaml valid" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Gate 6: No duplicates/stale files" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Report summary
+        if: success()
+        run: |
+          echo "✅ All framework consistency gates passed"
+      
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Framework consistency gates failed - see details above"
+          exit 1

@@ -1,0 +1,122 @@
+---
+# FRAMEWORK-MANIFEST.yaml
+# Unified source-of-truth for all agentic-engineers entities
+# Defines: agents, skills, hooks, specs, harnesses, instructions
+# Purpose: Enable automated consistency checking and prevent sync drift
+
+version: "1.0"
+created: "2026-05-24"
+last_updated: "2026-05-24"
+
+validation_rules:
+  - "All source files must be listed in their respective sections"
+  - "No archived entities can be deployed to ~/.copilot/ or ~/.claude/"
+  - "All skills must have SKILL.md marker"
+  - "Agent source files must follow *-agent.md naming"
+  - "Rendered agent files must follow *.agent.md naming"
+
+agents:
+  engineer:
+    name: Engineer
+    model: claude-haiku-4.5
+    type: implementation
+    status: active
+    effort: low
+    description: "Well-scoped task with pre-written plan; low-medium complexity coding/implementation"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+  lead-engineer:
+    name: Lead Engineer
+    model: claude-sonnet-4.6
+    type: review
+    status: active
+    effort: medium
+    description: "Code review; quality decisions; medium-complexity planning; architectural guidance"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+  model-engineer:
+    name: Model Engineer
+    model: claude-haiku-4.5
+    type: optimization
+    status: active
+    effort: low
+    description: "Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations"
+    created: "2026-04-24"
+    last_deployed: "2026-05-24"
+
+  orchestrator:
+    name: Orchestrator
+    model: claude-haiku-4.5
+    type: routing
+    status: active
+    effort: low
+    description: "All entry points; routing decisions; task management; metrics collection"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+  principal-engineer:
+    name: Principal Engineer
+    model: claude-opus-4.7
+    type: architecture
+    status: active
+    effort: high
+    description: "Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+  quality-engineer:
+    name: Quality Engineer
+    model: claude-sonnet-4.6
+    type: validation
+    status: active
+    effort: medium
+    description: "Post-implementation quality gate; code review; model suitability assessment"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+  security-engineer:
+    name: Security Engineer
+    model: claude-opus-4.7
+    type: security
+    status: active
+    effort: high
+    description: "Security analysis; threat modeling; vulnerability audits; final escalation path"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+  senior-engineer:
+    name: Senior Engineer
+    model: claude-sonnet-4.6
+    type: implementation
+    status: active
+    effort: high
+    description: "Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes"
+    created: "2026-01-15"
+    last_deployed: "2026-05-24"
+
+skills:
+  queue-management:
+    name: queue-management
+    status: active
+    description: "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+    
+  todo-maintenance:
+    name: todo-maintenance
+    status: active
+    description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
+  version-manager:
+    name: version-manager
+    status: active
+    description: "Semantic versioning workflow: calculate next version, update CHANGELOG with [Unreleased] section"
+    created: "2026-02-01"
+    required_by:
+      - engineer
