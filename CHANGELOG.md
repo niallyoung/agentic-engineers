@@ -5,34 +5,21 @@
 ## [Unreleased] - v0.35.0
 
 ### Added
-- Phase 2 - Orchestrator and invoke-agent routing
-- Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
-- Phase 3 - Test migration and multi-harness isolation
-- Phase 4 - E2E, rollback, monitoring
+- persistent queue in ~/.agentic-engineers/{harness}/{session-id}/queue/ (#1)
 
 ### Fixed
-- add cache.py to entropy detector whitelist
-- add required SPEC.md sections for security compliance
-- adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
-- disable pure entropy detection, keep pattern matching
-- don't use filename as field_name in entropy detection
-- export ArtifactMemoryStore and resolve __init__.py imports
-- raise entropy threshold from 3.5 to 4.5 to reduce false positives
 - remove duplicate path setup in test file
-- remove version from [Unreleased] (final fix)
-- remove version number from [Unreleased] section
-- repair versioning sync corruption and add validation
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
 - update CI Python 3.11 for Ubuntu 24.04 compatibility
-- update upload-artifact to v4 (deprecated v3)
-- use absolute REPO_ROOT paths in test_render_pipeline.py
-- whitelist src/auth.py in entropy detector to reduce false positives
 
 ### Documentation
-- add SPEC.md to root directory for security compliance
 - remove [Unreleased] placeholder - versions released
+
+### Miscellaneous
+- Update README with note on missing pieces and updates (#2)
+- Update README.md (#5)
 
 ## [v0.34.0] - 2026-05-24
 
