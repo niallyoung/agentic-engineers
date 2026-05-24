@@ -1,18 +1,10 @@
 # Changelog
 
 
+
 ## [Unreleased] - v0.34.0
 
-### Added
-- add file-sync analysis and pre-gate security framework
-- restore file-sync and pre-gate implementations
-
-### Fixed
-- correct bash syntax in pre-commit hook for .pyc detection
-- implement 6-layer file loss prevention framework
-
-### Miscellaneous
-- add file-sync analysis and pre-gate security framework"
+No unreleased changes.
 
 ## [v0.33.3] - 2026-05-24
 
@@ -28,11 +20,6 @@
 - aggressive cleanup - delete obsolete files and reorganize
 - refocus CONTRIBUTING.md on framework-based delegation
 - simplify CONTRIBUTING.md — defer to framework and meta-skills
-- clean up [Unreleased] section in CHANGELOG
-
-### Documentation
-- comprehensive audit report and archive organization
-
 ## [v0.34.0] - 2026-05-24
 
 ### Added
