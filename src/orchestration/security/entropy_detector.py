@@ -218,7 +218,9 @@ class EntropyDetector:
                 if line.strip().startswith('#'):
                     continue
                 
-                line_findings = self.scan_text(line, file_path.name)
+                # Don't use filename as field_name to avoid false positives
+                # from high-entropy filenames like auth.py, cache.py, etc.
+                line_findings = self.scan_text(line, field_name="")
                 for finding in line_findings:
                     finding['file'] = str(file_path)
                 findings.extend(line_findings)

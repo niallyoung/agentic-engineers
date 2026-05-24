@@ -23,6 +23,7 @@
 - update CI Python 3.11 for Ubuntu 24.04 compatibility
 - update upload-artifact to v4 (deprecated v3)
 - use absolute REPO_ROOT paths in test_render_pipeline.py
+- whitelist src/auth.py in entropy detector to reduce false positives
 
 ### Documentation
 - remove [Unreleased] placeholder - versions released
