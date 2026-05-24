@@ -126,6 +126,35 @@ The Orchestrator operates differently from other agents:
 **Note on Orchestrator Autonomy:**
 Unlike other agents, the Orchestrator's autonomy is about **continuous polling**, not task-based. It should poll the queue repeatedly while tasks exist, but pause when the queue is empty. This is automatic behavior, not a conscious decision per task.
 
+## Autonomous Task Execution (All Agents)
+
+**CRITICAL PRINCIPLE**: Maximize throughput by parallelizing all independent work. Pause only for genuine decisions (not task sequencing).
+
+**Default behavior for all agents**:
+1. **PARALLELIZE by default** — if ≥2 tasks are independent, delegate them simultaneously
+2. **NEVER ask "which task should I do first?"** — that's a sequencing question, not a decision
+3. **PAUSE ONLY for genuine decisions** — present as shorthand: `1(a-z)`, `2(a-z)`, etc.
+
+**Examples**:
+- ❌ **Don't ask**: "Should I start task A or task B?" (both are independent → parallelize)
+- ❌ **Don't ask**: "Which order should I implement these?" (sequencing is autonomous)
+- ✅ **Do ask**: "Should we use Redis or in-memory caching?" (genuine design decision)
+  - Format: Present as `1a. Use Redis, 1b. Use in-memory, 1c. Use memcached`
+  - User responds: `1b`
+- ✅ **Do ask**: "For this role, should we remove it or deprecate it?" (genuine choice)
+  - Format: `1a. Remove completely, 1b. Deprecate for 2 releases, 1c. Rename and repurpose`
+
+**Decision shorthand format**:
+- Use `{question_number}({letter})` format for fast multi-option responses
+- Example user response: `1a, 2c, 3b` (quick, unambiguous)
+- Parse with `task_orchestration.parse_decision_response()` skill (`src/skills/_meta/task-orchestration/`)
+
+**Supported dependencies** (sequential-only cases):
+- Git safety: commits must be sequential if they touch same files
+- Build/test: if test depends on build output, run build first
+- Database: migrations must run before tests
+- → Identify these and run sequentially; everything else in parallel
+
 ## Integration
 
 Invoked by OpenCode when explicitly requested via `@orchestrator` mention.

@@ -1,10 +1,15 @@
 """
 conftest.py — pytest configuration for agentic-engineers
 
-Ensures the repo root and nested skill paths are on sys.path so that:
-  from src.orchestration.agents.X import Y
-  from scripts.queue_ops import QueueOperations  # from queue-management skill
+Ensures the repo root and src/skills paths are on sys.path so that:
+  - from src.orchestration.agents.X import Y
+  - from queue-management.scripts.queue_ops import QueueOperations  # from skill
 works when running tests from the repo root or any subdirectory.
+
+Key insight: Skills with hyphenated names (queue-management, file-sync, etc.) 
+are importable via importlib when src/skills/ is in sys.path. We use 
+importlib.import_module('queue-management.scripts.queue_ops') rather than
+direct imports to handle Python's inability to import modules with hyphens.
 """
 import sys
 import os
@@ -18,19 +23,23 @@ repo_root = str(Path(__file__).parent.absolute())
 if repo_root not in sys.path:
    sys.path.insert(0, repo_root)
 
-# Also add nested skill paths for test imports
-nested_paths = [
-    os.path.join(repo_root, "src", "skills", "queue-management"),
-    os.path.join(repo_root, "src", "skills", "file-sync"),
-    os.path.join(repo_root, "src", "skills", "pre-gate-security"),
-]
+# Add src/skills to sys.path so we can import hyphenated skill packages
+skills_path = os.path.join(repo_root, "src", "skills")
+if os.path.exists(skills_path) and skills_path not in sys.path:
+    sys.path.insert(0, skills_path)
 
-for path in nested_paths:
-    if os.path.exists(path) and path not in sys.path:
-        sys.path.insert(0, path)
+# Ensure PYTHONPATH environment variable is set for subprocesses
+if os.path.exists(skills_path):
+    os.environ['PYTHONPATH'] = skills_path + os.pathsep + repo_root + os.pathsep + os.environ.get('PYTHONPATH', '')
 
-# Also ensure PYTHONPATH environment variable is set
-os.environ['PYTHONPATH'] = repo_root + os.pathsep + os.environ.get('PYTHONPATH', '')
+
+def pytest_configure(config):
+    """
+    Configure pytest by ensuring skill paths are in sys.path before collection.
+    """
+    skills_path = os.path.join(repo_root, "src", "skills")
+    if os.path.exists(skills_path) and skills_path not in sys.path:
+        sys.path.insert(0, skills_path)
 
 
 def import_hyphenated_module(module_path):

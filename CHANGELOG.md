@@ -2,7 +2,10 @@
 
 
 
-## [Unreleased] - v0.34.0
+## [Unreleased] - v0.34.1
+
+### Fixed
+- resolve pytest import issue for nested skill modules
 
 ### Documentation
 - remove [Unreleased] placeholder - versions released
