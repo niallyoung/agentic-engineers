@@ -2,12 +2,13 @@
 
 
 
-## [Unreleased] - v0.35.0
+## [Unreleased]
 
 ### Added
 - Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
 
 ### Fixed
+- adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
 - remove duplicate path setup in test file
 - remove version from [Unreleased] (final fix)
