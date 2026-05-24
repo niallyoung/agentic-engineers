@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Added
+- Phase 2 - Orchestrator and invoke-agent routing
 - Phase 2 security hardening - PKI signing, entropy detection, agent identity, audit logging, rate limiting, budget enforcement
 
 ### Fixed
