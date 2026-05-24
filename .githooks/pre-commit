@@ -293,7 +293,8 @@ for py_file in $STAGED_PY; do
     base=$(basename "$py_file" .py)
     
     # Try to find corresponding .pyc in __pycache__
-    for pyc in "$dir"/__pycache__/"${base}"*.pyc 2>/dev/null; do
+    if [ -d "$dir/__pycache__" ]; then
+        for pyc in "$dir"/__pycache__/"${base}"*.pyc; do
         if [ -f "$pyc" ]; then
             # Compare timestamps (platform-specific)
             if command -v stat >/dev/null 2>&1; then
@@ -317,6 +318,7 @@ for py_file in $STAGED_PY; do
             fi
         fi
     done
+   fi
 done
 
 # Check 3: For test files being added, verify source implementation exists

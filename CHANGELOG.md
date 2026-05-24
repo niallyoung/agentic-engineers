@@ -12,6 +12,7 @@
 - clean up [Unreleased] section in CHANGELOG
 - fix CHANGELOG update logic to track all commits
 - fix TOCTOU race condition in concurrent HANDBACK file writes
+- implement 6-layer file loss prevention framework
 - refocus CONTRIBUTING.md on framework-based delegation
 - resolve CI path evaluation errors in tests
 - simplify CONTRIBUTING.md — defer to framework and meta-skills
