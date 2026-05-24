@@ -1,7 +1,11 @@
 # Documentation Index
 
-**Last Updated:** 2026-05-18  
-**Total docs:** ~130 files in `docs/`, 3 active archive subdirs + 1 deprecated
+**Last Updated:** 2025-05-24  
+**Active docs:** 21 files at root level  
+**Archived docs:** 46 files in `docs/archive/` (historical, design, reference)  
+**Total documentation:** 67 markdown files
+
+> **Note:** This index lists only active documentation. For archived files (design docs, analysis, historical), see [docs/archive/INDEX.md](archive/INDEX.md).
 
 ---
 
@@ -10,43 +14,45 @@
 | Document | Purpose | Read Time |
 |----------|---------|-----------|
 | [README.md](../README.md) | Project overview, quick start, architecture | 10 min |
-| [docs/ONBOARDING.md](ONBOARDING.md) | New developer onboarding | 15 min |
-| [docs/AGENTS.md](AGENTS.md) | 8 roles + routing decision tree | 15 min |
+| [ONBOARDING.md](ONBOARDING.md) | New developer onboarding | 15 min |
+| [AGENTS.md](AGENTS.md) | 8 roles + routing decision tree | 15 min |
 
 ---
 
-## 📋 Core Protocol
+## 📋 Core Protocol & Architecture
 
 | Document | Purpose |
 |----------|---------|
-| [docs/SPEC.md](SPEC.md) | **Source of truth** — implementation specification |
-| [docs/HANDOFF.md](HANDOFF.md) | DELEGATE/HANDBACK format + examples |
-| [docs/PROTOCOL.md](PROTOCOL.md) | Queue protocol documentation |
-| [docs/QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) | Queue mechanics + state machine |
-| [docs/SKILLS.md](SKILLS.md) | Skills overview (14 skills) |
-| [docs/QUALITY.md](QUALITY.md) | Quality gates (3-layer validation) |
+| [SPEC.md](SPEC.md) | **Source of truth** — implementation specification |
+| [PROTOCOL.md](PROTOCOL.md) | Queue protocol documentation |
+| [HANDOFF.md](HANDOFF.md) | DELEGATE/HANDBACK format + examples |
+| [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) | Queue mechanics + state machine |
+| [SYSTEM.md](SYSTEM.md) | System architecture and operations |
+| [WORKFLOW.md](WORKFLOW.md) | SDLC lifecycle and enforcement gates |
 
 ---
 
-## 🔧 Installation & Setup
+## 🛠️ Core Concepts & Implementation
 
 | Document | Purpose |
 |----------|---------|
-| [docs/OPENCODE-INSTALL.md](OPENCODE-INSTALL.md) | OpenCode harness installation |
-| [docs/CLAUDE-INSTALL.md](CLAUDE-INSTALL.md) | Claude Code harness installation |
-| [docs/INSTALL.md](INSTALL.md) | General installation guide |
-| [docs/CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md) | Protocol quick start |
+| [SKILLS.md](SKILLS.md) | Skills overview and creation |
+| [QUALITY.md](QUALITY.md) | Quality gates and validation |
+| [ENTRYPOINT.md](ENTRYPOINT.md) | Standard execution model |
+| [DELEGATE-HANDBACK-QUALITY-GATES.md](DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gate implementation |
+| [SELF-REFERENTIAL-WORKFLOW.md](SELF-REFERENTIAL-WORKFLOW.md) | Self-improvement patterns |
+| [SPAN-CAPTURE-INTEGRATION.md](SPAN-CAPTURE-INTEGRATION.md) | OpenTelemetry integration |
 
 ---
 
-## 🚦 Quick Start Guides
+## 🚀 Getting Started
 
 | Document | Purpose |
 |----------|---------|
-| [docs/QUICK-START-TOKEN-VISIBILITY.md](QUICK-START-TOKEN-VISIBILITY.md) | Monitor token usage across agents |
-| [docs/QUICK-START-BUDGET-CHECKING.md](QUICK-START-BUDGET-CHECKING.md) | Set and enforce token budgets |
-| [docs/QUICK-START-PRODUCTION-DEPLOYMENT.md](QUICK-START-PRODUCTION-DEPLOYMENT.md) | Deploy to production |
-| [docs/QUICK-START-CONCURRENT-AGENTS.md](QUICK-START-CONCURRENT-AGENTS.md) | Run agents in parallel |
+| [CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md) | Protocol quick start |
+| [config-standard.md](config-standard.md) | Configuration standards |
+
+**For detailed setup guides:** See `archive/` for archived installation docs (OpenCode, Claude, MSMTP setup)
 
 ---
 
