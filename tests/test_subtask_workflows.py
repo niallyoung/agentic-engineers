@@ -38,15 +38,6 @@ import pytest
 # Path setup – allow running from repo root or tests/ directory
 # ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parents[1]
-QM_ROOT = REPO_ROOT / "src" / "skills" / "queue-management"
-
-import importlib
-import importlib.util
-
-# ---------------------------------------------------------------------------
-# Path setup – allow running from repo root or tests/ directory
-# ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = REPO_ROOT / "src" / "skills"
 
 import importlib
