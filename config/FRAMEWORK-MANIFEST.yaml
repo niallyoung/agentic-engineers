@@ -104,7 +104,7 @@ skills:
     created: "2026-02-01"
     required_by:
       - orchestrator
-    
+
   todo-maintenance:
     name: todo-maintenance
     status: active
@@ -112,11 +112,3 @@ skills:
     created: "2026-02-01"
     required_by:
       - orchestrator
-
-  version-manager:
-    name: version-manager
-    status: disabled
-    description: "Semantic versioning workflow: calculate next version (CHANGELOG updates disabled)"
-    created: "2026-02-01"
-    required_by:
-      - engineer
