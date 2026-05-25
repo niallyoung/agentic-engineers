@@ -98,7 +98,7 @@ git commit --amend  # Add to current commit
 
 **CI validates CHANGELOG consistency:**
 - ✅ All commits must have corresponding CHANGELOG entries
-- ✅ [Unreleased] section must match commits since last release tag
+- ✅ CHANGELOG uses direct versioned entries (## [vX.Y.Z] - YYYY-MM-DD format)
 - ✅ Semantic version calculation must be correct
 
 If CI fails on CHANGELOG validation:

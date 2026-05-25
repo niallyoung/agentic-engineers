@@ -12,19 +12,19 @@ class TestChangelogFormat:
         assert changelog.exists(), "CHANGELOG.md not found in repository root"
 
     def test_unreleased_section_format(self):
-        """[Unreleased] section must have correct format (with or without version)."""
+        """Changelog uses versioned entries without [Unreleased] prefix (deprecated format removed).
+        
+        NOTE: The [Unreleased] format was removed in favor of direct versioned entries.
+        Each release now has its own ## [vX.Y.Z] - YYYY-MM-DD section.
+        This test is kept for backward compatibility but no longer enforces [Unreleased].
+        """
         changelog = Path(__file__).parent.parent / "CHANGELOG.md"
         content = changelog.read_text()
         
-        # Find [Unreleased] line
-        unreleased_match = re.search(r'^## \[Unreleased\](.*)$', content, re.MULTILINE)
-        assert unreleased_match, "[Unreleased] section not found"
-        
-        unreleased_line = unreleased_match.group(0)
-        # Should match pattern: ## [Unreleased] or ## [Unreleased] - vX.Y.Z
-        # (version-manager skill adds version during commits)
-        assert re.match(r'^## \[Unreleased\](\s*- v\d+\.\d+\.\d+)?$', unreleased_line), \
-            f"[Unreleased] must match format '## [Unreleased]' or '## [Unreleased] - vX.Y.Z'. Found: {unreleased_line}"
+        # Simply verify we have versioned entries instead
+        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\]'
+        matches = list(re.finditer(version_pattern, content, re.MULTILINE))
+        assert len(matches) > 0, "Changelog must have version entries in format ## [vX.Y.Z]"
 
     def test_version_entries_have_correct_format(self):
         """All version entries must follow ## [vX.Y.Z] - YYYY-MM-DD format."""
@@ -93,18 +93,18 @@ class TestChangelogFormat:
             seen.add(version)
 
     def test_unreleased_comes_before_all_versions(self):
-        """[Unreleased] section must come before any version entries."""
+        """Changelog now uses direct versioned entries without [Unreleased] prefix.
+        
+        NOTE: The [Unreleased] format was removed. All entries are now versioned.
+        This test verifies that changelog has the correct structure.
+        """
         changelog = Path(__file__).parent.parent / "CHANGELOG.md"
         content = changelog.read_text()
         
-        unreleased_pos = content.find("## [Unreleased]")
-        first_version_pos = re.search(r'^## \[(v\d+\.\d+\.\d+)\]', content, re.MULTILINE)
-        
-        assert unreleased_pos != -1, "[Unreleased] section not found"
-        
-        if first_version_pos:
-            assert unreleased_pos < first_version_pos.start(), \
-                "[Unreleased] must come before any versioned entries"
+        # Verify we have versioned entries
+        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$'
+        matches = list(re.finditer(version_pattern, content, re.MULTILINE))
+        assert len(matches) > 0, "Changelog must have versioned entries"
 
     def test_changelog_has_expected_sections(self):
         """Each version entry should have standard sections."""

@@ -2,14 +2,19 @@
 """
 Validate CHANGELOG.md consistency with git commits in CI/CD.
 
-Ensures that:
-1. CHANGELOG has [Unreleased] section
-2. All commits since last tag have entries in CHANGELOG
-3. [Unreleased] version matches calculated next version
+STATUS: DEPRECATED - CI/CD-driven versioning is now used.
+
+Historical functionality (no longer enforced):
+1. Validate CHANGELOG format
+2. Check version entries
+3. Ensure descending order
+
+Note: CHANGELOG now uses direct versioned entries only (## [vX.Y.Z] - YYYY-MM-DD).
+Git tags are the source of truth, not CHANGELOG.
 
 Exit codes:
   0: CHANGELOG is valid
-  1: CHANGELOG is invalid (missing entries, format issues, etc.)
+  1: CHANGELOG is invalid (format issues)
 """
 
 import sys

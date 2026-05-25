@@ -1,7 +1,13 @@
 """
-Test suite for version-manager skill.
+Test suite for version-manager skill (DEPRECATED/DISABLED).
 
-TDD approach:
+STATUS: These tests verify historical functionality that is now DISABLED.
+Tests are retained for reference but the feature is not used in production.
+
+CHANGELOG now uses direct versioned entries only (## [vX.Y.Z] - YYYY-MM-DD).
+Git tags are the source of truth, not CHANGELOG predictions.
+
+TDD approach (historical):
 - Phase 1 (Red): Write failing tests
 - Phase 2 (Green): Implement minimal code to pass tests
 - Phase 3 (Refactor): Optimize and add edge cases
@@ -139,7 +145,7 @@ class TestChangelogUpdater:
         TDD RED TEST: Verify [Unreleased] section exists in CHANGELOG.
         This test initially fails, then passes after implementation.
         """
-        changelog_content = Path(__file__).parent.parent.parent.parent / "CHANGELOG.md"
+        changelog_content = Path(__file__).parent.parent.parent.parent.parent / "CHANGELOG.md"
         assert changelog_content.exists(), "CHANGELOG.md must exist"
         
         content = changelog_content.read_text()
@@ -149,7 +155,7 @@ class TestChangelogUpdater:
     def test_changelog_unreleased_shows_next_version(self):
         """Test [Unreleased] section shows projected next version"""
         # This would require actual CHANGELOG.md to have proper format
-        changelog_content = Path(__file__).parent.parent.parent.parent / "CHANGELOG.md"
+        changelog_content = Path(__file__).parent.parent.parent.parent.parent / "CHANGELOG.md"
         content = changelog_content.read_text()
         
         # Extract [Unreleased] line
