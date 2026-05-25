@@ -69,41 +69,21 @@ jobs:
           fetch-depth: 0
 
       - name: Create semantic version tag
+        id: tag_version
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: minor
+          default_bump: patch
           default_prerelease_bump: prerelease
           release_branches: main
           custom_release_rules: "feat:minor:✨ Features,fix:patch:🐛 Bug Fixes,docs:patch:📚 Documentation,chore:patch:🔧 Chores,refactor:patch:♻️ Refactoring,perf:patch:⚡ Performance,security:patch:🔒 Security"
 
-  release:
-    name: Create GitHub Release (from git tags)
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Extract tag and changelog
-        id: tag_info
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.tag_info.outputs.tag }}
-          name: Release ${{ steps.tag_info.outputs.tag }}
-          body: |
-            ## Release ${{ steps.tag_info.outputs.tag }}
-            
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -112,11 +112,3 @@ skills:
     created: "2026-02-01"
     required_by:
       - orchestrator
-
-  version-manager:
-    name: version-manager
-    status: active
-    description: "Semantic versioning workflow: calculate next version, update CHANGELOG with [Unreleased] section"
-    created: "2026-02-01"
-    required_by:
-      - engineer

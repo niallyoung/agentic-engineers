@@ -97,18 +97,18 @@ agents:
     last_deployed: "2026-05-24"
 
 skills:
-   queue-management:
-     name: queue-management
-     status: active
-     description: "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation"
-     created: "2026-02-01"
-     required_by:
-       - orchestrator
-     
-   todo-maintenance:
-     name: todo-maintenance
-     status: active
-     description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
-     created: "2026-02-01"
-     required_by:
-       - orchestrator
+  queue-management:
+    name: queue-management
+    status: active
+    description: "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
+  todo-maintenance:
+    name: todo-maintenance
+    status: active
+    description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
