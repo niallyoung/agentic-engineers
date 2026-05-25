@@ -43,7 +43,6 @@ Last updated: 2026-05-24
 | file-sync | Discovers and analyzes scripts in the repository | operations | - |
 | skill-creator | Creates new skills following the specification | scaffolding | - |
 | voice-notify | Voice notification integration layer | notifications | - |
-| version-manager | Semantic versioning workflow | versioning | - |
 | todo-maintenance | Auto-sync queue DELEGATEs with TODO.md | maintenance | - |
 | model-engineer | Cost-quality optimization agent | optimization | - |
 

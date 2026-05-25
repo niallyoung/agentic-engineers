@@ -1,9 +1,11 @@
 # SECURITY BRIEFING: Version-Manager Threat Analysis
 
-**STATUS: ✅ RESOLVED - Issues fixed by disabling version-manager and removing [Unreleased] format (2026-06-02)**
+**STATUS: ✅ RESOLVED & DELETED - Removed entirely (2026-05-25)**
 
 **Resolution Actions:**
-- version-manager pre-commit hook disabled
+- version-manager skill deleted entirely from src/skills/
+- All rendered artifacts deleted from dist/*/skills/
+- version-manager entry removed from config/FRAMEWORK-MANIFEST.yaml
 - All [Unreleased] references removed from codebase
 - CHANGELOG uses direct versioned entries only
 - CI/CD-driven versioning enforced (git tags as sole source of truth)

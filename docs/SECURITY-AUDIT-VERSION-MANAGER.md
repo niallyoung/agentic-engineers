@@ -1,8 +1,8 @@
 # Security Threat Analysis: Version-Manager & CHANGELOG Workflow
 
-**STATUS: ✅ RESOLVED - [Unreleased] format removed, version-manager disabled (2026-06-02)**
+**STATUS: ✅ RESOLVED & DELETED - Removed entirely (2026-05-25)**
 
-**Resolution:** Issues resolved by removing [Unreleased] format and disabling version-manager. CHANGELOG now uses direct versioned entries only.
+**Resolution:** version-manager skill deleted entirely from src/skills/. All rendered artifacts deleted from dist/*/skills/. CHANGELOG now uses direct versioned entries only. CI/CD-driven semantic versioning enforced via git tags.
 
 ---
 
