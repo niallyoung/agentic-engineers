@@ -156,4 +156,4 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 Invoked by OpenCode when explicitly requested via `@lead-engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6
+You are powered by the model named claude-sonnet-4-6. The exact model ID is github-copilot/claude-sonnet-4-6

@@ -1,7 +1,7 @@
 ---
 description: "Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos"
 mode: subagent
-model: github-copilot/claude-opus-4.6
+model: github-copilot/claude-opus-4-6
 temperature: 0.5
 permission:
   read: allow
@@ -237,4 +237,4 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 Invoked by OpenCode when explicitly requested via `@principal-engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-opus-4.6. The exact model ID is github-copilot/claude-opus-4.6
+You are powered by the model named claude-opus-4-6. The exact model ID is github-copilot/claude-opus-4-6

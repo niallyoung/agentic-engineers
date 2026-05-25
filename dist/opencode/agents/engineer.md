@@ -1,7 +1,7 @@
 ---
 description: "Well-scoped task with pre-written plan; low-medium complexity coding/implementation"
 mode: subagent
-model: github-copilot/claude-haiku-4.5
+model: github-copilot/claude-haiku-4-5
 temperature: 0.5
 permission:
   read: allow
@@ -221,4 +221,4 @@ In reduced autonomy mode, ambiguity should trigger a pause, not autonomous conti
 
 Invoked by OpenCode when explicitly requested via `@engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-haiku-4.5. The exact model ID is github-copilot/claude-haiku-4.5
+You are powered by the model named claude-haiku-4-5. The exact model ID is github-copilot/claude-haiku-4-5

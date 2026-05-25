@@ -221,4 +221,4 @@ In reduced autonomy mode, ambiguity should trigger a pause, not autonomous conti
 
 Invoked by OpenCode when explicitly requested via `@engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-haiku-4.5. The exact model ID is github-copilot/claude-haiku-4.5
+You are powered by the model named claude-haiku-4-5. The exact model ID is github-copilot/claude-haiku-4-5

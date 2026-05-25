@@ -1257,11 +1257,122 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 
 ---
 
+## Model Naming & Harness Compatibility (LOCKED SPEC)
+
+This section documents the approved AI model names and their official sources. Model naming is **CRITICAL** for harness compatibility and MUST NOT be changed without updating all validators, tests, and this specification.
+
+### Official Model Names (AUTHORITATIVE)
+
+**Source:** [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/docs/models-overview)
+
+All agentic-engineers agents use Anthropic Claude models in the following **HYPHEN format only**:
+
+| Model | Model ID | Claude API Alias | Context Window | Max Output | Use Case |
+|-------|----------|------------------|-----------------|------------|----------|
+| **Claude Haiku 4.5** | `claude-haiku-4-5` | `claude-haiku-4-5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
+| **Claude Sonnet 4.6** | `claude-sonnet-4-6` | `claude-sonnet-4-6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
+| **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
+| **Claude Opus 4.7** | `claude-opus-4-7` | `claude-opus-4-7` | 1M | 128K | Highest capability; Security Engineer, Principal Engineer |
+
+**CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4-7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
+
+### Harness-Specific Model Format
+
+Each harness transforms the base model ID for its runtime:
+
+| Harness | Source Model | Rendered Format | Official Docs |
+|---------|--------------|-----------------|---------------|
+| **Copilot CLI** | `claude-opus-4-7` | `claude-opus-4-7` | [Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models) |
+| **Claude (Direct API)** | `claude-opus-4-7` | `claude-opus-4-7` | [Claude API](https://docs.anthropic.com/claude/docs/models-overview) |
+| **OpenCode** | `claude-opus-4-7` | `github-copilot/claude-opus-4-7` | [OpenCode Docs](https://github.com/github/opencode) |
+| **Pi (pi.dev)** | `claude-opus-4-7` | `claude-opus-4-7` | [Pi.dev](https://pi.dev/) |
+
+### Model Assignment by Agent Role
+
+As of 2026-05-25:
+
+- **Orchestrator:** `claude-haiku-4-5` (fast, low-cost, routing-only)
+- **Engineer:** `claude-haiku-4-5` (fast, pre-planned tasks)
+- **Senior Engineer:** `claude-sonnet-4-6` (complex coding, unscoped work)
+- **Lead Engineer:** `claude-sonnet-4-6` (code review, architectural guidance)
+- **Quality Engineer:** `claude-sonnet-4-6` (quality gates, verification)
+- **Model Engineer:** `claude-sonnet-4-6` (metrics analysis, recommendations)
+- **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4-7` (cross-service architecture)
+- **Security Engineer:** `claude-opus-4-7` (complex threat modeling, vulnerability analysis)
+
+### Validation & Enforcement
+
+**Mandatory Checks** (all must pass):
+
+1. **Source Files** (`src/agents/*.md`):
+   - All `model:` fields must use hyphen format: `claude-{family}-{version-with-hyphens}`
+   - Pre-commit hook validates via `renderer/validate_agents.py`
+   - Test: `tests/test_agent_model_names.py`
+
+2. **Validator** (`renderer/validate_agents.py`):
+   - `KNOWN_MODELS` constant must list only hyphen-format models
+   - Validator rejects any model with dots (e.g., `claude-opus-4.7`)
+   - Test: `tests/test_renderer_validation.py`
+
+3. **Documentation** (`docs/AGENTS.md`):
+   - Agent registry table must match source files exactly
+   - Pre-commit hook enforces sync between agent files and registry
+   - Test: `tests/test_agents_registry_sync.py`
+
+4. **Rendered Output** (all harnesses):
+   - `dist/copilot/agents/*.agent.md` must use hyphen format
+   - `dist/claude/agents/*.md` must use hyphen format
+   - `dist/opencode/agents/*.md` must use hyphen format
+   - `dist/pi/agent/pi.yml` must use hyphen format
+   - Test: `tests/test_render_model_names.py` (validates all renderers)
+
+### No-Regression Tests
+
+**Test File:** `tests/test_model_naming_compliance.py`
+
+Tests verify:
+
+```python
+# ✅ Approved formats
+"claude-haiku-4-5"  # Hyphens only
+"claude-sonnet-4-6"
+"claude-opus-4-7"
+
+# ❌ Forbidden formats (tests must FAIL if found)
+"claude-haiku-4.5"  # Dots NOT allowed
+"claude-sonnet-4.6"
+"claude.opus-4.7"   # Mixed format
+"CLAUDE-HAIKU-4-5"  # Uppercase
+```
+
+### Regression Mitigation
+
+If a model name with dots is committed:
+
+1. **Pre-commit hook catches it** — commit is rejected with error message
+2. **CI/CD catches it** — `test_model_naming_compliance.py` fails
+3. **Quality Engineer review** — mandatory validation step in HANDBACK review
+4. **Automatic fix available** — `scripts/fix-model-names.py` converts dots to hyphens
+
+### Future Changes
+
+**Procedure to add or update approved models:**
+
+1. Verify official source (Anthropic, GitHub, pi.dev documentation)
+2. Update SPEC.md (this section)
+3. Add to `KNOWN_MODELS` in `renderer/validate_agents.py`
+4. Update `docs/AGENTS.md` agent registry
+5. Run full test suite (`make test`)
+6. Commit with clear message: `fix: add/update model {name} per official docs (source: {url})`
+
+---
+
 ## Update Log
 
 - **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements.
 - **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, bypass procedures, and references to docs/SDLC-HOOKS.md.
 - **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section. Documents token tracking requirements, budget checking requirements, cost attribution, production deployment requirements, and implementation references.
+- **2026-05-25:** Added Model Naming & Harness Compatibility section. Documents approved model names per official Anthropic/GitHub/pi.dev sources, validates hyphen format across all harnesses, adds no-regression tests and enforcement procedures.
 
 ---
 

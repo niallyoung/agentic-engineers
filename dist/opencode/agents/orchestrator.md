@@ -1,7 +1,7 @@
 ---
 description: "All entry points; routing decisions; task management; metrics collection; model recommendations"
 mode: all
-model: github-copilot/claude-haiku-4.5
+model: github-copilot/claude-haiku-4-5
 temperature: 0.3
 permission:
   read: allow

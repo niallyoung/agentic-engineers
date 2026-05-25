@@ -23,7 +23,8 @@
 # Mirrors render-claude.sh in style and safety model. OpenCode-specific divergences:
 #   1. Emits opencode.jsonc + AGENTS.md (Claude Code has neither — uses CLAUDE.md only).
 #   2. Agent frontmatter schema is OpenCode-specific (mode/model/temperature/permission).
-#   3. Model IDs are fully-qualified provider/model strings (claude-foo-X.Y dotted).
+#   3. Model IDs are fully-qualified provider/model strings (github-copilot/claude-opus-4-7 format).
+#   4. Accepts both hyphen and dot formats on input, normalizes to hyphen format per Anthropic API.
 
 set -euo pipefail
 
@@ -55,30 +56,25 @@ source "$(dirname "$0")/lib.sh"
 
 # Map agentic-engineers canonical model id → OpenCode provider/model id.
 #
-# IMPORTANT: This mapping is OpenCode-install-specific for the github-copilot
-# provider (the only Claude provider currently in this user's registry per
-# `opencode models`). A user with the `anthropic/` provider configured would
-# want different IDs (e.g., anthropic/claude-haiku-4-5 with dashed versions).
+# IMPORTANT: OpenCode uses Anthropic's official model IDs (hyphens, not dots).
+# This mapping accepts both hyphen and dot formats for compatibility.
+# Output is always hyphen-format per Anthropic API specification:
+# https://docs.anthropic.com/claude/docs/models-overview
 #
-# Future enhancement: detect available providers from `opencode models` output
-# at install time and pick the best match. For now, hardcoded github-copilot
-# matches what `opencode models | grep -E '(haiku|sonnet|opus)'` returns:
-#   github-copilot/claude-haiku-4.5
-#   github-copilot/claude-opus-4.5
-#   github-copilot/claude-opus-4.7
-#   github-copilot/claude-sonnet-4.5
-#   github-copilot/claude-sonnet-4.6
+# Provider is hardcoded to github-copilot (the standard Copilot provider for
+# Claude models in OpenCode). For users with anthropic/ provider, the mapping
+# would be different (e.g., anthropic/claude-haiku-4-5).
 #
 # Note: claude-opus-4-6 is now declared in the custom provider config (see write_config)
 # so it maps directly instead of falling back to 4.7.
 map_model_opencode() {
 	case "$1" in
-		claude-haiku-4-5|claude-haiku-4.5)   echo "github-copilot/claude-haiku-4.5" ;;
-		claude-sonnet-4-6|claude-sonnet-4.6) echo "github-copilot/claude-sonnet-4.6" ;;
-		claude-sonnet-4-5|claude-sonnet-4.5) echo "github-copilot/claude-sonnet-4.5" ;;
-		claude-opus-4-7|claude-opus-4.7)     echo "github-copilot/claude-opus-4.7" ;;
-		claude-opus-4-6|claude-opus-4.6)     echo "github-copilot/claude-opus-4.6" ;;
-		claude-opus-4-5|claude-opus-4.5)     echo "github-copilot/claude-opus-4.5" ;;
+		claude-haiku-4-5|claude-haiku-4.5)   echo "github-copilot/claude-haiku-4-5" ;;
+		claude-sonnet-4-6|claude-sonnet-4.6) echo "github-copilot/claude-sonnet-4-6" ;;
+		claude-sonnet-4-5|claude-sonnet-4.5) echo "github-copilot/claude-sonnet-4-5" ;;
+		claude-opus-4-7|claude-opus-4.7)     echo "github-copilot/claude-opus-4-7" ;;
+		claude-opus-4-6|claude-opus-4.6)     echo "github-copilot/claude-opus-4-6" ;;
+		claude-opus-4-5|claude-opus-4.5)     echo "github-copilot/claude-opus-4-5" ;;
 		*) echo "" ;;  # sentinel — caller warns + skips model emission
 	esac
 }

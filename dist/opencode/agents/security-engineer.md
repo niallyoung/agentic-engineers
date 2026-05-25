@@ -1,7 +1,7 @@
 ---
 description: "Security analysis; threat modeling; vulnerability audits; final escalation path"
 mode: subagent
-model: github-copilot/claude-opus-4.7
+model: github-copilot/claude-opus-4-7
 temperature: 0.5
 permission:
   read: allow
