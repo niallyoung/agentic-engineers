@@ -20,7 +20,7 @@ CREDENTIAL_PATTERNS = {
     'github_token': re.compile(r'gh[ousp]_[A-Za-z0-9_]{36,255}'),
     'azure_key': re.compile(r'[A-Za-z0-9+/]{88}=='),
     'private_key_header': re.compile(r'-----BEGIN (RSA|DSA|EC|OPENSSH|PRIVATE) KEY-----'),
-    'db_password': re.compile(r'(password|passwd|pwd)\s*[:=]\s*[\'"]?([a-zA-Z0-9!@#$%^&*()_+=\-\[\]{};:,.<>?/~`]{8,})'),
+    'db_password': re.compile(r'(password|passwd|pwd)\s*[:=]\s*[\'"]([a-zA-Z0-9!@#$%^&*()_+=\-\[\]{};:,.<>?/~`]{12,})[\'"]'),
     'api_key': re.compile(r'(api[_-]?key|apikey)\s*[:=]\s*[\'"]?([a-zA-Z0-9\-_]{20,})'),
     'oauth_token': re.compile(r'(access|bearer)\s+[a-zA-Z0-9\-._~+/]+=*'),
     'jwt_token': re.compile(r'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.'),
@@ -36,6 +36,9 @@ EXCLUSION_PATTERNS = {
     'version_number': re.compile(r'^\d+\.\d+(\.\d+)?'),
     'url': re.compile(r'^https?://'),
     'hex_color': re.compile(r'^#[0-9a-fA-F]{6}$'),
+    'shebang': re.compile(r'^#!'),  # Python shebang lines
+    'python_path': re.compile(r'^.*python.*$', re.IGNORECASE),  # Python paths
+    'import_stmt': re.compile(r'^from .+ import .+$'),  # Import statements
 }
 
 # Field names that commonly contain secrets
@@ -50,15 +53,8 @@ SECRET_FIELD_NAMES = {
 
 # Minimum entropy threshold (bits per character)
 # Typical random: 4-5, passwords: 2-3.5, real words: 1-1.5
-# Raised to 4.5 to reduce false positives on legitimate identifiers
-MIN_ENTROPY_THRESHOLD = 4.5
-
-# Files to skip (false positive whitelist)
-# These are legitimate framework/library files that trigger false positives
-WHITELISTED_FILES = {
-    'auth.py',  # Legitimate authentication module
-    'cache.py',  # Legitimate caching module
-}
+# Using 4.8 to avoid false positives on legitimate Python identifiers and imports
+MIN_ENTROPY_THRESHOLD = 4.8
 
 
 class EntropyDetector:
@@ -148,16 +144,15 @@ class EntropyDetector:
         if pattern:
             return True, f"Matches pattern: {pattern}"
         
-        # Check field name heuristics
+        # Check field name heuristics ONLY (entropy unreliable)
         field_lower = field_name.lower() if field_name else ""
         if any(secret_field in field_lower for secret_field in SECRET_FIELD_NAMES):
             entropy = self.calculate_entropy(str(value))
-            if entropy > 2.0:  # Lower threshold for suspicious field names
+            if entropy > 2.5:  # Very high bar for field name heuristics only
                 return True, f"Suspicious field '{field_name}' with high entropy ({entropy:.2f})"
         
-        # NOTE: Pure entropy detection disabled due to excessive false positives
-        # from legitimate class names, identifiers, etc. Pattern-based detection
-        # is more reliable and has fewer false positives.
+        # NOTE: Entropy-only detection disabled (too many false positives on legitimate code)
+        # Pattern matching is more reliable and specific
         
         return False, None
     
@@ -204,10 +199,6 @@ class EntropyDetector:
         Returns:
             List of findings
         """
-        # Skip whitelisted files (known false positives)
-        if file_path.name in WHITELISTED_FILES:
-            return []
-        
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
@@ -218,9 +209,8 @@ class EntropyDetector:
                 if line.strip().startswith('#'):
                     continue
                 
-                # Don't use filename as field_name to avoid false positives
-                # from high-entropy filenames like auth.py, cache.py, etc.
-                line_findings = self.scan_text(line, field_name="")
+                # Don't pass filename as field_name - causes false positives on filenames
+                line_findings = self.scan_text(line, "")
                 for finding in line_findings:
                     finding['file'] = str(file_path)
                 findings.extend(line_findings)

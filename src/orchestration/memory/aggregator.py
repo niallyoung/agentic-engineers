@@ -20,31 +20,23 @@ logger = logging.getLogger(__name__)
 class SessionMemoryAggregator:
     """Aggregates and indexes all session memory events."""
     
-    def __init__(self, session_id: str, queue_dir: Optional[Path] = None):
+    def __init__(self, session_id: str, queue_dir: Optional[Path] = None, harness: Optional[str] = None):
         """
         Initialize aggregator.
         
         Args:
             session_id: Session identifier
-            queue_dir: Optional queue directory (defaults to ~/.copilot/queue/{session_id})
+            queue_dir: Optional queue directory (defaults to ~/.agentic-engineers/{harness}/{session-id}/queue/)
+            harness: Harness type (copilot, claude, gpt; defaults to copilot)
         """
         self.session_id = session_id
+        self.harness = harness or "copilot"
         self.memory_dir = get_session_memory_dir(session_id)
         
-        # Default queue directory
+        # Default queue directory using new path structure
         if queue_dir is None:
             home = Path.home()
-            # Try copilot first, then claude
-            copilot_queue = home / ".copilot" / "queue" / session_id
-            claude_queue = home / ".claude" / "queue" / session_id
-            
-            if copilot_queue.exists():
-                queue_dir = copilot_queue
-            elif claude_queue.exists():
-                queue_dir = claude_queue
-            else:
-                # Default to copilot
-                queue_dir = copilot_queue
+            queue_dir = home / ".agentic-engineers" / self.harness / session_id / "queue"
         
         self.queue_dir = Path(queue_dir)
         
@@ -55,11 +47,13 @@ class SessionMemoryAggregator:
         self.thinking_dir = self.memory_dir / "thinking"
         self.metrics_dir = self.memory_dir / "metrics"
         
-        # Global artifacts directories
-        artifacts_root = Path.cwd() / "artifacts"
-        self.artifacts_delegates_dir = artifacts_root / "delegates"
-        self.artifacts_handbacks_dir = artifacts_root / "handbacks"
-        self.artifacts_spans_dir = artifacts_root / "spans"
+        # Global artifacts directories (use same harness/session-id structure as queue)
+        # These are in ~/.agentic-engineers/{harness}/{session-id}/delegates, etc.
+        home = Path.home()
+        harness_root = home / ".agentic-engineers" / (harness or "copilot") / session_id
+        self.artifacts_delegates_dir = harness_root / "delegates"
+        self.artifacts_handbacks_dir = harness_root / "handbacks"
+        self.artifacts_spans_dir = harness_root / "spans"
         
         self.index_path = self.memory_dir / "index.json"
         self.index = self._load_index()
@@ -284,12 +278,22 @@ class SessionMemoryAggregator:
         """Collect all agent logs."""
         logs = []
         
+        # Ensure logs_dir exists before trying to copy files
+        self.logs_dir.mkdir(parents=True, exist_ok=True)
+        
         # Look for logs in common locations
         log_locations = [
             self.queue_dir / "logs",
-            Path.cwd() / "logs",
             Path.home() / ".copilot" / "logs",
         ]
+        
+        # Add current directory logs if cwd is available
+        try:
+            cwd_logs = Path.cwd() / "logs"
+            log_locations.append(cwd_logs)
+        except (OSError, FileNotFoundError):
+            # Current working directory may not exist (e.g., in tests with temp dirs)
+            pass
         
         for log_dir in log_locations:
             if log_dir.exists():
@@ -318,11 +322,21 @@ class SessionMemoryAggregator:
         """Collect thinking/reasoning output."""
         thinking = []
         
+        # Ensure thinking_dir exists before trying to copy files
+        self.thinking_dir.mkdir(parents=True, exist_ok=True)
+        
         # Look for thinking files
         think_locations = [
             self.queue_dir / "thinking",
-            Path.cwd() / "thinking",
         ]
+        
+        # Add current directory thinking if cwd is available
+        try:
+            cwd_thinking = Path.cwd() / "thinking"
+            think_locations.append(cwd_thinking)
+        except (OSError, FileNotFoundError):
+            # Current working directory may not exist (e.g., in tests with temp dirs)
+            pass
         
         for think_dir in think_locations:
             if think_dir.exists():
