@@ -8,7 +8,9 @@
 - persistent queue in ~/.agentic-engineers/{harness}/{session-id}/queue/ (#1)
 
 ### Fixed
+- adjust CHANGELOG validation to match version-manager design
 - commit renderer/lib/render-lib.sh as source
+- export ArtifactMemoryStore and resolve __init__.py imports
 - remove duplicate path setup in test file
 - resolve pytest import issue for nested skill modules
 - resolve pytest module resolution for nested skill packages
