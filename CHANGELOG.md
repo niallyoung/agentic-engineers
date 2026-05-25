@@ -62,7 +62,7 @@
 ### Removed
 - Healing Engineer role (9th role not in canonical spec, adds no proportional value)
 - Spec Engineer references (not in canonical 8-role spec)
-- GitHub Actions auto-tagging job (use local version-manager skill instead)
+- GitHub Actions auto-tagging job (git tags are authoritative source of truth)
 
 ### Security
 - Multi-harness queue isolation ensures complete artifact separation by sessionID/harness
