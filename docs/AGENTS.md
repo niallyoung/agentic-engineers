@@ -21,8 +21,8 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 
 | Role | Model | Effort | Cost/Task | Use When |
 |---|---|---|---|---|
-| **Orchestrator** | claude-haiku-4-5 | low | $0.03 | All entry points; routing decisions; task management; metrics collection; model recommendations |
-| **Engineer** | claude-haiku-4-5 | high | $0.03 | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
+| **Orchestrator** | claude-haiku-4.5 | low | $0.03 | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Engineer** | claude-haiku-4.5 | high | $0.03 | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
 | **Quality Engineer** | claude-sonnet-4-6 | medium | $0.09 | Post-implementation quality gate; code review; model suitability assessment |
 | **Senior Engineer** | claude-sonnet-4-6 | high | $0.09 | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
 | **Lead Engineer** | claude-sonnet-4-6 | high | $0.09 | Code review; quality decisions; medium-complexity planning; architectural guidance |
@@ -111,7 +111,7 @@ Orchestrator → Engineer (via DELEGATE block):
 handoff_type: DELEGATE
 task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Implement 30s token expiry grace period in {example-service}; do not change Cognito config
 context:
@@ -144,7 +144,7 @@ tests:
   - "make verify": PASS (48 tests)
 tokens_in: 1200
 tokens_out: 820
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 18
 escalations: 0
@@ -575,7 +575,7 @@ When creating a sub-task, include these new optional fields:
 handoff_type: DELEGATE
 task_id: payment-analysis-stripe-001
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: "Analyze Stripe payment service for security risks..."
 plan:

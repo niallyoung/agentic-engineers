@@ -7,7 +7,7 @@ model: claude-sonnet-4-6
 # Model Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Model Engineer  
-**Model**: claude-haiku-4-5  
+**Model**: claude-haiku-4.5  
 **Effort**: medium (downgraded from Sonnet for cost optimization)
 
 **Why Haiku**: Token efficiency analysis is numeric/arithmetic (efficiency ratio, confidence scoring). Haiku excels at this.
