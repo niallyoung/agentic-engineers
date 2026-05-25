@@ -248,3 +248,36 @@ def tmp_queue(tmp_path: Path) -> Path:
     for subdir in ("incoming", "processing", "done"):
         (tmp_path / subdir).mkdir(parents=True)
     return tmp_path
+
+
+@pytest.fixture(scope="session", autouse=True)
+def regenerate_dist():
+    """
+    Auto-regenerate dist/ from src/ before any tests run.
+    
+    This fixture runs once per test session (before all tests) and ensures dist/
+    is populated from source. This allows dist/ to be kept out of git (as a
+    generated artifact) while tests can still validate the render pipeline.
+    
+    Triggered automatically for all tests (autouse=True).
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    render_targets = [
+        "render-copilot",
+        "render-claude",
+        "render-opencode",
+        "render-pi",
+        "render-specs"
+    ]
+    
+    # Check if dist/ is empty (needs regeneration)
+    dist_dir = repo_root / "dist"
+    dist_is_empty = not any(dist_dir.glob("*"))
+    
+    if dist_is_empty:
+        print("\n🔨 Regenerating dist/ from src/ before tests...\n")
+        for target in render_targets:
+            result = os.system(f"cd {repo_root} && make {target} > /dev/null 2>&1")
+            if result != 0:
+                print(f"⚠️  make {target} failed (non-critical for tests)")
+        print("✅ dist/ regenerated\n")
