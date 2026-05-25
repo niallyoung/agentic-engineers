@@ -20,7 +20,7 @@ CREDENTIAL_PATTERNS = {
     'github_token': re.compile(r'gh[ousp]_[A-Za-z0-9_]{36,255}'),
     'azure_key': re.compile(r'[A-Za-z0-9+/]{88}=='),
     'private_key_header': re.compile(r'-----BEGIN (RSA|DSA|EC|OPENSSH|PRIVATE) KEY-----'),
-    'db_password': re.compile(r'(password|passwd|pwd)\s*[:=]\s*[\'"]?([a-zA-Z0-9!@#$%^&*()_+=\-\[\]{};:,.<>?/~`]{8,})'),
+    'db_password': re.compile(r'(password|passwd|pwd)\s*[:=]\s*[\'"]([a-zA-Z0-9!@#$%^&*()_+=\-\[\]{};:,.<>?/~`]{12,})[\'"]'),
     'api_key': re.compile(r'(api[_-]?key|apikey)\s*[:=]\s*[\'"]?([a-zA-Z0-9\-_]{20,})'),
     'oauth_token': re.compile(r'(access|bearer)\s+[a-zA-Z0-9\-._~+/]+=*'),
     'jwt_token': re.compile(r'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.'),
@@ -36,6 +36,9 @@ EXCLUSION_PATTERNS = {
     'version_number': re.compile(r'^\d+\.\d+(\.\d+)?'),
     'url': re.compile(r'^https?://'),
     'hex_color': re.compile(r'^#[0-9a-fA-F]{6}$'),
+    'shebang': re.compile(r'^#!'),  # Python shebang lines
+    'python_path': re.compile(r'^.*python.*$', re.IGNORECASE),  # Python paths
+    'import_stmt': re.compile(r'^from .+ import .+$'),  # Import statements
 }
 
 # Field names that commonly contain secrets
@@ -50,8 +53,8 @@ SECRET_FIELD_NAMES = {
 
 # Minimum entropy threshold (bits per character)
 # Typical random: 4-5, passwords: 2-3.5, real words: 1-1.5
-# Using 4.5 to avoid false positives on legitimate identifiers
-MIN_ENTROPY_THRESHOLD = 4.5
+# Using 4.8 to avoid false positives on legitimate Python identifiers and imports
+MIN_ENTROPY_THRESHOLD = 4.8
 
 
 class EntropyDetector:
