@@ -63,9 +63,9 @@ artifacts/
 # ============================================================================
 # BUILD & TEMPORARY
 # ============================================================================
-# NOTE: dist/ is intentionally NOT ignored — it is the render output that is
-# committed as the single source of truth for skill/agent artifacts.
-# See RENDERING.md for the full src/ → dist/ → ~/.harness/ flow.
+# dist/ — generated render output (src/ → dist/ → ~/.harness/ flow)
+# Regenerated on build; not committed. See RENDERING.md for details.
+dist/
 *.tmp
 temp/
 # .claude is outside the repo (harness install target) — not committed here
