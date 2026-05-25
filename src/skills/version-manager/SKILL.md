@@ -1,18 +1,18 @@
 ---
 title: "version-manager"
-description: "Semantic versioning workflow: calculate next version, update CHANGELOG with [Unreleased] section, and manage release cadence via git hooks"
+description: "Semantic versioning workflow: calculate next version, manage release cadence via git hooks (currently disabled in favor of CI/CD-driven versioning)"
 role: "Security Engineer"
 model: "claude-haiku-4-5"
 effort: "medium"
-status: "implemented"
+status: "disabled"
 version: "1.0.0"
 ---
 
 # version-manager Skill
 
-**Purpose:** Implement semantic versioning as a local workflow, calculating next versions based on outstanding commits and maintaining [Unreleased] sections in CHANGELOG.
+**Purpose:** Implement semantic versioning as a local workflow, calculating next versions based on outstanding commits.
 
-**Status:** ✅ Implemented and TDD-verified
+**Status:** ⚠️ DISABLED - CI/CD-driven versioning is used instead (git tags are source of truth)
 
 ---
 
@@ -25,20 +25,11 @@ The `version-manager` skill provides:
    - Determines major/minor/patch bumps using conventional commits
    - Calculates next projected version
 
-2. **CHANGELOG Management**
-   - Maintains [Unreleased] section with next projected version
-   - Captures all unreleased commits grouped by type (feat, fix, etc.)
-   - Updates on every commit via git hook
-
-3. **Local Workflow Integration**
-   - Git pre-commit hook that runs version calculation
+2. **Local Workflow Integration**
    - Manual invocation via `scripts/version-manager/update-changelog.py`
    - No CI/CD dependency — works locally before push
 
-4. **Future CICD Transition**
-   - Local hooks provide version source of truth
-   - CI/CD will consume local versioning (not generate it)
-   - Enables decentralized release management
+**Note:** This skill was designed for local versioning workflows but is currently **disabled** in favor of CI/CD-driven semantic versioning. The project uses `mathieudutour/github-tag-action` to automatically create git tags from commit messages. The skill is retained for reference and potential future use cases.
 
 ---
 
@@ -62,22 +53,22 @@ skills/version-manager/
 └── ci.yml                      # (MODIFIED) Tag/release only, no version generation
 ```
 
-### Data Flow
+### Data Flow (DISABLED)
 
+**Historical workflow (no longer active):**
 ```
 git commit -m "feat: ..."
     ↓
-pre-commit hook triggers
+(pre-commit hook was disabled)
     ↓
-version_calculator.py
-  - Reads commits since last tag
-  - Determines next version
+version_calculator.py could calculate next version
     ↓
-changelog_updater.py
-  - Adds [Unreleased] section
-  - Lists unreleased commits grouped by type
-    ↓
-CHANGELOG.md updated
+Manual invocation only
+```
+
+**Current CI/CD workflow:**
+```
+git commit → push to main → CI/CD analyzes commits → git tag created
 ```
 
 ---
@@ -110,18 +101,17 @@ CHANGELOG.md updated
 - Wrapper around scripts/get_version.py
 - Returns: latest git tag or fallback
 
-### changelog_updater.py
+### changelog_updater.py (DISABLED)
 
-**`update_changelog_unreleased(next_version: str, commits: List)`**
-- Update CHANGELOG.md [Unreleased] section
-- Groups commits by type
-- Generates markdown sections
-- Inserts after header, before first version
+**Note:** CHANGELOG update functionality is disabled in favor of CI/CD-driven versioning. Functions are retained for reference only.
 
-**`generate_unreleased_section(version: str, commits: List) -> str`**
-- Generate markdown for [Unreleased] section
-- Format: `## [Unreleased] - vX.Y.Z (next)`
-- Sections: Added, Fixed, Changed, Documentation, etc.
+**`update_changelog_unreleased(next_version: str, commits: List)`** - DISABLED
+- Historical function for CHANGELOG updates
+- No longer used in active workflow
+
+**`generate_unreleased_section(version: str, commits: List) -> str`** - DISABLED
+- Historical function for section generation
+- No longer used in active workflow
 
 ---
 
@@ -129,94 +119,84 @@ CHANGELOG.md updated
 
 ### `.githooks/pre-commit`
 
-Triggers on every `git commit`:
+**Status: DISABLED**
 
+The version-manager pre-commit hook has been **disabled** to align with CI/CD-driven semantic versioning.
+
+**Why disabled:**
+- Project uses CI/CD to automatically create git tags from commit messages
+- Git tags are the authoritative version source
+- CHANGELOG is documentation, not source of truth
+- No need for automatic CHANGELOG updates on every commit
+
+**Historical behavior (no longer active):**
 ```bash
-#!/bin/bash
-# Run version calculation and CHANGELOG update
-python3 scripts/version-manager/update-changelog.py --auto
-
-# Stage updated CHANGELOG
-git add CHANGELOG.md
-
-exit 0
+# This section is commented out in .githooks/pre-commit
+# python3 scripts/version-manager/update-changelog.py --auto
+# git add CHANGELOG.md
 ```
-
-**Behavior:**
-- Non-blocking: failures don't prevent commit
-- Automatic: no user interaction required
-- Idempotent: running twice has same effect
-- Local-only: no network calls
-
-**Configuration:**
-- Git is configured to use `.githooks` directory
-- Already set in CI/CD workflow
-- Can be enabled locally: `git config core.hooksPath .githooks`
 
 ---
 
-## Manual Invocation
+## Manual Invocation (Reference Only)
 
-### CLI: Update CHANGELOG
+**Note:** These commands are available but **not recommended** for active use. CI/CD handles versioning automatically.
+
+### CLI: Version Calculation (if needed)
 
 ```bash
-# Update CHANGELOG with unreleased section
-python3 scripts/version-manager/update-changelog.py
-
-# Show next version without updating
+# Calculate next version without updating CHANGELOG
 python3 scripts/version-manager/update-changelog.py --dry-run
 
-# Force update even if CHANGELOG is current
-python3 scripts/version-manager/update-changelog.py --force
-
-# Verbose output for debugging
-python3 scripts/version-manager/update-changelog.py --verbose
+# Get current version from git tags
+python3 scripts/get_version.py
 ```
 
-### In Code
+### In Code (Reference)
 
 ```python
-from skills.version_manager import version_calculator, changelog_updater
+from skills.version_manager import version_calculator
 
-# Get next version
+# Get next version (for reference)
 next_version = version_calculator.calculate_next_version_from_commits()
 
-# Update CHANGELOG
-changelog_updater.update_changelog_unreleased(next_version)
+# Note: CHANGELOG update functions are disabled
 ```
 
 ---
 
-## Acceptance Criteria
+## Acceptance Criteria (Historical)
 
+**Original implementation (now disabled):**
 - ✅ SKILL.md created with proper frontmatter
 - ✅ Version calculation works with conventional commits
-- ✅ [Unreleased] section added to CHANGELOG
-- ✅ Unreleased commits grouped by type (feat, fix, etc.)
-- ✅ Git hook runs on pre-commit
-- ✅ Next version displayed correctly
-- ✅ All unreleased commits captured
 - ✅ Tests pass (TDD Red→Green→Refactor)
-- ✅ CICD workflow updated (no version generation step)
-- ✅ Can run locally without CI/CD dependency
+- ✅ Can calculate versions locally without CI/CD dependency
+
+**Current status:**
+- ✅ Disabled in favor of CI/CD-driven versioning
+- ✅ Git tags are source of truth
+- ✅ CHANGELOG uses direct versioned entries only
 
 ---
 
-## Testing Strategy (TDD)
+## Testing Strategy (TDD - Historical)
+
+**Original TDD approach (when feature was active):**
 
 ### Phase 1: Red (Failing Test)
-- Test checks: CHANGELOG has [Unreleased] section
-- Test fails: Current CHANGELOG doesn't have unreleased section
+- Test checked for version calculation
 
 ### Phase 2: Green (Minimal Implementation)
-- Implement version calculation
-- Implement CHANGELOG update
-- Test passes
+- Implemented version calculation
+- Tests passed
 
 ### Phase 3: Refactor
-- Optimize for edge cases
-- Add comprehensive commit parsing
-- Enhance error handling
+- Optimized for edge cases
+- Added comprehensive commit parsing
+- Enhanced error handling
+
+**Current testing:** Tests verify version calculation functionality only (CHANGELOG update tests are deprecated).
 
 ---
 
@@ -249,8 +229,8 @@ changelog_updater.update_changelog_unreleased(next_version)
 - Uses hardcoded v0.8.0 as baseline
 
 ### No Commits Since Tag
-- [Unreleased] section shows empty or "No unreleased changes"
 - Version remains current
+- No changes needed
 
 ### Mixed Commit Types
 - If has both feat and fix: minor bump (feat > fix)
@@ -334,18 +314,19 @@ python3 scripts/version-manager/update-changelog.py --force
 ## Notes for Maintainers
 
 ### When Releasing
-1. Ensure all commits have proper conventional commit format
-2. Run `git fetch --tags` to sync with CI-created remote tags
-3. Run `python3 scripts/version-manager/update-changelog.py --dry-run` to preview next version
-4. Commit changes locally (pre-commit hook updates CHANGELOG)
-5. Push to main via `git push && git push --tags`
-6. CI/CD creates new git tag automatically
-7. GitHub Release created from tag
+1. Ensure all commits have proper conventional commit format (feat:, fix:, etc.)
+2. Push to main branch
+3. CI/CD Quality Gate runs (lint, test, verify)
+4. If Quality Gate passes, CI/CD automatically:
+   - Analyzes commits since last tag
+   - Creates new git tag (e.g., v0.35.0)
+   - Creates GitHub Release with notes
+5. CHANGELOG can be updated manually later (optional documentation step)
 
 ### When Adding Features
-- All features become [Unreleased] until released
-- Run manual `update-changelog.py` to update immediately
-- Hook runs automatically on next commit
+- Commit with proper conventional commit messages
+- CI/CD handles versioning automatically
+- No manual version management needed
 
 ### When Debugging
 - Check CHANGELOG.md format: sections, dates, versions

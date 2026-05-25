@@ -1,10 +1,13 @@
 """
 version-manager skill: semantic versioning workflow.
 
-Provides:
+STATUS: DISABLED - CI/CD-driven versioning is used instead.
+
+Provides (for reference only):
 - Semantic version calculation from commits
-- CHANGELOG [Unreleased] section management
-- Git hook integration
+- Git hook integration (disabled)
+
+Note: CHANGELOG update functionality is disabled. Git tags are source of truth.
 """
 
 from .version_calculator import (

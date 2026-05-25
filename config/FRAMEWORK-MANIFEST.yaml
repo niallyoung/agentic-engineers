@@ -115,8 +115,8 @@ skills:
 
   version-manager:
     name: version-manager
-    status: active
-    description: "Semantic versioning workflow: calculate next version, update CHANGELOG with [Unreleased] section"
+    status: disabled
+    description: "Semantic versioning workflow: calculate next version (CHANGELOG updates disabled)"
     created: "2026-02-01"
     required_by:
       - engineer

@@ -1,7 +1,13 @@
 """
-Test suite for version-manager skill.
+Test suite for version-manager skill (DEPRECATED/DISABLED).
 
-TDD approach:
+STATUS: These tests verify historical functionality that is now DISABLED.
+Tests are retained for reference but the feature is not used in production.
+
+CHANGELOG now uses direct versioned entries only (## [vX.Y.Z] - YYYY-MM-DD).
+Git tags are the source of truth, not CHANGELOG predictions.
+
+TDD approach (historical):
 - Phase 1 (Red): Write failing tests
 - Phase 2 (Green): Implement minimal code to pass tests
 - Phase 3 (Refactor): Optimize and add edge cases

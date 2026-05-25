@@ -252,7 +252,7 @@
 - [ ] Update queue path examples
 
 #### CHANGELOG.md
-- [ ] Add section under `[Unreleased]`:
+- [ ] Add section under `versioned entry (## [vX.Y.Z] - YYYY-MM-DD)`:
   ```markdown
   ### Added
   - Queue path unification (Phase 1 of migration)
@@ -474,7 +474,7 @@
 **Effort**: 30 minutes  
 **Status**: ⏳ Not Started
 
-- [ ] Add entry under `[Unreleased]` section
+- [ ] Add entry under `versioned entry (## [vX.Y.Z] - YYYY-MM-DD)` section
 - [ ] Include:
   - Added: New features (isolation, env vars)
   - Changed: Breaking changes (week 5+)
