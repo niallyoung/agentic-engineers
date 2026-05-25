@@ -1,10 +1,15 @@
 """
-CHANGELOG.md management: maintains [Unreleased] section.
+CHANGELOG.md management (DEPRECATED/DISABLED).
 
-Maintains consistent [Unreleased] section with:
-- Next projected version
-- Commits grouped by type (feat, fix, docs, etc.)
-- Proper markdown formatting
+STATUS: This module is DISABLED in favor of CI/CD-driven versioning.
+CHANGELOG now uses direct versioned entries only (## [vX.Y.Z] - YYYY-MM-DD).
+
+Historical functionality (no longer used):
+- Next projected version calculation
+- Commits grouped by type
+- Markdown formatting
+
+Note: Functions are retained for reference but should not be used in active workflow.
 """
 
 import re

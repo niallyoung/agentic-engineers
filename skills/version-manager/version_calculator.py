@@ -50,9 +50,22 @@ def run_git(cmd: List[str], cwd: Optional[str] = None) -> str:
     return result.stdout.strip()
 
 
-def get_latest_tag() -> Optional[str]:
-    """Get latest semantic version tag."""
+def get_latest_tag(fetch_remote: bool = False) -> Optional[str]:
+    """
+    Get latest semantic version tag.
+    
+    Args:
+        fetch_remote: If True, fetch tags from remote before reading. Useful when
+                     CI creates remote tags that haven't been pulled locally yet.
+    
+    Returns:
+        Latest semantic version tag (e.g., 'v0.9.1') or None if no tags exist.
+    """
     try:
+        if fetch_remote:
+            # Sync remote CI-created tags before reading
+            run_git(["fetch", "--tags", "--quiet"])
+        
         tags_output = run_git(["tag", "-l", "v*", "--sort=-version:refname"])
         if not tags_output:
             return None

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-CLI wrapper for version-manager skill.
+CLI wrapper for version-manager skill (DEPRECATED/DISABLED).
 
-Updates CHANGELOG.md with [Unreleased] section based on commits since last tag.
+STATUS: This script is DISABLED in favor of CI/CD-driven versioning.
+CHANGELOG now uses direct versioned entries only, not unreleased sections.
 
-Usage:
-    python3 update-changelog.py              # Update CHANGELOG with unreleased section
-    python3 update-changelog.py --dry-run    # Show what would be updated (no write)
-    python3 update-changelog.py --force      # Force update even if current
-    python3 update-changelog.py --verbose    # Verbose output
+Git tags are the source of truth, created automatically by CI/CD.
+
+Historical usage (no longer recommended):
+    python3 update-changelog.py --dry-run    # Show next version (read-only)
+    
+Note: Update functionality is disabled. Use for version calculation only if needed.
 """
 
 import sys
@@ -52,7 +54,7 @@ def get_repo_root() -> Path:
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Update CHANGELOG.md with [Unreleased] section"
+        description="[DEPRECATED] Calculate next version (CHANGELOG updates disabled)"
     )
     parser.add_argument(
         "--dry-run",

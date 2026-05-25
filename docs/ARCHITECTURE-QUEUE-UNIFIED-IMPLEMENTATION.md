@@ -593,7 +593,7 @@ Complete documentation, announce deprecation, and prepare for legacy code remova
 
 **Entry**:
 ```markdown
-## [Unreleased]
+## [DEPRECATED: Unreleased format no longer used]
 
 ### Added
 - Queue path unification: session artifacts now stored in `~/.agentic-engineers/`

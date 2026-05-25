@@ -1,5 +1,13 @@
 # Version-Manager Remediation Plan
 
+**STATUS: ✅ RESOLVED - [Unreleased] format completely removed (2026-06-02)**
+
+**Resolution:** All [Unreleased] references removed from codebase. CHANGELOG now uses direct versioned entries only. version-manager marked as DISABLED. CI/CD-driven versioning enforced.
+
+---
+
+## Historical Document (Original Remediation Plan)
+
 **Principal Engineer Use**: Decision & Implementation Guide
 
 ---

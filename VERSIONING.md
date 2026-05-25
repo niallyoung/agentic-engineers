@@ -41,20 +41,22 @@ The CI/CD pipeline (`.github/workflows/ci.yml`) automatically:
 - **.github/workflows/ci.yml** — Automatic tagging and release
 - **scripts/get_version.py** — Version utility (read/bump versions)
 
-### Why No [Unreleased] Sections in CHANGELOG?
+### CHANGELOG Management
 
-The CHANGELOG does NOT contain `[Unreleased]` sections because:
+The CHANGELOG uses **direct versioned entries only** (format: `## [vX.Y.Z] - YYYY-MM-DD`).
 
-1. **Git tags are the source of truth** - Versions are determined by CI/CD from commit messages, not by manual CHANGELOG entries
-2. **No developer versioning burden** - Developers don't maintain version numbers; they just commit code
-3. **Incompatible workflow** - `[Unreleased]` sections are designed for local versioning workflows (manual releases), not CI/CD-driven workflows (automatic releases)
-4. **Single source of truth** - Git tags (created by CI/CD) are the authoritative version; CHANGELOG is just documentation
+**Rationale:**
+1. **Git tags are the source of truth** - Versions are determined by CI/CD from commit messages using Conventional Commits
+2. **No developer versioning burden** - Developers don't maintain version numbers; they just commit code with proper commit messages
+3. **CI/CD-driven workflow** - Tags and releases are created automatically after Quality Gate passes
+4. **CHANGELOG is documentation** - It documents what was released, not what will be released
 
-**Example:**
-- ❌ WRONG: Developer manually maintains `## [Unreleased] - v0.35.0` in CHANGELOG, then CI/CD creates the tag
-- ✅ RIGHT: CI/CD creates git tag `v0.35.0` from commits; CHANGELOG is updated manually later (optional) as release notes documentation
+**Workflow:**
+```
+Developer commits → CI/CD analyzes commits → Git tag created → GitHub Release published
+```
 
-See `CHANGELOG-FIX-PLAN.md` for detailed analysis of why `version-manager` pre-commit hook was disabled.
+The CHANGELOG is updated manually as needed to document released versions. No automatic CHANGELOG updates occur during commits.
 
 ### How Versioning Works
 
