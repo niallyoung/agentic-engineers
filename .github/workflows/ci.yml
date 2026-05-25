@@ -56,6 +56,27 @@ jobs:
       - name: Verify
         run: make verify
 
+  auto-tag:
+    name: Auto-Tag (Semantic Versioning)
+    needs: quality-gate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create semantic version tag
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: minor
+          default_prerelease_bump: prerelease
+          release_branches: main
+          custom_release_rules: "feat:minor:✨ Features,fix:patch:🐛 Bug Fixes,docs:patch:📚 Documentation,chore:patch:🔧 Chores,refactor:patch:♻️ Refactoring,perf:patch:⚡ Performance,security:patch:🔒 Security"
+
   release:
     name: Create GitHub Release (from git tags)
     if: startsWith(github.ref, 'refs/tags/v')
