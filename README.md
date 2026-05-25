@@ -150,6 +150,46 @@ make install-pi          # Install to ~/.pi/agent/
 make install             # Install all 4 harnesses at once
 ```
 
+**Option 6: Clean Install with Backup**
+```bash
+make clean-install       # Backup existing harnesses + fresh install
+```
+
+This command:
+- Backs up all existing harness directories with YYYYMMDD timestamp:
+  - `~/.copilot/` → `~/.copilot.20260525/`
+  - `~/.claude/` → `~/.claude.20260525/`
+  - `~/.pi/` → `~/.pi.20260525/`
+  - `~/.config/opencode/` → `~/.config/opencode.20260525/`
+- Then proceeds with fresh installation from `dist/`
+- **Important**: Never touches `~/.agentic-engineers/` (shared queue directory)
+
+**Manual Backup (Individual Harnesses)**
+```bash
+# Backup specific harnesses only
+bash renderer/scripts/backup-harnesses.sh copilot claude
+bash renderer/scripts/backup-harnesses.sh pi
+bash renderer/scripts/backup-harnesses.sh opencode
+
+# Backup all harnesses (default)
+bash renderer/scripts/backup-harnesses.sh
+```
+
+**Restoring from Backup**
+```bash
+# Manually restore a harness from backup
+rm -rf ~/.copilot/
+mv ~/.copilot.20260525/ ~/.copilot/
+
+# Or restore all harnesses from same-day backup
+for harness in copilot claude pi; do
+    rm -rf ~/.$harness/
+    mv ~/.$harness.20260525/ ~/.$harness/
+done
+rm -rf ~/.config/opencode/
+mv ~/.config/opencode.20260525/ ~/.config/opencode/
+```
+
 ### Rendering (Advanced)
 
 To generate distribution files for all harnesses:

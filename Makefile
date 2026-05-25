@@ -1,4 +1,4 @@
-.PHONY: help install install-copilot install-claude install-pi install-opencode \
+.PHONY: help install clean-install install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
         status status-opencode \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
@@ -12,6 +12,7 @@ help:
 	@echo ""
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
+	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-pi          Install π.dev harness → ~/.pi/"
@@ -53,6 +54,15 @@ install: install-copilot install-claude install-pi install-opencode ## Install t
 	@echo ""
 	@echo "Next: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
+
+clean-install: ## Fresh install with interactive backup prompts (timestamped backups)
+	@echo "🔄 Starting clean installation with interactive backup..."
+	@echo "   (You will be prompted to confirm each harness backup)"
+	@echo ""
+	@bash "$(REPO_ROOT)/renderer/scripts/backup-harnesses.sh" copilot claude pi opencode
+	@echo ""
+	@echo "📦 Proceeding with fresh installation..."
+	@$(MAKE) install
 
 install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
 	@echo "📋 Validating dist/copilot/ is populated..."
