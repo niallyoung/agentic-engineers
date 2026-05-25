@@ -6,11 +6,11 @@
 # Example: bash backup-harnesses.sh copilot claude pi opencode
 # Example (CI): bash backup-harnesses.sh --force copilot claude pi opencode
 #
-# Backs up existing harness directories with YYYYMMDD timestamp suffix:
-#   ~/.copilot/     → ~/.copilot.20260525/
-#   ~/.claude/      → ~/.claude.20260525/
-#   ~/.pi/          → ~/.pi.20260525/
-#   ~/.config/opencode/ → ~/.config/opencode.20260525/
+# Backs up existing harness directories with YYYYMMDD_HHMMSS timestamp suffix:
+#   ~/.copilot/     → ~/.copilot.20260525_143022/
+#   ~/.claude/      → ~/.claude.20260525_143022/
+#   ~/.pi/          → ~/.pi.20260525_143022/
+#   ~/.config/opencode/ → ~/.config/opencode.20260525_143022/
 #
 # SCOPE: Only backs up harness config directories, never touches ~/.agentic-engineers/
 #
@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-TIMESTAMP=$(date +%Y%m%d)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKED_UP=()
 SKIPPED=()
 ERRORS=()

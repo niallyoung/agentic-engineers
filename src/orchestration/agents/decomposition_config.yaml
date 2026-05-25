@@ -129,19 +129,19 @@ domain_keywords:
 role_routing:
   security:
     role: security_engineer
-    model: claude-opus-4-5
+    model: claude-opus-4.5
     effort: high
   testing:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
   documentation:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: low
   implementation:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
   review:
     role: quality_engineer
@@ -149,19 +149,19 @@ role_routing:
     effort: medium
   infrastructure:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
   database:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
   api:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
   configuration:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: low
   refactor:
     role: senior_engineer
@@ -169,7 +169,7 @@ role_routing:
     effort: high
   default:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
 
 # -----------------------------------------------------------------------

@@ -5,11 +5,11 @@ Tests verify that the backup-harnesses.sh script correctly backs up all harness
 configurations before fresh install, while never touching ~/.agentic-engineers/.
 
 Requirements:
-- Backup all harness configs (copilot, claude, pi, opencode) with YYYYMMDD timestamp
+- Backup all harness configs (copilot, claude, pi, opencode) with YYYYMMDD_HHMMSS timestamp
 - Use simple mv (no rsync, no complex logic)
 - Never touch ~/.agentic-engineers/ (shared queue directory)
 - Handle missing directories gracefully
-- Handle existing backups (same-day runs)
+- Handle existing backups (multiple runs per day)
 """
 
 import os
@@ -60,7 +60,7 @@ class TestBackupHarnesses:
     def test_backup_all_harnesses_success(self, temp_home, backup_script):
         """Test backing up all four harnesses successfully."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup script with --force (non-interactive)
         result = subprocess.run(
@@ -74,9 +74,15 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify all harnesses were backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".copilot.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for copilot"
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".claude.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for claude"
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".pi.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for pi"
         assert (home / ".config" / f"opencode.{timestamp}").exists()
         
         # Verify backup contents
@@ -116,12 +122,16 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify copilot was skipped
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         assert not (home / f".copilot.{timestamp}").exists()
         
         # Verify others were backed up
-        assert (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".claude.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for claude"
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".pi.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for pi"
         assert (home / ".config" / f"opencode.{timestamp}").exists()
         
         # Verify output mentions skipped harness
@@ -131,7 +141,7 @@ class TestBackupHarnesses:
     def test_backup_handles_existing_backup(self, temp_home, backup_script):
         """Test that backup skips if same-day backup already exists."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Create existing backup manually
         existing_backup = home / f".copilot.{timestamp}"
@@ -161,7 +171,7 @@ class TestBackupHarnesses:
         assert "already exists" in result.stdout.lower() or "skipped" in result.stdout.lower()
 
     def test_backup_timestamp_format(self, temp_home, backup_script):
-        """Test that backup uses correct YYYYMMDD timestamp format."""
+        """Test that backup uses correct YYYYMMDD_HHMMSS timestamp format."""
         home, harnesses, agentic_dir = temp_home
         
         # Run backup script with --force (non-interactive)
@@ -182,13 +192,17 @@ class TestBackupHarnesses:
         backup_dir = backups[0]
         timestamp = backup_dir.name.split(".")[-1]
         
-        # Verify timestamp format: YYYYMMDD (8 digits)
-        assert len(timestamp) == 8, f"Timestamp should be 8 digits, got: {timestamp}"
-        assert timestamp.isdigit(), f"Timestamp should be numeric, got: {timestamp}"
+        # Verify timestamp format: YYYYMMDD_HHMMSS (15 characters)
+        assert len(timestamp) == 15, f"Timestamp should be 15 chars (YYYYMMDD_HHMMSS), got: {timestamp}"
         
-        # Verify timestamp is valid date
-        today = datetime.now().strftime("%Y%m%d")
-        assert timestamp == today, f"Timestamp {timestamp} doesn't match today {today}"
+        # Verify format with regex: YYYYMMDD_HHMMSS
+        import re
+        pattern = r'^\d{8}_\d{6}$'
+        assert re.match(pattern, timestamp), f"Timestamp should match YYYYMMDD_HHMMSS format, got: {timestamp}"
+        
+        # Verify date part is today
+        today = datetime.now().strftime("%Y%m%d_%H%M%S")
+        assert timestamp.startswith(today), f"Timestamp {timestamp} should start with today {today}"
 
     def test_backup_never_touches_agentic_engineers(self, temp_home, backup_script):
         """Test that ~/.agentic-engineers/ is NEVER modified during backup."""
@@ -238,7 +252,7 @@ class TestBackupHarnesses:
     def test_backup_with_no_arguments_defaults_to_all(self, temp_home, backup_script):
         """Test that running backup with no args backs up all harnesses."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup script with no arguments (but --force for non-interactive)
         result = subprocess.run(
@@ -252,15 +266,21 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify all four harnesses were backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".copilot.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for copilot"
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".claude.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for claude"
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".pi.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for pi"
         assert (home / ".config" / f"opencode.{timestamp}").exists()
 
     def test_backup_single_harness(self, temp_home, backup_script):
         """Test backing up a single harness only."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup for copilot only (with --force for non-interactive)
         result = subprocess.run(
@@ -274,7 +294,9 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify only copilot was backed up
-        assert (home / f".copilot.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".copilot.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for copilot"
         assert not (home / f".claude.{timestamp}").exists()
         assert not (home / f".pi.{timestamp}").exists()
         assert not (home / ".config" / f"opencode.{timestamp}").exists()
@@ -306,7 +328,7 @@ class TestBackupHarnesses:
     def test_backup_interactive_prompt_accept(self, temp_home, backup_script):
         """Test backup proceeds when user confirms with 'y'."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup with user input "y" (accept)
         result = subprocess.run(
@@ -321,7 +343,9 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify copilot was backed up
-        assert (home / f".copilot.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".copilot.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for copilot"
         assert not harnesses["copilot"].exists()
         
         # Verify interactive prompt was shown
@@ -333,7 +357,7 @@ class TestBackupHarnesses:
     def test_backup_interactive_prompt_decline(self, temp_home, backup_script):
         """Test backup is skipped when user declines with 'n'."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup with user input "n" (decline)
         result = subprocess.run(
@@ -357,7 +381,7 @@ class TestBackupHarnesses:
     def test_backup_interactive_prompt_uppercase_Y(self, temp_home, backup_script):
         """Test backup proceeds when user confirms with uppercase 'Y'."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup with user input "Y" (accept, uppercase)
         result = subprocess.run(
@@ -372,13 +396,15 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify claude was backed up
-        assert (home / f".claude.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".claude.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for claude"
         assert not harnesses["claude"].exists()
 
     def test_backup_force_flag_skips_prompts(self, temp_home, backup_script):
         """Test --force flag skips all interactive prompts."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup with --force flag (no input needed)
         result = subprocess.run(
@@ -392,8 +418,12 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify both harnesses were backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert (home / f".claude.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".copilot.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for copilot"
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".claude.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for claude"
         
         # Verify no prompts were shown
         assert "Proceed with backup?" not in result.stdout
@@ -402,7 +432,7 @@ class TestBackupHarnesses:
     def test_backup_multiple_harnesses_interactive(self, temp_home, backup_script):
         """Test interactive prompts for multiple harnesses (mix of y/n)."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Run backup with mixed responses: y, n, y (copilot yes, claude no, pi yes)
         result = subprocess.run(
@@ -417,9 +447,13 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify copilot and pi were backed up, claude was not
-        assert (home / f".copilot.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".copilot.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for copilot"
         assert not (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
+        # Verify backup directory exists with new timestamp format
+        backup_dirs = list(home.glob(".pi.20*_*"))
+        assert len(backup_dirs) > 0, f"No backup found for pi"
         
         # Verify original states
         assert not harnesses["copilot"].exists()

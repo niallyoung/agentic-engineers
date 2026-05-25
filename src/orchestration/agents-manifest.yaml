@@ -14,7 +14,7 @@ agents:
   # Core Entry Point
   orchestrator:
     role: orchestrator
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: low
     description: "Queue polling, task routing, and DELEGATE/HANDBACK management"
     skills:
@@ -31,7 +31,7 @@ agents:
   # Standard Implementation
   engineer:
     role: engineer
-    model: claude-haiku-4-5
+    model: claude-haiku-4.5
     effort: medium
     description: "Well-scoped implementation, feature execution, bug fixes"
     skills:
@@ -48,7 +48,7 @@ agents:
   # Complex Design & Architecture
   senior-engineer:
     role: senior-engineer
-    model: claude-sonnet-4-5
+    model: claude-sonnet-4.5
     effort: high
     description: "Complex architecture, design patterns, deep debugging"
     skills:
@@ -66,7 +66,7 @@ agents:
   # Code Review & Quality
   lead-engineer:
     role: lead-engineer
-    model: claude-sonnet-4-5
+    model: claude-sonnet-4.5
     effort: high
     description: "Code review, quality assurance, team leadership"
     skills:
@@ -97,7 +97,7 @@ agents:
   # Testing & Quality
   quality-engineer:
     role: quality-engineer
-    model: claude-sonnet-4-5
+    model: claude-sonnet-4.5
     effort: high
     description: "Test strategy, quality metrics, coverage analysis"
     skills:
@@ -129,7 +129,7 @@ agents:
   # Specification Compliance
   spec-engineer:
     role: spec-engineer
-    model: claude-sonnet-4-5
+    model: claude-sonnet-4.5
     effort: medium
     description: "Specification validation, compliance checking, drift detection"
     skills:
@@ -142,12 +142,12 @@ agents:
 
 # Model Assignments (Cost Optimization)
 model_assignments:
-  claude-haiku-4-5:
+  claude-haiku-4.5:
     cost_per_1k_tokens: 0.80
     agents: [orchestrator, engineer]
     use_cases: [routing, simple-implementation, testing]
 
-  claude-sonnet-4-5:
+  claude-sonnet-4.5:
     cost_per_1k_tokens: 3.00
     agents: [senior-engineer, lead-engineer, quality-engineer, spec-engineer]
     use_cases: [architecture, code-review, complex-design]
