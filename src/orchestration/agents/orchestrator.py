@@ -433,18 +433,19 @@ class QueueManager:
         # ========================================================================
         self._using_isolation = False
         self.session_id = None
+        self.harness = None
         
         if _QUEUE_ISOLATION is not None:
             try:
                 # Get session ID and harness from environment
                 self.session_id = _QUEUE_ISOLATION.get_session_id()
-                harness = _QUEUE_ISOLATION.detect_harness()
+                self.harness = _QUEUE_ISOLATION.detect_harness()
                 
                 # Initialize queue structure (creates directories if needed)
-                _QUEUE_ISOLATION.init_queue_structure(self.session_id, harness)
+                _QUEUE_ISOLATION.init_queue_structure(self.session_id, self.harness)
                 
                 # Get the queue path from queue-isolation
-                queue_root = _QUEUE_ISOLATION.get_queue_path(self.session_id, harness)
+                queue_root = _QUEUE_ISOLATION.get_queue_path(self.session_id, self.harness)
                 
                 # Set up queue directories (new path structure)
                 self.session_queue_dir = queue_root
@@ -454,7 +455,7 @@ class QueueManager:
                 
                 logger.debug(
                     f"QueueManager: Using queue-isolation. "
-                    f"session_id={self.session_id}, harness={harness}, "
+                    f"session_id={self.session_id}, harness={self.harness}, "
                     f"path={self.session_queue_dir}"
                 )
                 
@@ -469,6 +470,9 @@ class QueueManager:
         # PHASE 2: Fallback to legacy paths (backward compatibility)
         # ========================================================================
         if not self._using_isolation:
+            # Detect harness/agent context early
+            self.harness = agent_context or self.detect_agent_context() or 'copilot'
+            
             # Detect session-id early
             try:
                 if self.session_id is None:
@@ -583,6 +587,49 @@ class QueueManager:
     def get_archive_queue_dir(self) -> Path:
         """Return the archive queue directory for this session."""
         return self.archive_dir
+    
+    def get_delegates_dir(self) -> Path:
+        """Return the delegates directory for this session.
+        
+        This directory stores DELEGATE protocol payloads for task delegation.
+        Located at the session-specific directory.
+        
+        Returns:
+            Path: The delegates directory
+        """
+        if self._using_isolation:
+            # New path: ~/.agentic-engineers/{harness}/{session_id}/delegates
+            delegates_dir = self.base_dir / "delegates"
+        else:
+            # Legacy path: Place delegates under session directory
+            # This is at base_dir/{session_id}/delegates
+            delegates_dir = self.session_queue_dir / "delegates"
+        
+        # Ensure directory exists
+        delegates_dir.mkdir(parents=True, exist_ok=True)
+        return delegates_dir
+    
+    def _get_queue_root(self, session_id: Optional[str] = None, harness: Optional[str] = None) -> Path:
+        """Get the queue root for a given session and harness.
+        
+        Defaults to current session/harness if not provided.
+        
+        Args:
+            session_id: Optional session ID (defaults to current)
+            harness: Optional harness type (defaults to current)
+            
+        Returns:
+            Path: The queue root directory
+        """
+        _session_id = session_id or self.session_id
+        _harness = harness or self.harness
+        
+        if self._using_isolation:
+            # New path: ~/.agentic-engineers/{harness}/{session_id}
+            return Path.home() / ".agentic-engineers" / _harness / _session_id
+        else:
+            # Legacy path: queue base directory
+            return self.base_dir / _session_id
     
     
     def list_incoming_tasks(self) -> List[str]:
@@ -937,6 +984,44 @@ class OrchestratorAgent(Agent):
             no_color=_no_color,
             on_budget_exceeded=self._handle_budget_exceeded,
         )
+    
+    # ========================================================================
+    # Properties exposing queue_manager attributes
+    # ========================================================================
+    
+    @property
+    def harness(self) -> str:
+        """Get the harness from queue_manager."""
+        return self.queue_manager.harness
+    
+    @property
+    def session_id(self) -> str:
+        """Get the session_id from queue_manager."""
+        return self.queue_manager.session_id
+    
+    # ========================================================================
+    # Path accessor methods (delegated to queue_manager)
+    # ========================================================================
+    
+    def get_incoming_queue_dir(self) -> Path:
+        """Get incoming queue directory."""
+        return self.queue_manager.get_incoming_queue_dir()
+    
+    def get_processing_queue_dir(self) -> Path:
+        """Get processing queue directory."""
+        return self.queue_manager.get_processing_queue_dir()
+    
+    def get_done_queue_dir(self) -> Path:
+        """Get done queue directory."""
+        return self.queue_manager.get_done_queue_dir()
+    
+    def get_delegates_dir(self) -> Path:
+        """Get delegates directory."""
+        return self.queue_manager.get_delegates_dir()
+    
+    def _get_queue_root(self, session_id: Optional[str] = None, harness: Optional[str] = None) -> Path:
+        """Get queue root directory."""
+        return self.queue_manager._get_queue_root(session_id, harness)
     
     def _handle_budget_exceeded(self, budget_result: BudgetResult) -> None:
         """Called when budget threshold is exceeded."""
