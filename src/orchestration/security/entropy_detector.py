@@ -144,18 +144,15 @@ class EntropyDetector:
         if pattern:
             return True, f"Matches pattern: {pattern}"
         
-        # Check field name heuristics
+        # Check field name heuristics ONLY (entropy unreliable)
         field_lower = field_name.lower() if field_name else ""
         if any(secret_field in field_lower for secret_field in SECRET_FIELD_NAMES):
             entropy = self.calculate_entropy(str(value))
-            if entropy > 2.0:  # Lower threshold for suspicious field names
+            if entropy > 2.5:  # Very high bar for field name heuristics only
                 return True, f"Suspicious field '{field_name}' with high entropy ({entropy:.2f})"
         
-        # Check entropy (lowest confidence)
-        if not self.is_excluded(str(value)):
-            entropy = self.calculate_entropy(str(value))
-            if entropy > self.entropy_threshold:
-                return True, f"High entropy ({entropy:.2f} bits/char, threshold: {self.entropy_threshold})"
+        # NOTE: Entropy-only detection disabled (too many false positives on legitimate code)
+        # Pattern matching is more reliable and specific
         
         return False, None
     
