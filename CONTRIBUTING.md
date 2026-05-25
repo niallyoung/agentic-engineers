@@ -85,8 +85,7 @@ git commit -m "docs: update installation guide"          # → Documentation sec
 
 **If CHANGELOG doesn't update:**
 ```bash
-# Manually trigger version-manager
-python3 skills/version-manager/scripts/update-changelog.py --verbose
+# Manually add an entry to the [Unreleased] section in CHANGELOG.md
 
 # Review changes
 git diff CHANGELOG.md
@@ -104,7 +103,7 @@ git commit --amend  # Add to current commit
 If CI fails on CHANGELOG validation:
 ```bash
 python3 scripts/validate_changelog_ci.py  # See what's missing
-python3 skills/version-manager/scripts/update-changelog.py --force
+# Manually update CHANGELOG.md [Unreleased] section
 git add CHANGELOG.md
 git commit --amend
 ```

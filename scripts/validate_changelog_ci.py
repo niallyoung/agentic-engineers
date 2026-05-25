@@ -160,7 +160,7 @@ def main():
         changelog_content = changelog_path.read_text()
         if "[Unreleased]" not in changelog_content:
             print("❌ CHANGELOG.md missing [Unreleased] section")
-            print("   Run: python3 skills/version-manager/scripts/update-changelog.py")
+            print("   Add an [Unreleased] section to CHANGELOG.md")
             return 1
         
         print("✅ [Unreleased] section found")
@@ -186,7 +186,7 @@ def main():
             for message, commit_hash in commits:
                 print(f"  {commit_hash[:8]} {message}")
             
-            print("\nRun: python3 skills/version-manager/scripts/update-changelog.py --force")
+            print("\nAdd missing entries to the [Unreleased] section in CHANGELOG.md")
             return 1
         
         # Check if all commits have entries in CHANGELOG
@@ -223,7 +223,7 @@ def main():
                 print(f"  {commit_hash[:8]} {message}")
             
             print("\n💡 Fix:")
-            print("  python3 skills/version-manager/scripts/update-changelog.py --force")
+            print("  Update CHANGELOG.md [Unreleased] section manually")
             print("  git add CHANGELOG.md")
             print("  git commit --amend (or make a new commit)")
             

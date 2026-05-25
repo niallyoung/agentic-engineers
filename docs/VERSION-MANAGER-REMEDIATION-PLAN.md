@@ -1,8 +1,30 @@
 # Version-Manager Remediation Plan
 
-**STATUS: ✅ RESOLVED - [Unreleased] format completely removed (2026-06-02)**
+**STATUS: ✅ RESOLVED & DELETED - Skill removed entirely (2026-05-25)**
 
-**Resolution:** All [Unreleased] references removed from codebase. CHANGELOG now uses direct versioned entries only. version-manager marked as DISABLED. CI/CD-driven versioning enforced.
+**Resolution:** version-manager skill deleted entirely from src/skills/. All rendered artifacts deleted from dist/*/skills/. version-manager entry removed from config/FRAMEWORK-MANIFEST.yaml. All [Unreleased] references removed from codebase. CHANGELOG now uses direct versioned entries only. CI/CD-driven versioning enforced via git tags.
+
+---
+
+## Deletion Complete (2026-05-25)
+
+**Implementation Summary:**
+- ✅ Deleted: `src/skills/version-manager/` (all source files)
+- ✅ Deleted: `dist/copilot/skills/version-manager/` (rendered artifacts)
+- ✅ Deleted: `dist/claude/skills/version-manager/` (rendered artifacts)
+- ✅ Deleted: `dist/opencode/skills/version-manager/` (rendered artifacts)
+- ✅ Updated: `config/FRAMEWORK-MANIFEST.yaml` (removed version-manager entry)
+- ✅ Updated: `CHANGELOG.md` (changed reference from "use local version-manager skill instead" to "git tags are authoritative source of truth")
+- ✅ Updated: `SECURITY-BRIEFING-VERSION-MANAGER.md` (status changed to "RESOLVED & DELETED")
+- ✅ Updated: `docs/SECURITY-AUDIT-VERSION-MANAGER.md` (status changed to "RESOLVED & DELETED")
+
+**Verification:**
+- ✅ No remaining active code references to version-manager
+- ✅ `make verify` passes all tests
+- ✅ Clean git state (no uncommitted changes after deletion)
+- ✅ Commit created with proper message
+
+**Rationale:** CI/CD-driven semantic versioning (via mathieudutour/github-tag-action) is the authoritative source of truth. Local version-manager skill added only complexity and risk with no benefit. All [Unreleased] format references already removed in previous commit.
 
 ---
 

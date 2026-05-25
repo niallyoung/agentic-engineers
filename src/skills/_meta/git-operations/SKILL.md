@@ -158,6 +158,5 @@ Tests in `tests/test_git_push.sh` use a local bare git repository to avoid any n
 ## References
 
 - Framework rendering and distribution workflow documented in architecture/
-- `src/skills/_meta/version-manager/SKILL.md` — version calculation and tag creation
 - `.githooks/pre-commit` — local quality gate before every commit
 - `.github/workflows/ci.yml` — GitHub Actions release trigger from git tags
