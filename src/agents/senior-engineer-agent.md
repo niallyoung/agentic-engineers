@@ -1,7 +1,7 @@
 ---
 name: senior-engineer
 description: Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes
-model: claude-sonnet-4.6
+model: gpt-4
 ---
 
 # Senior Engineer Agent — LIVE IMPLEMENTATION

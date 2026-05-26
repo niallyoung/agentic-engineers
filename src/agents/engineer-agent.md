@@ -1,7 +1,7 @@
 ---
 name: engineer
 description: Well-scoped task with pre-written plan; low-medium complexity coding/implementation
-model: claude-haiku-4.5
+model: gpt-4o-mini
 ---
 
 # Engineer Agent — LIVE IMPLEMENTATION

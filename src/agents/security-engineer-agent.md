@@ -1,7 +1,7 @@
 ---
 name: security-engineer
 description: Security analysis; threat modeling; vulnerability audits; final escalation path
-model: claude-opus-4.7
+model: gpt-4o
 ---
 
 # Security Engineer Agent

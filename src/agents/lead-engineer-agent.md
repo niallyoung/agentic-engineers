@@ -1,7 +1,7 @@
 ---
 name: lead-engineer
 description: Code review; quality decisions; medium-complexity planning; architectural guidance
-model: claude-sonnet-4.6
+model: gpt-4
 ---
 
 # Lead Engineer Agent — LIVE IMPLEMENTATION
