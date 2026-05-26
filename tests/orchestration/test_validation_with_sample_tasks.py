@@ -36,7 +36,7 @@ class TestValidationWithSampleTasks:
         delegate_obj = self.orchestrator.create_expanded_delegate(
             task_id=task_id,
             role=role,
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation that meets all requirements",
             plan=["Design", "Implement", "Test"],
@@ -60,7 +60,7 @@ class TestValidationWithSampleTasks:
             "tokens_in": 22000,
             "tokens_out": 8000,
             "time_elapsed_minutes": 200,
-            "model_used": "claude-sonnet-4-6",
+            "model_used": "claude-sonnet-4.6",
             "acceptance_criteria_met": ["Tests pass", "Documentation complete"],
             "deliverables": ["src/feature.py", "docs/feature.md"],
             "tests": {"unit": True, "integration": True},

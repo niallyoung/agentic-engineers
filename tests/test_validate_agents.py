@@ -68,7 +68,7 @@ def valid_agent_frontmatter():
     return """---
 name: engineer
 description: Executes well-scoped implementation tasks
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: medium
 ---
 """
@@ -118,7 +118,7 @@ class TestFrontmatterParsing:
         result = _parse_frontmatter(valid_agent_frontmatter)
         assert result is not None
         assert result["name"] == "engineer"
-        assert result["model"] == "claude-sonnet-4-6"
+        assert result["model"] == "claude-sonnet-4.6"
 
     def test_minimal_frontmatter(self, minimal_agent_frontmatter):
         """Test parsing minimal valid frontmatter."""
@@ -420,13 +420,13 @@ model: sonnet
 # ============================================================================
 
 @pytest.mark.parametrize("model", [
-    "claude-haiku-4-5",
-    "claude-haiku-4-6",
-    "claude-sonnet-4-5",
-    "claude-sonnet-4-6",
-    "claude-opus-4-5",
-    "claude-opus-4-6",
-    "claude-opus-4-7",
+    "claude-haiku-4.5",
+    "claude-haiku-4.6",
+    "claude-sonnet-4.5",
+    "claude-sonnet-4.6",
+    "claude-opus-4.5",
+    "claude-opus-4.6",
+    "claude-opus-4.7",
     "haiku",
     "sonnet",
     "opus",

@@ -47,7 +47,7 @@ Audit security in 4 payment services (Stripe, PayPal, Crypto, Square) for vulner
 handoff_type: DELEGATE
 task_id: 2026-05-16-security-audit-payments-001
 role: senior_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: >
   Coordinate security audit of all 4 payment services (Stripe, PayPal, Crypto, Square).
@@ -106,7 +106,7 @@ for service in services:
     ops.create_delegate(
         task_id=f"2026-05-16-security-audit-{service['name']}-001",
         role="security_engineer",
-        model="claude-opus-4-7",
+        model="claude-opus-4.7",
         effort="max",
         scope=f"Conduct comprehensive security audit of {service['name']} payment service. "
               f"Identify vulnerabilities, dependency issues, and compliance gaps. "
@@ -180,7 +180,7 @@ tests:
   - Compliance check: COMPLETE
 tokens_in: 2400
 tokens_out: 1800
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 duration_minutes: 55
 escalations: 0
@@ -203,7 +203,7 @@ tests:
   - Compliance check: COMPLETE
 tokens_in: 2200
 tokens_out: 1600
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 duration_minutes: 58
 escalations: 0
@@ -226,7 +226,7 @@ tests:
   - Compliance check: COMPLETE
 tokens_in: 2500
 tokens_out: 1900
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 duration_minutes: 60
 escalations: 0
@@ -249,7 +249,7 @@ tests:
   - Compliance check: COMPLETE
 tokens_in: 2100
 tokens_out: 1500
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 duration_minutes: 52
 escalations: 0
@@ -317,7 +317,7 @@ children_failed: []
 result_aggregation_status: all_complete
 tokens_in: 9200
 tokens_out: 6800
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 duration_minutes: 70
 escalations: 0
@@ -373,7 +373,7 @@ Migrate 10 databases from PostgreSQL 12 to PostgreSQL 15 with schema updates.
 handoff_type: DELEGATE
 task_id: 2026-05-16-db-migration-postgres-001
 role: senior_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: >
   Coordinate migration of all 10 production databases from PostgreSQL 12 to PostgreSQL 15.
@@ -424,7 +424,7 @@ for db in databases:
     ops.create_delegate(
         task_id=f"2026-05-16-db-migration-{db['name']}-001",
         role="engineer",
-        model="claude-haiku-4-5",
+        model="claude-haiku-4.5",
         effort="high",
         scope=f"Migrate {db['name']} from PostgreSQL 12 to PostgreSQL 15. "
               f"Database size: {db['size']}, tables: {db['tables']}. "
@@ -481,7 +481,7 @@ tests:
   - Rollback test: PASS (verified rollback capability)
 tokens_in: 1200
 tokens_out: 800
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 58
 escalations: 0
@@ -546,7 +546,7 @@ children_failed: []
 result_aggregation_status: all_complete
 tokens_in: 12000
 tokens_out: 8000
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 duration_minutes: 65
 escalations: 0
@@ -636,7 +636,7 @@ for repo in repos:
     ops.create_delegate(
         task_id=f"2026-05-16-code-review-{repo['name']}-001",
         role="lead_engineer",
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-4.6",
         effort="high",
         scope=f"Review code changes in {repo['name']} repository for release 2.0. "
               f"Changes: {repo['changes']}. {repo['files']} files changed, {repo['tests']} tests. "
@@ -692,7 +692,7 @@ tests:
   - Architecture check: PASS (aligns with design)
 tokens_in: 2800
 tokens_out: 2100
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 duration_minutes: 118
 escalations: 0
@@ -789,7 +789,7 @@ Implement new feature (user preferences) across 3 backend services (auth, users,
 handoff_type: DELEGATE
 task_id: 2026-05-16-feature-user-preferences-001
 role: senior_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: >
   Implement user preferences feature across 3 backend services (auth, users, api).
@@ -844,7 +844,7 @@ for service in services:
     ops.create_delegate(
         task_id=f"2026-05-16-feature-user-preferences-{service['name']}-001",
         role="engineer",
-        model="claude-haiku-4-5",
+        model="claude-haiku-4.5",
         effort="high",
         scope=service['scope'],
         context=[

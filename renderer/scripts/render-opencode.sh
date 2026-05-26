@@ -23,7 +23,7 @@
 # Mirrors render-claude.sh in style and safety model. OpenCode-specific divergences:
 #   1. Emits opencode.jsonc + AGENTS.md (Claude Code has neither — uses CLAUDE.md only).
 #   2. Agent frontmatter schema is OpenCode-specific (mode/model/temperature/permission).
-#   3. Model IDs are fully-qualified provider/model strings (github-copilot/claude-opus-4-7 format).
+#   3. Model IDs are fully-qualified provider/model strings (github-copilot/claude-opus-4.7 format).
 #   4. Accepts both hyphen and dot formats on input, normalizes to hyphen format per Anthropic API.
 
 set -euo pipefail
@@ -63,18 +63,18 @@ source "$(dirname "$0")/lib.sh"
 #
 # Provider is hardcoded to github-copilot (the standard Copilot provider for
 # Claude models in OpenCode). For users with anthropic/ provider, the mapping
-# would be different (e.g., anthropic/claude-haiku-4-5).
+# would be different (e.g., anthropic/claude-haiku-4.5).
 #
 # Note: claude-opus-4-6 is now declared in the custom provider config (see write_config)
 # so it maps directly instead of falling back to 4.7.
 map_model_opencode() {
 	case "$1" in
-		claude-haiku-4-5|claude-haiku-4.5)   echo "github-copilot/claude-haiku-4-5" ;;
-		claude-sonnet-4-6|claude-sonnet-4.6) echo "github-copilot/claude-sonnet-4-6" ;;
-		claude-sonnet-4-5|claude-sonnet-4.5) echo "github-copilot/claude-sonnet-4-5" ;;
-		claude-opus-4-7|claude-opus-4.7)     echo "github-copilot/claude-opus-4-7" ;;
-		claude-opus-4-6|claude-opus-4.6)     echo "github-copilot/claude-opus-4-6" ;;
-		claude-opus-4-5|claude-opus-4.5)     echo "github-copilot/claude-opus-4-5" ;;
+		claude-haiku-4.5|claude-haiku-4-5)   echo "github-copilot/claude-haiku-4.5" ;;
+		claude-sonnet-4.6|claude-sonnet-4-6) echo "github-copilot/claude-sonnet-4.6" ;;
+		claude-sonnet-4.5|claude-sonnet-4-5) echo "github-copilot/claude-sonnet-4.5" ;;
+		claude-opus-4.7|claude-opus-4-7)     echo "github-copilot/claude-opus-4.7" ;;
+		claude-opus-4.6|claude-opus-4-6)     echo "github-copilot/claude-opus-4.6" ;;
+		claude-opus-4.5|claude-opus-4-5)     echo "github-copilot/claude-opus-4.5" ;;
 		*) echo "" ;;  # sentinel — caller warns + skips model emission
 	esac
 }

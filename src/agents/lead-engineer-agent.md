@@ -1,13 +1,13 @@
 ---
 name: lead-engineer
 description: Code review; quality decisions; medium-complexity planning; architectural guidance
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Lead Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Lead Engineer
-**Model**: claude-sonnet-4-6
+**Model**: claude-sonnet-4.6
 **Effort**: high
 **Purpose**: Code review, architectural guidance, medium-complexity planning. Provides quality assurance and design feedback.
 
@@ -64,7 +64,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-lead-review-auth-refresh
 timestamp: 2026-06-02T13:00:00Z
 role: Lead Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: >
   Code review: OAuth2 refresh token rotation in {example-service}.
@@ -165,4 +165,4 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 Invoked by OpenCode when explicitly requested via `@lead-engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4-6. The exact model ID is github-copilot/claude-sonnet-4-6
+You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6

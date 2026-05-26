@@ -1,4 +1,5 @@
-.PHONY: help install clean-install install-copilot install-claude install-pi install-opencode \
+.PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
+        install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
         status status-opencode \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
@@ -13,6 +14,10 @@ help:
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
 	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
+	@echo "  fresh-install-copilot     Interactive: install Copilot only (with optional backup)"
+	@echo "  fresh-install-claude      Interactive: install Claude only (with optional backup)"
+	@echo "  fresh-install-pi          Interactive: install π.dev only (with optional backup)"
+	@echo "  fresh-install-opencode    Interactive: install OpenCode only (with optional backup)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-pi          Install π.dev harness → ~/.pi/"
@@ -63,6 +68,18 @@ clean-install: ## Fresh install with interactive backup prompts (timestamped bac
 	@echo ""
 	@echo "📦 Proceeding with fresh installation..."
 	@$(MAKE) install
+
+fresh-install-copilot: ## Interactive: install Copilot only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" copilot
+
+fresh-install-claude: ## Interactive: install Claude only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" claude
+
+fresh-install-pi: ## Interactive: install π.dev only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" pi
+
+fresh-install-opencode: ## Interactive: install OpenCode only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" opencode
 
 install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
 	@echo "📋 Validating dist/copilot/ is populated..."

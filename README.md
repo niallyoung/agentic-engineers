@@ -33,14 +33,14 @@ A production-ready multi-agent orchestration framework with 8 specialized AI rol
 
 | Rank | Role | Model | Version | Thinking | Effort | Cost/Task | Purpose |
 |------|------|-------|---------|----------|--------|-----------|---------|
-| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4-5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
-| 2️⃣ | **Engineer** | Haiku | claude-haiku-4-5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
-| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
-| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
-| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
-| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
+| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4.5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
+| 2️⃣ | **Engineer** | Haiku | claude-haiku-4.5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
+| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
+| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
+| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
+| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
 | 7️⃣ | **Principal Engineer** | Opus | claude-opus-4-6 | ✅ Yes | High | $0.15 | Cross-service architecture; major refactors |
-| 8️⃣ | **Security Engineer** | Opus | claude-opus-4-7 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
+| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.7 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
 - **Haiku (Ranks 1-2):** $0.03–$0.05 per task — Routing, well-scoped implementation
@@ -242,8 +242,8 @@ The Orchestrator will:
 **Discovery:** Well-scoped, pre-planned work can be executed by cheaper models (Haiku) with same quality as expensive models (Opus), but 60% cheaper.
 
 **Real-World Data:**
-- **Haiku (claude-haiku-4-5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
-- **Sonnet (claude-sonnet-4-6):** $0.09 per task, needed for complex analysis and planning
+- **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
+- **Sonnet (claude-sonnet-4.6):** $0.09 per task, needed for complex analysis and planning
 - **Opus (claude-opus-4-6/4-7):** $0.15 per task, only for security/architecture decisions
 
 **Cost Breakdown (Typical Workflow):**
@@ -277,27 +277,27 @@ The Orchestrator will:
 ```yaml
 # src/config/models.yaml
 orchestrator:
-  model: claude-haiku-4-5
+  model: claude-haiku-4.5
   effort: low
   thinking: false
 
 engineer:
-  model: claude-haiku-4-5
+  model: claude-haiku-4.5
   effort: high
   thinking: false
 
 quality_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: medium
   thinking: true
 
 senior_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: high
   thinking: true
 
 lead_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: high
   thinking: true
 
@@ -307,12 +307,12 @@ principal_engineer:
   thinking: true
 
 security_engineer:
-  model: claude-opus-4-7
+  model: claude-opus-4.7
   effort: max
   thinking: true
 
 model_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: high
   thinking: true
 ```
@@ -374,10 +374,10 @@ success_criteria:
 ### Supported Models
 
 **Anthropic (Default):**
-- `claude-haiku-4-5` — Fast, cheap, good for well-scoped work
-- `claude-sonnet-4-6` — Balanced, good for planning and review
+- `claude-haiku-4.5` — Fast, cheap, good for well-scoped work
+- `claude-sonnet-4.6` — Balanced, good for planning and review
 - `claude-opus-4-6` — Powerful, good for architecture
-- `claude-opus-4-7` — Most powerful, good for security analysis
+- `claude-opus-4.7` — Most powerful, good for security analysis
 
 **OpenAI (Supported):**
 - `gpt-4-turbo` — Equivalent to Sonnet (planning, review)
@@ -478,7 +478,7 @@ See [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) and [docs/CLAUDE-INSTAL
 handoff_type: DELEGATE
 task_id: 2026-05-17-fix-auth          # Unique: YYYY-MM-DD-slug
 role: Engineer                         # Target role
-model: claude-haiku-4-5               # Optional override
+model: claude-haiku-4.5               # Optional override
 effort: low|medium|high|max
 scope: |
   Clear description of work needed.
@@ -560,7 +560,7 @@ delegate: implement user login feature with bcrypt password hashing and JWT toke
 handoff_type: DELEGATE
 task_id: 2026-05-20-user-login
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: |
   Implement user login feature with bcrypt password hashing and JWT token generation.
@@ -742,7 +742,7 @@ delegate parallel: audit security in user-service; audit security in payment-ser
 handoff_type: DELEGATE
 task_id: 2026-05-20-security-audit-1
 role: Security Engineer
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 scope: |
   Perform comprehensive security audit of user-service.
@@ -857,7 +857,7 @@ delegate:
 handoff_type: DELEGATE
 task_id: 2026-05-20-payment-arch
 role: Principal Engineer
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: high
 scope: |
   Design microservices architecture for new payment system.
@@ -1232,7 +1232,7 @@ Here's a real DELEGATE that shows the complete workflow: plan → implement → 
 handoff_type: DELEGATE
 task_id: 2026-05-20-fix-ci-cd-timeout
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 
 scope: |
@@ -1305,7 +1305,7 @@ For large tasks (20+ hours, 1000+ statements), split into tiers:
 handoff_type: DELEGATE
 task_id: 2026-05-19-phase-h-tier1-critical-modules
 role: quality_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 
 scope: |
@@ -1767,7 +1767,7 @@ Every delegation follows this structure (see full spec in `src/AGENTS.md`):
 handoff_type: DELEGATE          # or HANDBACK / ESCALATE
 task_id: YYYY-MM-DD-short-slug
 role: senior-engineer           # target role from AGENTS.md roster
-model: claude-sonnet-4-6        # optional override
+model: claude-sonnet-4.6        # optional override
 files:
   - path/to/relevant/file.py
 context: |

@@ -2,7 +2,7 @@
 
 **Role Summary:** Automated A/B test lifecycle management. Designs tests, allocates tasks, monitors progress, analyzes results, and recommends model/effort changes.
 
-**Model:** claude-haiku-4-5 | **Effort:** high | **Cost Tier:** 1x | **Token Multiplier:** ~2x (analysis + coordination)
+**Model:** claude-haiku-4.5 | **Effort:** high | **Cost Tier:** 1x | **Token Multiplier:** ~2x (analysis + coordination)
 
 ---
 
@@ -83,7 +83,7 @@ priority: "high"  # Learn about new model
 
 control_arm:
   name: "Haiku 4.5 High (Current Baseline)"
-  model: "claude-haiku-4-5"
+  model: "claude-haiku-4.5"
   effort: "high"
   task_filter:
     domain: "auth"
@@ -326,7 +326,7 @@ Recommendation: Re-run test after 2 weeks (new model release?)
   "duration_days": 7,
   
   "control_arm": {
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "quality_mean": 89,
     "quality_sd": 1.2,

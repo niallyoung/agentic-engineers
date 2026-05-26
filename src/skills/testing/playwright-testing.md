@@ -8,7 +8,7 @@ Playwright is the primary E2E testing framework for {service-name} (React/TypeSc
 
 ## Part 1: Test Development (Engineer Focus)
 
-**Model:** claude-haiku-4-5 | **Effort:** medium | **Token Multiplier:** ~2x
+**Model:** claude-haiku-4.5 | **Effort:** medium | **Token Multiplier:** ~2x
 
 ### What Engineer DOES
 
@@ -35,7 +35,7 @@ Playwright is the primary E2E testing framework for {service-name} (React/TypeSc
 
 ## Part 2: Test Execution & Validation (Quality Engineer Focus)
 
-**Model:** claude-sonnet-4-6 | **Effort:** medium
+**Model:** claude-sonnet-4.6 | **Effort:** medium
 
 ### What Quality Engineer DOES
 

@@ -28,7 +28,7 @@ Orchestrator receives HANDBACK
   ├─ Extract from HANDBACK:
   │  ├─ task_id
   │  ├─ agent_role (e.g., "Engineer", "Senior Engineer")
-  │  ├─ agent_model (e.g., "claude-haiku-4-5")
+  │  ├─ agent_model (e.g., "claude-haiku-4.5")
   │  ├─ status (complete, blocked, partial)
   │  ├─ tokens_in (input tokens)
   │  ├─ tokens_out (output tokens)
@@ -130,7 +130,7 @@ status: "success"
 attributes:
   # Agent Identity
   agent_type: "engineer"
-  agent_model: "claude-haiku-4-5"
+  agent_model: "claude-haiku-4.5"
   agent_role: "Engineer"
   
   # Resource
@@ -206,9 +206,9 @@ When calculating cost in span attributes, use model-specific pricing:
 
 | Model | Input Price | Output Price |
 |-------|-------------|--------------|
-| claude-haiku-4-5 | $0.000080/token | $0.000240/token |
-| claude-sonnet-4-6 | $0.000003/token | $0.000015/token |
-| claude-opus-4-7 | $0.000015/token | $0.000075/token |
+| claude-haiku-4.5 | $0.000080/token | $0.000240/token |
+| claude-sonnet-4.6 | $0.000003/token | $0.000015/token |
+| claude-opus-4.7 | $0.000015/token | $0.000075/token |
 
 **Formula:** `cost_usd = (input_tokens × input_price) + (output_tokens × output_price)`
 

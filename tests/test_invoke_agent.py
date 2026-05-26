@@ -68,7 +68,7 @@ def make_delegate(
     task_id="2026-01-01-test-task",
     role="Engineer",
     effort="medium",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
 ) -> Dict:
     """Helper: create a minimal valid DELEGATE block."""
     return {
@@ -94,7 +94,7 @@ def make_valid_handback(task_id="2026-01-01-test-task", role="Engineer") -> Dict
         "tests": [{"command": "make verify", "result": "PASS"}],
         "tokens_in": 1000,
         "tokens_out": 500,
-        "model": "claude-haiku-4-5",
+        "model": "claude-haiku-4.5",
         "effort": "medium",
         "duration_minutes": 5,
         "escalations": 0,
@@ -801,7 +801,7 @@ class TestSpanCapture:
         delegate = make_delegate(
             task_id="2026-01-01-span-attrs",
             role="Senior Engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
         )
         handback = make_valid_handback(task_id="2026-01-01-span-attrs")
         handback["tokens_in"] = 2000
@@ -824,7 +824,7 @@ class TestSpanCapture:
 
         assert attrs["task_id"] == "2026-01-01-span-attrs"
         assert attrs["agent_type"] == "Senior Engineer"
-        assert attrs["agent_model"] == "claude-sonnet-4-6"
+        assert attrs["agent_model"] == "claude-sonnet-4.6"
         assert attrs["tokens_in"] == 2000
         assert attrs["tokens_out"] == 800
         assert attrs["total_tokens"] == 2800

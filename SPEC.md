@@ -377,14 +377,14 @@ All work enters via **Orchestrator** (default entry point). Orchestrator applies
 
 | Role | Model | Effort | Cost/Task | Purpose |
 |------|-------|--------|-----------|---------|
-| **Orchestrator** | claude-haiku-4-5 | low | $0.03 | Entry point; routing decisions; queue management; span capture; metrics collection |
-| **Engineer** | claude-haiku-4-5 | high | $0.03 | Execute well-scoped tasks with pre-written plans |
-| **Senior Engineer** | claude-sonnet-4-6 | high | $0.09 | Complex coding without plan; diagnosis; planning |
-| **Lead Engineer** | claude-sonnet-4-6 | high | $0.09 | Code review; quality verification; unblock stuck tasks |
-| **Quality Engineer** | claude-sonnet-4-6 | medium | $0.09 | Tier 1 quality checks; model suitability assessment |
+| **Orchestrator** | claude-haiku-4.5 | low | $0.03 | Entry point; routing decisions; queue management; span capture; metrics collection |
+| **Engineer** | claude-haiku-4.5 | high | $0.03 | Execute well-scoped tasks with pre-written plans |
+| **Senior Engineer** | claude-sonnet-4.6 | high | $0.09 | Complex coding without plan; diagnosis; planning |
+| **Lead Engineer** | claude-sonnet-4.6 | high | $0.09 | Code review; quality verification; unblock stuck tasks |
+| **Quality Engineer** | claude-sonnet-4.6 | medium | $0.09 | Tier 1 quality checks; model suitability assessment |
 | **Principal Engineer** | claude-opus-4-6 | high | $0.15 | Cross-service architecture; complex multi-step planning |
-| **Security Engineer** | claude-opus-4-7 | max | $0.15 | Security analysis; vulnerability audits; threat modeling |
-| **Model Engineer** | claude-sonnet-4-6 | high | $0.09 | Analyze feedback; recommend optimal model/effort; generate artifact index |
+| **Security Engineer** | claude-opus-4.7 | max | $0.15 | Security analysis; vulnerability audits; threat modeling |
+| **Model Engineer** | claude-sonnet-4.6 | high | $0.09 | Analyze feedback; recommend optimal model/effort; generate artifact index |
 
 **Cost Target Distribution:**
 - Orchestrator: 60%
@@ -654,7 +654,7 @@ The following paths are **DEPRECATED and MUST NOT be used**:
 handoff_type: DELEGATE
 task_id: {unique_id}
 role: Engineer | Senior Engineer | Lead Engineer | Quality Engineer | ...
-model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-opus-4-6 | ...
+model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4-6 | ...
 effort: low | medium | high | max
 scope: "Clear one-sentence scope + explicit out-of-scope boundaries"
 context: [relevant files, error messages, root cause analysis]
@@ -834,7 +834,7 @@ examples, and Python API reference.
 
 ### Engineer
 
-**Model:** claude-haiku-4-5 (high effort)  
+**Model:** claude-haiku-4.5 (high effort)  
 **Cost Target:** 18%
 
 Execute well-scoped tasks with pre-written plans.
@@ -850,7 +850,7 @@ Execute well-scoped tasks with pre-written plans.
 
 ### Senior Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 7%
 
 Design solutions for complex tasks without pre-written plans. Diagnose bugs when root cause unclear.
@@ -871,7 +871,7 @@ Design solutions for complex tasks without pre-written plans. Diagnose bugs when
 
 ### Lead Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 2%
 
 Review code and unblock stuck tasks.
@@ -888,7 +888,7 @@ Review code and unblock stuck tasks.
 
 ### Quality Engineer
 
-**Model:** claude-sonnet-4-6 (medium effort)  
+**Model:** claude-sonnet-4.6 (medium effort)  
 **Cost Target:** 8%
 
 Run Tier 1 quality checks. Assess model suitability.
@@ -916,7 +916,7 @@ Design when changes affect >2 repos or service boundaries.
 
 ### Security Engineer
 
-**Model:** claude-opus-4-7 (max effort)  
+**Model:** claude-opus-4.7 (max effort)  
 **Cost Target:** 1%
 
 Scan for vulnerabilities, check dependencies, verify access controls.
@@ -925,7 +925,7 @@ Scan for vulnerabilities, check dependencies, verify access controls.
 
 ### Model Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 3%
 
 Analyze completed task feedback (~10-100 samples). Identify patterns.
@@ -947,7 +947,7 @@ Analyze completed task feedback (~10-100 samples). Identify patterns.
 
 ### Orchestrator
 
-**Model:** claude-haiku-4-5 (low effort)  
+**Model:** claude-haiku-4.5 (low effort)  
 **Cost Target:** 60%
 
 Runs continuously in harness. Polls queues every 30-60 seconds.
@@ -1072,7 +1072,7 @@ span_id: {uuid, unique per agent}
 parent_span_id: {uuid or null}
 attributes:
   agent_type: "Engineer" | "Senior Engineer" | "Quality Engineer" | etc.
-  agent_model: "claude-haiku-4-5" | "claude-sonnet-4-6" | etc.
+  agent_model: "claude-haiku-4.5" | "claude-sonnet-4.6" | etc.
   service_name: "agentic-engineers"
   agent_role: {matching_role_from_DELEGATE}
   task_id: {task_id}
@@ -1421,12 +1421,12 @@ All agentic-engineers agents use Anthropic Claude models in the following **HYPH
 
 | Model | Model ID | Claude API Alias | Context Window | Max Output | Use Case |
 |-------|----------|------------------|-----------------|------------|----------|
-| **Claude Haiku 4.5** | `claude-haiku-4-5` | `claude-haiku-4-5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
-| **Claude Sonnet 4.6** | `claude-sonnet-4-6` | `claude-sonnet-4-6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
+| **Claude Haiku 4.5** | `claude-haiku-4.5` | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
+| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | `claude-sonnet-4.6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
 | **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
-| **Claude Opus 4.7** | `claude-opus-4-7` | `claude-opus-4-7` | 1M | 128K | Highest capability; Security Engineer, Principal Engineer |
+| **Claude Opus 4.7** | `claude-opus-4.7` | `claude-opus-4.7` | 1M | 128K | Highest capability; Security Engineer, Principal Engineer |
 
-**CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4-7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
+**CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
 
 ### Harness-Specific Model Format
 
@@ -1434,23 +1434,23 @@ Each harness transforms the base model ID for its runtime:
 
 | Harness | Source Model | Rendered Format | Official Docs |
 |---------|--------------|-----------------|---------------|
-| **Copilot CLI** | `claude-opus-4-7` | `claude-opus-4-7` | [Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models) |
-| **Claude (Direct API)** | `claude-opus-4-7` | `claude-opus-4-7` | [Claude API](https://docs.anthropic.com/claude/docs/models-overview) |
-| **OpenCode** | `claude-opus-4-7` | `github-copilot/claude-opus-4-7` | [OpenCode Docs](https://github.com/github/opencode) |
-| **Pi (pi.dev)** | `claude-opus-4-7` | `claude-opus-4-7` | [Pi.dev](https://pi.dev/) |
+| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | [Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models) |
+| **Claude (Direct API)** | `claude-opus-4.7` | `claude-opus-4.7` | [Claude API](https://docs.anthropic.com/claude/docs/models-overview) |
+| **OpenCode** | `claude-opus-4.7` | `github-copilot/claude-opus-4.7` | [OpenCode Docs](https://github.com/github/opencode) |
+| **Pi (pi.dev)** | `claude-opus-4.7` | `claude-opus-4.7` | [Pi.dev](https://pi.dev/) |
 
 ### Model Assignment by Agent Role
 
 As of 2026-05-25:
 
-- **Orchestrator:** `claude-haiku-4-5` (fast, low-cost, routing-only)
-- **Engineer:** `claude-haiku-4-5` (fast, pre-planned tasks)
-- **Senior Engineer:** `claude-sonnet-4-6` (complex coding, unscoped work)
-- **Lead Engineer:** `claude-sonnet-4-6` (code review, architectural guidance)
-- **Quality Engineer:** `claude-sonnet-4-6` (quality gates, verification)
-- **Model Engineer:** `claude-sonnet-4-6` (metrics analysis, recommendations)
-- **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4-7` (cross-service architecture)
-- **Security Engineer:** `claude-opus-4-7` (complex threat modeling, vulnerability analysis)
+- **Orchestrator:** `claude-haiku-4.5` (fast, low-cost, routing-only)
+- **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
+- **Senior Engineer:** `claude-sonnet-4.6` (complex coding, unscoped work)
+- **Lead Engineer:** `claude-sonnet-4.6` (code review, architectural guidance)
+- **Quality Engineer:** `claude-sonnet-4.6` (quality gates, verification)
+- **Model Engineer:** `claude-sonnet-4.6` (metrics analysis, recommendations)
+- **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4.7` (cross-service architecture)
+- **Security Engineer:** `claude-opus-4.7` (complex threat modeling, vulnerability analysis)
 
 ### Validation & Enforcement
 
@@ -1486,9 +1486,9 @@ Tests verify:
 
 ```python
 # ✅ Approved formats
-"claude-haiku-4-5"  # Hyphens only
-"claude-sonnet-4-6"
-"claude-opus-4-7"
+"claude-haiku-4.5"  # Hyphens only
+"claude-sonnet-4.6"
+"claude-opus-4.7"
 
 # ❌ Forbidden formats (tests must FAIL if found)
 "claude-haiku-4.5"  # Dots NOT allowed

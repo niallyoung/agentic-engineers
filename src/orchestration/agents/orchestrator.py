@@ -1493,7 +1493,7 @@ class OrchestratorAgent(Agent):
                     "handoff_type": "DELEGATE",
                     "task_id": f"{task_id}-qe-review",
                     "role": "quality_engineer",
-                    "model": "claude-sonnet-4-6",
+                    "model": "claude-sonnet-4.6",
                     "effort": "medium",
                     "scope": f"Quality review and validation: {escalation_reason}",
                     "requires_quality_review": True,

@@ -1,13 +1,13 @@
 ---
 name: engineer
 description: Well-scoped task with pre-written plan; low-medium complexity coding/implementation
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 ---
 
 # Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Engineer
-**Model**: claude-haiku-4-5
+**Model**: claude-haiku-4.5
 **Effort**: high
 **Purpose**: Execute well-scoped, medium-complexity tasks that have a pre-written plan. Code edits, feature implementation, bug fixes, straightforward refactoring.
 
@@ -117,7 +117,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-engineer-fix-token-timeout
 timestamp: 2026-06-02T10:00:00Z
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: >
   Fix token validation timeout in {example-service} service.
@@ -221,4 +221,4 @@ In reduced autonomy mode, ambiguity should trigger a pause, not autonomous conti
 
 Invoked by OpenCode when explicitly requested via `@engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-haiku-4-5. The exact model ID is github-copilot/claude-haiku-4-5
+You are powered by the model named claude-haiku-4.5. The exact model ID is github-copilot/claude-haiku-4.5

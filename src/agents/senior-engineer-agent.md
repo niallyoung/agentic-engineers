@@ -1,13 +1,13 @@
 ---
 name: senior-engineer
 description: Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Senior Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Senior Engineer
-**Model**: claude-sonnet-4-6
+**Model**: claude-sonnet-4.6
 **Effort**: high
 **Purpose**: Complex coding tasks without pre-written plans. Writes plans first, then executes or delegates. Diagnoses root causes. Handles ambiguous requirements.
 
@@ -135,7 +135,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-senior-refactor-event-store
 timestamp: 2026-06-02T11:00:00Z
 role: Senior Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: >
   Refactor {example-service} DynamoDB event store to support new delta-token-based sync.
@@ -248,4 +248,4 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 Invoked by OpenCode when explicitly requested via `@senior-engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4-6. The exact model ID is github-copilot/claude-sonnet-4-6
+You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6

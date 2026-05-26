@@ -145,7 +145,7 @@ DELEGATE block automatically includes budget context:
 handoff_type: DELEGATE
 task_id: 2026-04-25-example
 role: Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 budget_context:
   session_pct_at_delegation: 65
   hours_until_reset: 4.2

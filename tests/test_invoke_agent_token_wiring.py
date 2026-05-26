@@ -76,7 +76,7 @@ def make_delegate(
     task_id="2026-01-01-test-task",
     role="Engineer",
     effort="medium",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
 ) -> dict:
     """Helper: create a minimal valid DELEGATE block."""
     return {
@@ -110,7 +110,7 @@ def make_valid_handback(
         "tokens_in": tokens_in,
         "tokens_out": tokens_out,
         "tokens_cached": tokens_cached,
-        "model": "claude-haiku-4-5",
+        "model": "claude-haiku-4.5",
         "effort": "medium",
         "duration_minutes": 5,
         "escalations": 0,
@@ -275,7 +275,7 @@ class TestTokenDefaults:
             "status": "complete",
             "deliverables": [],
             "tests": [],
-            "model": "claude-haiku-4-5",
+            "model": "claude-haiku-4.5",
             "effort": "medium",
             "duration_minutes": 5,
             "escalations": 0,

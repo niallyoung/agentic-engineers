@@ -2,7 +2,7 @@
 title: "todo-maintenance"
 description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
 role: "Engineer"
-model: "claude-haiku-4-5"
+model: "claude-haiku-4.5"
 effort: "medium"
 status: "implemented"
 version: "1.0.0"

@@ -134,7 +134,7 @@ def make_delegate(
     task_id: str = "2026-01-01-test-task",
     role: str = "engineer",
     effort: str = "medium",
-    model: str = "claude-haiku-4-5",
+    model: str = "claude-haiku-4.5",
     scope: str = "Test scope",
     context: Optional[list] = None,
     plan: Optional[list] = None,

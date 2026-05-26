@@ -238,7 +238,7 @@ Is task security-scoped?
 **Output:**
 - DELEGATE block with:
   - `role`: {Engineer|Senior Engineer|Lead Engineer|...}
-  - `model`: {claude-haiku-4-5|claude-sonnet-4-6|claude-opus-4-6|...}
+  - `model`: {claude-haiku-4.5|claude-sonnet-4.6|claude-opus-4-6|...}
   - `effort`: {low|medium|high|max}
   - `scope`: Clear description of work
   - `context`: Background information
@@ -258,7 +258,7 @@ Is task security-scoped?
 handoff_type: DELEGATE              # ✓ Required, must be "DELEGATE"
 task_id: YYYY-MM-DD-kebab-case      # ✓ Required, correct format
 role: Engineer                       # ✓ Required, valid role
-model: claude-haiku-4-5              # ✓ Required, valid model
+model: claude-haiku-4.5              # ✓ Required, valid model
 effort: high                         # ✓ Required, valid level
 scope: |                             # ✓ Required, ≥15 words, clear
   Clear description of work

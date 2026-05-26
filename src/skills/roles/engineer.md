@@ -1,6 +1,6 @@
 # Engineer Role
 
-**Model:** claude-haiku-4-5 | **Effort:** high | **Cost:** 1x
+**Model:** claude-haiku-4.5 | **Effort:** high | **Cost:** 1x
 
 ## What This Role Does
 

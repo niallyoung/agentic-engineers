@@ -110,7 +110,7 @@ deliverables: [...]
 tests: [...]
 tokens_in: 1200
 tokens_out: 820
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 18
 escalations: 0
@@ -236,7 +236,7 @@ If you encounter legacy path references, ensure the queue-isolation skill is pro
 handoff_type: DELEGATE
 task_id: {unique_id}
 role: Engineer | Senior Engineer | Lead Engineer | ...
-model: claude-haiku-4-5 | claude-sonnet-4-6 | ...
+model: claude-haiku-4.5 | claude-sonnet-4.6 | ...
 effort: low | medium | high | max
 scope: "Clear one-sentence scope + out-of-scope"
 context: [...]

@@ -2,7 +2,7 @@
 
 **Role Summary:** Engineer executes code implementation tasks using red-green-refactor TDD, architectural compliance, and pattern consistency. Ensures every line of code adds measurable value.
 
-**Model:** claude-haiku-4-5 | **Effort:** high | **Cost Tier:** 1x | **Token Multiplier:** ~2x (extended context for code review)
+**Model:** claude-haiku-4.5 | **Effort:** high | **Cost Tier:** 1x | **Token Multiplier:** ~2x (extended context for code review)
 
 ---
 
@@ -69,7 +69,7 @@ tests:
     Result: "PASS (X tests, Y% coverage)"
 tokens_in: <estimate>
 tokens_out: <estimate>
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: <actual time>
 escalations: <count>
@@ -307,7 +307,7 @@ tests:
     Result: "PASS (124 tests, 87% coverage)"
 tokens_in: 2100
 tokens_out: 1400
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 35
 escalations: 0

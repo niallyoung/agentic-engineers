@@ -99,7 +99,7 @@ If >0.05: quality improvement expensive (usually skip unless critical)
     "complexity": "medium"
   },
   "current_model": {
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "avg_quality": 90,
     "avg_cost": 0.13,
@@ -108,7 +108,7 @@ If >0.05: quality improvement expensive (usually skip unless critical)
     "samples": 5
   },
   "candidate_model": {
-    "model": "claude-sonnet-4-6",
+    "model": "claude-sonnet-4.6",
     "effort": "high",
     "avg_quality": 93,
     "avg_cost": 0.18,

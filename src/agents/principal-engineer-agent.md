@@ -1,13 +1,13 @@
 ---
 name: principal-engineer
 description: Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos
-model: claude-opus-4-6
+model: claude-opus-4.6
 ---
 
 # Principal Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Principal Engineer
-**Model**: claude-opus-4-7
+**Model**: claude-opus-4.7
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 
@@ -88,7 +88,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-principal-redesign-event-store
 timestamp: 2026-06-02T15:00:00Z
 role: Principal Engineer
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: high
 scope: >
   Redesign event store architecture for multi-region deployment.
@@ -237,4 +237,4 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 Invoked by OpenCode when explicitly requested via `@principal-engineer` mention.
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-opus-4-6. The exact model ID is github-copilot/claude-opus-4-6
+You are powered by the model named claude-opus-4.6. The exact model ID is github-copilot/claude-opus-4.6

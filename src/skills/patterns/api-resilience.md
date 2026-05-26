@@ -1,7 +1,7 @@
 # API Resilience Skill
 
 **Used by:** senior-engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** medium — implement once per frontend API client; adjust retry parameters to match your SLA.
 
 Use this skill when building or modifying API client code in frontend applications that call backend HTTP services.
