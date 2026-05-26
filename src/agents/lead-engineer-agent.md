@@ -163,6 +163,15 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@lead-engineer` mention.
+Invoked via OpenCode CLI with `--agent lead-engineer` flag:
+```bash
+opencode --agent lead-engineer "Code review or architectural guidance"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent lead-engineer "Code review task"
+```
+
 Can be automatically invoked by orchestrator agents via Task tool.
 You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6

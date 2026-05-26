@@ -147,6 +147,15 @@ Unlike other agents, the Orchestrator's autonomy is about **continuous polling**
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@orchestrator` mention.
+Invoked via OpenCode CLI with `--agent orchestrator` flag:
+```bash
+opencode --agent orchestrator "Your task description"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent orchestrator "Your task"
+```
+
 Polls `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/` every 30-60 seconds in harness mode.
 All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure.

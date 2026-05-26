@@ -8,10 +8,95 @@
 
 ```bash
 git clone https://github.com/niallyoung/agentic-engineers.git && cd agentic-engineers
-make install && make verify && python3 -m pytest tests/ -q
+make install && make verify && make test
 ```
 
 You're ready to contribute.
+
+---
+
+## Contributor Setup Guide
+
+### Automatic Setup (What Happens After Clone)
+
+After `make install`, the framework automatically:
+
+✅ **Git Hooks Installed**
+- Pre-commit hook: Prevents bytecode (`.pyc`) from being staged
+- Commit-msg hook: Validates conventional commit format (`feat(scope): message`)
+- Pre-push hook: Runs concurrent tests to detect race conditions
+- 📍 Location: `.githooks/` → configured via `git config core.hooksPath`
+- ✅ **Automatic:** No manual action needed
+
+✅ **Directory Structure Created**
+- `~/.copilot/` — Copilot CLI agents + skills
+- `~/.claude/` — Claude Code agents
+- `~/.pi/` — π.dev experimental config
+- `~/.config/opencode/` — OpenCode agents + skills
+- ✅ **Automatic:** Created by `make install-*` targets
+
+✅ **Local Development Environment**
+- Python virtual environment ready (via `setup.py`)
+- All dependencies installed
+- Pytest configured with coverage reporting
+- ✅ **Automatic:** Done by `make install`
+
+### What You Need to Do (Manual Steps)
+
+1. **Clone & install:**
+   ```bash
+   git clone https://github.com/niallyoung/agentic-engineers.git
+   cd agentic-engineers
+   make install        # Installs to all 4 harnesses
+   # Or: make install-opencode (if using OpenCode only)
+   ```
+
+2. **Create a branch for your work:**
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+
+3. **Make your changes** using the framework's own tools:
+   - New agent? Use `agent-creator` skill
+   - New skill? Use `skill-creator` skill
+   - Code changes? Edit directly and run tests
+
+4. **Verify locally before pushing:**
+   ```bash
+   make verify         # Full verification (structure + agents + skills)
+   make test           # Run all tests with coverage
+   make lint           # Lint Python, Shell, YAML
+   make quality-gate   # Pre-push checks (all of the above)
+   ```
+
+5. **Push with conventional commits:**
+   ```bash
+   git commit -m "feat(skills): add cache invalidation"
+   git push origin feature/your-feature
+   ```
+   CI will validate all standards automatically.
+
+---
+
+## Working with Single Harnesses
+
+If you're only working with one harness (e.g., OpenCode development), use targeted make targets:
+
+```bash
+# Install OpenCode only
+make install-opencode
+
+# Render OpenCode only
+make render-opencode
+
+# Verify OpenCode specifically
+make validate-opencode
+
+# Uninstall OpenCode only
+make uninstall-opencode
+```
+
+This speeds up iteration without installing all 4 harnesses.
 
 ---
 
@@ -113,17 +198,29 @@ git commit --amend
 ## Testing
 
 ```bash
-# Run all tests
-python3 -m pytest tests/ -q
+# Run all tests with coverage (recommended)
+make test
 
-# With coverage
-python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
+# Run specific test file
+pytest tests/test_invoke_agent.py -v
 
-# Concurrent/race-condition guard (required before push)
-python3 -m pytest tests/test_invoke_agent.py::TestConcurrentInvocations -v --tb=short
+# Run concurrent tests (required before push)
+make test-concurrent
 ```
 
 All new code must have tests. CI enforces >85% coverage.
+
+### About make test
+
+The `make test` target runs:
+- All pytest tests
+- Coverage report generation
+- Automatic display of missing coverage
+
+Equivalent to:
+```bash
+python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
+```
 
 ### Parallel & Concurrent Test Validation
 

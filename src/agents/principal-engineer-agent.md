@@ -235,6 +235,15 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@principal-engineer` mention.
+Invoked via OpenCode CLI with `--agent principal-engineer` flag:
+```bash
+opencode --agent principal-engineer "Cross-service architecture or major refactor"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent principal-engineer "Architecture decisions"
+```
+
 Can be automatically invoked by orchestrator agents via Task tool.
 You are powered by the model named claude-opus-4.6. The exact model ID is github-copilot/claude-opus-4.6

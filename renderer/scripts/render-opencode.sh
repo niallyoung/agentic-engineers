@@ -260,8 +260,8 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 - Each role has specialised skills under \`skills/\` (see \`docs/SKILLS.md\`).
 
 ## Layout in this install
-- \`agents/\` — 8 subagents; invoke via \`@<agent-name>\` or the task tool
-  (e.g. \`@orchestrator\`, \`@engineer\`, \`@security-engineer\`).
+- \`agents/\` — 8 subagents; invoke via \`opencode --agent <agent-name>\` or the task tool
+  (e.g. \`opencode --agent orchestrator\`, \`opencode --agent engineer\`).
 - \`skills/\` — workflow modules loaded on demand via the skill tool.
 - \`opencode.jsonc\` — managed config (compaction, permissions); do not edit.
 - \`AGENTS.md.local\` — *optional, user-authored*; if present, OpenCode loads
@@ -430,8 +430,8 @@ case "$MODE" in
 
 			# Mode: orchestrator is the framework's entry point, so it must be
 			# selectable as a primary agent (--agent orchestrator, default_agent).
-			# Use mode: all so it can also be invoked as @orchestrator from inside
-			# any session. All other roles stay as subagents (invoked via @-mention
+			# Use mode: all so it can also be invoked as primary agent from inside
+			# any session. All other roles stay as subagents (invoked via --agent
 			# or task tool only).
 			if [ "$name" = "orchestrator" ]; then
 				agent_mode="all"

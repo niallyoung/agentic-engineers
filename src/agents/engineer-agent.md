@@ -219,6 +219,15 @@ In reduced autonomy mode, ambiguity should trigger a pause, not autonomous conti
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@engineer` mention.
+Invoked via OpenCode CLI with `--agent engineer` flag:
+```bash
+opencode --agent engineer "Your implementation task"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent engineer "Implementation task"
+```
+
 Can be automatically invoked by orchestrator agents via Task tool.
 You are powered by the model named claude-haiku-4.5. The exact model ID is github-copilot/claude-haiku-4.5

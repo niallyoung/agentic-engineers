@@ -200,14 +200,14 @@ make render-pi           # Generate ~/.pi/ config only
 ### Run the Orchestrator
 
 ```bash
-# Via OpenCode (recommended)
-opencode "Your task description here"
-
-# Via Claude Code
-@orchestrator Your task description here
+# Via OpenCode CLI (recommended)
+opencode --agent orchestrator "Your task description here"
 
 # Via Copilot CLI
-copilot --agent orchestrator "Your task description here"
+copilot --allow-all --autopilot --agent orchestrator "Your task description here"
+
+# Via Claude Code (in IDE)
+@orchestrator Your task description here
 ```
 
 The Orchestrator will:

@@ -324,10 +324,15 @@ install-opencode: render-opencode ## Install agents & skills to ~/.config/openco
 	fi
 	@echo "✅ Installation to ~/.config/opencode/ complete"
 	@echo ""
-	@echo "ℹ️  To use in OpenCode:"
-	@echo "  - Reference agents via @{agent-name} (e.g., @orchestrator, @engineer)"
-	@echo "  - Skills automatically discovered via skill tool"
-	@echo "  - Global rules in ~/.config/opencode/AGENTS.md (user overrides → AGENTS.md.local)"
+	@echo "ℹ️  To use agents via OpenCode CLI:"
+	@echo "  opencode --agent orchestrator 'Your task description'"
+	@echo "  opencode --agent engineer 'Implementation task'"
+	@echo ""
+	@echo "  Or via Copilot CLI:"
+	@echo "  copilot --allow-all --autopilot --agent orchestrator 'Your task'"
+	@echo ""
+	@echo "  Skills are automatically discovered via skill tool."
+	@echo "  Global rules in ~/.config/opencode/AGENTS.md"
 
 uninstall-all: uninstall-copilot uninstall-claude uninstall-pi uninstall-opencode ## Remove from all 4 locations
 	@echo "✅ Uninstall complete"
