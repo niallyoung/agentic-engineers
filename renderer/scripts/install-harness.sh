@@ -98,10 +98,18 @@ main() {
     fi
 
     # Step 2: Ask if user wants to backup first
+    # Get harness directory path
+    case "$HARNESS_NAME" in
+        copilot) harness_dir="$HOME/.copilot" ;;
+        claude) harness_dir="$HOME/.claude" ;;
+        pi) harness_dir="$HOME/.pi" ;;
+        opencode) harness_dir="$HOME/.config/opencode" ;;
+    esac
+ 
     echo -n "Backup $HARNESS_NAME first? (y/n): "
     read -r backup_choice
     echo ""
-
+ 
     if [[ $backup_choice =~ ^[Yy]$ ]]; then
         # Run backup for this harness
         log_info "Backing up $HARNESS_NAME..."
@@ -112,6 +120,42 @@ main() {
             exit 1
         fi
         echo ""
+    elif [ -d "$harness_dir" ]; then
+        # Directory exists and user skipped backup - warn about pollution risk
+        echo -e "${YELLOW}⚠️  WARNING: $harness_dir exists${NC}"
+        echo "   Without backup, old files may remain (potential pollution if files were renamed/deleted)"
+        echo ""
+        echo "   Options:"
+        echo "   (a) Proceed with merge (old files will remain)"
+        echo "   (b) Backup now before installing"
+        echo "   (c) Clean install (delete $harness_dir and reinstall fresh)"
+        echo ""
+        echo -n "Choose action (a/b/c): "
+        read -r action_choice
+        echo ""
+ 
+        case "$action_choice" in
+            [Bb])
+                log_info "Backing up $HARNESS_NAME..."
+                if bash "$REPO_ROOT/renderer/scripts/backup-harnesses.sh" --quiet --harness "$HARNESS_NAME"; then
+                    log_success "$HARNESS_NAME backed up"
+                else
+                    log_error "$HARNESS_NAME backup failed"
+                    exit 1
+                fi
+                echo ""
+                ;;
+            [Cc])
+                log_info "Removing $harness_dir for clean install..."
+                rm -rf "$harness_dir"
+                log_success "$HARNESS_NAME directory removed"
+                echo ""
+                ;;
+            [Aa]|*)
+                log_info "Proceeding with merge (old files will remain)"
+                echo ""
+                ;;
+        esac
     fi
 
     # Step 3: Render the harness
