@@ -1,33 +1,72 @@
 # Queue-Based Delegation Mechanics
 
-Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
+⚠️ **SPECIFICATION LOCKED (2026-05-26)**
 
-**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.copilot/queue/{session-id}/incoming/` (or `~/.claude/queue/` for Claude context), routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+This specification is LOCKED as of 2026-05-26. The canonical queue path is `~/.agentic-engineers/`.
+
+**Key Facts:**
+- All 4 harnesses (copilot, claude, opencode, pi) use the SAME base directory: `~/.agentic-engineers/{session-id}/{harness}/queue/`
+- Legacy paths (~.copilot/queue, ~/.claude/queue, artifacts/queue) are DEPRECATED and UNSUPPORTED
+- Queue-isolation skill REQUIRED (no fallback logic)
+- Changes to queue paths require approval via **spec-management skill**
+
+See **docs/SPEC.md - Queue Architecture & Paths (LOCKED SPEC)** for full specification and enforcement rules.
 
 ---
 
-## Queue Structure (Session-ID Partitioned)
+# Queue-Based Delegation Mechanics (Details)
+
+Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
+
+**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+
+All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure under `~/.agentic-engineers/artifacts/`.
+
+---
+
+## Queue Structure (All Harnesses - Unified)
+
+**As of 2026-05-26:** All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure.
 
 ```
-~/.copilot/queue/
-├── {session-id}/                    # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
-│   ├── incoming/                    # New work, ready for Orchestrator agent to process
-│   ├── processing/                  # Work assigned to agent, awaiting HANDBACK
-│   └── done/                        # Completed work, ready for human decision
-├── {other-session-id}/
-│   ├── incoming/
-│   ├── processing/
-│   └── done/
-└── .migration-log                   # Migration record (legacy → partitioned)
+~/.agentic-engineers/
+└── artifacts/
+    └── {session-id}/                   # UUID: unique per session
+        ├── claude/                     # Claude harness
+        │   ├── metadata.json           # Harness metadata
+        │   └── queue/
+        │       ├── incoming/           # New work, ready for Orchestrator
+        │       ├── processing/         # Work assigned to agent, awaiting HANDBACK
+        │       ├── done/               # Completed work, ready for decision
+        │       └── failed/             # Errored tasks
+        ├── copilot/                    # GitHub Copilot harness
+        │   ├── metadata.json
+        │   └── queue/
+        │       ├── incoming/
+        │       ├── processing/
+        │       ├── done/
+        │       └── failed/
+        ├── gpt/                        # OpenAI GPT harness
+        │   ├── metadata.json
+        │   └── queue/ ...
+        └── local/                      # Local harness
+            ├── metadata.json
+            └── queue/ ...
+    └── {other-session-id}/             # Other session
+        ├── claude/ ...
+        ├── copilot/ ...
+        └── ...
 ```
 
-**Prior Structure (Legacy - Automatically Migrated):**
+**Legacy Structure (Deprecated):**
 ```
-~/.copilot/queue/
-├── incoming/                        # Migrated to {session-id}/incoming/
-├── processing/                      # Migrated to {session-id}/processing/
-└── done/                            # Migrated to {session-id}/done/
+~/.copilot/queue/          ❌ NO LONGER SUPPORTED
+~/.claude/queue/           ❌ NO LONGER SUPPORTED
+artifacts/queue/           ❌ NO LONGER SUPPORTED (was local repo artifact path)
 ```
+
+**Migration completed:** All tasks from legacy paths are migrated to canonical path.
+Queue-isolation skill provides mandatory isolation. No backward compatibility.
 
 ---
 
@@ -35,9 +74,9 @@ Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-bas
 
 ### 1. Incoming Queue
 
-**New task arrives as:** `~/.copilot/queue/{session-id}/incoming/{task_id}.yaml`
+**New task arrives as:** `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/{task_id}.yaml`
 
-Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/incoming/2026-04-30-fix-token-timeout.yaml`
+Example path: `~/.agentic-engineers/artifacts/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/incoming/2026-04-30-fix-token-timeout.yaml`
 
 ```yaml
 ---
@@ -58,9 +97,9 @@ priority: high
 
 ### 2. Processing Queue
 
-**Agent returns work as:** `~/.copilot/queue/{session-id}/processing/{task_id}-HANDBACK-{role}.yaml`
+**Agent returns work as:** `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
 
-Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
+Example path: `~/.agentic-engineers/artifacts/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
 
 ```yaml
 ---
@@ -85,9 +124,9 @@ escalations: 0
 
 ### 3. Done Queue
 
-**Final decision stored as:** `~/.copilot/queue/{session-id}/done/{task_id}-{decision}.yaml`
+**Final decision stored as:** `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml`
 
-Example path: `~/.copilot/queue/54744939-4acb-430c-b2c4-3b8322289d0b/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
+Example path: `~/.agentic-engineers/artifacts/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
 
 ```yaml
 task_id: 2026-04-30-fix-token-timeout
@@ -142,91 +181,45 @@ The Orchestrator detects the session-id using the following priority:
 
 ### Multiple Simultaneous Sessions
 
-When multiple Copilot or Claude instances run concurrently, each gets a unique queue partition:
+When multiple harnesses run concurrently, each harness gets a unique queue partition within its session:
 
 ```
-~/.copilot/queue/
-├── 54744939-4acb-430c-b2c4-3b8322289d0b/  # Copilot session 1
-│   ├── incoming/ ← Tasks for session 1 only
-│   ├── processing/
-│   └── done/
-├── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/  # Copilot session 2
-│   ├── incoming/ ← Tasks for session 2 only
-│   ├── processing/
-│   └── done/
-└── .migration-log
+~/.agentic-engineers/artifacts/
+├── 54744939-4acb-430c-b2c4-3b8322289d0b/     # Session 1
+│   ├── claude/
+│   │   └── queue/
+│   │       ├── incoming/ ← Claude tasks for session 1
+│   │       ├── processing/
+│   │       └── done/
+│   └── copilot/
+│       └── queue/
+│           ├── incoming/ ← Copilot tasks for session 1
+│           ├── processing/
+│           └── done/
+├── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/     # Session 2
+│   ├── claude/
+│   │   └── queue/ ...
+│   └── copilot/
+│       └── queue/ ...
 ```
 
-Each session's Orchestrator only polls and processes its own queue partition. No cross-contamination, no race conditions.
+Each harness's Orchestrator only polls and processes its own queue partition. No cross-contamination, no race conditions.
 
 ---
 
-## Migration Guide (Legacy → Session-ID Partitioned)
+## Migration History (Completed 2026-05-26)
 
-### Automatic Migration on First Run
+⚠️ **Queue path consolidation is COMPLETE.** Legacy paths are NO LONGER SUPPORTED.
 
-When QueueManager is initialized for the first time with the new code:
+**Historical:** Phases 1-4 involved gradual migration from:
+- `~/.copilot/queue/` → ❌ DEPRECATED
+- `~/.claude/queue/` → ❌ DEPRECATED
+- `artifacts/queue/` → ❌ DEPRECATED
 
-1. **Detects legacy queue structure** (`~/.copilot/queue/{incoming,processing,done}`)
-2. **Creates new session-id directories** (`~/.copilot/queue/{session-id}/`)
-3. **Copies all queue files** from old location to new location
-4. **Renames old directories** to backup location (e.g., `incoming-legacy-20260503-143022/`)
-5. **Records migration** in `.migration-log`
+**Current:** All harnesses now use the canonical path:
+- `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/` ✅ REQUIRED
 
-### Migration Log
-
-After migration, a `.migration-log` file is created at `~/.copilot/queue/.migration-log`:
-
-```yaml
-- timestamp: 2026-05-03T14:30:22.123456
-  action: migration_started
-  from_structure: "~/.copilot/queue/{incoming,processing,done}"
-  to_structure: "~/.copilot/queue/{session-id}/{incoming,processing,done}"
-
-- timestamp: 2026-05-03T14:30:22.234567
-  action: file_copied
-  from: "incoming/task-001.yaml"
-  to: "54744939-4acb-430c-b2c4-3b8322289d0b/incoming/task-001.yaml"
-
-- timestamp: 2026-05-03T14:30:22.345678
-  action: file_copied
-  from: "processing/task-002.yaml"
-  to: "54744939-4acb-430c-b2c4-3b8322289d0b/processing/task-002.yaml"
-
-- timestamp: 2026-05-03T14:30:22.456789
-  action: old_directory_renamed
-  from: "incoming"
-  to: "incoming-legacy-20260503-143022"
-
-- timestamp: 2026-05-03T14:30:22.567890
-  action: migration_completed
-  status: success
-```
-
-### Backward Compatibility
-
-- Old queue files are **not deleted**, only copied to new location
-- Old directories are **renamed** with timestamp, not removed
-- All data is preserved for auditing and recovery
-- If migration fails, `.migration-log` records the error for debugging
-
-### Manual Queue Inspection
-
-To view tasks in a specific session's queue:
-
-```bash
-# Detect current session-id
-echo $COPILOT_SESSION_ID
-
-# Or find it from session-state
-ls ~/.copilot/session-state/
-
-# List incoming tasks for a session
-ls ~/.copilot/queue/{session-id}/incoming/
-
-# Inspect a task
-cat ~/.copilot/queue/{session-id}/incoming/task-001.yaml
-```
+If you encounter legacy path references, ensure the queue-isolation skill is properly initialized. See `src/skills/_meta/queue-isolation/SKILL.md` for configuration details.
 
 ---
 
@@ -234,9 +227,9 @@ cat ~/.copilot/queue/{session-id}/incoming/task-001.yaml
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
-| DELEGATE | `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
-| HANDBACK | `artifacts/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
-| Decision | `artifacts/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
+| DELEGATE | `~/.agentic-engineers/artifacts/{session-id}/{harness}/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
+| HANDBACK | `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
+| Decision | `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
 
 **DELEGATE Format (from HANDOFF.md):**
 ```yaml

@@ -379,7 +379,72 @@ echo "✅ Source file integrity check passed"
 
 # ─── End: Orphaned Bytecode Check ──────────────────────────────────────────────
 
-# ── Result ─────────────────────────────────────────────────────────────────────
+# ─── Section: Queue Path Centralization Enforcement ──────────────────────────────
+# SPEC locked: 2026-05-26 (docs/SPEC.md - Queue Architecture & Paths)
+#
+# Enforcement: All harnesses MUST use ~/.agentic-engineers/ (NO EXCEPTIONS)
+# - Block: ~/.copilot/queue (DEPRECATED)
+# - Block: ~/.claude/queue (DEPRECATED)
+# - Block: artifacts/queue (DEPRECATED)
+#
+# Exceptions: Allow in src/orchestration/queue_compat.py and _archive/ directories
+#
+
+echo ""
+echo "🔒 Validating queue path centralization..."
+
+QUEUE_ERRORS=0
+
+# Get all staged files
+STAGED_QUEUE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|json|yaml|yml|jsonc)$' || true)
+
+for file in $STAGED_QUEUE_FILES; do
+    [ -f "$file" ] || continue
+    
+    # Skip exceptions: queue_compat.py, _archive/, and tests/
+    if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]]; then
+        continue
+    fi
+    
+    # Check for legacy queue paths in staged content
+    
+    # Block: ~/.copilot/queue (except exceptions)
+    if git show ":$file" 2>/dev/null | grep -q "\.copilot/queue"; then
+        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]]; then
+            fail "Legacy queue path found in $file: ~/.copilot/queue"
+            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+        fi
+    fi
+    
+    # Block: ~/.claude/queue (except exceptions)
+    if git show ":$file" 2>/dev/null | grep -q "\.claude/queue"; then
+        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]]; then
+            fail "Legacy queue path found in $file: ~/.claude/queue"
+            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+        fi
+    fi
+    
+    # Block: artifacts/queue (except queue_compat.py and _archive/)
+    if git show ":$file" 2>/dev/null | grep -q "artifacts/queue"; then
+        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]]; then
+            fail "Legacy queue path found in $file: artifacts/queue"
+            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+        fi
+    fi
+done
+
+if [ "$QUEUE_ERRORS" -gt 0 ]; then
+    echo ""
+    echo "❌ pre-commit: $QUEUE_ERRORS queue path violation(s) found"
+    ERRORS=$((ERRORS + QUEUE_ERRORS))
+fi
+
+# ─── End: Queue Path Centralization Enforcement ────────────────────────────────
+
+
 if [ "$ERRORS" -gt 0 ]; then
   echo ""
   echo "❌ pre-commit: $ERRORS violation(s) found. Fix issues and re-commit."

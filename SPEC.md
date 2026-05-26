@@ -493,6 +493,158 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
 
 ---
 
+## Queue Architecture & Paths (LOCKED SPEC)
+
+**⚠️ SPECIFICATION LOCKED as of 2026-05-26**
+
+This section defines the canonical queue path architecture for all harnesses. Changes to queue paths require approval via the `spec-management` skill.
+
+### Canonical Queue Path
+
+**All harnesses MUST use: `~/.agentic-engineers/`**
+
+Queue directory structure:
+```
+~/.agentic-engineers/
+├── {session-id}/                       # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
+│   ├── copilot/
+│   │   ├── queue/
+│   │   │   ├── incoming/               # New DELEGATEs waiting for routing
+│   │   │   ├── processing/             # Work assigned to agents, HANDBACKs awaiting review
+│   │   │   ├── done/                   # Completed work
+│   │   │   └── failed/                 # Failed work (optional, for archival)
+│   │   └── session-state/
+│   ├── claude/
+│   │   ├── queue/
+│   │   │   ├── incoming/
+│   │   │   ├── processing/
+│   │   │   ├── done/
+│   │   │   └── failed/
+│   │   └── session-state/
+│   ├── opencode/
+│   │   ├── queue/
+│   │   │   ├── incoming/
+│   │   │   ├── processing/
+│   │   │   ├── done/
+│   │   │   └── failed/
+│   │   └── session-state/
+│   └── pi/
+│       ├── queue/
+│       │   ├── incoming/
+│       │   ├── processing/
+│       │   ├── done/
+│       │   └── failed/
+│       └── session-state/
+```
+
+**Supported Harnesses (ALL REQUIRE SAME BASE):**
+- **copilot**: Uses `~/.agentic-engineers/{session-id}/copilot/queue/`
+- **claude**: Uses `~/.agentic-engineers/{session-id}/claude/queue/`
+- **opencode**: Uses `~/.agentic-engineers/{session-id}/opencode/queue/`
+- **pi**: Uses `~/.agentic-engineers/{session-id}/pi/queue/`
+
+**CRITICAL:** There are NO EXCEPTIONS. All four harnesses use the same `~/.agentic-engineers/` base directory. No harness may use its own legacy path.
+
+### Queue Subdirectories (Standard)
+
+All queue directories MUST contain four standard subdirectories:
+
+| Directory | Purpose | Contents |
+|-----------|---------|----------|
+| **incoming/** | New work waiting for routing | DELEGATE blocks from humans or Orchestrator |
+| **processing/** | Work assigned to agents | HANDBACKs awaiting review by Quality Engineer |
+| **done/** | Completed work | Final decisions ready for human action |
+| **failed/** | Failed work (optional) | HANDBACKs with status=failed or blocked beyond recovery |
+
+All subdirectories exist across all four harnesses (copilot, claude, opencode, pi).
+
+### Unsupported Legacy Paths (DEPRECATED)
+
+The following paths are **DEPRECATED and MUST NOT be used**:
+
+| Legacy Path | Status | Migration |
+|-------------|--------|-----------|
+| `~/.copilot/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/{session-id}/copilot/queue/` |
+| `~/.claude/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/{session-id}/claude/queue/` |
+| `artifacts/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/{session-id}/*/queue/` |
+
+**Migration Completed:** 2026-05-26
+
+**Effect of Using Legacy Paths:** Using any legacy path will cause a `RuntimeError` from the queue isolation layer (queue-isolation skill) because those paths are no longer monitored by the Orchestrator or harness renderers.
+
+### Enforcement Rules
+
+**1. Queue-Isolation REQUIRED (No Fallback Logic)**
+- QueueManager MUST have queue-isolation skill available at runtime
+- If queue-isolation is unavailable, QueueManager raises `RuntimeError` immediately
+- Error message MUST mention canonical path and list all unsupported legacy paths
+- NO fallback to legacy paths; NO conditional logic to support old paths
+
+**2. Orchestrator Hard Constraint**
+- Orchestrator MUST initialize queue polling ONLY from `~/.agentic-engineers/{session-id}/{harness}/queue/`
+- Orchestrator detects session-id from COPILOT_SESSION_ID or CLAUDE_SESSION_ID environment variables
+- Orchestrator MUST NOT check for legacy paths (e.g., `~/.copilot/queue/`)
+- Orchestrator MUST NOT implement conditional logic for different harnesses; all use same base
+
+**3. Harness Renderers (Build-Time Compliance)**
+- All harness configuration renderers (copilot, claude, opencode, pi) MUST output:
+  ```
+  QUEUE_PATH=~/.agentic-engineers/{session-id}/{harness}/queue/
+  ```
+- Build-time validation checks that all harness configs use correct path
+- Pre-commit hooks validate no legacy paths are introduced in harness code
+
+**4. Pre-Commit Hooks (Enforcement Gate)**
+- Git hooks MUST block commits that introduce legacy paths (`~/.copilot/queue`, `~/.claude/queue`, `artifacts/queue`)
+- Exception: Allow in `src/orchestration/queue_compat.py` (marked DEPRECATED) and `_archive/` directories
+- Error message format:
+  ```
+  ERROR: Legacy queue paths found in {file}
+  Use ~/.agentic-engineers/ instead (see SPEC.md: Queue Architecture & Paths)
+  ```
+
+**5. Testing Validation (CI Gate)**
+- Test suite includes `tests/test_queue_path_centralization.py` with 8+ tests
+- All tests validate orchestrator initializes ONLY from canonical path
+- Tests validate all 4 harnesses initialize with correct path
+- Tests verify no legacy paths exist in active source code
+
+### Validation Procedures
+
+**Pre-Merge Gate (Automated):**
+
+1. **Grep Check for Legacy Paths:**
+   ```bash
+   grep -r "\.copilot/queue" src/                # Must return 0 matches (except _archive/)
+   grep -r "\.claude/queue" src/                 # Must return 0 matches (except _archive/)
+   grep -r "artifacts/queue" src/                # Must return 0 matches (except queue_compat.py, _archive/)
+   ```
+
+2. **Harness Config Validation:**
+   - Verify all harness configs output `~/.agentic-engineers/{session-id}/{harness}/queue/`
+   - Test each harness: copilot, claude, opencode, pi
+   - All must use SAME base directory
+
+3. **Test Suite Execution:**
+   - Run: `pytest tests/test_queue_path_centralization.py -v`
+   - All 8+ tests must pass
+   - Tests cover:
+     - Orchestrator requires isolation skill
+     - Canonical path is only path checked
+     - All 4 harnesses use same base
+     - Legacy paths not referenced in active code
+     - Queue subdirectory structure is standard
+     - SPEC.md documents canonical path
+     - Docs/QUEUE-PROTOCOL.md is locked
+     - Pre-commit hook validates paths
+
+4. **CI Gate (GitHub Actions):**
+   - Same tests run on every push
+   - Merge blocked if any test fails
+   - All 2,900+ tests must pass (including 8+ new queue path tests)
+
+---
+
 ## DELEGATE/HANDBACK Protocol
 
 ### DELEGATE Format (Orchestrator → Agent)
