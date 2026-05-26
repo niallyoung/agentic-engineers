@@ -1,6 +1,23 @@
-"""CHANGELOG.md validation tests to prevent versioning sync issues."""
+"""
+CHANGELOG.md validation tests (DEPRECATED)
+
+⚠️ DEPRECATED: CHANGELOG.md no longer exists in the repository
+As of commit 1a4f889, the repository uses GitHub Releases as the source of truth
+for version history and release notes. Local CHANGELOG.md is no longer maintained.
+
+TESTS SKIPPED: GitHub Releases replaced CHANGELOG.md as the canonical source.
+See GitHub Releases for version history and release notes.
+"""
+
 import re
 from pathlib import Path
+import pytest
+
+# Skip all tests in this module - CHANGELOG.md no longer exists
+pytestmark = pytest.mark.skip(
+    reason="CHANGELOG.md deprecated - GitHub Releases is the source of truth. "
+           "See https://github.com/niallyoung/agentic-engineers/releases"
+)
 
 
 class TestChangelogFormat:
