@@ -1,6 +1,6 @@
 # Agentic Engineers
 
-A production-ready multi-agent orchestration framework with 8 specialized AI roles, queue-based delegation, quality gates, and autonomous cost optimization feedback loops.
+8 agent roles + queue-based orchestration + quality gates + cost optimization feedback loops.
 
 ---
 
