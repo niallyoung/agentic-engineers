@@ -1,9 +1,0 @@
-# agentic-engineers framework
-.agentic-engineers/*.log
-.agentic-engineers/INIT-FAILED.yaml
-artifacts/queue/
-artifacts/spans/
-artifacts/sessions/
-data/metrics/*.jsonl
-data/metrics/*.log
-data/metrics/sessions/
