@@ -1,0 +1,145 @@
+# providers.yaml — Provider Metadata for Cost Aggregation (COST-002)
+#
+# Pricing is in USD per 1 million tokens.
+# Rates sourced from provider published pricing pages (as of 2026-05).
+# Update this file when providers change pricing.
+#
+# Fields per model:
+#   input_per_1m:  cost per 1M input (prompt) tokens
+#   output_per_1m: cost per 1M output (completion) tokens
+
+providers:
+
+  anthropic:
+    name: "Anthropic"
+    auth_env: ANTHROPIC_API_KEY
+    rate_limit_rpm: 500
+    models:
+      claude-sonnet-4.6:
+        input_per_1m: 3.00
+        output_per_1m: 15.00
+      claude-sonnet-4.5:
+        input_per_1m: 3.00
+        output_per_1m: 15.00
+      claude-haiku-4.5:
+        input_per_1m: 0.25
+        output_per_1m: 1.25
+      claude-opus-4.7:
+        input_per_1m: 15.00
+        output_per_1m: 75.00
+      claude-3-5-sonnet-20241022:
+        input_per_1m: 3.00
+        output_per_1m: 15.00
+      claude-3-haiku-20240307:
+        input_per_1m: 0.25
+        output_per_1m: 1.25
+      claude-3-opus-20240229:
+        input_per_1m: 15.00
+        output_per_1m: 75.00
+    fallback:
+      input_per_1m: 3.00
+      output_per_1m: 15.00
+
+  openai:
+    name: "OpenAI"
+    auth_env: OPENAI_API_KEY
+    rate_limit_rpm: 500
+    models:
+      gpt-5.4:
+        input_per_1m: 6.00
+        output_per_1m: 16.00
+      gpt-5.5:
+        input_per_1m: 12.00
+        output_per_1m: 32.00
+      gpt-5-mini:
+        input_per_1m: 0.40
+        output_per_1m: 1.60
+      gpt-4o:
+        input_per_1m: 2.50
+        output_per_1m: 10.00
+      gpt-4o-mini:
+        input_per_1m: 0.15
+        output_per_1m: 0.60
+      gpt-4-turbo:
+        input_per_1m: 10.00
+        output_per_1m: 30.00
+      gpt-4:
+        input_per_1m: 30.00
+        output_per_1m: 60.00
+    fallback:
+      input_per_1m: 2.50
+      output_per_1m: 10.00
+
+  google:
+    name: "Google Gemini"
+    auth_env: GOOGLE_API_KEY
+    rate_limit_rpm: 300
+    models:
+      gemini-2.0:
+        input_per_1m: 6.00
+        output_per_1m: 5.00
+      gemini-2.0-flash:
+        input_per_1m: 0.075
+        output_per_1m: 0.30
+      gemini-2.0-pro:
+        input_per_1m: 1.25
+        output_per_1m: 5.00
+      gemini-2-pro:
+        input_per_1m: 1.25
+        output_per_1m: 5.00
+      gemini-1-5-pro:
+        input_per_1m: 1.25
+        output_per_1m: 5.00
+      gemini-1.5-flash:
+        input_per_1m: 0.075
+        output_per_1m: 0.30
+    fallback:
+      input_per_1m: 1.25
+      output_per_1m: 5.00
+
+  copilot:
+    name: "GitHub Copilot"
+    auth_env: GITHUB_TOKEN
+    pricing_model: per_use
+    rate_limit_rpm: 100
+    models:
+      claude-sonnet-4.6:
+        input_per_1m: 1.00
+        output_per_1m: 1.50
+      claude-haiku-4.5:
+        input_per_1m: 0.20
+        output_per_1m: 0.40
+      gpt-4o:
+        input_per_1m: 0.80
+        output_per_1m: 1.20
+      gpt-4o-mini:
+        input_per_1m: 0.10
+        output_per_1m: 0.20
+    fallback:
+      input_per_1m: 1.00
+      output_per_1m: 1.50
+
+  ollama:
+    name: "Ollama (Local)"
+    auth_env: null
+    zero_cost: true
+    rate_limit_rpm: 9999
+    models:
+      mistral:latest:
+        input_per_1m: 0.0
+        output_per_1m: 0.0
+      llama3:latest:
+        input_per_1m: 0.0
+        output_per_1m: 0.0
+      llama3.1:latest:
+        input_per_1m: 0.0
+        output_per_1m: 0.0
+      codellama:latest:
+        input_per_1m: 0.0
+        output_per_1m: 0.0
+      phi3:latest:
+        input_per_1m: 0.0
+        output_per_1m: 0.0
+    fallback:
+      input_per_1m: 0.0
+      output_per_1m: 0.0
