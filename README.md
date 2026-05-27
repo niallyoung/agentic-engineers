@@ -180,11 +180,6 @@ Create me a new quality-engineer agent with custom validation logic
 Create me a skill called 'db-migrator' that handles database schema migrations
 ```
 
-**repo-init** — Bootstrap new repositories with agentic-engineers framework
-```
-Initialize my new repo with agentic-engineers framework
-```
-
 Both agent-creator and skill-creator validate your definitions (naming, model compatibility, circular dependencies) and generate SPEC-compliant scaffolds with TDD tests and DELEGATE/HANDBACK protocol templates. Perfect for extending the framework without manual boilerplate.
 
 ---

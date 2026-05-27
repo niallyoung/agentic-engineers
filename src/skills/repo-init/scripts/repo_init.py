@@ -2,6 +2,11 @@
 """
 repo_init.py — Main orchestrator for repo-init skill.
 
+[DISABLED] This skill has been disabled pending further discussion about repo modification
+policies and user concerns regarding installing into external repositories without explicit
+approval. See SKILL.md for status details.
+
+Archived description:
 Runs all 8 phases of repository initialization in order:
   1. Analyze      — Scan repo for language, tools, CI, etc.
   2. Generate SPEC.md — Render project-specific specification
@@ -14,26 +19,41 @@ Runs all 8 phases of repository initialization in order:
 
 Author: Senior Engineer
 Phase: Design + Implementation scaffold
+Status: DISABLED
 """
 
 from __future__ import annotations
 
-import argparse
-import sys
-import time
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional
+# DISABLED: This skill has been disabled
+# If re-enabling, uncomment the imports below
+# import argparse
+# import sys
+# import time
+# from dataclasses import dataclass, field
+# from pathlib import Path
+# from typing import Dict, List, Optional
 
 # Phase imports (each in its own module for single-responsibility)
-from analyze_repo import AnalysisResult, analyze_repo
-from generate_spec import generate_spec
-from bootstrap_structure import bootstrap_structure
-from housekeeping import run_housekeeping
-from framework_bootstrap import framework_bootstrap
-from validate_compatibility import CompatibilityResult, validate_compatibility
-from init_todo import init_todo
-from generate_docs import generate_docs
+# from analyze_repo import AnalysisResult, analyze_repo
+# from generate_spec import generate_spec
+# from bootstrap_structure import bootstrap_structure
+# from housekeeping import run_housekeeping
+# from framework_bootstrap import framework_bootstrap
+# from validate_compatibility import CompatibilityResult, validate_compatibility
+# from init_todo import init_todo
+# from generate_docs import generate_docs
+
+
+def raise_disabled():
+    """Raise an error indicating this skill is disabled."""
+    raise RuntimeError(
+        "repo-init skill is currently DISABLED. See src/skills/repo-init/SKILL.md "
+        "for status and reason. If you need this functionality, please file an issue."
+    )
+
+
+if __name__ == "__main__":
+    raise_disabled()
 
 
 # ============================================================================
