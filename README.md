@@ -148,24 +148,10 @@ Or for individual harnesses:
 make install-opencode    # Install agents + skills to ~/.config/opencode/
 ```
 
-Use agents via: `opencode --agent orchestrator "delegate: task1; task2; ..."`
-
-Or with the recommended alias:
-```bash
-alias opencode="opencode --agent orchestrator $*"
-```
-
 ### Option 2: Copilot CLI (Full Agent + Skill Support)
 
 ```bash
 make install-copilot     # Install agents + skills to ~/.copilot/
-```
-
-Use agents via: `copilot --allow-all --autopilot --agent orchestrator "delegate: task1; task2; ..."`
-
-Or with the recommended alias:
-```bash
-alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
 ```
 
 ### Option 3: Claude Code (Local with Full Agent Support)
@@ -184,22 +170,25 @@ make install-pi          # Install to ~/.pi/agent/
 
 ### Using the Orchestrator
 
-The Orchestrator coordinates complex tasks across agents. Simply delegate your work:
+The Orchestrator coordinates complex tasks across agents. Set up the recommended aliases in `~/.zshrc` or `~/.bashrc`:
 
-**Recommended Aliases** (add to `~/.zshrc` or `~/.bashrc`):
 ```bash
 alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
 alias opencode="opencode --agent orchestrator $*"
 ```
 
-Then use naturally:
+Then delegate your work. Examples of prompts to give the Orchestrator:
+
 ```bash
-copilot "delegate: read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
+copilot "delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
 ```
 
-Or via the CLI directly:
 ```bash
-copilot --allow-all --autopilot --agent orchestrator "delegate: read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
+opencode "delegate: analyze the codebase for performance bottlenecks; benchmark current implementation; propose optimization strategy; implement changes; measure improvement"
+```
+
+```bash
+copilot "delegate: fix the bug described in issue #42; add tests to prevent regression; update docs; commit and push"
 ```
 
 The Orchestrator will:
