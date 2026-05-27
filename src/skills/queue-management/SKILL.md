@@ -291,17 +291,17 @@ except ValueError as e:
 
 ## Queue States
 
-Tasks move through these states:
+Tasks move through these states in `~/.agentic-engineers/queue/`:
 
 ```
-incoming  →  processing  →  done
-           ↘  failed     ↗
+incoming/  →  processing/  →  done/
+            ↘  failed/     ↗
 ```
 
-- **incoming:** Task created, ready to process
-- **processing:** Task actively being worked on
-- **done:** Task completed successfully
-- **failed:** Task failed and needs retry or escalation
+- **incoming/:** Task created, ready to process
+- **processing/:** Task actively being worked on
+- **done/:** Task completed successfully
+- **failed/:** Task failed and needs retry or escalation
 
 ---
 

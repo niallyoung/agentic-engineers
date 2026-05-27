@@ -79,7 +79,7 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 ```
 User Task
    ↓
-[artifacts/queue/incoming/] ← DELEGATE
+[~/.agentic-engineers/queue/incoming/] ← DELEGATE
    ↓
 [Orchestrator Agent]
    ├─ Routes via AGENTS.md decision tree
@@ -95,17 +95,18 @@ User Task
    └─ quality_score ≥ threshold → done/
       else → REWORK or ESCALATE
    ↓
-[artifacts/queue/done/] ← Results + Metrics
+[~/.agentic-engineers/queue/done/] ← Results + Metrics
 ```
 
 ### Queue States
 
 ```
-incoming/      ← New DELEGATE tasks
-  ↓ (Orchestrator picks up)
-processing/    ← Tasks being worked on
-  ↓ (agent completes)
-done/          ← Completed tasks with full audit trail
+~/.agentic-engineers/queue/
+  incoming/      ← New DELEGATE tasks
+    ↓ (Orchestrator picks up)
+  processing/    ← Tasks being worked on
+    ↓ (agent completes)
+  done/          ← Completed tasks with full audit trail
 ```
 
 ---
