@@ -78,7 +78,7 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
 ```
 [User / CLI]
-   ↓ (copilot --allow-all --autopilot --agent orchestrator "delegate: task1; task2; ...")
+   ↓ (invoke orchestrator agent with task)
 [Orchestrator Agent]
    ├─ Parses task list
    ├─ Routes via AGENTS.md decision tree
@@ -1677,136 +1677,44 @@ See full thresholds in `src/DECISION-MAKING.md`:
 
 ## Installation Verification
 
-After running `make install` (or a harness-specific target), verify the installation is complete:
-
-### Universal Verification
+After running `make install`, verify the installation is complete:
 
 ```bash
 # 1. Complete framework verification
 make verify                # Runs all structure + agent + skill checks
 
-# 2. All 4 harness installation status
-make status               # Shows status of all 4 harnesses
-```
+# 2. All harness installation status
+make status               # Shows status of all harnesses
 
-### OpenCode Harness
-
-```bash
-# Verify OpenCode harness installation
-ls ~/.config/opencode/AGENTS.md        # Agent roster installed
-ls ~/.config/opencode/SKILLS.md        # Skill matrix installed
-ls ~/.config/opencode/DECISION-MAKING.md  # Routing config installed
-make validate-opencode                 # Validate OpenCode configuration
-
-# Test OpenCode connectivity
-opencode --version                     # Verify OpenCode CLI works
-opencode "What roles are available?"   # Smoke test
-```
-
-### Claude Code Harness
-
-```bash
-# Verify Claude Code harness installation
-ls ~/.claude/agents/                   # Agent files installed
-ls ~/.claude/agents/orchestrator/      # Orchestrator agent
-test -d ~/.claude && echo "✅ Claude Code harness installed" || echo "❌ Not installed"
-```
-
-### Copilot CLI Harness
-
-```bash
-# Verify Copilot CLI harness installation (agents + skills)
-ls ~/.copilot/agents/                     # Agents directory
-ls ~/.copilot/skills/agentic-engineer/    # Skills namespace
-test -d ~/.copilot && echo "✅ Copilot CLI harness installed" || echo "❌ Not installed"
-```
-
-### π.dev Harness
-
-```bash
-# Verify π.dev harness installation
-ls ~/.pi/agent/                        # π.dev agent config
-test -d ~/.pi && echo "✅ π.dev harness installed" || echo "❌ Not installed"
-```
-
-### Queue Infrastructure
-
-```bash
-# 4. Queue directories exist (used by all harnesses)
+# 3. Queue infrastructure
 ls ~/.agentic-engineers/artifacts/queue/incoming/
 ls ~/.agentic-engineers/artifacts/queue/processing/
 ls ~/.agentic-engineers/artifacts/queue/done/
-```
 
-### Protocol Documentation
-
-```bash
-# 5. Protocol docs installed (OpenCode example)
+# 4. Protocol docs installed (OpenCode example)
 for doc in AGENTS DECISION-MAKING SKILLS TOKEN_METRICS CLI-PERMISSIONS; do
   test -f ~/.config/opencode/${doc}.md && echo "✅ ${doc}.md" || echo "❌ ${doc}.md MISSING"
 done
-```
 
-### Smoke Tests
-
-```bash
-# 6. Test via OpenCode (recommended)
+# 5. Smoke tests
 opencode "What roles are available and what is the current queue depth?"
 # Expected: lists 8 roles; reports queue depth 0
-
-# 7. Test via Claude Code
-@orchestrator What roles are available and what is the current queue depth?
-
-# 8. Test via Copilot CLI
-copilot --agent orchestrator "What roles are available?"
 ```
 
 ## Uninstall
 
-### Individual Harness Removal
-
-**OpenCode (Agentic Engineers only - user config remains)**
+**Remove from all harnesses at once:**
 ```bash
-make uninstall-opencode  # Removes: AGENTS.md, SKILLS.md, and all protocol docs
-                         # Keeps: ~/.config/opencode/ directory, user config
+make uninstall-all       # Removes agentic-engineers managed files from all harnesses
+make status              # Confirm removal
 ```
 
-**Claude Code (Managed files only)**
+Individual harness uninstall targets also available:
 ```bash
-make uninstall-claude    # Removes: agents from ~/.claude/
-                         # Keeps: ~/.claude/ directory, other user config
-```
-
-**Copilot CLI (Managed skills only)**
-```bash
-make uninstall-copilot   # Removes: agentic-engineer skills from ~/.copilot/
-                         # Keeps: ~/.copilot/ directory, other user skills
-```
-
-**π.dev (Managed config only)**
-```bash
-make uninstall-pi        # Removes: agentic-engineers config from ~/.pi/
-                         # Keeps: ~/.pi/ directory, other user config
-```
-
-### Complete Removal
-
-**Remove from all 4 harnesses at once:**
-```bash
-make uninstall-all       # Uninstalls from OpenCode, Claude Code, Copilot CLI, and π.dev
-```
-
-### Verify Uninstall
-
-```bash
-# Confirm removal
-make status              # Should show 0 installations (or only partial if not fully uninstalled)
-
-# Check specific harnesses
-ls ~/.config/opencode/AGENTS.md 2>/dev/null && echo "OpenCode still installed" || echo "✅ OpenCode removed"
-ls ~/.claude/agents/orchestrator 2>/dev/null && echo "Claude Code still installed" || echo "✅ Claude Code removed"
-ls ~/.copilot/skills/agentic-engineer 2>/dev/null && echo "Copilot CLI still installed" || echo "✅ Copilot CLI removed"
-ls ~/.pi/agent/ 2>/dev/null && echo "π.dev still installed" || echo "✅ π.dev removed"
+make uninstall-opencode  # OpenCode only
+make uninstall-claude    # Claude Code only
+make uninstall-copilot   # Copilot CLI only
+make uninstall-pi        # π.dev only
 ```
 
 **⚠️ Important:** Uninstall targets only remove agentic-engineers managed files. User configuration and other content remain intact:
