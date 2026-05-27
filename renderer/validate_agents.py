@@ -42,7 +42,7 @@ KNOWN_MODELS = {
     "claude-opus-4.5",
     "claude-opus-4.6",
     "claude-opus-4.7",
-    # Allow short-form aliases used in some configs
+    # Allow short-form aliases used in some dist/ renders (e.g. render-claude.sh)
     "haiku",
     "sonnet",
     "opus",

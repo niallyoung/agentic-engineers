@@ -158,7 +158,7 @@ class TestModelNamingCompliance:
                 )
 
     def test_rendered_claude_uses_hyphen_format(self):
-        """Rendered Claude files must use hyphen-format models."""
+        """Rendered Claude files must use hyphen-format models (frontmatter only)."""
         claude_dir = self.REPO_ROOT / "dist" / "claude" / "agents"
         if not claude_dir.exists():
             pytest.skip("dist/claude not present")
@@ -169,7 +169,12 @@ class TestModelNamingCompliance:
 
         for agent_file in claude_agents:
             content = agent_file.read_text()
-            model_refs = re.findall(r'^model:\s*([^\s\n]+)', content, re.MULTILINE)
+            # Only check frontmatter (body may contain example DELEGATE blocks with versioned IDs)
+            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if not frontmatter_match:
+                continue
+            frontmatter = frontmatter_match.group(1)
+            model_refs = re.findall(r'^model:\s*([^\s\n]+)', frontmatter, re.MULTILINE)
 
             for model in model_refs:
                 assert "." not in model, (
@@ -177,7 +182,7 @@ class TestModelNamingCompliance:
                 )
 
     def test_rendered_opencode_uses_hyphen_format(self):
-        """Rendered OpenCode files must use hyphen-format models."""
+        """Rendered OpenCode files must use hyphen-format models (frontmatter only)."""
         opencode_dir = self.REPO_ROOT / "dist" / "opencode" / "agents"
         if not opencode_dir.exists():
             pytest.skip("dist/opencode not present")
@@ -188,10 +193,15 @@ class TestModelNamingCompliance:
 
         for agent_file in opencode_agents:
             content = agent_file.read_text()
+            # Only check frontmatter (body may contain example DELEGATE blocks with versioned IDs)
+            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if not frontmatter_match:
+                continue
+            frontmatter = frontmatter_match.group(1)
             # OpenCode uses github-copilot/ prefix but model ID must have hyphens
             model_refs = re.findall(
                 r'github-copilot/(claude-[^\s\n"]+)|^model:\s*([^\s\n]+)',
-                content,
+                frontmatter,
                 re.MULTILINE
             )
 

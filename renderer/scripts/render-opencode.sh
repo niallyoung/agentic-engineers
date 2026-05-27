@@ -69,12 +69,12 @@ source "$(dirname "$0")/lib.sh"
 # so it maps directly instead of falling back to 4.7.
 map_model_opencode() {
 	case "$1" in
-		claude-haiku-4.5|claude-haiku-4-5)   echo "github-copilot/claude-haiku-4.5" ;;
-		claude-sonnet-4.6|claude-sonnet-4-6) echo "github-copilot/claude-sonnet-4.6" ;;
-		claude-sonnet-4.5|claude-sonnet-4-5) echo "github-copilot/claude-sonnet-4.5" ;;
-		claude-opus-4.7|claude-opus-4-7)     echo "github-copilot/claude-opus-4.7" ;;
-		claude-opus-4.6|claude-opus-4-6)     echo "github-copilot/claude-opus-4.6" ;;
-		claude-opus-4.5|claude-opus-4-5)     echo "github-copilot/claude-opus-4.5" ;;
+		claude-haiku-4.5|claude-haiku-4-5)   echo "github-copilot/claude-haiku-4-5" ;;
+		claude-sonnet-4.6|claude-sonnet-4-6) echo "github-copilot/claude-sonnet-4-6" ;;
+		claude-sonnet-4.5|claude-sonnet-4-5) echo "github-copilot/claude-sonnet-4-5" ;;
+		claude-opus-4.7|claude-opus-4-7)     echo "github-copilot/claude-opus-4-7" ;;
+		claude-opus-4.6|claude-opus-4-6)     echo "github-copilot/claude-opus-4-6" ;;
+		claude-opus-4.5|claude-opus-4-5)     echo "github-copilot/claude-opus-4-5" ;;
 		*) echo "" ;;  # sentinel — caller warns + skips model emission
 	esac
 }
