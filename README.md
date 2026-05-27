@@ -134,7 +134,7 @@ make install
 |---------|----------|-------------|-------------|-------|
 | **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
 | **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
-| **Managed Config** | ✅ Full | ❌ Manual | ❌ Manual | ⚠️ Experimental |
+| **Managed Config** | ✅ Full | ✅ Full | ❌ Manual | ⚠️ Experimental |
 | **IDE/CLI** | CLI | CLI | IDE | IDE |
 | **Install Path** | ~/.config/opencode/ | ~/.copilot/ | ~/.claude/ | ~/.pi/agent/ |
 | **Status** | 🟢 Recommended | 🟢 Stable | 🟢 Stable | 🟡 Experimental |
@@ -412,7 +412,7 @@ success_criteria:
 |---------|:--------:|:-----------:|:-----------:|:-----:|
 | **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
 | **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
-| **Managed Config** | ✅ Full | ❌ Manual | ❌ Manual | ⚠️ Experimental |
+| **Managed Config** | ✅ Full | ❌ Manual | ✅ Full | ⚠️ Experimental |
 | **IDE/CLI** | CLI | IDE | CLI | IDE |
 | **Install Path** | `~/.config/opencode/` | `~/.claude/` | `~/.copilot/` | `~/.pi/agent/` |
 | **Status** | 🟢 Recommended | 🟢 Stable | 🟢 Stable | 🟡 Experimental |
