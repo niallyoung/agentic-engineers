@@ -1059,7 +1059,7 @@ delegate:
 
 ## Token Visibility & Budget Checking (Phase 3)
 
-NOTE: not verified yet
+NOTE: The `opencode-tokens` tool itself is not verified yet
 
 Real-time token tracking across all agents and subagents:
 
