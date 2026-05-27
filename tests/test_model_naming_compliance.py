@@ -1,22 +1,26 @@
 """
-Test: Model Naming Compliance (PERMANENTLY LOCKED)
+Test: Model Naming Compliance (LOCKED CHOICES - Positive Enforcement)
 
-Validates that all agent model definitions follow the architecture:
-- SOURCE agents (src/agents/): Use canonical format with DOTS (Copilot CLI format)
-  Example: claude-opus-4.7 (NOT claude-opus-4-7)
+Validates that all agent model definitions use LOCKED Claude models by choice:
+- SOURCE agents (src/agents/): Must use models from LOCKED_MODELS list
+  Locked models: claude-haiku-4.5, claude-sonnet-4.5, claude-sonnet-4.6, claude-opus-4.7
 - RENDERED agents (dist/*/): Transform per-harness based on platform requirements
   - Copilot CLI: Pass-through (dots) → claude-opus-4.7
   - OpenCode: Transform to hyphens → claude-opus-4-7
   - Claude Code: Transform to short alias → opus
   - Pi.dev: Uses hyphens (Anthropic API format)
 
-This architecture is LOCKED and enforced by:
-1. Pre-commit hook (rejects non-compliant commits)
-2. CI pipeline (blocks merge on violation)
-3. Tests in this file (8+ comprehensive tests)
-4. Code comments (every agent/renderer explains transformation)
+Philosophy: POSITIVE ENFORCEMENT
+- We CHOSE these Claude models (not "GPT forbidden")
+- Users CAN request model changes via Orchestrator
+- Changes are explicit decisions with documented rationale
+- Single source of truth: .githooks/LOCKED_MODELS.sh
 
-CRITICAL: This prevents model naming regressions that have broken agents multiple times.
+Enforcement:
+1. Pre-commit hook (validates agents use locked models)
+2. CI pipeline (blocks merge on violation)
+3. Tests in this file (comprehensive compliance verification)
+4. Code comments (every agent/renderer explains transformation)
 
 Official sources:
 - Anthropic: https://docs.anthropic.com/claude/docs/models-overview (canonical format)
@@ -32,7 +36,23 @@ from typing import Set
 
 
 class TestModelNamingCompliance:
-    """Test model naming compliance across entire codebase."""
+    """Test model naming compliance across entire codebase (positive enforcement).
+    
+    Verifies that agents use LOCKED Claude models by choice, not forbidden patterns.
+    Locked models are defined in .githooks/LOCKED_MODELS.sh and enforced by:
+    - Pre-commit hook validation
+    - This test suite
+    - CI/CD pipeline
+    """
+
+    # Locked models (canonical format with dots for Copilot CLI)
+    # Source of truth: .githooks/LOCKED_MODELS.sh
+    LOCKED_MODELS = {
+        "claude-haiku-4.5",
+        "claude-sonnet-4.5",
+        "claude-sonnet-4.6",
+        "claude-opus-4.7",
+    }
 
     # Official approved model names (hyphens only)
     APPROVED_MODELS = {
@@ -63,8 +83,41 @@ class TestModelNamingCompliance:
 
     REPO_ROOT = Path(__file__).parent.parent
 
+    def test_agent_files_use_locked_models(self):
+        """Verify agents use LOCKED models (positive enforcement).
+        
+        Each agent in src/agents/ must use a model from the locked set.
+        Locked models are chosen for cost-quality balance and enforced by pre-commit.
+        """
+        agent_files = list(self.REPO_ROOT.glob("src/agents/*-agent.md"))
+        assert agent_files, "No agent files found in src/agents/"
+
+        for agent_file in agent_files:
+            content = agent_file.read_text()
+
+            # Extract frontmatter only (between --- delimiters)
+            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if not frontmatter_match:
+                continue
+
+            frontmatter = frontmatter_match.group(1)
+
+            # Extract model from frontmatter
+            model_refs = re.findall(r'^model:\s*([^\s\n]+)', frontmatter, re.MULTILINE)
+
+            for model_ref in model_refs:
+                # Strip any quotes if present
+                model_ref = model_ref.strip('"\'')
+
+                # Verify model is in locked set
+                assert model_ref in self.LOCKED_MODELS, (
+                    f"{agent_file.name}: Model '{model_ref}' not in locked set. "
+                    f"Locked models: {', '.join(sorted(self.LOCKED_MODELS))}. "
+                    f"To request a model change, contact Orchestrator."
+                )
+
     def test_agent_files_use_hyphen_format(self):
-        """All agent definition files (frontmatter) must use dot-format model names (Copilot CLI)."""
+        """Verify locked agents use canonical format with DOTS (Copilot CLI)."""
         agent_files = list(self.REPO_ROOT.glob("src/agents/*-agent.md"))
         assert agent_files, "No agent files found in src/agents/"
 
@@ -354,9 +407,15 @@ class TestModelNamingConsistency:
                         f"Expected one of: {allowed}"
                     )
 
-    def test_no_gpt_models_anywhere(self):
-        """CRITICAL: No GPT models allowed in source or rendered agents."""
-        forbidden_patterns = [
+    def test_agents_use_only_locked_models(self):
+        """Verify agents use only LOCKED Claude models (positive enforcement).
+        
+        Agents are not restricted from using GPT by prohibition, but rather
+        are LOCKED to Claude models by choice for cost-quality alignment.
+        This test verifies the positive lock is maintained.
+        """
+        # Models that are NOT locked (should not appear in agents)
+        non_locked_patterns = [
             r'gpt-4[^0-9]',  # gpt-4, gpt-4o
             r'gpt-3\.5',      # gpt-3.5-turbo
             r'gpt-4o-mini',   # gpt-4o-mini
@@ -379,16 +438,20 @@ class TestModelNamingConsistency:
                     continue
 
                 content = agent_file.read_text()
-                for pattern in forbidden_patterns:
+                for pattern in non_locked_patterns:
                     matches = re.findall(pattern, content)
                     assert not matches, (
-                        f"{agent_file}: Found forbidden GPT model. "
-                        f"Use Claude models only (claude-haiku, claude-sonnet, claude-opus). "
+                        f"{agent_file}: Contains non-locked model. "
+                        f"Use LOCKED Claude models: {', '.join(sorted(self.LOCKED_MODELS))}. "
                         f"Matched: {matches}"
                     )
 
-    def test_unversioned_models_forbidden_in_source(self):
-        """CRITICAL: All source agents must have versioned models (e.g., claude-opus-4.7 not claude-opus)."""
+    def test_locked_models_must_be_versioned(self):
+        """Verify LOCKED models in source agents have versions (e.g., claude-opus-4.7 not claude-opus).
+        
+        All locked models require explicit versions for consistency and clarity.
+        Unversioned models are ambiguous and prevent clear model assignment.
+        """
         agent_files = list(self.REPO_ROOT.glob("src/agents/*-agent.md"))
 
         for agent_file in agent_files:
@@ -405,7 +468,7 @@ class TestModelNamingConsistency:
             unversioned = re.findall(r'claude-(haiku|sonnet|opus)(?:\s|$|[\n"])', frontmatter)
             assert not unversioned, (
                 f"{agent_file.name}: Unversioned model found. "
-                f"Use claude-haiku-4.5, claude-sonnet-4.6, or claude-opus-4.7 (with version)."
+                f"Locked models must have versions: {', '.join(sorted(self.LOCKED_MODELS))}."
             )
 
     def test_transformer_logic_documented(self):

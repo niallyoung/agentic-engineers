@@ -1409,28 +1409,100 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 
 ---
 
-## Model Naming & Harness Compatibility (LOCKED SPEC)
+## Approved Claude Models (LOCKED SPEC)
 
-This section documents the approved AI model names and their official sources. Model naming is **CRITICAL** for harness compatibility and MUST NOT be changed without updating all validators, tests, and this specification.
+This section documents the LOCKED models and the process for requesting changes. Model assignments are **CRITICAL** for cost-quality alignment and cannot be changed without explicit Orchestrator approval.
 
-### Official Model Names (AUTHORITATIVE)
+### Philosophy: Positive Enforcement
+
+We use **positive enforcement** (locked choices by strategy) rather than **negative enforcement** (forbidden patterns by restriction).
+
+- ✅ "We chose these Claude models" (strategic alignment)
+- ✅ Users CAN request changes by contacting Orchestrator
+- ✅ Changes are auditable and documented with rationale
+- ✅ Simpler to maintain than rejection patterns
+
+### Locked Models (Current)
+
+These models are approved and locked for agents today:
+
+| Model | Agents | Cost/Token | Context | Max Output | Rationale |
+|-------|--------|-----------|---------|-----------|-----------|
+| **claude-haiku-4.5** | engineer, orchestrator | $0.035 | 200K | 64K | Fast, cost-effective for standard tasks |
+| **claude-sonnet-4.5** | model-engineer | $0.06 | 1M | 64K | Analysis tasks, cost-quality balance |
+| **claude-sonnet-4.6** | lead, quality, senior | $0.065 | 1M | 64K | Complex tasks, higher quality |
+| **claude-opus-4.7** | security, principal | $0.15 | 1M | 128K | High-stakes, cross-service decisions |
 
 **Source:** [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/docs/models-overview)
 
-All agentic-engineers agents use Anthropic Claude models in the following **HYPHEN format only**:
+### Model Switch Process
 
-| Model | Model ID | Claude API Alias | Context Window | Max Output | Use Case |
-|-------|----------|------------------|-----------------|------------|----------|
-| **Claude Haiku 4.5** | `claude-haiku-4.5` | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
-| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | `claude-sonnet-4.6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
-| **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
-| **Claude Opus 4.7** | `claude-opus-4.7` | `claude-opus-4.7` | 1M | 128K | Highest capability; Security Engineer, Principal Engineer |
+Models are locked by **explicit choice**, not by chance. To switch an agent to a different model:
 
-**CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
+#### 1. Request
+Contact Orchestrator with:
+- **Agent name** (e.g., `engineer-agent`)
+- **Requested model** (e.g., `claude-sonnet-4.5`)
+- **Reason** (e.g., "Current model too slow for code analysis")
+- **Expected impact** (e.g., "Cost +$0.02/task, quality +15%")
 
-### Model Naming Architecture (LOCKED — Version 2026-05-26)
+#### 2. Evaluation
+Orchestrator reviews:
+- Budget impact (is cost increase approved?)
+- Task profile (does capability improvement match task complexity?)
+- Consistency (does this create conflicts with other agents?)
+- Timeline (when should the change take effect?)
 
-**STATUS: PERMANENTLY LOCKED via tests, pre-commit hooks, and CI gates**
+#### 3. Decision
+- ✅ **Approved** → Proceed to implementation
+- ⏸️ **Deferred** → Revisit later (e.g., next budget cycle)
+- ❌ **Denied** → Documented reason (e.g., budget constraint)
+
+#### 4. Implementation (if approved)
+1. Update `.githooks/LOCKED_MODELS.sh`:
+   - Add model to `LOCKED_MODELS` array (if new)
+   - Update `AGENT_MODEL_MAPPING` for the agent
+2. Create PR with:
+   - Commit message: `"Approved model switch for {agent}: {reason}"`
+   - PR description: Full rationale and cost impact
+3. Merge → Pre-commit hook enforces new lock
+
+### Single Source of Truth
+
+**File:** `.githooks/LOCKED_MODELS.sh`
+
+Contains:
+- `LOCKED_MODELS` — canonical list of approved models (only these pass validation)
+- `AGENT_MODEL_MAPPING` — which agent uses which model (for documentation)
+- Helper functions for validation and display
+
+All hooks and validators source this file to ensure consistency.
+
+### Validation & Enforcement
+
+**PERMANENT LOCKS (Cannot bypass):**
+
+1. **Pre-Commit Hook** (`.githooks/pre-commit`)
+   - Validates: Agent models are in locked set
+   - Rejects: Non-locked models
+   - Bypass: `SKIP_HOOKS=1` (requires documented reason)
+
+2. **Test Suite** (`tests/test_model_naming_compliance.py`)
+   - Test: Agents use locked models (positive enforcement)
+   - Test: Locked models are properly versioned
+   - Test: No non-locked models in any harness
+   - Test: Canonical format with dots for Copilot CLI
+
+3. **CI Pipeline**
+   - Runs model compliance tests on every push
+   - Blocks merge if tests fail
+   - Status: ✅ ACTIVE (enforced)
+
+4. **Code Comments**
+   - Every agent file explains model choice
+   - Renderer scripts document transformations
+
+### Model Naming Architecture (LOCKED)
 
 #### Canonical Format (Source Agents)
 
@@ -1440,11 +1512,12 @@ All agent definitions in `src/agents/*.md` use **versioned Claude models with DO
 model: claude-{variant}-{major}.{minor}
 Examples:
   ✅ claude-haiku-4.5
+  ✅ claude-sonnet-4.5
   ✅ claude-sonnet-4.6
   ✅ claude-opus-4.7
   ❌ claude-opus-4-7 (wrong: hyphens instead of dots)
   ❌ claude-opus (wrong: missing version)
-  ❌ gpt-4 (forbidden: must be Claude)
+  ❌ gpt-4 (not locked: use Claude models only)
 ```
 
 This is the **single source of truth**. All harness renderers transform FROM this format based on their platform requirements.
@@ -1479,55 +1552,6 @@ Each harness has different model format requirements due to platform constraints
 - Reason: Pi.dev uses Anthropic API format; may pin dated model versions
 - Transformation: May use standard hyphens or date-pinned versions
 - Note: Check `dist/pi/pi.yml` for actual format
-
-### Forbidden Patterns (All Contexts)
-
-**Source Agents (src/agents/) — STRICT**
-- ❌ **No GPT models** (gpt-4, gpt-4o, gpt-4o-mini) — Claude only
-- ❌ **No unversioned models** (claude-haiku without -4.5) — version mandatory
-- ❌ **No format mixing** (claude-opus-4_5 or claude-opus-4-5) — dots REQUIRED
-- ❌ **No uppercase** (CLAUDE-, -4-A) — lowercase only
-- ✅ **Correct:** claude-{haiku|sonnet|opus}-\d+\.\d+
-
-**Rendered Contexts (dist/) — CONTEXT-SPECIFIC**
-- ❌ **No GPT models in any harness**
-- ❌ **No unversioned Claude** (except Claude Code which allows: haiku/sonnet/opus)
-- ❌ **Format mismatches** (e.g., dots in OpenCode which requires hyphens)
-- ❌ **Inconsistencies** between source and rendered (after transformation)
-
-### Validation & Enforcement
-
-**PERMANENT LOCKS (Cannot bypass):**
-
-1. **Pre-Commit Hook** — Git rejects commits with non-compliant models
-   - Run: `.githooks/pre-commit` + `make validate-models`
-   - Rejects: GPT models, unversioned models, format mismatches
-   - Bypass: SKIP_HOOKS=1 (requires documented reason in commit message)
-
-2. **Test Suite** — 14 comprehensive tests in `tests/test_model_naming_compliance.py`
-   - Test 1: Source agents use canonical format (versioned Claude with dots)
-   - Test 2: Validator KNOWN_MODELS lists only approved models
-   - Test 3: docs/AGENTS.md registry matches source format
-   - Test 4: Copilot renderers preserve dots (pass-through)
-   - Test 5: Claude renderers use short aliases only
-   - Test 6: OpenCode renderers use hyphens in version
-   - Test 7: Pi.dev renderers use correct format
-   - Test 8: No dots in agent frontmatter (source canonical format)
-   - Test 9: Official documentation links are current
-   - Test 10: Agent models match validator KNOWN_MODELS
-   - Test 11: Same-role agents use consistent models (exceptions allowed)
-   - Test 12: No GPT models anywhere (critical safety check)
-   - Test 13: No unversioned models in source
-   - Test 14: Renderer scripts document transformation logic
-
-3. **CI Pipeline** — Dedicated "Model Naming Compliance" job
-   - Runs all 14 tests on every push
-   - Blocks merge if any test fails
-   - Status: ✅ ACTIVE (enforced)
-
-4. **Code Comments** — Every file with transformation logic documents the rule
-   - Agent files: "model: claude-haiku-4.5 (canonical format for source)"
-   - Renderer scripts: "Transform dots→hyphens for OpenCode" or "Pass-through for Copilot CLI"
    - Validator: "KNOWN_MODELS is the approved list; no GPT allowed"
 
 ### Validation Logic (Regex Patterns)

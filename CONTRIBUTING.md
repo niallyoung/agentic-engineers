@@ -258,31 +258,71 @@ failed validation. The fix is:
 
 ---
 
-## Model Naming When Adding Agents
+## Model Selection (Locked)
 
-**CRITICAL: This is LOCKED and enforced by tests, pre-commit hooks, and CI.**
+**CRITICAL: Model choices are LOCKED by strategic decision and enforced by pre-commit hooks.**
 
-When adding a new agent to `src/agents/`, you MUST use the canonical model naming format:
+We have chosen these Claude models today for cost-quality alignment:
+- **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
+- **claude-sonnet-4.5** — model-engineer (analysis, cost-quality balance)
+- **claude-sonnet-4.6** — lead, quality, senior engineers (complex tasks)
+- **claude-opus-4.7** — security, principal engineers (high-stakes decisions)
 
-### Canonical Format (Source Agents)
+### Why Locked Models?
+
+**Positive enforcement approach:**
+- ✅ "These are our chosen models" (not "GPT forbidden")
+- ✅ Users CAN request changes via Orchestrator
+- ✅ Changes are documented and auditable
+- ✅ Simpler than maintaining rejection patterns
+
+### Adding a New Agent
+
+When adding an agent to `src/agents/`, use the canonical format with DOTS:
 
 ```yaml
 ---
 name: my-agent
 description: Agent description
-model: claude-{variant}-{major}.{minor}  # ← REQUIRED format
+model: claude-{variant}-{major}.{minor}  # ← REQUIRED format (e.g., claude-haiku-4.5)
 ---
 ```
 
-**Approved models** (use DOTS, not hyphens in version):
+**Locked models** (pick one):
 - ✅ `claude-haiku-4.5`
+- ✅ `claude-sonnet-4.5`
 - ✅ `claude-sonnet-4.6`
 - ✅ `claude-opus-4.7`
 
-**Forbidden** (will be rejected by pre-commit hook):
-- ❌ `claude-opus-4-7` (hyphens instead of dots)
-- ❌ `claude-opus` (missing version)
-- ❌ `gpt-4` (no GPT models allowed)
+**Not locked** (rejected by pre-commit hook):
+- ❌ `claude-opus-4-7` (hyphens in version — use dots)
+- ❌ `claude-opus` (unversioned — use full version)
+- ❌ `gpt-4` (not a locked model — use Claude)
+
+### Requesting a Model Change
+
+If you need a different model for an agent:
+
+1. **Contact Orchestrator** with:
+   - Agent name (e.g., `engineer-agent`)
+   - Requested model (e.g., `claude-sonnet-4.5`)
+   - Reason (e.g., "Current model too slow for code review")
+   - Expected impact (e.g., "Cost +$0.02/task, quality +15%")
+
+2. **Orchestrator evaluates:**
+   - Budget impact (is cost increase justified?)
+   - Capability improvement (does task profile warrant it?)
+   - Timeline (when should it take effect?)
+
+3. **Decision:**
+   - ✅ Approved → Model is added to locked set
+   - ⏸️ Deferred → Revisit later (e.g., next budget cycle)
+   - ❌ Denied → Explain why (e.g., budget constraint)
+
+4. **If approved:**
+   - Model is added to `.githooks/LOCKED_MODELS.sh`
+   - PR includes rationale in commit message
+   - Pre-commit hook enforces new lock from merge forward
 
 ### Why Per-Harness Transformations?
 
@@ -299,53 +339,54 @@ Different harnesses have incompatible model format requirements:
 
 ### Workflow
 
-1. **Choose model** → Pick from approved list (canonical format with DOTS)
+1. **Choose model** → Pick from locked list (canonical format with DOTS)
    ```yaml
    model: claude-haiku-4.5  # correct
    ```
 
-2. **Add comment** → Explain why you chose this model
+2. **Add comment** → Explain why this model fits your agent
    ```
    Agent Purpose: Fast routing/analysis (low cost, low latency)
-   Model Choice: claude-haiku-4.5 (Haiku is fastest; 4.5 stable release)
+   Model Choice: claude-haiku-4.5 (Haiku is fastest; 4.5 is stable)
    ```
 
-3. **Verify format** → Run pre-commit hook before committing
+3. **Verify format** → Pre-commit hook validates automatically
    ```bash
    git add src/agents/my-agent.md
    git commit -m "feat: add my-agent"
-   # Pre-commit validates model naming automatically
+   # Pre-commit validates model is in locked set and format is correct
    ```
 
 4. **Render & test** → Ensure all harnesses render correctly
    ```bash
    make render-all
-   make test-models  # Runs 14 model naming compliance tests
+   make test-models  # Runs model compliance tests
    ```
 
-### If You Forget (Pre-Commit Hook Error)
-
-If you accidentally use hyphens instead of dots:
+### If Pre-Commit Rejects Your Model
 
 ```
-❌ pre-commit: Incorrect format: Source agents MUST use DOTS in version
-   → Use claude-opus-4.7 (not claude-opus-4-7)
-   → Renderers transform per-harness; source must use canonical format
+❌ Model not in locked set: src/agents/my-agent.md
+   Model: claude-gpt-4
+   Locked models (approved choices):
+     - claude-haiku-4.5
+     - claude-sonnet-4.5
+     - claude-sonnet-4.6
+     - claude-opus-4.7
+   To request a model change, contact the Orchestrator
 ```
 
-**Fix:**
-```bash
-# Edit src/agents/my-agent.md and change model to canonical format
-sed -i 's/claude-opus-4-7/claude-opus-4.7/g' src/agents/my-agent.md
-git add src/agents/my-agent.md
-git commit -m "fix: correct model naming format (claude-opus-4.7)"
-```
+**Options:**
+1. Use a locked model (recommended for standard tasks)
+2. Request new model from Orchestrator (include reason and impact)
+3. Discuss with team (if locked models don't fit your use case)
 
 ### See Also
 
-- **Complete architecture:** [`docs/SPEC.md`](docs/SPEC.md) — "Model Naming Architecture" section
-- **Approved models:** [`renderer/validate_agents.py`](renderer/validate_agents.py) — KNOWN_MODELS constant
-- **Tests:** [`tests/test_model_naming_compliance.py`](tests/test_model_naming_compliance.py) — 14 comprehensive tests
+- **Lock rationale:** [`.githooks/LOCKED_MODELS_RATIONALE.md`](./.githooks/LOCKED_MODELS_RATIONALE.md)
+- **Locked models:** [`.githooks/LOCKED_MODELS.sh`](./.githooks/LOCKED_MODELS.sh)
+- **Full architecture:** [`docs/SPEC.md`](docs/SPEC.md) — "Approved Claude Models" section
+- **Tests:** [`tests/test_model_naming_compliance.py`](tests/test_model_naming_compliance.py) — compliance verification
 - **Agent registry:** [`docs/AGENTS.md`](docs/AGENTS.md) — model assignments by role
 
 ---
