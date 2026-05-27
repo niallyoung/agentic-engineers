@@ -57,7 +57,7 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 - **Complete architecture:** [SPEC.md > Model Naming Architecture](../SPEC.md)
 - **Tests:** [test_model_naming_compliance.py](../tests/test_model_naming_compliance.py) (14 comprehensive tests)
 - **Validator:** [validate_agents.py](../renderer/validate_agents.py) (KNOWN_MODELS)
-- **Adding agents:** [CONTRIBUTING.md > Model Naming When Adding Agents](../CONTRIBUTING.md#model-naming-when-adding-agents)
+- **Adding agents:** [CONTRIBUTING.md > Model Naming When Adding Agents](CONTRIBUTING/README.md#model-naming-when-adding-agents)
 
 ---
 
