@@ -91,7 +91,7 @@ artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml created
   (existing artifacts: DELEGATEs, HANDBACKs already written)
   ↓
 Model Engineer (agent) runs periodically (as part of feedback loop)
-  ├─ Reads: artifacts/2026-*/, artifacts/queue/
+  ├─ Reads: artifacts/2026-*/, ~/.agentic-engineers/artifacts/queue/
   ├─ Extracts: task_id, status, tokens, cost, severity, decision
   ├─ Generates: artifacts/index.json
   └─ Uses: Index to analyze cost trends, model selection patterns
@@ -240,7 +240,7 @@ When calculating cost in span attributes, use model-specific pricing:
   - [ ] Write to artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml
   
 - [ ] Model Engineer code: Generate index.json
-  - [ ] Scan artifacts/2026-*/ and artifacts/queue/
+  - [ ] Scan artifacts/2026-*/ and ~/.agentic-engineers/artifacts/queue/
   - [ ] Extract metadata from all DELEGATE/HANDBACK/SPAN files
   - [ ] Build index by: file_type, task_id, agent_type, status
   - [ ] Calculate: total_tokens, total_cost, critical_issues, escalations

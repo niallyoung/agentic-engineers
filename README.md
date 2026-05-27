@@ -1240,7 +1240,7 @@ For large tasks (20+ hours, 1000+ statements), split into tiers:
 
 **Quality Target:** ≥90% coverage  
 **Owner:** Quality Engineer  
-**Status:** Queued in `artifacts/queue/incoming/`
+**Status:** Queued in `~/.agentic-engineers/artifacts/queue/incoming/`
 
 ```yaml
 ---
@@ -1797,9 +1797,9 @@ test -d ~/.pi && echo "✅ π.dev harness installed" || echo "❌ Not installed"
 
 ```bash
 # 4. Queue directories exist (used by all harnesses)
-ls artifacts/queue/incoming/
-ls artifacts/queue/processing/
-ls artifacts/queue/done/
+ls ~/.agentic-engineers/artifacts/queue/incoming/
+ls ~/.agentic-engineers/artifacts/queue/processing/
+ls ~/.agentic-engineers/artifacts/queue/done/
 ```
 
 ### Protocol Documentation
@@ -1876,7 +1876,7 @@ ls ~/.pi/agent/ 2>/dev/null && echo "π.dev still installed" || echo "✅ π.dev
 **⚠️ Important:** Uninstall targets only remove agentic-engineers managed files. User configuration and other content remain intact:
 - User-created agents/skills in each harness are preserved
 - Workspace configuration (`.claude/config`, `~/.copilot/config`, etc.) is preserved
-- Queue infrastructure remains (use `rm -rf artifacts/queue/` if you want full cleanup)
+- Queue infrastructure remains (use `rm -rf ~/.agentic-engineers/artifacts/queue/` if you want full cleanup)
 
 ### Common Issues
 
@@ -1884,6 +1884,6 @@ ls ~/.pi/agent/ 2>/dev/null && echo "π.dev still installed" || echo "✅ π.dev
 |---------|-------------|-----|
 | `SKILL.md` not found in Copilot | `make install-copilot` not run | `make install-copilot` |
 | Orchestrator routes all tasks to Engineer | `DECISION-MAKING.md` not installed | `make install-opencode` |
-| Model Engineer never fires | Queue missing `artifacts/queue/done/` dir | `make init-queue` |
+| Model Engineer never fires | Queue missing `~/.agentic-engineers/artifacts/queue/done/` dir | `make init-queue` |
 | Skills show as `[MISSING]` in matrix | Skill file deleted or renamed | `make verify-skills` |
 | Token metrics not updating | `TOKEN_METRICS.md` path mismatch | Check `src/config/models.yaml` `metrics_path` |
