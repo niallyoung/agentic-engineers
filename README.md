@@ -169,7 +169,7 @@ Use agents via: `copilot --allow-all --autopilot --agent orchestrator "delegate:
 
 Or with the recommended alias:
 ```bash
-copilot "delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD; repeat until green"
+alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
 ```
 
 ### Option 3: Claude Code (Local with Full Agent Support)
