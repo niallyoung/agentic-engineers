@@ -94,6 +94,12 @@ If Agentic Engineers saves you time, money, or complexity, consider supporting i
 
 </div>
 
+**Support open-source development:**
+- NOSTR: npub1ydxa9ss3xkps49s2gck7lk6pptpx79uvh78p87ly8zg0setwaxps3edd7d
+- LN: bluemouse1@primal.net
+- BTC: bc1py8jw0s695nvx9efm7zfejjhxvzfx8m6q2zhxhyt8s6sukdh6wm9sy2nq0n
+- 🙏 Will rotate address / add BTCPay if any support
+
 Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
 ---
