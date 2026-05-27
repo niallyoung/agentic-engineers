@@ -55,7 +55,7 @@ def sample_delegate():
     return {
         "task_id": "task-001",
         "role": "engineer",
-        "model": "claude-haiku-4-5",
+        "model": "claude-haiku-4.5",
         "effort": "high",
     }
 

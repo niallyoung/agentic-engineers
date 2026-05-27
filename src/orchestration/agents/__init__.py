@@ -103,7 +103,7 @@ class Agent(ABC):
 
 ORCHESTRATOR_CONFIG = AgentConfig(
     name="General Orchestrator",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
     effort="low",
     role="orchestrator",
     description="Route all work to appropriate specialist agents"
@@ -111,7 +111,7 @@ ORCHESTRATOR_CONFIG = AgentConfig(
 
 ENGINEER_CONFIG = AgentConfig(
     name="Engineer",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
     effort="high",
     role="engineer",
     description="Execute well-scoped tasks with pre-written plans"
@@ -119,7 +119,7 @@ ENGINEER_CONFIG = AgentConfig(
 
 SENIOR_ENGINEER_CONFIG = AgentConfig(
     name="Senior Engineer",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="high",
     role="senior_engineer",
     description="Complex work, writes plans, diagnoses root causes"
@@ -127,7 +127,7 @@ SENIOR_ENGINEER_CONFIG = AgentConfig(
 
 LEAD_ENGINEER_CONFIG = AgentConfig(
     name="Lead Engineer",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="high",
     role="lead_engineer",
     description="Code review, architectural guidance, quality decisions"
@@ -135,7 +135,7 @@ LEAD_ENGINEER_CONFIG = AgentConfig(
 
 PRINCIPAL_ENGINEER_CONFIG = AgentConfig(
     name="Principal Engineer",
-    model="claude-opus-4-7",
+    model="claude-opus-4.7",
     effort="high",
     role="principal_engineer",
     description="Cross-service architecture, complex design decisions"
@@ -143,7 +143,7 @@ PRINCIPAL_ENGINEER_CONFIG = AgentConfig(
 
 QUALITY_ENGINEER_CONFIG = AgentConfig(
     name="Quality Engineer",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="medium",
     role="quality_engineer",
     description="Post-implementation quality gate, code review"
@@ -151,7 +151,7 @@ QUALITY_ENGINEER_CONFIG = AgentConfig(
 
 MODEL_ENGINEER_CONFIG = AgentConfig(
     name="Model Engineer",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
     effort="medium",
     role="model_engineer",
     description="Token analysis, confidence scoring, model recommendations"
@@ -159,7 +159,7 @@ MODEL_ENGINEER_CONFIG = AgentConfig(
 
 SECURITY_ENGINEER_CONFIG = AgentConfig(
     name="Security Engineer",
-    model="claude-opus-4-7",
+    model="claude-opus-4.7",
     effort="max",
     role="security_engineer",
     description="Security analysis, threat modeling, vulnerability audits"
@@ -169,7 +169,7 @@ SECURITY_ENGINEER_CONFIG = AgentConfig(
 
 SECURITY_AGENT_QG_CONFIG = AgentConfig(
     name="Security Agent (QG)",
-    model="claude-opus-4-7",
+    model="claude-opus-4.7",
     effort="high",
     role="security_agent",
     description="Scan code for credentials, vulnerabilities, insecure patterns"
@@ -177,7 +177,7 @@ SECURITY_AGENT_QG_CONFIG = AgentConfig(
 
 TESTING_AGENT_CONFIG = AgentConfig(
     name="Testing Agent",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
     effort="medium",
     role="testing_agent",
     description="Parse test output, extract metrics, validate coverage"
@@ -185,7 +185,7 @@ TESTING_AGENT_CONFIG = AgentConfig(
 
 METRICS_AGENT_CONFIG = AgentConfig(
     name="Metrics Agent",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
     effort="medium",
     role="metrics_agent",
     description="Score system health, validate latency/errors/capacity"
@@ -193,7 +193,7 @@ METRICS_AGENT_CONFIG = AgentConfig(
 
 HEALING_AGENT_CONFIG = AgentConfig(
     name="Healing Agent",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="medium",
     role="healing_agent",
     description="Identify config issues, apply auto-fixes, verify"
@@ -201,7 +201,7 @@ HEALING_AGENT_CONFIG = AgentConfig(
 
 SPEC_ENGINEER_CONFIG = AgentConfig(
     name="Spec Engineer",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="medium",
     role="spec_engineer",
     description="Validate code against specification, detect drift"
@@ -209,7 +209,7 @@ SPEC_ENGINEER_CONFIG = AgentConfig(
 
 QUALITY_GATE_ORCHESTRATOR_CONFIG = AgentConfig(
     name="Quality Gate Orchestrator",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="medium",
     role="quality_gate_orchestrator",
     description="Delegate to 5 QG sub-agents, aggregate, decide PROCEED/ESCALATE"
@@ -219,7 +219,7 @@ QUALITY_GATE_ORCHESTRATOR_CONFIG = AgentConfig(
 
 ROUTING_AGENT_CONFIG = AgentConfig(
     name="Routing Agent",
-    model="claude-haiku-4-5",
+    model="claude-haiku-4.5",
     effort="low",
     role="routing_agent",
     description="Translate AGENTS.md decision tree to route tasks to appropriate agents"
@@ -227,7 +227,7 @@ ROUTING_AGENT_CONFIG = AgentConfig(
 
 DECISION_ENGINE_CONFIG = AgentConfig(
     name="Decision Engine",
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4.6",
     effort="medium",
     role="decision_engine",
     description="Evaluate HANDBACK against success criteria and decide next action"

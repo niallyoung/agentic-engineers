@@ -1,6 +1,6 @@
 # Lead Engineer Role
 
-**Model:** claude-sonnet-4-6 | **Effort:** high + thinking | **Cost:** 3x
+**Model:** claude-sonnet-4.6 | **Effort:** high + thinking | **Cost:** 3x
 
 ## What This Role Does
 

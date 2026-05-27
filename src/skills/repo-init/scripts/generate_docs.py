@@ -281,13 +281,13 @@ def test_delete_nonexistent_user_returns_404():
 
 ```bash
 # Check incoming queue
-ls artifacts/queue/incoming/
+ls ~/.agentic-engineers/incoming/
 
 # Check completed tasks
-ls artifacts/queue/done/
+ls ~/.agentic-engineers/done/
 
 # View a task
-cat artifacts/queue/incoming/<task_id>.yaml
+cat ~/.agentic-engineers/incoming/<task_id>.yaml
 ```
 
 ---

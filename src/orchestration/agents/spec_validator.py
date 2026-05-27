@@ -38,73 +38,73 @@ class SpecValidator:
         # For now, return expected spec
         return {
             "GeneralOrchestrator": {
-                "model": "claude-haiku-4-5",
+                "model": "claude-haiku-4.5",
                 "effort": "low",
                 "role": "orchestrator"
             },
             "EngineerAgent": {
-                "model": "claude-haiku-4-5",
+                "model": "claude-haiku-4.5",
                 "effort": "high",
                 "role": "engineer"
             },
             "SeniorEngineerAgent": {
-                "model": "claude-sonnet-4-6",
+                "model": "claude-sonnet-4.6",
                 "effort": "high",
                 "role": "senior_engineer"
             },
             "LeadEngineerAgent": {
-                "model": "claude-sonnet-4-6",
+                "model": "claude-sonnet-4.6",
                 "effort": "high",
                 "role": "lead_engineer"
             },
             "PrincipalEngineerAgent": {
-                "model": "claude-opus-4-7",
+                "model": "claude-opus-4.7",
                 "effort": "high",
                 "role": "principal_engineer"
             },
             "QualityEngineerAgent": {
-                "model": "claude-sonnet-4-6",
+                "model": "claude-sonnet-4.6",
                 "effort": "medium",
                 "role": "quality_engineer"
             },
             "ModelEngineerAgent": {
-                "model": "claude-haiku-4-5",
+                "model": "claude-haiku-4.5",
                 "effort": "medium",
                 "role": "model_engineer"
             },
             "SecurityEngineerAgent": {
-                "model": "claude-opus-4-7",
+                "model": "claude-opus-4.7",
                 "effort": "max",
                 "role": "security_engineer"
             },
             # QG Sub-agents
             "SecurityAgentQG": {
-                "model": "claude-opus-4-7",
+                "model": "claude-opus-4.7",
                 "effort": "high",
                 "role": "security_agent"
             },
             "TestingAgent": {
-                "model": "claude-haiku-4-5",
+                "model": "claude-haiku-4.5",
                 "effort": "medium",
                 "role": "testing_agent"
             },
             "MetricsAgent": {
-                "model": "claude-haiku-4-5",
+                "model": "claude-haiku-4.5",
                 "effort": "medium",
                 "role": "metrics_agent"
             },
             "HealingAgent": {
-                "model": "claude-sonnet-4-6",
+                "model": "claude-sonnet-4.6",
                 "effort": "medium",
                 "role": "healing_agent"
             },
             "SpecEngineerAgent": {
-                "model": "claude-sonnet-4-6",
+                "model": "claude-sonnet-4.6",
                 "effort": "medium",
                 "role": "spec_engineer"
             },
             "QualityGateOrchestrator": {
-                "model": "claude-sonnet-4-6",
+                "model": "claude-sonnet-4.6",
                 "effort": "medium",
                 "role": "quality_gate_orchestrator"
             }

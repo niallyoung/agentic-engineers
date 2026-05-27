@@ -34,7 +34,7 @@ def example_basic_usage():
     delegate = {
         "task_id": "task-001",
         "role": "engineer",
-        "model": "claude-haiku-4-5",
+        "model": "claude-haiku-4.5",
         "effort": "high",
     }
     

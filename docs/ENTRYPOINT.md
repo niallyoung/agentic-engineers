@@ -37,7 +37,7 @@ cat > ~/.copilot/queue/$COPILOT_SESSION_ID/incoming/{task_id}.yaml <<'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer | Quality Engineer | Model Engineer | Orchestrator
-model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-opus-4-7
+model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.7
 effort: low | medium | high | max
 scope: |
   Clear, one-sentence description of what the task is.
@@ -86,7 +86,7 @@ The Orchestrator is invoked by the agent harness (Claude or Copilot CLI). Queue 
 handoff_type: DELEGATE
 task_id: orchestrator-polling-session
 role: Orchestrator
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: low
 scope: |
   Poll queue and delegate all work to appropriate agents.
@@ -150,7 +150,7 @@ cat > artifacts/queue/incoming/2026-05-02-update-spec.yaml << 'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-update-spec
 role: Senior Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: Update docs/SPEC.md with current Phase 5.10 implementation
 context:
@@ -185,7 +185,7 @@ cat > artifacts/queue/incoming/2026-05-02-validate-impl.yaml << 'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-validate-impl
 role: Lead Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: Validate implementation against docs/SPEC.md
 context:
@@ -219,7 +219,7 @@ cat > artifacts/queue/incoming/2026-05-02-fix-bug.yaml << 'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-fix-orchestrator-bug
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: medium
 scope: Fix race condition in Orchestrator span capture
 context:

@@ -31,6 +31,10 @@ jobs:
         run: |
           python3 -m pytest tests/test_framework_consistency.py -v
       
+      - name: Generate dist/ outputs (prerequisite for render validation)
+        run: |
+          make render-all
+      
       - name: Run render pipeline validation
         run: |
           python3 -m pytest tests/test_render_pipeline.py -v

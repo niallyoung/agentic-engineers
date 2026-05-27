@@ -2,13 +2,19 @@
 Orchestrator Agent - Continuous Queue Polling & Task Routing
 
 Implements the canonical ORCHESTRATOR-FIRST EXECUTION MODEL:
-1. Poll ~/.copilot/queue/incoming/ for new DELEGATE blocks
+1. Poll ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/ for new DELEGATE blocks
 2. Route each task to appropriate agent per AGENTS.md
 3. Process HANDBACK results
 4. Move tasks through queue states: incoming → processing → done
 5. Continue polling until queue is idle (60+ seconds with no tasks)
 
 This is the ONLY way work flows through agentic-engineers.
+
+CANONICAL QUEUE PATH (all harnesses):
+  ~/.agentic-engineers/{session-id}/{harness}/queue/
+  - Harnesses: claude, copilot, gpt, local
+  - Supported by queue-isolation skill (mandatory)
+  - Legacy paths (~/.copilot/queue/, ~/.claude/queue/, artifacts/queue/) NO LONGER SUPPORTED
 """
 
 import os
@@ -420,13 +426,15 @@ class QueueManager:
     
     def __init__(self, queue_dir: Optional[str] = None, agent_context: Optional[str] = None):
         """
-        Initialize QueueManager with dual-path support (Phase 1 migration).
+        Initialize QueueManager with mandatory queue-isolation support.
         
-        Priority:
-        1. Try queue-isolation (new path: ~/.agentic-engineers/artifacts/)
-        2. Fall back to legacy paths (~/.copilot/queue/ or ~/.claude/queue/)
+        CANONICAL PATH (required): ~/.agentic-engineers/{session-id}/{harness}/queue/
         
-        This ensures backward compatibility while gradually adopting the new path structure.
+        This path is provided and validated by the queue-isolation skill.
+        If queue-isolation is unavailable, initialization will fail with a clear error message.
+        
+        Legacy path fallback is NO LONGER SUPPORTED.
+        All harnesses (Claude, Copilot, GPT, Local) use the same centralized path structure.
         """
         # ========================================================================
         # PHASE 1: Try queue-isolation (new path)
@@ -467,60 +475,15 @@ class QueueManager:
                 # Fall through to legacy code below
         
         # ========================================================================
-        # PHASE 2: Fallback to legacy paths (backward compatibility)
+        # PHASE 2: Enforce canonical queue path only
         # ========================================================================
         if not self._using_isolation:
-            # Detect harness/agent context early
-            self.harness = agent_context or self.detect_agent_context() or 'copilot'
-            
-            # Detect session-id early
-            try:
-                if self.session_id is None:
-                    self.session_id = self.detect_session_id()
-            except RuntimeError as e:
-                logger.warning(f"Could not detect session ID, using fallback: {e}")
-                # Fallback: use a placeholder for testing/migration purposes
-                self.session_id = "default"
-            
-            # Use explicit queue_dir, or auto-detect based on agent context
-            if queue_dir:
-                base_queue_dir = Path(queue_dir).expanduser()
-                self.agent_context = agent_context or self.detect_agent_context()
-            else:
-                # Auto-detect agent context
-                self.agent_context = agent_context or self.detect_agent_context()
-                
-                # Build queue path based on context
-                if self.agent_context == 'claude':
-                    claude_queue = Path("~/.claude/queue").expanduser()
-                    repo_queue = Path("artifacts/queue")
-                    if claude_queue.exists():
-                        base_queue_dir = claude_queue
-                    elif repo_queue.exists():
-                        base_queue_dir = repo_queue
-                    else:
-                        base_queue_dir = claude_queue
-                else:  # copilot or other
-                    copilot_queue = Path("~/.copilot/queue").expanduser()
-                    repo_queue = Path("artifacts/queue")
-                    if copilot_queue.exists():
-                        base_queue_dir = copilot_queue
-                    elif repo_queue.exists():
-                        base_queue_dir = repo_queue
-                    else:
-                        base_queue_dir = copilot_queue
-            
-            # Store the base queue directory (for migrations)
-            self.base_dir = base_queue_dir
-            
-            # Now set the session-id partitioned queue directory BEFORE migration
-            self.session_queue_dir = self.base_dir / self.session_id
-            
-            logger.debug(
-                f"QueueManager: Using legacy paths. "
-                f"session_id={self.session_id}, agent_context={self.agent_context}, "
-                f"path={self.session_queue_dir}"
+            raise RuntimeError(
+                "Canonical queue path is ~/.agentic-engineers/ for all harnesses. "
+                "Legacy paths (~/.copilot/queue/, ~/.claude/queue/, artifacts/queue/) "
+                "are NO LONGER SUPPORTED. Ensure queue-isolation skill is properly initialized."
             )
+        
         
         # ========================================================================
         # Initialize queue subdirectories (same for both paths)
@@ -1530,7 +1493,7 @@ class OrchestratorAgent(Agent):
                     "handoff_type": "DELEGATE",
                     "task_id": f"{task_id}-qe-review",
                     "role": "quality_engineer",
-                    "model": "claude-sonnet-4-6",
+                    "model": "claude-sonnet-4.6",
                     "effort": "medium",
                     "scope": f"Quality review and validation: {escalation_reason}",
                     "requires_quality_review": True,

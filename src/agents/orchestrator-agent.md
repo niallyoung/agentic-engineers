@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: All entry points; routing decisions; task management; metrics collection; model recommendations
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 ---
 
 # Orchestrator Agent
@@ -102,7 +102,7 @@ Your goal is to maximize team efficiency, code quality, and cost-effectiveness t
 The Orchestrator operates differently from other agents:
 
 **CONTINUE polling and processing when:**
-- ✓ Tasks exist in `artifacts/queue/incoming/`
+- ✓ Tasks exist in `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/`
 - ✓ HANDBACK results are waiting to be routed
 - ✓ Metrics need to be collected and analyzed
 - → Continue polling every 30-60 seconds
@@ -147,5 +147,15 @@ Unlike other agents, the Orchestrator's autonomy is about **continuous polling**
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@orchestrator` mention.
-Polls `artifacts/queue/incoming/` every 30-60 seconds in harness mode.
+Invoked via OpenCode CLI with `--agent orchestrator` flag:
+```bash
+opencode --agent orchestrator "Your task description"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent orchestrator "Your task"
+```
+
+Polls `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/` every 30-60 seconds in harness mode.
+All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure.

@@ -58,7 +58,7 @@ and enables decentralized sub-task creation.
 from skills.queue_management.scripts import QueueOperations
 
 # Initialize
-queue = QueueOperations(session_id="my-session", queue_path="~/.copilot/queue")
+queue = QueueOperations(session_id="my-session", queue_path="~/.agentic-engineers/")
 
 # Create DELEGATE
 result = queue.create_delegate(
@@ -291,17 +291,17 @@ except ValueError as e:
 
 ## Queue States
 
-Tasks move through these states:
+Tasks move through these states in `~/.agentic-engineers/queue/`:
 
 ```
-incoming  →  processing  →  done
-           ↘  failed     ↗
+incoming/  →  processing/  →  done/
+            ↘  failed/     ↗
 ```
 
-- **incoming:** Task created, ready to process
-- **processing:** Task actively being worked on
-- **done:** Task completed successfully
-- **failed:** Task failed and needs retry or escalation
+- **incoming/:** Task created, ready to process
+- **processing/:** Task actively being worked on
+- **done/:** Task completed successfully
+- **failed/:** Task failed and needs retry or escalation
 
 ---
 
@@ -309,7 +309,7 @@ incoming  →  processing  →  done
 
 ### QueueOperations
 
-#### `__init__(session_id: str, queue_path: str = "~/.copilot/queue")`
+#### `__init__(session_id: str, queue_path: str = "~/.agentic-engineers/")`
 Initialize queue operations for a session.
 
 #### `create_delegate(...) -> Dict`
@@ -410,7 +410,7 @@ The `scripts/add-to-queue` CLI tool automates task queuing. Instead of manually 
 **What it does:**
 1. Parses task specifications (JSON or CLI args)
 2. Validates against QUEUE-PROTOCOL format
-3. Generates DELEGATE JSON file in `~/.copilot/queue/{session-id}/incoming/`
+3. Generates DELEGATE JSON file in `~/.agentic-engineers/{session-id}/incoming/`
 4. Adds entry to repo TODO.md (correct phase section)
 5. Commits both files atomically in single git commit
 6. Detects and prevents duplicate task_ids

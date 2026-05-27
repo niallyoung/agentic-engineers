@@ -175,7 +175,7 @@ Compact, structured markup for agent-to-agent handoffs (~80% context savings vs.
 handoff_type: DELEGATE
 task_id: 2026-04-24-redis-caching
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Add Redis caching to {example-service}
 context:
@@ -204,7 +204,7 @@ tests:
   - "make verify": PASS (48 tests, 87% coverage)
 tokens_in: 18500
 tokens_out: 2100
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 42
 escalations: 0

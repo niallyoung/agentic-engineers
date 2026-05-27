@@ -1,7 +1,7 @@
 # Voice Notify Skill
 
 **Agent Role**: Engineer  
-**Model**: claude-haiku-4-5  
+**Model**: claude-haiku-4.5  
 **Effort**: low  
 **Purpose**: Delivers voice notifications for orchestration events; matches personality voice to agent type
 
@@ -42,7 +42,7 @@ handoff_type: DELEGATE
 task_id: 2026-05-05-notify-quality-gate-pass-{example-service}
 timestamp: 2026-05-05T09:35:00Z
 role: Voice Notify Agent (Engineer)
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: low
 scope: >
   Deliver voice notification: "Quality gate passed for {example-service}. All checks green."

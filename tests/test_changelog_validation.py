@@ -1,173 +1,18 @@
-"""CHANGELOG.md validation tests to prevent versioning sync issues."""
-import re
-from pathlib import Path
+"""
+CHANGELOG.md validation tests (DEPRECATED)
+
+⚠️ DEPRECATED: CHANGELOG.md no longer exists in the repository
+As of commit 1a4f889, the repository uses GitHub Releases as the source of truth
+for version history and release notes. Local CHANGELOG.md is no longer maintained.
+
+TESTS SKIPPED: GitHub Releases replaced CHANGELOG.md as the canonical source.
+See GitHub Releases for version history and release notes.
+"""
+
+import pytest
 
 
-class TestChangelogFormat:
-    """Validate CHANGELOG.md format and versioning consistency."""
-
-    def test_changelog_exists(self):
-        """CHANGELOG.md must exist in repository root."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        assert changelog.exists(), "CHANGELOG.md not found in repository root"
-
-    def test_unreleased_section_format(self):
-        """Changelog uses versioned entries without [Unreleased] prefix (deprecated format removed).
-        
-        NOTE: The [Unreleased] format was removed in favor of direct versioned entries.
-        Each release now has its own ## [vX.Y.Z] - YYYY-MM-DD section.
-        This test is kept for backward compatibility but no longer enforces [Unreleased].
-        """
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Simply verify we have versioned entries instead
-        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\]'
-        matches = list(re.finditer(version_pattern, content, re.MULTILINE))
-        assert len(matches) > 0, "Changelog must have version entries in format ## [vX.Y.Z]"
-
-    def test_version_entries_have_correct_format(self):
-        """All version entries must follow ## [vX.Y.Z] - YYYY-MM-DD format."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Find all version entries (excluding [Unreleased])
-        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$'
-        matches = re.finditer(version_pattern, content, re.MULTILINE)
-        
-        versions = []
-        for match in matches:
-            versions.append((match.group(1), match.start()))
-        
-        assert len(versions) > 0, "No version entries found in CHANGELOG"
-        
-        # Extract just version numbers
-        version_numbers = [v[0] for v in versions]
-        
-        # Verify format of each
-        for version in version_numbers:
-            parts = version.lstrip('v').split('.')
-            assert len(parts) == 3, f"Version {version} must have format vX.Y.Z"
-            for part in parts:
-                assert part.isdigit(), f"Version {version} has non-numeric component"
-
-    def test_versions_in_descending_order(self):
-        """Version entries must be in descending order (newest first)."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Find all version entries
-        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\]'
-        matches = re.finditer(version_pattern, content, re.MULTILINE)
-        
-        versions = [match.group(1) for match in matches]
-        assert len(versions) > 1, "Need at least 2 versions to verify ordering"
-        
-        # Convert to tuples for comparison
-        def version_key(v):
-            parts = v.lstrip('v').split('.')
-            return tuple(int(p) for p in parts)
-        
-        # Verify each version is >= the next
-        for i in range(len(versions) - 1):
-            current = version_key(versions[i])
-            next_version = version_key(versions[i + 1])
-            assert current >= next_version, \
-                f"Version {versions[i]} should come after {versions[i + 1]} (descending order)"
-
-    def test_no_duplicate_versions(self):
-        """No duplicate version entries allowed."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Find all version entries
-        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\]'
-        matches = re.finditer(version_pattern, content, re.MULTILINE)
-        
-        versions = [match.group(1) for match in matches]
-        
-        # Check for duplicates
-        seen = set()
-        for version in versions:
-            assert version not in seen, f"Duplicate version entry found: {version}"
-            seen.add(version)
-
-    def test_unreleased_comes_before_all_versions(self):
-        """Changelog now uses direct versioned entries without [Unreleased] prefix.
-        
-        NOTE: The [Unreleased] format was removed. All entries are now versioned.
-        This test verifies that changelog has the correct structure.
-        """
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Verify we have versioned entries
-        version_pattern = r'^## \[(v\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$'
-        matches = list(re.finditer(version_pattern, content, re.MULTILINE))
-        assert len(matches) > 0, "Changelog must have versioned entries"
-
-    def test_changelog_has_expected_sections(self):
-        """Each version entry should have standard sections."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Find first version entry (skip [Unreleased] which may be empty)
-        version_matches = re.finditer(
-            r'^## \[(v\d+\.\d+\.\d+)\][^\n]*\n(.*?)(?=^## \[|$)',
-            content,
-            re.MULTILINE | re.DOTALL
-        )
-        
-        version_sections = list(version_matches)
-        assert len(version_sections) > 0, "Could not find any version entries"
-        
-        # Check first non-empty version section
-        for version_match in version_sections:
-            version_section = version_match.group(2).strip()
-            if not version_section:
-                continue
-                
-            # Should have at least one of: Added, Fixed, Changed, Removed, Security, Documentation
-            valid_sections = ['Added', 'Fixed', 'Changed', 'Removed', 'Security', 'Documentation']
-            has_section = any(f"### {section}" in version_section for section in valid_sections)
-            
-            assert has_section, \
-                f"Version entry should have at least one of: {', '.join(valid_sections)}"
-            break  # Only check first non-empty version
-
-
-    def test_changelog_no_version_in_unreleased_content(self):
-        """The [Unreleased] section content should not mention version numbers."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Extract content between [Unreleased] and first [vX.Y.Z]
-        unreleased_match = re.search(
-            r'^## \[Unreleased\]\n(.*?)^## \[v\d+\.\d+\.\d+\]',
-            content,
-            re.MULTILINE | re.DOTALL
-        )
-        
-        if unreleased_match:
-            unreleased_section = unreleased_match.group(1)
-            # Should not have version-like patterns in the section headers
-            # (but may have them in entries)
-            assert "- v" not in unreleased_section or \
-                   "upgrade to v" in unreleased_section or \
-                   "support v" in unreleased_section, \
-                "Unreleased section should not reference specific versions"
-
-    def test_changelog_is_valid_markdown(self):
-        """CHANGELOG.md should be valid Markdown."""
-        changelog = Path(__file__).parent.parent / "CHANGELOG.md"
-        content = changelog.read_text()
-        
-        # Check for basic Markdown validity
-        assert content.startswith("# "), "CHANGELOG should start with H1 heading"
-        
-        # Count heading levels
-        h2_count = len(re.findall(r'^## ', content, re.MULTILINE))
-        h3_count = len(re.findall(r'^### ', content, re.MULTILINE))
-        
-        assert h2_count > 0, "CHANGELOG should have H2 headings (version entries)"
-        assert h3_count > 0, "CHANGELOG should have H3 headings (section titles)"
+def test_changelog_deprecated():
+    """Placeholder test - all CHANGELOG.md tests are deprecated."""
+    pytest.skip("CHANGELOG.md deprecated - GitHub Releases is the source of truth. "
+                "See https://github.com/niallyoung/agentic-engineers/releases")

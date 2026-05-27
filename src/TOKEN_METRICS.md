@@ -164,7 +164,7 @@ metrics:
   tokens_used: 5840           # actual tokens consumed (input + output)
   tokens_estimated: 8000      # budget from the DELEGATE
   efficiency_ratio: 0.73      # tokens_used / tokens_estimated
-  model_used: claude-sonnet-4-6
+  model_used: claude-sonnet-4.6
   duration_ms: 42000          # wall-clock time
   quality_score: 0.88         # 0.0–1.0, self-assessed by agent
 ```
@@ -224,12 +224,12 @@ After each Quality Engineer HANDBACK, the Model Engineer runs:
 
 ## Analysis
 - Task type: [classification]
-- Model used: claude-sonnet-4-6
+- Model used: claude-sonnet-4.6
 - Efficiency ratio: 0.48
 - Quality score: 0.85
 
 ## Recommendation
-**DOWNGRADE** to claude-haiku-4-5 for similar tasks.
+**DOWNGRADE** to claude-haiku-4.5 for similar tasks.
 
 ## Reasoning
 Efficiency ratio of 0.48 indicates the Sonnet model had significant headroom.
@@ -249,9 +249,9 @@ Haiku would deliver similar quality at 67% lower cost.
 
 | Model | Input (per 1M tokens) | Output (per 1M tokens) | Typical task cost |
 |-------|-----------------------|------------------------|-------------------|
-| claude-haiku-4-5 | $0.80 | $4.00 | $0.03–0.05 |
-| claude-sonnet-4-6 | $3.00 | $15.00 | $0.09 |
+| claude-haiku-4.5 | $0.80 | $4.00 | $0.03–0.05 |
+| claude-sonnet-4.6 | $3.00 | $15.00 | $0.09 |
 | claude-opus-4-6 | $15.00 | $75.00 | $0.15 |
-| claude-opus-4-7 | $15.00 | $75.00 | $0.15 |
+| claude-opus-4.7 | $15.00 | $75.00 | $0.15 |
 
 > Prices are approximate and subject to Anthropic pricing changes. Verify at [anthropic.com/pricing](https://www.anthropic.com/pricing).

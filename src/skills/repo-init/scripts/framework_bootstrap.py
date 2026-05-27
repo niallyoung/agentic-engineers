@@ -226,6 +226,6 @@ quality_gate:
   require_code_review: false
 
 queue:
-  location: "artifacts/queue"
+  location: "~/.agentic-engineers/"
   session_partitioned: true
 """

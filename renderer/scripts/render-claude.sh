@@ -39,7 +39,7 @@ AGENT_MANIFEST="$DST_AGENTS/.agentic-engine{service-name}"
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-# Map "claude-haiku-4-5" → "haiku", "claude-sonnet-4-6" → "sonnet", "claude-opus-4-7" → "opus"
+# Map "claude-haiku-4.5" → "haiku", "claude-sonnet-4.6" → "sonnet", "claude-opus-4.7" → "opus"
 # Claude Code accepts short tier names rather than fully-qualified provider/model IDs.
 # Note: does not distinguish between minor versions (e.g., sonnet-4-5 vs sonnet-4-6).
 map_model() {

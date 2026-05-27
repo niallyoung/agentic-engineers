@@ -1,7 +1,7 @@
 # Event Consumer Skill
 
 **Used by:** senior-engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** high — involves idempotency design, SQS/SNS wiring, CDK infrastructure, and event routing.
 
 Use this skill when building or modifying event-driven consumers that process domain events from an SNS FIFO → SQS FIFO pipeline.

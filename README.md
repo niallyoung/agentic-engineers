@@ -1,10 +1,6 @@
 # Agentic Engineers
 
-A production-ready multi-agent orchestration framework with 8 specialized AI roles, queue-based delegation, quality gates, and autonomous cost optimization feedback loops.
-
-**NOTE: oops, in the rush to publish I've discovered some last-minute issues, and my ~/.copilot/ config shat itself and hid some missing pieces - COMING SOON Mon 25th hopefully 🤦‍♂️🙇‍♂️
-Like many of thse frameworks, we're wrestling a) models; and now b) harness updates and c) LLM provider changes :\ 
-brb**
+8 agent roles + queue-based orchestration + quality gates + cost optimization feedback loops.
 
 ---
 
@@ -33,18 +29,42 @@ brb**
 
 ---
 
+## Table of Contents
+
+- [What It Is](#what-it-is)
+- [8 Specialized Roles](#8-specialized-roles)
+- [Support This Project](#support-this-project)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Key Benefits & Discoveries](#key-benefits--discoveries)
+- [DELEGATE / HANDBACK Protocol](#delegate--handback-protocol)
+- [How to Delegate Work](#how-to-delegate-work)
+- [Token Visibility & Budget Checking](#token-visibility--budget-checking-phase-3)
+- [Quality Gates](#quality-gates-3-layers)
+- [SDLC Enforcement](#sdlc-enforcement)
+- [Testing](#testing)
+- [Repository Structure](#repository-structure)
+- [Key Documentation](#key-documentation)
+- [Cost Optimization](#cost-optimization-self-improving)
+- [Market Comparison](#market-comparison-agentic-engineers-vs-industry-frameworks)
+- [When to Use This System](#when-to-use-this-system)
+- [Core Protocol Documents](#core-protocol-documents)
+- [Installation & Setup](#installation-verification)
+
+---
+
 ## 8 Specialized Roles
 
 | Rank | Role | Model | Version | Thinking | Effort | Cost/Task | Purpose |
 |------|------|-------|---------|----------|--------|-----------|---------|
-| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4-5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
-| 2️⃣ | **Engineer** | Haiku | claude-haiku-4-5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
-| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
-| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
-| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
-| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4-6 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
+| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4.5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
+| 2️⃣ | **Engineer** | Haiku | claude-haiku-4.5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
+| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
+| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
+| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
+| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
 | 7️⃣ | **Principal Engineer** | Opus | claude-opus-4-6 | ✅ Yes | High | $0.15 | Cross-service architecture; major refactors |
-| 8️⃣ | **Security Engineer** | Opus | claude-opus-4-7 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
+| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.7 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
 - **Haiku (Ranks 1-2):** $0.03–$0.05 per task — Routing, well-scoped implementation
@@ -81,35 +101,41 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 ## Architecture
 
 ```
-User Task
-   ↓
-[artifacts/queue/incoming/] ← DELEGATE
-   ↓
+[User / CLI]
+   ↓ (invoke orchestrator agent with task)
 [Orchestrator Agent]
+   ├─ Parses task list
    ├─ Routes via AGENTS.md decision tree
-   ├─ Spawns appropriate specialist
-   └─ Waits for HANDBACK
+   ├─ Writes DELEGATEs to ~/.agentic-engineers/queue/incoming/
+   └─ Polls queue for HANDBACKs
    ↓
-[Specialist Agent]
+[~/.agentic-engineers/queue/incoming/] (tasks waiting)
+   ↓ (Orchestrator picks up)
+[~/.agentic-engineers/queue/processing/] (tasks in flight)
+   ↓ (agent completes)
+[Specialist Agent] (Engineer, Lead, Security, Principal, Senior, etc.)
    ├─ Executes task
    ├─ Measures quality + metrics
    └─ Returns HANDBACK
    ↓
 [Quality Gates validate]
-   └─ quality_score ≥ threshold → done/
+   └─ quality_score ≥ threshold → move to done/
       else → REWORK or ESCALATE
    ↓
-[artifacts/queue/done/] ← Results + Metrics
+[~/.agentic-engineers/queue/done/] ← Results + Metrics + Audit Trail
+   ↓
+[Orchestrator reports back to user]
 ```
 
 ### Queue States
 
 ```
-incoming/      ← New DELEGATE tasks
-  ↓ (Orchestrator picks up)
-processing/    ← Tasks being worked on
-  ↓ (agent completes)
-done/          ← Completed tasks with full audit trail
+~/.agentic-engineers/queue/
+  incoming/      ← New DELEGATE tasks
+    ↓ (Orchestrator picks up)
+  processing/    ← Tasks being worked on
+    ↓ (agent completes)
+  done/          ← Completed tasks with full audit trail
 ```
 
 ---
@@ -118,108 +144,67 @@ done/          ← Completed tasks with full audit trail
 
 ### Installation (Choose Your Harness)
 
-All harnesses are configured by default to use Anthropic models via OpenCode. Install to any or all:
+All harnesses are configured by default to use Anthropic Claude models. Install to any or all:
 
-**Option 1: OpenCode (Recommended - Complete Implementation)**
+### Quick Start: All Harnesses (Recommended)
+
 ```bash
-make install-opencode    # Install agents + skills to ~/.config/opencode/
-make status-opencode     # Verify installation
+make install
 ```
 
-**Option 2: Copilot CLI (Full Agent + Skill Support)**
+Or install individual harnesses:
+
 ```bash
-make install-copilot     # Install agents + skills to ~/.copilot/
+make install-opencode      # OpenCode CLI (recommended)
+make install-copilot       # Copilot CLI
+make install-claude        # Claude Code (IDE)
+make install-pi            # π.dev (experimental)
 ```
 
-Use agents via: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
+### Using the Orchestrator
 
-**Option 3: Claude Code (Local with Full Agent Support)**
+The Orchestrator coordinates complex tasks across agents. Set up the recommended aliases in `~/.zshrc` or `~/.bashrc`:
+
 ```bash
-make install-claude      # Install agents to ~/.claude/
+alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
+alias opencode="opencode --agent orchestrator $*"
 ```
 
-**Option 4: π.dev (Experimental)**
-```bash
-make install-pi          # Install to ~/.pi/agent/
+Then delegate your work. Example prompts for the Orchestrator:
+
+```
+delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green
 ```
 
-**Why Experimental:** π.dev uses static agent configuration (no dynamic agent registration like OpenCode and Claude Code). Agent configuration is defined at installation time and cannot be modified at runtime. This limitation makes it less suitable for rapidly evolving multi-agent systems but suitable for testing static configurations.
-
-**Option 5: All Harnesses (Parallel Installation)**
-```bash
-make install             # Install all 4 harnesses at once
+```
+delegate: analyze the codebase for performance bottlenecks; benchmark current implementation; propose optimization strategy; implement changes; measure improvement
 ```
 
-**Option 6: Clean Install with Backup**
-```bash
-make clean-install       # Backup existing harnesses + fresh install
 ```
-
-This command:
-- Backs up all existing harness directories with YYYYMMDD timestamp:
-  - `~/.copilot/` → `~/.copilot.20260525/`
-  - `~/.claude/` → `~/.claude.20260525/`
-  - `~/.pi/` → `~/.pi.20260525/`
-  - `~/.config/opencode/` → `~/.config/opencode.20260525/`
-- Then proceeds with fresh installation from `dist/`
-- **Important**: Never touches `~/.agentic-engineers/` (shared queue directory)
-
-**Manual Backup (Individual Harnesses)**
-```bash
-# Backup specific harnesses only
-bash renderer/scripts/backup-harnesses.sh copilot claude
-bash renderer/scripts/backup-harnesses.sh pi
-bash renderer/scripts/backup-harnesses.sh opencode
-
-# Backup all harnesses (default)
-bash renderer/scripts/backup-harnesses.sh
-```
-
-**Restoring from Backup**
-```bash
-# Manually restore a harness from backup
-rm -rf ~/.copilot/
-mv ~/.copilot.20260525/ ~/.copilot/
-
-# Or restore all harnesses from same-day backup
-for harness in copilot claude pi; do
-    rm -rf ~/.$harness/
-    mv ~/.$harness.20260525/ ~/.$harness/
-done
-rm -rf ~/.config/opencode/
-mv ~/.config/opencode.20260525/ ~/.config/opencode/
-```
-
-### Rendering (Advanced)
-
-To generate distribution files for all harnesses:
-```bash
-make render-all          # Generate dist/claude/, dist/copilot/, ~/.pi/ config
-make render-claude       # Generate dist/claude/ only
-make render-copilot      # Generate dist/copilot/ only
-make render-pi           # Generate ~/.pi/ config only
-# OpenCode config is generated automatically by make install-opencode
-```
-
-### Run the Orchestrator
-
-```bash
-# Via OpenCode (recommended)
-opencode "Your task description here"
-
-# Via Claude Code
-@orchestrator Your task description here
-
-# Via Copilot CLI
-copilot --agent orchestrator "Your task description here"
+delegate: fix the bug described in issue #42; add tests to prevent regression; update docs; commit and push
 ```
 
 The Orchestrator will:
-1. Parse your task and determine complexity
-2. Route to the appropriate specialist agent
-3. Create a DELEGATE with scope, plan, and success criteria
-4. Monitor execution and collect metrics
-5. Return results with quality score and token usage
+1. Parse task list
+2. Route to appropriate agents (Engineer, Lead Engineer, Security Engineer, etc.)
+3. Handle parallelization automatically
+4. Report results and metrics
+
+### Extend the Framework
+
+The framework includes creator skills for extending in any direction:
+
+**agent-creator** — Scaffold new agents instantly
+```
+Create me a new quality-engineer agent with custom validation logic
+```
+
+**skill-creator** — Build new automation skills
+```
+Create me a skill called 'db-migrator' that handles database schema migrations
+```
+
+Both agent-creator and skill-creator validate your definitions (naming, model compatibility, circular dependencies) and generate SPEC-compliant scaffolds with TDD tests and DELEGATE/HANDBACK protocol templates. Perfect for extending the framework without manual boilerplate.
 
 ---
 
@@ -246,8 +231,8 @@ The Orchestrator will:
 **Discovery:** Well-scoped, pre-planned work can be executed by cheaper models (Haiku) with same quality as expensive models (Opus), but 60% cheaper.
 
 **Real-World Data:**
-- **Haiku (claude-haiku-4-5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
-- **Sonnet (claude-sonnet-4-6):** $0.09 per task, needed for complex analysis and planning
+- **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
+- **Sonnet (claude-sonnet-4.6):** $0.09 per task, needed for complex analysis and planning
 - **Opus (claude-opus-4-6/4-7):** $0.15 per task, only for security/architecture decisions
 
 **Cost Breakdown (Typical Workflow):**
@@ -267,7 +252,7 @@ The Orchestrator will:
 
 ### 3. Parallel Sub-Agent Execution at Scale
 
-**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization.
+**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization. `opencode` recommended.
 
 **Tested Capacity:**
 - ✅ **Tens to hundreds of concurrent agents** from single parent (observed in production)
@@ -281,27 +266,27 @@ The Orchestrator will:
 ```yaml
 # src/config/models.yaml
 orchestrator:
-  model: claude-haiku-4-5
+  model: claude-haiku-4.5
   effort: low
   thinking: false
 
 engineer:
-  model: claude-haiku-4-5
+  model: claude-haiku-4.5
   effort: high
   thinking: false
 
 quality_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: medium
   thinking: true
 
 senior_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: high
   thinking: true
 
 lead_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: high
   thinking: true
 
@@ -311,12 +296,12 @@ principal_engineer:
   thinking: true
 
 security_engineer:
-  model: claude-opus-4-7
+  model: claude-opus-4.7
   effort: max
   thinking: true
 
 model_engineer:
-  model: claude-sonnet-4-6
+  model: claude-sonnet-4.6
   effort: high
   thinking: true
 ```
@@ -330,6 +315,8 @@ model_engineer:
 - ✅ Thinking mode enabled for complex reasoning tasks
 
 ### Override Models Per Agent/Role
+
+NOTE: this area may not be functional / not verified. Intent here is for `agentic-engineers` to support pluggable: harness, providers, models → sane defaults but auto-detect / user-configuration wizard?
 
 **Method 1: Environment Variables (Temporary)**
 ```bash
@@ -378,10 +365,10 @@ success_criteria:
 ### Supported Models
 
 **Anthropic (Default):**
-- `claude-haiku-4-5` — Fast, cheap, good for well-scoped work
-- `claude-sonnet-4-6` — Balanced, good for planning and review
+- `claude-haiku-4.5` — Fast, cheap, good for well-scoped work
+- `claude-sonnet-4.6` — Balanced, good for planning and review
 - `claude-opus-4-6` — Powerful, good for architecture
-- `claude-opus-4-7` — Most powerful, good for security analysis
+- `claude-opus-4.7` — Most powerful, good for security analysis
 
 **OpenAI (Supported):**
 - `gpt-4-turbo` — Equivalent to Sonnet (planning, review)
@@ -409,72 +396,6 @@ success_criteria:
 
 ---
 
-## Harness Support & Comparison
-
-### Quick Reference: Harness Matrix
-
-| Feature | OpenCode | Claude Code | Copilot CLI | π.dev |
-|---------|:--------:|:-----------:|:-----------:|:-----:|
-| **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
-| **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
-| **Managed Config** | ✅ Full | ❌ Manual | ❌ Manual | ⚠️ Experimental |
-| **IDE/CLI** | CLI | IDE | CLI | IDE |
-| **Install Path** | `~/.config/opencode/` | `~/.claude/` | `~/.copilot/` | `~/.pi/agent/` |
-| **Status** | 🟢 Recommended | 🟢 Stable | 🟢 Stable | 🟡 Experimental |
-| **Quality** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
-
-### Detailed Harness Guide
-
-#### 1. OpenCode (Recommended)
-**Best for:** Primary workspace with full agent + skill support
-```bash
-make install-opencode    # Install agents & skills
-make status-opencode     # Verify installation
-make uninstall-opencode  # Remove (agentic-engineers only)
-```
-- ✅ Full agent support (8 specialized roles)
-- ✅ Full skill registry (14 capabilities)
-- ✅ Managed configuration
-- 📍 Location: `~/.config/opencode/`
-
-#### 2. Claude Code (IDE Extension)
-**Best for:** Local IDE integration with agent support
-```bash
-make install-claude      # Install agents
-make uninstall-claude    # Remove
-```
-- ✅ Full agent support (8 specialized roles)
-- ✅ Skills available
-- ❌ No managed config (manual setup)
-- 📍 Location: `~/.claude/`
-
-#### 3. Copilot CLI (Command Line)
-**Best for:** CLI-first workflows with full agent + skill support
-```bash
-make install-copilot     # Install agents + skills to ~/.copilot/
-make uninstall-copilot   # Remove
-```
-- ✅ Full agent support (8 specialized roles)
-- ✅ Skills available (14)
-- ✅ Managed configuration
-- 📍 Location: `~/.copilot/`
-- 💡 Usage: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
-
-#### 4. π.dev (Experimental)
-**Best for:** Testing and experimental configurations
-```bash
-make install-pi          # Install configuration
-make uninstall-pi        # Remove
-```
-- ⚠️ Static agent config (experimental)
-- ❌ No skills support
-- ⚠️ Experimental status
-- 📍 Location: `~/.pi/agent/`
-
-See [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) and [docs/CLAUDE-INSTALL.md](docs/CLAUDE-INSTALL.md) for detailed setup guides.
-
----
-
 ## DELEGATE / HANDBACK Protocol
 
 **DELEGATE** (task assignment):
@@ -482,7 +403,7 @@ See [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) and [docs/CLAUDE-INSTAL
 handoff_type: DELEGATE
 task_id: 2026-05-17-fix-auth          # Unique: YYYY-MM-DD-slug
 role: Engineer                         # Target role
-model: claude-haiku-4-5               # Optional override
+model: claude-haiku-4.5               # Optional override
 effort: low|medium|high|max
 scope: |
   Clear description of work needed.
@@ -564,7 +485,7 @@ delegate: implement user login feature with bcrypt password hashing and JWT toke
 handoff_type: DELEGATE
 task_id: 2026-05-20-user-login
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: |
   Implement user login feature with bcrypt password hashing and JWT token generation.
@@ -746,7 +667,7 @@ delegate parallel: audit security in user-service; audit security in payment-ser
 handoff_type: DELEGATE
 task_id: 2026-05-20-security-audit-1
 role: Security Engineer
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 scope: |
   Perform comprehensive security audit of user-service.
@@ -861,7 +782,7 @@ delegate:
 handoff_type: DELEGATE
 task_id: 2026-05-20-payment-arch
 role: Principal Engineer
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: high
 scope: |
   Design microservices architecture for new payment system.
@@ -1157,6 +1078,8 @@ delegate:
 
 ## Token Visibility & Budget Checking (Phase 3)
 
+NOTE: The `opencode-tokens` tool itself is not verified yet
+
 Real-time token tracking across all agents and subagents:
 
 ```bash
@@ -1236,7 +1159,7 @@ Here's a real DELEGATE that shows the complete workflow: plan → implement → 
 handoff_type: DELEGATE
 task_id: 2026-05-20-fix-ci-cd-timeout
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 
 scope: |
@@ -1302,14 +1225,14 @@ For large tasks (20+ hours, 1000+ statements), split into tiers:
 
 **Quality Target:** ≥90% coverage  
 **Owner:** Quality Engineer  
-**Status:** Queued in `artifacts/queue/incoming/`
+**Status:** Queued in `~/.agentic-engineers/artifacts/queue/incoming/`
 
 ```yaml
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-19-phase-h-tier1-critical-modules
 role: quality_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 
 scope: |
@@ -1771,7 +1694,7 @@ Every delegation follows this structure (see full spec in `src/AGENTS.md`):
 handoff_type: DELEGATE          # or HANDBACK / ESCALATE
 task_id: YYYY-MM-DD-short-slug
 role: senior-engineer           # target role from AGENTS.md roster
-model: claude-sonnet-4-6        # optional override
+model: claude-sonnet-4.6        # optional override
 files:
   - path/to/relevant/file.py
 context: |
@@ -1803,143 +1726,50 @@ See full thresholds in `src/DECISION-MAKING.md`:
 
 ## Installation Verification
 
-After running `make install` (or a harness-specific target), verify the installation is complete:
-
-### Universal Verification
+After running `make install`, verify the installation is complete:
 
 ```bash
 # 1. Complete framework verification
 make verify                # Runs all structure + agent + skill checks
 
-# 2. All 4 harness installation status
-make status               # Shows status of all 4 harnesses
-```
+# 2. All harness installation status
+make status               # Shows status of all harnesses
 
-### OpenCode Harness
+# 3. Queue infrastructure
+ls ~/.agentic-engineers/artifacts/queue/incoming/
+ls ~/.agentic-engineers/artifacts/queue/processing/
+ls ~/.agentic-engineers/artifacts/queue/done/
 
-```bash
-# Verify OpenCode harness installation
-ls ~/.config/opencode/AGENTS.md        # Agent roster installed
-ls ~/.config/opencode/SKILLS.md        # Skill matrix installed
-ls ~/.config/opencode/DECISION-MAKING.md  # Routing config installed
-make status-opencode                   # Detailed OpenCode status
-make validate-opencode                 # Validate OpenCode configuration
-
-# Test OpenCode connectivity
-opencode --version                     # Verify OpenCode CLI works
-opencode "What roles are available?"   # Smoke test
-```
-
-### Claude Code Harness
-
-```bash
-# Verify Claude Code harness installation
-ls ~/.claude/agents/                   # Agent files installed
-ls ~/.claude/agents/orchestrator/      # Orchestrator agent
-test -d ~/.claude && echo "✅ Claude Code harness installed" || echo "❌ Not installed"
-```
-
-### Copilot CLI Harness
-
-```bash
-# Verify Copilot CLI harness installation (agents + skills)
-ls ~/.copilot/agents/                     # Agents directory
-ls ~/.copilot/skills/agentic-engineer/    # Skills namespace
-test -d ~/.copilot && echo "✅ Copilot CLI harness installed" || echo "❌ Not installed"
-```
-
-### π.dev Harness
-
-```bash
-# Verify π.dev harness installation
-ls ~/.pi/agent/                        # π.dev agent config
-test -d ~/.pi && echo "✅ π.dev harness installed" || echo "❌ Not installed"
-```
-
-### Queue Infrastructure
-
-```bash
-# 4. Queue directories exist (used by all harnesses)
-ls artifacts/queue/incoming/
-ls artifacts/queue/processing/
-ls artifacts/queue/done/
-```
-
-### Protocol Documentation
-
-```bash
-# 5. Protocol docs installed (OpenCode example)
+# 4. Protocol docs installed (OpenCode example)
 for doc in AGENTS DECISION-MAKING SKILLS TOKEN_METRICS CLI-PERMISSIONS; do
   test -f ~/.config/opencode/${doc}.md && echo "✅ ${doc}.md" || echo "❌ ${doc}.md MISSING"
 done
-```
 
-### Smoke Tests
-
-```bash
-# 6. Test via OpenCode (recommended)
+# 5. Smoke tests
 opencode "What roles are available and what is the current queue depth?"
 # Expected: lists 8 roles; reports queue depth 0
-
-# 7. Test via Claude Code
-@orchestrator What roles are available and what is the current queue depth?
-
-# 8. Test via Copilot CLI
-copilot --agent orchestrator "What roles are available?"
 ```
 
 ## Uninstall
 
-### Individual Harness Removal
-
-**OpenCode (Agentic Engineers only - user config remains)**
+**Remove from all harnesses at once:**
 ```bash
-make uninstall-opencode  # Removes: AGENTS.md, SKILLS.md, and all protocol docs
-                         # Keeps: ~/.config/opencode/ directory, user config
+make uninstall-all       # Removes agentic-engineers managed files from all harnesses
+make status              # Confirm removal
 ```
 
-**Claude Code (Managed files only)**
+Individual harness uninstall targets also available:
 ```bash
-make uninstall-claude    # Removes: agents from ~/.claude/
-                         # Keeps: ~/.claude/ directory, other user config
-```
-
-**Copilot CLI (Managed skills only)**
-```bash
-make uninstall-copilot   # Removes: agentic-engineer skills from ~/.copilot/
-                         # Keeps: ~/.copilot/ directory, other user skills
-```
-
-**π.dev (Managed config only)**
-```bash
-make uninstall-pi        # Removes: agentic-engineers config from ~/.pi/
-                         # Keeps: ~/.pi/ directory, other user config
-```
-
-### Complete Removal
-
-**Remove from all 4 harnesses at once:**
-```bash
-make uninstall-all       # Uninstalls from OpenCode, Claude Code, Copilot CLI, and π.dev
-```
-
-### Verify Uninstall
-
-```bash
-# Confirm removal
-make status              # Should show 0 installations (or only partial if not fully uninstalled)
-
-# Check specific harnesses
-ls ~/.config/opencode/AGENTS.md 2>/dev/null && echo "OpenCode still installed" || echo "✅ OpenCode removed"
-ls ~/.claude/agents/orchestrator 2>/dev/null && echo "Claude Code still installed" || echo "✅ Claude Code removed"
-ls ~/.copilot/skills/agentic-engineer 2>/dev/null && echo "Copilot CLI still installed" || echo "✅ Copilot CLI removed"
-ls ~/.pi/agent/ 2>/dev/null && echo "π.dev still installed" || echo "✅ π.dev removed"
+make uninstall-opencode  # OpenCode only
+make uninstall-claude    # Claude Code only
+make uninstall-copilot   # Copilot CLI only
+make uninstall-pi        # π.dev only
 ```
 
 **⚠️ Important:** Uninstall targets only remove agentic-engineers managed files. User configuration and other content remain intact:
 - User-created agents/skills in each harness are preserved
 - Workspace configuration (`.claude/config`, `~/.copilot/config`, etc.) is preserved
-- Queue infrastructure remains (use `rm -rf artifacts/queue/` if you want full cleanup)
+- Queue infrastructure remains (use `rm -rf ~/.agentic-engineers/artifacts/queue/` if you want full cleanup)
 
 ### Common Issues
 
@@ -1947,6 +1777,6 @@ ls ~/.pi/agent/ 2>/dev/null && echo "π.dev still installed" || echo "✅ π.dev
 |---------|-------------|-----|
 | `SKILL.md` not found in Copilot | `make install-copilot` not run | `make install-copilot` |
 | Orchestrator routes all tasks to Engineer | `DECISION-MAKING.md` not installed | `make install-opencode` |
-| Model Engineer never fires | Queue missing `artifacts/queue/done/` dir | `make init-queue` |
+| Model Engineer never fires | Queue missing `~/.agentic-engineers/artifacts/queue/done/` dir | `make init-queue` |
 | Skills show as `[MISSING]` in matrix | Skill file deleted or renamed | `make verify-skills` |
 | Token metrics not updating | `TOKEN_METRICS.md` path mismatch | Check `src/config/models.yaml` `metrics_path` |

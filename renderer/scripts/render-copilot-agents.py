@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Copilot CLI Agent Renderer
-Converts src/agents/*.md to ~/.copilot/agents/*.agent.md with Copilot CLI spec compliance
+Converts src/agents/*.md to dist/copilot/agents/*.agent.md with Copilot CLI spec compliance
 """
 
 import os
@@ -124,8 +124,11 @@ def main():
         dest_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser('~/.copilot/agents')
     
     # Get absolute paths
-    script_dir = Path(__file__).parent.parent
-    src_path = (script_dir / src_dir).resolve()
+    repo_root = Path(__file__).parent.parent.parent  # ../../ from scripts/
+    if Path(src_dir).is_absolute():
+        src_path = Path(src_dir).resolve()
+    else:
+        src_path = (repo_root / src_dir).resolve()
     dest_path = Path(dest_dir).expanduser().resolve()
     
     print(f"\n{'='*60}")

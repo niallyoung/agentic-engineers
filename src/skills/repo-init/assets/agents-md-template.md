@@ -97,9 +97,9 @@ Default effort is `low`. Increase only when the task genuinely warrants it.
 
 | Queue | Path | Purpose |
 |-------|------|---------|
-| Incoming | `artifacts/queue/incoming/` | New DELEGATE tasks |
-| Done | `artifacts/queue/done/` | Completed tasks |
-| Failed | `artifacts/queue/failed/` | Failed tasks (for retry) |
+| Incoming | `~/.agentic-engineers/incoming/` | New DELEGATE tasks |
+| Done | `~/.agentic-engineers/done/` | Completed tasks |
+| Failed | `~/.agentic-engineers/failed/` | Failed tasks (for retry) |
 
 ---
 

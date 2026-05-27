@@ -68,5 +68,5 @@
 ---
 
 *This TODO.md is maintained by the `todo-maintenance` skill. All new items must come
-through the delegation queue (see `artifacts/queue/`). Do not add items manually
+through the delegation queue (see `~/.agentic-engineers/`). Do not add items manually
 unless you are a Principal Engineer or Lead Engineer.*

@@ -40,14 +40,14 @@
 
 | Role | Skill File | Model | Cost Tier |
 |------|-----------|-------|-----------|
-| Orchestrator | [`src/skills/roles/engineer.md`](skills/roles/engineer.md) → [`orchestration/task-routing.md`](skills/orchestration/task-routing.md) | `claude-haiku-4-5` | 💰 Cheap |
-| Engineer | [`src/skills/roles/engineer.md`](skills/roles/engineer.md) | `claude-haiku-4-5` | 💰 Cheap |
-| Model Engineer | [`src/skills/roles/model-engineer.md`](skills/roles/model-engineer.md) | `claude-sonnet-4-6` | 💰💰 Medium |
-| Quality Engineer | [`src/skills/roles/quality-engineer.md`](skills/roles/quality-engineer.md) | `claude-sonnet-4-6` | 💰💰 Medium |
-| Lead Engineer | [`src/skills/roles/lead-engineer.md`](skills/roles/lead-engineer.md) | `claude-sonnet-4-6` | 💰💰 Medium |
-| Senior Engineer | [`src/skills/roles/senior-engineer.md`](skills/roles/senior-engineer.md) | `claude-sonnet-4-6` | 💰💰 Medium |
+| Orchestrator | [`src/skills/roles/engineer.md`](skills/roles/engineer.md) → [`orchestration/task-routing.md`](skills/orchestration/task-routing.md) | `claude-haiku-4.5` | 💰 Cheap |
+| Engineer | [`src/skills/roles/engineer.md`](skills/roles/engineer.md) | `claude-haiku-4.5` | 💰 Cheap |
+| Model Engineer | [`src/skills/roles/model-engineer.md`](skills/roles/model-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
+| Quality Engineer | [`src/skills/roles/quality-engineer.md`](skills/roles/quality-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
+| Lead Engineer | [`src/skills/roles/lead-engineer.md`](skills/roles/lead-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
+| Senior Engineer | [`src/skills/roles/senior-engineer.md`](skills/roles/senior-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
 | Principal Engineer | [`src/skills/roles/principal-engineer.md`](skills/roles/principal-engineer.md) | `claude-opus-4-6` | 💰💰💰 Premium |
-| Security Engineer | [`src/skills/roles/security-engineer.md`](skills/roles/security-engineer.md) | `claude-opus-4-7` | 💰💰💰 Premium |
+| Security Engineer | [`src/skills/roles/security-engineer.md`](skills/roles/security-engineer.md) | `claude-opus-4.7` | 💰💰💰 Premium |
 
 ---
 

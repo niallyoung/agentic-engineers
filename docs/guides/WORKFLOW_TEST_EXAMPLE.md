@@ -30,7 +30,7 @@ Complexity: Medium (straightforward if pattern is known)
 handoff_type: DELEGATE
 task_id: 2026-04-24-cache-getevent
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Add Redis caching to {example-service} GetEvent endpoint. Cache key={eventID}, TTL=1h. No changes to upstream services.
 context:
@@ -69,7 +69,7 @@ tests:
   - "make verify": PASS (51 tests, 88% coverage, up from 85%)
 tokens_in: 16400
 tokens_out: 1950
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 45
 escalations: 0
@@ -117,7 +117,7 @@ tests:
   - "make verify": PASS (51 tests, 88% coverage)
 tokens_in: 16400
 tokens_out: 1950
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 45
 escalations: 0
@@ -153,7 +153,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-24/2026-04-24-cache-getevent.js
   },
   "assignment": {
     "role": "Engineer",
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "confidence": 0.50
   },
@@ -222,19 +222,19 @@ Error rate: 0 escalations
   },
   "recommendation": {
     "rank_1": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "high",
       "confidence": 0.88,
       "reason": "QE confirms Haiku suitable. Task was straightforward implementation of known pattern. Cost-efficient."
     },
     "rank_2": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "medium",
       "confidence": 0.65,
       "reason": "Could reduce effort to medium (unproven). Only 1 sample; insufficient confidence."
     },
     "rank_3": {
-      "model": "claude-sonnet-4-6",
+      "model": "claude-sonnet-4.6",
       "effort": "medium",
       "confidence": 0.30,
       "reason": "Not recommended. Would cost 3x more ($0.39 vs $0.13) for no quality benefit."
@@ -273,7 +273,7 @@ Complexity: Medium (same pattern)
 handoff_type: DELEGATE
 task_id: 2026-04-25-cache-getmember
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Add Redis caching to {example-service} GetMember endpoint. Cache key={memberID}, TTL=1h. Pattern: follow GetEvent caching (task 2026-04-24-cache-getevent).
 context:
@@ -312,7 +312,7 @@ tests:
   - "make verify": PASS (52 tests, 88% coverage, consistent with GetEvent)
 tokens_in: 14200
 tokens_out: 1750
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 38
 escalations: 0
@@ -340,7 +340,7 @@ Orchestrator saves to `~/.claude/metrics/2026-04-25/2026-04-25-cache-getmember.j
   "task_id": "2026-04-25-cache-getmember",
   "timestamp": "2026-04-25T15:20:00Z",
   "assignment": {
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "confidence": 0.88,
     "routing_source": "model_engineer_recommendation"
@@ -385,19 +385,19 @@ Orchestrator saves to `~/.claude/metrics/2026-04-25/2026-04-25-cache-getmember.j
   },
   "recommendation": {
     "rank_1": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "high",
       "confidence": 0.92,
       "reason": "2 consistent samples, both quality 92-93. QE confirms Haiku is optimal for {example-service} caching tasks. Proven pattern."
     },
     "rank_2": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "medium",
       "confidence": 0.70,
       "reason": "Could reduce effort (2 samples suggest straightforward). Small risk; consider if cost target active."
     },
     "rank_3": {
-      "model": "claude-sonnet-4-6",
+      "model": "claude-sonnet-4.6",
       "effort": "medium",
       "confidence": 0.15,
       "reason": "Not recommended. Haiku proven cost-efficient. Would increase cost 3x for no quality gain."

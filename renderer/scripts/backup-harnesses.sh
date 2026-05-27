@@ -2,9 +2,11 @@
 # backup-harnesses.sh - Backup harness configs before fresh install
 # Part of agentic-engineers multi-harness backup feature
 #
-# Usage: bash backup-harnesses.sh [--force] [harness1 harness2 ...]
+# Usage: bash backup-harnesses.sh [OPTIONS] [harness1 harness2 ...]
 # Example: bash backup-harnesses.sh copilot claude pi opencode
 # Example (CI): bash backup-harnesses.sh --force copilot claude pi opencode
+# Example (single harness): bash backup-harnesses.sh --harness copilot
+# Example (quiet): bash backup-harnesses.sh --quiet copilot claude
 #
 # Backs up existing harness directories with YYYYMMDD timestamp suffix:
 #   ~/.copilot/     → ~/.copilot.20260525/
@@ -15,7 +17,10 @@
 # SCOPE: Only backs up harness config directories, never touches ~/.agentic-engineers/
 #
 # FLAGS:
-#   --force    Skip interactive prompts (for CI/automation)
+#   --force        Skip interactive prompts (for CI/automation)
+#   --harness NAME Back up only one harness (copilot, claude, pi, or opencode)
+#   --quiet        Suppress verbose output (show only status)
+#   --verbose      Show detailed output (default for interactive mode)
 
 set -euo pipefail
 
@@ -76,7 +81,9 @@ backup_harness() {
     
     # Validate harness name
     if [ -z "$harness_dir" ]; then
-        log_error "Unknown harness: $harness_name (valid: copilot, claude, pi, opencode)"
+        if [ "$QUIET_MODE" != true ]; then
+            log_error "Unknown harness: $harness_name (valid: copilot, claude, pi, opencode)"
+        fi
         ERRORS+=("$harness_name")
         return 1
     fi
@@ -85,14 +92,18 @@ backup_harness() {
 
     # Check if harness directory exists
     if [ ! -d "$harness_dir" ]; then
-        log_warn "$harness_name: No existing installation at $harness_dir (skipped)"
+        if [ "$QUIET_MODE" != true ]; then
+            log_warn "$harness_name: No existing installation at $harness_dir (skipped)"
+        fi
         SKIPPED+=("$harness_name")
         return 0
     fi
 
     # Check if backup already exists (multiple runs same day)
     if [ -d "$backup_dir" ]; then
-        log_warn "$harness_name: Backup already exists at $backup_dir (skipped)"
+        if [ "$QUIET_MODE" != true ]; then
+            log_warn "$harness_name: Backup already exists at $backup_dir (skipped)"
+        fi
         SKIPPED+=("$harness_name")
         return 0
     fi
@@ -103,36 +114,47 @@ backup_harness() {
 
     # Interactive prompt (unless --force)
     if [ "$SKIP_PROMPTS" != true ]; then
-        echo ""
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        log_info "About to backup $harness_name configuration"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "  Source:      $harness_dir"
-        echo "  Backup to:   $backup_dir"
-        echo "  Size:        $size"
-        echo ""
-        echo -n "  Proceed with backup? (y/n): "
+        if [ "$QUIET_MODE" != true ]; then
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            log_info "About to backup $harness_name configuration"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  Source:      $harness_dir"
+            echo "  Backup to:   $backup_dir"
+            echo "  Size:        $size"
+            echo ""
+        fi
+        echo -n "  Backup $harness_name? (y/n): "
         
         read -r confirm
-        echo ""
+        
+        if [ "$QUIET_MODE" != true ]; then
+            echo ""
+        fi
         
         if [[ ! $confirm =~ ^[Yy]$ ]]; then
-            log_warn "$harness_name: Backup skipped by user"
+            if [ "$QUIET_MODE" != true ]; then
+                log_warn "$harness_name: Backup skipped by user"
+            fi
             SKIPPED+=("$harness_name")
             return 0
         fi
     fi
 
     # Perform backup (simple mv)
-    if [ "$SKIP_PROMPTS" = true ]; then
+    if [ "$SKIP_PROMPTS" = true ] && [ "$QUIET_MODE" != true ]; then
         log_info "Backing up $harness_name: $harness_dir → $backup_dir"
     fi
     
     if mv "$harness_dir" "$backup_dir"; then
-        log_success "$harness_name: Backup complete → $backup_dir"
+        if [ "$QUIET_MODE" != true ]; then
+            log_success "$harness_name: Backup complete → $backup_dir"
+        fi
         BACKED_UP+=("$harness_name")
     else
-        log_error "$harness_name: Backup failed"
+        if [ "$QUIET_MODE" != true ]; then
+            log_error "$harness_name: Backup failed"
+        fi
         ERRORS+=("$harness_name")
         return 1
     fi
@@ -140,16 +162,37 @@ backup_harness() {
 
 # Main execution
 main() {
-    # Parse arguments (check for --force flag first)
+    # Parse arguments
     SKIP_PROMPTS=false
+    QUIET_MODE=false
     local harnesses=()
     
-    for arg in "$@"; do
-        if [ "$arg" = "--force" ]; then
-            SKIP_PROMPTS=true
-        else
-            harnesses+=("$arg")
-        fi
+    local i=1
+    while [ $i -le $# ]; do
+        arg="${!i}"
+        case "$arg" in
+            --force)
+                SKIP_PROMPTS=true
+                ;;
+            --quiet)
+                QUIET_MODE=true
+                ;;
+            --verbose)
+                QUIET_MODE=false
+                ;;
+            --harness)
+                # Next argument is the harness name
+                i=$((i+1))
+                if [ $i -le $# ]; then
+                    harnesses=("${!i}")  # Single harness
+                fi
+                ;;
+            *)
+                # It's a harness name
+                harnesses+=("$arg")
+                ;;
+        esac
+        i=$((i+1))
     done
 
     # Default to all harnesses if none specified
@@ -157,43 +200,57 @@ main() {
         harnesses=("copilot" "claude" "pi" "opencode")
     fi
 
-    echo ""
-    if [ "$SKIP_PROMPTS" = true ]; then
-        log_info "Starting harness backup in NON-INTERACTIVE mode (timestamp: $TIMESTAMP)"
-    else
-        log_info "Starting INTERACTIVE harness backup (timestamp: $TIMESTAMP)"
-        log_info "You will be prompted for confirmation before backing up each harness"
+    # Print startup message (unless quiet mode)
+    if [ "$QUIET_MODE" != true ]; then
+        echo ""
+        if [ "$SKIP_PROMPTS" = true ]; then
+            log_info "Starting harness backup in NON-INTERACTIVE mode (timestamp: $TIMESTAMP)"
+        else
+            log_info "Starting INTERACTIVE harness backup (timestamp: $TIMESTAMP)"
+            if [ ${#harnesses[@]} -eq 1 ]; then
+                log_info "Backing up: ${harnesses[0]}"
+            else
+                log_info "You will be prompted for confirmation before backing up each harness"
+            fi
+        fi
+        echo ""
     fi
-    echo ""
 
     # Backup each harness
     for harness in "${harnesses[@]}"; do
         backup_harness "$harness" || true  # Continue on error
     done
 
-    # Summary
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "Backup Summary"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    if [ ${#BACKED_UP[@]} -gt 0 ]; then
-        log_success "Backed up (${#BACKED_UP[@]}): ${BACKED_UP[*]}"
-    fi
-    
-    if [ ${#SKIPPED[@]} -gt 0 ]; then
-        log_warn "Skipped (${#SKIPPED[@]}): ${SKIPPED[*]}"
-    fi
-    
-    if [ ${#ERRORS[@]} -gt 0 ]; then
-        log_error "Failed (${#ERRORS[@]}): ${ERRORS[*]}"
+    # Summary (unless quiet mode)
+    if [ "$QUIET_MODE" != true ]; then
         echo ""
-        exit 1
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Backup Summary"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        
+        if [ ${#BACKED_UP[@]} -gt 0 ]; then
+            log_success "Backed up (${#BACKED_UP[@]}): ${BACKED_UP[*]}"
+        fi
+        
+        if [ ${#SKIPPED[@]} -gt 0 ]; then
+            log_warn "Skipped (${#SKIPPED[@]}): ${SKIPPED[*]}"
+        fi
+        
+        if [ ${#ERRORS[@]} -gt 0 ]; then
+            log_error "Failed (${#ERRORS[@]}): ${ERRORS[*]}"
+            echo ""
+            exit 1
+        fi
+        
+        echo ""
+        log_info "Note: ~/.agentic-engineers/ is never backed up (shared across all harnesses)"
+        echo ""
+    else
+        # In quiet mode, still exit with error code if there were failures
+        if [ ${#ERRORS[@]} -gt 0 ]; then
+            exit 1
+        fi
     fi
-    
-    echo ""
-    log_info "Note: ~/.agentic-engineers/ is never backed up (shared across all harnesses)"
-    echo ""
 }
 
 main "$@"
