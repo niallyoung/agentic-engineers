@@ -144,8 +144,6 @@ Or for individual harnesses:
 
 ### Option 1: OpenCode (Recommended)
 
-**Best for:** All workflows (CLI-first, full automation, managed config)
-
 ```bash
 make install-opencode    # Install agents + skills to ~/.config/opencode/
 ```
@@ -158,8 +156,6 @@ alias opencode="opencode --agent orchestrator $*"
 ```
 
 ### Option 2: Copilot CLI (Full Agent + Skill Support)
-
-**Best for:** GitHub Copilot integration with full automation
 
 ```bash
 make install-copilot     # Install agents + skills to ~/.copilot/
@@ -174,15 +170,11 @@ alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
 
 ### Option 3: Claude Code (Local with Full Agent Support)
 
-**Best for:** JetBrains IDE integration (IntelliJ, PyCharm, etc.)
-
 ```bash
 make install-claude      # Install agents to ~/.claude/
 ```
 
 ### Option 4: π.dev (Experimental)
-
-**Best for:** Testing and experimental configurations
 
 ```bash
 make install-pi          # Install to ~/.pi/agent/
