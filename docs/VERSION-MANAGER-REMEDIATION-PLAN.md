@@ -15,7 +15,7 @@
 - ✅ Deleted: `dist/opencode/skills/version-manager/` (rendered artifacts)
 - ✅ Updated: `config/FRAMEWORK-MANIFEST.yaml` (removed version-manager entry)
 - ✅ Updated: `CHANGELOG.md` (changed reference from "use local version-manager skill instead" to "git tags are authoritative source of truth")
-- ✅ Updated: `SECURITY-BRIEFING-VERSION-MANAGER.md` (status changed to "RESOLVED & DELETED")
+- ✅ Updated: `archive/phase-reports/SECURITY-BRIEFING-VERSION-MANAGER.md` (status changed to "RESOLVED & DELETED")
 - ✅ Updated: `docs/SECURITY-AUDIT-VERSION-MANAGER.md` (status changed to "RESOLVED & DELETED")
 
 **Verification:**
@@ -120,7 +120,7 @@ replacement: "Use `git tag` directly or GitHub Releases (created automatically b
 
 ### Why Deprecated
 
-1. **Architectural Conflict**: VERSIONING.md states "git tags are the ONLY source of truth," but version-manager creates a second source in CHANGELOG
+1. **Architectural Conflict**: archive/phase-reports/VERSIONING.md states "git tags are the ONLY source of truth," but version-manager creates a second source in CHANGELOG
 2. **Design Flaw**: `[Unreleased] - vX.Y.Z` violates semantic versioning standards
 3. **Workflow Impact**: Auto-updating CHANGELOG on every commit causes merge conflicts on parallel PRs
 4. **Bypass Risk**: Git hooks are easily bypassed (`--no-verify`)
@@ -144,8 +144,8 @@ git config core.hooksPath .githooks  # Use repo hooks (version-manager removed)
 ### References
 
 - Security Audit: docs/SECURITY-AUDIT-VERSION-MANAGER.md
-- Briefing: SECURITY-BRIEFING-VERSION-MANAGER.md
-- Versioning Strategy: VERSIONING.md
+- Briefing: archive/phase-reports/SECURITY-BRIEFING-VERSION-MANAGER.md
+- Versioning Strategy: archive/phase-reports/VERSIONING.md
 
 ---
 
@@ -156,7 +156,7 @@ git config core.hooksPath .githooks  # Use repo hooks (version-manager removed)
 
 #### Step 3: Update Documentation
 
-**File**: `VERSIONING.md`
+**File**: `archive/phase-reports/VERSIONING.md`
 
 **Section to Update** (lines 1-30):
 
@@ -297,7 +297,7 @@ echo "✅ Manual release process works"
 **Checklist before merging**:
 - [ ] No `.githooks/` files reference version-manager
 - [ ] `skills/version-manager/` directory deleted
-- [ ] `VERSIONING.md` updated (no version-manager references)
+- [ ] `archive/phase-reports/VERSIONING.md` updated (no version-manager references)
 - [ ] `CONTRIBUTING.md` has release process documented
 - [ ] `TODO.md` cleaned of version-manager items
 - [ ] Manual git tag works correctly
@@ -309,7 +309,7 @@ echo "✅ Manual release process works"
 
 **Code Review Checklist**:
 - [ ] Security audit reviewed (SECURITY-AUDIT-VERSION-MANAGER.md)
-- [ ] Briefing reviewed (SECURITY-BRIEFING-VERSION-MANAGER.md)
+- [ ] Briefing reviewed (archive/phase-reports/SECURITY-BRIEFING-VERSION-MANAGER.md)
 - [ ] All hooks tested successfully
 - [ ] No remaining version-manager references
 - [ ] Documentation accurate and complete
@@ -321,14 +321,14 @@ chore(security): remove version-manager skill
 Removes version-manager skill and related local versioning automation
 due to architectural conflicts with git tag-based versioning strategy.
 
-VERSIONING.md established that "git tags are the ONLY source of truth,"
+archive/phase-reports/VERSIONING.md established that "git tags are the ONLY source of truth,"
 but version-manager created conflicting [Unreleased] versions in CHANGELOG,
 caused merge conflicts on parallel PRs, and introduced hook bypass risks.
 
 Changes:
 - Delete skills/version-manager/ directory
 - Remove version-manager hooks from .githooks/pre-commit
-- Update VERSIONING.md and CONTRIBUTING.md
+- Update archive/phase-reports/VERSIONING.md and CONTRIBUTING.md
 - All versioning now via git tags (CI/CD creates automatically)
 
 Security Issues Resolved:
@@ -337,7 +337,7 @@ Security Issues Resolved:
 - Eliminates [Unreleased] merge conflicts
 - Single source of truth (git tags only)
 
-See SECURITY-BRIEFING-VERSION-MANAGER.md for full analysis.
+See archive/phase-reports/SECURITY-BRIEFING-VERSION-MANAGER.md for full analysis.
 
 Fixes: PR merge workflow blocking on CHANGELOG conflicts
 ```
