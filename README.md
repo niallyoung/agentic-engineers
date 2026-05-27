@@ -128,6 +128,15 @@ All harnesses are configured by default to use Anthropic Claude models. Install 
 make install
 ```
 
+Or install individual harnesses:
+
+```bash
+make install-opencode      # OpenCode CLI (recommended)
+make install-copilot       # Copilot CLI
+make install-claude        # Claude Code (IDE)
+make install-pi            # π.dev (experimental)
+```
+
 ### Using the Orchestrator
 
 The Orchestrator coordinates complex tasks across agents. Set up the recommended aliases in `~/.zshrc` or `~/.bashrc`:
