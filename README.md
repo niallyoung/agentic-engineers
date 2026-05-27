@@ -177,18 +177,18 @@ alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
 alias opencode="opencode --agent orchestrator $*"
 ```
 
-Then delegate your work. Examples of prompts to give the Orchestrator:
+Then delegate your work. Example prompts for the Orchestrator:
 
-```bash
-copilot "delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
+```
+delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green
 ```
 
-```bash
-opencode "delegate: analyze the codebase for performance bottlenecks; benchmark current implementation; propose optimization strategy; implement changes; measure improvement"
+```
+delegate: analyze the codebase for performance bottlenecks; benchmark current implementation; propose optimization strategy; implement changes; measure improvement
 ```
 
-```bash
-copilot "delegate: fix the bug described in issue #42; add tests to prevent regression; update docs; commit and push"
+```
+delegate: fix the bug described in issue #42; add tests to prevent regression; update docs; commit and push
 ```
 
 The Orchestrator will:
