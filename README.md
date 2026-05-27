@@ -154,7 +154,7 @@ Use agents via: `opencode --agent orchestrator "delegate: task1; task2; ..."`
 
 Or with the recommended alias:
 ```bash
-opencode "delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD; repeat until green"
+alias opencode="opencode --agent orchestrator $*"
 ```
 
 ### Option 2: Copilot CLI (Full Agent + Skill Support)
