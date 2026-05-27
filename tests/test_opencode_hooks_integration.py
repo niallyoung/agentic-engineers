@@ -217,9 +217,6 @@ class TestHooksIntegration:
     def test_hooks_have_bypass_mechanisms(self):
         """Verify hooks have documented bypass mechanisms"""
         for hook in GITHOOKS_DIR.glob("*"):
-            # Skip markdown documentation files
-            if hook.suffix == '.md':
-                continue
             if hook.is_file() and hook.stat().st_mode & 0o111:
                 content = hook.read_text()
                 assert "SKIP_HOOKS" in content or "bypass" in content.lower(), \
