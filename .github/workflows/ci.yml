@@ -57,6 +57,13 @@ jobs:
       - name: Lint
         run: make lint
 
+      - name: Render agents and skills
+        run: |
+          make render-copilot
+          make render-claude
+          make render-opencode
+          make render-pi
+
       - name: Test
         run: make test
 

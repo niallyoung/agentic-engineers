@@ -33,11 +33,14 @@ class TestHooksExist:
             assert hook_path.exists(), f"Hook not found: {hook_path}"
     
     def test_all_hooks_executable(self):
-        """All hooks should be executable."""
+        """All hooks should be executable (except documentation files)."""
         repo_root = Path(__file__).parent.parent
         hooks_dir = repo_root / '.githooks'
         
         for hook_file in hooks_dir.glob('*'):
+            # Skip markdown documentation files
+            if hook_file.suffix == '.md':
+                continue
             if hook_file.is_file():
                 assert os.access(hook_file, os.X_OK), f"Hook not executable: {hook_file}"
     
