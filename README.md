@@ -243,7 +243,7 @@ The Orchestrator will:
 
 ### 3. Parallel Sub-Agent Execution at Scale
 
-**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization.
+**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization. `opencode` recommended.
 
 **Tested Capacity:**
 - ✅ **Tens to hundreds of concurrent agents** from single parent (observed in production)
