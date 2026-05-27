@@ -63,6 +63,7 @@ jobs:
           make render-claude
           make render-opencode
           make render-pi
+          make render-specs
 
       - name: Test
         run: make test
