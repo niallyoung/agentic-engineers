@@ -1,7 +1,7 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
         install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        status status-opencode \
+        status \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
         lint test quality-gate
@@ -39,7 +39,6 @@ help:
 	@echo ""
 	@echo "Diagnostic:"
 	@echo "  status              Check installation status (all 4 harnesses)"
-	@echo "  status-opencode     Check ~/.config/opencode/ install status"
 	@echo "  verify              Full verification (structure + agents + skills + protocols)"
 	@echo "  validate-opencode   Validate OpenCode config generation"
 	@echo "  validate-agents     Validate agent YAML frontmatter + AGENTS.md registration"
@@ -344,9 +343,6 @@ uninstall-pi: ## Remove from ~/.pi/ (managed only)
 uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only)
 	@echo "🧹 Uninstalling from ~/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --uninstall
-
-status-opencode: ## Status of ~/.config/opencode/ install
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
 
 render-pi: ## Generate dist/pi/ config (π.dev harness)
 	@echo "🔨 Rendering π.dev harness configuration → dist/pi/..."

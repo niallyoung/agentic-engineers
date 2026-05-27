@@ -16,25 +16,37 @@
 
 # ─── LOCKED MODELS: Canonical list (only these are allowed in agents) ────────
 # Format: claude-{variant}-{major}.{minor}
-declare -a LOCKED_MODELS=(
+LOCKED_MODELS=(
     "claude-haiku-4.5"
     "claude-sonnet-4.5"
     "claude-sonnet-4.6"
+    "claude-opus-4.6"
     "claude-opus-4.7"
 )
 
+# Note: If a locked model becomes unavailable, the harness will auto-select:
+# 1. Exact version (preferred)
+# 2. Adjacent version in same family (fallback)
+# 3. Any version in same family (fallback)
+# 4. Any Claude model (fallback)
+#
+# Examples:
+# - prefer claude-sonnet-4.6 → fallback to claude-sonnet-4.5 or claude-sonnet-5.0
+# - prefer claude-opus-4.6 → fallback to claude-opus-4.7
+# - prefer claude-haiku-4.5 → fallback to claude-haiku-4.6 if it exists
+
 # ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────
 # This is the canonical assignment. Agents MUST use a model from this mapping.
-# Format: agent-role → model-choice
-declare -A AGENT_MODEL_MAPPING=(
-    [engineer-agent]="claude-haiku-4.5"
-    [orchestrator-agent]="claude-haiku-4.5"
-    [lead-engineer-agent]="claude-sonnet-4.6"
-    [quality-engineer-agent]="claude-sonnet-4.6"
-    [senior-engineer-agent]="claude-sonnet-4.6"
-    [model-engineer-agent]="claude-sonnet-4.5"
-    [security-engineer-agent]="claude-opus-4.7"
-    [principal-engineer-agent]="claude-opus-4.7"
+# Format: agent-name:model-choice (space-separated for portability)
+AGENT_MODEL_ASSIGNMENTS=(
+    "engineer-agent:claude-haiku-4.5"
+    "orchestrator-agent:claude-haiku-4.5"
+    "lead-engineer-agent:claude-sonnet-4.6"
+    "quality-engineer-agent:claude-sonnet-4.6"
+    "senior-engineer-agent:claude-sonnet-4.5"
+    "model-engineer-agent:claude-sonnet-4.5"
+    "security-engineer-agent:claude-opus-4.7"
+    "principal-engineer-agent:claude-opus-4.6"
 )
 
 # ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────
@@ -54,13 +66,17 @@ is_model_locked() {
 get_agent_locked_model() {
     local agent_role="$1"
     
-    # Check if agent exists in mapping using local variable expansion
-    if [[ -n "${AGENT_MODEL_MAPPING[$agent_role]:-}" ]]; then
-        echo "${AGENT_MODEL_MAPPING[$agent_role]}"
-        return 0
-    else
-        return 1  # Agent not in mapping
-    fi
+    # Search for agent in assignments (format: "agent-name:model")
+    for assignment in "${AGENT_MODEL_ASSIGNMENTS[@]}"; do
+        local agent="${assignment%%:*}"
+        local model="${assignment##*:}"
+        if [[ "$agent" == "$agent_role" ]]; then
+            echo "$model"
+            return 0
+        fi
+    done
+    
+    return 1  # Agent not found
 }
 
 # ─── DISPLAY HELPERS ──────────────────────────────────────────────────────────
@@ -76,15 +92,18 @@ show_locked_models() {
 # Show agent-model assignments (for documentation)
 show_agent_assignments() {
     echo "Agent model assignments:"
-    for agent in "${!AGENT_MODEL_MAPPING[@]}"; do
-        echo "  - $agent: ${AGENT_MODEL_MAPPING[$agent]}"
+    for assignment in "${AGENT_MODEL_ASSIGNMENTS[@]}"; do
+        local agent="${assignment%%:*}"
+        local model="${assignment##*:}"
+        echo "  - $agent: $model"
     done | sort
 }
 
 # ─── EXPORT for sourcing in other hooks ───────────────────────────────────────
 export LOCKED_MODELS
-export AGENT_MODEL_MAPPING
+export AGENT_MODEL_ASSIGNMENTS
 export -f is_model_locked
 export -f get_agent_locked_model
 export -f show_locked_models
 export -f show_agent_assignments
+

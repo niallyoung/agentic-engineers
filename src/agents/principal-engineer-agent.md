@@ -1,13 +1,13 @@
 ---
 name: principal-engineer
 description: Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos
-model: claude-opus-4.7
+model: claude-opus-4.6
 ---
 
 # Principal Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Principal Engineer
-**Model**: claude-opus-4.7
+**Model**: claude-opus-4.6
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 

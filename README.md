@@ -114,108 +114,65 @@ done/          ← Completed tasks with full audit trail
 
 ### Installation (Choose Your Harness)
 
-All harnesses are configured by default to use Anthropic models via OpenCode. Install to any or all:
+All harnesses are configured by default to use Anthropic Claude models. Install to any or all:
 
-**Option 1: OpenCode (Recommended - Complete Implementation)**
+### Quick Start: All Harnesses (Recommended)
+
 ```bash
-make install-opencode    # Install agents + skills to ~/.config/opencode/
-make status-opencode     # Verify installation
+make fresh-install-copilot
+make fresh-install-claude
+make fresh-install-pi
 ```
 
-**Option 2: Copilot CLI (Full Agent + Skill Support)**
+Then for individual harnesses:
+
+### Option 1: Copilot CLI (Full Agent + Skill Support)
+
 ```bash
 make install-copilot     # Install agents + skills to ~/.copilot/
 ```
 
 Use agents via: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
 
-**Option 3: Claude Code (Local with Full Agent Support)**
+### Option 2: Claude Code (Local with Full Agent Support)
+
 ```bash
 make install-claude      # Install agents to ~/.claude/
 ```
 
-**Option 4: π.dev (Experimental)**
+### Option 3: π.dev (Experimental)
+
 ```bash
 make install-pi          # Install to ~/.pi/agent/
 ```
 
-**Why Experimental:** π.dev uses static agent configuration (no dynamic agent registration like OpenCode and Claude Code). Agent configuration is defined at installation time and cannot be modified at runtime. This limitation makes it less suitable for rapidly evolving multi-agent systems but suitable for testing static configurations.
+**Why Experimental:** π.dev uses static agent configuration (no dynamic agent registration like Copilot and Claude Code). Agent configuration is defined at installation time and cannot be modified at runtime. This limitation makes it less suitable for rapidly evolving multi-agent systems but suitable for testing static configurations.
 
-**Option 5: All Harnesses (Parallel Installation)**
+### Option 4: OpenCode (Optional)
+
 ```bash
-make install             # Install all 4 harnesses at once
+make install-opencode    # Install agents + skills to ~/.config/opencode/
 ```
 
-**Option 6: Clean Install with Backup**
+### Using the Orchestrator
+
+The Orchestrator coordinates complex tasks across agents. Simply delegate your work:
+
 ```bash
-make clean-install       # Backup existing harnesses + fresh install
+delegate: read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green
 ```
 
-This command:
-- Backs up all existing harness directories with YYYYMMDD timestamp:
-  - `~/.copilot/` → `~/.copilot.20260525/`
-  - `~/.claude/` → `~/.claude.20260525/`
-  - `~/.pi/` → `~/.pi.20260525/`
-  - `~/.config/opencode/` → `~/.config/opencode.20260525/`
-- Then proceeds with fresh installation from `dist/`
-- **Important**: Never touches `~/.agentic-engineers/` (shared queue directory)
-
-**Manual Backup (Individual Harnesses)**
-```bash
-# Backup specific harnesses only
-bash renderer/scripts/backup-harnesses.sh copilot claude
-bash renderer/scripts/backup-harnesses.sh pi
-bash renderer/scripts/backup-harnesses.sh opencode
-
-# Backup all harnesses (default)
-bash renderer/scripts/backup-harnesses.sh
-```
-
-**Restoring from Backup**
-```bash
-# Manually restore a harness from backup
-rm -rf ~/.copilot/
-mv ~/.copilot.20260525/ ~/.copilot/
-
-# Or restore all harnesses from same-day backup
-for harness in copilot claude pi; do
-    rm -rf ~/.$harness/
-    mv ~/.$harness.20260525/ ~/.$harness/
-done
-rm -rf ~/.config/opencode/
-mv ~/.config/opencode.20260525/ ~/.config/opencode/
-```
-
-### Rendering (Advanced)
-
-To generate distribution files for all harnesses:
-```bash
-make render-all          # Generate dist/claude/, dist/copilot/, ~/.pi/ config
-make render-claude       # Generate dist/claude/ only
-make render-copilot      # Generate dist/copilot/ only
-make render-pi           # Generate ~/.pi/ config only
-# OpenCode config is generated automatically by make install-opencode
-```
-
-### Run the Orchestrator
+Or use the web UI / Copilot CLI:
 
 ```bash
-# Via OpenCode CLI (recommended)
-opencode --agent orchestrator "Your task description here"
-
-# Via Copilot CLI
-copilot --allow-all --autopilot --agent orchestrator "Your task description here"
-
-# Via Claude Code (in IDE)
-@orchestrator Your task description here
+copilot --agent orchestrator "read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
 ```
 
 The Orchestrator will:
-1. Parse your task and determine complexity
-2. Route to the appropriate specialist agent
-3. Create a DELEGATE with scope, plan, and success criteria
-4. Monitor execution and collect metrics
-5. Return results with quality score and token usage
+1. Parse task list
+2. Route to appropriate agents (Engineer, Lead Engineer, Security Engineer, etc.)
+3. Handle parallelization automatically
+4. Report results and metrics
 
 ---
 
@@ -425,7 +382,6 @@ success_criteria:
 **Best for:** Primary workspace with full agent + skill support
 ```bash
 make install-opencode    # Install agents & skills
-make status-opencode     # Verify installation
 make uninstall-opencode  # Remove (agentic-engineers only)
 ```
 - ✅ Full agent support (8 specialized roles)
@@ -1818,7 +1774,6 @@ make status               # Shows status of all 4 harnesses
 ls ~/.config/opencode/AGENTS.md        # Agent roster installed
 ls ~/.config/opencode/SKILLS.md        # Skill matrix installed
 ls ~/.config/opencode/DECISION-MAKING.md  # Routing config installed
-make status-opencode                   # Detailed OpenCode status
 make validate-opencode                 # Validate OpenCode configuration
 
 # Test OpenCode connectivity
