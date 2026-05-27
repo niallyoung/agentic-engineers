@@ -29,6 +29,30 @@
 
 ---
 
+## Table of Contents
+
+- [What It Is](#what-it-is)
+- [8 Specialized Roles](#8-specialized-roles)
+- [Support This Project](#support-this-project)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Key Benefits & Discoveries](#key-benefits--discoveries)
+- [DELEGATE / HANDBACK Protocol](#delegate--handback-protocol)
+- [How to Delegate Work](#how-to-delegate-work)
+- [Token Visibility & Budget Checking](#token-visibility--budget-checking-phase-3)
+- [Quality Gates](#quality-gates-3-layers)
+- [SDLC Enforcement](#sdlc-enforcement)
+- [Testing](#testing)
+- [Repository Structure](#repository-structure)
+- [Key Documentation](#key-documentation)
+- [Cost Optimization](#cost-optimization-self-improving)
+- [Market Comparison](#market-comparison-agentic-engineers-vs-industry-frameworks)
+- [When to Use This System](#when-to-use-this-system)
+- [Core Protocol Documents](#core-protocol-documents)
+- [Installation & Setup](#installation-verification)
+
+---
+
 ## 8 Specialized Roles
 
 | Rank | Role | Model | Version | Thinking | Effort | Cost/Task | Purpose |
