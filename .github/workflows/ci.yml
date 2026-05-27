@@ -43,6 +43,13 @@ jobs:
               chmod +x ".git/hooks/$hook"
             fi
           done
+          # Copy hook dependencies (e.g., LOCKED_MODELS.sh sourced by pre-commit)
+          for dep in LOCKED_MODELS.sh LOCKED_MODELS_RATIONALE.md; do
+            if [ -f ".githooks/$dep" ]; then
+              cp ".githooks/$dep" ".git/hooks/$dep"
+              chmod +x ".git/hooks/$dep" 2>/dev/null || true
+            fi
+          done
           echo "Git hooks configured:"
           git config core.hooksPath
           ls -lh .git/hooks/{pre-commit,commit-msg,post-merge,pre-push} 2>/dev/null || echo "Some hooks missing"
