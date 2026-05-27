@@ -325,7 +325,7 @@ class TestBackupHarnesses:
         assert not harnesses["copilot"].exists()
         
         # Verify interactive prompt was shown
-        assert "Proceed with backup?" in result.stdout or "proceed" in result.stdout.lower()
+        assert "Backup copilot?" in result.stdout or "backup" in result.stdout.lower()
         assert "Source:" in result.stdout
         assert "Backup to:" in result.stdout
         assert "Size:" in result.stdout
