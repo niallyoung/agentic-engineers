@@ -130,7 +130,7 @@ Or for individual harnesses:
 make install-copilot     # Install agents + skills to ~/.copilot/
 ```
 
-Use agents via: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
+Use agents via: `copilot --allow-all --autopilot --agent orchestrator "delegate: task1; task2; ..."`
 
 ### Option 2: Claude Code (Local with Full Agent Support)
 
@@ -156,14 +156,20 @@ make install-opencode    # Install agents + skills to ~/.config/opencode/
 
 The Orchestrator coordinates complex tasks across agents. Simply delegate your work:
 
+**Recommended Aliases** (add to `~/.zshrc` or `~/.bashrc`):
 ```bash
-delegate: read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green
+alias copilot="copilot --allow-all --autopilot --agent orchestrator $*"
+alias opencode="opencode --agent orchestrator $*"
 ```
 
-Or use the web UI / Copilot CLI:
-
+Then use naturally:
 ```bash
-copilot --agent orchestrator "read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
+copilot "delegate: read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
+```
+
+Or via the CLI directly:
+```bash
+copilot --allow-all --autopilot --agent orchestrator "delegate: read requirements spec; kick off planning and design; implement with quality gates; iterate on commit/push; watch CI/CD for issues; repeat until green"
 ```
 
 The Orchestrator will:
@@ -408,7 +414,7 @@ make uninstall-copilot   # Remove
 - ✅ Skills available (14)
 - ✅ Managed configuration
 - 📍 Location: `~/.copilot/`
-- 💡 Usage: `gh copilot -- --agent engineer "task"` or `/agent` in interactive mode
+- 💡 Usage: `copilot --allow-all --autopilot --agent orchestrator "delegate: task1; task2; ..."`
 
 #### 4. π.dev (Experimental)
 **Best for:** Testing and experimental configurations
