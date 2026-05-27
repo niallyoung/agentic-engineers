@@ -100,6 +100,162 @@ role_models:
       meta: "llama-3-8b"
     description: "Task routing - 6-point decision tree"
 
+
+# ---------------------------------------------------------------------------
+# Provider cost rates (USD per 1K tokens) — used by COST-001 & COST-003
+# ---------------------------------------------------------------------------
+
+providers:
+  anthropic:
+    claude-haiku-4.5:
+      input: 0.00008
+      output: 0.00024
+    claude-sonnet-4.5:
+      input: 0.003
+      output: 0.015
+    claude-sonnet-4.6:
+      input: 0.003
+      output: 0.015
+    claude-opus-4.7:
+      input: 0.015
+      output: 0.075
+  openai:
+    gpt-4o-mini:
+      input: 0.00015
+      output: 0.0006
+    gpt-4o:
+      input: 0.0025
+      output: 0.01
+    gpt-4-turbo:
+      input: 0.01
+      output: 0.03
+    gpt-4:
+      input: 0.01
+      output: 0.03
+  google:
+    gemini-2.0-flash:
+      input: 0.000075
+      output: 0.0003
+    gemini-1.5-pro:
+      input: 0.00125
+      output: 0.005
+    gemini-flash:
+      input: 0.000075
+      output: 0.0003
+    gemini-pro:
+      input: 0.00125
+      output: 0.005
+  ollama:
+    llama-3-8b:
+      input: 0.0
+      output: 0.0
+    llama-3-70b:
+      input: 0.0
+      output: 0.0
+  github_copilot:
+    gpt-4o-mini:
+      input: 0.00015
+      output: 0.0006
+    gpt-4o:
+      input: 0.0025
+      output: 0.01
+    gpt-4:
+      input: 0.01
+      output: 0.03
+
+# ---------------------------------------------------------------------------
+# Model Selection metadata — used by COST-003 (ModelSelector)
+# ---------------------------------------------------------------------------
+
+model_selection:
+  models:
+    claude-haiku-4.5:
+      provider: anthropic
+      tier: haiku
+      base_quality: 0.65
+      avg_latency_sec: 1.5
+    claude-sonnet-4.5:
+      provider: anthropic
+      tier: sonnet
+      base_quality: 0.82
+      avg_latency_sec: 3.0
+    claude-sonnet-4.6:
+      provider: anthropic
+      tier: sonnet
+      base_quality: 0.85
+      avg_latency_sec: 3.0
+    claude-opus-4.7:
+      provider: anthropic
+      tier: opus
+      base_quality: 0.95
+      avg_latency_sec: 7.0
+    gpt-4o-mini:
+      provider: openai
+      tier: mini
+      base_quality: 0.62
+      avg_latency_sec: 1.5
+    gpt-4o:
+      provider: openai
+      tier: sonnet
+      base_quality: 0.83
+      avg_latency_sec: 3.5
+    gpt-4-turbo:
+      provider: openai
+      tier: sonnet
+      base_quality: 0.80
+      avg_latency_sec: 4.0
+    gemini-2.0-flash:
+      provider: google
+      tier: haiku
+      base_quality: 0.63
+      avg_latency_sec: 1.2
+    gemini-1.5-pro:
+      provider: google
+      tier: sonnet
+      base_quality: 0.81
+      avg_latency_sec: 3.5
+    llama-3-8b:
+      provider: ollama
+      tier: mini
+      base_quality: 0.55
+      avg_latency_sec: 4.0
+    llama-3-70b:
+      provider: ollama
+      tier: haiku
+      base_quality: 0.68
+      avg_latency_sec: 6.0
+  task_quality_adjustments:
+    code_review:
+      mini: -0.05
+      haiku: -0.05
+      sonnet: 0.05
+      opus: 0.02
+    security_audit:
+      mini: -0.10
+      haiku: -0.10
+      sonnet: 0.02
+      opus: 0.03
+    documentation:
+      mini: 0.05
+      haiku: 0.05
+      sonnet: 0.0
+      opus: -0.02
+    general:
+      mini: 0.0
+      haiku: 0.0
+      sonnet: 0.0
+      opus: 0.0
+    data_analysis:
+      mini: -0.03
+      haiku: -0.03
+      sonnet: 0.03
+      opus: 0.02
+    summarization:
+      mini: 0.03
+      haiku: 0.03
+      sonnet: 0.0
+      opus: -0.01
+
 # Provider capabilities (LCD - highlight deltas)
 provider_features:
   copilot:
