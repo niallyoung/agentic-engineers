@@ -128,45 +128,6 @@ All harnesses are configured by default to use Anthropic Claude models. Install 
 make install
 ```
 
-### Quick Reference: Harness Matrix
-
-| Feature | OpenCode CLI | Copilot CLI | Claude CLI | π.dev |
-|---------|----------|-------------|-------------|-------|
-| **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
-| **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
-| **Managed Config** | ✅ Full | ✅ Full | ❌ Manual | ⚠️ Experimental |
-| **Install Path** | ~/.config/opencode/ | ~/.copilot/ | ~/.claude/ | ~/.pi/agent/ |
-| **Status** | 🟢 Recommended | 🟢 Stable | 🟢 Stable | 🟡 Experimental |
-| **Quality** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
-
-Or for individual harnesses:
-
-### Option 1: OpenCode (Recommended)
-
-```bash
-make install-opencode    # Install agents + skills to ~/.config/opencode/
-```
-
-### Option 2: Copilot CLI (Full Agent + Skill Support)
-
-```bash
-make install-copilot     # Install agents + skills to ~/.copilot/
-```
-
-### Option 3: Claude Code (Local with Full Agent Support)
-
-```bash
-make install-claude      # Install agents to ~/.claude/
-```
-
-### Option 4: π.dev (Experimental)
-
-```bash
-make install-pi          # Install to ~/.pi/agent/
-```
-
-**Why Experimental:** π.dev uses static agent configuration (no dynamic agent registration like Copilot and Claude Code). Agent configuration is defined at installation time and cannot be modified at runtime. This limitation makes it less suitable for rapidly evolving multi-agent systems but suitable for testing static configurations.
-
 ### Using the Orchestrator
 
 The Orchestrator coordinates complex tasks across agents. Set up the recommended aliases in `~/.zshrc` or `~/.bashrc`:
