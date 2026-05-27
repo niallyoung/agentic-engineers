@@ -1,7 +1,7 @@
 ---
 name: quality-engineer
 description: Post-implementation quality gate; code review; model suitability assessment
-model: gpt-4
+model: claude-sonnet-4.6
 ---
 
 # Quality Engineer Agent — LIVE IMPLEMENTATION

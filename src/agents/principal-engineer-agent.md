@@ -1,7 +1,7 @@
 ---
 name: principal-engineer
 description: Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos
-model: gpt-4o
+model: claude-opus-4.7
 ---
 
 # Principal Engineer Agent — LIVE IMPLEMENTATION

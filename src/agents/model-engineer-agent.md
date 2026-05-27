@@ -1,7 +1,7 @@
 ---
 name: model-engineer
 description: Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks
-model: gpt-4
+model: claude-sonnet-4.5
 ---
 
 # Model Engineer Agent — LIVE IMPLEMENTATION
