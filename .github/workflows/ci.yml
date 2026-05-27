@@ -44,10 +44,16 @@ jobs:
             fi
           done
           # Copy hook dependencies (e.g., LOCKED_MODELS.sh sourced by pre-commit)
-          for dep in LOCKED_MODELS.sh LOCKED_MODELS_RATIONALE.md; do
+          for dep in LOCKED_MODELS.sh; do
             if [ -f ".githooks/$dep" ]; then
               cp ".githooks/$dep" ".git/hooks/$dep"
               chmod +x ".git/hooks/$dep" 2>/dev/null || true
+            fi
+          done
+          # Copy documentation (not executable)
+          for doc in LOCKED_MODELS_RATIONALE.md PRE-PUSH.md; do
+            if [ -f ".githooks/$doc" ]; then
+              cp ".githooks/$doc" ".git/hooks/$doc"
             fi
           done
           echo "Git hooks configured:"
@@ -63,6 +69,7 @@ jobs:
           make render-claude
           make render-opencode
           make render-pi
+          make render-specs
 
       - name: Test
         run: make test
