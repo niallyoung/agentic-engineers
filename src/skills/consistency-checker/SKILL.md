@@ -52,7 +52,7 @@ from skills.consistency_checker.scripts import ConsistencyChecker
 
 # Initialize
 checker = ConsistencyChecker(
-    queue_path="~/.copilot/queue",
+    queue_path="~/.agentic-engineers/",
     session_id=None,  # None = check all sessions
 )
 
@@ -107,7 +107,7 @@ python -m skills.consistency_checker --delegates-only
 The checker scans this directory structure:
 
 ```
-~/.copilot/queue/
+~/.agentic-engineers/
 ├── {session_id}/
 │   ├── incoming/       # New tasks waiting to be processed
 │   ├── assigned/       # Tasks currently being processed

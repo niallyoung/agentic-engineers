@@ -3,7 +3,7 @@
 bootstrap_structure.py — Phase 3: Directory structure creation for repo-init.
 
 Creates the agentic-engineers directory layout in the target repository:
-  agents/, skills/, tests/, docs/, artifacts/queue/
+  agents/, skills/, tests/, docs/, ~/.agentic-engineers/
 
 All writes are idempotent (skip if already exists unless force_reinit=True).
 
@@ -95,9 +95,9 @@ def bootstrap_structure(cfg, analysis, dry_run: bool = False) -> List[Path]:
         )
         created.append(docs_index)
 
-    # ── artifacts/queue/.gitkeep ──────────────────────────────────────────────
+    # ── ~/.agentic-engineers/.gitkeep ──────────────────────────────────────────────
     for subdir in ("incoming", "done", "failed"):
-        gitkeep = cfg.repo_root / "artifacts" / "queue" / subdir / ".gitkeep"
+        gitkeep = cfg.repo_root / ".agentic-engineers" / subdir / ".gitkeep"
         if not gitkeep.exists() and not dry_run:
             gitkeep.write_text("")
             created.append(gitkeep)
@@ -348,7 +348,7 @@ def test_gitignore_contains_framework_entries():
         content = gitignore.read_text()
         has_entry = any(
             marker in content
-            for marker in ("artifacts/queue/", "agentic-engineers", ".agentic-engineers")
+            for marker in ("~/.agentic-engineers/", "agentic-engineers", ".agentic-engineers")
         )
         assert has_entry, ".gitignore missing agentic-engineers entries"
 '''

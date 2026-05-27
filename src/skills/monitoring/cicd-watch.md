@@ -1,7 +1,7 @@
 # CI/CD Watch Skill
 
 **Used by:** engineer, senior-engineer, lead-engineer, quality-engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** low — monitoring only; no code changes required.
 
 Use this skill after pushing to main when you need to monitor GitHub Actions pipeline status across one or more repositories.

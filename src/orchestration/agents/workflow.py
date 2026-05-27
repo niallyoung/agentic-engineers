@@ -121,7 +121,7 @@ class WorkflowOrchestrator:
             "handoff_type": "DELEGATE",
             "task_id": task_id,
             "role": "orchestrator",
-            "model": "claude-haiku-4-5",
+            "model": "claude-haiku-4.5",
             "effort": "low",
             "scope": scope,
             "complexity": complexity,
@@ -143,7 +143,7 @@ class WorkflowOrchestrator:
             "handoff_type": "DELEGATE",
             "task_id": task_id,
             "role": executor,
-            "model": "claude-haiku-4-5" if executor == "engineer" else "claude-sonnet-4-6",
+            "model": "claude-haiku-4.5" if executor == "engineer" else "claude-sonnet-4.6",
             "effort": "high",
             "scope": scope,
             "plan": [
@@ -172,7 +172,7 @@ class WorkflowOrchestrator:
             "handoff_type": "DELEGATE",
             "task_id": task_id,
             "role": "quality_engineer",
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-4.6",
             "effort": "medium",
             "scope": "Post-implementation quality review",
             "quality_score": executor_result.get('quality_score', 90)
@@ -192,7 +192,7 @@ class WorkflowOrchestrator:
             "handoff_type": "DELEGATE",
             "task_id": task_id,
             "role": "model_engineer",
-            "model": "claude-haiku-4-5",
+            "model": "claude-haiku-4.5",
             "effort": "medium",
             "scope": "Analyze quality and recommend model",
             "quality_score": qe_result.get('quality_score', 90)
@@ -212,7 +212,7 @@ class WorkflowOrchestrator:
             "handoff_type": "DELEGATE",
             "task_id": task_id,
             "role": "quality_gate_orchestrator",
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-4.6",
             "effort": "medium",
             "scope": "Run quality gate checks"
         }

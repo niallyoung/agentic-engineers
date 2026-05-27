@@ -1,7 +1,7 @@
 # Lambda Handler Skill
 
 **Used by:** engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** medium — two archetypes cover most cases; adapt routing and dependency injection to your service.
 
 Use this skill when creating or modifying Lambda functions for Go microservices on AWS.

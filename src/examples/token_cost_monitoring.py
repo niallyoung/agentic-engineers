@@ -60,8 +60,8 @@ def example_2_interpret_cost_breakdown():
     
     # Simulate task costs by model
     tasks = [
-        {"model": "claude-haiku-4-5", "cost": 0.005, "tokens": 500},
-        {"model": "claude-haiku-4-5", "cost": 0.006, "tokens": 600},
+        {"model": "claude-haiku-4.5", "cost": 0.005, "tokens": 500},
+        {"model": "claude-haiku-4.5", "cost": 0.006, "tokens": 600},
         {"model": "claude-sonnet-4", "cost": 0.025, "tokens": 500},
         {"model": "claude-sonnet-4", "cost": 0.030, "tokens": 600},
         {"model": "claude-opus", "cost": 0.150, "tokens": 500},

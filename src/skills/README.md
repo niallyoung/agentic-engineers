@@ -164,7 +164,7 @@ Runs 10 test scenarios covering:
 handoff_type: DELEGATE
 task_id: 2026-04-29-fix-auth-abc123
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high  # low, medium, high, max
 scope: "Add timeout grace period to authentication service validation"
 complexity: medium  # low, medium, high

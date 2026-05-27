@@ -22,7 +22,7 @@ class TestQualityEngineerProtocolIntegration:
         return {
             "task_id": task_id,
             "role": role,
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-4.6",
             "effort": "medium",
             "scope": "Implement feature with comprehensive testing and documentation",
             "quality_baseline": quality_baseline,
@@ -58,7 +58,7 @@ class TestQualityEngineerProtocolIntegration:
             "tokens_in": 22000,
             "tokens_out": 8000,
             "time_elapsed_minutes": 180,
-            "model_used": "claude-sonnet-4-6",
+            "model_used": "claude-sonnet-4.6",
             "acceptance_criteria_met": ["All tests pass", "Code coverage ≥90%"] if quality_score >= 90 else ["All tests pass"],
             "deliverables": ["src/feature.py"],
             "tests": {"unit": True},

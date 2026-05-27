@@ -36,7 +36,7 @@ Metrics Collection captures task execution data from HANDBACK and records it to 
   
   "assignment": {
     "role": "Engineer",
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "thinking": "disabled",
     "confidence": 0.95
@@ -206,9 +206,9 @@ For each model, use standard rates:
 
 | Model | $/1M input tokens | $/1M output tokens |
 |-------|---|---|
-| claude-haiku-4-5 | 0.80 | 4.00 |
-| claude-sonnet-4-6 | 3.00 | 15.00 |
-| claude-opus-4-7 | 15.00 | 75.00 |
+| claude-haiku-4.5 | 0.80 | 4.00 |
+| claude-sonnet-4.6 | 3.00 | 15.00 |
+| claude-opus-4.7 | 15.00 | 75.00 |
 
 Calculate:
 ```
@@ -268,7 +268,7 @@ tests:
   - "make verify": PASS (87% coverage)
 tokens_in: 18500
 tokens_out: 2100
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 90
 escalations: 0

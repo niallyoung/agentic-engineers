@@ -60,7 +60,7 @@ All agent implementations MUST follow these validation and error handling patter
 
 ## Engineer
 
-**Model:** claude-haiku-4-5 (high effort)  
+**Model:** claude-haiku-4.5 (high effort)  
 **Cost Target:** 18%
 
 Execute well-scoped tasks with pre-written plans. Recommended (not mandatory): use Red-Green TDD when writing code (test first, implement, refactor).
@@ -77,7 +77,7 @@ Execute well-scoped tasks with pre-written plans. Recommended (not mandatory): u
 
 ## Senior Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 7%
 
 Design solutions for complex tasks without pre-written plans. Diagnose bugs when root cause is unclear.
@@ -92,7 +92,7 @@ Design solutions for complex tasks without pre-written plans. Diagnose bugs when
 
 ## Lead Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 2%
 
 Review code and unblock stuck tasks. Verify quality before work proceeds.
@@ -111,7 +111,7 @@ Review code and unblock stuck tasks. Verify quality before work proceeds.
 
 ## Quality Engineer
 
-**Model:** claude-sonnet-4-6 (medium effort)  
+**Model:** claude-sonnet-4.6 (medium effort)  
 **Cost Target:** 8%
 
 Run Tier 1 quality checks. Assess model performance.
@@ -137,7 +137,7 @@ Design when changes affect >2 repos or touch service boundaries.
 
 ## Security Engineer
 
-**Model:** claude-opus-4-7 (max effort)  
+**Model:** claude-opus-4.7 (max effort)  
 **Cost Target:** 1%
 
 Scan for vulnerabilities, check dependencies, verify access controls, return findings by severity (CRITICAL, HIGH, MEDIUM, LOW).
@@ -146,7 +146,7 @@ Scan for vulnerabilities, check dependencies, verify access controls, return fin
 
 ## Model Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 3%
 
 **Primary:** Analyze completed task feedback (~10-100 samples). Identify patterns: which models succeed? Which fail? Token efficiency?
@@ -168,7 +168,7 @@ Orchestrator uses Rank 1 for the next matching task.
 
 ## Orchestrator
 
-**Model:** claude-haiku-4-5 (low effort)  
+**Model:** claude-haiku-4.5 (low effort)  
 **Cost Target:** 60%
 
 Central coordinator for agent-based task routing and queue management. Runs continuously in harness, polling queues every 30-60 seconds. No external tools or cron jobs — 100% agent-based delegation.
@@ -451,7 +451,7 @@ Apply the routing decision tree in order, stopping at first match:
    - status: `success` (if status == complete), `error` (if blocked), `unknown` (if partial)
    - attributes:
      - agent_type: role name (e.g., "Engineer")
-     - agent_model: model string (e.g., "claude-haiku-4-5")
+     - agent_model: model string (e.g., "claude-haiku-4.5")
      - service_name: "orchestrator-queue" (literal)
      - task_id, priority
      - input_tokens, output_tokens, total_tokens, cost_usd

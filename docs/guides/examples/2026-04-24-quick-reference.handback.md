@@ -30,7 +30,7 @@ tokens_out: 1850
 duration_minutes: 18
 escalations: 0
 quality_score: 94
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: medium
 role: Engineer
 

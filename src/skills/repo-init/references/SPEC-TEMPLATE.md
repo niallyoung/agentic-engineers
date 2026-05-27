@@ -44,7 +44,7 @@ The generated SPEC.md follows three principles:
 ## 6. Delegation Protocol
    - DELEGATE block format required
    - HANDBACK block format required
-   - Queue location (artifacts/queue/)
+   - Queue location (~/.agentic-engineers/)
 
 ## 7. Escalation Paths
    - engineer → senior-engineer

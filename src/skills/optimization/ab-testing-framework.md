@@ -2,7 +2,7 @@
 
 **Role Summary:** Automate A/B test design, allocation, monitoring, and analysis. Continuously run model/effort comparisons to optimize cost-quality tradeoff.
 
-**Model:** claude-haiku-4-5 | **Effort:** high | **Cost Tier:** 1x | **Token Multiplier:** ~2x (test coordination + analysis)
+**Model:** claude-haiku-4.5 | **Effort:** high | **Cost Tier:** 1x | **Token Multiplier:** ~2x (test coordination + analysis)
 
 ---
 
@@ -34,7 +34,7 @@ priority: "medium"  # low/medium/high (affects sampling rate)
 
 control_arm:
   name: "Haiku High (Current)"
-  model: "claude-haiku-4-5"
+  model: "claude-haiku-4.5"
   effort: "high"
   task_filter:
     domain: "auth"
@@ -48,7 +48,7 @@ control_arm:
 
 test_arm:
   name: "Sonnet Medium (Proposed)"
-  model: "claude-sonnet-4-6"
+  model: "claude-sonnet-4.6"
   effort: "medium"
   task_filter: (same as control)
   historical_data:

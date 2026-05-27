@@ -247,7 +247,7 @@ Model: Sonnet or Opus (Haiku doesn't use extended thinking)
   "task_description": "Add Redis caching to {example-service}",
   "routing_decision": {
     "role": "Engineer",
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "thinking": "disabled",
     "confidence": 0.95

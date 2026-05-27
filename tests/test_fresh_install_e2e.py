@@ -238,7 +238,7 @@ class TestFreshInstallE2E:
             'handoff_type': 'DELEGATE',
             'task_id': task_id,
             'role': 'Engineer',
-            'model': 'claude-haiku-4-5',
+            'model': 'claude-haiku-4.5',
             'effort': 'low',
             'scope': 'Test queue delegation protocol',
             'context': [
@@ -289,7 +289,7 @@ class TestFreshInstallE2E:
             ],
             'tokens_in': 500,
             'tokens_out': 250,
-            'model': 'claude-haiku-4-5',
+            'model': 'claude-haiku-4.5',
             'effort': 'low',
             'duration_minutes': 5,
             'escalations': 0
@@ -423,7 +423,7 @@ class TestQueueArtifactLocations:
             'handoff_type': 'DELEGATE',
             'task_id': task_id,
             'role': role,
-            'model': 'claude-haiku-4-5',
+            'model': 'claude-haiku-4.5',
             'effort': 'low',
             'scope': 'Test artifact location'
         }
@@ -709,7 +709,7 @@ if __name__ == '__main__':
             'handoff_type': 'DELEGATE',
             'task_id': task_id,
             'role': 'Engineer',
-            'model': 'claude-haiku-4-5',
+            'model': 'claude-haiku-4.5',
             'effort': 'low',
             'scope': 'Test fresh install queue delegation',
             'context': [
@@ -761,7 +761,7 @@ if __name__ == '__main__':
             ],
             'tokens_in': 500,
             'tokens_out': 250,
-            'model': 'claude-haiku-4-5',
+            'model': 'claude-haiku-4.5',
             'effort': 'low',
             'duration_minutes': 5,
             'escalations': 0

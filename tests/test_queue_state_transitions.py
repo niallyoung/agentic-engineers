@@ -285,7 +285,7 @@ class TestQueueStateTransitions:
             "handoff_type": "DELEGATE",
             "task_id": "test-task-001",
             "role": "Engineer",
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-4.6",
             "effort": "medium",
             "scope": "Test task for queue transitions",
             "plan": ["Step 1", "Step 2"],

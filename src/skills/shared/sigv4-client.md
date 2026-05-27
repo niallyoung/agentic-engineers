@@ -1,7 +1,7 @@
 # SigV4 Client Skill
 
 **Used by:** engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** low — copy implementation, inject at construction time, call from handlers.
 
 Use this skill when implementing inter-service HTTP communication where the target API Gateway uses IAM authorization (not JWT).

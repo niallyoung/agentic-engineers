@@ -2,7 +2,7 @@
 
 **Role Summary:** Analyzes task complexity, historical performance data, and cost-quality tradeoffs to recommend optimal model assignments. Continuously optimizes model tier selection to maximize quality while minimizing cost.
 
-**Model:** claude-haiku-4-5 | **Effort:** medium | **Cost Tier:** 1x | **Token Multiplier:** ~2x (analysis + metrics reading)
+**Model:** claude-haiku-4.5 | **Effort:** medium | **Cost Tier:** 1x | **Token Multiplier:** ~2x (analysis + metrics reading)
 
 ---
 
@@ -46,14 +46,14 @@
   "similar_past_tasks": [
     {
       "task_id": "2026-04-20-database-index",
-      "model_used": "claude-haiku-4-5",
+      "model_used": "claude-haiku-4.5",
       "tokens": 18500,
       "quality": 92,
       "success": true
     },
     {
       "task_id": "2026-04-15-http-client-retry",
-      "model_used": "claude-haiku-4-5",
+      "model_used": "claude-haiku-4.5",
       "tokens": 16200,
       "quality": 88,
       "success": true
@@ -70,7 +70,7 @@
   "recommendations": [
     {
       "rank": 1,
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "high",
       "predicted_quality": 90,
       "predicted_tokens": 17800,
@@ -82,7 +82,7 @@
     },
     {
       "rank": 2,
-      "model": "claude-sonnet-4-6",
+      "model": "claude-sonnet-4.6",
       "effort": "medium",
       "predicted_quality": 94,
       "predicted_tokens": 22500,

@@ -47,7 +47,7 @@ class TestTokenMetricsExport:
         tokens_output = registry.counter(
             "orchestrator_tokens_output_by_model",
             "Output tokens by model",
-            labels={"model": "claude-haiku-4-5"}
+            labels={"model": "claude-haiku-4.5"}
         )
         tokens_output.inc(500)
         
@@ -55,7 +55,7 @@ class TestTokenMetricsExport:
         output = exporter.export()
         
         assert "orchestrator_tokens_output_by_model" in output
-        assert 'model="claude-haiku-4-5"' in output
+        assert 'model="claude-haiku-4.5"' in output
         assert "500" in output
     
     def test_export_tokens_cached(self):
@@ -125,7 +125,7 @@ class TestCostMetricsExport:
         cost_by_model = registry.counter(
             "orchestrator_cost_usd_by_model",
             "Cost by model",
-            labels={"model": "claude-opus-4-7"}
+            labels={"model": "claude-opus-4.7"}
         )
         cost_by_model.inc(1.25)
         
@@ -133,7 +133,7 @@ class TestCostMetricsExport:
         output = exporter.export()
         
         assert "orchestrator_cost_usd_by_model" in output
-        assert 'model="claude-opus-4-7"' in output
+        assert 'model="claude-opus-4.7"' in output
     
     def test_export_cost_by_task_type(self):
         """Test exporting cost metrics with task type labels."""

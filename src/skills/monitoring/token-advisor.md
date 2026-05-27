@@ -2,7 +2,7 @@
 
 **Role Summary:** Read-only analytics agent analyzing token usage metrics to optimize model selection, effort levels, and cost efficiency. Provides continuous feedback loop on token burn, model performance, and cost-per-quality ratios.
 
-**Model:** claude-haiku-4-5 | **Effort:** low | **Cost Tier:** 1x | **Token Multiplier:** ~1x (read-only, no tool calls)
+**Model:** claude-haiku-4.5 | **Effort:** low | **Cost Tier:** 1x | **Token Multiplier:** ~1x (read-only, no tool calls)
 
 ---
 
@@ -40,7 +40,7 @@
   "task_id": "2026-04-24-auth-jwt-validation",
   "date": "2026-04-24",
   "role": "Engineer",
-  "model": "claude-haiku-4-5",
+  "model": "claude-haiku-4.5",
   "effort": "high",
   "tokens_in": 18500,
   "tokens_out": 2100,
@@ -60,7 +60,7 @@
 **Session event log (.claude/metrics/YYYY-MM-DD/session.jsonl):**
 ```jsonl
 {"timestamp":"2026-04-24T08:00:00Z","event":"session_start","user":"niall","session_id":"sess_123"}
-{"timestamp":"2026-04-24T08:15:30Z","event":"task_delegated","task_id":"2026-04-24-auth-jwt-validation","role":"Engineer","model":"claude-haiku-4-5","effort":"high"}
+{"timestamp":"2026-04-24T08:15:30Z","event":"task_delegated","task_id":"2026-04-24-auth-jwt-validation","role":"Engineer","model":"claude-haiku-4.5","effort":"high"}
 {"timestamp":"2026-04-24T08:57:45Z","event":"task_completed","task_id":"2026-04-24-auth-jwt-validation","tokens_in":18500,"tokens_out":2100,"quality_score":92}
 {"timestamp":"2026-04-24T09:00:00Z","event":"session_end","total_tokens":20600,"tasks_completed":1}
 ```
@@ -84,7 +84,7 @@ By Role:
   Engineer (Haiku 4.5): 20,600 tokens, $0.15, 1 task, 100% success
 
 By Model:
-  claude-haiku-4-5: 20,600 tokens (100%)
+  claude-haiku-4.5: 20,600 tokens (100%)
 
 By Effort:
   high: 20,600 tokens (100%)
@@ -125,8 +125,8 @@ By Role (tokens | % | cost):
   Quality Engineer (Haiku):  20,800 | 7%  | $0.15 (1 audit)
 
 By Model:
-  claude-haiku-4-5:       133,100 | 46% | $0.97 (tokens/cost efficient)
-  claude-sonnet-4-6:      154,300 | 54% | $1.13 (higher quality needs)
+  claude-haiku-4.5:       133,100 | 46% | $0.97 (tokens/cost efficient)
+  claude-sonnet-4.6:      154,300 | 54% | $1.13 (higher quality needs)
 
 Quality Trends:
   Engineer tasks: avg 89 quality, 2 escalations (25% escalation rate)
@@ -159,9 +159,9 @@ A/B Test Proposal:
   Success Criteria: Test arm achieves quality ≥95 AND cost_per_quality ≤ control OR lower tokens
 
 Model Readiness Check (for new models):
-  claude-opus-4-7: Not yet evaluated
-  claude-sonnet-4-6: ✅ Baseline (95 avg quality)
-  claude-haiku-4-5: ✅ Baseline (89 avg quality, 39% of tasks)
+  claude-opus-4.7: Not yet evaluated
+  claude-sonnet-4.6: ✅ Baseline (95 avg quality)
+  claude-haiku-4.5: ✅ Baseline (89 avg quality, 39% of tasks)
 ```
 
 ### Model Comparison Report
@@ -172,15 +172,15 @@ When new models become available:
 MODEL COMPARISON — Available Models as of 2026-04-24
 
 Tier 1x (Same cost multiplier):
-  ✅ claude-haiku-4-5 (current): 89 avg quality, 46% of tasks, fastest
+  ✅ claude-haiku-4.5 (current): 89 avg quality, 46% of tasks, fastest
   ? claude-haiku-4-6 (new): Not yet evaluated
 
 Tier 2x (Dual cost multiplier):
-  ✅ claude-sonnet-4-6 (current): 95 avg quality, 54% of tasks, balanced
+  ✅ claude-sonnet-4.6 (current): 95 avg quality, 54% of tasks, balanced
   ? claude-sonnet-4-7 (new): Not yet evaluated
 
 Tier 7.5x (High-effort, premium):
-  ✅ claude-opus-4-7 (current): 98 avg quality (Principal/Security roles)
+  ✅ claude-opus-4.7 (current): 98 avg quality (Principal/Security roles)
   ? claude-opus-4-8 (new): Not yet evaluated
 
 Recommendation for Evaluation:
@@ -242,7 +242,7 @@ claude-code /token-advisor test --proposal="haiku-vs-sonnet-on-medium-tasks" \
 claude-code /token-advisor eval --model="claude-haiku-4-6" \
   --task-type="low-complexity-coding" \
   --sample-size=5 \
-  --compare-to="claude-haiku-4-5"
+  --compare-to="claude-haiku-4.5"
 ```
 
 ---
@@ -266,7 +266,7 @@ claude-code /token-advisor eval --model="claude-haiku-4-6" \
   "by_role": [
     {
       "role": "Engineer",
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "tokens": 20600,
       "cost_usd": 0.15,
       "tasks": 1,
@@ -284,7 +284,7 @@ claude-code /token-advisor eval --model="claude-haiku-4-6" \
 
 ```
 date,role,model,tokens,cost_usd,quality_score,duration_minutes
-2026-04-24,Engineer,claude-haiku-4-5,20600,0.15,92,42
+2026-04-24,Engineer,claude-haiku-4.5,20600,0.15,92,42
 ```
 
 ### Text Report (for reading)

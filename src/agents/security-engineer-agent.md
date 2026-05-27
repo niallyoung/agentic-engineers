@@ -1,7 +1,7 @@
 ---
 name: security-engineer
 description: Security analysis; threat modeling; vulnerability audits; final escalation path
-model: claude-opus-4-7
+model: claude-opus-4.7
 ---
 
 # Security Engineer Agent
@@ -132,6 +132,15 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@security-engineer` mention.
+Invoked via OpenCode CLI with `--agent security-engineer` flag:
+```bash
+opencode --agent security-engineer "Security analysis, threat modeling, or vulnerability audit"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent security-engineer "Security analysis"
+```
+
 Can be automatically invoked by orchestrator agents via Task tool.
 You are powered by the model named claude-opus-4.7.

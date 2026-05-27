@@ -158,7 +158,7 @@ Record to `~/.claude/metrics/YYYY-MM-DD/{task_id}.json`:
   "schema_version": "1.0",
   "task_id": "2026-04-24-example",
   "role": "Engineer",
-  "model": "claude-haiku-4-5",
+  "model": "claude-haiku-4.5",
   "status": "complete",
   "tokens_in": 18500,
   "tokens_out": 2100,
@@ -224,7 +224,7 @@ See `GLOBAL_COPILOT_INSTRUCTIONS.md` for full character mapping and override rul
 handoff_type: DELEGATE
 task_id: 2026-04-24-redis-caching
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Add Redis caching to {example-service}
 context:

@@ -207,7 +207,7 @@ Recommend:
   },
   "recommendation": {
     "rank_1": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "high",
       "thinking": "disabled",
       "confidence": 0.92,
@@ -218,7 +218,7 @@ Recommend:
       "escalation_rate": 0.0
     },
     "rank_2": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "medium",
       "thinking": "disabled",
       "confidence": 0.65,
@@ -229,7 +229,7 @@ Recommend:
       "escalation_rate": 0.0
     },
     "rank_3": {
-      "model": "claude-sonnet-4-6",
+      "model": "claude-sonnet-4.6",
       "effort": "medium",
       "thinking": "disabled",
       "confidence": 0.42,
@@ -242,7 +242,7 @@ Recommend:
   },
   "decision_context": {
     "current_assignment": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "high",
       "thinking": "disabled"
     },
