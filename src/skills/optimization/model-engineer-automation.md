@@ -2,7 +2,7 @@
 
 **Role Summary:** Automated model selection engine. Analyzes task metadata, queries historical data, predicts quality/cost for each model tier, and recommends optimal assignment.
 
-**Model:** claude-haiku-4-5 | **Effort:** medium | **Cost Tier:** 1x | **Token Multiplier:** ~1.5x (analysis + lookup)
+**Model:** claude-haiku-4.5 | **Effort:** medium | **Cost Tier:** 1x | **Token Multiplier:** ~1.5x (analysis + lookup)
 
 ---
 
@@ -105,7 +105,7 @@ action_response: model_recommendation
 task_id: "2026-04-25-redis-caching"
 recommendations:
   - rank: 1
-    model: "claude-haiku-4-5"
+    model: "claude-haiku-4.5"
     effort: "high"
     predicted_quality: 90
     predicted_tokens: 18000
@@ -125,7 +125,7 @@ recommendations:
       - May need escalation if Redis library underdocumented
   
   - rank: 2
-    model: "claude-sonnet-4-6"
+    model: "claude-sonnet-4.6"
     effort: "medium"
     predicted_quality: 94
     predicted_tokens: 22000
@@ -158,7 +158,7 @@ suggested_decision: "Allocate to Haiku high-effort (Rank 1). High confidence, pr
 handoff_type: DELEGATE
 task_id: 2026-04-25-redis-caching
 role: Engineer
-model: claude-haiku-4-5  # ← From Model Engineer recommendation
+model: claude-haiku-4.5  # ← From Model Engineer recommendation
 effort: high
 scope: Add Redis caching to {example-service} (cache user memberships)
 context:

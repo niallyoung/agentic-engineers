@@ -1,7 +1,7 @@
 # CDK Stack Skill
 
 **Used by:** engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** medium — boilerplate is standardized; adapt stack types and cross-stack props to your service.
 
 Use this skill when creating or modifying AWS CDK infrastructure for Go microservices.

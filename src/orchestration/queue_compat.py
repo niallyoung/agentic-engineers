@@ -1,23 +1,32 @@
 """
-Backward Compatibility Layer for Queue Path Migration (Phase 1-4)
+[DEPRECATED] Backward Compatibility Layer for Queue Path Migration (Phase 1-4)
 
-This module provides utilities for:
+🔴 DEPRECATED - Migration Phase 1-4 completed 2026-05-26
+Only ~/.agentic-engineers/ is supported now. This file is kept for migration understanding only.
+
+This module PREVIOUSLY provided utilities for:
 1. Detecting legacy queue paths (~/.copilot/queue/{session_id}/)
 2. Validating queue path migration integrity (no data loss)
 3. Providing migration status and diagnostics
 
-During Phase 1-4 of the migration (weeks 1-4), both old and new paths work.
-After Phase 4, only the new path (~/.agentic-engineers/artifacts/) will be supported.
+Historical note: During Phase 1-4 of the migration (weeks 1-4), both old and new paths worked.
+As of May 26, 2026, only the new path (~/.agentic-engineers/{session-id}/{harness}/) is supported.
 
-Usage:
+DO NOT USE THIS MODULE IN NEW CODE.
+
+Legacy paths NO LONGER SUPPORTED:
+- ~/.copilot/queue/
+- ~/.claude/queue/
+- artifacts/queue/
+
+Canonical path for all harnesses:
+- ~/.agentic-engineers/{session-id}/{harness}/queue/
+
+Usage (for historical reference only):
     from src.orchestration.queue_compat import QueuePathMigration
     
-    qm = QueuePathMigration()
+    qm = QueuePathMigration()  # ⚠️ Will detect legacy paths only (no longer used)
     legacy_path = qm.detect_legacy_queue("session-123")
-    if legacy_path:
-        print(f"Found legacy queue at {legacy_path}")
-        status = qm.validate_migration("session-123", "claude")
-        print(f"Migration status: {status}")
 """
 
 import logging

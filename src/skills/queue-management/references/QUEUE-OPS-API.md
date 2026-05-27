@@ -11,13 +11,13 @@ from skills.queue_management.scripts import QueueOperations
 
 queue = QueueOperations(
     session_id="my-session",
-    queue_path="~/.copilot/queue"  # Optional, default shown
+    queue_path="~/.agentic-engineers/"  # Optional, default shown
 )
 ```
 
 **Parameters:**
 - `session_id` (str, required): Unique session identifier for isolation
-- `queue_path` (str, optional): Root queue directory path, default "~/.copilot/queue"
+- `queue_path` (str, optional): Root queue directory path, default "~/.agentic-engineers/"
 
 **Raises:**
 - `ValueError`: If session_id is empty or not a string
@@ -57,7 +57,7 @@ result = queue.create_delegate(
     "status": "created",
     "task_id": "feature-001",
     "timestamp": "2024-05-23T10:15:30.123456",
-    "queue_path": "/home/user/.copilot/queue/my-session/incoming/feature-001.json",
+    "queue_path": "/home/user/.agentic-engineers/my-session/incoming/feature-001.json",
     "parent_task_id": None or "parent-id"
 }
 ```
@@ -329,7 +329,7 @@ status = limiter.get_status("session-1")
 ```python
 from skills.queue_management.scripts import AtomicQueueOps
 
-ops = AtomicQueueOps(queue_path=Path("~/.copilot/queue/session-1"))
+ops = AtomicQueueOps(queue_path=Path("~/.agentic-engineers/session-1"))
 
 # Write atomically (temp-then-move)
 ops.write_atomic(Path("file.json"), json.dumps(data))

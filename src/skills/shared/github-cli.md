@@ -1,7 +1,7 @@
 # GitHub CLI Skill
 
 **Used by:** orchestrator
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** low — use `gh` for all GitHub interactions; never use the web UI or REST API manually.
 
 **Updated:** Apr 2026 — Smart CICD monitoring (monitor until green, auto-stop)
@@ -69,6 +69,15 @@ EOF
 
 # Merge (squash)
 gh pr merge <NUMBER> --squash --delete-branch
+
+# Merge with admin override (REQUIRES HUMAN VERIFICATION)
+# Only used when base branch protection blocks merge despite passing CI.
+# CRITICAL: This must NEVER be done autonomously.
+# Agents MUST ask the user for explicit confirmation with two-step verification:
+#   1. User must confirm intent: "I want to merge the PR"
+#   2. User must acknowledge understanding: "I understand this uses admin override"
+# Only after BOTH confirmations should the agent proceed with:
+gh pr merge <NUMBER> --squash --delete-branch --admin
 
 # Approve
 gh pr review <NUMBER> --approve
@@ -266,6 +275,53 @@ When a repo fails to go green:
 4. **Resume monitoring**: Restart monitor — it will detect the new run and wait for green
 5. **Verify clean runs**: Once green, monitor auto-exits
 
+## Admin Merge Override Workflow (Branch Protection Bypass)
+
+When a PR cannot merge despite passing all CI checks due to base branch protection policy, the `--admin` flag bypasses the protection **but only after human verification**.
+
+### When to Use `--admin`
+
+- All status checks are passing (green)
+- Base branch policy blocks merge
+- User explicitly requests the merge
+- This is typically only needed for author self-merges on repos with strict protection
+
+### Two-Step Verification (MANDATORY)
+
+Agents MUST NEVER use `--admin` autonomously. Instead:
+
+1. **Ask the user to confirm intent:**
+   ```
+   This PR cannot merge due to branch protection, but all checks pass.
+   Do you want to merge with admin override?
+   Please type: I want to merge the PR
+   ```
+
+2. **After user confirms, ask for acknowledgment:**
+   ```
+   I understand this uses admin privileges to override branch protection.
+   Please type: I understand
+   ```
+
+3. **Only after BOTH confirmations**, execute:
+   ```bash
+   gh pr merge <NUMBER> --squash --delete-branch --admin
+   ```
+
+### Example User Flow
+
+```
+Agent: "This PR cannot merge due to branch protection, but all checks pass. Do you want to merge with admin override? Please type: I want to merge the PR"
+
+User: "I want to merge the PR"
+
+Agent: "I understand this uses admin privileges to override branch protection. Please type: I understand"
+
+User: "I understand"
+
+Agent: [executes gh pr merge 9 --squash --delete-branch --admin]
+```
+
 ## Quality Checklist
 
 - [ ] Use `-R owner/repo` flag when not inside the repo directory
@@ -278,7 +334,11 @@ When a repo fails to go green:
 
 - If `gh auth login` fails or tokens expire repeatedly, escalate to platform team (may be a GitHub App / OIDC configuration issue)
 - If a workflow cannot be triggered via `gh workflow run`, check that it has a `workflow_dispatch` trigger — if not, escalate to the engineer who owns that workflow
-- If branch protection blocks a merge, escalate to lead-engineer
+- If branch protection blocks a merge, **STOP and ask the user for explicit two-step verification before using `--admin`**:
+  1. Ask: "Do you want to merge this PR with admin override? (Type: I want to merge the PR)"
+  2. After user response, ask: "I understand this uses admin privileges and overrides branch protection. Proceed? (Type: I understand)"
+  3. Only after BOTH confirmations, proceed with `gh pr merge <NUMBER> --squash --delete-branch --admin`
+  4. **NEVER use `--admin` autonomously or without explicit human verification**
 
 ## References
 

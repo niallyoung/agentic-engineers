@@ -9,7 +9,7 @@ status: SPEC_COMPLETE
 # Spec Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Spec Engineer (Quality Gate Sub-Agent)
-**Model**: claude-sonnet-4-6
+**Model**: claude-sonnet-4.6
 **Effort**: medium
 **Purpose**: Specification-driven quality gate. Validates that committed code matches documented spec. Detects undocumented changes, feature deletions, architectural drift.
 
@@ -172,7 +172,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-spec-engineer-validate-oauth
 timestamp: 2026-06-02T16:00:00Z
 role: Spec Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: medium
 scope: >
   Validate {example-service} code against SPEC.md.

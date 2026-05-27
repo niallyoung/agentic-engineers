@@ -7,7 +7,7 @@ phase: 5.10
 # Healing Agent — LIVE IMPLEMENTATION
 
 **Role**: Senior Engineer  
-**Model**: claude-sonnet-4-6  
+**Model**: claude-sonnet-4.6  
 **Effort**: high
 
 ## Agent Logic

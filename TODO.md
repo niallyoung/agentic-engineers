@@ -128,7 +128,7 @@
 - [ ] **COVERAGE-TIER1:** Add tests for 5 critical modules (588 stmts)
   - Modules: core_protocol_validator (150), protocol_audit (201), healer-metrics-analyzer (137), queue_manager (96), test_validators (104)
   - Target: All modules ≥90% coverage
-  - Effort: 8 hours | Owner: Quality Engineer | Model: claude-sonnet-4-6
+  - Effort: 8 hours | Owner: Quality Engineer | Model: claude-sonnet-4.6
   - Deadline: 2026-05-21
   - Status: PENDING (queued after Phase I completes)
 
@@ -137,7 +137,7 @@
 - [ ] **COVERAGE-TIER2:** Add tests for 4 important modules (251 stmts)
   - Modules: test_rate_limiting (69), test_queue_ops (63), testing_harness (56), AGENT-IMPLEMENTATION-TEMPLATE (63)
   - Target: All modules ≥80% coverage
-  - Effort: 6 hours | Owner: Quality Engineer | Model: claude-sonnet-4-6
+  - Effort: 6 hours | Owner: Quality Engineer | Model: claude-sonnet-4.6
   - Deadline: 2026-05-22
   - Status: PENDING (after TIER 1 completes)
 
@@ -146,7 +146,7 @@
 - [ ] **COVERAGE-TIER3:** Add tests for 5 optional modules (522 stmts)
   - Modules: test_integration (42), orchestrator_testing_harness (36), errors (13), conftest (5), test_core_protocol_validator (324)
   - Target: All modules ≥80% coverage
-  - Effort: 4 hours | Owner: Quality Engineer | Model: claude-sonnet-4-6
+  - Effort: 4 hours | Owner: Quality Engineer | Model: claude-sonnet-4.6
   - Deadline: 2026-05-23
   - Status: PENDING (after TIER 2 completes)
 

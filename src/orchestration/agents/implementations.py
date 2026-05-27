@@ -221,9 +221,9 @@ class ModelEngineerAgent(Agent):
 
         return {
             "confidence": confidence,
-            "rank_1_model": "claude-haiku-4-5",
+            "rank_1_model": "claude-haiku-4.5",
             "rank_1_confidence": confidence,
-            "rank_2_model": "claude-sonnet-4-6",
+            "rank_2_model": "claude-sonnet-4.6",
             "rank_2_confidence": confidence - 0.15,
             "recommendation": "Haiku suitable for this task type",
             "deliverables": ["Model recommendations", "Confidence scores"]

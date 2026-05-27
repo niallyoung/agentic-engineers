@@ -1,6 +1,6 @@
 ---
 name: repo-init
-description: Initializes new repositories with the agentic-engineers framework. Analyzes existing repo structure, generates project-specific SPEC.md, bootstraps directory layout (agents/, skills/, tests/, docs/), sets up housekeeping files, validates model harness compatibility (Claude, GPT-5, local), and primes TODO.md with initial delegations. Use when onboarding any new repo into the agentic-engineers workflow.
+description: "[DISABLED] Initializes new repositories with the agentic-engineers framework. Currently disabled pending further discussion about repo modification policies."
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+. Requires Python 3.8+, git, bash.
 metadata:
@@ -11,18 +11,24 @@ metadata:
   model: claude-sonnet-4.6
   effort: medium
   thinking: false
+  disabled: true
+  disabled_reason: "User concern about installing into other repos without explicit approval"
   dependencies:
     - agent-creator
     - spec-management
 ---
 
-# repo-init
+# repo-init [DISABLED]
 
-## Overview
+## Status
 
-`repo-init` bootstraps any repository to be immediately job-ready for agentic-engineers
+**This skill is currently DISABLED.** It was designed to bootstrap new repositories with the agentic-engineers framework, but has been disabled pending further discussion about repo modification policies and user concerns regarding installing into external repositories without explicit approval.
+
+## Overview (Archived)
+
+~~`repo-init` bootstraps any repository to be immediately job-ready for agentic-engineers
 workflow — agents, delegation queues, SPEC-driven quality gates, and documentation —
-with a single invocation. It is the on-ramp skill for every new project.
+with a single invocation. It is the on-ramp skill for every new project.~~
 
 **What it does (8 phases):**
 
@@ -325,7 +331,7 @@ Creates this layout in the target repo:
 ```
 # agentic-engineers framework
 .agentic-engineers/session-*.log
-artifacts/queue/
+~/.agentic-engineers/
 artifacts/spans/
 data/metrics/*.jsonl
 __pycache__/

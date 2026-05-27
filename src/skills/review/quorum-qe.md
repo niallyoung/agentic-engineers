@@ -2,7 +2,7 @@
 
 **Role Summary:** Distributed quality gates using consensus voting. Multiple Quality Engineers independently review task output, vote pass/fail, escalate on disagreement. Enables scaling beyond single QE bottleneck while raising standards for critical tasks.
 
-**Model:** claude-haiku-4-5 | **Effort:** medium | **Cost Tier:** 1x per QE | **Token Multiplier:** ~1.5x (review + voting)
+**Model:** claude-haiku-4.5 | **Effort:** medium | **Cost Tier:** 1x per QE | **Token Multiplier:** ~1.5x (review + voting)
 
 ---
 

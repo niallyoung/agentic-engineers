@@ -28,7 +28,7 @@ class TestExpandedDelegateHandler:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-test-task",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature X with comprehensive testing and documentation",
             plan=["Step 1: Design", "Step 2: Implement", "Step 3: Test"],
@@ -44,7 +44,7 @@ class TestExpandedDelegateHandler:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-full-task",
             role="senior-engineer",
-            model="claude-opus-4-7",
+            model="claude-opus-4.7",
             effort="high",
             scope="Design and implement complex distributed system with fault tolerance",
             plan=[
@@ -85,7 +85,7 @@ class TestExpandedDelegateHandler:
         original = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-serialize-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Test serialization with comprehensive testing and documentation",
             plan=["Step 1", "Step 2"],
@@ -129,7 +129,7 @@ class TestExpandedHandbackHandler:
             tokens_out=15000,
             time_elapsed_minutes=120,
             cost_actual=0.85,
-            model_used="claude-sonnet-4-6",
+            model_used="claude-sonnet-4.6",
             quality_score=92,
             test_coverage=0.92,
             regressions_detected=0,
@@ -178,7 +178,7 @@ class TestQualityEvaluationEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-quality-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -208,7 +208,7 @@ class TestQualityEvaluationEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-meets-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -236,7 +236,7 @@ class TestQualityEvaluationEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-below-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -270,7 +270,7 @@ class TestFeedbackLoopEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-feedback-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -298,7 +298,7 @@ class TestFeedbackLoopEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-partial-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -325,7 +325,7 @@ class TestFeedbackLoopEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-trend-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -376,7 +376,7 @@ class TestOptimizationEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-cost-opt-test",
             role="engineer",
-            model="claude-opus-4-7",
+            model="claude-opus-4.7",
             effort="high",
             scope="Implement complex feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],
@@ -404,7 +404,7 @@ class TestOptimizationEngine:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-quality-opt-test",
             role="engineer",
-            model="claude-haiku-4-5",
+            model="claude-haiku-4.5",
             effort="low",
             scope="Implement simple feature with basic testing and documentation",
             plan=["Implement", "Test"],
@@ -440,7 +440,7 @@ class TestProtocolEventPublisher:
             task_id="2026-05-20-event-test",
             actor="orchestrator",
             actor_role="orchestrator",
-            data={"role": "engineer", "model": "claude-sonnet-4-6"},
+            data={"role": "engineer", "model": "claude-sonnet-4.6"},
             tags=["protocol", "delegate"],
         )
         
@@ -459,7 +459,7 @@ class TestProtocolEventPublisher:
             task_id=task_id,
             actor="engineer",
             actor_role="engineer",
-            data={"model": "claude-sonnet-4-6"},
+            data={"model": "claude-sonnet-4.6"},
         )
         
         # Publish execution.completed
@@ -503,7 +503,7 @@ class TestEndToEndWorkflow:
         delegate = ExpandedDelegateHandler.create_delegate(
             task_id="2026-05-20-e2e-test",
             role="engineer",
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4.6",
             effort="medium",
             scope="Implement feature with comprehensive testing and documentation",
             plan=["Design", "Implement", "Test"],

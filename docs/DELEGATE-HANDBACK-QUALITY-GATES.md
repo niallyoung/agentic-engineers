@@ -393,8 +393,8 @@ timestamp_completed: 2026-06-02T14:32:00Z
 
 # ── Routing ──────────────────────────────────────────────────────────────────
 agent_type: senior_engineer         # role from DELEGATE
-model_used: claude-sonnet-4-6       # actual model (may differ if escalated)
-model_intended: claude-sonnet-4-6   # model from DELEGATE
+model_used: claude-sonnet-4.6       # actual model (may differ if escalated)
+model_intended: claude-sonnet-4.6   # model from DELEGATE
 effort_declared: high               # effort from DELEGATE
 effort_actual: high                 # effort from HANDBACK
 

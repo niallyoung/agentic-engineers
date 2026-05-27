@@ -1,7 +1,7 @@
 # Code Review Skill
 
 **Used by:** lead-engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** medium — apply all sections; skip domain-specific sections that do not apply to the repo under review.
 
 Use this skill when reviewing code changes in any repository. Apply via `/review` in your CLI or as a `.github/instructions/review.instructions.md` per-repo file.

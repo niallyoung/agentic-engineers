@@ -8,10 +8,95 @@
 
 ```bash
 git clone https://github.com/niallyoung/agentic-engineers.git && cd agentic-engineers
-make install && make verify && python3 -m pytest tests/ -q
+make install && make verify && make test
 ```
 
 You're ready to contribute.
+
+---
+
+## Contributor Setup Guide
+
+### Automatic Setup (What Happens After Clone)
+
+After `make install`, the framework automatically:
+
+✅ **Git Hooks Installed**
+- Pre-commit hook: Prevents bytecode (`.pyc`) from being staged
+- Commit-msg hook: Validates conventional commit format (`feat(scope): message`)
+- Pre-push hook: Runs concurrent tests to detect race conditions
+- 📍 Location: `.githooks/` → configured via `git config core.hooksPath`
+- ✅ **Automatic:** No manual action needed
+
+✅ **Directory Structure Created**
+- `~/.copilot/` — Copilot CLI agents + skills
+- `~/.claude/` — Claude Code agents
+- `~/.pi/` — π.dev experimental config
+- `~/.config/opencode/` — OpenCode agents + skills
+- ✅ **Automatic:** Created by `make install-*` targets
+
+✅ **Local Development Environment**
+- Python virtual environment ready (via `setup.py`)
+- All dependencies installed
+- Pytest configured with coverage reporting
+- ✅ **Automatic:** Done by `make install`
+
+### What You Need to Do (Manual Steps)
+
+1. **Clone & install:**
+   ```bash
+   git clone https://github.com/niallyoung/agentic-engineers.git
+   cd agentic-engineers
+   make install        # Installs to all 4 harnesses
+   # Or: make install-opencode (if using OpenCode only)
+   ```
+
+2. **Create a branch for your work:**
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+
+3. **Make your changes** using the framework's own tools:
+   - New agent? Use `agent-creator` skill
+   - New skill? Use `skill-creator` skill
+   - Code changes? Edit directly and run tests
+
+4. **Verify locally before pushing:**
+   ```bash
+   make verify         # Full verification (structure + agents + skills)
+   make test           # Run all tests with coverage
+   make lint           # Lint Python, Shell, YAML
+   make quality-gate   # Pre-push checks (all of the above)
+   ```
+
+5. **Push with conventional commits:**
+   ```bash
+   git commit -m "feat(skills): add cache invalidation"
+   git push origin feature/your-feature
+   ```
+   CI will validate all standards automatically.
+
+---
+
+## Working with Single Harnesses
+
+If you're only working with one harness (e.g., OpenCode development), use targeted make targets:
+
+```bash
+# Install OpenCode only
+make install-opencode
+
+# Render OpenCode only
+make render-opencode
+
+# Verify OpenCode specifically
+make validate-opencode
+
+# Uninstall OpenCode only
+make uninstall-opencode
+```
+
+This speeds up iteration without installing all 4 harnesses.
 
 ---
 
@@ -113,17 +198,29 @@ git commit --amend
 ## Testing
 
 ```bash
-# Run all tests
-python3 -m pytest tests/ -q
+# Run all tests with coverage (recommended)
+make test
 
-# With coverage
-python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
+# Run specific test file
+pytest tests/test_invoke_agent.py -v
 
-# Concurrent/race-condition guard (required before push)
-python3 -m pytest tests/test_invoke_agent.py::TestConcurrentInvocations -v --tb=short
+# Run concurrent tests (required before push)
+make test-concurrent
 ```
 
 All new code must have tests. CI enforces >85% coverage.
+
+### About make test
+
+The `make test` target runs:
+- All pytest tests
+- Coverage report generation
+- Automatic display of missing coverage
+
+Equivalent to:
+```bash
+python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
+```
 
 ### Parallel & Concurrent Test Validation
 
@@ -158,6 +255,139 @@ failed validation. The fix is:
    after writing to a `.tmp` sibling file.
 2. **Production code** (`_read_and_validate_handback`): returns `None` for empty
    files instead of raising, signalling the polling loop to continue retrying.
+
+---
+
+## Model Selection (Locked)
+
+**CRITICAL: Model choices are LOCKED by strategic decision and enforced by pre-commit hooks.**
+
+We have chosen these Claude models today for cost-quality alignment:
+- **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
+- **claude-sonnet-4.5** — model-engineer (analysis, cost-quality balance)
+- **claude-sonnet-4.6** — lead, quality, senior engineers (complex tasks)
+- **claude-opus-4.7** — security, principal engineers (high-stakes decisions)
+
+### Why Locked Models?
+
+**Positive enforcement approach:**
+- ✅ "These are our chosen models" (not "GPT forbidden")
+- ✅ Users CAN request changes via Orchestrator
+- ✅ Changes are documented and auditable
+- ✅ Simpler than maintaining rejection patterns
+
+### Adding a New Agent
+
+When adding an agent to `src/agents/`, use the canonical format with DOTS:
+
+```yaml
+---
+name: my-agent
+description: Agent description
+model: claude-{variant}-{major}.{minor}  # ← REQUIRED format (e.g., claude-haiku-4.5)
+---
+```
+
+**Locked models** (pick one):
+- ✅ `claude-haiku-4.5`
+- ✅ `claude-sonnet-4.5`
+- ✅ `claude-sonnet-4.6`
+- ✅ `claude-opus-4.7`
+
+**Not locked** (rejected by pre-commit hook):
+- ❌ `claude-opus-4-7` (hyphens in version — use dots)
+- ❌ `claude-opus` (unversioned — use full version)
+- ❌ `gpt-4` (not a locked model — use Claude)
+
+### Requesting a Model Change
+
+If you need a different model for an agent:
+
+1. **Contact Orchestrator** with:
+   - Agent name (e.g., `engineer-agent`)
+   - Requested model (e.g., `claude-sonnet-4.5`)
+   - Reason (e.g., "Current model too slow for code review")
+   - Expected impact (e.g., "Cost +$0.02/task, quality +15%")
+
+2. **Orchestrator evaluates:**
+   - Budget impact (is cost increase justified?)
+   - Capability improvement (does task profile warrant it?)
+   - Timeline (when should it take effect?)
+
+3. **Decision:**
+   - ✅ Approved → Model is added to locked set
+   - ⏸️ Deferred → Revisit later (e.g., next budget cycle)
+   - ❌ Denied → Explain why (e.g., budget constraint)
+
+4. **If approved:**
+   - Model is added to `.githooks/LOCKED_MODELS.sh`
+   - PR includes rationale in commit message
+   - Pre-commit hook enforces new lock from merge forward
+
+### Why Per-Harness Transformations?
+
+Different harnesses have incompatible model format requirements:
+
+| Harness | Source | Renders to | Why |
+|---------|--------|------------|-----|
+| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | Uses Anthropic API format (dots required) |
+| **OpenCode** | `claude-opus-4.7` | `claude-opus-4-7` | CLI requires hyphens in version (platform constraint) |
+| **Claude Code** | `claude-opus-4.7` | `opus` | Web UI uses short aliases for UX |
+| **Pi.dev** | `claude-opus-4.7` | `claude-opus-4-7` | Anthropic API format (hyphens) |
+
+**Key principle:** Source agents use ONE canonical format (DOTS). Renderers transform per-harness. This separation makes source maintainable and allows automation of transformations.
+
+### Workflow
+
+1. **Choose model** → Pick from locked list (canonical format with DOTS)
+   ```yaml
+   model: claude-haiku-4.5  # correct
+   ```
+
+2. **Add comment** → Explain why this model fits your agent
+   ```
+   Agent Purpose: Fast routing/analysis (low cost, low latency)
+   Model Choice: claude-haiku-4.5 (Haiku is fastest; 4.5 is stable)
+   ```
+
+3. **Verify format** → Pre-commit hook validates automatically
+   ```bash
+   git add src/agents/my-agent.md
+   git commit -m "feat: add my-agent"
+   # Pre-commit validates model is in locked set and format is correct
+   ```
+
+4. **Render & test** → Ensure all harnesses render correctly
+   ```bash
+   make render-all
+   make test-models  # Runs model compliance tests
+   ```
+
+### If Pre-Commit Rejects Your Model
+
+```
+❌ Model not in locked set: src/agents/my-agent.md
+   Model: claude-gpt-4
+   Locked models (approved choices):
+     - claude-haiku-4.5
+     - claude-sonnet-4.5
+     - claude-sonnet-4.6
+     - claude-opus-4.7
+   To request a model change, contact the Orchestrator
+```
+
+**Options:**
+1. Use a locked model (recommended for standard tasks)
+2. Request new model from Orchestrator (include reason and impact)
+3. Discuss with team (if locked models don't fit your use case)
+
+### See Also
+
+- **Lock rationale:** [`.githooks/LOCKED_MODELS_RATIONALE.md`](./.githooks/LOCKED_MODELS_RATIONALE.md)
+- **Locked models:** [`.githooks/LOCKED_MODELS.sh`](./.githooks/LOCKED_MODELS.sh)
+- **Full architecture:** [`docs/SPEC.md`](docs/SPEC.md) — "Approved Claude Models" section
+- **Tests:** [`tests/test_model_naming_compliance.py`](tests/test_model_naming_compliance.py) — compliance verification
+- **Agent registry:** [`docs/AGENTS.md`](docs/AGENTS.md) — model assignments by role
 
 ---
 

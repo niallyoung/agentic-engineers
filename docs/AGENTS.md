@@ -14,21 +14,71 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 
 ---
 
+## Model Naming Architecture (LOCKED)
+
+**STATUS:** Permanent. Enforced via tests, pre-commit hooks, and CI gates.
+
+### Canonical Format (Source)
+
+All agents in `src/agents/*.md` use **versioned Claude with DOTS**:
+
+```
+model: claude-{variant}-{major}.{minor}
+Examples: claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.7
+```
+
+### Per-Harness Transformations
+
+Each harness renders the canonical format according to its requirements:
+
+| Harness | Transforms To | Reason |
+|---------|---------------|--------|
+| **Copilot CLI** | `claude-opus-4.7` (pass-through) | Accepts Anthropic API format (dots required) |
+| **OpenCode** | `claude-opus-4-7` (dots→hyphens) | CLI requires hyphens in version |
+| **Claude Code** | `opus` (short alias) | Web UI uses short aliases for UX |
+| **Pi.dev** | `claude-opus-4-7` or dated versions | Anthropic API format (hyphens, optional date) |
+
+### Forbidden Patterns (All Contexts)
+
+- ❌ GPT models (gpt-4, gpt-4o, gpt-4o-mini)
+- ❌ Unversioned Claude (claude-opus without -4.7)
+- ❌ Mixed formats (claude-opus-4_5 or claude-opus-4-7 in source)
+- ✅ Correct: Use canonical format with DOTS in source
+
+### Rationale
+
+Model naming broke repeatedly across commits due to confusion about per-harness format requirements. By documenting the **canonical format (source) + per-harness transformations (renderers)**, we:
+1. Make source agents maintainable (one format to remember)
+2. Automate harness-specific transformations
+3. Prevent regressions via tests + pre-commit hooks + CI enforcement
+
+### References
+
+- **Complete architecture:** [SPEC.md > Model Naming Architecture](../SPEC.md)
+- **Tests:** [test_model_naming_compliance.py](../tests/test_model_naming_compliance.py) (14 comprehensive tests)
+- **Validator:** [validate_agents.py](../renderer/validate_agents.py) (KNOWN_MODELS)
+- **Adding agents:** [CONTRIBUTING.md > Model Naming When Adding Agents](../CONTRIBUTING.md#model-naming-when-adding-agents)
+
+---
+
 ## Primary Assignments (Dark Factory Model)
 
-**Default Entry Point:** Orchestrator (Haiku 4.5, Low Effort)  
+**Default Entry Point:** Orchestrator (Claude Haiku 4.5, Low Effort)  
 **Entry Rule:** All work flows through Orchestrator for routing. No direct delegation from external sources.
 
-| Role | Model | Effort | Cost/Task | Use When |
-|---|---|---|---|---|
-| **Orchestrator** | claude-haiku-4-5 | low | $0.03 | All entry points; routing decisions; task management; metrics collection; model recommendations |
-| **Engineer** | claude-haiku-4-5 | high | $0.03 | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-4-6 | medium | $0.09 | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-4-6 | high | $0.09 | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-4-6 | high | $0.09 | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-4-6 | high | $0.15 | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4-7 | max | $0.15 | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-4-6 | high | $0.09 | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+**MODEL NAMING (LOCKED):** All models use canonical format with DOTS: `claude-{variant}-{major}.{minor}`
+(e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.7`). See [SPEC.md > Model Naming Architecture](../SPEC.md).
+
+| Role | Model | Effort | Use When |
+|---|---|---|---|
+| **Orchestrator** | claude-haiku-4.5 | low | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Engineer** | claude-haiku-4.5 | high | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
+| **Quality Engineer** | claude-sonnet-4.6 | medium | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-4.5 | high | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Lead Engineer** | claude-sonnet-4.6 | high | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Principal Engineer** | claude-opus-4.6 | high | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
+| **Security Engineer** | claude-opus-4.7 | max | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Model Engineer** | claude-sonnet-4.5 | high | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
 **Routing Rules** (for Orchestrator):
 - If task is security-scoped → Security Engineer (block all other routes)
@@ -111,7 +161,7 @@ Orchestrator → Engineer (via DELEGATE block):
 handoff_type: DELEGATE
 task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Implement 30s token expiry grace period in {example-service}; do not change Cognito config
 context:
@@ -144,7 +194,7 @@ tests:
   - "make verify": PASS (48 tests)
 tokens_in: 1200
 tokens_out: 820
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 18
 escalations: 0
@@ -575,7 +625,7 @@ When creating a sub-task, include these new optional fields:
 handoff_type: DELEGATE
 task_id: payment-analysis-stripe-001
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: "Analyze Stripe payment service for security risks..."
 plan:
@@ -627,7 +677,7 @@ children_failed: []
 result_aggregation_status: all_complete
 tokens_in: 2400
 tokens_out: 1850
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 duration_minutes: 45
 ---

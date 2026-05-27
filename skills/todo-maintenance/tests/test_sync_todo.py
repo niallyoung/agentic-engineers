@@ -38,7 +38,7 @@ class TestDelegateEntry:
 handoff_type: DELEGATE
 task_id: 2026-05-18-test-task
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: medium
 scope: |
   Test task for todo-maintenance skill

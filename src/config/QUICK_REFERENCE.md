@@ -28,7 +28,7 @@
 handoff_type: DELEGATE
 task_id: 2026-04-24-redis-caching
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Add Redis caching to {example-service}
 context:

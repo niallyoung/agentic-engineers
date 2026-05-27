@@ -2,7 +2,7 @@
 
 **Role Summary:** Scheduled agent runs TokenAdvisor analysis daily, produces reports, and alerts Orchestrator on anomalies or optimization opportunities.
 
-**Model:** claude-haiku-4-5 | **Effort:** low | **Cost Tier:** 1x | **Token Multiplier:** ~1x (read-only analysis)
+**Model:** claude-haiku-4.5 | **Effort:** low | **Cost Tier:** 1x | **Token Multiplier:** ~1x (read-only analysis)
 
 ---
 

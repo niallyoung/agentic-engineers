@@ -2,7 +2,7 @@
 title: "git-operations"
 description: "Git workflow helpers for the agentic-engineers framework: push with tags, tag management, and standard release workflow"
 role: "Senior Engineer"
-model: "claude-haiku-4-5"
+model: "claude-haiku-4.5"
 effort: "low"
 status: "implemented"
 version: "1.0.0"

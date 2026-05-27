@@ -22,7 +22,7 @@ class TestExpandedDelegate:
         delegate = ExpandedDelegate(
             task_id="2026-05-17-test-task",
             role="engineer",
-            model="claude-haiku-4-5",
+            model="claude-haiku-4.5",
             effort="high",
             scope="This is a test task that should have at least fifteen words in the scope description for validation purposes.",
             plan=["Step 1", "Step 2", "Step 3"],
@@ -38,7 +38,7 @@ class TestExpandedDelegate:
         delegate = ExpandedDelegate(
             task_id="test",  # Too short
             role="invalid-role",
-            model="claude-haiku-4-5",
+            model="claude-haiku-4.5",
             effort="high",
             scope="Short scope",  # Too short
             plan=[],  # Empty plan
@@ -56,7 +56,7 @@ class TestExpandedDelegate:
         delegate = ExpandedDelegate(
             task_id="2026-05-17-test-task",
             role="engineer",
-            model="claude-haiku-4-5",
+            model="claude-haiku-4.5",
             effort="high",
             scope="This is a test task that should have at least fifteen words in the scope description for validation purposes.",
             plan=["Step 1", "Step 2"],
@@ -72,7 +72,7 @@ class TestExpandedDelegate:
         data = {
             "task_id": "2026-05-17-test-task",
             "role": "engineer",
-            "model": "claude-haiku-4-5",
+            "model": "claude-haiku-4.5",
             "effort": "high",
             "scope": "This is a test task that should have at least fifteen words in the scope description for validation purposes.",
             "plan": ["Step 1", "Step 2"],
@@ -313,7 +313,7 @@ class TestValidation:
         data = {
             "task_id": "2026-05-17-test-task",
             "role": "engineer",
-            "model": "claude-haiku-4-5",
+            "model": "claude-haiku-4.5",
             "effort": "high",
             "scope": "This is a test task that should have at least fifteen words in the scope description for validation purposes.",
             "plan": ["Step 1", "Step 2"],

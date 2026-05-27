@@ -133,7 +133,7 @@ to a specialist agent.
 handoff_type: DELEGATE
 task_id: 2026-05-09-add-jwt-validation
 role: senior_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: medium
 estimated_hours: 8
 scope: |
