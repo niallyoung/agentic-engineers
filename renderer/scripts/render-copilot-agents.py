@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
 Copilot CLI Agent Renderer
-Converts src/agents/*.md to dist/copilot/agents/*.agent.md with Copilot CLI spec compliance.
-
-Model names are resolved from src/config/models.yaml providers.copilot mappings.
+Converts src/agents/*.md to dist/copilot/agents/*.agent.md with Copilot CLI spec compliance
 """
 
 import os
@@ -12,18 +10,12 @@ import re
 from pathlib import Path
 from typing import Dict, Tuple
 
-# Add renderer to path for model_registry import
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from model_registry import HarnessModelRegistry, ModelNotFoundError
-
 class CopilotAgentRenderer:
-    """Renders source agent definitions to Copilot CLI agent profiles with registry-backed models"""
+    """Renders source agent definitions to Copilot CLI agent profiles"""
     
     def __init__(self, src_dir: str, dest_dir: str):
         self.src_dir = Path(src_dir)
         self.dest_dir = Path(dest_dir)
-        self.model_registry = HarnessModelRegistry()
         
         # Ensure destination exists
         self.dest_dir.mkdir(parents=True, exist_ok=True)
@@ -55,15 +47,6 @@ class CopilotAgentRenderer:
         if missing:
             raise ValueError(f"Missing required frontmatter fields: {missing}")
     
-    def resolve_copilot_model(self, agent_name: str) -> str:
-        """Resolve Copilot model from registry, fall back to source model if needed"""
-        try:
-            return self.model_registry.render_model(agent_name, "copilot")
-        except (ModelNotFoundError, KeyError) as e:
-            print(f"⚠️  Registry resolution failed for {agent_name}: {e}")
-            print(f"    Falling back to source model definition")
-            return None
-    
     def render_agent(self, src_file: Path) -> None:
         """Render a single source agent to Copilot CLI format"""
         
@@ -74,22 +57,15 @@ class CopilotAgentRenderer:
         frontmatter, body = self.extract_frontmatter(content)
         self.validate_frontmatter(frontmatter)
         
-        # Get agent name (e.g., "engineer" from "engineer-agent.md")
-        agent_name = src_file.stem
-        
-        # Resolve model from registry (or use source if registry fails)
-        copilot_model = self.resolve_copilot_model(agent_name)
-        if not copilot_model:
-            copilot_model = frontmatter['model']
-        
         # Build output filename: engineer.md → engineer.agent.md
+        agent_name = src_file.stem
         dest_file = self.dest_dir / f"{agent_name}.agent.md"
         
         # Rebuild with clean frontmatter (spec-compliant)
         output = f"""---
 name: {frontmatter['name']}
 description: {frontmatter['description']}
-model: {copilot_model}
+model: {frontmatter['model']}
 ---
 
 {body}"""
@@ -98,7 +74,7 @@ model: {copilot_model}
         with open(dest_file, 'w') as f:
             f.write(output)
         
-        print(f"✅ Rendered: {src_file.name} → {dest_file.name} (model: {copilot_model})")
+        print(f"✅ Rendered: {src_file.name} → {dest_file.name}")
         return dest_file
     
     def render_all(self) -> int:
@@ -148,8 +124,11 @@ def main():
         dest_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser('~/.copilot/agents')
     
     # Get absolute paths
-    script_dir = Path(__file__).parent.parent
-    src_path = (script_dir / src_dir).resolve()
+    repo_root = Path(__file__).parent.parent.parent  # ../../ from scripts/
+    if Path(src_dir).is_absolute():
+        src_path = Path(src_dir).resolve()
+    else:
+        src_path = (repo_root / src_dir).resolve()
     dest_path = Path(dest_dir).expanduser().resolve()
     
     print(f"\n{'='*60}")
