@@ -13,6 +13,8 @@
 # Create a PR with:
 #   - Commit message: "Approved model switch for {agent} because {reason}"
 #   - Rationale in PR description (cost delta, capability improvement, etc)
+#
+# Bypass: SKIP_HOOKS=1 (for emergency situations only; document reason in commit msg)
 
 # ─── LOCKED MODELS: Canonical list (only these are allowed in agents) ────────
 # Format: claude-{variant}-{major}.{minor}
