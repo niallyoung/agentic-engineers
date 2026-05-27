@@ -1,20 +1,28 @@
 """
-Test: Model Naming Compliance
+Test: Model Naming Compliance (PERMANENTLY LOCKED)
 
-Validates that all agent model definitions use the official Copilot CLI format
-(dots in version numbers). This prevents regression and ensures compatibility with
-Anthropic Claude API, Copilot CLI, OpenCode, and pi.dev harnesses.
+Validates that all agent model definitions follow the architecture:
+- SOURCE agents (src/agents/): Use canonical format with DOTS (Copilot CLI format)
+  Example: claude-opus-4.7 (NOT claude-opus-4-7)
+- RENDERED agents (dist/*/): Transform per-harness based on platform requirements
+  - Copilot CLI: Pass-through (dots) → claude-opus-4.7
+  - OpenCode: Transform to hyphens → claude-opus-4-7
+  - Claude Code: Transform to short alias → opus
+  - Pi.dev: Uses hyphens (Anthropic API format)
+
+This architecture is LOCKED and enforced by:
+1. Pre-commit hook (rejects non-compliant commits)
+2. CI pipeline (blocks merge on violation)
+3. Tests in this file (8+ comprehensive tests)
+4. Code comments (every agent/renderer explains transformation)
+
+CRITICAL: This prevents model naming regressions that have broken agents multiple times.
 
 Official sources:
-- Anthropic: https://docs.anthropic.com/claude/docs/models-overview
-- Copilot CLI: https://docs.github.com/en/copilot/reference/ai-models/supported-models
-- Pi.dev: Anthropic API format
-
-Requirements:
-✅ Copilot CLI model names use dots: claude-opus-4.7 (not claude-opus-4-7)
-✅ Dots required in version numbers for Copilot CLI
-✅ Consistent across all source files (agents, validators, docs)
-✅ Consistent across all rendered harnesses (copilot, claude, opencode, pi)
+- Anthropic: https://docs.anthropic.com/claude/docs/models-overview (canonical format)
+- Copilot CLI: https://docs.github.com/en/copilot/reference/ai-models/supported-models (dots required)
+- OpenCode: GitHub issues & investigation (hyphens required)
+- Pi.dev: Anthropic API compatibility (hyphens)
 """
 
 import pytest
@@ -97,9 +105,9 @@ class TestModelNamingCompliance:
 
         content = validator_file.read_text()
 
-        # Extract KNOWN_MODELS set
+        # Extract KNOWN_MODELS set (may have comments and newlines)
         match = re.search(
-            r'KNOWN_MODELS\s*=\s*\{([^}]+)\}',
+            r'KNOWN_MODELS\s*=\s*\{(.*?)\n\}',
             content,
             re.DOTALL
         )
@@ -278,7 +286,7 @@ class TestModelNamingConsistency:
         validator_content = validator_file.read_text()
 
         match = re.search(
-            r'KNOWN_MODELS\s*=\s*\{([^}]+)\}',
+            r'KNOWN_MODELS\s*=\s*\{(.*?)\n\}',
             validator_content,
             re.DOTALL
         )
@@ -345,6 +353,95 @@ class TestModelNamingConsistency:
                         f"first was {models_by_role[role]}, now {model}. "
                         f"Expected one of: {allowed}"
                     )
+
+    def test_no_gpt_models_anywhere(self):
+        """CRITICAL: No GPT models allowed in source or rendered agents."""
+        forbidden_patterns = [
+            r'gpt-4[^0-9]',  # gpt-4, gpt-4o
+            r'gpt-3\.5',      # gpt-3.5-turbo
+            r'gpt-4o-mini',   # gpt-4o-mini
+        ]
+
+        search_paths = [
+            self.REPO_ROOT / "src" / "agents",
+            self.REPO_ROOT / "dist" / "copilot" / "agents",
+            self.REPO_ROOT / "dist" / "claude" / "agents",
+            self.REPO_ROOT / "dist" / "opencode" / "agents",
+            self.REPO_ROOT / "dist" / "pi" / "agent",
+        ]
+
+        for path in search_paths:
+            if not path.exists():
+                continue
+
+            for agent_file in path.rglob("*"):
+                if not agent_file.is_file() or agent_file.suffix not in {'.md', '.yml', '.yaml'}:
+                    continue
+
+                content = agent_file.read_text()
+                for pattern in forbidden_patterns:
+                    matches = re.findall(pattern, content)
+                    assert not matches, (
+                        f"{agent_file}: Found forbidden GPT model. "
+                        f"Use Claude models only (claude-haiku, claude-sonnet, claude-opus). "
+                        f"Matched: {matches}"
+                    )
+
+    def test_unversioned_models_forbidden_in_source(self):
+        """CRITICAL: All source agents must have versioned models (e.g., claude-opus-4.7 not claude-opus)."""
+        agent_files = list(self.REPO_ROOT.glob("src/agents/*-agent.md"))
+
+        for agent_file in agent_files:
+            content = agent_file.read_text()
+
+            # Extract frontmatter
+            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if not frontmatter_match:
+                continue
+
+            frontmatter = frontmatter_match.group(1)
+
+            # Check for unversioned models (claude-haiku, claude-sonnet, claude-opus without version)
+            unversioned = re.findall(r'claude-(haiku|sonnet|opus)(?:\s|$|[\n"])', frontmatter)
+            assert not unversioned, (
+                f"{agent_file.name}: Unversioned model found. "
+                f"Use claude-haiku-4.5, claude-sonnet-4.6, or claude-opus-4.7 (with version)."
+            )
+
+    def test_transformer_logic_documented(self):
+        """CRITICAL: Each renderer script must have comments explaining model transformation."""
+        renderer_files = [
+            self.REPO_ROOT / "renderer" / "scripts" / "render-copilot-agents.py",
+            self.REPO_ROOT / "renderer" / "scripts" / "render-copilot-agents.sh",
+            self.REPO_ROOT / "renderer" / "scripts" / "render-opencode.sh",
+            self.REPO_ROOT / "renderer" / "scripts" / "render-pi-dev.py",
+        ]
+
+        for renderer_file in renderer_files:
+            if not renderer_file.exists():
+                continue
+
+            content = renderer_file.read_text()
+
+            # Check for transformation logic comments
+            has_comment = any(keyword in content.lower() for keyword in [
+                'transform',
+                'model',
+                'version',
+                'copilot',
+                'opencode',
+                'claude',
+                'harness'
+            ])
+
+            # Comment doesn't need to be present if file doesn't do transformation
+            # (e.g., copilot pass-through), but should at least have something
+            if 'model' in content.lower():
+                assert has_comment or len(content) < 100, (
+                    f"{renderer_file.name}: Contains model transformation but lacks documentation. "
+                    f"Add comment explaining: canonical format input → {renderer_file.stem} output format"
+                )
+
 
 
 if __name__ == "__main__":

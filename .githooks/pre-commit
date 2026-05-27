@@ -393,6 +393,67 @@ echo "✅ Source file integrity check passed"
 echo ""
 echo "🔒 Validating queue path centralization..."
 
+# ─── Section: Model Naming Compliance Enforcement ────────────────────────────────
+# SPEC locked: 2026-05-26 (docs/SPEC.md - Model Naming Architecture)
+#
+# Enforcement: Model naming is PERMANENTLY LOCKED via:
+#   1. Source agents MUST use canonical format: claude-{variant}-\d+\.\d+ (DOTS)
+#   2. NO GPT models allowed anywhere
+#   3. NO unversioned models (claude-opus without -4.7)
+#   4. Tests validate all renderers transform correctly per-harness
+#
+# Rationale: Model naming has broken repeatedly; this is non-negotiable.
+#
+
+echo ""
+echo "🔒 Validating model naming compliance..."
+
+MODEL_ERRORS=0
+
+# Check 1: No GPT models in staged files
+STAGED_MODEL_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|py|yaml|yml)$' || true)
+for file in $STAGED_MODEL_FILES; do
+    [ -f "$file" ] || continue
+    
+    # Skip non-agent files (e.g., tests, docs)
+    if [[ "$file" != src/agents/* ]]; then
+        continue
+    fi
+    
+    # Check for GPT models (FORBIDDEN)
+    if git show ":$file" 2>/dev/null | grep -qiE 'model:\s*(gpt-|GPT-)'; then
+        fail "❌ Forbidden: GPT model found in $file"
+        fail "   → Source agents MUST use Claude models only (claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.7)"
+        MODEL_ERRORS=$((MODEL_ERRORS + 1))
+    fi
+    
+    # Check for unversioned Claude models (FORBIDDEN)
+    if git show ":$file" 2>/dev/null | grep -qE 'model:\s*claude-(haiku|sonnet|opus)\s*$'; then
+        fail "❌ Forbidden: Unversioned Claude model in $file"
+        fail "   → Use claude-haiku-4.5, claude-sonnet-4.6, or claude-opus-4.7 (with version)"
+        MODEL_ERRORS=$((MODEL_ERRORS + 1))
+    fi
+    
+    # Check source agents use DOTS (Copilot CLI canonical format)
+    if [[ "$file" == src/agents/*.md ]]; then
+        if git show ":$file" 2>/dev/null | grep -qE 'model:\s*claude-[a-z]+-[0-9]+-[0-9]+'; then
+            fail "❌ Incorrect format: Source agents MUST use DOTS in version (src/agents/)"
+            fail "   → Use claude-opus-4.7 (not claude-opus-4-7)"
+            fail "   → Renderers transform per-harness; source must use canonical format"
+            MODEL_ERRORS=$((MODEL_ERRORS + 1))
+        fi
+    fi
+done
+
+if [ "$MODEL_ERRORS" -gt 0 ]; then
+    echo ""
+    echo "❌ pre-commit: $MODEL_ERRORS model naming violation(s) found"
+    fail "Model naming is LOCKED per docs/SPEC.md 'Model Naming Architecture'"
+    ERRORS=$((ERRORS + MODEL_ERRORS))
+fi
+
+# ─── End: Model Naming Compliance Enforcement ────────────────────────────────
+
 QUEUE_ERRORS=0
 
 # Get all staged files

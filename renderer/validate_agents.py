@@ -34,7 +34,38 @@ except ImportError:
 # Constants
 # ---------------------------------------------------------------------------
 
+# KNOWN_MODELS — LOCKED per docs/SPEC.md "Model Naming Architecture"
+#
+# This set is the SINGLE SOURCE OF TRUTH for approved models.
+# ALL models must be listed here; validator rejects anything outside this set.
+#
+# STRUCTURE:
+#   Versioned Claude models (canonical source format, DOTS required):
+#     - claude-haiku-4.5, claude-haiku-4.6
+#     - claude-sonnet-4.5, claude-sonnet-4.6
+#     - claude-opus-4.5, claude-opus-4.6, claude-opus-4.7
+#   
+#   Short aliases (for Claude Code harness only):
+#     - haiku, sonnet, opus (no version numbers)
+#
+# FORBIDDEN (causes validator to REJECT):
+#   ❌ GPT models (gpt-4, gpt-4o, gpt-4o-mini)
+#   ❌ Unversioned Claude (claude-opus without -4.7)
+#   ❌ Hyphens in version (claude-opus-4-7) — source uses DOTS
+#   ❌ Uppercase, underscores, or other formats
+#
+# RATIONALE:
+#   Model naming broke repeatedly across commits due to per-harness
+#   format confusion. Source agents use canonical format (DOTS),
+#   renderers transform per harness (OpenCode→hyphens, Claude Code→aliases).
+#   This set enforces the canonical format for source validation.
+#   See docs/SPEC.md for complete architecture & transformation rules.
+#
+
 KNOWN_MODELS = {
+    # Versioned Claude models (canonical source format)
+    # SOURCE: https://docs.anthropic.com/claude/docs/models-overview
+    # Format: claude-{variant}-{major}.{minor}
     "claude-haiku-4.5",
     "claude-haiku-4.6",
     "claude-sonnet-4.5",
@@ -42,7 +73,9 @@ KNOWN_MODELS = {
     "claude-opus-4.5",
     "claude-opus-4.6",
     "claude-opus-4.7",
-    # Allow short-form aliases used in some dist/ renders (e.g. render-claude.sh)
+    
+    # Short aliases (Claude Code harness only, NO DOTS)
+    # Used in dist/claude/agents/ after transformation from canonical format
     "haiku",
     "sonnet",
     "opus",

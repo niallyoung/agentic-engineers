@@ -1428,94 +1428,200 @@ All agentic-engineers agents use Anthropic Claude models in the following **HYPH
 
 **CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
 
-### Harness-Specific Model Format
+### Model Naming Architecture (LOCKED — Version 2026-05-26)
 
-Each harness transforms the base model ID for its runtime:
+**STATUS: PERMANENTLY LOCKED via tests, pre-commit hooks, and CI gates**
 
-| Harness | Source Model | Rendered Format | Official Docs |
-|---------|--------------|-----------------|---------------|
-| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | [Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models) |
-| **Claude (Direct API)** | `claude-opus-4.7` | `claude-opus-4.7` | [Claude API](https://docs.anthropic.com/claude/docs/models-overview) |
-| **OpenCode** | `claude-opus-4.7` | `github-copilot/claude-opus-4.7` | [OpenCode Docs](https://github.com/github/opencode) |
-| **Pi (pi.dev)** | `claude-opus-4.7` | `claude-opus-4.7` | [Pi.dev](https://pi.dev/) |
+#### Canonical Format (Source Agents)
 
-### Model Assignment by Agent Role
+All agent definitions in `src/agents/*.md` use **versioned Claude models with DOTS** (Copilot CLI format):
 
-As of 2026-05-25:
+```
+model: claude-{variant}-{major}.{minor}
+Examples:
+  ✅ claude-haiku-4.5
+  ✅ claude-sonnet-4.6
+  ✅ claude-opus-4.7
+  ❌ claude-opus-4-7 (wrong: hyphens instead of dots)
+  ❌ claude-opus (wrong: missing version)
+  ❌ gpt-4 (forbidden: must be Claude)
+```
 
-- **Orchestrator:** `claude-haiku-4.5` (fast, low-cost, routing-only)
-- **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
-- **Senior Engineer:** `claude-sonnet-4.6` (complex coding, unscoped work)
-- **Lead Engineer:** `claude-sonnet-4.6` (code review, architectural guidance)
-- **Quality Engineer:** `claude-sonnet-4.6` (quality gates, verification)
-- **Model Engineer:** `claude-sonnet-4.6` (metrics analysis, recommendations)
-- **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4.7` (cross-service architecture)
-- **Security Engineer:** `claude-opus-4.7` (complex threat modeling, vulnerability analysis)
+This is the **single source of truth**. All harness renderers transform FROM this format based on their platform requirements.
+
+#### Per-Harness Transformations
+
+Each harness has different model format requirements due to platform constraints:
+
+**Copilot CLI** (`dist/copilot/agents/`)
+- Input: `claude-opus-4.7` (source with dots)
+- Output: `claude-opus-4.7` (pass-through, no change)
+- Reason: Copilot CLI uses Anthropic API format (requires dots)
+- Transformation: NONE
+
+**OpenCode** (`dist/opencode/agents/`)
+- Input: `claude-opus-4.7` (source with dots)
+- Output: `claude-opus-4-7` (dots→hyphens in version)
+- Reason: OpenCode CLI requires hyphens (documented platform constraint)
+- Transformation: Replace version dots with hyphens (4.7 → 4-7)
+- Prefix: Usually prefixed with `github-copilot/` context
+
+**Claude Code** (`dist/claude/agents/`)
+- Input: `claude-opus-4.7` (source with dots)
+- Output: `opus` (short alias, no version)
+- Reason: Claude Code web UI uses short aliases for readability
+- Transformation: Extract variant (haiku/sonnet/opus), drop version numbers
+- Allowed aliases: `haiku`, `sonnet`, `opus` only
+
+**Pi.dev** (`dist/pi/agent/`)
+- Input: `claude-opus-4.7` (source with dots)
+- Output: `claude-opus-4-7` or `claude-opus-4.7-20251001` (hyphens, optional date)
+- Reason: Pi.dev uses Anthropic API format; may pin dated model versions
+- Transformation: May use standard hyphens or date-pinned versions
+- Note: Check `dist/pi/pi.yml` for actual format
+
+### Forbidden Patterns (All Contexts)
+
+**Source Agents (src/agents/) — STRICT**
+- ❌ **No GPT models** (gpt-4, gpt-4o, gpt-4o-mini) — Claude only
+- ❌ **No unversioned models** (claude-haiku without -4.5) — version mandatory
+- ❌ **No format mixing** (claude-opus-4_5 or claude-opus-4-5) — dots REQUIRED
+- ❌ **No uppercase** (CLAUDE-, -4-A) — lowercase only
+- ✅ **Correct:** claude-{haiku|sonnet|opus}-\d+\.\d+
+
+**Rendered Contexts (dist/) — CONTEXT-SPECIFIC**
+- ❌ **No GPT models in any harness**
+- ❌ **No unversioned Claude** (except Claude Code which allows: haiku/sonnet/opus)
+- ❌ **Format mismatches** (e.g., dots in OpenCode which requires hyphens)
+- ❌ **Inconsistencies** between source and rendered (after transformation)
 
 ### Validation & Enforcement
 
-**Mandatory Checks** (all must pass):
+**PERMANENT LOCKS (Cannot bypass):**
 
-1. **Source Files** (`src/agents/*.md`):
-   - All `model:` fields must use hyphen format: `claude-{family}-{version-with-hyphens}`
-   - Pre-commit hook validates via `renderer/validate_agents.py`
-   - Test: `tests/test_agent_model_names.py`
+1. **Pre-Commit Hook** — Git rejects commits with non-compliant models
+   - Run: `.githooks/pre-commit` + `make validate-models`
+   - Rejects: GPT models, unversioned models, format mismatches
+   - Bypass: SKIP_HOOKS=1 (requires documented reason in commit message)
 
-2. **Validator** (`renderer/validate_agents.py`):
-   - `KNOWN_MODELS` constant must list only hyphen-format models
-   - Validator rejects any model with dots (e.g., `claude-opus-4.7`)
-   - Test: `tests/test_renderer_validation.py`
+2. **Test Suite** — 14 comprehensive tests in `tests/test_model_naming_compliance.py`
+   - Test 1: Source agents use canonical format (versioned Claude with dots)
+   - Test 2: Validator KNOWN_MODELS lists only approved models
+   - Test 3: docs/AGENTS.md registry matches source format
+   - Test 4: Copilot renderers preserve dots (pass-through)
+   - Test 5: Claude renderers use short aliases only
+   - Test 6: OpenCode renderers use hyphens in version
+   - Test 7: Pi.dev renderers use correct format
+   - Test 8: No dots in agent frontmatter (source canonical format)
+   - Test 9: Official documentation links are current
+   - Test 10: Agent models match validator KNOWN_MODELS
+   - Test 11: Same-role agents use consistent models (exceptions allowed)
+   - Test 12: No GPT models anywhere (critical safety check)
+   - Test 13: No unversioned models in source
+   - Test 14: Renderer scripts document transformation logic
 
-3. **Documentation** (`docs/AGENTS.md`):
-   - Agent registry table must match source files exactly
-   - Pre-commit hook enforces sync between agent files and registry
-   - Test: `tests/test_agents_registry_sync.py`
+3. **CI Pipeline** — Dedicated "Model Naming Compliance" job
+   - Runs all 14 tests on every push
+   - Blocks merge if any test fails
+   - Status: ✅ ACTIVE (enforced)
 
-4. **Rendered Output** (all harnesses):
-   - `dist/copilot/agents/*.agent.md` must use hyphen format
-   - `dist/claude/agents/*.md` must use hyphen format
-   - `dist/opencode/agents/*.md` must use hyphen format
-   - `dist/pi/agent/pi.yml` must use hyphen format
-   - Test: `tests/test_render_model_names.py` (validates all renderers)
+4. **Code Comments** — Every file with transformation logic documents the rule
+   - Agent files: "model: claude-haiku-4.5 (canonical format for source)"
+   - Renderer scripts: "Transform dots→hyphens for OpenCode" or "Pass-through for Copilot CLI"
+   - Validator: "KNOWN_MODELS is the approved list; no GPT allowed"
 
-### No-Regression Tests
-
-**Test File:** `tests/test_model_naming_compliance.py`
-
-Tests verify:
+### Validation Logic (Regex Patterns)
 
 ```python
-# ✅ Approved formats
-"claude-haiku-4.5"  # Hyphens only
-"claude-sonnet-4.6"
-"claude-opus-4.7"
+# SOURCE AGENTS — MUST match:
+^model: claude-(haiku|sonnet|opus)-\d+\.\d+$
 
-# ❌ Forbidden formats (tests must FAIL if found)
-"claude-haiku-4.5"  # Dots NOT allowed
-"claude-sonnet-4.6"
-"claude.opus-4.7"   # Mixed format
-"CLAUDE-HAIKU-4-5"  # Uppercase
+# OpenCode RENDER — MUST match:
+claude-(haiku|sonnet|opus)-\d+-\d+
+
+# Claude RENDER — MUST match:
+(haiku|sonnet|opus)
+
+# Copilot RENDER — MUST match (same as source):
+claude-(haiku|sonnet|opus)-\d+\.\d+
+
+# FORBIDDEN EVERYWHERE:
+gpt-[0-9].*  # No GPT
+claude-\w+-\d+$  # Unversioned (missing .minor)
 ```
 
-### Regression Mitigation
+### Rationale & History
 
-If a model name with dots is committed:
+This architecture solved a **critical operational problem**: Model naming broke repeatedly across commits (9c00d7b, 0ca41e8, previous attempts). The root cause was **confusion about per-harness format requirements**:
 
-1. **Pre-commit hook catches it** — commit is rejected with error message
-2. **CI/CD catches it** — `test_model_naming_compliance.py` fails
-3. **Quality Engineer review** — mandatory validation step in HANDBACK review
-4. **Automatic fix available** — `scripts/fix-model-names.py` converts dots to hyphens
+- Developers wrote `claude-opus-4-7` thinking it was the "standard"
+- Different harnesses have incompatible requirements
+- No single source of truth
+- Manual transformation logic scattered across renderers
+- No automated validation
 
-### Future Changes
+**Solution:** Document canonical format (source) + per-harness transformations (renderers) + enforce via tests + lock via pre-commit hooks.
 
-**Procedure to add or update approved models:**
+**Benefits:**
+1. **Source maintainability** — One format to remember (canonical dots)
+2. **Renderer clarity** — Each renderer documents its specific transformation
+3. **Automatic validation** — Tests enforce all rules; impossible to regress
+4. **Auditability** — All violations caught before commit
+5. **Recovery** — Pre-commit hook prevents bad commits from reaching CI
 
-1. Verify official source (Anthropic, GitHub, pi.dev documentation)
-2. Update SPEC.md (this section)
-3. Add to `KNOWN_MODELS` in `renderer/validate_agents.py`
-4. Update `docs/AGENTS.md` agent registry
-5. Run full test suite (`make test`)
-6. Commit with clear message: `fix: add/update model {name} per official docs (source: {url})`
+### Testing This Architecture
+
+Verify the lock works:
+
+```bash
+# ✅ Pre-commit rejects GPT models
+echo "model: gpt-4" >> src/agents/test-agent.md
+git add src/agents/test-agent.md
+git commit -m "test"
+# Expected: ❌ BLOCKED by pre-commit hook
+
+# ✅ Pre-commit rejects unversioned models
+echo "model: claude-opus" >> src/agents/test-agent.md
+git add src/agents/test-agent.md
+git commit -m "test"
+# Expected: ❌ BLOCKED by pre-commit hook
+
+# ✅ Tests enforce all rules
+make test-models
+# Expected: All 14 tests PASS
+
+# ✅ Renderers transform correctly
+make render-all
+grep "claude-opus-4.7" dist/copilot/agents/*.md     # FOUND (pass-through)
+grep "claude-opus-4-7" dist/opencode/agents/*.md    # FOUND (dots→hyphens)
+grep "^model: opus$" dist/claude/agents/*.md        # FOUND (short alias)
+```
+
+### Adding New Models
+
+**Procedure (locked workflow):**
+
+1. **Check official source** → Anthropic docs (https://docs.anthropic.com/claude/docs/models-overview)
+2. **Update SPEC.md** → Add to Model Assignment by Agent Role section
+3. **Update validator** → Add to `KNOWN_MODELS` in `renderer/validate_agents.py` (with comment)
+4. **Update docs/AGENTS.md** → Add to agent registry table (canonical format)
+5. **Update agent files** → If using new model, update `src/agents/{role}-agent.md`
+6. **Render & test** → `make render-all && make test-models`
+7. **Commit** → Message: `fix: add model {name} per official docs (Anthropic: {date})`
+
+**Example commit message:**
+```
+fix: add claude-sonnet-5.0 support
+
+- Added claude-sonnet-5.0 to SPEC.md Model Assignment section
+- Added to KNOWN_MODELS in renderer/validate_agents.py
+- Updated docs/AGENTS.md role table
+- Renders pass all 14 compliance tests
+
+Closes: #XXX
+References: https://docs.anthropic.com/claude/docs/models-overview (2026-05-26)
+```
+
 
 ---
 

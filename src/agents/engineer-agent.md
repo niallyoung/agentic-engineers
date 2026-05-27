@@ -1,6 +1,10 @@
 ---
 name: engineer
 description: Well-scoped task with pre-written plan; low-medium complexity coding/implementation
+# model: claude-haiku-4.5 — LOCKED CANONICAL FORMAT
+# Source agents use versioned Claude with DOTS (Copilot CLI format)
+# Renderers transform per-harness: OpenCode→hyphens, Claude Code→alias only, Copilot CLI→pass-through
+# See docs/SPEC.md "Model Naming Architecture" for complete per-harness transformation rules
 model: claude-haiku-4.5
 ---
 

@@ -258,6 +258,98 @@ failed validation. The fix is:
 
 ---
 
+## Model Naming When Adding Agents
+
+**CRITICAL: This is LOCKED and enforced by tests, pre-commit hooks, and CI.**
+
+When adding a new agent to `src/agents/`, you MUST use the canonical model naming format:
+
+### Canonical Format (Source Agents)
+
+```yaml
+---
+name: my-agent
+description: Agent description
+model: claude-{variant}-{major}.{minor}  # ← REQUIRED format
+---
+```
+
+**Approved models** (use DOTS, not hyphens in version):
+- ✅ `claude-haiku-4.5`
+- ✅ `claude-sonnet-4.6`
+- ✅ `claude-opus-4.7`
+
+**Forbidden** (will be rejected by pre-commit hook):
+- ❌ `claude-opus-4-7` (hyphens instead of dots)
+- ❌ `claude-opus` (missing version)
+- ❌ `gpt-4` (no GPT models allowed)
+
+### Why Per-Harness Transformations?
+
+Different harnesses have incompatible model format requirements:
+
+| Harness | Source | Renders to | Why |
+|---------|--------|------------|-----|
+| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | Uses Anthropic API format (dots required) |
+| **OpenCode** | `claude-opus-4.7` | `claude-opus-4-7` | CLI requires hyphens in version (platform constraint) |
+| **Claude Code** | `claude-opus-4.7` | `opus` | Web UI uses short aliases for UX |
+| **Pi.dev** | `claude-opus-4.7` | `claude-opus-4-7` | Anthropic API format (hyphens) |
+
+**Key principle:** Source agents use ONE canonical format (DOTS). Renderers transform per-harness. This separation makes source maintainable and allows automation of transformations.
+
+### Workflow
+
+1. **Choose model** → Pick from approved list (canonical format with DOTS)
+   ```yaml
+   model: claude-haiku-4.5  # correct
+   ```
+
+2. **Add comment** → Explain why you chose this model
+   ```
+   Agent Purpose: Fast routing/analysis (low cost, low latency)
+   Model Choice: claude-haiku-4.5 (Haiku is fastest; 4.5 stable release)
+   ```
+
+3. **Verify format** → Run pre-commit hook before committing
+   ```bash
+   git add src/agents/my-agent.md
+   git commit -m "feat: add my-agent"
+   # Pre-commit validates model naming automatically
+   ```
+
+4. **Render & test** → Ensure all harnesses render correctly
+   ```bash
+   make render-all
+   make test-models  # Runs 14 model naming compliance tests
+   ```
+
+### If You Forget (Pre-Commit Hook Error)
+
+If you accidentally use hyphens instead of dots:
+
+```
+❌ pre-commit: Incorrect format: Source agents MUST use DOTS in version
+   → Use claude-opus-4.7 (not claude-opus-4-7)
+   → Renderers transform per-harness; source must use canonical format
+```
+
+**Fix:**
+```bash
+# Edit src/agents/my-agent.md and change model to canonical format
+sed -i 's/claude-opus-4-7/claude-opus-4.7/g' src/agents/my-agent.md
+git add src/agents/my-agent.md
+git commit -m "fix: correct model naming format (claude-opus-4.7)"
+```
+
+### See Also
+
+- **Complete architecture:** [`docs/SPEC.md`](docs/SPEC.md) — "Model Naming Architecture" section
+- **Approved models:** [`renderer/validate_agents.py`](renderer/validate_agents.py) — KNOWN_MODELS constant
+- **Tests:** [`tests/test_model_naming_compliance.py`](tests/test_model_naming_compliance.py) — 14 comprehensive tests
+- **Agent registry:** [`docs/AGENTS.md`](docs/AGENTS.md) — model assignments by role
+
+---
+
 ## References
 
 - **Agent Roster:** [`src/AGENTS.md`](src/AGENTS.md) — all roles and responsibilities
