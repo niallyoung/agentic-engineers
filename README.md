@@ -1093,6 +1093,8 @@ delegate:
 
 ## Token Visibility & Budget Checking (Phase 3)
 
+NOTE: not verified yet
+
 Real-time token tracking across all agents and subagents:
 
 ```bash
