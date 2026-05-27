@@ -128,9 +128,38 @@ All harnesses are configured by default to use Anthropic Claude models. Install 
 make install
 ```
 
+### Quick Reference: Harness Matrix
+
+| Feature | OpenCode | Copilot CLI | Claude Code | π.dev |
+|---------|----------|-------------|-------------|-------|
+| **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
+| **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
+| **Managed Config** | ✅ Full | ❌ Manual | ❌ Manual | ⚠️ Experimental |
+| **IDE/CLI** | CLI | CLI | IDE | IDE |
+| **Install Path** | ~/.config/opencode/ | ~/.copilot/ | ~/.claude/ | ~/.pi/agent/ |
+| **Status** | 🟢 Recommended | 🟢 Stable | 🟢 Stable | 🟡 Experimental |
+| **Quality** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
+
 Or for individual harnesses:
 
-### Option 1: Copilot CLI (Full Agent + Skill Support)
+### Option 1: OpenCode (Recommended)
+
+**Best for:** All workflows (CLI-first, full automation, managed config)
+
+```bash
+make install-opencode    # Install agents + skills to ~/.config/opencode/
+```
+
+Use agents via: `opencode --agent orchestrator "delegate: task1; task2; ..."`
+
+Or with the recommended alias:
+```bash
+opencode "delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD; repeat until green"
+```
+
+### Option 2: Copilot CLI (Full Agent + Skill Support)
+
+**Best for:** GitHub Copilot integration with full automation
 
 ```bash
 make install-copilot     # Install agents + skills to ~/.copilot/
@@ -138,25 +167,28 @@ make install-copilot     # Install agents + skills to ~/.copilot/
 
 Use agents via: `copilot --allow-all --autopilot --agent orchestrator "delegate: task1; task2; ..."`
 
-### Option 2: Claude Code (Local with Full Agent Support)
+Or with the recommended alias:
+```bash
+copilot "delegate: read requirements spec; plan and design; implement with quality gates; iterate on commit/push; watch CI/CD; repeat until green"
+```
+
+### Option 3: Claude Code (Local with Full Agent Support)
+
+**Best for:** JetBrains IDE integration (IntelliJ, PyCharm, etc.)
 
 ```bash
 make install-claude      # Install agents to ~/.claude/
 ```
 
-### Option 3: π.dev (Experimental)
+### Option 4: π.dev (Experimental)
+
+**Best for:** Testing and experimental configurations
 
 ```bash
 make install-pi          # Install to ~/.pi/agent/
 ```
 
 **Why Experimental:** π.dev uses static agent configuration (no dynamic agent registration like Copilot and Claude Code). Agent configuration is defined at installation time and cannot be modified at runtime. This limitation makes it less suitable for rapidly evolving multi-agent systems but suitable for testing static configurations.
-
-### Option 4: OpenCode (Optional)
-
-```bash
-make install-opencode    # Install agents + skills to ~/.config/opencode/
-```
 
 ### Using the Orchestrator
 
