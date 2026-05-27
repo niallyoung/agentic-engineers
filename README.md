@@ -276,7 +276,7 @@ model_engineer:
 
 ### Override Models Per Agent/Role
 
-NOTE: this area may not be functional / not verified
+NOTE: this area may not be functional / not verified. Intent here is for `agentic-engineers` to support pluggable: harness, providers, models → sane defaults but auto-detect / user-configuration wizard?
 
 **Method 1: Environment Variables (Temporary)**
 ```bash
