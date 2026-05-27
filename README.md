@@ -77,25 +77,30 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 ## Architecture
 
 ```
-User Task
-   ↓
-[~/.agentic-engineers/queue/incoming/] ← DELEGATE
-   ↓
+[User / CLI]
+   ↓ (copilot --allow-all --autopilot --agent orchestrator "delegate: task1; task2; ...")
 [Orchestrator Agent]
+   ├─ Parses task list
    ├─ Routes via AGENTS.md decision tree
-   ├─ Spawns appropriate specialist
-   └─ Waits for HANDBACK
+   ├─ Writes DELEGATEs to ~/.agentic-engineers/queue/incoming/
+   └─ Polls queue for HANDBACKs
    ↓
-[Specialist Agent]
+[~/.agentic-engineers/queue/incoming/] (tasks waiting)
+   ↓ (Orchestrator picks up)
+[~/.agentic-engineers/queue/processing/] (tasks in flight)
+   ↓ (agent completes)
+[Specialist Agent] (Engineer, Lead, Security, Principal, Senior, etc.)
    ├─ Executes task
    ├─ Measures quality + metrics
    └─ Returns HANDBACK
    ↓
 [Quality Gates validate]
-   └─ quality_score ≥ threshold → done/
+   └─ quality_score ≥ threshold → move to done/
       else → REWORK or ESCALATE
    ↓
-[~/.agentic-engineers/queue/done/] ← Results + Metrics
+[~/.agentic-engineers/queue/done/] ← Results + Metrics + Audit Trail
+   ↓
+[Orchestrator reports back to user]
 ```
 
 ### Queue States
