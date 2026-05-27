@@ -173,9 +173,9 @@ Current format (from CHANGELOG.md line 5):
 - Version is determined by **git tags**, not CHANGELOG
 - Release tool converts `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
 
-### 2.3 Why VERSIONING.md Contradicts This
+### 2.3 Why archive/phase-reports/VERSIONING.md Contradicts This
 
-From VERSIONING.md (lines 33-36):
+From archive/phase-reports/VERSIONING.md (lines 33-36):
 ```
 - **Git tags** — Primary version source (created automatically by CI/CD)
 - **.github/workflows/ci.yml** — Automatic tagging and release
@@ -306,7 +306,7 @@ From git history:
 **Translation**: The skill is **supposed** to auto-generate and regenerate `[Unreleased]` on every commit.
 
 **Problem**: This conflicts with the stated goal:
-- VERSIONING.md says: "Git tags are the only source of truth"
+- archive/phase-reports/VERSIONING.md says: "Git tags are the only source of truth"
 - But version-manager assumes CHANGELOG is a source of truth
 - **Contradiction**: Can't have two sources of truth
 
@@ -331,7 +331,7 @@ From git history:
 ### Option A: DISABLE version-manager (Recommended ✅)
 
 **Rationale**:
-- Git tags are already authoritative (VERSIONING.md confirms)
+- Git tags are already authoritative (archive/phase-reports/VERSIONING.md confirms)
 - CI/CD already creates tags automatically (github-tag-action)
 - Local version calculation adds nothing
 - Removes all hooks + automation
@@ -501,7 +501,7 @@ fi
 - *Validation*: CI/CD check: no tag = no release
 
 **Risk 2: Inconsistent version numbers**
-- *Mitigation*: Keep VERSIONING.md as single source of truth
+- *Mitigation*: Keep archive/phase-reports/VERSIONING.md as single source of truth
 - *Validation*: setup.py reads version from git tags only
 
 **Risk 3: CHANGELOG becomes stale**
@@ -533,7 +533,7 @@ fi
 - [ ] Update SKILL.md to document deprecation
 - [ ] Remove from TODO.md
 - [ ] Remove from `.github/workflows/ci.yml` (if any reference)
-- [ ] Update VERSIONING.md: remove version-manager references
+- [ ] Update archive/phase-reports/VERSIONING.md: remove version-manager references
 - [ ] Add release checklist to CONTRIBUTING.md
 - [ ] Test: Create manual release with git tag
 - [ ] Verify: setup.py reads version correctly from tag
