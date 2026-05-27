@@ -119,12 +119,10 @@ All harnesses are configured by default to use Anthropic Claude models. Install 
 ### Quick Start: All Harnesses (Recommended)
 
 ```bash
-make fresh-install-copilot
-make fresh-install-claude
-make fresh-install-pi
+make install
 ```
 
-Then for individual harnesses:
+Or for individual harnesses:
 
 ### Option 1: Copilot CLI (Full Agent + Skill Support)
 
