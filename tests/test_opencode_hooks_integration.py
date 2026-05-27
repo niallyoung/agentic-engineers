@@ -215,9 +215,13 @@ class TestHooksIntegration:
             "pre-push hook should run tests"
 
     def test_hooks_have_bypass_mechanisms(self):
-        """Verify hooks have documented bypass mechanisms"""
+        """Verify executable hooks have documented bypass mechanisms"""
         for hook in GITHOOKS_DIR.glob("*"):
-            if hook.is_file() and hook.stat().st_mode & 0o111:
+            # Skip documentation files - they don't need bypass mechanisms
+            if hook.suffix in {".md", ".txt"}:
+                continue
+            
+            if hook.is_file():
                 content = hook.read_text()
                 assert "SKIP_HOOKS" in content or "bypass" in content.lower(), \
                     f"{hook.name} should have bypass mechanism"
