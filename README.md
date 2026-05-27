@@ -307,6 +307,8 @@ model_engineer:
 
 ### Override Models Per Agent/Role
 
+NOTE: this area may not be functional / not verified
+
 **Method 1: Environment Variables (Temporary)**
 ```bash
 # Override a single agent's model
