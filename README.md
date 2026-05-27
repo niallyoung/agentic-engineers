@@ -130,7 +130,7 @@ make install
 
 ### Quick Reference: Harness Matrix
 
-| Feature | OpenCode | Copilot CLI | Claude Code | π.dev |
+| Feature | OpenCode CLI | Copilot CLI | Claude CLI | π.dev |
 |---------|----------|-------------|-------------|-------|
 | **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
 | **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
@@ -390,7 +390,7 @@ success_criteria:
 
 ### Quick Reference: Harness Matrix
 
-| Feature | OpenCode | Claude Code | Copilot CLI | π.dev |
+| Feature | OpenCode CLI | Claude CLI | Copilot CLI | π.dev |
 |---------|:--------:|:-----------:|:-----------:|:-----:|
 | **Agents Support** | ✅ Full (8) | ✅ Full (8) | ✅ Full (8) | ⚠️ Static config |
 | **Skills Support** | ✅ (14) | ✅ (14) | ✅ (14) | ❌ |
