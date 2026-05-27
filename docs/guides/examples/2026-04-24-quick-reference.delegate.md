@@ -2,7 +2,7 @@
 handoff_type: DELEGATE
 task_id: 2026-04-24-quickref-card
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: medium
 scope: Create agentic-engineers quick reference card for on-screen use
 

@@ -1,6 +1,7 @@
-.PHONY: help install clean-install install-copilot install-claude install-pi install-opencode \
+.PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
+        install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        status status-opencode \
+        status \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
         lint test quality-gate
@@ -13,6 +14,10 @@ help:
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
 	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
+	@echo "  fresh-install-copilot     Interactive: install Copilot only (with optional backup)"
+	@echo "  fresh-install-claude      Interactive: install Claude only (with optional backup)"
+	@echo "  fresh-install-pi          Interactive: install π.dev only (with optional backup)"
+	@echo "  fresh-install-opencode    Interactive: install OpenCode only (with optional backup)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-pi          Install π.dev harness → ~/.pi/"
@@ -34,7 +39,6 @@ help:
 	@echo ""
 	@echo "Diagnostic:"
 	@echo "  status              Check installation status (all 4 harnesses)"
-	@echo "  status-opencode     Check ~/.config/opencode/ install status"
 	@echo "  verify              Full verification (structure + agents + skills + protocols)"
 	@echo "  validate-opencode   Validate OpenCode config generation"
 	@echo "  validate-agents     Validate agent YAML frontmatter + AGENTS.md registration"
@@ -63,6 +67,18 @@ clean-install: ## Fresh install with interactive backup prompts (timestamped bac
 	@echo ""
 	@echo "📦 Proceeding with fresh installation..."
 	@$(MAKE) install
+
+fresh-install-copilot: ## Interactive: install Copilot only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" copilot
+
+fresh-install-claude: ## Interactive: install Claude only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" claude
+
+fresh-install-pi: ## Interactive: install π.dev only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" pi
+
+fresh-install-opencode: ## Interactive: install OpenCode only (with optional backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" opencode
 
 install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
 	@echo "📋 Validating dist/copilot/ is populated..."
@@ -307,10 +323,15 @@ install-opencode: render-opencode ## Install agents & skills to ~/.config/openco
 	fi
 	@echo "✅ Installation to ~/.config/opencode/ complete"
 	@echo ""
-	@echo "ℹ️  To use in OpenCode:"
-	@echo "  - Reference agents via @{agent-name} (e.g., @orchestrator, @engineer)"
-	@echo "  - Skills automatically discovered via skill tool"
-	@echo "  - Global rules in ~/.config/opencode/AGENTS.md (user overrides → AGENTS.md.local)"
+	@echo "ℹ️  To use agents via OpenCode CLI:"
+	@echo "  opencode --agent orchestrator 'Your task description'"
+	@echo "  opencode --agent engineer 'Implementation task'"
+	@echo ""
+	@echo "  Or via Copilot CLI:"
+	@echo "  copilot --allow-all --autopilot --agent orchestrator 'Your task'"
+	@echo ""
+	@echo "  Skills are automatically discovered via skill tool."
+	@echo "  Global rules in ~/.config/opencode/AGENTS.md"
 
 uninstall-all: uninstall-copilot uninstall-claude uninstall-pi uninstall-opencode ## Remove from all 4 locations
 	@echo "✅ Uninstall complete"
@@ -322,9 +343,6 @@ uninstall-pi: ## Remove from ~/.pi/ (managed only)
 uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only)
 	@echo "🧹 Uninstalling from ~/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --uninstall
-
-status-opencode: ## Status of ~/.config/opencode/ install
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
 
 render-pi: ## Generate dist/pi/ config (π.dev harness)
 	@echo "🔨 Rendering π.dev harness configuration → dist/pi/..."

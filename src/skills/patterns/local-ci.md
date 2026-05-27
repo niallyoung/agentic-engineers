@@ -1,7 +1,7 @@
 # Local CI Skill
 
 **Used by:** engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** low — run before every push; each step is fast if quality gates are maintained.
 
 Use this skill when running the full local CI pipeline before pushing, or when asked to verify changes are ready to ship. Trigger on: "local ci", "verify", "ready to push", "check everything", "run ci locally", "pre-push check".

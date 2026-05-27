@@ -153,7 +153,7 @@ These files match the directory names we deleted:
 
 **AGENTS.md says:**
 - Role: Security Engineer
-- Model: claude-opus-4-7
+- Model: claude-opus-4.7
 - Effort: max
 - Use: Security analysis, threat modeling, vulnerability audits
 

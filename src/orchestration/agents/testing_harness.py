@@ -40,7 +40,7 @@ class TestScenario:
             "handoff_type": "DELEGATE",
             "task_id": self._task_id(),
             "role": "quality_gate_orchestrator",
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-4.6",
             "effort": "medium",
             "scope": self.description
         }

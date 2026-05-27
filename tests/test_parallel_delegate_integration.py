@@ -59,7 +59,7 @@ def _make_delegate(scope: str, complexity: str = "high", task_id: str = "test-ta
         "handoff_type": "DELEGATE",
         "task_id": task_id,
         "role": "senior_engineer",
-        "model": "claude-sonnet-4-6",
+        "model": "claude-sonnet-4.6",
         "effort": "high",
         "complexity": complexity,
         "scope": scope,

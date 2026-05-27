@@ -22,14 +22,14 @@
 
 | # | Role | Model | Thinking | Cost/Task | Purpose |
 |---|------|-------|----------|-----------|---------|
-| 1 | **Orchestrator** | `claude-haiku-4-5` | ❌ | $0.03 | Entry point — routes all work via decision tree, never does implementation |
-| 2 | **Engineer** | `claude-haiku-4-5` | ❌ | $0.05 | Executes well-scoped, pre-planned tasks (file edits, tests, simple fixes) |
-| 3 | **Model Engineer** | `claude-sonnet-4-6` | ✅ | $0.09 | Analyses HANDBACK metrics; recommends model/effort adjustments |
-| 4 | **Quality Engineer** | `claude-sonnet-4-6` | ✅ | $0.09 | Post-implementation validation; model suitability assessment |
-| 5 | **Lead Engineer** | `claude-sonnet-4-6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
-| 6 | **Senior Engineer** | `claude-sonnet-4-6` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
+| 1 | **Orchestrator** | `claude-haiku-4.5` | ❌ | $0.03 | Entry point — routes all work via decision tree, never does implementation |
+| 2 | **Engineer** | `claude-haiku-4.5` | ❌ | $0.05 | Executes well-scoped, pre-planned tasks (file edits, tests, simple fixes) |
+| 3 | **Model Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Analyses HANDBACK metrics; recommends model/effort adjustments |
+| 4 | **Quality Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Post-implementation validation; model suitability assessment |
+| 5 | **Lead Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
+| 6 | **Senior Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
 | 7 | **Principal Engineer** | `claude-opus-4-6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
-| 8 | **Security Engineer** | `claude-opus-4-7` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
+| 8 | **Security Engineer** | `claude-opus-4.7` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
 
 ### Cost Tiers
 
@@ -76,7 +76,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 1. Orchestrator
 
-**Model:** `claude-haiku-4-5`  **Tier:** Cheap  **Skill:** `src/skills/orchestration/task-routing.md`
+**Model:** `claude-haiku-4.5`  **Tier:** Cheap  **Skill:** `src/skills/orchestration/task-routing.md`
 
 **Purpose:** Entry point for all user requests. Routes work via the decision tree. Never implements.
 
@@ -101,7 +101,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 2. Engineer
 
-**Model:** `claude-haiku-4-5`  **Tier:** Cheap  **Skill:** `src/skills/roles/engineer.md`
+**Model:** `claude-haiku-4.5`  **Tier:** Cheap  **Skill:** `src/skills/roles/engineer.md`
 
 **Purpose:** Execute well-scoped tasks at known file:line addresses. Cheapest implementation role.
 
@@ -128,7 +128,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-4-6`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
+**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
 
 **Purpose:** Plans unscoped work; handles multi-file implementations requiring architectural awareness.
 
@@ -155,7 +155,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 4. Lead Engineer
 
-**Model:** `claude-sonnet-4-6`  **Tier:** Medium  **Skill:** `src/skills/roles/lead-engineer.md`
+**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/lead-engineer.md`
 
 **Purpose:** Architecture decisions, 8-point code review, API contract design, conflict resolution.
 
@@ -179,7 +179,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 5. Quality Engineer
 
-**Model:** `claude-sonnet-4-6`  **Tier:** Medium  **Skill:** `src/skills/roles/quality-engineer.md`
+**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/quality-engineer.md`
 
 **Purpose:** Post-implementation validation. Verifies HANDBACK correctness and assesses model suitability.
 
@@ -203,7 +203,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-4-6`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
+**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
 
 **Purpose:** Analyse HANDBACK efficiency metrics; recommend model or effort tier adjustments.
 
@@ -250,7 +250,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 8. Security Engineer
 
-**Model:** `claude-opus-4-7`  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
+**Model:** `claude-opus-4.7`  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
 
 **Purpose:** Threat modelling, vulnerability assessment, compliance review. Always assigned for security-scoped work.
 
@@ -285,7 +285,7 @@ On completion, agents return a **HANDBACK block** to `~/.copilot/queue/done/TASK
 task_id: TASK-NNN
 type: DELEGATE
 role: senior-engineer          # target role (lowercase-hyphenated)
-model: claude-sonnet-4-6       # must be explicit — no implicit defaults
+model: claude-sonnet-4.6       # must be explicit — no implicit defaults
 effort: high                   # low | medium | high | max
 priority: normal               # low | normal | high | urgent
 
@@ -363,7 +363,7 @@ metrics:
   tokens_used: 5840
   tokens_estimated: 8000
   efficiency_ratio: 0.73       # tokens_used / tokens_estimated
-  model_used: claude-sonnet-4-6
+  model_used: claude-sonnet-4.6
   duration_ms: 42000
   quality_score: 0.88          # 0.0–1.0, self-assessed
 
@@ -427,7 +427,7 @@ Request: [what information is needed to proceed]
 If the agent detects it is running on a different model than specified in the DELEGATE `model:` field:
 
 ```
-❌ MODEL_MISMATCH — expected claude-sonnet-4-6, got claude-haiku-4-5
+❌ MODEL_MISMATCH — expected claude-sonnet-4.6, got claude-haiku-4.5
 Stopping. Orchestrator must re-delegate with the correct model.
 ```
 
@@ -436,7 +436,7 @@ Stopping. Orchestrator must re-delegate with the correct model.
 Every agent MUST include in its final output:
 
 ```
-MODEL_USED: claude-sonnet-4-6   # actual model used (not the requested model)
+MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 ```
 
 ---
@@ -496,7 +496,7 @@ To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
 task_id: TASK-101
 type: DELEGATE
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: low
 priority: normal
 
@@ -550,7 +550,7 @@ Changes:
 - tests/test_postal.py:1-28 — added tests for valid/invalid AU postcodes
 
 CI: PASS — make test FILTER=test_postal: 6 passed
-MODEL_USED: claude-haiku-4-5
+MODEL_USED: claude-haiku-4.5
 ```
 
 ---
@@ -576,7 +576,7 @@ metrics:
   tokens_used: 1200
   tokens_estimated: 2000
   efficiency_ratio: 0.60
-  model_used: claude-haiku-4-5
+  model_used: claude-haiku-4.5
   duration_ms: 8000
   quality_score: 0.0
 
@@ -608,7 +608,7 @@ escalation:
 task_id: TASK-202-senior
 type: DELEGATE
 role: senior-engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 priority: normal
 
@@ -674,7 +674,7 @@ the updated `processor.py` call site.
 task_id: TASK-303
 type: DELEGATE
 role: security-engineer
-model: claude-opus-4-7
+model: claude-opus-4.7
 effort: max
 priority: high
 
@@ -738,7 +738,7 @@ estimated_cost: 0.15
 [DELEGATE block for Senior — implement jti blacklist in handlers.py]
 [DELEGATE block for Engineer — update token storage in middleware.py]
 
-MODEL_USED: claude-opus-4-7
+MODEL_USED: claude-opus-4.7
 ```
 
 ---
@@ -751,7 +751,7 @@ MODEL_USED: claude-opus-4-7
 task_id: TASK-404-qe
 type: DELEGATE
 role: quality-engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: medium
 priority: normal
 
@@ -771,7 +771,7 @@ context:
 requirements:
   - Verify each acceptance criterion from TASK-404
   - Run make lint && make test && make build
-  - Assess whether claude-sonnet-4-6 was appropriate or if claude-haiku-4-5 would have sufficed
+  - Assess whether claude-sonnet-4.6 was appropriate or if claude-haiku-4.5 would have sufficed
 
 acceptance_criteria:
   - "AC1: make lint passes with no errors"

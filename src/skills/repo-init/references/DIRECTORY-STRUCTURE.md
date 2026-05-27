@@ -214,7 +214,7 @@ def test_gitignore_contains_framework_entries():
     gitignore = REPO_ROOT / ".gitignore"
     if gitignore.exists():
         content = gitignore.read_text()
-        assert "artifacts/queue/" in content or "agentic-engineers" in content
+        assert "~/.agentic-engineers/" in content or "agentic-engineers" in content
 ```
 
 ### `docs/index.md`
@@ -246,9 +246,7 @@ Appended to `.gitignore` by Phase 4:
 # agentic-engineers framework
 .agentic-engineers/*.log
 .agentic-engineers/INIT-FAILED.yaml
-artifacts/queue/
-artifacts/spans/
-artifacts/sessions/
+~/.agentic-engineers/
 data/metrics/*.jsonl
 data/metrics/*.log
 ```
@@ -325,7 +323,7 @@ quality_gate:
   require_code_review: false    # Enable when lead-engineer is active
 
 queue:
-  location: "artifacts/queue"
+  location: "~/.agentic-engineers/"
   session_partitioned: true
 ```
 

@@ -19,7 +19,7 @@ Used by the delegating agent (typically Orchestrator) to pass work to a speciali
 handoff_type: DELEGATE
 task_id: YYYY-MM-DD-slug (e.g. 2026-04-24-fix-token-timeout)
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer
-model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-sonnet-4-7 | claude-opus-4-6 | claude-opus-4-7
+model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-sonnet-4-7 | claude-opus-4-6 | claude-opus-4.7
 effort: low | medium | high | max
 scope: >
   One sentence: what is in scope, explicitly what is out of scope.
@@ -79,7 +79,7 @@ tests:
   - Mobile e2e: "npm run e2e:smoke" PASS (3/3 scenarios)
 tokens_in: 1200
 tokens_out: 820
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 18
 escalations: 0
@@ -158,7 +158,7 @@ Include actual token usage in HANDBACK block:
 ```yaml
 tokens_in: 1200        # Tokens consumed reading DELEGATE + context
 tokens_out: 820        # Tokens produced in response
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 18
 ```
@@ -279,7 +279,7 @@ tests:
   - Mobile e2e: PASS (3/3 scenarios)
 tokens_in: 1200
 tokens_out: 820
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 duration_minutes: 18
 escalations: 0
@@ -317,7 +317,7 @@ Task moves to `artifacts/queue/done/{task_id}-PROCEED.yaml`. Orchestrator (or hu
 handoff_type: DELEGATE
 task_id: 2026-04-24-fix-token-grace-period
 role: Engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: Implement 30s token expiry grace period in {example-service}. Do not change authentication flow or Cognito config.
 context:
@@ -421,7 +421,7 @@ metrics:
   usage_after_session_pct: 71
   tokens_consumed_estimate: 2100
   session_velocity_pct_per_hour: 2.4
-  model_used: claude-sonnet-4-6
+  model_used: claude-sonnet-4.6
   efficiency_note: "Token consumption 8% below baseline for similar scope"
 ---
 ```
@@ -481,7 +481,7 @@ DELEGATE block includes automatic budget assessment:
 handoff_type: DELEGATE
 task_id: 2026-04-25-refactor-auth-handler
 role: Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: medium
 budget_context:
   session_pct_at_delegation: 65
@@ -557,7 +557,7 @@ When an agent creates a sub-task, include these fields in the DELEGATE block:
 handoff_type: DELEGATE
 task_id: subtask-stripe-analysis-001
 role: engineer
-model: claude-haiku-4-5
+model: claude-haiku-4.5
 effort: high
 scope: "Analyze Stripe payment service for security risks and performance bottlenecks..."
 context:
@@ -630,7 +630,7 @@ children_failed: []
 result_aggregation_status: all_complete
 tokens_in: 2400
 tokens_out: 1850
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 duration_minutes: 45
 escalations: 0
@@ -748,7 +748,7 @@ children_results:
 handoff_type: DELEGATE
 task_id: payment-analysis-001
 role: senior_engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: high
 scope: "Analyze all three payment services (Stripe, PayPal, Crypto) for security risks..."
 plan:

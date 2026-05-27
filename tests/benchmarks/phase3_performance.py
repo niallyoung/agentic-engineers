@@ -52,7 +52,7 @@ def _make_delegate(task_id: str = "bench-task-001") -> dict:
         "handoff_type": "DELEGATE",
         "task_id": task_id,
         "role": "engineer",
-        "model": "claude-sonnet-4-6",
+        "model": "claude-sonnet-4.6",
         "effort": "medium",
         "scope": "Benchmark task",
     }
@@ -70,7 +70,7 @@ def _make_handback(task_id: str = "bench-task-001", cost_usd: float = 0.05) -> d
             "cost_usd": cost_usd,
         },
         "agent": "engineer",
-        "model": "claude-sonnet-4-6",
+        "model": "claude-sonnet-4.6",
     }
 
 

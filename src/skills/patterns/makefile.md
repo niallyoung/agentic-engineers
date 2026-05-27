@@ -1,7 +1,7 @@
 # Makefile Skill
 
 **Used by:** engineer
-**Model:** claude-sonnet-4-6
+**Model:** claude-sonnet-4.6
 **Effort:** low — copy template, replace placeholders, add per-Lambda targets.
 
 Use this skill when creating or modifying a Makefile for a Go microservice that deploys via AWS CDK and Lambda.

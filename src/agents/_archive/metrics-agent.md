@@ -7,7 +7,7 @@ phase: 5.10
 # Metrics Agent — LIVE IMPLEMENTATION
 
 **Role**: Orchestrator (Haiku)  
-**Model**: claude-haiku-4-5  
+**Model**: claude-haiku-4.5  
 **Effort**: low
 
 ## Agent Logic

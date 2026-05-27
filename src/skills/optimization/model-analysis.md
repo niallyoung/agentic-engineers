@@ -24,7 +24,7 @@ Quality Engineer provides after every task completion:
 ```json
 {
   "task_id": "2026-04-24-redis-caching",
-  "assigned_model": "claude-haiku-4-5",
+  "assigned_model": "claude-haiku-4.5",
   "assigned_effort": "high",
   "quality_score": 92,
   "tokens_in": 18500,
@@ -78,7 +78,7 @@ Update model assignment table with:
     "language": "go"
   },
   "current_assignment": {
-    "model": "claude-haiku-4-5",
+    "model": "claude-haiku-4.5",
     "effort": "high",
     "confidence": 0.85,
     "samples": 5,
@@ -87,19 +87,19 @@ Update model assignment table with:
   },
   "recommendation": {
     "rank_1": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "high",
       "confidence": 0.92,
       "reason": "5 samples all scored 90+, cost stable at $0.13"
     },
     "rank_2": {
-      "model": "claude-haiku-4-5",
+      "model": "claude-haiku-4.5",
       "effort": "medium",
       "confidence": 0.65,
       "reason": "Could reduce effort to save tokens, but only 1 sample"
     },
     "rank_3": {
-      "model": "claude-sonnet-4-6",
+      "model": "claude-sonnet-4.6",
       "effort": "medium",
       "confidence": 0.42,
       "reason": "Never tried; would cost 3x more (not recommended)"

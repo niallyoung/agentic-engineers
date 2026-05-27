@@ -7,7 +7,7 @@ phase: 5.10
 # Testing Agent — LIVE IMPLEMENTATION
 
 **Role**: Engineer  
-**Model**: claude-haiku-4-5  
+**Model**: claude-haiku-4.5  
 **Effort**: medium (downgraded from Sonnet for cost optimization)
 
 **Why Haiku**: Structured output parsing (make test) is mechanical. Haiku excels at this.

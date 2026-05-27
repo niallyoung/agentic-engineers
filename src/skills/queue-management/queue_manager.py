@@ -80,14 +80,14 @@ class QueueManager:
         """Get default queue directory using queue-isolation for harness/session scoping.
 
         Uses ``queue_isolation.get_queue_path()`` when the queue-isolation skill is
-        available (preferred).  Falls back to the legacy ``~/.copilot/queue/`` path
+        available (preferred).  Falls back to the legacy ``~/.agentic-engineers/`` path
         so that existing deployments are not broken.
 
         Isolation path:
             ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/incoming/
 
         Legacy fallback path:
-            ~/.copilot/queue/{session_id}/incoming/
+            ~/.agentic-engineers/{session_id}/incoming/
         """
         qi = _try_import_queue_isolation()
         if qi is not None:
@@ -105,7 +105,7 @@ class QueueManager:
         if not session_id:
             session_id = "local"
 
-        queue_base = os.path.expanduser("~/.copilot/queue")
+        queue_base = os.path.expanduser("~/.agentic-engineers/")
         return os.path.join(queue_base, session_id, "incoming")
 
     @staticmethod

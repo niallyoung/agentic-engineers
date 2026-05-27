@@ -1,13 +1,13 @@
 ---
 name: quality-engineer
 description: Post-implementation quality gate; code review; model suitability assessment
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 ---
 
 # Quality Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Quality Engineer
-**Model**: claude-sonnet-4-6
+**Model**: claude-sonnet-4.6
 **Effort**: medium
 **Purpose**: Post-implementation validation. Verify deliverables meet spec. Test execution, coverage analysis, quality assessment.
 
@@ -63,7 +63,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-quality-validate-oauth-impl
 timestamp: 2026-06-02T14:00:00Z
 role: Quality Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-4.6
 effort: medium
 scope: >
   Validate OAuth2 refresh token rotation implementation.
@@ -164,6 +164,15 @@ You operate in **reduced autonomy mode**. Here's when to continue vs. pause:
 
 ## Integration
 
-Invoked by OpenCode when explicitly requested via `@quality-engineer` mention.
+Invoked via OpenCode CLI with `--agent quality-engineer` flag:
+```bash
+opencode --agent quality-engineer "Post-implementation validation task"
+```
+
+Or via Copilot CLI:
+```bash
+copilot --allow-all --autopilot --agent quality-engineer "Quality validation"
+```
+
 Can be automatically invoked by orchestrator agents via Task tool.
 You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6

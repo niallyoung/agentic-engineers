@@ -1,13 +1,21 @@
 """
 Test Suite for Session-ID Based Queue Partitioning
 
+⚠️ DEPENDENT ON LEGACY QUEUE BEHAVIOR (NOW REMOVED)
+These tests cover session-ID based queue partitioning and legacy queue migration,
+which have been removed as of 2026-05-26. The new canonical queue path structure
+no longer supports these features.
+
 Tests cover:
 - Session-ID detection from environment variable
 - Session-ID detection from filesystem
 - Queue path partitioning by session-id
-- Legacy queue migration
+- Legacy queue migration (DEPRECATED)
 - Multiple concurrent sessions isolation
-- Backward compatibility
+- Backward compatibility (REMOVED)
+
+TESTS SKIPPED: These require legacy queue structure that no longer exists.
+See tests/test_queue_path_centralization.py for new canonical path tests.
 """
 
 import os
@@ -18,6 +26,12 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from unittest.mock import patch, MagicMock
+
+# Skip all tests in this module - test legacy functionality that was removed
+pytestmark = pytest.mark.skip(
+    reason="Legacy queue partitioning tests (functionality removed). "
+           "See tests/test_queue_path_centralization.py for canonical path tests."
+)
 import sys
 
 # Add parent directory to path to allow imports

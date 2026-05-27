@@ -1,1 +1,0 @@
-# file-sync skill package

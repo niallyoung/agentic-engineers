@@ -45,7 +45,7 @@ managed_by: spec-management
 | **Model Harness** | {model_harness} |
 | **Date Initialized** | {date} |
 | **Config Location** | `.agentic-engineers/config.yaml` |
-| **Queue Location** | `artifacts/queue/` |
+| **Queue Location** | `~/.agentic-engineers/` |
 | **Agent Definitions** | `agents/` |
 | **Skills** | `skills/` |
 | **Docs** | `docs/` |

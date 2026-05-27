@@ -76,7 +76,7 @@ class ConsistencyChecker:
 
     def __init__(
         self,
-        queue_path: str = "~/.copilot/queue",
+        queue_path: str = "~/.agentic-engineers/",
         session_id: Optional[str] = None,
         spec_path: str = "docs/specs/protocol-core-v1.0.yaml",
     ):
@@ -447,7 +447,7 @@ def main():
     )
     parser.add_argument(
         '--queue',
-        default='~/.copilot/queue',
+        default='~/.agentic-engineers/',
         help='Path to queue directory'
     )
     parser.add_argument(

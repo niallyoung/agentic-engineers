@@ -377,14 +377,14 @@ All work enters via **Orchestrator** (default entry point). Orchestrator applies
 
 | Role | Model | Effort | Cost/Task | Purpose |
 |------|-------|--------|-----------|---------|
-| **Orchestrator** | claude-haiku-4-5 | low | $0.03 | Entry point; routing decisions; queue management; span capture; metrics collection |
-| **Engineer** | claude-haiku-4-5 | high | $0.03 | Execute well-scoped tasks with pre-written plans |
-| **Senior Engineer** | claude-sonnet-4-6 | high | $0.09 | Complex coding without plan; diagnosis; planning |
-| **Lead Engineer** | claude-sonnet-4-6 | high | $0.09 | Code review; quality verification; unblock stuck tasks |
-| **Quality Engineer** | claude-sonnet-4-6 | medium | $0.09 | Tier 1 quality checks; model suitability assessment |
+| **Orchestrator** | claude-haiku-4.5 | low | $0.03 | Entry point; routing decisions; queue management; span capture; metrics collection |
+| **Engineer** | claude-haiku-4.5 | high | $0.03 | Execute well-scoped tasks with pre-written plans |
+| **Senior Engineer** | claude-sonnet-4.6 | high | $0.09 | Complex coding without plan; diagnosis; planning |
+| **Lead Engineer** | claude-sonnet-4.6 | high | $0.09 | Code review; quality verification; unblock stuck tasks |
+| **Quality Engineer** | claude-sonnet-4.6 | medium | $0.09 | Tier 1 quality checks; model suitability assessment |
 | **Principal Engineer** | claude-opus-4-6 | high | $0.15 | Cross-service architecture; complex multi-step planning |
-| **Security Engineer** | claude-opus-4-7 | max | $0.15 | Security analysis; vulnerability audits; threat modeling |
-| **Model Engineer** | claude-sonnet-4-6 | high | $0.09 | Analyze feedback; recommend optimal model/effort; generate artifact index |
+| **Security Engineer** | claude-opus-4.7 | max | $0.15 | Security analysis; vulnerability audits; threat modeling |
+| **Model Engineer** | claude-sonnet-4.6 | high | $0.09 | Analyze feedback; recommend optimal model/effort; generate artifact index |
 
 **Cost Target Distribution:**
 - Orchestrator: 60%
@@ -493,6 +493,158 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
 
 ---
 
+## Queue Architecture & Paths (LOCKED SPEC)
+
+**⚠️ SPECIFICATION LOCKED as of 2026-05-26**
+
+This section defines the canonical queue path architecture for all harnesses. Changes to queue paths require approval via the `spec-management` skill.
+
+### Canonical Queue Path
+
+**All harnesses MUST use: `~/.agentic-engineers/`**
+
+Queue directory structure:
+```
+~/.agentic-engineers/
+├── {session-id}/                       # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
+│   ├── copilot/
+│   │   ├── queue/
+│   │   │   ├── incoming/               # New DELEGATEs waiting for routing
+│   │   │   ├── processing/             # Work assigned to agents, HANDBACKs awaiting review
+│   │   │   ├── done/                   # Completed work
+│   │   │   └── failed/                 # Failed work (optional, for archival)
+│   │   └── session-state/
+│   ├── claude/
+│   │   ├── queue/
+│   │   │   ├── incoming/
+│   │   │   ├── processing/
+│   │   │   ├── done/
+│   │   │   └── failed/
+│   │   └── session-state/
+│   ├── opencode/
+│   │   ├── queue/
+│   │   │   ├── incoming/
+│   │   │   ├── processing/
+│   │   │   ├── done/
+│   │   │   └── failed/
+│   │   └── session-state/
+│   └── pi/
+│       ├── queue/
+│       │   ├── incoming/
+│       │   ├── processing/
+│       │   ├── done/
+│       │   └── failed/
+│       └── session-state/
+```
+
+**Supported Harnesses (ALL REQUIRE SAME BASE):**
+- **copilot**: Uses `~/.agentic-engineers/{session-id}/copilot/queue/`
+- **claude**: Uses `~/.agentic-engineers/{session-id}/claude/queue/`
+- **opencode**: Uses `~/.agentic-engineers/{session-id}/opencode/queue/`
+- **pi**: Uses `~/.agentic-engineers/{session-id}/pi/queue/`
+
+**CRITICAL:** There are NO EXCEPTIONS. All four harnesses use the same `~/.agentic-engineers/` base directory. No harness may use its own legacy path.
+
+### Queue Subdirectories (Standard)
+
+All queue directories MUST contain four standard subdirectories:
+
+| Directory | Purpose | Contents |
+|-----------|---------|----------|
+| **incoming/** | New work waiting for routing | DELEGATE blocks from humans or Orchestrator |
+| **processing/** | Work assigned to agents | HANDBACKs awaiting review by Quality Engineer |
+| **done/** | Completed work | Final decisions ready for human action |
+| **failed/** | Failed work (optional) | HANDBACKs with status=failed or blocked beyond recovery |
+
+All subdirectories exist across all four harnesses (copilot, claude, opencode, pi).
+
+### Unsupported Legacy Paths (DEPRECATED)
+
+The following paths are **DEPRECATED and MUST NOT be used**:
+
+| Legacy Path | Status | Migration |
+|-------------|--------|-----------|
+| `~/.copilot/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/{session-id}/copilot/queue/` |
+| `~/.claude/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/{session-id}/claude/queue/` |
+| `artifacts/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/{session-id}/*/queue/` |
+
+**Migration Completed:** 2026-05-26
+
+**Effect of Using Legacy Paths:** Using any legacy path will cause a `RuntimeError` from the queue isolation layer (queue-isolation skill) because those paths are no longer monitored by the Orchestrator or harness renderers.
+
+### Enforcement Rules
+
+**1. Queue-Isolation REQUIRED (No Fallback Logic)**
+- QueueManager MUST have queue-isolation skill available at runtime
+- If queue-isolation is unavailable, QueueManager raises `RuntimeError` immediately
+- Error message MUST mention canonical path and list all unsupported legacy paths
+- NO fallback to legacy paths; NO conditional logic to support old paths
+
+**2. Orchestrator Hard Constraint**
+- Orchestrator MUST initialize queue polling ONLY from `~/.agentic-engineers/{session-id}/{harness}/queue/`
+- Orchestrator detects session-id from COPILOT_SESSION_ID or CLAUDE_SESSION_ID environment variables
+- Orchestrator MUST NOT check for legacy paths (e.g., `~/.copilot/queue/`)
+- Orchestrator MUST NOT implement conditional logic for different harnesses; all use same base
+
+**3. Harness Renderers (Build-Time Compliance)**
+- All harness configuration renderers (copilot, claude, opencode, pi) MUST output:
+  ```
+  QUEUE_PATH=~/.agentic-engineers/{session-id}/{harness}/queue/
+  ```
+- Build-time validation checks that all harness configs use correct path
+- Pre-commit hooks validate no legacy paths are introduced in harness code
+
+**4. Pre-Commit Hooks (Enforcement Gate)**
+- Git hooks MUST block commits that introduce legacy paths (`~/.copilot/queue`, `~/.claude/queue`, `artifacts/queue`)
+- Exception: Allow in `src/orchestration/queue_compat.py` (marked DEPRECATED) and `_archive/` directories
+- Error message format:
+  ```
+  ERROR: Legacy queue paths found in {file}
+  Use ~/.agentic-engineers/ instead (see SPEC.md: Queue Architecture & Paths)
+  ```
+
+**5. Testing Validation (CI Gate)**
+- Test suite includes `tests/test_queue_path_centralization.py` with 8+ tests
+- All tests validate orchestrator initializes ONLY from canonical path
+- Tests validate all 4 harnesses initialize with correct path
+- Tests verify no legacy paths exist in active source code
+
+### Validation Procedures
+
+**Pre-Merge Gate (Automated):**
+
+1. **Grep Check for Legacy Paths:**
+   ```bash
+   grep -r "\.copilot/queue" src/                # Must return 0 matches (except _archive/)
+   grep -r "\.claude/queue" src/                 # Must return 0 matches (except _archive/)
+   grep -r "artifacts/queue" src/                # Must return 0 matches (except queue_compat.py, _archive/)
+   ```
+
+2. **Harness Config Validation:**
+   - Verify all harness configs output `~/.agentic-engineers/{session-id}/{harness}/queue/`
+   - Test each harness: copilot, claude, opencode, pi
+   - All must use SAME base directory
+
+3. **Test Suite Execution:**
+   - Run: `pytest tests/test_queue_path_centralization.py -v`
+   - All 8+ tests must pass
+   - Tests cover:
+     - Orchestrator requires isolation skill
+     - Canonical path is only path checked
+     - All 4 harnesses use same base
+     - Legacy paths not referenced in active code
+     - Queue subdirectory structure is standard
+     - SPEC.md documents canonical path
+     - Docs/QUEUE-PROTOCOL.md is locked
+     - Pre-commit hook validates paths
+
+4. **CI Gate (GitHub Actions):**
+   - Same tests run on every push
+   - Merge blocked if any test fails
+   - All 2,900+ tests must pass (including 8+ new queue path tests)
+
+---
+
 ## DELEGATE/HANDBACK Protocol
 
 ### DELEGATE Format (Orchestrator → Agent)
@@ -502,7 +654,7 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
 handoff_type: DELEGATE
 task_id: {unique_id}
 role: Engineer | Senior Engineer | Lead Engineer | Quality Engineer | ...
-model: claude-haiku-4-5 | claude-sonnet-4-6 | claude-opus-4-6 | ...
+model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4-6 | ...
 effort: low | medium | high | max
 scope: "Clear one-sentence scope + explicit out-of-scope boundaries"
 context: [relevant files, error messages, root cause analysis]
@@ -682,7 +834,7 @@ examples, and Python API reference.
 
 ### Engineer
 
-**Model:** claude-haiku-4-5 (high effort)  
+**Model:** claude-haiku-4.5 (high effort)  
 **Cost Target:** 18%
 
 Execute well-scoped tasks with pre-written plans.
@@ -698,7 +850,7 @@ Execute well-scoped tasks with pre-written plans.
 
 ### Senior Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 7%
 
 Design solutions for complex tasks without pre-written plans. Diagnose bugs when root cause unclear.
@@ -719,7 +871,7 @@ Design solutions for complex tasks without pre-written plans. Diagnose bugs when
 
 ### Lead Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 2%
 
 Review code and unblock stuck tasks.
@@ -736,7 +888,7 @@ Review code and unblock stuck tasks.
 
 ### Quality Engineer
 
-**Model:** claude-sonnet-4-6 (medium effort)  
+**Model:** claude-sonnet-4.6 (medium effort)  
 **Cost Target:** 8%
 
 Run Tier 1 quality checks. Assess model suitability.
@@ -764,7 +916,7 @@ Design when changes affect >2 repos or service boundaries.
 
 ### Security Engineer
 
-**Model:** claude-opus-4-7 (max effort)  
+**Model:** claude-opus-4.7 (max effort)  
 **Cost Target:** 1%
 
 Scan for vulnerabilities, check dependencies, verify access controls.
@@ -773,7 +925,7 @@ Scan for vulnerabilities, check dependencies, verify access controls.
 
 ### Model Engineer
 
-**Model:** claude-sonnet-4-6 (high effort)  
+**Model:** claude-sonnet-4.6 (high effort)  
 **Cost Target:** 3%
 
 Analyze completed task feedback (~10-100 samples). Identify patterns.
@@ -795,7 +947,7 @@ Analyze completed task feedback (~10-100 samples). Identify patterns.
 
 ### Orchestrator
 
-**Model:** claude-haiku-4-5 (low effort)  
+**Model:** claude-haiku-4.5 (low effort)  
 **Cost Target:** 60%
 
 Runs continuously in harness. Polls queues every 30-60 seconds.
@@ -920,7 +1072,7 @@ span_id: {uuid, unique per agent}
 parent_span_id: {uuid or null}
 attributes:
   agent_type: "Engineer" | "Senior Engineer" | "Quality Engineer" | etc.
-  agent_model: "claude-haiku-4-5" | "claude-sonnet-4-6" | etc.
+  agent_model: "claude-haiku-4.5" | "claude-sonnet-4.6" | etc.
   service_name: "agentic-engineers"
   agent_role: {matching_role_from_DELEGATE}
   task_id: {task_id}
@@ -1257,13 +1409,152 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 
 ---
 
+## Model Naming & Harness Compatibility (LOCKED SPEC)
+
+This section documents the approved AI model names and their official sources. Model naming is **CRITICAL** for harness compatibility and MUST NOT be changed without updating all validators, tests, and this specification.
+
+### Official Model Names (AUTHORITATIVE)
+
+**Source:** [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/docs/models-overview)
+
+All agentic-engineers agents use Anthropic Claude models in the following **HYPHEN format only**:
+
+| Model | Model ID | Claude API Alias | Context Window | Max Output | Use Case |
+|-------|----------|------------------|-----------------|------------|----------|
+| **Claude Haiku 4.5** | `claude-haiku-4.5` | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
+| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | `claude-sonnet-4.6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
+| **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
+| **Claude Opus 4.7** | `claude-opus-4.7` | `claude-opus-4.7` | 1M | 128K | Highest capability; Security Engineer, Principal Engineer |
+
+**CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
+
+### Harness-Specific Model Format
+
+Each harness transforms the base model ID for its runtime:
+
+| Harness | Source Model | Rendered Format | Official Docs |
+|---------|--------------|-----------------|---------------|
+| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | [Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models) |
+| **Claude (Direct API)** | `claude-opus-4.7` | `claude-opus-4.7` | [Claude API](https://docs.anthropic.com/claude/docs/models-overview) |
+| **OpenCode** | `claude-opus-4.7` | `github-copilot/claude-opus-4.7` | [OpenCode Docs](https://github.com/github/opencode) |
+| **Pi (pi.dev)** | `claude-opus-4.7` | `claude-opus-4.7` | [Pi.dev](https://pi.dev/) |
+
+### Model Assignment by Agent Role
+
+As of 2026-05-25:
+
+- **Orchestrator:** `claude-haiku-4.5` (fast, low-cost, routing-only)
+- **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
+- **Senior Engineer:** `claude-sonnet-4.6` (complex coding, unscoped work)
+- **Lead Engineer:** `claude-sonnet-4.6` (code review, architectural guidance)
+- **Quality Engineer:** `claude-sonnet-4.6` (quality gates, verification)
+- **Model Engineer:** `claude-sonnet-4.6` (metrics analysis, recommendations)
+- **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4.7` (cross-service architecture)
+- **Security Engineer:** `claude-opus-4.7` (complex threat modeling, vulnerability analysis)
+
+### Validation & Enforcement
+
+**Mandatory Checks** (all must pass):
+
+1. **Source Files** (`src/agents/*.md`):
+   - All `model:` fields must use hyphen format: `claude-{family}-{version-with-hyphens}`
+   - Pre-commit hook validates via `renderer/validate_agents.py`
+   - Test: `tests/test_agent_model_names.py`
+
+2. **Validator** (`renderer/validate_agents.py`):
+   - `KNOWN_MODELS` constant must list only hyphen-format models
+   - Validator rejects any model with dots (e.g., `claude-opus-4.7`)
+   - Test: `tests/test_renderer_validation.py`
+
+3. **Documentation** (`docs/AGENTS.md`):
+   - Agent registry table must match source files exactly
+   - Pre-commit hook enforces sync between agent files and registry
+   - Test: `tests/test_agents_registry_sync.py`
+
+4. **Rendered Output** (all harnesses):
+   - `dist/copilot/agents/*.agent.md` must use hyphen format
+   - `dist/claude/agents/*.md` must use hyphen format
+   - `dist/opencode/agents/*.md` must use hyphen format
+   - `dist/pi/agent/pi.yml` must use hyphen format
+   - Test: `tests/test_render_model_names.py` (validates all renderers)
+
+### No-Regression Tests
+
+**Test File:** `tests/test_model_naming_compliance.py`
+
+Tests verify:
+
+```python
+# ✅ Approved formats
+"claude-haiku-4.5"  # Hyphens only
+"claude-sonnet-4.6"
+"claude-opus-4.7"
+
+# ❌ Forbidden formats (tests must FAIL if found)
+"claude-haiku-4.5"  # Dots NOT allowed
+"claude-sonnet-4.6"
+"claude.opus-4.7"   # Mixed format
+"CLAUDE-HAIKU-4-5"  # Uppercase
+```
+
+### Regression Mitigation
+
+If a model name with dots is committed:
+
+1. **Pre-commit hook catches it** — commit is rejected with error message
+2. **CI/CD catches it** — `test_model_naming_compliance.py` fails
+3. **Quality Engineer review** — mandatory validation step in HANDBACK review
+4. **Automatic fix available** — `scripts/fix-model-names.py` converts dots to hyphens
+
+### Future Changes
+
+**Procedure to add or update approved models:**
+
+1. Verify official source (Anthropic, GitHub, pi.dev documentation)
+2. Update SPEC.md (this section)
+3. Add to `KNOWN_MODELS` in `renderer/validate_agents.py`
+4. Update `docs/AGENTS.md` agent registry
+5. Run full test suite (`make test`)
+6. Commit with clear message: `fix: add/update model {name} per official docs (source: {url})`
+
+---
+
 ## Update Log
 
 - **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements.
 - **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, bypass procedures, and references to docs/SDLC-HOOKS.md.
 - **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section. Documents token tracking requirements, budget checking requirements, cost attribution, production deployment requirements, and implementation references.
+- **2026-05-25:** Added Model Naming & Harness Compatibility section. Documents approved model names per official Anthropic/GitHub/pi.dev sources, validates hyphen format across all harnesses, adds no-regression tests and enforcement procedures.
 
 ---
 
 **Document Status:** Specification current. Phase 3 complete. Phase 6 span capture in progress.  
 **Maintenance:** Update when agent roles, models, routing rules, or SKILLS change.
+
+---
+
+## Specification
+
+This document defines the operational specification for the Agentic Engineers framework, including the orchestrator-first execution model, agent routing, queue management, security requirements, and compliance gates.
+
+---
+
+## Core Requirements
+
+1. **Orchestrator-First Execution**: All work must flow through the Orchestrator agent. No direct agent invocation is permitted.
+2. **Queue-Based Delegation**: Tasks are queued in session-partitioned directories and processed by agents.
+3. **Audit Trails**: Complete audit trails must be maintained for all DELEGATE/HANDBACK operations.
+4. **Quality Gates**: All completed work must pass Quality Engineer verification before completion.
+5. **Security Compliance**: All code must pass entropy-based credential detection and pattern matching.
+6. **Version Management**: Changes are tracked via CHANGELOG and semantic versioning.
+
+---
+
+## Quality Gates
+
+1. **Pre-Commit Gates**: Verify code integrity, SPEC compliance, and pre-push validation
+2. **Security Gates**: Entropy detection, SPEC.md compliance, dependency scanning
+3. **Framework Integrity**: Ensure consistency across all framework files
+4. **Source Validation**: Verify test sources and skill/agent file integrity
+5. **Quality Engineer Review**: Final validation of output quality and correctness
+6. **Post-Merge Validation**: Continuous monitoring for regressions and quality drift

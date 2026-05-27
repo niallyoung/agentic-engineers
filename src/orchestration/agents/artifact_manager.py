@@ -1,9 +1,9 @@
 """
 Artifact Manager - Read/Write DELEGATE/HANDBACK/FEEDBACK YAML blocks
 
-Manages serialization of DELEGATE, HANDBACK, and FEEDBACK blocks to/from
-the artifacts/ directory structure. Supports date-keyed organization for
-historical archival.
+Manages serialization of DELEGATE, HANDBACK, and FEEDBACK blocks to the
+canonical artifacts directory: ~/.agentic-engineers/{session-id}/{harness}/
+Supports date-keyed organization for historical archival.
 """
 
 import os
