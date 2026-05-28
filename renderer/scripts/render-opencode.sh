@@ -238,11 +238,11 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 ## Mandatory Constraints
 
 ### Queue-based routing
-- ALL work flows through \`artifacts/queue/incoming/ → processing/ → done/\`.
+- ALL work flows through \`~/.agentic-engineers/{session-id}/opencode/queue/incoming/ → processing/ → done/\`.
 - The Orchestrator polls the queue and routes per the decision tree in
   \`docs/AGENTS.md\`. No direct delegation from external sources.
-- DELEGATEs live in \`artifacts/delegates/YYYY-MM-DD/\`; HANDBACKs in
-  \`artifacts/queue/processing/\` until the Quality Engineer reviews them.
+- DELEGATEs are written to the queue's \`incoming/\` directory; HANDBACKs are written to
+  \`processing/\` and moved to \`done/\` after Quality Engineer review.
 
 ### Orchestrator constraints
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
