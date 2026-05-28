@@ -674,8 +674,8 @@ class TestGetDefaultQueueDir:
         # Temporarily make it fail
         with patch.dict("sys.modules", {"queue_isolation": None}):
             result = qm_mod._try_import_queue_isolation()
-        # Should not raise; returns None or the module
-        assert result is None or result is not None  # just no exception
+        # Should return None when module is missing
+        assert result is None
 
     def test_default_queue_dir_with_copilot_session_id(self, tmp_path, monkeypatch):
         """_get_default_queue_dir uses COPILOT_SESSION_ID env var."""

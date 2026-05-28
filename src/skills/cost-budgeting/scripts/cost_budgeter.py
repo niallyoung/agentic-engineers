@@ -26,6 +26,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
+import threading
 import time
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone, timedelta
@@ -204,6 +206,9 @@ class CostBudgeter:
         self._models_yaml = models_yaml or self._find_models_yaml()
         self._cost_rates: Dict[str, Dict[str, Dict[str, float]]] = {}
         self._load_cost_rates()
+        # Thread-safety: per-(session, granularity) locks for record_spend
+        self._budget_locks: Dict[Tuple[str, str], threading.Lock] = {}
+        self._locks_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -250,15 +255,38 @@ class CostBudgeter:
             return None
 
     def _save(self, budget: CostBudget) -> None:
-        """Atomically persist budget to disk."""
+        """
+        Atomically persist budget to disk with thread-safe temp file handling.
+        
+        Uses a unique temporary file (PID + random suffix) in the same directory
+        as the target to ensure atomic os.replace() and prevent concurrent save
+        collisions. Cleans up temp file on exception.
+        """
         path = self._budget_path(budget.session_id, budget.granularity)
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
+        
+        # Create unique temp file in same directory for atomic replace
+        # Using delete=False to manually control cleanup
+        fd, tmp_path_str = tempfile.mkstemp(
+            suffix=".tmp",
+            prefix=f".{path.stem}_",
+            dir=path.parent,
+        )
+        tmp_path = Path(tmp_path_str)
+        
         try:
-            tmp.write_text(json.dumps(budget.to_dict(), indent=2))
-            tmp.replace(path)
+            # Write to temp file via file descriptor
+            os.write(fd, json.dumps(budget.to_dict(), indent=2).encode("utf-8"))
+            os.close(fd)
+            # Atomic rename
+            tmp_path.replace(path)
         except OSError as exc:
             logger.error("Failed to save budget %s: %s", path, exc)
+            # Clean up temp file on failure
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
             raise
 
     # ------------------------------------------------------------------
@@ -324,6 +352,14 @@ class CostBudgeter:
         self._save(budget)
         return budget
 
+    def _get_budget_lock(self, session_id: str, granularity: str) -> threading.Lock:
+        """Get or create a lock for the given (session_id, granularity) pair."""
+        key = (session_id, granularity)
+        with self._locks_lock:
+            if key not in self._budget_locks:
+                self._budget_locks[key] = threading.Lock()
+            return self._budget_locks[key]
+
     def record_spend(
         self,
         session_id: str,
@@ -333,6 +369,9 @@ class CostBudgeter:
     ) -> CostBudget:
         """
         Increment the accumulated spend for (session_id, granularity) by *amount* USD.
+        
+        Thread-safe: uses per-(session, granularity) lock to prevent race
+        conditions during read-modify-write cycle.
 
         Args:
             session_id:  Session to update.
@@ -349,20 +388,23 @@ class CostBudgeter:
         if amount < 0:
             raise ValueError(f"Spend amount must be non-negative, got {amount}")
 
-        budget = self.get_budget(session_id, granularity)
-        budget.current_spend += amount
+        # Acquire lock for this specific budget to prevent lost updates
+        lock = self._get_budget_lock(session_id, granularity)
+        with lock:
+            budget = self.get_budget(session_id, granularity)
+            budget.current_spend += amount
 
-        if provider:
-            budget.provider_splits[provider] = (
-                budget.provider_splits.get(provider, 0.0) + amount
+            if provider:
+                budget.provider_splits[provider] = (
+                    budget.provider_splits.get(provider, 0.0) + amount
+                )
+
+            self._save(budget)
+            logger.debug(
+                "Recorded spend %.6f USD for %s/%s (total: %.6f / %.6f)",
+                amount, session_id, granularity, budget.current_spend, budget.limit_usd,
             )
-
-        self._save(budget)
-        logger.debug(
-            "Recorded spend %.6f USD for %s/%s (total: %.6f / %.6f)",
-            amount, session_id, granularity, budget.current_spend, budget.limit_usd,
-        )
-        return budget
+            return budget
 
     def calculate_provider_cost(
         self,

@@ -756,7 +756,7 @@ class TestWidthLimit:
         assert count == 5
 
     def test_width_exactly_at_limit(self, cycle_detector, temp_queue):
-        """Exactly 10 children is still valid (limit is < 10, so 10 is over)."""
+        """Exactly 10 children exceeds the limit (max_width=10, check is count < max_width)."""
         _create_task(temp_queue, "parent")
         for i in range(10):
             _create_task(temp_queue, f"child-{i}", parent_id="parent")
