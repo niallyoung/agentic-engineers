@@ -26,14 +26,16 @@ class TestValidateQueuePaths:
     
     @pytest.fixture
     def mock_queue_manager(self):
-        """Create a mock queue manager with queue directories."""
+        """Create a mock queue manager with queue directories in canonical format."""
         mock = MagicMock()
         
-        # Create temporary directories for testing
-        temp_dir = tempfile.mkdtemp()
-        incoming_dir = Path(temp_dir) / "incoming"
-        processing_dir = Path(temp_dir) / "processing"
-        done_dir = Path(temp_dir) / "done"
+        # Create temporary directories with canonical format: .agentic-engineers/{session}/{harness}/queue
+        home_dir = Path.home()
+        base_dir = home_dir / ".agentic-engineers" / "test-session" / "opencode" / "queue"
+        
+        incoming_dir = base_dir / "incoming"
+        processing_dir = base_dir / "processing"
+        done_dir = base_dir / "done"
         
         incoming_dir.mkdir(parents=True, exist_ok=True)
         processing_dir.mkdir(parents=True, exist_ok=True)
@@ -43,19 +45,26 @@ class TestValidateQueuePaths:
         mock.processing_dir = processing_dir
         mock.done_dir = done_dir
         
-        return mock, temp_dir
+        return mock, base_dir
     
     @pytest.fixture
     def orchestrator(self, mock_queue_manager):
         """Create OrchestratorAgent with mocked queue manager."""
-        mock_manager, temp_dir = mock_queue_manager
+        mock_manager, base_dir = mock_queue_manager
         agent = MagicMock(spec=OrchestratorAgent)
         
         # Call the real validate_queue_paths method
         agent.validate_queue_paths = OrchestratorAgent.validate_queue_paths.__get__(agent)
         agent.queue_manager = mock_manager
         
-        return agent, mock_manager, temp_dir
+        yield agent, mock_manager, base_dir
+        
+        # Cleanup: remove the test queue directory structure
+        import shutil
+        try:
+            shutil.rmtree(base_dir.parent.parent.parent)  # Remove .agentic-engineers/test-session
+        except Exception:
+            pass
     
     def test_validate_empty_queues(self, orchestrator):
         """Test validation with empty queue directories."""
@@ -273,15 +282,17 @@ class TestValidateQueuePathsErrorHandling:
     
     @pytest.fixture
     def orchestrator_with_mock_manager(self):
-        """Create orchestrator with mock queue manager."""
+        """Create orchestrator with mock queue manager using canonical paths."""
         agent = MagicMock(spec=OrchestratorAgent)
         mock_manager = MagicMock()
         
-        # Set up temporary directories
-        temp_dir = Path(tempfile.mkdtemp())
-        mock_manager.incoming_dir = temp_dir / "incoming"
-        mock_manager.processing_dir = temp_dir / "processing"
-        mock_manager.done_dir = temp_dir / "done"
+        # Set up canonical queue directories: ~/.agentic-engineers/{session}/{harness}/queue
+        home_dir = Path.home()
+        base_dir = home_dir / ".agentic-engineers" / "test-session-errors" / "opencode" / "queue"
+        
+        mock_manager.incoming_dir = base_dir / "incoming"
+        mock_manager.processing_dir = base_dir / "processing"
+        mock_manager.done_dir = base_dir / "done"
         
         for dir_path in [mock_manager.incoming_dir, mock_manager.processing_dir, mock_manager.done_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
@@ -289,7 +300,14 @@ class TestValidateQueuePathsErrorHandling:
         agent.queue_manager = mock_manager
         agent.validate_queue_paths = OrchestratorAgent.validate_queue_paths.__get__(agent)
         
-        return agent, mock_manager, temp_dir
+        yield agent, mock_manager, base_dir
+        
+        # Cleanup
+        import shutil
+        try:
+            shutil.rmtree(base_dir.parent.parent.parent)
+        except Exception:
+            pass
     
     def test_handles_inaccessible_files_gracefully(self, orchestrator_with_mock_manager):
         """Test that inaccessible files don't crash validation."""
