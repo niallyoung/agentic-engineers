@@ -467,7 +467,7 @@ for file in $STAGED_QUEUE_FILES; do
     [ -f "$file" ] || continue
     
     # Skip exceptions: queue_compat.py, _archive/, and tests/
-    if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]]; then
+    if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]] || [[ "$file" == *"queue-path-validator"* ]]; then
         continue
     fi
     
@@ -475,7 +475,7 @@ for file in $STAGED_QUEUE_FILES; do
     
     # Block: ~/.copilot/queue (except exceptions)
     if git show ":$file" 2>/dev/null | grep -q "\.copilot/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]]; then
+        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
             fail "Legacy queue path found in $file: ~/.copilot/queue"
             fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
             QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
@@ -484,7 +484,7 @@ for file in $STAGED_QUEUE_FILES; do
     
     # Block: ~/.claude/queue (except exceptions)
     if git show ":$file" 2>/dev/null | grep -q "\.claude/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]]; then
+        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
             fail "Legacy queue path found in $file: ~/.claude/queue"
             fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
             QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
@@ -493,7 +493,7 @@ for file in $STAGED_QUEUE_FILES; do
     
     # Block: artifacts/queue (except queue_compat.py and _archive/)
     if git show ":$file" 2>/dev/null | grep -q "artifacts/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]]; then
+        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
             fail "Legacy queue path found in $file: artifacts/queue"
             fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
             QUEUE_ERRORS=$((QUEUE_ERRORS + 1))

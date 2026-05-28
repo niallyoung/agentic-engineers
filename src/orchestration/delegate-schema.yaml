@@ -215,6 +215,38 @@ optional_fields:
       - "Gray-zone manual review gate (70-79 range)"
       - "Metrics collection and aggregation"
       - "CI/CD integration"
+  
+  security_scope:
+    type: string
+    enum:
+      - none
+      - auth
+      - crypto
+      - pii
+      - secrets
+      - injection
+      - supply_chain
+    default: none
+    description: "Security classification for task (triggers routing to Security Engineer if set)"
+    example: "auth"
+  
+  approval_gate:
+    type: string
+    enum:
+      - none
+      - lead_engineer
+      - principal_engineer
+      - security_engineer
+      - cto
+    default: none
+    description: "Required approval authority before task execution"
+    example: "principal_engineer"
+  
+  audit_required:
+    type: boolean
+    default: false
+    description: "Whether task execution must be audited (required if approval_gate set)"
+    example: true
 
 # Validation Rules (enforced by orchestrator.py:validate_delegate_pre_flight)
 validation_groups:
@@ -320,6 +352,25 @@ validation_groups:
         rule: "Code review / validation → role = lead_engineer or quality_engineer"
         validator: "('review' not in scope.lower() and 'audit' not in scope.lower()) OR role in ['lead_engineer', 'quality_engineer']"
         severity: "MEDIUM"
+  
+  group_d:
+    name: "Security Fields (Critical for security-scoped tasks)"
+    description: "Any NO = invalid security configuration — reject DELEGATE"
+    checks:
+      - id: "D1"
+        rule: "If security_scope set (not 'none'), approval_gate MUST be set (not 'none')"
+        validator: "security_scope == 'none' OR approval_gate != 'none'"
+        severity: "CRITICAL"
+        
+      - id: "D2"
+        rule: "If approval_gate set (not 'none'), audit_required MUST be true"
+        validator: "approval_gate == 'none' OR audit_required == true"
+        severity: "CRITICAL"
+        
+      - id: "D3"
+        rule: "If security_scope set (not 'none'), role MUST be security_engineer"
+        validator: "security_scope == 'none' OR role == 'security_engineer'"
+        severity: "CRITICAL"
 
 # Effort × Role Mismatch Table
 effort_role_matrix:

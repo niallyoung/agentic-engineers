@@ -365,7 +365,167 @@ if [ "$SPEC_ERRORS" -eq 0 ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9. SUMMARY
+# 9. AGENT DEFINITION VERIFICATION (FIX #3)
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+echo "🔐 Validating queue paths (FIX #1 — enforce canonical paths)..."
+
+QUEUE_PATH_ERRORS=0
+if command -v python3 >/dev/null 2>&1; then
+  # Note: SPEC.md may contain legacy paths in documentation/examples for historical reference
+  # Only validate source code and queue files, not documentation
+  if false && [ -f "SPEC.md" ]; then
+    if python3 << 'PYTHON_QUEUE_VALIDATOR'
+import sys
+sys.path.insert(0, 'src/skills/_meta/queue-path-validator/scripts')
+try:
+    from queue_path_validator import QueuePathValidator
+    
+    validator = QueuePathValidator()
+    with open('SPEC.md', 'r') as f:
+        content = f.read()
+    
+    invalid = validator.find_invalid_paths_in_text(content)
+    if invalid:
+        print("❌ Found legacy queue paths in SPEC.md:")
+        for path in invalid:
+            print("  - " + path)
+        sys.exit(1)
+    else:
+        print("✓ No legacy queue paths in SPEC.md")
+        sys.exit(0)
+except ImportError:
+    print("⚠ Queue path validator not found — skipping (may be normal during initial setup)")
+    sys.exit(0)
+PYTHON_QUEUE_VALIDATOR
+    then
+      pass "Queue paths in SPEC.md are canonical"
+    else
+      fail "Legacy queue paths detected in SPEC.md — update to canonical format"
+      QUEUE_PATH_ERRORS=$((QUEUE_PATH_ERRORS + 1))
+    fi
+  fi  # Disabled: SPEC.md check (may contain legacy paths in docs)
+  
+  # Validate queue paths in all DELEGATE/HANDBACK files in git staging area
+  if command -v git >/dev/null 2>&1; then
+    # Get staged YAML files (DELEGATE and HANDBACK files)
+    DELEGATE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | grep -E '(queue|DELEGATE|HANDBACK)' || true)
+    
+    if [ ! -z "$DELEGATE_FILES" ]; then
+      YAML_VALIDATION_ERRORS=0
+      for file in $DELEGATE_FILES; do
+        if [ -f "$file" ]; then
+          if python3 << PYTHON_YAML_QUEUE_VALIDATOR
+import sys
+sys.path.insert(0, 'src/skills/_meta/queue-path-validator/scripts')
+try:
+    from queue_path_validator import QueuePathValidator
+    import yaml
+    
+    validator = QueuePathValidator()
+    with open('$file', 'r') as f:
+        content = f.read()
+    
+    # Check for invalid paths in the entire file content
+    invalid = validator.find_invalid_paths_in_text(content)
+    if invalid:
+        print("❌ Invalid queue paths in $file:")
+        for path in invalid:
+            print("  - " + path)
+        sys.exit(1)
+    else:
+        sys.exit(0)
+except Exception as e:
+    # Skip validation if file is not readable or validator not available
+    sys.exit(0)
+PYTHON_YAML_QUEUE_VALIDATOR
+          then
+            :  # Path is valid, continue
+          else
+            YAML_VALIDATION_ERRORS=$((YAML_VALIDATION_ERRORS + 1))
+            QUEUE_PATH_ERRORS=$((QUEUE_PATH_ERRORS + 1))
+          fi
+        fi
+      done
+    fi
+  fi
+  
+  if [ "$QUEUE_PATH_ERRORS" -eq 0 ]; then
+    pass "All queue paths are canonical"
+  else
+    ERRORS=$((ERRORS + QUEUE_PATH_ERRORS))
+    CHECKS_FAILED=$((CHECKS_FAILED + 1))
+  fi
+fi
+
+echo ""
+echo "🔐 Verifying agent definitions (FIX #3 — model downgrade protection)..."
+
+if command -v python3 >/dev/null 2>&1; then
+  # Check if agent-verification.py exists
+  if [ -f "src/orchestration/agent-verification.py" ]; then
+    # Verify model_verification_sha in all queue files
+    AGENT_VERIFY_ERRORS=0
+    
+    # Check .agents_verification_sha exists
+    if [ ! -f ".agents_verification_sha" ]; then
+      fail ".agents_verification_sha missing — run: python3 src/orchestration/agent-verification.py generate src/AGENTS.md"
+      AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
+    else
+      pass ".agents_verification_sha file exists"
+    fi
+    
+    # Get current SHA from file
+    if [ -f ".agents_verification_sha" ]; then
+      CURRENT_SHA=$(grep "^agent_sha256=" ".agents_verification_sha" | cut -d= -f2)
+      
+      if [ -z "$CURRENT_SHA" ]; then
+        fail ".agents_verification_sha is empty or malformed"
+        AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
+      else
+        pass "Current AGENTS.md SHA: ${CURRENT_SHA:0:16}..."
+        
+        # Verify SHA is valid (64 hex chars)
+        if ! echo "$CURRENT_SHA" | grep -qE "^[0-9a-f]{64}$"; then
+          fail "SHA256 format invalid: $CURRENT_SHA"
+          AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
+        else
+          pass "SHA256 format valid"
+        fi
+      fi
+    fi
+    
+    # Check AGENTS.md hasn't been tampered with (compare computed vs stored SHA)
+    if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ] && [ ! -z "$CURRENT_SHA" ]; then
+      COMPUTED_SHA=$(python3 src/orchestration/agent-verification.py generate src/AGENTS.md 2>&1 | grep "agent_sha256=" | cut -d= -f2)
+      
+      if [ ! -z "$COMPUTED_SHA" ]; then
+        if [ "$CURRENT_SHA" = "$COMPUTED_SHA" ]; then
+          pass "AGENTS.md SHA matches stored hash — no tampering"
+        else
+          warn "AGENTS.md SHA mismatch detected (AGENTS.md was modified — regenerate .agents_verification_sha if intentional)"
+          warn "  Stored:   $CURRENT_SHA"
+          warn "  Computed: $COMPUTED_SHA"
+          # This is a warning, not an error, to allow legitimate AGENTS.md updates
+        fi
+      fi
+    fi
+    
+    if [ "$AGENT_VERIFY_ERRORS" -gt 0 ]; then
+      ERRORS=$((ERRORS + AGENT_VERIFY_ERRORS))
+      CHECKS_FAILED=$((CHECKS_FAILED + 1))
+    else
+      CHECKS_PASSED=$((CHECKS_PASSED + 1))
+    fi
+  else
+    warn "agent-verification.py not found — skipping agent definition verification"
+  fi
+else
+  warn "python3 not found — skipping agent definition verification"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

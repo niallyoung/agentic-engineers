@@ -9,6 +9,20 @@ required_fields:
     description: "Must exactly match the DELEGATE task_id"
     example: "2026-05-09-protocol-week1-validation"
     
+  spec_version:
+    type: string
+    pattern: "^\\d+\\.\\d+(-.*)?$"
+    description: "SPEC version when task executed (must match DELEGATE for audit trail integrity)"
+    examples:
+      - "1.0"
+      - "1.1"
+      - "1.1-2026-05-28"
+      - "1.0-rc1"
+    validation:
+      - "Must exactly match DELEGATE spec_version"
+      - "Used for audit trail linking and compliance verification"
+      - "Mismatch indicates possible spec drift during task execution"
+    
   status:
     type: string
     enum:
