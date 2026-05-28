@@ -178,8 +178,9 @@ write_config() {
 		# Convert role to agent name (remove ** markers, lowercase, replace spaces with hyphens)
 		local agent_name=$(echo "$role" | sed 's/\*\*//g' | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
 		
-		# Convert model format: claude-haiku-4.5 → github-copilot/claude-haiku-4.5
-		local full_model="github-copilot/$model"
+		# Convert model format: claude-haiku-4.5 → github-copilot/claude-haiku-4-5 (dots→hyphens)
+		local model_normalized=$(echo "$model" | sed 's/\./-/g')  # claude-haiku-4.5 → claude-haiku-4-5
+		local full_model="github-copilot/$model_normalized"
 		
 		# Add to agent config (NO trailing comma - we'll add it between entries)
 		if [ -n "$agent_config" ]; then
@@ -236,7 +237,7 @@ write_config() {
   "\$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
-  "model": "github-copilot/claude-haiku-4.5",
+  "model": "github-copilot/claude-haiku-4-5",
   "compaction": {
     "auto": true,
     "reserved": 30000
