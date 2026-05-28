@@ -480,6 +480,64 @@ in the source repository for the authoritative protocol.
 EOF
 }
 
+# Generate Phase 2 role-specific AGENTS.md files.
+#
+# These files provide role-specific guidance for each of the 8 agents.
+# They are generated persistently from the canonical role-specific templates.
+# This function is idempotent — running it twice produces identical output.
+#
+# Phase 2 artifacts:
+#   dist/opencode/agents/{role}-AGENTS.md
+#
+# Each file contains:
+#   - Role description and capabilities
+#   - Critical constraints (bash/edit restrictions)
+#   - Available tools and skills
+#   - Decision trees and workflows
+#   - Examples and common patterns
+#
+generate_role_agents_md() {
+	local src_role_agents_dir="$REPO_ROOT/dist/opencode/agents"
+	local dst_role_agents_dir="$DST_AGENTS"
+	
+	if [ ! -d "$src_role_agents_dir" ]; then
+		echo "  ⚠️  skipping role-specific AGENTS.md — no source at $src_role_agents_dir"
+		return
+	fi
+	
+	# 8 canonical roles
+	local roles=(
+		orchestrator
+		engineer
+		senior-engineer
+		lead-engineer
+		quality-engineer
+		principal-engineer
+		security-engineer
+		model-engineer
+	)
+	
+	local count=0
+	for role in "${roles[@]}"; do
+		local src_file="$src_role_agents_dir/${role}-AGENTS.md"
+		local dst_file="$dst_role_agents_dir/${role}-AGENTS.md"
+		
+		if [ ! -f "$src_file" ]; then
+			echo "  ⚠️  skipping role-specific AGENTS.md for $role — source not found at $src_file"
+			continue
+		fi
+		
+		# Copy the role-specific guidance file verbatim (idempotent).
+		# Skip if source and destination are identical (same file).
+		if [ "$src_file" != "$dst_file" ]; then
+			cp "$src_file" "$dst_file"
+		fi
+		count=$((count + 1))
+	done
+	
+	echo "✅ Generated $count role-specific AGENTS.md file(s)"
+}
+
 case "$MODE" in
 	--uninstall)
 		echo "🧹 Removing managed files from $OPENCODE/..."
@@ -662,6 +720,10 @@ case "$MODE" in
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
+
+		# 2.5. Phase 2: Role-specific AGENTS.md files (role guidance)
+		echo "📦 Generating Phase 2 role-specific AGENTS.md → $DST_AGENTS/..."
+		generate_role_agents_md
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# This enforces SDLC compliance at commit/push time for the repo itself.
