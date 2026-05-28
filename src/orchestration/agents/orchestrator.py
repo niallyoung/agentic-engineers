@@ -23,6 +23,7 @@ import yaml
 import json
 import time
 import shutil
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -40,6 +41,7 @@ from ..monitoring.metrics import MetricsRegistry
 from ..monitoring.token_tracker import TokenTracker
 from ..monitoring.orchestrator_cli import OrchestratorCLI
 from ..monitoring.budget_checker import BudgetStatus, BudgetResult
+from ..decorators import SecurityError
 
 logger = logging.getLogger(__name__)
 
@@ -1300,12 +1302,329 @@ class OrchestratorAgent(Agent):
             metrics['first_try_quality'] = first_try_quality
         
         if handback_block.get('tests'):
-            metrics['test_results'] = {
-                'passed': test_results.get('passed', 0),
-                'failed': test_results.get('failed', 0),
-            }
+             metrics['test_results'] = {
+                 'passed': test_results.get('passed', 0),
+                 'failed': test_results.get('failed', 0),
+             }
         
         return metrics
+
+    def verify_agent_definitions(self) -> Dict:
+        """
+        Verify agent definitions integrity using SHA256 checksum.
+        
+        Security verification that:
+        1. Loads SHA256 checksum from .agents_verification_sha file
+        2. Computes current SHA256 of docs/AGENTS.md
+        3. Compares checksums to detect unauthorized modifications
+        4. Raises SecurityError if mismatch detected (unless SKIP_AGENT_VERIFICATION=true)
+        5. Supports SKIP_AGENT_VERIFICATION environment variable bypass
+        6. Logs all verification steps with clear pass/fail status
+        7. Has comprehensive docstrings and error messages
+        
+        Returns:
+            Dict with keys:
+            - verified (bool): True if verification passed, False if bypassed or failed
+            - expected_sha (str): SHA256 from .agents_verification_sha file (or None if file missing)
+            - actual_sha (str): Computed SHA256 of docs/AGENTS.md
+            - file_path (str): Path to docs/AGENTS.md
+            - verification_file_path (str): Path to .agents_verification_sha
+            - error (str or None): Error message if verification failed
+            - bypassed (bool): True if verification was skipped via SKIP_AGENT_VERIFICATION
+            - timestamp (str): ISO timestamp of verification
+        
+        Raises:
+            SecurityError: If SHA mismatch detected and SKIP_AGENT_VERIFICATION is not set to 'true'
+        
+        Example:
+            result = orchestrator.verify_agent_definitions()
+            # Typical successful result:
+            # {
+            #     'verified': True,
+            #     'expected_sha': '3466b791...',
+            #     'actual_sha': '3466b791...',
+            #     'file_path': '/path/to/docs/AGENTS.md',
+            #     'verification_file_path': '/path/to/.agents_verification_sha',
+            #     'error': None,
+            #     'bypassed': False,
+            #     'timestamp': '2026-05-28T20:33:32.397030'
+            # }
+        """
+        # Check for bypass flag
+        skip_verification = os.environ.get('SKIP_AGENT_VERIFICATION', '').lower() == 'true'
+        
+        # Paths to verify
+        agents_md_path = Path('docs/AGENTS.md')
+        verification_file_path = Path('.agents_verification_sha')
+        
+        timestamp = datetime.now().isoformat()
+        
+        # Initialize result dict
+        result = {
+            'verified': False,
+            'expected_sha': None,
+            'actual_sha': None,
+            'file_path': str(agents_md_path.absolute()),
+            'verification_file_path': str(verification_file_path.absolute()),
+            'error': None,
+            'bypassed': skip_verification,
+            'timestamp': timestamp,
+        }
+        
+        try:
+            # If bypass is enabled, log warning and return
+            if skip_verification:
+                logger.warning(
+                    "🔓 SKIP_AGENT_VERIFICATION=true — Agent definition verification BYPASSED. "
+                    "This should only be used for development/testing. "
+                    "WARNING: Production environments must verify agent definitions!"
+                )
+                result['verified'] = True  # Mark as "verified" (though actually bypassed)
+                result['bypassed'] = True
+                return result
+            
+            # Step 1: Load expected SHA from verification file
+            if not verification_file_path.exists():
+                error_msg = (
+                    f"Agent verification file not found: {verification_file_path}. "
+                    "Run 'python3 scripts/generate-agent-verification-sha.py' to generate it."
+                )
+                logger.error(f"🔴 {error_msg}")
+                result['error'] = error_msg
+                raise SecurityError(error_msg)
+            
+            # Read and parse verification file
+            try:
+                verification_content = verification_file_path.read_text().strip()
+                expected_sha = None
+                for line in verification_content.split('\n'):
+                    if line.startswith('agent_sha256='):
+                        expected_sha = line.split('=', 1)[1].strip()
+                        break
+                
+                if not expected_sha:
+                    error_msg = (
+                        f"Invalid verification file format: {verification_file_path}. "
+                        "Expected line starting with 'agent_sha256='"
+                    )
+                    logger.error(f"🔴 {error_msg}")
+                    result['error'] = error_msg
+                    raise SecurityError(error_msg)
+                
+                result['expected_sha'] = expected_sha
+            except Exception as e:
+                error_msg = f"Failed to read verification file: {str(e)}"
+                logger.error(f"🔴 {error_msg}")
+                result['error'] = error_msg
+                raise SecurityError(error_msg) from e
+            
+            # Step 2: Verify docs/AGENTS.md exists
+            if not agents_md_path.exists():
+                error_msg = (
+                    f"Agent definitions file not found: {agents_md_path}. "
+                    "Expected file: docs/AGENTS.md"
+                )
+                logger.error(f"🔴 {error_msg}")
+                result['error'] = error_msg
+                raise SecurityError(error_msg)
+            
+            # Step 3: Compute SHA256 of docs/AGENTS.md
+            sha256_hash = hashlib.sha256()
+            with open(agents_md_path, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b''):
+                    sha256_hash.update(chunk)
+            actual_sha = sha256_hash.hexdigest()
+            result['actual_sha'] = actual_sha
+            
+            # Step 4: Compare checksums
+            if expected_sha != actual_sha:
+                error_msg = (
+                    f"🚨 SECURITY ALERT: Agent definitions have been modified! "
+                    f"Expected SHA256: {expected_sha} | "
+                    f"Actual SHA256: {actual_sha} | "
+                    f"File: {agents_md_path}"
+                )
+                logger.error(error_msg)
+                result['error'] = error_msg
+                result['verified'] = False
+                raise SecurityError(error_msg)
+            
+            # Verification passed
+            logger.info(
+                f"✅ Agent definitions verified successfully. "
+                f"SHA256: {actual_sha}"
+            )
+            result['verified'] = True
+            result['error'] = None
+            
+            return result
+        
+        except SecurityError:
+            # Re-raise security errors as-is
+            raise
+        except Exception as e:
+            # Catch unexpected errors
+            error_msg = f"Unexpected error during agent verification: {str(e)}"
+            logger.error(f"🔴 {error_msg}")
+            result['error'] = error_msg
+            raise SecurityError(error_msg) from e
+    
+    def validate_queue_paths(self) -> Dict:
+        """
+        Validate all paths in queue subdirectories (incoming/, processing/, done/).
+        
+        Comprehensive security validation that:
+        1. Validates all paths in queue subdirectories match canonical format
+        2. Rejects legacy paths (~/.copilot/queue/, ~/.claude/queue/)
+        3. Prevents path traversal attempts (.., //, symlinks)
+        4. Returns validation results with valid_count, invalid_count, errors
+        5. Raises SecurityError if invalid paths detected (unless SKIP_QUEUE_PATH_VALIDATION env var set)
+        6. Logs clear validation results
+        
+        Returns:
+            Dict with keys:
+            - valid_count (int): Number of valid paths found
+            - invalid_count (int): Number of invalid paths found
+            - errors (list): List of error dicts, each with:
+              - path (str): The invalid path that was found
+              - reason (str): Why the path is invalid
+              - directory (str): Which queue subdirectory (incoming/processing/done)
+            - status (str): 'PASS' if all paths valid, 'FAIL' if any invalid
+        
+        Raises:
+            SecurityError: If any invalid paths detected (unless SKIP_QUEUE_PATH_VALIDATION=true)
+        
+        Example:
+            result = orchestrator.validate_queue_paths()
+            # result = {
+            #     'valid_count': 42,
+            #     'invalid_count': 0,
+            #     'errors': [],
+            #     'status': 'PASS'
+            # }
+        """
+        try:
+            # Try to import queue path validator from the reference skill
+            from src.skills._meta.queue_path_validator import queue_path_validator
+            validate_queue_path = queue_path_validator.validate_queue_path
+        except (ImportError, AttributeError):
+            # Fallback: implement inline validation
+            logger.warning("queue_path_validator not available, using inline validation")
+            
+            def validate_queue_path(path_str: str) -> Dict:
+                """Inline path validation fallback."""
+                if not path_str or not isinstance(path_str, str):
+                    return {'valid': False, 'error': 'Path must be non-empty string'}
+                
+                path_str = path_str.strip()
+                
+                # Check for path traversal
+                if '..' in path_str or '//' in path_str:
+                    return {'valid': False, 'error': 'Path traversal detected (.., //)'}
+                
+                # Check for legacy paths
+                legacy_patterns = [
+                    '/.copilot/queue',
+                    '/.claude/queue',
+                    '/.pi/queue',
+                ]
+                for pattern in legacy_patterns:
+                    if pattern in path_str:
+                        return {'valid': False, 'error': f'Legacy path detected: {path_str}'}
+                
+                # Check for canonical format: .agentic-engineers/{session}/{harness}/queue
+                import re
+                canonical = re.compile(r'\.agentic-engineers/[a-z0-9\-]+/[a-z0-9\-]+/queue')
+                if not canonical.search(path_str):
+                    return {'valid': False, 'error': 'Path does not match canonical format'}
+                
+                return {'valid': True, 'error': None}
+        
+        valid_count = 0
+        invalid_count = 0
+        errors = []
+        
+        # Define queue subdirectories to validate
+        queue_dirs = [
+            ('incoming', self.queue_manager.incoming_dir),
+            ('processing', self.queue_manager.processing_dir),
+            ('done', self.queue_manager.done_dir),
+        ]
+        
+        # Validate each queue subdirectory
+        for subdir_name, subdir_path in queue_dirs:
+            if not subdir_path.exists():
+                logger.debug(f"Queue subdirectory does not exist: {subdir_path}")
+                continue
+            
+            # Scan all files in the subdirectory
+            for file_path in subdir_path.glob("*"):
+                try:
+                    # Validate the file's absolute path
+                    abs_path = str(file_path.absolute())
+                    validation_result = validate_queue_path(abs_path)
+                    
+                    if validation_result.get('valid', False):
+                        valid_count += 1
+                    else:
+                        invalid_count += 1
+                        error_reason = validation_result.get('error', 'Unknown validation error')
+                        errors.append({
+                            'path': abs_path,
+                            'reason': error_reason,
+                            'directory': subdir_name,
+                        })
+                        logger.warning(f"Invalid path in {subdir_name}: {abs_path} ({error_reason})")
+                
+                except Exception as exc:
+                    invalid_count += 1
+                    errors.append({
+                        'path': str(file_path),
+                        'reason': f"Validation exception: {str(exc)}",
+                        'directory': subdir_name,
+                    })
+                    logger.error(f"Path validation exception for {file_path}: {exc}")
+        
+        # Determine overall status
+        status = 'PASS' if invalid_count == 0 else 'FAIL'
+        
+        result = {
+            'valid_count': valid_count,
+            'invalid_count': invalid_count,
+            'errors': errors,
+            'status': status,
+        }
+        
+        # Log validation results clearly
+        logger.info(
+            f"Queue path validation: {valid_count} valid, {invalid_count} invalid. Status: {status}"
+        )
+        
+        if errors:
+            logger.error(f"Queue path validation errors detected:")
+            for error in errors:
+                logger.error(
+                    f"  - {error['directory']}/{Path(error['path']).name}: "
+                    f"{error['reason']}"
+                )
+        
+        # Raise SecurityError if invalid paths detected (unless skipped)
+        if invalid_count > 0 and os.environ.get('SKIP_QUEUE_PATH_VALIDATION') != 'true':
+            error_msg = (
+                f"Queue path validation FAILED: {invalid_count} invalid path(s) detected. "
+                f"This is a security violation - canonical queue paths required. "
+                f"Details: {errors}"
+            )
+            logger.critical(error_msg)
+            raise SecurityError(error_msg)
+        
+        if invalid_count > 0 and os.environ.get('SKIP_QUEUE_PATH_VALIDATION') == 'true':
+            logger.warning(
+                f"Queue path validation failed with {invalid_count} invalid paths, "
+                f"but SKIP_QUEUE_PATH_VALIDATION=true — continuing anyway"
+            )
+        
+        return result
 
     def run_poll_cycle(self) -> Dict:
         """
@@ -1349,6 +1668,33 @@ class OrchestratorAgent(Agent):
         Exits when idle for idle_timeout seconds.
         """
         print(f"\n🚀 Orchestrator starting polling loop (idle timeout: {self.idle_timeout}s)")
+        
+        # Validate queue paths at startup (security hardening)
+        print(f"\n🔐 Validating queue paths...")
+        try:
+            validation_result = self.validate_queue_paths()
+            print(
+                f"   ✓ Queue path validation: {validation_result['valid_count']} valid, "
+                f"{validation_result['invalid_count']} invalid. Status: {validation_result['status']}"
+            )
+        except SecurityError as sec_err:
+            print(f"   ❌ Security validation failed: {sec_err}")
+            raise
+        
+        # Verify agent definitions at startup (security hardening)
+        print(f"\n🔐 Verifying agent definitions...")
+        try:
+            verification_result = self.verify_agent_definitions()
+            if verification_result['bypassed']:
+                print(f"   ⚠️  Agent verification BYPASSED (SKIP_AGENT_VERIFICATION=true)")
+            elif verification_result['verified']:
+                print(f"   ✓ Agent definitions verified. SHA256: {verification_result['actual_sha'][:16]}...")
+            else:
+                print(f"   ❌ Agent verification failed: {verification_result['error']}")
+                raise SecurityError(verification_result['error'])
+        except SecurityError as sec_err:
+            print(f"   ❌ Agent verification failed: {sec_err}")
+            raise
         
         while True:
             # Poll for tasks

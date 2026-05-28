@@ -9,8 +9,8 @@ from pathlib import Path
 
 def generate_agent_sha():
     """Generate SHA256 of agent definitions."""
-    # Read src/orchestration/agents-manifest.yaml
-    agents_file = Path("src/orchestration/agents-manifest.yaml")
+    # Read docs/AGENTS.md (canonical source of agent definitions)
+    agents_file = Path("docs/AGENTS.md")
     
     if not agents_file.exists():
         print(f"Error: {agents_file} not found", file=sys.stderr)
