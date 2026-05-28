@@ -158,10 +158,82 @@ write_config() {
 		echo "  ⚠️  skipping opencode.jsonc — foreign at $DST_CONFIG"
 		return
 	fi
-	cat > "$DST_CONFIG" <<'EOF'
+	
+	# Generate agent config from AGENTS.md Primary Assignments table
+	# Format: | Role | Model | Effort | Use When |
+	local agent_config=""
+	local model_config=""
+	local models_seen=""
+	
+	# Extract table rows (skip header and separator)
+	local table_lines=$(sed -n '/^## Primary Assignments/,/^##/p' "$DOCS_AGENTS" | grep '^|' | tail -n +3)
+	
+	while IFS='|' read -r empty role model effort use_when; do
+		role=$(echo "$role" | xargs)  # trim whitespace
+		model=$(echo "$model" | xargs)
+		
+		# Skip empty lines
+		[ -z "$role" ] && continue
+		
+		# Convert role to agent name (remove ** markers, lowercase, replace spaces with hyphens)
+		local agent_name=$(echo "$role" | sed 's/\*\*//g' | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+		
+		# Convert model format: claude-haiku-4.5 → github-copilot/claude-haiku-4.5
+		local full_model="github-copilot/$model"
+		
+		# Add to agent config (NO trailing comma - we'll add it between entries)
+		if [ -n "$agent_config" ]; then
+			agent_config="${agent_config},"
+		fi
+		agent_config="${agent_config}
+    \"$agent_name\": {
+      \"model\": \"$full_model\"
+    }"
+		
+		# Track unique models
+		if ! echo "$models_seen" | grep -q "$model"; then
+			models_seen="$models_seen $model"
+			
+			# Generate model config entry (NO trailing comma - we'll add it between entries)
+			local model_name=$(echo "$model" | sed 's/claude-/Claude /' | sed 's/-/ /g' | sed 's/\([0-9]\)\.\([0-9]\)/\1.\2/')
+			local model_id=$(echo "$model" | sed 's/\./-/g')  # claude-haiku-4.5 → claude-haiku-4-5
+			
+			if [ -n "$model_config" ]; then
+				model_config="${model_config},"
+			fi
+			model_config="${model_config}
+        \"$model_id\": {
+          \"id\": \"$model_id\",
+          \"name\": \"$model_name\",
+          \"family\": \"claude\",
+          \"release_date\": \"2025-05-01\",
+          \"attachment\": true,
+          \"reasoning\": true,
+          \"temperature\": true,
+          \"tool_call\": true,
+          \"cost\": {
+            \"input\": 0.000005,
+            \"output\": 0.000025,
+            \"cache_read\": 0.0000005,
+            \"cache_write\": 0.00000625
+          },
+          \"limit\": {
+            \"context\": 1000000,
+            \"output\": 128000
+          },
+          \"modalities\": {
+            \"input\": [\"text\", \"image\"],
+            \"output\": [\"text\"]
+          },
+          \"status\": \"active\"
+        }"
+		fi
+	done <<< "$table_lines"
+	
+	cat > "$DST_CONFIG" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
 {
-  "$schema": "https://opencode.ai/config.json",
+  "\$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
   "model": "github-copilot/claude-haiku-4.5",
@@ -178,39 +250,11 @@ write_config() {
     "grep": "allow",
     "webfetch": "allow"
   },
-  "agent": {
-    "orchestrator": {
-      "model": "github-copilot/claude-haiku-4.5"
-    }
+  "agent": {$agent_config
   },
   "provider": {
     "github-copilot": {
-      "models": {
-        "claude-opus-4.6": {
-          "id": "claude-opus-4.6",
-          "name": "Claude Opus 4.6",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000005,
-            "output": 0.000025,
-            "cache_read": 0.0000005,
-            "cache_write": 0.00000625
-          },
-          "limit": {
-            "context": 1000000,
-            "output": 128000
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        }
+      "models": {$model_config
       }
     }
   }
