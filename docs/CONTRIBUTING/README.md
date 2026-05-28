@@ -59,7 +59,25 @@ After `make install`, the framework automatically:
 3. **Make your changes** using the framework's own tools:
    - New agent? Use `agent-creator` skill
    - New skill? Use `skill-creator` skill
-   - Code changes? Edit directly and run tests
+   - Code changes? Delegate to the Orchestrator!
+
+   Instead of editing files directly, use the delegation format:
+
+   ```
+   delegate: improve agentic-engineers framework in aspect foo by way of bah; subsequent goals and outcomes; create me a skill to fandango, an agent to muppeteer; then update the docs; etcetera; commit and push watch cicd until green or fix until it is
+   ```
+
+   Describe the goal or outcome in sufficient detail with descriptive language. Don't be too prescriptive about how exactly — prefer generalized flexible principles and positive reinforcement over inflexible rules. Give the Orchestrator a list of related tasks and outcomes end-to-end so it has enough context to plan and implement a decent solution.
+
+   > **NOTE:** We don't recommend editing any of the agentic-engineers files by hand. Ask the Orchestrator to delegate those tasks for you.
+   >
+   > When delegating:
+   > - Describe the goal or outcome you want (e.g., "add cost tracking to agent invocations")
+   > - Include sufficient detail with descriptive language
+   > - Don't be overly prescriptive about implementation details
+   > - Prefer generalized, flexible principles and positive reinforcement over inflexible rules
+   > - Provide the Orchestrator with a list of related tasks and outcomes end-to-end
+   > - Give enough context so the Orchestrator can plan and implement a decent solution
 
 4. **Verify locally before pushing:**
    ```bash
