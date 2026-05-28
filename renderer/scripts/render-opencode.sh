@@ -153,101 +153,10 @@ derive_docs_url() {
 #     so a larger reserve reduces mid-task compaction surprises.
 #   - `compaction.auto: true` keeps automatic pruning enabled. The TUI signals when
 #     compaction occurs, so user retains visibility.
-# Generate per-agent permission blocks for OpenCode security enforcement
-# Based on agent role and responsibility level
-get_agent_permissions() {
-	local agent_name="$1"
-	
-	# Define permission rules per agent role
-	# Each role has bash and edit deny lists
-	case "$agent_name" in
-		orchestrator)
-			# Orchestrator has NO direct execution — routing only
-			cat <<'PERMS'
-,
-        "permission": {
-          "bash": {
-            "deny": ["*"]
-          },
-          "edit": {
-            "deny": ["*"]
-          }
-        }
-PERMS
-			;;
-		engineer)
-			# Engineer — standard developer with protections against force-push and destructive ops
-			cat <<'PERMS'
-,
-        "permission": {
-          "bash": {
-            "deny": ["git push *", "git force-push", "git push --force", "git push -f", "rm -rf *", "rm -rf /", "rm -rf ~", "sudo rm", "rm -rf .git"]
-          },
-          "edit": {
-            "deny": ["SPEC.md", ".githooks/**", "docs/SPEC.md", "SPEC-*.md", "opencode.jsonc"]
-          }
-        }
-PERMS
-			;;
-		quality-engineer)
-			# Quality Engineer — QA role with protection against destructive ops
-			cat <<'PERMS'
-,
-        "permission": {
-          "bash": {
-            "deny": ["rm -rf *", "rm -rf /", "rm -rf ~", "git force-push", "git push --force", "git push -f", "git reset --hard HEAD~", "sudo rm", "rm -rf .git"]
-          },
-          "edit": {
-            "deny": ["SPEC.md", ".githooks/**", "docs/SPEC.md", "SPEC-*.md", "opencode.jsonc"]
-          }
-        }
-PERMS
-			;;
-		senior-engineer)
-			# Senior Engineer — architecture role; force-push requires Lead review
-			cat <<'PERMS'
-,
-        "permission": {
-          "bash": {
-            "deny": ["git force-push", "git push --force", "git push -f"]
-          },
-          "edit": {
-            "deny": ["SPEC.md", ".githooks/**", "docs/SPEC.md", "SPEC-*.md"]
-          }
-        }
-PERMS
-			;;
-		lead-engineer)
-			# Lead Engineer — trusted role, full access (implicit)
-			echo ""
-			;;
-		principal-engineer)
-			# Principal Engineer — ultimate authority, full access (implicit)
-			echo ""
-			;;
-		security-engineer)
-			# Security Engineer — trusted security role, full access (implicit)
-			echo ""
-			;;
-		model-engineer)
-			# Model Engineer — optimization role with protection against destructive ops
-			cat <<'PERMS'
-,
-        "permission": {
-          "bash": {
-            "deny": ["rm -rf *", "rm -rf /", "rm -rf ~", "git force-push", "git push --force", "sudo rm", "rm -rf .git"]
-          },
-          "edit": {
-            "deny": ["SPEC.md", ".githooks/**", "opencode.jsonc", "docs/SPEC.md", "SPEC-*.md"]
-          }
-        }
-PERMS
-			;;
-		*)
-			echo ""
-			;;
-	esac
-}
+#
+# NOTE: Agents are NOT config entries. They are discovered as .md files in ~/.config/opencode/agents/
+# with frontmatter (mode/model/temperature/permission/thinking). This function only emits global config
+# (schema, instructions, default_agent, model, compaction, permission, provider).
 
 write_config() {
 	if [ -f "$DST_CONFIG" ] && ! grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then
@@ -255,80 +164,10 @@ write_config() {
 		return
 	fi
 	
-	# Generate agent config from AGENTS.md Primary Assignments table
-	# Format: | Role | Model | Effort | Use When |
-	local agent_config=""
-	local model_config=""
-	local models_seen=""
-	
-	# Extract table rows (skip header and separator)
-	local table_lines=$(sed -n '/^## Primary Assignments/,/^##/p' "$DOCS_AGENTS" | grep '^|' | tail -n +3)
-	
-	while IFS='|' read -r empty role model effort use_when; do
-		role=$(echo "$role" | xargs)  # trim whitespace
-		model=$(echo "$model" | xargs)
-		
-		# Skip empty lines
-		[ -z "$role" ] && continue
-		
-		# Convert role to agent name (remove ** markers, lowercase, replace spaces with hyphens)
-		local agent_name=$(echo "$role" | sed 's/\*\*//g' | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
-		
-		# Convert model format: claude-haiku-4.5 → github-copilot/claude-haiku-4-5 (dots→hyphens)
-		local model_normalized=$(echo "$model" | sed 's/\./-/g')  # claude-haiku-4.5 → claude-haiku-4-5
-		local full_model="github-copilot/$model_normalized"
-		
-		# Generate per-agent permissions (empty string if no restrictions)
-		local permissions=$(get_agent_permissions "$agent_name")
-		
-		# Add to agent config (NO trailing comma - we'll add it between entries)
-		if [ -n "$agent_config" ]; then
-			agent_config="${agent_config},"
-		fi
-		agent_config="${agent_config}
-    \"$agent_name\": {
-      \"model\": \"$full_model\"$permissions
-    }"
-		
-		# Track unique models
-		if ! echo "$models_seen" | grep -q "$model"; then
-			models_seen="$models_seen $model"
-			
-			# Generate model config entry (NO trailing comma - we'll add it between entries)
-			local model_name=$(echo "$model" | sed 's/claude-/Claude /' | sed 's/-/ /g' | sed 's/\([0-9]\)\.\([0-9]\)/\1.\2/')
-			local model_id=$(echo "$model" | sed 's/\./-/g')  # claude-haiku-4.5 → claude-haiku-4-5
-			
-			if [ -n "$model_config" ]; then
-				model_config="${model_config},"
-			fi
-			model_config="${model_config}
-        \"$model_id\": {
-          \"id\": \"$model_id\",
-          \"name\": \"$model_name\",
-          \"family\": \"claude\",
-          \"release_date\": \"2025-05-01\",
-          \"attachment\": true,
-          \"reasoning\": true,
-          \"temperature\": true,
-          \"tool_call\": true,
-          \"cost\": {
-            \"input\": 0.000005,
-            \"output\": 0.000025,
-            \"cache_read\": 0.0000005,
-            \"cache_write\": 0.00000625
-          },
-          \"limit\": {
-            \"context\": 1000000,
-            \"output\": 128000
-          },
-          \"modalities\": {
-            \"input\": [\"text\", \"image\"],
-            \"output\": [\"text\"]
-          },
-          \"status\": \"active\"
-        }"
-		fi
-	done <<< "$table_lines"
+	# IMPORTANT: Agents are NOT config entries. They are discovered as .md files in ~/.config/opencode/agents/
+	# with frontmatter (mode/model/temperature/permission/thinking). opencode.jsonc contains ONLY global config.
+	#
+	# We emit a minimal provider config with available models, but NO agent array.
 	
 	cat > "$DST_CONFIG" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
@@ -350,11 +189,134 @@ write_config() {
     "grep": "allow",
     "webfetch": "allow"
   },
-  "agent": {$agent_config
-  },
   "provider": {
     "github-copilot": {
-      "models": {$model_config
+      "models": {
+        "claude-haiku-4-5": {
+          "id": "claude-haiku-4-5",
+          "name": "Claude Haiku 4.5",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000003,
+            "output": 0.000012,
+            "cache_read": 0.00000015,
+            "cache_write": 0.0000018
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-sonnet-4-5": {
+          "id": "claude-sonnet-4-5",
+          "name": "Claude Sonnet 4.5",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000003,
+            "output": 0.000015,
+            "cache_read": 0.00000015,
+            "cache_write": 0.0000018
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-sonnet-4-6": {
+          "id": "claude-sonnet-4-6",
+          "name": "Claude Sonnet 4.6",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000003,
+            "output": 0.000015,
+            "cache_read": 0.00000015,
+            "cache_write": 0.0000018
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-opus-4-6": {
+          "id": "claude-opus-4-6",
+          "name": "Claude Opus 4.6",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000015,
+            "output": 0.00006,
+            "cache_read": 0.00000075,
+            "cache_write": 0.0000075
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-opus-4-7": {
+          "id": "claude-opus-4-7",
+          "name": "Claude Opus 4.7",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000015,
+            "output": 0.00006,
+            "cache_read": 0.00000075,
+            "cache_write": 0.0000075
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        }
       }
     }
   }
@@ -710,6 +672,16 @@ case "$MODE" in
 				echo "  glob: allow"
 				echo "  grep: allow"
 				echo "  webfetch: allow"
+				
+				# Add thinking config for agents that support extended thinking (Principal, Security)
+				case "$name" in
+					principal-engineer|security-engineer)
+						echo "thinking:"
+						echo "  enabled: true"
+						echo "  budget_tokens: 5000"
+						;;
+				esac
+				
 				echo "---"
 				echo
 				strip_fm "$src_file"

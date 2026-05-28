@@ -11,6 +11,12 @@ model: claude-opus-4.6
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 
+**Extended Thinking**: This role has access to extended thinking (budget: 5000 tokens). Use it for:
+- Hard architectural problems with multiple competing constraints
+- Deep debugging spanning 3+ services or complex call stacks
+- Critical design decisions with significant risk/cost implications
+- Complex distributed system analysis (race conditions, consistency models, etc.)
+
 ---
 
 ## Agent Logic
