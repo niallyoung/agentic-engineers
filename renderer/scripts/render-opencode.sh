@@ -153,6 +153,102 @@ derive_docs_url() {
 #     so a larger reserve reduces mid-task compaction surprises.
 #   - `compaction.auto: true` keeps automatic pruning enabled. The TUI signals when
 #     compaction occurs, so user retains visibility.
+# Generate per-agent permission blocks for OpenCode security enforcement
+# Based on agent role and responsibility level
+get_agent_permissions() {
+	local agent_name="$1"
+	
+	# Define permission rules per agent role
+	# Each role has bash and edit deny lists
+	case "$agent_name" in
+		orchestrator)
+			# Orchestrator has NO direct execution — routing only
+			cat <<'PERMS'
+,
+        "permission": {
+          "bash": {
+            "deny": ["*"]
+          },
+          "edit": {
+            "deny": ["*"]
+          }
+        }
+PERMS
+			;;
+		engineer)
+			# Engineer — standard developer with protections against force-push and destructive ops
+			cat <<'PERMS'
+,
+        "permission": {
+          "bash": {
+            "deny": ["git push *", "git force-push", "git push --force", "git push -f", "rm -rf *", "rm -rf /", "rm -rf ~", "sudo rm", "rm -rf .git"]
+          },
+          "edit": {
+            "deny": ["SPEC.md", ".githooks/**", "docs/SPEC.md", "SPEC-*.md", "opencode.jsonc"]
+          }
+        }
+PERMS
+			;;
+		quality-engineer)
+			# Quality Engineer — QA role with protection against destructive ops
+			cat <<'PERMS'
+,
+        "permission": {
+          "bash": {
+            "deny": ["rm -rf *", "rm -rf /", "rm -rf ~", "git force-push", "git push --force", "git push -f", "git reset --hard HEAD~", "sudo rm", "rm -rf .git"]
+          },
+          "edit": {
+            "deny": ["SPEC.md", ".githooks/**", "docs/SPEC.md", "SPEC-*.md", "opencode.jsonc"]
+          }
+        }
+PERMS
+			;;
+		senior-engineer)
+			# Senior Engineer — architecture role; force-push requires Lead review
+			cat <<'PERMS'
+,
+        "permission": {
+          "bash": {
+            "deny": ["git force-push", "git push --force", "git push -f"]
+          },
+          "edit": {
+            "deny": ["SPEC.md", ".githooks/**", "docs/SPEC.md", "SPEC-*.md"]
+          }
+        }
+PERMS
+			;;
+		lead-engineer)
+			# Lead Engineer — trusted role, full access (implicit)
+			echo ""
+			;;
+		principal-engineer)
+			# Principal Engineer — ultimate authority, full access (implicit)
+			echo ""
+			;;
+		security-engineer)
+			# Security Engineer — trusted security role, full access (implicit)
+			echo ""
+			;;
+		model-engineer)
+			# Model Engineer — optimization role with protection against destructive ops
+			cat <<'PERMS'
+,
+        "permission": {
+          "bash": {
+            "deny": ["rm -rf *", "rm -rf /", "rm -rf ~", "git force-push", "git push --force", "sudo rm", "rm -rf .git"]
+          },
+          "edit": {
+            "deny": ["SPEC.md", ".githooks/**", "opencode.jsonc", "docs/SPEC.md", "SPEC-*.md"]
+          }
+        }
+PERMS
+			;;
+		*)
+			echo ""
+			;;
+	esac
+}
+
 write_config() {
 	if [ -f "$DST_CONFIG" ] && ! grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then
 		echo "  ⚠️  skipping opencode.jsonc — foreign at $DST_CONFIG"
@@ -182,13 +278,16 @@ write_config() {
 		local model_normalized=$(echo "$model" | sed 's/\./-/g')  # claude-haiku-4.5 → claude-haiku-4-5
 		local full_model="github-copilot/$model_normalized"
 		
+		# Generate per-agent permissions (empty string if no restrictions)
+		local permissions=$(get_agent_permissions "$agent_name")
+		
 		# Add to agent config (NO trailing comma - we'll add it between entries)
 		if [ -n "$agent_config" ]; then
 			agent_config="${agent_config},"
 		fi
 		agent_config="${agent_config}
     \"$agent_name\": {
-      \"model\": \"$full_model\"
+      \"model\": \"$full_model\"$permissions
     }"
 		
 		# Track unique models
@@ -304,11 +403,64 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 - **Lead/Senior Engineer** unblock or redirect Engineer when blocked.
 - Each role has specialised skills under \`skills/\` (see \`docs/SKILLS.md\`).
 
+## Protocol Protection (Critical)
+
+### SPEC.md — Immutable Protocol Document
+
+The SPEC.md file defines the agentic-engineers protocol and is protected from direct modification.
+
+**Why**: SPEC.md is the source of truth for our multi-agent coordination protocol. Unauthorized changes could break protocol compliance.
+
+**Who Can Modify?**
+- **Principal Engineer**: Full access via \`spec-management\` skill
+- **All other agents**: Denied (OpenCode will block direct edits)
+
+**How to Modify SPEC.md?**
+1. Use the \`spec-management\` skill (loads structured proposal interface)
+2. Propose changes via SPEC_CHANGE_PROPOSAL.md
+3. Principal Engineer reviews and approves
+4. Changes applied with audit trail maintained automatically
+5. All modifications tracked in SPEC_CHANGELOG.md
+
+### Protected Files
+
+The following files are protected from unintended modifications:
+- \`SPEC.md\` — Core protocol definition (Principal Engineer only)
+- \`docs/SPEC.md\` — Protocol documentation (Principal Engineer only)
+- \`.githooks/**\` — Git hooks infrastructure (Security Engineer only)
+- \`opencode.jsonc\` — OpenCode configuration (Principal Engineer / Security Engineer only)
+- \`SPEC-*.md\` — Protocol extensions (Principal Engineer only)
+
+### Per-Agent Permission Boundaries
+
+Each agent has granular permissions enforced by OpenCode at runtime:
+
+| Agent | Bash Restrictions | Edit Restrictions | Access Level |
+|-------|------------------|-------------------|--------------|
+| **Engineer** | Blocks: \`git push\`, \`git force-push\`, \`rm -rf *\`, \`sudo rm\` | Blocks: SPEC.md, .githooks, config files | Standard developer |
+| **Orchestrator** | Blocks: ALL bash execution | Blocks: ALL file edits | Router only (no direct execution) |
+| **Quality Engineer** | Blocks: Destructive ops, \`rm -rf\`, \`git force-push\` | Blocks: SPEC.md, config files | QA assurance |
+| **Senior Engineer** | Blocks: \`git force-push\` (hotfix exception via Lead) | Blocks: SPEC.md, .githooks | Architecture guidance |
+| **Lead Engineer** | No restrictions (logs all actions) | No restrictions (logs all actions) | Team leadership |
+| **Security Engineer** | No restrictions (trusted security role) | No restrictions (trusted security role) | Security authority |
+| **Model Engineer** | Blocks: Destructive ops, dangerous commands | Blocks: SPEC.md, config files | Model optimization |
+| **Principal Engineer** | No restrictions (ultimate authority) | No restrictions (ultimate authority) | Org authority |
+
+### Critical Dangerous Commands (All Agents)
+
+The following patterns are blocked at the agent level to prevent accidental destruction:
+- \`rm -rf /\` — System destruction
+- \`rm -rf ~\` — Home directory destruction
+- \`rm -rf .git\` — Repository destruction
+- \`git push --force\` or \`git push -f\` — Force pushes (breaks history)
+- \`git reset --hard HEAD~\` — Destructive resets
+- \`sudo rm\` — Privileged destruction
+
 ## Layout in this install
 - \`agents/\` — 8 subagents; invoke via \`opencode --agent <agent-name>\` or the task tool
   (e.g. \`opencode --agent orchestrator\`, \`opencode --agent engineer\`).
 - \`skills/\` — workflow modules loaded on demand via the skill tool.
-- \`opencode.jsonc\` — managed config (compaction, permissions); do not edit.
+- \`opencode.jsonc\` — managed config (compaction, permissions); do not edit directly—use Principal access.
 - \`AGENTS.md.local\` — *optional, user-authored*; if present, OpenCode loads
   it after this file. Use it for personal overrides that survive re-render.
 
@@ -319,6 +471,7 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
   their output survives compaction. Other tool output may be pruned.
 - 8 subagents are installed. Mention them with \`@\` or invoke programmatically
   via the task tool.
+- **Permission enforcement** is runtime-based; violations are logged and blocked at execution time.
 
 ## Full specification
 See [\`docs/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
