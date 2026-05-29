@@ -469,7 +469,7 @@ class OptimizationEngine:
         
         # Identify cost opportunities
         cost_opportunities = []
-         if delegate.model == "claude-opus-4.8" and handback.quality_score >= 85:
+        if delegate.model == "claude-opus-4.8" and handback.quality_score >= 85:
             # Could downgrade to Sonnet
             cost_opportunities.append(
                 CostOpportunity(
@@ -497,7 +497,7 @@ class OptimizationEngine:
         
         # Identify quality opportunities
         quality_opportunities = []
-         if handback.quality_score < 85 and delegate.model not in ("claude-opus-4.6", "claude-opus-4.8"):
+        if handback.quality_score < 85 and delegate.model not in ("claude-opus-4.6", "claude-opus-4.8"):
             # Could upgrade model
             quality_opportunities.append(
                 QualityOpportunity(
