@@ -24,7 +24,7 @@ All agents in `src/agents/*.md` use **versioned Claude with DOTS**:
 
 ```
 model: claude-{variant}-{major}.{minor}
-Examples: claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.7
+Examples: claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.8
 ```
 
 ### Per-Harness Transformations
@@ -33,7 +33,7 @@ Each harness renders the canonical format according to its requirements:
 
 | Harness | Transforms To | Reason |
 |---------|---------------|--------|
-| **Copilot CLI** | `claude-opus-4.7` (pass-through) | Accepts Anthropic API format (dots required) |
+| **Copilot CLI** | `claude-opus-4.8` (pass-through) | Accepts Anthropic API format (dots required) |
 | **OpenCode** | `claude-opus-4-7` (dots→hyphens) | CLI requires hyphens in version |
 | **Claude Code** | `opus` (short alias) | Web UI uses short aliases for UX |
 | **Pi.dev** | `claude-opus-4-7` or dated versions | Anthropic API format (hyphens, optional date) |
@@ -67,7 +67,7 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 **Entry Rule:** All work flows through Orchestrator for routing. No direct delegation from external sources.
 
 **MODEL NAMING (LOCKED):** All models use canonical format with DOTS: `claude-{variant}-{major}.{minor}`
-(e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.7`). See [SPEC.md > Model Naming Architecture](../SPEC.md).
+(e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.8`). See [SPEC.md > Model Naming Architecture](../SPEC.md).
 
 | Role | Model | Effort | Use When |
 |---|---|---|---|
@@ -77,7 +77,7 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 | **Senior Engineer** | claude-sonnet-4.5 | high | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
 | **Lead Engineer** | claude-sonnet-4.6 | high | Code review; quality decisions; medium-complexity planning; architectural guidance |
 | **Principal Engineer** | claude-opus-4.6 | high | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4.7 | max | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Security Engineer** | claude-opus-4.8 | max | Security analysis; threat modeling; vulnerability audits; final escalation path |
 | **Model Engineer** | claude-sonnet-4.5 | high | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
 **Routing Rules** (for Orchestrator):

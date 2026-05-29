@@ -1,6 +1,6 @@
 # Principal Engineer — Architecture Design
 
-**Role:** Principal Engineer (Opus 4.7, high effort)  
+**Role:** Principal Engineer (Opus 4.6, high effort)  
 **Purpose:** Design system architecture for cross-service features, new patterns, or major refactors
 
 ---

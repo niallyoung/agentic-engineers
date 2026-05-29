@@ -1,6 +1,6 @@
 # Security Engineer — Security Architecture Review
 
-**Role:** Security Engineer (Opus 4.7, max effort)  
+**Role:** Security Engineer (Opus 4.8, max effort)  
 **Purpose:** Review system design for auth, data flows, access control, and cross-service security contracts
 
 ---
