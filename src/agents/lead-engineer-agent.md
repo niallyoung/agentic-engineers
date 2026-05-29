@@ -71,7 +71,7 @@ scope: >
   Senior Engineer + 3 Engineers implemented. Need Lead Engineer sign-off before merge.
 context:
   - Files to review: lambda/auth/oauth_rotation.go, lambda/auth/handlers.go (lines 85-120)
-  - PR: https://github.com/{your-org}/ers/pull/1234
+  - PR: https://github.com/{your-org}/{repo-name}/pull/1234
   - Senior Engineer assessment: "Complex state machine, well-tested (96% coverage)"
   - Risk level: HIGH (auth changes always high risk)
 success_criteria:

@@ -29,7 +29,7 @@
 | 5 | **Lead Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
 | 6 | **Senior Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
 | 7 | **Principal Engineer** | `claude-opus-4-6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
-| 8 | **Security Engineer** | `claude-opus-4.7` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
+ | 8 | **Security Engineer** | `claude-opus-4.8` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
 
 ### Cost Tiers
 
@@ -250,7 +250,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 8. Security Engineer
 
-**Model:** `claude-opus-4.7`  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
+**Model:** `claude-opus-4.8`  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
 
 **Purpose:** Threat modelling, vulnerability assessment, compliance review. Always assigned for security-scoped work.
 
@@ -674,7 +674,7 @@ the updated `processor.py` call site.
 task_id: TASK-303
 type: DELEGATE
 role: security-engineer
-model: claude-opus-4.7
+model: claude-opus-4.8
 effort: max
 priority: high
 
@@ -738,7 +738,7 @@ estimated_cost: 0.15
 [DELEGATE block for Senior — implement jti blacklist in handlers.py]
 [DELEGATE block for Engineer — update token storage in middleware.py]
 
-MODEL_USED: claude-opus-4.7
+MODEL_USED: claude-opus-4.8
 ```
 
 ---

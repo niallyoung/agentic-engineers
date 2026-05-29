@@ -1,0 +1,23 @@
+# Routing Rules - Security-aware task routing configuration
+
+routing_rules:
+  security_scope_routing:
+    auth: security_engineer
+    crypto: security_engineer
+    pii: security_engineer
+    secrets: security_engineer
+    injection: security_engineer
+    supply_chain: security_engineer
+    none: null
+
+  approval_gate_routing:
+    lead_engineer: lead_engineer
+    principal_engineer: principal_engineer
+    security_engineer: security_engineer
+    cto: escalate_with_cto_notification
+    none: null
+
+  routing_priority:
+    - approval_gate (highest priority)
+    - security_scope
+    - normal_role_routing (fallback)

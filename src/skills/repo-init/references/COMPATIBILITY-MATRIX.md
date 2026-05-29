@@ -27,7 +27,7 @@ These checks run as subprocess calls with a 5-second timeout.
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Tool use | ✅ Full | All tool types supported |
-| Long context | ✅ 200k tokens | claude-opus-4.7, sonnet |
+| Long context | ✅ 200k tokens | claude-opus-4.8, sonnet |
 | Structured output | ✅ Full | JSON mode + tool_use |
 | Function calling | ✅ Full | |
 | Streaming | ✅ Full | |
@@ -68,7 +68,7 @@ agents:
   lead-engineer:
     model: gpt-4o         # replaces claude-sonnet-4.6
   principal-engineer:
-    model: gpt-4          # replaces claude-opus-4.7
+    model: gpt-4          # replaces claude-opus-4.8
 ```
 
 ---
@@ -188,13 +188,13 @@ MODEL HARNESS: claude
 HARD FAILURES: none
 WARNINGS: none
 
-RESULT: ✅ FULLY COMPATIBLE
-  All checks passed. Recommended configuration:
-  - engineer model: claude-haiku-4.5
-  - senior model:   claude-sonnet-4.6
-  - lead model:     claude-sonnet-4.6
-  - principal model: claude-opus-4.7
-  - quality_threshold: 85%
+ RESULT: ✅ FULLY COMPATIBLE
+   All checks passed. Recommended configuration:
+   - engineer model: claude-haiku-4.5
+   - senior model:   claude-sonnet-4.6
+   - lead model:     claude-sonnet-4.6
+   - principal model: claude-opus-4.6
+   - quality_threshold: 85%
 ══════════════════════════════════════════════════════
 ```
 

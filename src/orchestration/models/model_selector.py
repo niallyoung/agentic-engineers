@@ -17,7 +17,7 @@ Override rules (applied after base decision):
 Available models (relative cost multipliers vs Sonnet = 1×):
   haiku-4-5   0.33×
   sonnet-4-6  1.00×
-  opus-4-7    3.00×
+  opus-4-8    3.00×
   gpt-5-4     1.00×  (GPT-5.4 parity)
   gpt-5-5     7.50×  (GPT-5.5 premium)
 """
@@ -36,12 +36,12 @@ from .complexity_scorer import ComplexityLevel, ComplexityScorer, TaskAttributes
 # ---------------------------------------------------------------------------
 
 class ModelTier(Enum):
-    """Available model tiers with relative cost multipliers."""
-    HAIKU = "haiku-4-5"
-    SONNET = "sonnet-4-6"
-    OPUS = "opus-4-7"
-    GPT_5_4 = "gpt-5-4"
-    GPT_5_5 = "gpt-5-5"
+     """Available model tiers with relative cost multipliers."""
+     HAIKU = "haiku-4-5"
+     SONNET = "sonnet-4-6"
+     OPUS = "opus-4-8"
+     GPT_5_4 = "gpt-5-4"
+     GPT_5_5 = "gpt-5-5"
 
 
 # Cost multipliers relative to Sonnet = 1.0
@@ -131,7 +131,7 @@ class ModelSelector:
         selector = ModelSelector()
         attrs = TaskAttributes(effort="high", task_type="refactor", has_plan=False)
         decision = selector.select(attrs)
-        print(decision.model_id)  # "sonnet-4-6" or "opus-4-7"
+         print(decision.model_id)  # "sonnet-4-6" or "opus-4-8"
 
     The selector is intentionally stateless — it does not load metrics.
     For data-driven routing, combine with RecommendationsEngine.

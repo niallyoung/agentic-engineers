@@ -33,7 +33,7 @@ ROLE_TARGETS = {
 MODEL_COSTS = {
     "haiku-4-5": 0.00008,
     "sonnet-4-6": 0.0003,
-    "opus-4-7": 0.00015,
+    "opus-4-8": 0.00015,
 }
 
 

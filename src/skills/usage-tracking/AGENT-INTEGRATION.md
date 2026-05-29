@@ -331,9 +331,9 @@ bash skills/usage-tracking/scripts/capture_token_usage.sh --silent
 
 ### Path Not Found
 **Cause:** Running from wrong directory
-**Fix:** Run from project root (~/git/ers):
+**Fix:** Run from project root:
 ```bash
-cd ~/git/ers
+cd <project-root>
 bash {workspace-name}/agentic-engineers/skills/usage-tracking/scripts/usage-tracking.sh analyze
 ```
 

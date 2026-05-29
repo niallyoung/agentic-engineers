@@ -1,4 +1,4 @@
-# Dark Factory Agentic Engineering — ERS Multi-Agent Orchestration
+# Agentic Engineering Multi-Agent Orchestration
 
 A permanent, evolving framework for AI-driven development using Anthropic models (Opus, Sonnet, Haiku) as a coordinated team.
 
@@ -148,7 +148,7 @@ Over time, assign focused skills to agent-personality-model-effort combinations.
 - {example-service} (Sonnet, medium+ effort)
 - {example-service} (Haiku Worker, high effort; Sonnet, medium+ effort)
 
-**Future Specializations (Dark Factory v2+):**
+**Future Specializations (Phase 3+):**
 - **Haiku Engineer:** `{service-name}`, `{service-name}`, `{service-name}`
 - **Architect (Sonnet):** `{service-name}`, `{service-name}`, `{example-service}-schema-design`
 - **Sage (Opus 4.6):** `{service-name}`, `{service-name}`, `{service-name}`
@@ -160,11 +160,11 @@ Over time, assign focused skills to agent-personality-model-effort combinations.
 
 ---
 
-## Daily Workflow — Dark Factory in Action
+## Daily Workflow — Agentic Engineering in Action
 
 ### Morning Standup (Dispatch Orchestrator, 5 min)
 ```
-Dispatch: "ERS build status: main green. 3 PRs pending review. Security audit 
+Dispatch: "Build status: main green. 3 PRs pending review. Security audit 
 scheduled for {example-service} this week. Allocating 20% capacity to security work."
 ```
 
@@ -278,5 +278,5 @@ A: AGENTS.md = decision matrices, effort levels. ORCHESTRATION.md = roles, voice
 
 ## Update Log
 
-- **2026-04-19:** Initial ORCHESTRATION.md established as foundation for Dark Factory Agentic Engineering.
+- **2026-04-19:** Initial ORCHESTRATION.md established as foundation for Agentic Engineering framework.
 - **Quarterly Reviews:** Every 3 months, assess cost targets, personality effectiveness, skill gaps.

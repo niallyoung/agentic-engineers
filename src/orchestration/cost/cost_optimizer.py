@@ -257,7 +257,7 @@ class CostOptimizer:
                     priority=1,
                     affected_tasks=len(opus_low),
                     ab_test_recommended=len(opus_low) >= 5,
-                    metadata={"from_model": "opus-4-7", "to_model": "sonnet-4-6"},
+                    metadata={"from_model": "opus-4-8", "to_model": "sonnet-4-6"},
                 ))
 
             if sonnet_trivial:

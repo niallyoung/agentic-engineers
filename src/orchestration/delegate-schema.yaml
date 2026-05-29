@@ -30,7 +30,7 @@ required_fields:
       engineer: "claude-haiku-4.5"
       senior_engineer: "claude-sonnet-4.6"
       lead_engineer: "claude-sonnet-4.6"
-      principal_engineer: "claude-opus-4.7"
+      principal_engineer: "claude-opus-4.8"
       security_engineer: "claude-sonnet-4.6"
       quality_engineer: "claude-sonnet-4.6"
       model_engineer: "claude-sonnet-4.6"

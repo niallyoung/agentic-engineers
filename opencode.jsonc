@@ -2,7 +2,7 @@
 // Integrates git hooks with OpenCode commands for SDLC enforcement
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": [".opencode/AGENTS.md"],
+  "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
   "model": "github-copilot/claude-haiku-4.5",
   

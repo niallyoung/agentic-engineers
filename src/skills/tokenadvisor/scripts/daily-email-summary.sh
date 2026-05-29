@@ -1,5 +1,5 @@
 #!/bin/bash
-# Daily Email Summary — 24h activity report across ERS repos
+# Daily Email Summary — 24h activity report across services
 
 set -euo pipefail
 

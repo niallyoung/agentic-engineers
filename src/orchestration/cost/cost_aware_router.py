@@ -37,13 +37,15 @@ from datetime import datetime, date
 MODEL_COST_MULTIPLIERS: Dict[str, float] = {
     "haiku-4-5":  0.33,
     "sonnet-4-6": 1.00,
-    "opus-4-7":   3.00,
+    "opus-4-6":   3.00,
+    "opus-4-8":   3.00,
 }
 
 MODEL_QUALITY_BASELINES: Dict[str, float] = {
     "haiku-4-5":  82.0,
     "sonnet-4-6": 93.0,
-    "opus-4-7":   97.0,
+    "opus-4-6":   97.0,
+    "opus-4-8":   98.0,
 }
 
 BASE_COST_PER_TOKEN: float = 0.0003  # Sonnet rate in USD
@@ -264,9 +266,9 @@ class CostAwareRouter:
             role = c.get("role", "unknown")
             model = c.get("model", "sonnet-4-6")
 
-            # Security override: Opus minimum
-            if security_sensitive and model != "opus-4-7":
-                model = "opus-4-7"
+            # Security override: Opus minimum (4.8 for security tasks)
+            if security_sensitive and model not in ("opus-4-6", "opus-4-8"):
+                model = "opus-4-8"
 
             multiplier = MODEL_COST_MULTIPLIERS.get(model, 1.0)
             quality = MODEL_QUALITY_BASELINES.get(model, 90.0)

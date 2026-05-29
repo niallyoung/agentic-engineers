@@ -57,29 +57,42 @@ After `make install`, the framework automatically:
    ```
 
 3. **Make your changes** using the framework's own tools:
-   - New agent? Use `agent-creator` skill
-   - New skill? Use `skill-creator` skill
-   - Code changes? Delegate to the Orchestrator!
+    - New agent? Use `agent-creator` skill
+    - New skill? Use `skill-creator` skill
+    - Code changes? Delegate to the Orchestrator!
 
-   Instead of editing files directly, use the delegation format:
+      Instead of editing files directly, use the delegation format. Here's an example:
 
-   ```
-   delegate: improve agentic-engineers framework in aspect foo by way of bah; subsequent goals and outcomes; create me a skill to fandango, an agent to muppeteer; then update the docs; etcetera; commit and push watch cicd until green or fix until it is
-   ```
+     ```yaml
+     ---
+     handoff_type: DELEGATE
+     task_id: 2026-05-29-add-postal-validation
+     role: engineer
+     model: claude-haiku-4.5
+     effort: high
+     scope: Add AU PostalCode validation rule to the address validator. PostalCode is optional but when present must be exactly 4 digits.
+     context:
+       - File: src/validation/postal.py
+       - File: tests/test_postal.py
+     plan:
+       1. Add 4-digit AU postcode regex rule
+       2. Add unit tests for valid and invalid cases
+       3. Run make verify to confirm all tests pass
+     success_criteria:
+       - "PostalCode '2000' and '0800' pass validation"
+       - "PostalCode 'ABC', '123', '12345' are rejected with a clear error message"
+       - "make test FILTER=test_postal passes with no failures"
+     ---
+     ```
 
-   Describe the goal or outcome in sufficient detail with descriptive language. Don't be too prescriptive about how exactly — prefer generalized flexible principles and positive reinforcement over inflexible rules. Give the Orchestrator a list of related tasks and outcomes end-to-end so it has enough context to plan and implement a decent solution.
+     When delegating work:
+     - Describe the goal or outcome in sufficient detail with descriptive language
+     - Don't be too prescriptive about implementation details
+     - Prefer generalized, flexible principles and positive reinforcement over inflexible rules
+     - Provide the Orchestrator with a list of related tasks and outcomes end-to-end
+     - Give enough context so the Orchestrator can plan and implement a decent solution
 
-   > **NOTE:** We don't recommend editing any of the agentic-engineers files by hand. Ask the Orchestrator to delegate those tasks for you.
-   >
-   > When delegating:
-   > - Describe the goal or outcome you want (e.g., "add cost tracking to agent invocations")
-   > - Include sufficient detail with descriptive language
-   > - Don't be overly prescriptive about implementation details
-   > - Prefer generalized, flexible principles and positive reinforcement over inflexible rules
-   > - Provide the Orchestrator with a list of related tasks and outcomes end-to-end
-   > - Give enough context so the Orchestrator can plan and implement a decent solution
-
-4. **Verify locally before pushing:**
+ 4. **Verify locally before pushing:**
    ```bash
    make verify         # Full verification (structure + agents + skills)
    make test           # Run all tests with coverage
@@ -128,6 +141,114 @@ This speeds up iteration without installing all 4 harnesses.
 - **Complex planning?** Use the `Senior Engineer` agent to plan unscoped work.
 
 All framework extensions run through the validation pipeline automatically. See [`src/AGENTS.md`](src/AGENTS.md) and [`src/SKILLS.md`](src/SKILLS.md) for the complete roster.
+
+---
+
+## Creating New Skills
+
+**Important:** Skills are always created in the **framework source**, not in user config directories.
+
+### Correct Workflow
+
+1. **Create skill in framework source:**
+   ```bash
+   # Skills live in src/skills/{category}/{skill-name}/
+   mkdir -p ~/git/agentic-engineers/src/skills/{category}/{skill-name}/{scripts,references}
+   
+   # Example: test-sync-validator in testing category
+   mkdir -p ~/git/agentic-engineers/src/skills/testing/test-sync-validator/{scripts,references}
+   ```
+
+2. **Create SKILL.md with frontmatter:**
+   ```yaml
+   ---
+   name: test-sync-validator
+   description: Detects test fixture drift from code changes...
+   license: Proprietary
+   metadata:
+     author: agentic-engineers
+     version: "1.0"
+     category: testing
+     role: quality-engineer
+   ---
+   ```
+
+3. **Add scripts to scripts/ subdirectory:**
+   - Keep scripts modular and focused
+   - One responsibility per script
+   - Include error handling and help text
+
+4. **Build and install:**
+   ```bash
+   # Build renders src/ → dist/ → ~/.claude/, ~/.copilot/, etc.
+   make install
+   
+   # Verify skill was rendered to all harnesses
+   ls -la ~/.claude/skills/test-sync-validator/
+   ls -la ~/.copilot/skills/test-sync-validator/
+   ls -la ~/.config/opencode/skills/test-sync-validator/
+   ```
+
+### ❌ Anti-Pattern: Don't Create Directly in User Config
+
+**WRONG:**
+```bash
+# Never do this!
+mkdir -p ~/.claude/skills/my-skill
+# This gets overwritten by make install
+```
+
+**RIGHT:**
+```bash
+# Always do this
+mkdir -p ~/git/agentic-engineers/src/skills/{category}/my-skill
+make install  # Renders to ~/.claude/, ~/.copilot/, etc.
+```
+
+### Directory Structure Reference
+
+```
+agentic-engineers/
+├── src/skills/          # ← Authoritative source
+│   ├── testing/
+│   │   ├── test-sync-validator.md      # Main spec
+│   │   └── scripts/
+│   │       └── test_sync_validator.py  # Implementation
+│   ├── orchestration/
+│   ├── optimization/
+│   └── ...
+├── dist/                # ← Generated build artifacts
+│   ├── claude/skills/   # Rendered for Claude CLI
+│   ├── copilot/skills/  # Rendered for Copilot CLI
+│   ├── opencode/skills/ # Rendered for OpenCode
+│   └── pi/skills/       # Rendered for π.dev
+├── ~/.claude/skills/    # ← User installation (auto-generated, don't edit)
+├── ~/.copilot/skills/   # ← User installation (auto-generated, don't edit)
+└── ~/.config/opencode/skills/ # ← User installation (auto-generated, don't edit)
+```
+
+### Test Fixture Synchronization
+
+When making code changes, ensure tests stay in sync:
+
+1. **Use test-sync-validator to detect drift:**
+   ```bash
+   git diff origin/main...HEAD | \
+     python src/skills/testing/scripts/test_sync_validator.py \
+       --diff /dev/stdin --mode pre-merge --fail-on-critical
+   ```
+
+2. **Fix discovered mismatches before commit:**
+   - Update LOCKED_MODELS if models change
+   - Update router expectations if logic changes
+   - Update cost/quality thresholds if tiers change
+
+3. **Commit test updates with code changes:**
+   ```bash
+   git add src/agents/security-engineer-agent.md
+   git add tests/test_model_naming_compliance.py  # test fixture sync
+   git commit -m "feat(agents): upgrade to claude-opus-4.8"
+   ```
 
 ---
 

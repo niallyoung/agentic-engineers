@@ -371,7 +371,7 @@ This constraint is non-negotiable. No legacy scripts, cron jobs, or autonomous p
 
 ## Core Architecture
 
-### Agents & Roles (Dark Factory Model)
+### Agents & Roles (Multi-Agent Model)
 
 All work enters via **Orchestrator** (default entry point). Orchestrator applies routing decision tree to delegate to specialists.
 

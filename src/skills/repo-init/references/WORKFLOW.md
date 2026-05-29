@@ -102,7 +102,7 @@ The SPEC.md template (`assets/spec-template.md`) uses these placeholders:
 | `{engineer_model}` | compat result | `claude-haiku-4.5` |
 | `{senior_model}` | compat result | `claude-sonnet-4.6` |
 | `{lead_model}` | compat result | `claude-sonnet-4.6` |
-| `{principal_model}` | compat result | `claude-opus-4.7` |
+ | `{principal_model}` | compat result | `claude-opus-4.6` |
 | `{quality_threshold}` | size-based | `85` |
 | `{git_remote}` | Phase 1 | `github.com/org/repo` |
 | `{license}` | Phase 1 | `MIT` |
