@@ -361,7 +361,7 @@ class TestAnthropicProvider:
 
     def test_claude_opus_47_cost(self, provider):
         """$15/$75 per 1M"""
-        cost = provider.calculate_cost(1_000_000, 1_000_000, "claude-opus-4.7")
+        cost = provider.calculate_cost(1_000_000, 1_000_000, "claude-opus-4.8")
         assert cost == pytest.approx(15.0 + 75.0)
 
     def test_unknown_model_uses_sonnet_fallback(self, providers_yaml):
@@ -690,7 +690,7 @@ class TestAggregateTaskCost:
             task_type="test",
             input_tokens=1000,
             output_tokens=500,
-            model_variants={"anthropic": "claude-opus-4.7", "openai": "gpt-4o-mini"},
+            model_variants={"anthropic": "claude-opus-4.8", "openai": "gpt-4o-mini"},
         )
         # gpt-4o-mini should be cheaper than opus
         assert result["winner"] == "openai"

@@ -1,7 +1,7 @@
 ---
 name: security-engineer
 description: Security analysis; threat modeling; vulnerability audits; final escalation path
-model: claude-opus-4.7
+model: claude-opus-4.8
 ---
 
 # Security Engineer Agent
@@ -149,4 +149,4 @@ copilot --allow-all --autopilot --agent security-engineer "Security analysis"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-opus-4.7.
+You are powered by the model named claude-opus-4.8.

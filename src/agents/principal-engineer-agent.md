@@ -94,7 +94,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-principal-redesign-event-store
 timestamp: 2026-06-02T15:00:00Z
 role: Principal Engineer
-model: claude-opus-4.7
+model: claude-opus-4.6
 effort: high
 scope: >
   Redesign event store architecture for multi-region deployment.

@@ -29,7 +29,7 @@ Each agent definition follows this structure:
 ---
 name: Agent Name
 description: Brief description of what this agent does
-model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.7
+model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.6 | claude-opus-4.8
 ---
 
 # Agent Name
