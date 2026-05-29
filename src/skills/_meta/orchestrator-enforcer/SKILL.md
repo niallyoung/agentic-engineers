@@ -7,6 +7,11 @@ author: Principal Engineer
 created: 2026-05-30
 updated: 2026-05-30
 
+description: |
+  Runtime enforcement of DELEGATE field requirements via decorators.
+  Prevents DELEGATEs from bypassing critical field validation and orchestrator
+  from processing non-compliant work before execution.
+
 role: principal-engineer
 effort: high
 priority: normal

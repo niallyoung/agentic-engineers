@@ -1,4 +1,8 @@
 ---
+name: agent-definition-verifier
+description: |
+  Tri-level verification of AGENTS.md against SPEC.md.
+  Blocks model downgrade attacks and unauthorized agent definitions.
 role: security-engineer
 model: claude-opus-4.7
 effort: high

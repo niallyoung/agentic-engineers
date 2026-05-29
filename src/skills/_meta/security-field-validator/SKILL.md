@@ -7,6 +7,10 @@ author: Principal Engineer
 created: 2026-05-30
 updated: 2026-05-30
 
+description: |
+  Validate security-critical DELEGATE fields and enforce routing rules.
+  Prevents security work from being mis-routed to general engineers.
+
 role: principal-engineer
 effort: high
 priority: normal
