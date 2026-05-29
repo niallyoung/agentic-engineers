@@ -159,7 +159,7 @@ A/B Test Proposal:
   Success Criteria: Test arm achieves quality ≥95 AND cost_per_quality ≤ control OR lower tokens
 
 Model Readiness Check (for new models):
-  claude-opus-4.7: Not yet evaluated
+  claude-opus-4.8: Not yet evaluated
   claude-sonnet-4.6: ✅ Baseline (95 avg quality)
   claude-haiku-4.5: ✅ Baseline (89 avg quality, 39% of tasks)
 ```
@@ -180,7 +180,7 @@ Tier 2x (Dual cost multiplier):
   ? claude-sonnet-4-7 (new): Not yet evaluated
 
 Tier 7.5x (High-effort, premium):
-  ✅ claude-opus-4.7 (current): 98 avg quality (Principal/Security roles)
+  ✅ claude-opus-4.8 (current): 98 avg quality (Principal/Security roles)
   ? claude-opus-4-8 (new): Not yet evaluated
 
 Recommendation for Evaluation:
@@ -193,13 +193,13 @@ Recommendation for Evaluation:
      → Track: tokens_in, duration, quality_score
   
   3. Evaluate claude-opus-4-8 on Principal/Security roles
-     → Current: Opus 4.7. New 4.8 may have better reasoning for architecture decisions
+     → Current: Opus 4.8. New 4.8 may have better reasoning for architecture decisions
      → Cost multiplier unknown (assume 7.5x for planning, adjust if confirmed)
 
 Historical Model Shifts (if any):
   2026-03-15: Upgraded from Haiku 3.5 (1x) to Haiku 4.5 (1x)
               → Quality improvement: 82 → 89 (+7 points, no cost change)
-  2026-02-01: Downgraded Principal from Opus 4.6 to Opus 4.7
+  2026-02-01: Downgraded Principal Engineer (Opus 4.6
               → Quality improvement: 97 → 98 (+1 point, no cost change)
 ```
 

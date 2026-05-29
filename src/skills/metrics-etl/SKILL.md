@@ -2,7 +2,7 @@
 name: metrics-etl
 description: Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.
 license: Proprietary
-compatibility: Designed for agentic-engineers framework (ERS platform)
+compatibility: Designed for agentic-engineers framework
 metadata:
   author: agentic-engineers
   version: "1.0"
@@ -35,7 +35,7 @@ python scripts/metrics-etl.py --export json --output metrics.json
 Hourly (every hour on the hour) via `orchestration/config/metrics-etl.cron`
 
 ```bash
-0 * * * * cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
+0 * * * * cd <project-root> && python agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
 ```
 
 ## Voice Notifications

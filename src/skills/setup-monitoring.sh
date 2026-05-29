@@ -1,22 +1,22 @@
 #!/bin/bash
 ################################################################################
-# setup-cloudwatch-monitoring.sh
+# setup-monitoring.sh
 #
-# One-time setup script to create CloudWatch resources for quality gate monitoring
-# Run once per AWS account/environment
+# One-time setup script to create monitoring resources for quality gate auditing
+# Run once per environment/region
 #
-# Usage: ./setup-cloudwatch-monitoring.sh [aws-profile] [aws-region]
-#        ./setup-cloudwatch-monitoring.sh {service-name} ap-southeast-2
+# Usage: ./setup-monitoring.sh [aws-profile] [aws-region]
+#        ./setup-monitoring.sh default us-east-1
 ################################################################################
 
 set -e
 
 # Configuration
 AWS_PROFILE="${1:-default}"
-AWS_REGION="${2:-ap-southeast-2}"
-CW_LOG_GROUP="/ers/quality-gates/audit-trail"
+AWS_REGION="${2:-us-east-1}"
+CW_LOG_GROUP="/agentic-engineers/quality-gates/audit-trail"
 CW_DASHBOARD_NAME="QualityGatesMonitoring"
-CW_NAMESPACE="ERS/QualityGates"
+CW_NAMESPACE="AgenticEngineers/QualityGates"
 
 echo "Setting up CloudWatch monitoring for quality gates..."
 echo "  AWS Profile: $AWS_PROFILE"

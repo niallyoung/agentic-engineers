@@ -1,17 +1,17 @@
 ---
-name: ERS Architecture Skills Index
+name: agentic-engineers Framework Skills Index
 type: index
 last_updated: 2026-04-28 (Phase 5 Quality Engineer + Self-Healing skills complete)
 ---
 
-# ERS Architecture & Enforcement Skills
+# agentic-engineers Framework Architecture & Enforcement Skills
 
-This index catalogs architectural decision patterns and enforcement skills for the ERS platform.
+This index catalogs architectural decision patterns and enforcement skills for the agentic-engineers framework.
 
 ## Configuration & Dependency Management
 
 ### 1. **{example-service}.md** — The Baseline Standard
-- **Purpose**: Defines how all ERS services handle configuration, environment variables, and cross-service dependencies
+- **Purpose**: Defines how services handle configuration, environment variables, and cross-service dependencies
 - **Key rules**:
   - REQUIRED dependencies fail loudly if missing
   - OPTIONAL features use explicit empty strings with documented rationale
@@ -24,7 +24,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 ### 2. **{service-name}.md** — Audit & Verification Checklist
 - **Purpose**: Provides tools and checklists to verify services comply with the standard
 - **Includes**:
-  - Quick audit command that checks all 8 services
+  - Quick audit command that checks all services
   - Detailed checklist for each service
   - Automated fixes for common issues
   - Audit report template
@@ -40,7 +40,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
   - Verification checklist
   - HANDBACK format for completion
 - **Who uses it**: Orchestrator (delegates to QE/LE), QE/LE (executes fixes)
-- **When to use**: When CICD fails or code review finds compliance gaps
+- **When to use**: When CI/CD fails or code review finds compliance gaps
 
 ## Planning, Execution & Implementation Workflow
 
@@ -167,7 +167,7 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Called by**: `quality-gate-orchestration` (testing phase, parallel execution)
 
 ### **test-integration-orchestration.md** — Integration Test Orchestration
-- **Purpose**: Run integration tests with ERS service mocking (DynamoDB, SNS, EventBridge)
+- **Purpose**: Run integration tests with service mocking (LocalStack for DynamoDB, SNS, SQS, etc.)
 - **Input**: `service_path`, `environment` (test/staging/dev), `test_filter`
 - **Output**: Integration tests passed/failed, mocks used, execution time
 - **Mocking**: LocalStack for DynamoDB/SNS/SQS, serverless-offline for Lambda
@@ -265,12 +265,12 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Status**: Phase 5.10 IN PROGRESS (2026-04-28)
 - **Purpose**: Build observability infrastructure for quality gates; measure Healer effectiveness; enable Level 2→Level 3 graduation
 - **5 Phases**:
-  1. Audit trail centralization (CloudWatch Logs)
-  2. CloudWatch metrics and dashboards
+  1. Audit trail centralization (structured logging)
+  2. Metrics and dashboards
   3. Healer success rate tracking
   4. Confidence score calibration
   5. Continuous improvement feedback loop
-- **Deliverables**: Plan document, metrics analyzer tool, graduation checklist, CloudWatch queries
+- **Deliverables**: Plan document, metrics analyzer tool, graduation checklist, query examples
 
 ### **healer-metrics-analyzer.py** — Audit Log Analysis Tool
 - **Purpose**: Analyze quality gate audit logs to measure Healer success rates and readiness for Level 3
@@ -297,8 +297,8 @@ This index catalogs architectural decision patterns and enforcement skills for t
 - **Rollout plan**: Phased (1 service → 3 services → all services)
 - **Failure recovery**: Documented procedures for rollback scenarios
 
-### **cloudwatch-queries.md** — CloudWatch Logs Insights Query Reference
-- **Purpose**: Reusable CloudWatch Logs Insights queries for audit trail analysis
+### **monitoring-queries.md** — Logs Insights Query Reference
+- **Purpose**: Reusable structured logging queries for audit trail analysis
 - **12 Queries**:
   - Quality gate success rate by service
   - Phase success rates
@@ -312,17 +312,17 @@ This index catalogs architectural decision patterns and enforcement skills for t
   - Daily metrics summary
   - Anomaly detection (failure spikes)
   - Healer PR merge rate
-  - Service reliability ranking
-- **Usage**: Copy/paste into CloudWatch Logs Insights UI or integrate into scheduled reports
+   - Service reliability ranking
+- **Usage**: Copy/paste into query UI or integrate into scheduled reports
 
-### **setup-cloudwatch-monitoring.sh** — CloudWatch Infrastructure Setup
-- **Purpose**: One-time setup script to create CloudWatch monitoring infrastructure
+### **setup-monitoring.sh** — Monitoring Infrastructure Setup
+- **Purpose**: One-time setup script to create monitoring infrastructure for quality gates
 - **Creates**:
-  - CloudWatch Logs group: `/ers/quality-gates/audit-trail`
-  - Log streams for all 7 services × 2 environments (dev, prod)
+  - Logs group: `/agentic-engineers/quality-gates/audit-trail`
+  - Log streams for all services × environments (dev, prod)
   - 30-day retention policy
-  - CloudWatch Dashboard: "QualityGatesMonitoring" with 5 widgets
-- **Usage**: `./setup-cloudwatch-monitoring.sh {service-name} ap-southeast-2`
+  - Dashboard: "QualityGatesMonitoring" with 5 widgets
+- **Usage**: `./setup-monitoring.sh {service-name}`
 - **Idempotent**: Safe to run multiple times (skips existing resources)
 
 ### **PHASE-5.10-IMPLEMENTATION-SUMMARY.md** — Current Progress & Timeline
@@ -331,9 +331,9 @@ This index catalogs architectural decision patterns and enforcement skills for t
   - Monitoring plan (5-phase breakdown)
   - Healer metrics analyzer tool
   - Level 3 graduation checklist
-  - CloudWatch queries reference
-  - CloudWatch integration in quality-gate-orchestration.sh
-  - CloudWatch setup automation script
+  - Logs query reference
+  - Monitoring integration in quality-gate-orchestration.sh
+  - Monitoring setup automation script
 - **Pending**:
   - AlertManager rules for escalation
   - Scheduled weekly metrics job
@@ -411,7 +411,7 @@ These skills assume and build on:
 - **{example-service}**: CDK patterns (3-tier stacks, SSM references)
 - **{service-name}**: Local quality gates (make verify, pre-commit hooks)
 
-See `~/git/ers/CLAUDE.md` and `~/git/ers/{workspace-name}/` for other architectural patterns.
+See `../../CLAUDE.md` and local repository documentation for other architectural patterns.
 
 ## Workflow Integration
 

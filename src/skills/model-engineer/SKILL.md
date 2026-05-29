@@ -2,7 +2,7 @@
 name: model-engineer
 description: Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. Use to generate task routing recommendations and experiment designs based on TokenAdvisor findings.
 license: Proprietary
-compatibility: Designed for agentic-engineers framework (ERS platform)
+compatibility: Designed for agentic-engineers framework
 metadata:
   author: agentic-engineers
   version: "1.0"
@@ -37,7 +37,7 @@ python scripts/model-engineer.py --feedback
 Daily at 17:15 UTC (15 min after TokenAdvisor) via `orchestration/config/model-engineer.cron`
 
 ```bash
-0 17 * * * sleep 900 && cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/model-engineer/scripts/model-engineer.py --analyze
+0 17 * * * sleep 900 && cd <project-root> && python agentic-engineers/skills/model-engineer/scripts/model-engineer.py --analyze
 ```
 
 ## Voice Notifications
@@ -51,7 +51,7 @@ Status phrases (via voice-notify skill):
 ## Configuration
 
 - **Cost target:** $0.0016 per quality point
-- **Models:** Haiku 4.5, Sonnet 4.6, Opus 4.7
+- **Models:** Haiku 4.5, Sonnet 4.6, Opus 4.8
 - **Roles:** Engineer, Senior, Lead, Principal
 - **Input:** TokenAdvisor output + `agentic-engineers/data/metrics/`
 - **Output:** `agentic-engineers/data/logs/model-engineer-YYYY-MM-DD.log`

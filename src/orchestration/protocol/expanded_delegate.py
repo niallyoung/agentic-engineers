@@ -4,7 +4,7 @@ Expanded DELEGATE schema with 20+ fields for cross-lifecycle reuse.
 Core fields (5):
 - task_id: Unique task identifier (YYYY-MM-DD-kebab-case)
 - role: Agent role (engineer, senior-engineer, lead-engineer, principal-engineer, security-engineer, quality-engineer)
-- model: Model to use (claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.6, claude-opus-4.7)
+- model: Model to use (claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.6, claude-opus-4.8)
 - effort: Effort level (low, medium, high, extra-high)
 - scope: Task description (≥15 words)
 
@@ -51,7 +51,7 @@ class ExpandedDelegate:
     # Core fields (5)
     task_id: str
     role: str  # engineer, senior-engineer, lead-engineer, principal-engineer, security-engineer, quality-engineer
-    model: str  # claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.6, claude-opus-4.7
+    model: str  # claude-haiku-4.5, claude-sonnet-4.6, claude-opus-4.6, claude-opus-4.8
     effort: str  # low, medium, high, extra-high
     scope: str  # ≥15 words
     

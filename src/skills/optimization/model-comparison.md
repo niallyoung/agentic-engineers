@@ -197,7 +197,7 @@ Opus rarely needed for:
     "medium_complexity_feature": "use_haiku",
     "medium_complexity_refactor": "use_sonnet",
     "high_complexity_any": "use_sonnet",
-    "ers_app_any": "use_sonnet",
+    "app_any": "use_sonnet",
     "cross_service_design": "use_opus"
   }
 }

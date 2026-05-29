@@ -189,7 +189,7 @@ chmod +x agentic-engineers/orchestration/scripts/usage-tracking.sh
 
 ### Step 2: Test Capture
 ```bash
-cd ~/git/ers/{workspace-name}
+cd <project-root>
 VERBOSE=true ./agentic-engineers/orchestration/scripts/capture_token_usage.sh
 ```
 
@@ -205,9 +205,9 @@ Expected output: Human-readable trend report (or "No usage data" if first captur
 ### Step 4: Add to Shell Aliases
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
-alias usage-capture="bash ~/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh"
-alias usage-analyze="python3 ~/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/analyze_usage_trends.py"
-alias usage-tracking="bash ~/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/usage-tracking.sh"
+alias usage-capture="bash <project-root>/agentic-engineers/orchestration/scripts/capture_token_usage.sh"
+alias usage-analyze="python3 <project-root>/agentic-engineers/orchestration/scripts/analyze_usage_trends.py"
+alias usage-tracking="bash <project-root>/agentic-engineers/orchestration/scripts/usage-tracking.sh"
 ```
 
 ### Step 5: Setup Cron (Optional but Recommended)

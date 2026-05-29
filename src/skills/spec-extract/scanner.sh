@@ -2,7 +2,7 @@
 #
 # spec-extract scanner.sh
 # Hybrid pattern detection engine with regex phase + template validation
-# Detects all 8 ERS architectural patterns and generates confidence scores
+# Detects architectural patterns and generates confidence scores
 #
 
 set -euo pipefail

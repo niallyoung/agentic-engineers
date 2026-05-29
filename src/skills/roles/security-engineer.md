@@ -1,6 +1,6 @@
 # Security Engineer Role
 
-**Model:** claude-opus-4.7 | **Effort:** max + thinking | **Cost:** 7.5x
+**Model:** claude-opus-4.8 | **Effort:** max + thinking | **Cost:** 7.5x
 
 ## What This Role Does
 
