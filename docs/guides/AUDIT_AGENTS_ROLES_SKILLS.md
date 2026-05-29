@@ -265,7 +265,7 @@ Create 2-3 core skills:
 4. `makefile.md` — Makefile patterns
 5. `sigv4-client.md` — IAM SigV4 signing
 
-**Question:** Are these intentional Engineer skills, or orphaned from deleted ers-* directories?
+**Question:** Are these intentional Engineer skills, or orphaned from deleted service directories?
 
 **Options:**
 A) **Keep as Engineer skills** → Document in INDEX.md, CLAUDE.md
@@ -384,7 +384,7 @@ After fixes:
 - [ ] All skills documented in INDEX.md, CLAUDE.md, IMPLEMENTATION_COMPLETE.md
 - [ ] Consistent file organization (all overview files in `skills/` subdirectory)
 - [ ] Skills count accurate in documentation (currently 27+, will be ~35+ with Principal/Security)
-- [ ] No orphaned files from deleted ers-* directories
+- [ ] No orphaned files from deleted service directories
 - [ ] Principal and Security engineers have clear workflows defined
 - [ ] All role tables in docs are consistent (same role/model/effort definitions)
 

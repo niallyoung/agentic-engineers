@@ -66,7 +66,7 @@ ALLOWED_MODELS: List[str] = [
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
     "claude-sonnet",
-    "claude-opus-4.7",
+    "claude-opus-4.8",
     "claude-opus",
     "gpt-4o-mini",
     "gpt-4",

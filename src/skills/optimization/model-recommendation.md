@@ -24,7 +24,7 @@ Model Recommendation systematically tries cheaper model/effort/thinking combinat
 2. Sonnet 4.5        ($0.09/task)  ← If Haiku fails quality gate
 3. Sonnet 4.6        ($0.09/task)  ← Same cost as 4.5, try if 4.5 insufficient
 4. Opus 4.6          ($0.15/task)  ← If Sonnet fails
-5. Opus 4.7          ($0.15/task)  ← Same cost as 4.6, last resort
+5. Opus 4.8          ($0.15/task)  ← Same cost as 4.6, last resort
 ```
 
 **Effort levels (combined with models):**
@@ -65,7 +65,7 @@ ELSE:
 ```
 
 **Quality threshold:** best_quality - 5 points (acceptable quality gap)
-- If Opus 4.7 quality = 95 pts, acceptable min = 90 pts
+- If Opus 4.8 quality = 95 pts, acceptable min = 90 pts
 - Haiku 4.5 quality = 91 pts → acceptable, pick Haiku
 - Haiku quality = 88 pts → NOT acceptable, try Sonnet
 
@@ -92,7 +92,7 @@ Haiku 4.5 (Orchestrator, Engineer)
 Sonnet 4.5 (Quality, Senior, Model Engineer)
 Sonnet 4.6 (Lead)
 Opus 4.6 (Principal)
-Opus 4.7 (Security)
+Opus 4.8 (Security)
 ```
 
 **Real examples:**
@@ -130,7 +130,7 @@ Try in order (stop when quality fails):
     └─ Sonnet 4.6, effort=max, thinking=yes
   
   MODEL 4: Opus 4.6 ($0.15) — only if Sonnet fails
-  MODEL 5: Opus 4.7 ($0.15) — last resort
+  MODEL 5: Opus 4.8 ($0.15) — last resort
 ```
 
 **Progression rule:** Only move to next model if current model + all effort/thinking combos fail quality gate.

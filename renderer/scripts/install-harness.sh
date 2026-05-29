@@ -113,7 +113,7 @@ main() {
     if [[ $backup_choice =~ ^[Yy]$ ]]; then
         # Run backup for this harness
         log_info "Backing up $HARNESS_NAME..."
-        if bash "$REPO_ROOT/renderer/scripts/backup-harnesses.sh" --quiet --harness "$HARNESS_NAME"; then
+        if bash "$REPO_ROOT/renderer/scripts/backup-harnesses.sh" --force --quiet --harness "$HARNESS_NAME"; then
             log_success "$HARNESS_NAME backed up"
         else
             log_error "$HARNESS_NAME backup failed"
@@ -137,7 +137,7 @@ main() {
         case "$action_choice" in
             [Bb])
                 log_info "Backing up $HARNESS_NAME..."
-                if bash "$REPO_ROOT/renderer/scripts/backup-harnesses.sh" --quiet --harness "$HARNESS_NAME"; then
+                if bash "$REPO_ROOT/renderer/scripts/backup-harnesses.sh" --force --quiet --harness "$HARNESS_NAME"; then
                     log_success "$HARNESS_NAME backed up"
                 else
                     log_error "$HARNESS_NAME backup failed"

@@ -133,7 +133,7 @@ Uses existing SSH keys / GitHub Personal Access Token (set up once, reused).
 
 **After `git push origin main`:**
 1. GitHub Actions CI starts automatically
-2. Monitor with: `gh run list -R {your-org}/ers-<service>`
+2. Monitor with: `gh run list -R {your-org}/{service-name}`
 3. Check logs if failure: `gh run view <run_id> --log`
 4. Review PR comments (if applicable): `gh api repos/.../pulls/<number>/comments`
 
@@ -147,7 +147,7 @@ Uses existing SSH keys / GitHub Personal Access Token (set up once, reused).
 ## Skill Validation
 
 This skill is correct if it can:
-1. List recent workflow runs for any ERS service
+1. List recent workflow runs for any agentic-engineers service
 2. Stream logs from a running workflow
 3. Create a PR with title and body
 4. Check PR status and review comments

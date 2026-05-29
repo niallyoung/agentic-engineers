@@ -58,7 +58,7 @@ role_models:
     effort: "max"
     providers:
       copilot: "gpt-4o"
-      claude: "claude-opus-4.7"
+      claude: "claude-opus-4.8"
       openai: "gpt-4o"
       google: "gemini-2-pro"
       meta: "llama-3-405b"
@@ -70,7 +70,7 @@ role_models:
     effort: "high"
     providers:
       copilot: "gpt-4o"
-      claude: "claude-opus-4.7"
+      claude: "claude-opus-4.8"
       openai: "gpt-4o"
       google: "gemini-2-pro"
       meta: "llama-3-405b"
@@ -116,7 +116,7 @@ providers:
     claude-sonnet-4.6:
       input: 0.003
       output: 0.015
-    claude-opus-4.7:
+    claude-opus-4.8:
       input: 0.015
       output: 0.075
   openai:
@@ -184,7 +184,7 @@ model_selection:
       tier: sonnet
       base_quality: 0.85
       avg_latency_sec: 3.0
-    claude-opus-4.7:
+    claude-opus-4.8:
       provider: anthropic
       tier: opus
       base_quality: 0.95

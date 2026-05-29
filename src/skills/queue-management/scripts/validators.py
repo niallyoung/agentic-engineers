@@ -50,7 +50,7 @@ class DelegateValidator:
             "claude-sonnet-4.6",
             "claude-sonnet-4.5",
             "claude-haiku-4.5",
-            "claude-opus-4.7",
+            "claude-opus-4.8",
         }
 
     def validate_groups(self, delegate: Dict) -> Tuple[bool, List[str]]:

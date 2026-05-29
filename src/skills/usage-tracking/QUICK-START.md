@@ -15,7 +15,7 @@ Result: Budget-aware task routing, automatic alerts, and historical usage data f
 ## Start a Session (One Command)
 
 ```bash
-cd ~/git/ers
+cd <project-root>
 bash {workspace-name}/agentic-engineers/skills/usage-tracking/SESSION-INIT.sh
 ```
 
@@ -270,7 +270,7 @@ bash skills/usage-tracking/scripts/usage-tracking.sh snapshot
 - Manual input option in `USAGE-BUDGET-MANAGER.md`
 
 **Path errors when running from different directory**
-- Run from project root: `cd ~/git/ers`
+- Run from project root: `cd <project-root>`
 - Or use absolute path: `bash /full/path/to/scripts/usage-tracking.sh`
 
 ---

@@ -509,7 +509,7 @@ class TestBackwardCompatibility:
         old_delegate = {
             **valid_delegate,
             "effort": "high",
-            "model": "claude-opus-4.7",
+            "model": "claude-opus-4.8",
             "estimated_hours": 24
         }
         valid, errors = core_validator.validate_delegate_core(old_delegate)
@@ -520,7 +520,7 @@ class TestBackwardCompatibility:
         old_delegate = {
             **valid_delegate,
             "effort": "high",
-            "model": "claude-opus-4.7"
+            "model": "claude-opus-4.8"
         }
         valid, errors = ext_validator.validate_extensions(old_delegate)
         assert valid, f"old-format delegate extensions should pass, got errors: {errors}"

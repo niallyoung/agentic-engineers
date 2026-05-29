@@ -148,7 +148,7 @@ class MetricsETL:
     def export_grafana_datasource(self) -> Dict[str, Any]:
         """Generate Grafana datasource configuration."""
         return {
-            "name": "ERS Metrics",
+            "name": "Agentic Engineers Metrics",
             "type": "prometheus",
             "url": "http://prometheus:9090",
             "access": "proxy",

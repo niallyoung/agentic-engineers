@@ -164,7 +164,7 @@ queue-ops query --state done --role "Senior Engineer"
 
 **Valid Models:**
 - GPT series: gpt-5.5, gpt-5.4, gpt-5.3-codex, gpt-5.2-codex, gpt-5.2, gpt-5.4-mini, gpt-5-mini, gpt-4.1
-- Claude series: claude-sonnet-4.6, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.7
+- Claude series: claude-sonnet-4.6, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.8
 
 ---
 

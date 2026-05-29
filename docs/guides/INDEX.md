@@ -48,7 +48,7 @@
 
 **Directory:** `reference/`
 
-All reference docs are architecture/coding standards extracted from production ERS codebase. Use for implementation guidance.
+All reference docs are architecture/coding standards extracted from production agentic-engineers codebase. Use for implementation guidance.
 
 | File | Audience | When to Read |
 |------|----------|--------------|

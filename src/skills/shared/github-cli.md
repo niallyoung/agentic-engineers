@@ -222,7 +222,7 @@ echo "✅ All services green"
 
 ### Using Monitor Tool (Until Green)
 
-**All 8 ERS Services — Optimized with 60s polling:**
+**All services — Optimized with 60s polling:**
 
 ```bash
 # Monitor all 8 services with 60s check interval (conserves tokens/network)

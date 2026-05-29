@@ -23,14 +23,14 @@ from typing import Any, Dict, List, Tuple, Optional
 MODEL_TIERS = {
     "haiku-4-5": {"cost": 0.00008, "quality_baseline": 85, "effort_suitability": ["low", "medium"]},
     "sonnet-4-6": {"cost": 0.0003, "quality_baseline": 93, "effort_suitability": ["medium", "high", "max"]},
-    "opus-4-7": {"cost": 0.00015, "quality_baseline": 96, "effort_suitability": ["high", "max"], "premium": True},
+    "opus-4-8": {"cost": 0.00015, "quality_baseline": 96, "effort_suitability": ["high", "max"], "premium": True},
 }
 
 ROLE_ASSIGNMENTS = {
     "Engineer": {"model": "haiku-4-5", "effort": "low"},
     "Senior Engineer": {"model": "sonnet-4-6", "effort": "medium"},
     "Lead Engineer": {"model": "sonnet-4-6", "effort": "high"},
-    "Principal Engineer": {"model": "opus-4-7", "effort": "max"},
+    "Principal Engineer": {"model": "opus-4-8", "effort": "max"},
 }
 
 # Cost targets

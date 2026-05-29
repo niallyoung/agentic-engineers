@@ -1,8 +1,8 @@
 ---
 name: skill-creator
-description: Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the ERS platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.
+description: Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the agentic-engineers platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.
 license: Proprietary
-compatibility: Designed for agentic-engineers framework (ERS platform)
+compatibility: Designed for agentic-engineers framework
 metadata:
   author: agentic-engineers
   version: "1.0"

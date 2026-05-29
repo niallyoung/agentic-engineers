@@ -134,12 +134,12 @@ LEAD_ENGINEER_CONFIG = AgentConfig(
 )
 
 PRINCIPAL_ENGINEER_CONFIG = AgentConfig(
-    name="Principal Engineer",
-    model="claude-opus-4.7",
-    effort="high",
-    role="principal_engineer",
-    description="Cross-service architecture, complex design decisions"
-)
+     name="Principal Engineer",
+     model="claude-opus-4.6",
+     effort="high",
+     role="principal_engineer",
+     description="Cross-service architecture, complex design decisions"
+ )
 
 QUALITY_ENGINEER_CONFIG = AgentConfig(
     name="Quality Engineer",
@@ -158,22 +158,22 @@ MODEL_ENGINEER_CONFIG = AgentConfig(
 )
 
 SECURITY_ENGINEER_CONFIG = AgentConfig(
-    name="Security Engineer",
-    model="claude-opus-4.7",
-    effort="max",
-    role="security_engineer",
-    description="Security analysis, threat modeling, vulnerability audits"
-)
+     name="Security Engineer",
+     model="claude-opus-4.8",
+     effort="max",
+     role="security_engineer",
+     description="Security analysis, threat modeling, vulnerability audits"
+ )
 
 # Quality Gate Sub-Agents
 
 SECURITY_AGENT_QG_CONFIG = AgentConfig(
-    name="Security Agent (QG)",
-    model="claude-opus-4.7",
-    effort="high",
-    role="security_agent",
-    description="Scan code for credentials, vulnerabilities, insecure patterns"
-)
+     name="Security Agent (QG)",
+     model="claude-opus-4.8",
+     effort="high",
+     role="security_agent",
+     description="Scan code for credentials, vulnerabilities, insecure patterns"
+ )
 
 TESTING_AGENT_CONFIG = AgentConfig(
     name="Testing Agent",

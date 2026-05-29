@@ -1,6 +1,6 @@
 # Principal Engineer — Design Decision Documentation
 
-**Role:** Principal Engineer (Opus 4.7, high effort)  
+**Role:** Principal Engineer (Opus 4.6, high effort)  
 **Purpose:** Document architectural decisions so they persist beyond the decision-maker
 
 ---

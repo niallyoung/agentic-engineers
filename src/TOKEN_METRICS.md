@@ -251,7 +251,7 @@ Haiku would deliver similar quality at 67% lower cost.
 |-------|-----------------------|------------------------|-------------------|
 | claude-haiku-4.5 | $0.80 | $4.00 | $0.03–0.05 |
 | claude-sonnet-4.6 | $3.00 | $15.00 | $0.09 |
-| claude-opus-4-6 | $15.00 | $75.00 | $0.15 |
-| claude-opus-4.7 | $15.00 | $75.00 | $0.15 |
+ | claude-opus-4-6 | $15.00 | $75.00 | $0.15 |
+ | claude-opus-4.8 | $15.00 | $75.00 | $0.15 |
 
 > Prices are approximate and subject to Anthropic pricing changes. Verify at [anthropic.com/pricing](https://www.anthropic.com/pricing).
