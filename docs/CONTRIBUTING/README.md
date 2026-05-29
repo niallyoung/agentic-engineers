@@ -57,40 +57,40 @@ After `make install`, the framework automatically:
    ```
 
 3. **Make your changes** using the framework's own tools:
-   - New agent? Use `agent-creator` skill
-   - New skill? Use `skill-creator` skill
-   - Code changes? Delegate to the Orchestrator!
+    - New agent? Use `agent-creator` skill
+    - New skill? Use `skill-creator` skill
+    - Code changes? Delegate to the Orchestrator!
 
-     Instead of editing files directly, use the delegation format. Here's an example:
+      Instead of editing files directly, use the delegation format. Here's an example:
 
-    ```yaml
-    ---
-    handoff_type: DELEGATE
-    task_id: 2026-05-29-add-postal-validation
-    role: engineer
-    model: claude-haiku-4.5
-    effort: high
-    scope: Add AU PostalCode validation rule to the address validator. PostalCode is optional but when present must be exactly 4 digits.
-    context:
-      - File: src/validation/postal.py
-      - File: tests/test_postal.py
-    plan:
-      1. Add 4-digit AU postcode regex rule
-      2. Add unit tests for valid and invalid cases
-      3. Run make verify to confirm all tests pass
-    success_criteria:
-      - "PostalCode '2000' and '0800' pass validation"
-      - "PostalCode 'ABC', '123', '12345' are rejected with a clear error message"
-      - "make test FILTER=test_postal passes with no failures"
-    ---
-    ```
+     ```yaml
+     ---
+     handoff_type: DELEGATE
+     task_id: 2026-05-29-add-postal-validation
+     role: engineer
+     model: claude-haiku-4.5
+     effort: high
+     scope: Add AU PostalCode validation rule to the address validator. PostalCode is optional but when present must be exactly 4 digits.
+     context:
+       - File: src/validation/postal.py
+       - File: tests/test_postal.py
+     plan:
+       1. Add 4-digit AU postcode regex rule
+       2. Add unit tests for valid and invalid cases
+       3. Run make verify to confirm all tests pass
+     success_criteria:
+       - "PostalCode '2000' and '0800' pass validation"
+       - "PostalCode 'ABC', '123', '12345' are rejected with a clear error message"
+       - "make test FILTER=test_postal passes with no failures"
+     ---
+     ```
 
-    When delegating work:
-    - Describe the goal or outcome in sufficient detail with descriptive language
-    - Don't be too prescriptive about implementation details
-    - Prefer generalized, flexible principles and positive reinforcement over inflexible rules
-    - Provide the Orchestrator with a list of related tasks and outcomes end-to-end
-    - Give enough context so the Orchestrator can plan and implement a decent solution
+     When delegating work:
+     - Describe the goal or outcome in sufficient detail with descriptive language
+     - Don't be too prescriptive about implementation details
+     - Prefer generalized, flexible principles and positive reinforcement over inflexible rules
+     - Provide the Orchestrator with a list of related tasks and outcomes end-to-end
+     - Give enough context so the Orchestrator can plan and implement a decent solution
 
  4. **Verify locally before pushing:**
    ```bash
