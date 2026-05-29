@@ -9,7 +9,7 @@ metadata:
   category: governance
   role: principal-engineer
   authority: principal-engineer, security-engineer, lead-engineer
-  model: claude-opus-4.7
+  model: claude-opus-4.8
   effort: medium
   thinking: true
 ---
@@ -443,7 +443,7 @@ co delegate principal-engineer \
 
 ### Constraints
 - **TDD discipline**: All implementation must be driven by tests
-- **Model**: Claude Opus 4.7 (highest capability for security scrutiny)
+- **Model**: Claude Opus 4.8 (highest capability for security scrutiny)
 - **Authority**: Principal/Security/Lead exclusive
 - **No direct edits**: SPEC.md can only be modified through this skill
 - **Audit immutability**: Audit trail is permanent and tamper-evident

@@ -363,7 +363,7 @@ def _agents_md_content(cfg, today: str) -> str:
             "engineer_model": "claude-haiku-4.5",
             "senior_model": "claude-sonnet-4.6",
             "lead_model": "claude-sonnet-4.6",
-            "principal_model": "claude-opus-4.7",
+            "principal_model": "claude-opus-4.8",
         },
         "gpt5": {
             "engineer_model": "gpt-4o-mini",
@@ -381,7 +381,7 @@ def _agents_md_content(cfg, today: str) -> str:
             "engineer_model": "claude-haiku-4.5",
             "senior_model": "claude-sonnet-4.6",
             "lead_model": "claude-sonnet-4.6",
-            "principal_model": "claude-opus-4.7",
+            "principal_model": "claude-opus-4.8",
         },
     }
 

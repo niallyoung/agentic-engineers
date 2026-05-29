@@ -153,18 +153,29 @@ derive_docs_url() {
 #     so a larger reserve reduces mid-task compaction surprises.
 #   - `compaction.auto: true` keeps automatic pruning enabled. The TUI signals when
 #     compaction occurs, so user retains visibility.
+#
+# NOTE: Agents are NOT config entries. They are discovered as .md files in ~/.config/opencode/agents/
+# with frontmatter (mode/model/temperature/permission/thinking). This function only emits global config
+# (schema, instructions, default_agent, model, compaction, permission, provider).
+
 write_config() {
 	if [ -f "$DST_CONFIG" ] && ! grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then
 		echo "  ⚠️  skipping opencode.jsonc — foreign at $DST_CONFIG"
 		return
 	fi
-	cat > "$DST_CONFIG" <<'EOF'
+	
+	# IMPORTANT: Agents are NOT config entries. They are discovered as .md files in ~/.config/opencode/agents/
+	# with frontmatter (mode/model/temperature/permission/thinking). opencode.jsonc contains ONLY global config.
+	#
+	# We emit a minimal provider config with available models, but NO agent array.
+	
+	cat > "$DST_CONFIG" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
 {
-  "$schema": "https://opencode.ai/config.json",
+  "\$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
-  "model": "github-copilot/claude-haiku-4.5",
+  "model": "github-copilot/claude-haiku-4-5",
   "compaction": {
     "auto": true,
     "reserved": 30000
@@ -178,16 +189,86 @@ write_config() {
     "grep": "allow",
     "webfetch": "allow"
   },
-  "agent": {
-    "orchestrator": {
-      "model": "github-copilot/claude-haiku-4.5"
-    }
-  },
   "provider": {
     "github-copilot": {
       "models": {
-        "claude-opus-4.6": {
-          "id": "claude-opus-4.6",
+        "claude-haiku-4-5": {
+          "id": "claude-haiku-4-5",
+          "name": "Claude Haiku 4.5",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000003,
+            "output": 0.000012,
+            "cache_read": 0.00000015,
+            "cache_write": 0.0000018
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-sonnet-4-5": {
+          "id": "claude-sonnet-4-5",
+          "name": "Claude Sonnet 4.5",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000003,
+            "output": 0.000015,
+            "cache_read": 0.00000015,
+            "cache_write": 0.0000018
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-sonnet-4-6": {
+          "id": "claude-sonnet-4-6",
+          "name": "Claude Sonnet 4.6",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000003,
+            "output": 0.000015,
+            "cache_read": 0.00000015,
+            "cache_write": 0.0000018
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-opus-4-6": {
+          "id": "claude-opus-4-6",
           "name": "Claude Opus 4.6",
           "family": "claude",
           "release_date": "2025-05-01",
@@ -196,14 +277,39 @@ write_config() {
           "temperature": true,
           "tool_call": true,
           "cost": {
-            "input": 0.000005,
-            "output": 0.000025,
-            "cache_read": 0.0000005,
-            "cache_write": 0.00000625
+            "input": 0.000015,
+            "output": 0.00006,
+            "cache_read": 0.00000075,
+            "cache_write": 0.0000075
           },
           "limit": {
-            "context": 1000000,
-            "output": 128000
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-opus-4-7": {
+          "id": "claude-opus-4-7",
+          "name": "Claude Opus 4.7",
+          "family": "claude",
+          "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000015,
+            "output": 0.00006,
+            "cache_read": 0.00000075,
+            "cache_write": 0.0000075
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
           },
           "modalities": {
             "input": ["text", "image"],
@@ -238,11 +344,11 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 ## Mandatory Constraints
 
 ### Queue-based routing
-- ALL work flows through \`artifacts/queue/incoming/ → processing/ → done/\`.
+- ALL work flows through \`~/.agentic-engineers/{session-id}/opencode/queue/incoming/ → processing/ → done/\`.
 - The Orchestrator polls the queue and routes per the decision tree in
   \`docs/AGENTS.md\`. No direct delegation from external sources.
-- DELEGATEs live in \`artifacts/delegates/YYYY-MM-DD/\`; HANDBACKs in
-  \`artifacts/queue/processing/\` until the Quality Engineer reviews them.
+- DELEGATEs are written to the queue's \`incoming/\` directory; HANDBACKs are written to
+  \`processing/\` and moved to \`done/\` after Quality Engineer review.
 
 ### Orchestrator constraints
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
@@ -259,11 +365,64 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 - **Lead/Senior Engineer** unblock or redirect Engineer when blocked.
 - Each role has specialised skills under \`skills/\` (see \`docs/SKILLS.md\`).
 
+## Protocol Protection (Critical)
+
+### SPEC.md — Immutable Protocol Document
+
+The SPEC.md file defines the agentic-engineers protocol and is protected from direct modification.
+
+**Why**: SPEC.md is the source of truth for our multi-agent coordination protocol. Unauthorized changes could break protocol compliance.
+
+**Who Can Modify?**
+- **Principal Engineer**: Full access via \`spec-management\` skill
+- **All other agents**: Denied (OpenCode will block direct edits)
+
+**How to Modify SPEC.md?**
+1. Use the \`spec-management\` skill (loads structured proposal interface)
+2. Propose changes via SPEC_CHANGE_PROPOSAL.md
+3. Principal Engineer reviews and approves
+4. Changes applied with audit trail maintained automatically
+5. All modifications tracked in SPEC_CHANGELOG.md
+
+### Protected Files
+
+The following files are protected from unintended modifications:
+- \`SPEC.md\` — Core protocol definition (Principal Engineer only)
+- \`docs/SPEC.md\` — Protocol documentation (Principal Engineer only)
+- \`.githooks/**\` — Git hooks infrastructure (Security Engineer only)
+- \`opencode.jsonc\` — OpenCode configuration (Principal Engineer / Security Engineer only)
+- \`SPEC-*.md\` — Protocol extensions (Principal Engineer only)
+
+### Per-Agent Permission Boundaries
+
+Each agent has granular permissions enforced by OpenCode at runtime:
+
+| Agent | Bash Restrictions | Edit Restrictions | Access Level |
+|-------|------------------|-------------------|--------------|
+| **Engineer** | Blocks: \`git push\`, \`git force-push\`, \`rm -rf *\`, \`sudo rm\` | Blocks: SPEC.md, .githooks, config files | Standard developer |
+| **Orchestrator** | Blocks: ALL bash execution | Blocks: ALL file edits | Router only (no direct execution) |
+| **Quality Engineer** | Blocks: Destructive ops, \`rm -rf\`, \`git force-push\` | Blocks: SPEC.md, config files | QA assurance |
+| **Senior Engineer** | Blocks: \`git force-push\` (hotfix exception via Lead) | Blocks: SPEC.md, .githooks | Architecture guidance |
+| **Lead Engineer** | No restrictions (logs all actions) | No restrictions (logs all actions) | Team leadership |
+| **Security Engineer** | No restrictions (trusted security role) | No restrictions (trusted security role) | Security authority |
+| **Model Engineer** | Blocks: Destructive ops, dangerous commands | Blocks: SPEC.md, config files | Model optimization |
+| **Principal Engineer** | No restrictions (ultimate authority) | No restrictions (ultimate authority) | Org authority |
+
+### Critical Dangerous Commands (All Agents)
+
+The following patterns are blocked at the agent level to prevent accidental destruction:
+- \`rm -rf /\` — System destruction
+- \`rm -rf ~\` — Home directory destruction
+- \`rm -rf .git\` — Repository destruction
+- \`git push --force\` or \`git push -f\` — Force pushes (breaks history)
+- \`git reset --hard HEAD~\` — Destructive resets
+- \`sudo rm\` — Privileged destruction
+
 ## Layout in this install
 - \`agents/\` — 8 subagents; invoke via \`opencode --agent <agent-name>\` or the task tool
   (e.g. \`opencode --agent orchestrator\`, \`opencode --agent engineer\`).
 - \`skills/\` — workflow modules loaded on demand via the skill tool.
-- \`opencode.jsonc\` — managed config (compaction, permissions); do not edit.
+- \`opencode.jsonc\` — managed config (compaction, permissions); do not edit directly—use Principal access.
 - \`AGENTS.md.local\` — *optional, user-authored*; if present, OpenCode loads
   it after this file. Use it for personal overrides that survive re-render.
 
@@ -274,12 +433,71 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
   their output survives compaction. Other tool output may be pruned.
 - 8 subagents are installed. Mention them with \`@\` or invoke programmatically
   via the task tool.
+- **Permission enforcement** is runtime-based; violations are logged and blocked at execution time.
 
 ## Full specification
 See [\`docs/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
 [\`docs/QUEUE-PROTOCOL.md\`]($docs_url), and [\`docs/SKILLS.md\`]($docs_url)
 in the source repository for the authoritative protocol.
 EOF
+}
+
+# Generate Phase 2 role-specific AGENTS.md files.
+#
+# These files provide role-specific guidance for each of the 8 agents.
+# They are generated persistently from the canonical role-specific templates.
+# This function is idempotent — running it twice produces identical output.
+#
+# Phase 2 artifacts:
+#   dist/opencode/agents/{role}-AGENTS.md
+#
+# Each file contains:
+#   - Role description and capabilities
+#   - Critical constraints (bash/edit restrictions)
+#   - Available tools and skills
+#   - Decision trees and workflows
+#   - Examples and common patterns
+#
+generate_role_agents_md() {
+	local src_role_agents_dir="$REPO_ROOT/dist/opencode/agents"
+	local dst_role_agents_dir="$DST_AGENTS"
+	
+	if [ ! -d "$src_role_agents_dir" ]; then
+		echo "  ⚠️  skipping role-specific AGENTS.md — no source at $src_role_agents_dir"
+		return
+	fi
+	
+	# 8 canonical roles
+	local roles=(
+		orchestrator
+		engineer
+		senior-engineer
+		lead-engineer
+		quality-engineer
+		principal-engineer
+		security-engineer
+		model-engineer
+	)
+	
+	local count=0
+	for role in "${roles[@]}"; do
+		local src_file="$src_role_agents_dir/${role}-AGENTS.md"
+		local dst_file="$dst_role_agents_dir/${role}-AGENTS.md"
+		
+		if [ ! -f "$src_file" ]; then
+			echo "  ⚠️  skipping role-specific AGENTS.md for $role — source not found at $src_file"
+			continue
+		fi
+		
+		# Copy the role-specific guidance file verbatim (idempotent).
+		# Skip if source and destination are identical (same file).
+		if [ "$src_file" != "$dst_file" ]; then
+			cp "$src_file" "$dst_file"
+		fi
+		count=$((count + 1))
+	done
+	
+	echo "✅ Generated $count role-specific AGENTS.md file(s)"
 }
 
 case "$MODE" in
@@ -454,6 +672,16 @@ case "$MODE" in
 				echo "  glob: allow"
 				echo "  grep: allow"
 				echo "  webfetch: allow"
+				
+				# Add thinking config for agents that support extended thinking (Principal, Security)
+				case "$name" in
+					principal-engineer|security-engineer)
+						echo "thinking:"
+						echo "  enabled: true"
+						echo "  budget_tokens: 5000"
+						;;
+				esac
+				
 				echo "---"
 				echo
 				strip_fm "$src_file"
@@ -464,6 +692,10 @@ case "$MODE" in
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
+
+		# 2.5. Phase 2: Role-specific AGENTS.md files (role guidance)
+		echo "📦 Generating Phase 2 role-specific AGENTS.md → $DST_AGENTS/..."
+		generate_role_agents_md
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# This enforces SDLC compliance at commit/push time for the repo itself.

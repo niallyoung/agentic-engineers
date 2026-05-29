@@ -357,7 +357,7 @@ class TestRecommendModelQualityTargets:
 
     def test_quality_score_clamped_at_1(self, selector):
         """Quality score never exceeds 1.0."""
-        score = selector._quality.estimate_quality("claude-opus-4.7", "code_review")
+        score = selector._quality.estimate_quality("claude-opus-4.8", "code_review")
         assert score <= 1.0
 
     def test_quality_score_clamped_at_0(self, selector):
@@ -801,13 +801,13 @@ class TestQualityEstimator:
 
     def test_opus_quality_highest(self, estimator):
         """Claude Opus scores highest quality among all models."""
-        opus_q = estimator.estimate_quality("claude-opus-4.7", "general")
+        opus_q = estimator.estimate_quality("claude-opus-4.8", "general")
         for model in ("claude-haiku-4.5", "claude-sonnet-4.5", "gpt-4o-mini", "gpt-4o"):
             assert opus_q >= estimator.estimate_quality(model, "general")
 
     def test_score_within_bounds(self, estimator):
         """All quality scores are within [0, 1]."""
-        for model in ("claude-haiku-4.5", "claude-sonnet-4.5", "claude-opus-4.7",
+        for model in ("claude-haiku-4.5", "claude-sonnet-4.5", "claude-opus-4.8",
                       "gpt-4o-mini", "gpt-4o", "llama-3-70b"):
             for task in ("general", "code_review", "documentation", "security_audit"):
                 score = estimator.estimate_quality(model, task)
@@ -829,7 +829,7 @@ class TestQualityEstimator:
 
     def test_get_model_tier_opus(self, estimator):
         """get_model_tier returns 'opus' for claude-opus-4.7."""
-        assert estimator.get_model_tier("claude-opus-4.7") == "opus"
+        assert estimator.get_model_tier("claude-opus-4.8") == "opus"
 
     def test_get_avg_latency_from_config(self, estimator):
         """get_avg_latency returns the configured value for a known model."""
@@ -840,14 +840,14 @@ class TestQualityEstimator:
     def test_get_avg_latency_opus(self, estimator):
         """Opus latency is higher than haiku latency."""
         haiku_lat = estimator.get_avg_latency("claude-haiku-4.5")
-        opus_lat = estimator.get_avg_latency("claude-opus-4.7")
+        opus_lat = estimator.get_avg_latency("claude-opus-4.8")
         assert opus_lat > haiku_lat
 
     def test_list_known_models(self, estimator):
         """list_known_models returns all models from config."""
         models = estimator.list_known_models()
         assert "claude-haiku-4.5" in models
-        assert "claude-opus-4.7" in models
+        assert "claude-opus-4.8" in models
         assert len(models) >= 6
 
     # _infer_tier tests
@@ -861,7 +861,7 @@ class TestQualityEstimator:
 
     def test_infer_tier_opus(self):
         """claude-opus-4.7 → opus tier."""
-        assert _infer_tier("claude-opus-4.7") == "opus"
+        assert _infer_tier("claude-opus-4.8") == "opus"
 
     def test_infer_tier_mini(self):
         """gpt-4o-mini → mini tier (mini takes priority over 4o)."""
