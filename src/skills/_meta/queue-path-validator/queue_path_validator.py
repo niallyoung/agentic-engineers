@@ -2,7 +2,7 @@
 
 Security Model:
 - Canonical format: ~/.agentic-engineers/{session-id}/{harness}/queue/{subdir}
-- Rejects legacy paths (e.g., ~/.copilot/queue/, ~/.claude/queue/)
+- Rejects legacy paths (e.g., ~/.copilot-legacy/queue, ~/.claude-legacy/queue)
 - Prevents path traversal (../, //, symlinks)
 - Validates subdirectory names (incoming, processing, done)
 """
@@ -15,11 +15,11 @@ from typing import Dict, Any, Optional
 
 # Canonical queue path pattern
 CANONICAL_QUEUE_PATTERN = re.compile(
-    r'^~?/?\.agentic-engineers/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/?$'
+    r'^~?/?\.agentic-engineers/artifacts/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/?$'
 )
 
 # Valid queue subdirectories
-VALID_SUBDIRS = {'incoming', 'processing', 'done'}
+VALID_SUBDIRS = {'incoming', 'processing', 'done', 'failed'}
 
 # Legacy paths to reject (must be at root level, not in canonical path)
 LEGACY_PATTERNS = [
@@ -40,10 +40,10 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
     """
     Validate queue path matches canonical format.
     
-    Canonical format: ~/.agentic-engineers/{session-id}/{harness}/queue/
+    Canonical format: ~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/
     
     Security checks:
-    - Rejects legacy paths (~/.copilot/queue/, ~/.claude/queue/)
+    - Rejects legacy paths (old ~/.copilot and ~/.claude directories)
     - Prevents path traversal (../, //, symlinks)
     - Validates session-id and harness names
     - Ensures path is not a symlink
@@ -54,13 +54,10 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
     Returns:
         Dict with keys:
         - valid (bool): Whether path is valid
-        - session_id (str): Extracted session ID (if valid)
-        - harness (str): Extracted harness name (if valid)
-        - subdir (str): Extracted subdirectory (if valid)
-        - error (str): Error message (if invalid)
-        
-    Raises:
-        QueuePathValidationError: If path is invalid
+        - session_id (str): Extracted session ID (if valid), None otherwise
+        - harness (str): Extracted harness name (if valid), None otherwise
+        - subdir (str): Extracted subdirectory (if valid), None otherwise
+        - error (str): Error message (if invalid), None if valid
     """
     if not path or not isinstance(path, str):
         return {
@@ -132,14 +129,14 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
             'error': f'Invalid session_id format: {session_id}'
         }
     
-    # Validate harness name
-    if harness not in {'opencode', 'claude', 'copilot', 'pi'}:
+    # Validate harness name - accept any harness including local, gpt, and custom names
+    if not re.match(r'^[a-z0-9\-]+$', harness):
         return {
             'valid': False,
             'session_id': session_id,
             'harness': harness,
             'subdir': None,
-            'error': f'Invalid harness name: {harness}'
+            'error': f'Invalid harness name format: {harness}'
         }
     
     return {
@@ -204,7 +201,7 @@ def validate_queue_subdir(path: str) -> Dict[str, Any]:
     
     # Match canonical pattern with subdir
     pattern = re.compile(
-        r'^~?/?\.agentic-engineers/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/([a-z]+)/?$'
+        r'^~?/?\.agentic-engineers/artifacts/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/([a-z]+)/?$'
     )
     match = pattern.match(normalized)
     
@@ -231,14 +228,14 @@ def validate_queue_subdir(path: str) -> Dict[str, Any]:
             'error': f'Invalid session_id format: {session_id}'
         }
     
-    # Validate harness
-    if harness not in {'opencode', 'claude', 'copilot', 'pi'}:
+    # Validate harness - accept any harness including local, gpt, and custom names
+    if not re.match(r'^[a-z0-9\-]+$', harness):
         return {
             'valid': False,
             'session_id': session_id,
             'harness': harness,
             'subdir': subdir,
-            'error': f'Invalid harness name: {harness}'
+            'error': f'Invalid harness name format: {harness}'
         }
     
     # Validate subdir

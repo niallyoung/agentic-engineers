@@ -466,10 +466,10 @@ STAGED_QUEUE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '
 for file in $STAGED_QUEUE_FILES; do
     [ -f "$file" ] || continue
     
-    # Skip exceptions: queue_compat.py, _archive/, and tests/
-    if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]]; then
-        continue
-    fi
+     # Skip exceptions: queue_compat.py, queue_path_validator.py (contains legacy patterns for validation), _archive/, and tests/
+     if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"queue_path_validator.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]]; then
+         continue
+     fi
     
     # Check for legacy queue paths in staged content
     

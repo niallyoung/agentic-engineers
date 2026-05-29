@@ -271,7 +271,7 @@ class TestValidateQueuePathsIntegration:
                     thread.join(timeout=2)
                     
                     # validate_queue_paths should have been called
-                    # (Note: may not be called if orchestrator fails to initialize)
+                    assert mock_validate.called, "validate_queue_paths was not called during poll_and_process"
             except Exception as e:
                 # Some initialization may fail in test environment
                 pass

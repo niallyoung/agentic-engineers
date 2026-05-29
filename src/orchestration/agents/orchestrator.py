@@ -46,6 +46,22 @@ from ..decorators import SecurityError
 logger = logging.getLogger(__name__)
 
 
+def _is_env_var_truthy(env_var_name: str) -> bool:
+    """
+    Check if an environment variable is set to a truthy value.
+    
+    Accepts: 'true', 'True', 'TRUE', '1', 'yes', 'Yes', 'YES'
+    
+    Args:
+        env_var_name: Environment variable name to check
+        
+    Returns:
+        bool: True if variable is set to a truthy value, False otherwise
+    """
+    value = os.environ.get(env_var_name, '').strip().lower()
+    return value in ('true', '1', 'yes')
+
+
 # ============================================================================
 # PHASE 1: Queue Isolation Integration
 # ============================================================================
@@ -1302,10 +1318,10 @@ class OrchestratorAgent(Agent):
             metrics['first_try_quality'] = first_try_quality
         
         if handback_block.get('tests'):
-             metrics['test_results'] = {
-                 'passed': test_results.get('passed', 0),
-                 'failed': test_results.get('failed', 0),
-             }
+            metrics['test_results'] = {
+                'passed': test_results.get('passed', 0),
+                'failed': test_results.get('failed', 0),
+            }
         
         return metrics
 
@@ -1353,9 +1369,10 @@ class OrchestratorAgent(Agent):
         # Check for bypass flag
         skip_verification = os.environ.get('SKIP_AGENT_VERIFICATION', '').lower() == 'true'
         
-        # Paths to verify
-        agents_md_path = Path('docs/AGENTS.md')
-        verification_file_path = Path('.agents_verification_sha')
+        # Paths to verify - use absolute paths relative to project root
+        project_root = Path(__file__).parent.parent.parent.parent  # src/orchestration/agents/orchestrator.py → root
+        agents_md_path = project_root / 'docs' / 'AGENTS.md'
+        verification_file_path = project_root / '.agents_verification_sha'
         
         timestamp = datetime.now().isoformat()
         
@@ -1505,9 +1522,17 @@ class OrchestratorAgent(Agent):
         """
         try:
             # Try to import queue path validator from the reference skill
-            from src.skills._meta.queue_path_validator import queue_path_validator
-            validate_queue_path = queue_path_validator.validate_queue_path
-        except (ImportError, AttributeError):
+            # Note: directory is hyphenated (queue-path-validator) but we use importlib
+            import importlib.util
+            skill_path = Path(__file__).parent.parent.parent / 'skills' / '_meta' / 'queue-path-validator' / 'queue_path_validator.py'
+            spec = importlib.util.spec_from_file_location("queue_path_validator", skill_path)
+            if spec and spec.loader:
+                qpv_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(qpv_module)
+                validate_queue_path = qpv_module.validate_queue_path
+            else:
+                raise ImportError("Could not load queue_path_validator spec")
+        except (ImportError, AttributeError, FileNotFoundError):
             # Fallback: implement inline validation
             logger.warning("queue_path_validator not available, using inline validation")
             
@@ -1609,7 +1634,7 @@ class OrchestratorAgent(Agent):
                 )
         
         # Raise SecurityError if invalid paths detected (unless skipped)
-        if invalid_count > 0 and os.environ.get('SKIP_QUEUE_PATH_VALIDATION') != 'true':
+        if invalid_count > 0 and not _is_env_var_truthy('SKIP_QUEUE_PATH_VALIDATION'):
             error_msg = (
                 f"Queue path validation FAILED: {invalid_count} invalid path(s) detected. "
                 f"This is a security violation - canonical queue paths required. "
@@ -1618,7 +1643,7 @@ class OrchestratorAgent(Agent):
             logger.critical(error_msg)
             raise SecurityError(error_msg)
         
-        if invalid_count > 0 and os.environ.get('SKIP_QUEUE_PATH_VALIDATION') == 'true':
+        if invalid_count > 0 and _is_env_var_truthy('SKIP_QUEUE_PATH_VALIDATION'):
             logger.warning(
                 f"Queue path validation failed with {invalid_count} invalid paths, "
                 f"but SKIP_QUEUE_PATH_VALIDATION=true — continuing anyway"

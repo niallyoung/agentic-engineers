@@ -8,6 +8,6 @@ effort: low
 # Queue Path Validator Skill
 
 Validates that queue paths conform to the canonical format:
-`~/.agentic-engineers/{session-id}/{harness}/queue/`
+`~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/`
 
 Rejects legacy paths and injection attempts.

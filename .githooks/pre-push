@@ -29,6 +29,14 @@ WARNINGS=0
 CHECKS_PASSED=0
 CHECKS_FAILED=0
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CAPTURE GIT REFS BEFORE STDIN CONSUMPTION
+# ─────────────────────────────────────────────────────────────────────────────
+# These vars are needed later in queue validation but stdin will be consumed
+# by the read loop. Capture them upfront to avoid empty variable bug.
+LOCAL_SHA=""
+REMOTE_SHA=""
+
 # Color codes
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -65,6 +73,10 @@ echo ""
 
 PUSHING_TO_PROTECTED=0
 while read local_ref local_sha remote_ref remote_sha; do
+  # Capture refs for use after stdin is consumed
+  LOCAL_SHA="$local_sha"
+  REMOTE_SHA="$remote_sha"
+  
   if echo "$remote_ref" | grep -qE 'refs/heads/(main|master)$'; then
     PUSHING_TO_PROTECTED=1
     warn "Pushing to protected branch: $remote_ref"
@@ -361,22 +373,20 @@ if [ "${SKIP_QUEUE_PATH_VALIDATION:-}" = "true" ]; then
 fi
 
 # Check for queue changes in the push
-QUEUE_CHANGES=$(git diff --name-only "$local_sha" "$remote_sha" 2>/dev/null | grep -E '^artifacts/queue/' || true)
+QUEUE_CHANGES=$(git diff --name-only "$LOCAL_SHA" "$REMOTE_SHA" 2>/dev/null | grep -E '^artifacts/queue/' || true)
 
 if [ -n "$QUEUE_CHANGES" ] && [ "$BYPASS_QUEUE_VALIDATION" -eq 0 ]; then
   echo "  Queue changes detected, validating paths..."
   
   # Check for changes to artifacts/queue/ directory
   if git diff --name-only HEAD | grep -q '^artifacts/queue/'; then
-    local_sha=$(git rev-parse HEAD 2>/dev/null || echo "HEAD")
-    
-    # Get list of changed files in queue
+    # Get list of changed files in queue (already includes artifacts/queue/ prefix)
     CHANGED_QUEUE_FILES=$(git diff --name-only HEAD -- artifacts/queue/ 2>/dev/null || true)
     
     if [ -n "$CHANGED_QUEUE_FILES" ]; then
       echo "$CHANGED_QUEUE_FILES" | while read -r queue_file; do
-        # Validate each changed path
-        validate_queue_path "artifacts/queue/$queue_file" 0 || true
+        # Validate each changed path (queue_file already has full path prefix)
+        validate_queue_path "$queue_file" 0 || true
       done
     fi
   fi
@@ -385,7 +395,7 @@ if [ -n "$QUEUE_CHANGES" ] && [ "$BYPASS_QUEUE_VALIDATION" -eq 0 ]; then
   LEGACY_PATHS=()
   
   # Check ~/.copilot/queue/ references (legacy)
-  if git diff --unified=0 "$local_sha" "$remote_sha" 2>/dev/null | grep -E '~/.copilot/queue/|~/.claude/queue/'; then
+  if git diff --unified=0 "$LOCAL_SHA" "$REMOTE_SHA" 2>/dev/null | grep -E '~/.copilot/queue/|~/.claude/queue/'; then
     warn "Legacy queue paths detected in changes (~/.copilot/queue/ or ~/.claude/queue/)"
     echo "[$TIMESTAMP] LEGACY_PATHS: ~/.copilot/queue/ or ~/.claude/queue/" >> "$QUEUE_AUDIT_LOG"
     QUEUE_PATH_ERRORS=$((QUEUE_PATH_ERRORS + 1))
@@ -559,17 +569,18 @@ log_audit() {
 AGENTS_MD_CHANGED=0
 AGENTS_SHA_CHANGED=0
 
-while read local_ref local_sha remote_ref remote_sha; do
+# Use captured refs from earlier stdin read to check for changes
+if [ -n "$LOCAL_SHA" ] && [ -n "$REMOTE_SHA" ]; then
   # Check if AGENTS.md is in the staged changes
-  if git diff --cached --name-only "$local_sha" 2>/dev/null | grep -q "^docs/AGENTS.md$"; then
+  if git diff --cached --name-only "$LOCAL_SHA" 2>/dev/null | grep -q "^docs/AGENTS.md$"; then
     AGENTS_MD_CHANGED=1
   fi
   
   # Check if .agents_verification_sha is in the staged changes
-  if git diff --cached --name-only "$local_sha" 2>/dev/null | grep -q "^.agents_verification_sha$"; then
+  if git diff --cached --name-only "$LOCAL_SHA" 2>/dev/null | grep -q "^.agents_verification_sha$"; then
     AGENTS_SHA_CHANGED=1
   fi
-done
+fi
 
 # Determine if we should verify (not bypassed)
 SHOULD_VERIFY=1
@@ -619,14 +630,6 @@ if [ "$SHOULD_VERIFY" -eq 1 ]; then
       fail "scripts/generate-agent-verification-sha.py not found"
       AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
       log_audit "agent_verification_failed" "generation_script_missing"
-    elif [ ! -x "scripts/generate-agent-verification-sha.py" ]; then
-      fail "scripts/generate-agent-verification-sha.py is not executable"
-      echo ""
-      echo "  📋 Remediation:"
-      echo "     chmod +x scripts/generate-agent-verification-sha.py"
-      echo ""
-      AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
-      log_audit "agent_verification_failed" "generation_script_not_executable"
     else
       # Try to verify the SHA was actually regenerated
       # by running the script in a temp location and comparing
@@ -634,7 +637,7 @@ if [ "$SHOULD_VERIFY" -eq 1 ]; then
         TEMP_SHA_FILE=$(mktemp)
         trap "rm -f $TEMP_SHA_FILE" EXIT
         
-        # Run script to generate fresh SHA
+        # Run script to generate fresh SHA (invoke explicitly via python3, no executable check needed)
         if python3 scripts/generate-agent-verification-sha.py > /dev/null 2>&1; then
           # Compare with staged .agents_verification_sha
           STAGED_SHA=$(git show ":".agents_verification_sha 2>/dev/null | grep "^agent_sha256=" | cut -d= -f2)

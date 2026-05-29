@@ -61,13 +61,37 @@ After `make install`, the framework automatically:
    - New skill? Use `skill-creator` skill
    - Code changes? Delegate to the Orchestrator!
 
-   Instead of editing files directly, use the delegation format:
+     Instead of editing files directly, use the delegation format. Here's an example:
 
-   ```
-   delegate: improve agentic-engineers framework in aspect foo by way of bah; subsequent goals and outcomes; create me a skill to fandango, an agent to muppeteer; then update the docs; etcetera; commit and push watch cicd until green or fix until it is
-   ```
+    ```yaml
+    ---
+    handoff_type: DELEGATE
+    task_id: 2026-05-29-add-postal-validation
+    role: engineer
+    model: claude-haiku-4.5
+    effort: high
+    scope: Add AU PostalCode validation rule to the address validator. PostalCode is optional but when present must be exactly 4 digits.
+    context:
+      - File: src/validation/postal.py
+      - File: tests/test_postal.py
+    plan:
+      1. Add 4-digit AU postcode regex rule
+      2. Add unit tests for valid and invalid cases
+      3. Run make verify to confirm all tests pass
+    success_criteria:
+      - "PostalCode '2000' and '0800' pass validation"
+      - "PostalCode 'ABC', '123', '12345' are rejected with a clear error message"
+      - "make test FILTER=test_postal passes with no failures"
+    ---
+    ```
 
-   Describe the goal or outcome in sufficient detail with descriptive language. Don't be too prescriptive about how exactly — prefer generalized flexible principles and positive reinforcement over inflexible rules. Give the Orchestrator a list of related tasks and outcomes end-to-end so it has enough context to plan and implement a decent solution.
+    When delegating work:
+    - Describe the goal or outcome in sufficient detail with descriptive language
+    - Don't be too prescriptive about implementation details
+    - Prefer generalized, flexible principles and positive reinforcement over inflexible rules
+    - Provide the Orchestrator with a list of related tasks and outcomes end-to-end
+    - Give enough context so the Orchestrator can plan and implement a decent solution
+    - Always provide enough context so the Orchestrator can plan and implement a decent solution
 
    > **NOTE:** We don't recommend editing any of the agentic-engineers files by hand. Ask the Orchestrator to delegate those tasks for you.
    >
