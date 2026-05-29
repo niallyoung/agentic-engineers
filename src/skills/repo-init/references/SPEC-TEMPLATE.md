@@ -72,7 +72,7 @@ The generated SPEC.md follows three principles:
 | Engineer model | `claude-haiku-4.5` | Cheapest capable model; upgrade when needed |
 | Senior model | `claude-sonnet-4.6` | Balance of cost and capability |
 | Lead model | `claude-sonnet-4.6` | Same tier; promote to opus when complex |
-| Principal model | `claude-opus-4.7` | Highest capability for architecture decisions |
+| Principal model | `claude-opus-4.8` | Highest capability for architecture decisions |
 | Default effort | `low` | Prevents runaway token spend |
 | Coverage threshold | `85%` | Industry standard; lower for legacy code |
 | Require HANDBACK | `true` | Always get a structured result |

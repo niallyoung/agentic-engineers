@@ -1,6 +1,6 @@
 # Security Engineer — Threat Modeling
 
-**Role:** Security Engineer (Opus 4.7, max effort)  
+**Role:** Security Engineer (Opus 4.8, max effort)  
 **Purpose:** Identify security threats and design mitigations before implementation
 
 ---

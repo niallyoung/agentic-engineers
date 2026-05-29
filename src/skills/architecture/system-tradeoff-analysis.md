@@ -1,6 +1,6 @@
 # Principal Engineer — System Tradeoff Analysis
 
-**Role:** Principal Engineer (Opus 4.7, high effort)  
+**Role:** Principal Engineer (Opus 4.6, high effort)  
 **Purpose:** Analyze complex tradeoffs (performance vs. cost vs. complexity) to guide architectural decisions
 
 ---

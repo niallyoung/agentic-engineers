@@ -49,8 +49,8 @@ _HARNESS_MODEL_MAPS: dict[str, dict[str, str]] = {
         "senior-engineer":    "claude-sonnet-4.6",
         "lead-engineer":      "claude-sonnet-4.6",
         "quality-engineer":   "claude-sonnet-4.6",
-        "security-engineer":  "claude-opus-4.7",
-        "principal-engineer": "claude-opus-4.7",
+        "security-engineer":  "claude-opus-4.8",
+        "principal-engineer": "claude-opus-4.8",
         "orchestrator":       "claude-sonnet-4.6",
     },
     "gpt5": {
@@ -76,8 +76,8 @@ _HARNESS_MODEL_MAPS: dict[str, dict[str, str]] = {
         "senior-engineer":    "claude-sonnet-4.6",
         "lead-engineer":      "claude-sonnet-4.6",
         "quality-engineer":   "claude-sonnet-4.6",
-        "security-engineer":  "claude-opus-4.7",
-        "principal-engineer": "claude-opus-4.7",
+        "security-engineer":  "claude-opus-4.8",
+        "principal-engineer": "claude-opus-4.8",
         "orchestrator":       "claude-sonnet-4.6",
     },
 }

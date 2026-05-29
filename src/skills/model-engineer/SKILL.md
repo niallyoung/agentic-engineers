@@ -51,7 +51,7 @@ Status phrases (via voice-notify skill):
 ## Configuration
 
 - **Cost target:** $0.0016 per quality point
-- **Models:** Haiku 4.5, Sonnet 4.6, Opus 4.7
+- **Models:** Haiku 4.5, Sonnet 4.6, Opus 4.8
 - **Roles:** Engineer, Senior, Lead, Principal
 - **Input:** TokenAdvisor output + `agentic-engineers/data/metrics/`
 - **Output:** `agentic-engineers/data/logs/model-engineer-YYYY-MM-DD.log`

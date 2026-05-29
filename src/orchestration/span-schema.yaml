@@ -1,0 +1,46 @@
+# SPAN Schema - Task execution span tracking
+# Captures metadata about task invocation and execution
+
+spec_version:
+  type: string
+  pattern: "^\\d+\\.\\d+(-.+)?$"
+  description: "SPEC.md version at task invocation time"
+  required: true
+
+task_id:
+  type: string
+  description: "Reference to DELEGATE task_id"
+  required: true
+
+start_time:
+  type: string
+  format: "ISO-8601"
+  description: "Task invocation timestamp"
+  required: true
+
+end_time:
+  type: string
+  format: "ISO-8601"
+  description: "Task completion timestamp"
+  required: false
+
+duration_ms:
+  type: integer
+  description: "Task execution duration in milliseconds"
+  required: false
+
+model_used:
+  type: string
+  description: "Actual model used for execution"
+  required: true
+
+tokens_used:
+  type: integer
+  description: "Total tokens consumed"
+  required: false
+
+model_mismatch:
+  type: boolean
+  default: false
+  description: "Whether model verification SHA mismatch detected"
+  required: false

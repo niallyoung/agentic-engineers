@@ -71,4 +71,4 @@ Predict daily cost and quality for a hypothetical routing mix.
 | mini | 0.52–0.67 | gpt-4o-mini |
 | haiku | 0.55–0.70 | claude-haiku-4.5, gemini-flash |
 | sonnet | 0.82–0.90 | claude-sonnet-4.5/4.6, gpt-4o |
-| opus | 0.95–0.98 | claude-opus-4.7 |
+| opus | 0.95–0.98 | claude-opus-4.8 |

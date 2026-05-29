@@ -47,7 +47,7 @@
 | Lead Engineer | [`src/skills/roles/lead-engineer.md`](skills/roles/lead-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
 | Senior Engineer | [`src/skills/roles/senior-engineer.md`](skills/roles/senior-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
 | Principal Engineer | [`src/skills/roles/principal-engineer.md`](skills/roles/principal-engineer.md) | `claude-opus-4-6` | 💰💰💰 Premium |
-| Security Engineer | [`src/skills/roles/security-engineer.md`](skills/roles/security-engineer.md) | `claude-opus-4.7` | 💰💰💰 Premium |
+ | Security Engineer | [`src/skills/roles/security-engineer.md`](skills/roles/security-engineer.md) | `claude-opus-4.8` | 💰💰💰 Premium |
 
 ---
 

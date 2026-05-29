@@ -272,11 +272,11 @@ Generates a project-specific SPEC.md with:
 # Generated .agentic-engineers/config.yaml
 framework_version: "5.10"
 model_harness: claude          # or gpt5 / local
-default_engineer_model: claude-haiku-4.5
-default_senior_model: claude-sonnet-4.6
-default_lead_model: claude-sonnet-4.6
-default_principal_model: claude-opus-4.7
-default_effort: low
+ default_engineer_model: claude-haiku-4.5
+ default_senior_model: claude-sonnet-4.6
+ default_lead_model: claude-sonnet-4.6
+ default_principal_model: claude-opus-4.6
+ default_effort: low
 quality_gate:
   min_coverage: 85
   require_handback: true

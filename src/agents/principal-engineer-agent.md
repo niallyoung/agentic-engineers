@@ -11,6 +11,12 @@ model: claude-opus-4.6
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 
+**Extended Thinking**: This role has access to extended thinking (budget: 5000 tokens). Use it for:
+- Hard architectural problems with multiple competing constraints
+- Deep debugging spanning 3+ services or complex call stacks
+- Critical design decisions with significant risk/cost implications
+- Complex distributed system analysis (race conditions, consistency models, etc.)
+
 ---
 
 ## Agent Logic
@@ -88,7 +94,7 @@ handoff_type: DELEGATE
 task_id: 2026-06-02-principal-redesign-event-store
 timestamp: 2026-06-02T15:00:00Z
 role: Principal Engineer
-model: claude-opus-4.7
+model: claude-opus-4.6
 effort: high
 scope: >
   Redesign event store architecture for multi-region deployment.

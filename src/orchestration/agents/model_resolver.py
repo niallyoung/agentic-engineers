@@ -49,20 +49,20 @@ class ModelResolver:
 
     # Fallback defaults when models.yaml is unavailable
     FALLBACK_DEFAULTS = {
-        'engineer': 'claude-haiku-4.5',
-        'senior_engineer': 'claude-sonnet-4.6',
-        'quality_engineer': 'claude-sonnet-4.6',
-        'lead_engineer': 'claude-sonnet-4.6',
-        'security_engineer': 'claude-opus-4.7',
-        'principal_engineer': 'claude-opus-4.7',
-        'model_engineer': 'claude-haiku-4.5',
-        'general_orchestrator': 'claude-haiku-4.5',
-        'orchestrator': 'claude-haiku-4.5',
-        'metrics': 'claude-haiku-4.5',
-        'testing': 'claude-haiku-4.5',
-        'spec_engineer': 'claude-sonnet-4.6',
-        'healing_engineer': 'claude-sonnet-4.6',
-        'spec_engineer_orchestrator': 'claude-sonnet-4.6',
+         'engineer': 'claude-haiku-4.5',
+         'senior_engineer': 'claude-sonnet-4.6',
+         'quality_engineer': 'claude-sonnet-4.6',
+         'lead_engineer': 'claude-sonnet-4.6',
+         'security_engineer': 'claude-opus-4.8',
+         'principal_engineer': 'claude-opus-4.6',
+         'model_engineer': 'claude-haiku-4.5',
+         'general_orchestrator': 'claude-haiku-4.5',
+         'orchestrator': 'claude-haiku-4.5',
+         'metrics': 'claude-haiku-4.5',
+         'testing': 'claude-haiku-4.5',
+         'spec_engineer': 'claude-sonnet-4.6',
+         'healing_engineer': 'claude-sonnet-4.6',
+         'spec_engineer_orchestrator': 'claude-sonnet-4.6',
     }
 
     def __init__(self, models_yaml_path: Optional[str] = None, fallback_to_defaults: bool = True):
