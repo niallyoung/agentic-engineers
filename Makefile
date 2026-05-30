@@ -1,7 +1,7 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
         install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        status \
+        setup status \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
         lint test test-concurrent test-ci test-ci-force test-ci-shell quality-gate
@@ -10,6 +10,9 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
+	@echo ""
+	@echo "Setup:"
+	@echo "  setup               Install Git hooks (.githooks/ → .git/hooks) + dependencies"
 	@echo ""
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
@@ -55,6 +58,33 @@ help:
 	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
 	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
 	@echo "  quality-gate        Pre-push quality checks (lint + test + verify)"
+
+setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
+	@echo "🔒 Setting up Git hooks..."
+	@if [ ! -d "$(REPO_ROOT)/.githooks" ]; then \
+		echo "❌ .githooks/ directory not found"; \
+		exit 1; \
+	fi
+	@git -C "$(REPO_ROOT)" config core.hooksPath .githooks
+	@echo "✓ Git configured to use .githooks/"
+	@for hook in "$(REPO_ROOT)"/.githooks/pre-commit "$(REPO_ROOT)"/.githooks/pre-push "$(REPO_ROOT)"/.githooks/commit-msg "$(REPO_ROOT)"/.githooks/post-merge; do \
+		if [ -f "$$hook" ]; then \
+			chmod +x "$$hook"; \
+			echo "✓ Made executable: $$(basename $$hook)"; \
+		fi \
+	done
+	@echo ""
+	@echo "🧪 Verifying hook setup..."
+	@HOOK_PATH=$$(git -C "$(REPO_ROOT)" config core.hooksPath) && \
+		if [ "$$HOOK_PATH" = ".githooks" ]; then \
+			echo "✅ Git hooks configured: core.hooksPath = .githooks"; \
+		else \
+			echo "❌ Hook configuration failed: core.hooksPath = $$HOOK_PATH"; \
+			exit 1; \
+		fi
+	@echo ""
+	@echo "📖 Hook documentation: .githooks/README.md"
+	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
 install: install-copilot install-claude install-pi install-opencode ## Install to all 4 harnesses
 	@echo ""

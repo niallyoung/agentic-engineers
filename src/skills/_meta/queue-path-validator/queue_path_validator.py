@@ -10,12 +10,13 @@ Security Model:
 import os
 import re
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 
 
-# Canonical queue path pattern
+# Canonical queue path pattern - matches queue directory (no subdirs yet)
+# Handles: ~/.agentic-engineers/{session}/{harness}/queue/ (with or without trailing slash)
 CANONICAL_QUEUE_PATTERN = re.compile(
-    r'^~?/?\.agentic-engineers/artifacts/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/?$'
+    r'^~?/?\.agentic-engineers/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/?$'
 )
 
 # Valid queue subdirectories
@@ -36,11 +37,16 @@ class QueuePathValidationError(Exception):
     pass
 
 
-def validate_queue_path(path: str) -> Dict[str, Any]:
+def validate_queue_path(path: Union[Path, str]) -> Dict[str, Any]:
     """
     Validate queue path matches canonical format.
     
-    Canonical format: ~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/
+    This function accepts BOTH file paths (e.g., ~/.agentic-engineers/session/harness/queue/incoming/file.yaml)
+    and directory paths (e.g., ~/.agentic-engineers/session/harness/queue/).
+    
+    For file paths, it extracts and validates the queue directory.
+    
+    Canonical format: ~/.agentic-engineers/{session-id}/{harness}/queue/[{subdir}/][{file}]
     
     Security checks:
     - Rejects legacy paths (old ~/.copilot and ~/.claude directories)
@@ -48,8 +54,12 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
     - Validates session-id and harness names
     - Ensures path is not a symlink
     
+    Contract validation:
+    - Input must be a Path or string (not None)
+    - Parent directories must be accessible (if path exists)
+    
     Args:
-        path: Queue path to validate (absolute or relative)
+        path: Queue path to validate (absolute or relative). Can be file or directory.
         
     Returns:
         Dict with keys:
@@ -58,18 +68,45 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
         - harness (str): Extracted harness name (if valid), None otherwise
         - subdir (str): Extracted subdirectory (if valid), None otherwise
         - error (str): Error message (if invalid), None if valid
+        
+    Raises:
+        AssertionError: If contract violated (path is None, not a string/Path, or parent not accessible)
     """
-    if not path or not isinstance(path, str):
-        return {
-            'valid': False,
-            'session_id': None,
-            'harness': None,
-            'subdir': None,
-            'error': 'Path must be a non-empty string'
-        }
+    # Contract validation: ensure input is Path or str
+    if not isinstance(path, (Path, str)):
+        raise AssertionError(
+            f"validate_queue_path requires path to be Path or str, got {type(path).__name__}"
+        )
+    
+    if path is None or (isinstance(path, str) and not path.strip()):
+        raise AssertionError("Path must be a non-empty string or Path object")
+    
+    # Convert Path to string for processing
+    if isinstance(path, Path):
+        path_str = str(path)
+    else:
+        path_str = path.strip()
+    
+    # Contract validation: if path exists, parent must be a directory
+    try:
+        path_obj = Path(path_str)
+        if path_obj.exists():
+            # Verify parent is a directory or path itself is a directory
+            if path_obj.is_file():
+                parent_dir = path_obj.parent
+                assert parent_dir.is_dir(), (
+                    f"Parent directory {parent_dir} is not accessible or not a directory"
+                )
+            elif not path_obj.is_dir():
+                raise AssertionError(
+                    f"Path exists but is neither file nor directory: {path_str}"
+                )
+    except (OSError, ValueError) as e:
+        # Path may not exist yet, that's OK - continue validation
+        pass
     
     # Normalize path
-    normalized = path.strip()
+    normalized = path_str.strip()
     
     # Check for path traversal attempts
     if '..' in normalized or '//' in normalized:
@@ -105,15 +142,63 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
     except (OSError, ValueError):
         pass  # Path may not exist yet, continue validation
     
-    # Match canonical pattern (without subdir)
-    match = CANONICAL_QUEUE_PATTERN.match(normalized)
+    # Extract queue directory from file path (if this is a file path)
+    # Remove file name and any subdirectories under queue/ to get just the queue dir
+    # Examples:
+    #   ~/.agentic-engineers/session/harness/queue/incoming/file.yaml → extract queue dir
+    #   /absolute/path/.agentic-engineers/session/harness/queue/ → extract queue dir
+    #   ~/.agentic-engineers/session/harness/queue/ → exact match
+    
+    # Find the "queue" directory marker in the path
+    parts = normalized.replace('\\', '/').split('/')
+    queue_idx = -1
+    for i, part in enumerate(parts):
+        if part == 'queue':
+            queue_idx = i
+            break
+    
+    if queue_idx == -1:
+        # No 'queue' marker found
+        return {
+            'valid': False,
+            'session_id': None,
+            'harness': None,
+            'subdir': None,
+            'error': f'Queue directory not found in path: {normalized}'
+        }
+    
+    # Extract just the canonical part: from '.agentic-engineers' to 'queue'
+    # Find the index of '.agentic-engineers' part
+    canonical_start_idx = -1
+    for i, part in enumerate(parts):
+        if part == '.agentic-engineers':
+            canonical_start_idx = i
+            break
+    
+    if canonical_start_idx == -1:
+        # No '.agentic-engineers' marker found
+        return {
+            'valid': False,
+            'session_id': None,
+            'harness': None,
+            'subdir': None,
+            'error': f'Canonical path marker (.agentic-engineers) not found: {normalized}'
+        }
+    
+    # Reconstruct the canonical queue directory path
+    # From '.agentic-engineers' to 'queue' (inclusive)
+    queue_dir_parts = parts[canonical_start_idx:queue_idx + 1]
+    queue_dir_normalized = '/'.join(queue_dir_parts)
+    
+    # Match canonical pattern (without subdir or file)
+    match = CANONICAL_QUEUE_PATTERN.match(queue_dir_normalized)
     if not match:
         return {
             'valid': False,
             'session_id': None,
             'harness': None,
             'subdir': None,
-            'error': f'Path does not match canonical format: {normalized}'
+            'error': f'Queue directory does not match canonical format: {queue_dir_normalized}'
         }
     
     session_id = match.group(1)
@@ -139,25 +224,33 @@ def validate_queue_path(path: str) -> Dict[str, Any]:
             'error': f'Invalid harness name format: {harness}'
         }
     
+    # If there's a subdirectory, validate it
+    subdir = None
+    if queue_idx + 1 < len(parts) and parts[queue_idx + 1]:
+        # Check if next part is a subdirectory (not a file)
+        potential_subdir = parts[queue_idx + 1]
+        if potential_subdir in VALID_SUBDIRS:
+            subdir = potential_subdir
+    
     return {
         'valid': True,
         'session_id': session_id,
         'harness': harness,
-        'subdir': None,  # No subdir in base path
+        'subdir': subdir,  # Subdir if present, None if this is just a file path
         'error': None
     }
 
 
-def validate_queue_subdir(path: str) -> Dict[str, Any]:
+def validate_queue_subdir(path: Union[Path, str]) -> Dict[str, Any]:
     """
     Validate queue path with subdirectory.
     
     Validates: ~/.agentic-engineers/{session-id}/{harness}/queue/{subdir}
     
-    Valid subdirs: incoming, processing, done
+    Valid subdirs: incoming, processing, done, failed
     
     Args:
-        path: Full queue path including subdirectory
+        path: Full queue path including subdirectory (Path or str)
         
     Returns:
         Dict with keys:
@@ -167,7 +260,19 @@ def validate_queue_subdir(path: str) -> Dict[str, Any]:
         - subdir (str): Extracted subdirectory (if valid)
         - error (str): Error message (if invalid)
     """
-    if not path or not isinstance(path, str):
+    # Contract validation
+    if not isinstance(path, (Path, str)):
+        raise AssertionError(
+            f"validate_queue_subdir requires path to be Path or str, got {type(path).__name__}"
+        )
+    
+    # Convert Path to string
+    if isinstance(path, Path):
+        path_str = str(path)
+    else:
+        path_str = path
+    
+    if not path_str or not isinstance(path_str, str):
         return {
             'valid': False,
             'session_id': None,
@@ -176,7 +281,7 @@ def validate_queue_subdir(path: str) -> Dict[str, Any]:
             'error': 'Path must be a non-empty string'
         }
     
-    normalized = path.strip().rstrip('/')
+    normalized = path_str.strip().rstrip('/')
     
     # Check for path traversal
     if '..' in normalized or '//' in normalized:
@@ -201,7 +306,7 @@ def validate_queue_subdir(path: str) -> Dict[str, Any]:
     
     # Match canonical pattern with subdir
     pattern = re.compile(
-        r'^~?/?\.agentic-engineers/artifacts/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/([a-z]+)/?$'
+        r'^~?/?\.agentic-engineers/([a-z0-9\-]+)/([a-z0-9\-]+)/queue/([a-z]+)/?$'
     )
     match = pattern.match(normalized)
     
