@@ -402,7 +402,7 @@ class CostBudget:
     @contextmanager
     def transaction(self, amount: float) -> TransactionContext:
         """Execute an operation with automatic transaction rollback on error."""
-        # Check before proceeding
+        # Pre-check (cheap, gives a descriptive message for the common case).
         check = self.check_operation(amount)
         if not check.can_proceed:
             raise RuntimeError(
@@ -411,6 +411,14 @@ class CostBudget:
 
         with self._lock:
             self._refresh_all_periods()
+            # Authoritative re-check under the same lock as the deduction so a
+            # concurrent record_spend()/transaction() cannot slip the budget
+            # past its hard limit between the pre-check and the deduction.
+            for level in self._levels.values():
+                if not level.has_capacity(amount):
+                    raise RuntimeError(
+                        f"Transaction blocked: {level.period.value} budget exhausted"
+                    )
             # Pre-deduct from all levels
             self._add_all_levels(amount)
 
