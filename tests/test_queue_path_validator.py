@@ -121,19 +121,20 @@ class TestValidateQueuePath:
         """Reject session ID that is too short."""
         result = validate_queue_path('~/.agentic-engineers/abc/opencode/queue')
         assert result['valid'] is False
-        assert 'Invalid session_id' in result['error'] or 'does not match canonical format' in result['error']
+        assert 'Invalid session_id' in result['error']
     
     def test_reject_invalid_session_id_special_chars(self):
-        """Reject session ID with special characters."""
+        """Reject session ID with invalid special characters."""
         result = validate_queue_path('~/.agentic-engineers/session@001/opencode/queue')
         assert result['valid'] is False
-        assert 'does not match canonical format' in result['error'] or 'invalid' in result['error'].lower()
+        # Special chars in session_id cause pattern mismatch, not session_id validation error
+        assert 'does not match canonical format' in result['error'] or 'Invalid session_id' in result['error']
     
     def test_reject_malformed_path(self):
         """Reject malformed path."""
         result = validate_queue_path('~/.agentic-engineers/session-001')
         assert result['valid'] is False
-        assert 'Queue directory not found' in result['error'] or 'does not match canonical format' in result['error']
+        assert 'does not match canonical format' in result['error']
 
 
 class TestValidateQueueSubdir:

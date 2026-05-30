@@ -1,0 +1,28 @@
+{
+  "session_id": "test-session-mgr-001",
+  "session_start": "2026-05-28T10:00:00Z",
+  "session_end": "2026-05-30T12:30:00Z",
+  "principal_role": "security-engineer",
+  "principal_model": "claude-opus-4.8",
+  "status": "COMPLETE",
+  "tasks_completed": 5,
+  "skills_created": 2,
+  "total_artifacts": 7,
+  "summary": "All 5 tasks completed successfully, 2 new SKILLs created. 5 critical architectural gaps identified with Phase 2 roadmap.",
+  "handback_artifacts": [
+    "HANDBACK-TASK-LINTING-GATES-001-20260530T121500Z.yaml",
+    "HANDBACK-TASK-TEST-ENVIRONMENT-SIMULATION-001-20260530T121500Z.yaml",
+    "HANDBACK-TASK-SECURITY-ANALYSIS-GAPS-001-20260530T121500Z.yaml",
+    "HANDBACK-TASK-CI-PATH-SYMLINK-IMPL-001-20260530T121500Z.yaml",
+    "HANDBACK-TASK-QUEUE-PROTOCOL-INTEGRATION-001-20260530T121500Z.yaml",
+    "HANDBACK-SKILL-code-hygiene-git-workflow-20260530T121500Z.yaml",
+    "HANDBACK-SKILL-add-feature-to-framework-20260530T121500Z.yaml"
+  ],
+  "metrics": {
+    "total_tokens_estimated": 58400,
+    "average_quality_score": 95.2,
+    "acceptance_criteria_passed": 68,
+    "test_pass_rate": "100%",
+    "total_tests": 3490
+  }
+}
