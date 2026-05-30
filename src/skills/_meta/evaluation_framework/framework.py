@@ -39,6 +39,9 @@ class TestResult:
     output: str = ""
     error_message: str = ""
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    quality_score: float = 0.0  # 0-100 quality score
+    cost_usd: float = 0.0  # Cost in USD
+    error_rate: float = 0.0  # Error rate percentage
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert result to dictionary."""
@@ -49,6 +52,9 @@ class TestResult:
             "status": self.status.value,
             "duration_ms": self.duration_ms,
             "tokens_used": self.tokens_used,
+            "quality_score": self.quality_score,
+            "cost_usd": self.cost_usd,
+            "error_rate": self.error_rate,
             "timestamp": self.timestamp,
             "error_message": self.error_message if self.error_message else None,
         }
@@ -176,6 +182,135 @@ class CompatibilityMatrix:
                 regressions[key] = []
             regressions[key].append(result.test_id)
         return regressions
+    
+    def detect_quality_regressions(self, baseline_quality: float = 92.0, threshold: float = 10.0) -> List[Dict[str, Any]]:
+        """
+        Detect quality regressions (quality drop > threshold%).
+        
+        Args:
+            baseline_quality: Baseline quality score (default 92.0)
+            threshold: Quality drop threshold percentage (default 10.0)
+            
+        Returns:
+            List of regression findings
+        """
+        regressions = []
+        by_harness_model = {}
+        
+        # Group by harness:model and calculate avg quality
+        for result in self.results:
+            key = f"{result.harness}:{result.model}"
+            if key not in by_harness_model:
+                by_harness_model[key] = []
+            by_harness_model[key].append(result.quality_score)
+        
+        # Check for regressions
+        for key, scores in by_harness_model.items():
+            avg_quality = sum(scores) / len(scores) if scores else 0
+            quality_drop = baseline_quality - avg_quality
+            if quality_drop > threshold:
+                harness, model = key.split(":")
+                regressions.append({
+                    "harness": harness,
+                    "model": model,
+                    "baseline": baseline_quality,
+                    "achieved": round(avg_quality, 2),
+                    "drop_percent": round(quality_drop, 2),
+                    "status": "❌ FAIL",
+                })
+        
+        return regressions
+    
+    def detect_latency_regressions(self, baseline_latency: float = 500.0, threshold: float = 25.0) -> List[Dict[str, Any]]:
+        """
+        Detect latency regressions (latency increase > threshold%).
+        
+        Args:
+            baseline_latency: Baseline latency in ms (default 500.0)
+            threshold: Latency increase threshold percentage (default 25.0)
+            
+        Returns:
+            List of regression findings
+        """
+        regressions = []
+        by_harness_model = {}
+        
+        # Group by harness:model and calculate avg latency
+        for result in self.results:
+            key = f"{result.harness}:{result.model}"
+            if key not in by_harness_model:
+                by_harness_model[key] = []
+            by_harness_model[key].append(result.duration_ms)
+        
+        # Check for regressions
+        for key, latencies in by_harness_model.items():
+            avg_latency = sum(latencies) / len(latencies) if latencies else 0
+            latency_increase_pct = ((avg_latency - baseline_latency) / baseline_latency * 100) if baseline_latency > 0 else 0
+            if latency_increase_pct > threshold:
+                harness, model = key.split(":")
+                regressions.append({
+                    "harness": harness,
+                    "model": model,
+                    "baseline_ms": baseline_latency,
+                    "achieved_ms": round(avg_latency, 2),
+                    "increase_percent": round(latency_increase_pct, 2),
+                    "status": "⚠️ CAUTION",
+                })
+        
+        return regressions
+    
+    def generate_colored_matrix(self) -> str:
+        """
+        Generate a colored compatibility matrix with emoji status indicators.
+        
+        Returns:
+            Formatted matrix string with ✅ 🟡 ❌ indicators
+        """
+        # Get unique models and harnesses
+        models = sorted(set(r.model for r in self.results))
+        harnesses = sorted(set(r.harness for r in self.results))
+        
+        lines = []
+        lines.append("\n🔹 Model Compatibility Matrix\n")
+        
+        # Header row
+        header = "Harness".ljust(15)
+        for model in models:
+            header += f" | {model.upper()}"
+        lines.append(header)
+        lines.append("-" * len(header))
+        
+        # Data rows
+        for harness in harnesses:
+            row = harness.ljust(15)
+            for model in models:
+                # Find results for this harness:model combination
+                matching = [r for r in self.results if r.harness == harness and r.model == model]
+                
+                if not matching:
+                    row += " | ⚪"
+                    continue
+                
+                # Determine status based on pass rate and quality
+                passed = sum(1 for r in matching if r.status == TestStatus.PASS)
+                total = len(matching)
+                pass_rate = (passed / total * 100) if total > 0 else 0
+                avg_quality = sum(r.quality_score for r in matching) / total if matching else 0
+                
+                # Color code: ✅ (pass), 🟡 (warning), ❌ (fail)
+                if pass_rate >= 90 and avg_quality >= 90:
+                    status = "✅"
+                elif pass_rate >= 70 or avg_quality >= 80:
+                    status = "🟡"
+                else:
+                    status = "❌"
+                
+                row += f" | {status}"
+            
+            lines.append(row)
+        
+        matrix_text = "\n".join(lines) + "\n"
+        return matrix_text
 
 
 class TestRunner:
