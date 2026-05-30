@@ -15,6 +15,7 @@ Usage:
 """
 
 import hashlib
+import hmac
 import re
 import sys
 from pathlib import Path
@@ -199,8 +200,9 @@ def verify_sha_matches(delegate: Dict[str, Any], current_agents_sha: str) -> boo
     except (ValueError, TypeError):
         return False
     
-    # Compare SHAs
-    return delegate_sha == current_agents_sha
+    # Compare SHAs using a constant-time comparison to avoid leaking
+    # information about how many leading characters matched.
+    return hmac.compare_digest(delegate_sha, current_agents_sha)
 
 
 def verify_handback_sha(handback: Dict[str, Any], current_agents_sha: str) -> bool:
