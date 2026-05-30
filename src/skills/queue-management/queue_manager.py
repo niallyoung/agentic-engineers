@@ -396,12 +396,19 @@ class QueueManager:
         if not message:
             message = f"queue: add task {task_id} to queue and TODO"
         
+        # Pin git operations to the repository that owns TODO.md rather than the
+        # ambient process cwd. Relying on os.getcwd() is unsafe: under concurrent
+        # test execution another thread can change the working directory mid-call,
+        # causing commits to land in the wrong repository.
+        repo_cwd = os.path.dirname(os.path.abspath(self.todo_path)) or "."
+        
         try:
             # Stage files
             subprocess.run(
                 ["git", "add", self.queue_dir, self.todo_path],
                 check=True,
                 capture_output=True,
+                cwd=repo_cwd,
             )
             
             # Commit
@@ -409,6 +416,7 @@ class QueueManager:
                 ["git", "commit", "-m", message],
                 check=True,
                 capture_output=True,
+                cwd=repo_cwd,
             )
         except subprocess.CalledProcessError as e:
             raise GitError(f"Git commit failed: {e.stderr.decode()}")
