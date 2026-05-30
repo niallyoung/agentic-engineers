@@ -1,0 +1,3893 @@
+{
+  "timestamp": "/Users/niall/git/agentic-engineers",
+  "total_skills": 95,
+  "compliant": 48,
+  "partial": 4,
+  "non_compliant": 43,
+  "compliance_percentage": 50.526315789473685,
+  "average_score": 89.62105263157895,
+  "total_issues": 100,
+  "results": [
+    {
+      "skill_name": "ab-testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/ab-testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "ab-testing",
+        "description": "Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. Use to test routing changes, model upgrades, and role assignments with Welch's t-test significance testing.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "lead-engineer",
+        "schedule": "0 18 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 418,
+        "Invocation": 496,
+        "Voice Notifications": 284,
+        "Configuration": 236,
+        "Integration": 206,
+        "Scripts": 45
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "agent-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/agent-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "agent-creator",
+        "description": "Scaffolds new SPEC-compliant agentic-engineers agents with a single call. Generates SKILL.md frontmatter, test scaffolds (TDD RED-phase), __init__.py, scripts/ layout, and DELEGATE/HANDBACK protocol templates. Use when creating any new automation agent, task handler, or operational tool. Validates role, model, effort, naming, and dependency graphs (circular dep detection) before writing files. Supports dry-run mode for planning without side effects.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 593,
+        "Configuration": 1530,
+        "Integration": 188,
+        "Scripts": 136
+      },
+      "score": 91.0
+    },
+    {
+      "skill_name": "consistency-checker",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/consistency-checker/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "consistency-checker",
+        "description": "Automated cross-validation of protocol queue integrity. Scans all DELEGATEs/HANDBACKs, validates schema compliance, detects cycles, checks rate limits, generates compliance report. Enables self-referential protocol improvements.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1281,
+        "Invocation": 1273,
+        "References": 289
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "cost-aggregation",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/cost-aggregation/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "cost-aggregation",
+        "description": "Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. Enables apples-to-apples cost comparison and savings analysis.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Configuration": 124
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "file-sync",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/file-sync/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "file-sync",
+        "description": "Discovers and analyzes scripts in the repository, scoring them for utility and integration. Produces SYNC_REPORT.md with recommendations for integration, archival, or deletion of each script.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "hygiene",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": "GREEN",
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 923,
+        "Invocation": 122
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "metrics-etl",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/metrics-etl/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "metrics-etl",
+        "description": "Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 * * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 376,
+        "Invocation": 444,
+        "Voice Notifications": 50,
+        "Configuration": 231,
+        "Integration": 177,
+        "Scripts": 78
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-engineer",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/model-engineer/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "model-engineer",
+        "description": "Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. Use to generate task routing recommendations and experiment designs based on TokenAdvisor findings.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "senior-engineer",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 479,
+        "Invocation": 435,
+        "Voice Notifications": 303,
+        "Configuration": 280,
+        "Integration": 167,
+        "Scripts": 60
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-selection",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/model-selection/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "model-selection",
+        "description": "Model Selection Optimization (COST-003) \u2014 recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. Computes the Pareto cost-quality frontier and supports mixed-model routing simulation.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Integration": true
+      },
+      "section_lengths": {
+        "Integration": 191
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "protocol-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/protocol-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "protocol-validator",
+        "description": "Runtime protocol validation for DELEGATEs/HANDBACKs against spec-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Integration": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1244,
+        "Invocation": 1940,
+        "Integration": 1104,
+        "References": 267
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "queue-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/queue-management/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "queue-management",
+        "description": "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation. Enables decentralized sub-task creation and reduces orchestrator bottleneck.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "task-management",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1662,
+        "Invocation": 1499,
+        "References": 177
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "repo-init",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/repo-init/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "repo-init",
+        "description": "[DISABLED] Initializes new repositories with the agentic-engineers framework. Currently disabled pending further discussion about repo modification policies.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+, git, bash.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true,
+        "Scripts": true,
+        "Compliance Checklist": true
+      },
+      "section_lengths": {
+        "Configuration": 754,
+        "Scripts": 678,
+        "Compliance Checklist": 582
+      },
+      "score": 76.0
+    },
+    {
+      "skill_name": "skill-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/skill-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "skill-creator",
+        "description": "Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the agentic-engineers platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Examples": true,
+        "Directory Structure": true,
+        "Naming Conventions": true,
+        "Categories": true,
+        "Compliance Checklist": true,
+        "Validation": true
+      },
+      "section_lengths": {
+        "Overview": 774,
+        "Examples": 248,
+        "Directory Structure": 424,
+        "Naming Conventions": 370,
+        "Categories": 677,
+        "Compliance Checklist": 435,
+        "Validation": 165
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "spec-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/spec-management/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "spec-management",
+        "description": "Exclusive SPEC.md change protection with structured proposal interface, impact analysis, multi-level authorization, immutable audit trail, and rollback capability. Only Principal/Security/Lead Engineers can invoke. Enforces all SPEC.md modifications through proposal\u2192analysis\u2192approval\u2192changelog workflow with tamper-evident audit trail.",
+        "license": "Proprietary",
+        "compatibility": "Agentic-Engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "principal-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 1193
+      },
+      "score": 85.0
+    },
+    {
+      "skill_name": "spec-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/spec-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "spec-validator",
+        "description": "Validates implementation compliance with SPEC.md. Parses SPEC.md requirements and constraints, analyzes git diffs, detects violations and rollbacks, and generates compliance reports. Use as a pre-merge gate or post-merge audit to prevent spec drift.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 1163,
+        "Invocation": 1319,
+        "Configuration": 298
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "test-sync-validator",
+        "description": "Validates test fixture synchronization with code changes. Detects orphaned test expectations, stale fixtures, and missing test coverage for code updates. Use as pre-merge gate to catch test-code drift before regressions reach CI.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "testing",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 1285,
+        "Invocation": 814
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "tokenadvisor",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/tokenadvisor/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "tokenadvisor",
+        "description": "Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 487,
+        "Invocation": 330,
+        "Voice Notifications": 245,
+        "Configuration": 212,
+        "Integration": 195,
+        "Scripts": 111
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "usage-tracking",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/usage-tracking/SKILL.md",
+      "compliance_level": "PARTIAL",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        }
+      ],
+      "metadata": {
+        "name": "usage-tracking",
+        "description": "Real-time and historical token usage capture, analysis, and forecasting skill for agents",
+        "license": "Proprietary",
+        "compatibility": "macOS/Linux. Requires Python 3, bash, access to data/metrics/ directory",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "observability",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 517,
+        "Invocation": 760,
+        "Configuration": 311
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "voice-notify",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/voice-notify/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "voice-notify",
+        "description": "Voice notification integration layer providing consistent, brief audio alerts for lifecycle events across all automation agents. Use to emit status alerts via macOS say command or Linux espeak with configurable voices.",
+        "license": "Proprietary",
+        "compatibility": "macOS (say command) or Linux (espeak). Designed for agentic-engineers framework.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 404,
+        "Invocation": 291,
+        "Configuration": 186,
+        "Integration": 248,
+        "Scripts": 97
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "workflow-review",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/claude/skills/workflow-review/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "workflow-review",
+        "description": "Validates end-to-end delegation workflows for correctness. Generates ASCII workflow diagrams showing agent data flow. Checks for missing quality gates, incomplete feedback loops, blocked exit criteria, and unused components.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1451,
+        "References": 242
+      },
+      "score": 87.0
+    },
+    {
+      "skill_name": "ab-testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/ab-testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "ab-testing",
+        "description": "Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. Use to test routing changes, model upgrades, and role assignments with Welch's t-test significance testing.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "lead-engineer",
+        "schedule": "0 18 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 418,
+        "Invocation": 496,
+        "Voice Notifications": 284,
+        "Configuration": 236,
+        "Integration": 206,
+        "Scripts": 45
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "agent-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/agent-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "agent-creator",
+        "description": "Scaffolds new SPEC-compliant agentic-engineers agents with a single call. Generates SKILL.md frontmatter, test scaffolds (TDD RED-phase), __init__.py, scripts/ layout, and DELEGATE/HANDBACK protocol templates. Use when creating any new automation agent, task handler, or operational tool. Validates role, model, effort, naming, and dependency graphs (circular dep detection) before writing files. Supports dry-run mode for planning without side effects.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 593,
+        "Configuration": 1530,
+        "Integration": 188,
+        "Scripts": 136
+      },
+      "score": 91.0
+    },
+    {
+      "skill_name": "consistency-checker",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/consistency-checker/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "consistency-checker",
+        "description": "Automated cross-validation of protocol queue integrity. Scans all DELEGATEs/HANDBACKs, validates schema compliance, detects cycles, checks rate limits, generates compliance report. Enables self-referential protocol improvements.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1281,
+        "Invocation": 1273,
+        "References": 289
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "cost-aggregation",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/cost-aggregation/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "cost-aggregation",
+        "description": "Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. Enables apples-to-apples cost comparison and savings analysis.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Configuration": 124
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "file-sync",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/file-sync/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "file-sync",
+        "description": "Discovers and analyzes scripts in the repository, scoring them for utility and integration. Produces SYNC_REPORT.md with recommendations for integration, archival, or deletion of each script.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "hygiene",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": "GREEN",
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 923,
+        "Invocation": 122
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "metrics-etl",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/metrics-etl/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "metrics-etl",
+        "description": "Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 * * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 376,
+        "Invocation": 444,
+        "Voice Notifications": 50,
+        "Configuration": 231,
+        "Integration": 177,
+        "Scripts": 78
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-engineer",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/model-engineer/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "model-engineer",
+        "description": "Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. Use to generate task routing recommendations and experiment designs based on TokenAdvisor findings.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "senior-engineer",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 479,
+        "Invocation": 435,
+        "Voice Notifications": 303,
+        "Configuration": 280,
+        "Integration": 167,
+        "Scripts": 60
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-selection",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/model-selection/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "model-selection",
+        "description": "Model Selection Optimization (COST-003) \u2014 recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. Computes the Pareto cost-quality frontier and supports mixed-model routing simulation.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Integration": true
+      },
+      "section_lengths": {
+        "Integration": 191
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "protocol-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/protocol-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "protocol-validator",
+        "description": "Runtime protocol validation for DELEGATEs/HANDBACKs against spec-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Integration": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1244,
+        "Invocation": 1940,
+        "Integration": 1104,
+        "References": 267
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "queue-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/queue-management/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "queue-management",
+        "description": "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation. Enables decentralized sub-task creation and reduces orchestrator bottleneck.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "task-management",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1662,
+        "Invocation": 1499,
+        "References": 177
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "repo-init",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/repo-init/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "repo-init",
+        "description": "[DISABLED] Initializes new repositories with the agentic-engineers framework. Currently disabled pending further discussion about repo modification policies.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+, git, bash.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true,
+        "Scripts": true,
+        "Compliance Checklist": true
+      },
+      "section_lengths": {
+        "Configuration": 754,
+        "Scripts": 678,
+        "Compliance Checklist": 582
+      },
+      "score": 76.0
+    },
+    {
+      "skill_name": "skill-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/skill-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "skill-creator",
+        "description": "Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the agentic-engineers platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Examples": true,
+        "Directory Structure": true,
+        "Naming Conventions": true,
+        "Categories": true,
+        "Compliance Checklist": true,
+        "Validation": true
+      },
+      "section_lengths": {
+        "Overview": 774,
+        "Examples": 248,
+        "Directory Structure": 424,
+        "Naming Conventions": 370,
+        "Categories": 677,
+        "Compliance Checklist": 435,
+        "Validation": 165
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "spec-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/spec-management/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "spec-management",
+        "description": "Exclusive SPEC.md change protection with structured proposal interface, impact analysis, multi-level authorization, immutable audit trail, and rollback capability. Only Principal/Security/Lead Engineers can invoke. Enforces all SPEC.md modifications through proposal\u2192analysis\u2192approval\u2192changelog workflow with tamper-evident audit trail.",
+        "license": "Proprietary",
+        "compatibility": "Agentic-Engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "principal-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 1193
+      },
+      "score": 85.0
+    },
+    {
+      "skill_name": "spec-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/spec-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "spec-validator",
+        "description": "Validates implementation compliance with SPEC.md. Parses SPEC.md requirements and constraints, analyzes git diffs, detects violations and rollbacks, and generates compliance reports. Use as a pre-merge gate or post-merge audit to prevent spec drift.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 1163,
+        "Invocation": 1319,
+        "Configuration": 298
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "test-sync-validator",
+        "description": "Validates test fixture synchronization with code changes. Detects orphaned test expectations, stale fixtures, and missing test coverage for code updates. Use as pre-merge gate to catch test-code drift before regressions reach CI.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "testing",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 1285,
+        "Invocation": 814
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "tokenadvisor",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/tokenadvisor/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "tokenadvisor",
+        "description": "Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 487,
+        "Invocation": 330,
+        "Voice Notifications": 245,
+        "Configuration": 212,
+        "Integration": 195,
+        "Scripts": 111
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "usage-tracking",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/usage-tracking/SKILL.md",
+      "compliance_level": "PARTIAL",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        }
+      ],
+      "metadata": {
+        "name": "usage-tracking",
+        "description": "Real-time and historical token usage capture, analysis, and forecasting skill for agents",
+        "license": "Proprietary",
+        "compatibility": "macOS/Linux. Requires Python 3, bash, access to data/metrics/ directory",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "observability",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 517,
+        "Invocation": 760,
+        "Configuration": 311
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "voice-notify",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/voice-notify/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "voice-notify",
+        "description": "Voice notification integration layer providing consistent, brief audio alerts for lifecycle events across all automation agents. Use to emit status alerts via macOS say command or Linux espeak with configurable voices.",
+        "license": "Proprietary",
+        "compatibility": "macOS (say command) or Linux (espeak). Designed for agentic-engineers framework.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 404,
+        "Invocation": 291,
+        "Configuration": 186,
+        "Integration": 248,
+        "Scripts": 97
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "workflow-review",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/copilot/skills/workflow-review/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "workflow-review",
+        "description": "Validates end-to-end delegation workflows for correctness. Generates ASCII workflow diagrams showing agent data flow. Checks for missing quality gates, incomplete feedback loops, blocked exit criteria, and unused components.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1451,
+        "References": 242
+      },
+      "score": 87.0
+    },
+    {
+      "skill_name": "ab-testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/ab-testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "ab-testing",
+        "description": "Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. Use to test routing changes, model upgrades, and role assignments with Welch's t-test significance testing.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "lead-engineer",
+        "schedule": "0 18 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 418,
+        "Invocation": 496,
+        "Voice Notifications": 284,
+        "Configuration": 236,
+        "Integration": 206,
+        "Scripts": 45
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "agent-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/agent-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "agent-creator",
+        "description": "Scaffolds new SPEC-compliant agentic-engineers agents with a single call. Generates SKILL.md frontmatter, test scaffolds (TDD RED-phase), __init__.py, scripts/ layout, and DELEGATE/HANDBACK protocol templates. Use when creating any new automation agent, task handler, or operational tool. Validates role, model, effort, naming, and dependency graphs (circular dep detection) before writing files. Supports dry-run mode for planning without side effects.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 593,
+        "Configuration": 1530,
+        "Integration": 188,
+        "Scripts": 136
+      },
+      "score": 91.0
+    },
+    {
+      "skill_name": "consistency-checker",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/consistency-checker/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "consistency-checker",
+        "description": "Automated cross-validation of protocol queue integrity. Scans all DELEGATEs/HANDBACKs, validates schema compliance, detects cycles, checks rate limits, generates compliance report. Enables self-referential protocol improvements.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1281,
+        "Invocation": 1273,
+        "References": 289
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "cost-aggregation",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/cost-aggregation/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "cost-aggregation",
+        "description": "Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. Enables apples-to-apples cost comparison and savings analysis.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Configuration": 124
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "file-sync",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/file-sync/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "file-sync",
+        "description": "Discovers and analyzes scripts in the repository, scoring them for utility and integration. Produces SYNC_REPORT.md with recommendations for integration, archival, or deletion of each script.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "hygiene",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": "GREEN",
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 923,
+        "Invocation": 122
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "metrics-etl",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/metrics-etl/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "metrics-etl",
+        "description": "Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 * * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 376,
+        "Invocation": 444,
+        "Voice Notifications": 50,
+        "Configuration": 231,
+        "Integration": 177,
+        "Scripts": 78
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-engineer",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/model-engineer/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "model-engineer",
+        "description": "Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. Use to generate task routing recommendations and experiment designs based on TokenAdvisor findings.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "senior-engineer",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 479,
+        "Invocation": 435,
+        "Voice Notifications": 303,
+        "Configuration": 280,
+        "Integration": 167,
+        "Scripts": 60
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-selection",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/model-selection/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "model-selection",
+        "description": "Model Selection Optimization (COST-003) \u2014 recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. Computes the Pareto cost-quality frontier and supports mixed-model routing simulation.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Integration": true
+      },
+      "section_lengths": {
+        "Integration": 191
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "protocol-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/protocol-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "protocol-validator",
+        "description": "Runtime protocol validation for DELEGATEs/HANDBACKs against spec-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Integration": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1244,
+        "Invocation": 1940,
+        "Integration": 1104,
+        "References": 267
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "queue-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/queue-management/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "queue-management",
+        "description": "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation. Enables decentralized sub-task creation and reduces orchestrator bottleneck.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "task-management",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1662,
+        "Invocation": 1499,
+        "References": 177
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "repo-init",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/repo-init/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "repo-init",
+        "description": "[DISABLED] Initializes new repositories with the agentic-engineers framework. Currently disabled pending further discussion about repo modification policies.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+, git, bash.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true,
+        "Scripts": true,
+        "Compliance Checklist": true
+      },
+      "section_lengths": {
+        "Configuration": 754,
+        "Scripts": 678,
+        "Compliance Checklist": 582
+      },
+      "score": 76.0
+    },
+    {
+      "skill_name": "skill-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/skill-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "skill-creator",
+        "description": "Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the agentic-engineers platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Examples": true,
+        "Directory Structure": true,
+        "Naming Conventions": true,
+        "Categories": true,
+        "Compliance Checklist": true,
+        "Validation": true
+      },
+      "section_lengths": {
+        "Overview": 774,
+        "Examples": 248,
+        "Directory Structure": 424,
+        "Naming Conventions": 370,
+        "Categories": 677,
+        "Compliance Checklist": 435,
+        "Validation": 165
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "spec-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/spec-management/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "spec-management",
+        "description": "Exclusive SPEC.md change protection with structured proposal interface, impact analysis, multi-level authorization, immutable audit trail, and rollback capability. Only Principal/Security/Lead Engineers can invoke. Enforces all SPEC.md modifications through proposal\u2192analysis\u2192approval\u2192changelog workflow with tamper-evident audit trail.",
+        "license": "Proprietary",
+        "compatibility": "Agentic-Engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "principal-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 1193
+      },
+      "score": 85.0
+    },
+    {
+      "skill_name": "spec-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/spec-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "spec-validator",
+        "description": "Validates implementation compliance with SPEC.md. Parses SPEC.md requirements and constraints, analyzes git diffs, detects violations and rollbacks, and generates compliance reports. Use as a pre-merge gate or post-merge audit to prevent spec drift.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 1163,
+        "Invocation": 1319,
+        "Configuration": 298
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "test-sync-validator",
+        "description": "Validates test fixture synchronization with code changes. Detects orphaned test expectations, stale fixtures, and missing test coverage for code updates. Use as pre-merge gate to catch test-code drift before regressions reach CI.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "testing",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 1285,
+        "Invocation": 814
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "tokenadvisor",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/tokenadvisor/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "tokenadvisor",
+        "description": "Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 487,
+        "Invocation": 330,
+        "Voice Notifications": 245,
+        "Configuration": 212,
+        "Integration": 195,
+        "Scripts": 111
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "usage-tracking",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/usage-tracking/SKILL.md",
+      "compliance_level": "PARTIAL",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        }
+      ],
+      "metadata": {
+        "name": "usage-tracking",
+        "description": "Real-time and historical token usage capture, analysis, and forecasting skill for agents",
+        "license": "Proprietary",
+        "compatibility": "macOS/Linux. Requires Python 3, bash, access to data/metrics/ directory",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "observability",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 517,
+        "Invocation": 760,
+        "Configuration": 311
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "voice-notify",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/voice-notify/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "voice-notify",
+        "description": "Voice notification integration layer providing consistent, brief audio alerts for lifecycle events across all automation agents. Use to emit status alerts via macOS say command or Linux espeak with configurable voices.",
+        "license": "Proprietary",
+        "compatibility": "macOS (say command) or Linux (espeak). Designed for agentic-engineers framework.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 404,
+        "Invocation": 291,
+        "Configuration": 186,
+        "Integration": 248,
+        "Scripts": 97
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "workflow-review",
+      "skill_path": "/Users/niall/git/agentic-engineers/dist/opencode/skills/workflow-review/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "workflow-review",
+        "description": "Validates end-to-end delegation workflows for correctness. Generates ASCII workflow diagrams showing agent data flow. Checks for missing quality gates, incomplete feedback loops, blocked exit criteria, and unused components.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1451,
+        "References": 242
+      },
+      "score": 87.0
+    },
+    {
+      "skill_name": "ab-testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/docs/archive/deprecated-skills/ab-testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "ab-testing",
+        "description": "Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. Use to test routing changes, model upgrades, and role assignments with Welch's t-test significance testing.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework (ERS platform)",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "lead-engineer",
+        "schedule": "0 18 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 418,
+        "Invocation": 508,
+        "Voice Notifications": 284,
+        "Configuration": 236,
+        "Integration": 206,
+        "Scripts": 45
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "cicd-monitor",
+      "skill_path": "/Users/niall/git/agentic-engineers/docs/archive/deprecated-skills/cicd-monitor/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "cicd-monitor",
+        "description": "Post-push CI/CD health monitor that checks GitHub Actions workflows for failures, escalates issues, and initiates automatic or manual fixes with retry timers (3-5 min intervals).",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 247
+      },
+      "score": 85.0
+    },
+    {
+      "skill_name": "metrics-etl",
+      "skill_path": "/Users/niall/git/agentic-engineers/docs/archive/deprecated-skills/metrics-etl/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "metrics-etl",
+        "description": "Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework (ERS platform)",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 * * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 376,
+        "Invocation": 456,
+        "Voice Notifications": 50,
+        "Configuration": 231,
+        "Integration": 177,
+        "Scripts": 78
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "repo-init",
+      "skill_path": "/Users/niall/git/agentic-engineers/docs/archive/deprecated-skills/repo-init/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "repo-init",
+        "description": "[DISABLED] Initializes new repositories with the agentic-engineers framework. Currently disabled pending further discussion about repo modification policies.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+, git, bash.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true,
+        "Scripts": true,
+        "Compliance Checklist": true
+      },
+      "section_lengths": {
+        "Configuration": 754,
+        "Scripts": 678,
+        "Compliance Checklist": 582
+      },
+      "score": 76.0
+    },
+    {
+      "skill_name": "tokenadvisor",
+      "skill_path": "/Users/niall/git/agentic-engineers/docs/archive/deprecated-skills/tokenadvisor/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "tokenadvisor",
+        "description": "Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework (ERS platform)",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 487,
+        "Invocation": 342,
+        "Voice Notifications": 245,
+        "Configuration": 212,
+        "Integration": 195,
+        "Scripts": 111
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "todo-maintenance",
+      "skill_path": "/Users/niall/git/agentic-engineers/skills/todo-maintenance/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_FIELD",
+          "severity": "critical",
+          "section": "Frontmatter",
+          "message": "Missing required field: name",
+          "suggested_fix": "Add 'name' field to frontmatter"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "",
+        "description": "Auto-sync queue DELEGATEs \u2194 TODO.md on task lifecycle events",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 897
+      },
+      "score": 60.0
+    },
+    {
+      "skill_name": "add-feature-to-framework",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/add-feature-to-framework/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "FRONTMATTER_INVALID",
+          "severity": "critical",
+          "section": "Frontmatter",
+          "message": "Invalid YAML frontmatter or missing delimiters",
+          "suggested_fix": "Ensure frontmatter is wrapped in --- delimiters"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": null,
+      "structure_valid": true,
+      "frontmatter_valid": false,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Examples": true
+      },
+      "section_lengths": {
+        "Examples": 1061
+      },
+      "score": 57.0
+    },
+    {
+      "skill_name": "agent-definition-verifier",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/agent-definition-verifier/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "agent-definition-verifier",
+        "description": "Tri-level verification of AGENTS.md against SPEC.md.\nBlocks model downgrade attacks and unauthorized agent definitions.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 748,
+        "References": 177
+      },
+      "score": 77.0
+    },
+    {
+      "skill_name": "code-hygiene-git-workflow",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/code-hygiene-git-workflow/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "FRONTMATTER_INVALID",
+          "severity": "critical",
+          "section": "Frontmatter",
+          "message": "Invalid YAML frontmatter or missing delimiters",
+          "suggested_fix": "Ensure frontmatter is wrapped in --- delimiters"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": null,
+      "structure_valid": true,
+      "frontmatter_valid": false,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "References": 192
+      },
+      "score": 57.0
+    },
+    {
+      "skill_name": "evaluation_framework",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/evaluation_framework/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "evaluation-framework",
+        "description": "Comprehensive harness integration test suite for catching compatibility flaps and feature regressions early",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers Security Team",
+        "version": "1.0",
+        "category": "testing",
+        "role": "security-engineer",
+        "schedule": "0 2 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Troubleshooting": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 822,
+        "Troubleshooting": 784,
+        "References": 173
+      },
+      "score": 89.0
+    },
+    {
+      "skill_name": "file-cleanup",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/file-cleanup/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "file-cleanup",
+        "description": "Identifies and removes unnecessary files before they accidentally end up in commits. Detects session/temp files, debug logs, coverage artefacts, and test-result directories. Respects git tracking \u2014 never deletes indexed files. Supports dry-run, analysis-only, and execute modes.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "hygiene",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": "GREEN",
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 910,
+        "Invocation": 498
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "gh-actions-monitor",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/gh-actions-monitor/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "gh-actions-monitor",
+        "description": "Efficiently monitor GitHub Actions runs and extract review feedback.\n\nUses adaptive polling intervals (30s for initial/active, 60s for stabilized)\nto minimize API calls while maintaining responsive feedback. Extracts logs,\nidentifies failures, and documents Copilot review comments.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Integration": true
+      },
+      "section_lengths": {
+        "Integration": 622
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "git-operations",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/git-operations/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "git-operations",
+        "description": "Git workflow helpers for the agentic-engineers framework: push with tags, tag management, and standard release workflow",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 309,
+        "References": 217
+      },
+      "score": 77.0
+    },
+    {
+      "skill_name": "orchestrator-enforcer",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/orchestrator-enforcer/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "orchestrator-enforcer",
+        "description": "Runtime enforcement of DELEGATE field requirements via decorators.\nPrevents DELEGATEs from bypassing critical field validation and orchestrator\nfrom processing non-compliant work before execution.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 440,
+        "References": 189
+      },
+      "score": 77.0
+    },
+    {
+      "skill_name": "queue-isolation",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/queue-isolation/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "queue-isolation",
+        "description": "Session-scoped, harness-scoped queue path isolation for multi-harness agentic-engineers workflows. Ensures Claude, Copilot, GPT, and local agents never collide on the same queue directories.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.7+",
+        "author": "agentic-engineers",
+        "version": "1.0.0",
+        "category": "infrastructure",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 356
+      },
+      "score": 85.0
+    },
+    {
+      "skill_name": "queue-path-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/queue-path-validator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "queue-path-validator",
+        "description": "Runtime enforcement of canonical queue paths for DELEGATE/HANDBACK files.\n\nEnforces canonical path: ~/.agentic-engineers/{session-id}/{harness}/queue/\nRejects legacy paths and injection attacks.\n\nIntegrates with git hooks to prevent non-canonical paths in commits.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "References": 145
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "security-field-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/security-field-validator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "security-field-validator",
+        "description": "Validate security-critical DELEGATE fields and enforce routing rules.\nPrevents security work from being mis-routed to general engineers.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 467
+      },
+      "score": 75.0
+    },
+    {
+      "skill_name": "spec-version-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/spec-version-validator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "spec-version-validator",
+        "description": "Audit Trail via spec_version Field \u2014 validates spec_version field in DELEGATE/HANDBACK\nblocks to enable audit trail linking tasks to SPEC versions for compliance and debugging.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false
+      },
+      "section_lengths": {},
+      "score": 60.0
+    },
+    {
+      "skill_name": "task-orchestration",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/_meta/task-orchestration/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "task-orchestration",
+        "description": "Encodes the autonomous task execution framework principle: maximize throughput by parallelizing all independent tasks, and pause only for genuine decisions (not task sequencing). Provides task classification, parallelization analysis, and decision shorthand helpers for all agentic-engineers agents.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.7+",
+        "author": "agentic-engineers",
+        "version": "1.0.0",
+        "category": "framework",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": "GREEN",
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Examples": true
+      },
+      "section_lengths": {
+        "Overview": 838,
+        "Examples": 1271
+      },
+      "score": 87.0
+    },
+    {
+      "skill_name": "ab-testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/ab-testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "ab-testing",
+        "description": "Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. Use to test routing changes, model upgrades, and role assignments with Welch's t-test significance testing.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "lead-engineer",
+        "schedule": "0 18 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 418,
+        "Invocation": 496,
+        "Voice Notifications": 284,
+        "Configuration": 236,
+        "Integration": 206,
+        "Scripts": 45
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "agent-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/agent-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "agent-creator",
+        "description": "Scaffolds new SPEC-compliant agentic-engineers agents with a single call. Generates SKILL.md frontmatter, test scaffolds (TDD RED-phase), __init__.py, scripts/ layout, and DELEGATE/HANDBACK protocol templates. Use when creating any new automation agent, task handler, or operational tool. Validates role, model, effort, naming, and dependency graphs (circular dep detection) before writing files. Supports dry-run mode for planning without side effects.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 593,
+        "Configuration": 1530,
+        "Integration": 188,
+        "Scripts": 136
+      },
+      "score": 91.0
+    },
+    {
+      "skill_name": "consistency-checker",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/consistency-checker/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "consistency-checker",
+        "description": "Automated cross-validation of protocol queue integrity. Scans all DELEGATEs/HANDBACKs, validates schema compliance, detects cycles, checks rate limits, generates compliance report. Enables self-referential protocol improvements.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1281,
+        "Invocation": 1273,
+        "References": 289
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "cost-aggregation",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/cost-aggregation/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "cost-aggregation",
+        "description": "Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. Enables apples-to-apples cost comparison and savings analysis.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Configuration": 124
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "file-sync",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/file-sync/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "file-sync",
+        "description": "Discovers and analyzes scripts in the repository, scoring them for utility and integration. Produces SYNC_REPORT.md with recommendations for integration, archival, or deletion of each script.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "hygiene",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": "GREEN",
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 923,
+        "Invocation": 122
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "metrics-etl",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/metrics-etl/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "metrics-etl",
+        "description": "Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 * * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 376,
+        "Invocation": 444,
+        "Voice Notifications": 50,
+        "Configuration": 231,
+        "Integration": 177,
+        "Scripts": 78
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-engineer",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/model-engineer/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "model-engineer",
+        "description": "Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. Use to generate task routing recommendations and experiment designs based on TokenAdvisor findings.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "optimization",
+        "role": "senior-engineer",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 479,
+        "Invocation": 435,
+        "Voice Notifications": 303,
+        "Configuration": 280,
+        "Integration": 167,
+        "Scripts": 60
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "model-selection",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/model-selection/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing category in metadata",
+          "suggested_fix": "Add category field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "model-selection",
+        "description": "Model Selection Optimization (COST-003) \u2014 recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. Computes the Pareto cost-quality frontier and supports mixed-model routing simulation.\n",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Integration": true
+      },
+      "section_lengths": {
+        "Integration": 191
+      },
+      "score": 62.0
+    },
+    {
+      "skill_name": "protocol-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/protocol-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "protocol-validator",
+        "description": "Runtime protocol validation for DELEGATEs/HANDBACKs against spec-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Integration": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1244,
+        "Invocation": 1940,
+        "Integration": 1104,
+        "References": 267
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "queue-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/queue-management/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "queue-management",
+        "description": "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation. Enables decentralized sub-task creation and reduces orchestrator bottleneck.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "task-management",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1662,
+        "Invocation": 1499,
+        "References": 177
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "repo-init",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/repo-init/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Overview",
+          "message": "Missing required section: ## Overview",
+          "suggested_fix": "Add '## Overview' section to document"
+        },
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "repo-init",
+        "description": "[DISABLED] Initializes new repositories with the agentic-engineers framework. Currently disabled pending further discussion about repo modification policies.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+, git, bash.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "senior-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": false,
+        "Invocation": false,
+        "Configuration": true,
+        "Scripts": true,
+        "Compliance Checklist": true
+      },
+      "section_lengths": {
+        "Configuration": 754,
+        "Scripts": 678,
+        "Compliance Checklist": 582
+      },
+      "score": 76.0
+    },
+    {
+      "skill_name": "skill-creator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/skill-creator/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "skill-creator",
+        "description": "Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the agentic-engineers platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "Examples": true,
+        "Directory Structure": true,
+        "Naming Conventions": true,
+        "Categories": true,
+        "Compliance Checklist": true,
+        "Validation": true
+      },
+      "section_lengths": {
+        "Overview": 774,
+        "Examples": 248,
+        "Directory Structure": 424,
+        "Naming Conventions": 370,
+        "Categories": 677,
+        "Compliance Checklist": 435,
+        "Validation": 165
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "spec-management",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/spec-management/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "spec-management",
+        "description": "Exclusive SPEC.md change protection with structured proposal interface, impact analysis, multi-level authorization, immutable audit trail, and rollback capability. Only Principal/Security/Lead Engineers can invoke. Enforces all SPEC.md modifications through proposal\u2192analysis\u2192approval\u2192changelog workflow with tamper-evident audit trail.",
+        "license": "Proprietary",
+        "compatibility": "Agentic-Engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "principal-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false
+      },
+      "section_lengths": {
+        "Overview": 1193
+      },
+      "score": 85.0
+    },
+    {
+      "skill_name": "spec-validator",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/spec-validator/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "spec-validator",
+        "description": "Validates implementation compliance with SPEC.md. Parses SPEC.md requirements and constraints, analyzes git diffs, detects violations and rollbacks, and generates compliance reports. Use as a pre-merge gate or post-merge audit to prevent spec drift.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "governance",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 1163,
+        "Invocation": 1319,
+        "Configuration": 298
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "testing",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/testing/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "test-sync-validator",
+        "description": "Validates test fixture synchronization with code changes. Detects orphaned test expectations, stale fixtures, and missing test coverage for code updates. Use as pre-merge gate to catch test-code drift before regressions reach CI.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "testing",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true
+      },
+      "section_lengths": {
+        "Overview": 1285,
+        "Invocation": 814
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "tokenadvisor",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/tokenadvisor/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "tokenadvisor",
+        "description": "Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.",
+        "license": "Proprietary",
+        "compatibility": "Designed for agentic-engineers framework",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "monitoring",
+        "role": "orchestrator",
+        "schedule": "0 17 * * *",
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Voice Notifications": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 487,
+        "Invocation": 330,
+        "Voice Notifications": 245,
+        "Configuration": 212,
+        "Integration": 195,
+        "Scripts": 111
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "usage-tracking",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/usage-tracking/SKILL.md",
+      "compliance_level": "PARTIAL",
+      "issues": [
+        {
+          "issue_type": "MISSING_METADATA",
+          "severity": "warning",
+          "section": "Frontmatter.metadata",
+          "message": "Missing role in metadata",
+          "suggested_fix": "Add role field to metadata section"
+        }
+      ],
+      "metadata": {
+        "name": "usage-tracking",
+        "description": "Real-time and historical token usage capture, analysis, and forecasting skill for agents",
+        "license": "Proprietary",
+        "compatibility": "macOS/Linux. Requires Python 3, bash, access to data/metrics/ directory",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "observability",
+        "role": "",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true
+      },
+      "section_lengths": {
+        "Overview": 517,
+        "Invocation": 760,
+        "Configuration": 311
+      },
+      "score": 97.0
+    },
+    {
+      "skill_name": "voice-notify",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/voice-notify/SKILL.md",
+      "compliance_level": "COMPLIANT",
+      "issues": [],
+      "metadata": {
+        "name": "voice-notify",
+        "description": "Voice notification integration layer providing consistent, brief audio alerts for lifecycle events across all automation agents. Use to emit status alerts via macOS say command or Linux espeak with configurable voices.",
+        "license": "Proprietary",
+        "compatibility": "macOS (say command) or Linux (espeak). Designed for agentic-engineers framework.",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "orchestration",
+        "role": "orchestrator",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": true,
+        "Configuration": true,
+        "Integration": true,
+        "Scripts": true
+      },
+      "section_lengths": {
+        "Overview": 404,
+        "Invocation": 291,
+        "Configuration": 186,
+        "Integration": 248,
+        "Scripts": 97
+      },
+      "score": 100.0
+    },
+    {
+      "skill_name": "workflow-review",
+      "skill_path": "/Users/niall/git/agentic-engineers/src/skills/workflow-review/SKILL.md",
+      "compliance_level": "NON_COMPLIANT",
+      "issues": [
+        {
+          "issue_type": "MISSING_SECTION",
+          "severity": "critical",
+          "section": "Invocation",
+          "message": "Missing required section: ## Invocation",
+          "suggested_fix": "Add '## Invocation' section to document"
+        }
+      ],
+      "metadata": {
+        "name": "workflow-review",
+        "description": "Validates end-to-end delegation workflows for correctness. Generates ASCII workflow diagrams showing agent data flow. Checks for missing quality gates, incomplete feedback loops, blocked exit criteria, and unused components.",
+        "license": "Proprietary",
+        "compatibility": "agentic-engineers framework v5.10+. Requires Python 3.8+",
+        "author": "agentic-engineers",
+        "version": "1.0",
+        "category": "validation",
+        "role": "quality-engineer",
+        "schedule": null,
+        "tdd_phase": null,
+        "allowed_tools": []
+      },
+      "structure_valid": true,
+      "frontmatter_valid": true,
+      "sections_present": {
+        "Overview": true,
+        "Invocation": false,
+        "References": true
+      },
+      "section_lengths": {
+        "Overview": 1451,
+        "References": 242
+      },
+      "score": 87.0
+    }
+  ]
+}
