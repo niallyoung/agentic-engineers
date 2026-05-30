@@ -95,7 +95,7 @@ def validate_spec_version_match(
         validate_spec_version_match(handback, delegate)  # → SpecVersionValidationError
     """
     task_id = block.get("task_id", "unknown")
-    block_type = block.get("type", "unknown")
+    block_type = block.get("handoff_type") or block.get("type", "unknown")
 
     # Check if spec_version field exists
     if "spec_version" not in block:

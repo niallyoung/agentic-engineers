@@ -13,7 +13,7 @@ purpose: |
   Enable audit trail queries: "Which tasks executed under spec v1.0?"
   Enable compliance verification: "Did spec drift occur between task start and completion?"
   
-  Removes version stamps prevents audit trail linking tasks to spec versions.
+  Audit trail requires version stamps to link tasks to spec versions.
   This skill adds spec_version field to DELEGATE and HANDBACK schemas with validation.
 
 reference: |
@@ -86,16 +86,16 @@ class SpecVersionValidationError(Exception):
 ### Integration Points
 
 1. **Schema updates** (`src/orchestration/`):
-   - `delegate-schema.yaml`: Add `spec_version` to `required_fields`
-   - `handback-schema.yaml`: Add `spec_version` to `required_fields`
+    - `delegate-schema.yaml`: Add `spec_version` to `required_fields` ✅ COMPLETE
+    - `handback-schema.yaml`: Add `spec_version` to `required_fields` ✅ COMPLETE
 
 2. **Validation pipeline** (`src/orchestration/protocol/`):
-   - Import `spec_version_validator`
-   - Call `validate_spec_version_match()` during DELEGATE pre-flight validation (Group A)
-   - Call `validate_spec_version_match()` during HANDBACK post-flight validation
+    - Import `spec_version_validator`
+    - Call `validate_spec_version_match()` during DELEGATE pre-flight validation (Group A)
+    - Call `validate_spec_version_match()` during HANDBACK post-flight validation
 
 3. **Audit queries** (`src/orchestration/`):
-   - Export `find_tasks_by_spec_version()` for audit/compliance reports
+    - Export `find_tasks_by_spec_version()` for audit/compliance reports
 
 ## Test Coverage
 
@@ -210,32 +210,42 @@ Expected output:
 
 ### delegate-schema.yaml
 
-Add to `required_fields` section:
+Add to `required_fields` section (or update if present):
 
 ```yaml
   spec_version:
     type: string
-    pattern: "^\d+\.\d+(-.+)?$"
+    pattern: "^\d+\.\d+(-.*)?$"
     description: "SPEC version authorizing this task for audit trail linking"
     examples:
       - "1.0"
       - "1.1-2026-05-28"
       - "1.0-rc1"
+
+  model_verification_sha:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+    description: "SHA256 of AGENTS.md at task creation (for model downgrade detection)"
 ```
 
 ### handback-schema.yaml
 
-Add to `required_fields` section:
+Add to `required_fields` section (or update if present):
 
 ```yaml
   spec_version:
     type: string
-    pattern: "^\d+\.\d+(-.+)?$"
+    pattern: "^\d+\.\d+(-[^-].+)?$"
     description: "SPEC version when task executed (must match DELEGATE for audit trail integrity)"
     examples:
       - "1.0"
       - "1.1-2026-05-28"
       - "1.0-rc1"
+
+  model_verification_sha:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+    description: "SHA256 of AGENTS.md at task execution (for model downgrade detection)"
 ```
 
 ## Quality Metrics

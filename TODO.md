@@ -244,9 +244,55 @@
   - Fix: Add startup checks: agents loaded, skills available, queue paths valid
   - Effort: 1-2 hours | Owner: Quality Engineer
 
+### Harness Compatibility & Evaluation Testing (Priority: CRITICAL)
+**Problem:** Recent harness/model updates are causing silent compatibility flaps and feature regressions. Need end-to-end feedback loop testing.
+
+- [ ] **EVALS-001: Harness Integration Tests**
+   - Build comprehensive test suite for copilot|opencode|claude CLI harnesses
+   - Test standard prompts/delegations/skills across all harnesses
+   - Capture success/fail results with pass/fail thresholds
+   - Report compatibility matrix: (harness × model × feature)
+   - Effort: 2-3 weeks | Priority: CRITICAL | Owner: Quality Engineer
+   - Success Metric: All harnesses pass standard eval suite with ≥95% success rate
+
+- [ ] **EVALS-002: Model Compatibility Matrix**
+   - Build test suite calling each model (haiku, sonnet, opus) with standard DELEGATE blocks
+   - Measure response quality, latency, cost
+   - Detect model regressions early (breaking changes after model updates)
+   - Effort: 1-2 weeks | Priority: HIGH | Owner: Model Engineer
+
+- [ ] **EVALS-003: Skill Interoperability Tests**
+   - Test each skill against all harnesses (copilot, opencode, claude, pi)
+   - Validate skill outputs meet HANDBACK schema requirements
+   - Report skill-by-harness compatibility
+   - Effort: 1-2 weeks | Priority: HIGH | Owner: Quality Engineer
+
+- [ ] **EVALS-004: End-to-End Delegation Workflows**
+   - Create standard delegation scenarios (simple task, escalation, parallel work)
+   - Run through full workflow on each harness/model combo
+   - Measure success rate, latency, cost
+   - Report pass/fail + threshold analysis
+   - Effort: 2-3 weeks | Priority: HIGH | Owner: Senior Engineer
+
+- [ ] **EVALS-005: Continuous Evaluation Pipeline (CI/CD Integration)**
+   - Add nightly evaluation job to GitHub Actions
+   - Run standard eval suite against all harnesses + models
+   - Generate compatibility report automatically
+   - Alert on regressions (model incompatibility, harness drift)
+   - Effort: 1-2 weeks | Priority: MEDIUM | Owner: Principal Engineer
+
+- [ ] **EVALS-INFRASTRUCTURE: Evaluation Framework**
+   - Create reusable `src/skills/_meta/evaluation-framework/` skill
+   - Standardized test case format, result reporting, threshold checking
+   - Integration with CI/CD, human-readable reports
+   - Effort: 2 weeks | Priority: CRITICAL | Owner: Senior Engineer
+   - Deliverable: Pluggable framework for adding new evaluation scenarios
+
 ### Documentation Polish & Consolidation (Priority: MEDIUM)
 - [ ] **README-POLISH:** Update top section with Phase 1.5 completion and consolidation vision
-  - Add "Phase: Simplify, Reduce, and Polish" banner after intro
+   - Add "Phase: Simplify, Reduce, and Polish" banner after intro
+   - Add Evaluation & Compatibility Testing section
+   - Link to evaluation roadmap
   - Explain: We are in consolidation phase, not feature-add
   - Link to TODO.md for detailed roadmap
   - Effort: 1 hour | Owner: Orchestrator

@@ -47,6 +47,41 @@ We have built a comprehensive multi-agent orchestration framework through 8 phas
 
 ---
 
+## 🧪 Harness Compatibility & Evaluation Testing
+
+**Problem:** Silent compatibility flaps after harness/model updates. Need automated feedback loop.
+
+We're building a comprehensive evaluation framework to close the end-to-end feedback loop with developers and users:
+
+### What We're Adding
+
+1. **Harness Integration Tests** — Standard prompts + delegations across all harnesses (copilot, opencode, claude, pi)
+2. **Model Compatibility Matrix** — Track which models work with which harnesses + features
+3. **Skill Interoperability Tests** — Validate each skill works consistently across all harnesses
+4. **End-to-End Delegation Workflows** — Test complex scenarios (escalation, parallel work, error handling)
+5. **Continuous Evaluation Pipeline** — Nightly CI/CD job to detect regressions automatically
+
+### Why This Matters
+
+Recent updates have caused silent feature regressions. Instead of discovering issues weeks later in production, we'll:
+- ✅ Test every harness × model × skill combination automatically
+- ✅ Generate compatibility reports showing which combinations pass/fail
+- ✅ Alert on model regressions immediately (breaking changes)
+- ✅ Provide clear success/fail thresholds (e.g., "≥95% pass rate required")
+- ✅ Enable confident rollbacks if a harness update breaks workflows
+
+### Timeline
+
+- **Milestone 2a** — Evaluation Framework + Harness Tests (2-3 weeks)
+- **Milestone 2b** — Model Compatibility Matrix + CI/CD Integration (1-2 weeks)
+- **Target:** All harnesses passing 95%+ eval suite by June 2026
+
+### See Detailed Plan
+
+See [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](#harness-compatibility--evaluation-testing) for full roadmap, effort estimates, and ownership.
+
+---
+
 ## What It Is
 
 **Agentic Engineers** solves the multi-agent coordination problem:

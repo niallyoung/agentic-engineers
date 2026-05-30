@@ -246,11 +246,11 @@ class TestStackedDecorators:
         # Valid: both constraints satisfied
         delegate = {
             "task_id": "TASK-012",
-            "approval_gate": "approved",
+            "approval_gate": "lead_engineer",
             "security_scope": "auth",
         }
         result = process_delegate(delegate)
-        assert result["approval_gate"] == "approved"
+        assert result["approval_gate"] == "lead_engineer"
         assert result["security_scope"] == "auth"
 
     def test_stacked_decorators_enforce_first_constraint(self):
@@ -306,12 +306,12 @@ class TestStackedDecorators:
         delegate = {
             "task_id": "TASK-015",
             "role": "engineer",
-            "approval_gate": "yes",
+            "approval_gate": "lead_engineer",
             "security_scope": "crypto",
         }
         result = process_delegate(delegate)
         assert result["role"] == "engineer"
-        assert result["approval_gate"] == "yes"
+        assert result["approval_gate"] == "lead_engineer"
         assert result["security_scope"] == "crypto"
 
     def test_three_stacked_decorators_fail_middle(self):

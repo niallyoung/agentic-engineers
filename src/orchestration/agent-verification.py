@@ -40,15 +40,16 @@ def cmd_generate(args):
     try:
         sha = generate_agents_sha256(agents_file)
         
-        # Write to file
+        # Print to stdout in format hook expects
         timestamp = datetime.utcnow().isoformat() + "Z"
-        content = f"agent_sha256={sha}\ngenerated_at={timestamp}\n"
+        print(f"agent_sha256={sha}")
+        print(f"generated_at={timestamp}")
         
+        # Also write to file for persistence
+        content = f"agent_sha256={sha}\ngenerated_at={timestamp}\n"
         with open(output_file, 'w') as f:
             f.write(content)
         
-        print(f"✅ SHA generated: {sha}")
-        print(f"✅ Written to: {output_file}")
         return True
         
     except FileNotFoundError as e:

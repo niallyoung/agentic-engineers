@@ -17,15 +17,12 @@ from pathlib import Path
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-try:
-    from spec_version_validator import (
-        validate_spec_version_format,
-        validate_spec_version_match,
-        find_tasks_by_spec_version,
-        SpecVersionValidationError,
-    )
-except ImportError as e:
-    pytest.skip(f"spec_version_validator module not found: {e}", allow_module_level=True)
+from spec_version_validator import (
+    validate_spec_version_format,
+    validate_spec_version_match,
+    find_tasks_by_spec_version,
+    SpecVersionValidationError,
+)
 
 
 class TestSpecVersionFormatValidation:
@@ -88,6 +85,16 @@ class TestDelegateRequiresSpecVersion:
         }
         # Should not raise exception
         assert validate_spec_version_match(delegate, None) is True
+
+    def test_delegate_missing_spec_version_raises_error(self):
+        """DELEGATE missing spec_version field should raise SpecVersionValidationError"""
+        delegate = {
+            "task_id": "2026-05-30-test-task",
+            "type": "DELEGATE",
+            "role": "engineer",
+        }
+        with pytest.raises(SpecVersionValidationError):
+            validate_spec_version_match(delegate, None)
 
     def test_delegate_with_valid_spec_version_format(self):
         """DELEGATE with various valid spec_version formats should be accepted"""

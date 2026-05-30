@@ -11,7 +11,7 @@ required_fields:
     
   spec_version:
     type: string
-    pattern: "^\\d+\\.\\d+(-.*)?$"
+    pattern: "^\\d+\\.\\d+(-[^-].+)?$"
     description: "SPEC version when task executed (must match DELEGATE for audit trail integrity)"
     examples:
       - "1.0"
@@ -22,6 +22,12 @@ required_fields:
       - "Must exactly match DELEGATE spec_version"
       - "Used for audit trail linking and compliance verification"
       - "Mismatch indicates possible spec drift during task execution"
+    
+  model_verification_sha:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+    description: "SHA256 of AGENTS.md at task execution (for model downgrade detection)"
+    example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
     
   status:
     type: string

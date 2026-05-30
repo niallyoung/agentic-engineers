@@ -127,6 +127,22 @@ required_fields:
       - "Sufficient detail that agent needs no clarification questions"
     example: "Three specialist agents completed a comprehensive protocol review and architecture design. Quality Engineer identified 5 critical gaps in validation. Principal Engineer designed 5 architectural decisions with 400 LOC pseudocode. This task implements Week 1 Priority 1 tasks to enforce protocol compliance from the start."
 
+  spec_version:
+    type: string
+    pattern: "^\\d+\\.\\d+(-.*)?$"
+    description: "SPEC version authorizing this task for audit trail linking and compliance verification"
+    examples:
+      - "1.0"
+      - "1.1"
+      - "1.1-2026-05-28"
+      - "1.0-rc1"
+
+  model_verification_sha:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+    description: "SHA256 of AGENTS.md at task creation (for model downgrade detection)"
+    example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+
 subtask_fields:
   parent_task_id:
     type: string
