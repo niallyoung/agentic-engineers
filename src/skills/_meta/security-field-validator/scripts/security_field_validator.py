@@ -64,19 +64,31 @@ class SecurityFieldValidator:
             errors.append(
                 f"approval_gate '{approval_gate}' not in {self.APPROVAL_GATES}"
             )
-        
+
+        # audit_required MUST be a real boolean. A non-bool (e.g. the string
+        # "false", which is truthy in Python) would otherwise silently satisfy
+        # the audit requirement below — a fail-open type-confusion bypass.
+        if not isinstance(audit_required, bool):
+            errors.append(
+                f"audit_required must be a boolean (true/false), got "
+                f"{type(audit_required).__name__}: {audit_required!r}"
+            )
+
         # Validation Rule 1: If security_scope != none, approval_gate MUST be set (not "none")
         if security_scope != "none" and approval_gate == "none":
             errors.append(
                 f"Invalid combination: security_scope='{security_scope}' requires approval_gate "
                 f"to be set (not 'none'). Got approval_gate='{approval_gate}'"
             )
-        
-        # Validation Rule 2: If approval_gate is set, audit_required MUST be true
-        if approval_gate != "none" and not audit_required:
+
+        # Validation Rule 2: If approval_gate is set, audit_required MUST be true.
+        # Use an explicit identity check so only the literal boolean True passes;
+        # truthy non-bool values are already rejected above and must not slip
+        # through here.
+        if approval_gate != "none" and audit_required is not True:
             errors.append(
                 f"Invalid combination: approval_gate='{approval_gate}' requires audit_required=true. "
-                f"Got audit_required={audit_required}"
+                f"Got audit_required={audit_required!r}"
             )
         
         # Determine required role based on security_scope
