@@ -2,7 +2,7 @@
 
 8 agent roles + queue-based orchestration + quality gates + cost optimization feedback loops.
 
-**📍 Status:** Consolidation phase—focus on harness stability, skills audit, enforcement consistency. See [Current Status](#current-status) for details.
+**📍 Status:** **Phase 1.5 Security Hardening Complete** — Now in **consolidation phase** (2026-05-30 onwards). Focus: harness stability, skills audit, enforcement consistency. **Feature freeze target: June 15, 2026.** See [Current Status](#current-status) for details.
 
 ---
 
@@ -1900,27 +1900,27 @@ We have built a comprehensive multi-agent orchestration framework through 8 phas
 
 See detailed roadmap: [TODO.md POST-MERGE ROADMAP](TODO.md#post-merge-roadmap)
 
-### 🧪 Harness Compatibility & Evaluation Testing
+### 🧪 Evaluation & Compatibility Testing
 
-**Problem:** Silent compatibility flaps after harness/model updates. Need automated feedback loop.
+**Why This Matters:** Recent harness and model updates can silently break compatibility. We need continuous automated testing to catch regressions immediately.
 
-**What We're Adding:**
-1. **Harness Integration Tests** — Standard prompts + delegations across all harnesses (copilot, opencode, claude, pi)
-2. **Model Compatibility Matrix** — Track which models work with which harnesses + features
+**What We're Building:**
+1. **Harness Integration Tests** — Standard prompts and delegations tested across all harnesses (copilot, opencode, claude, π.dev)
+2. **Model Compatibility Matrix** — Track which models work with which harnesses and features
 3. **Skill Interoperability Tests** — Validate each skill works consistently across all harnesses
 4. **End-to-End Delegation Workflows** — Test complex scenarios (escalation, parallel work, error handling)
 5. **Continuous Evaluation Pipeline** — Nightly CI/CD job to detect regressions automatically
 
-**Why This Matters:**
-- ✅ Test every harness × model × skill combination automatically
-- ✅ Generate compatibility reports showing which combinations pass/fail
-- ✅ Alert on model regressions immediately (breaking changes)
-- ✅ Provide clear success/fail thresholds (e.g., "≥95% pass rate required")
-- ✅ Enable confident rollbacks if a harness update breaks workflows
+**Success Criteria:**
+- ✅ All harness × model × skill combinations tested automatically
+- ✅ Compatibility reports showing which combinations pass/fail
+- ✅ Model regressions detected immediately (breaking changes)
+- ✅ Clear success/fail thresholds (≥95% pass rate required)
+- ✅ Confident rollbacks enabled if a harness update breaks workflows
 
 **Timeline:**
-- Milestone 2a — Evaluation Framework + Harness Tests (2-3 weeks)
-- Milestone 2b — Model Compatibility Matrix + CI/CD Integration (1-2 weeks)
-- Target: All harnesses passing 95%+ eval suite by June 2026
+- **2-3 weeks:** Evaluation framework + harness integration tests
+- **1-2 weeks:** Model compatibility matrix + CI/CD integration
+- **Target:** All harnesses passing 95%+ eval suite by June 2026
 
-See detailed plan: [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](TODO.md#harness-compatibility--evaluation-testing)
+See detailed plan: [TODO.md Harness Compatibility & Evaluation Testing](TODO.md#harness-compatibility--evaluation-testing)
