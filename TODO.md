@@ -434,9 +434,14 @@ No new skills or agents may be added to the framework after this date. All API a
 
 ## 🔵 PLANNED (Phase J+)
 
-- [ ] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
+- [x] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
    - Full standards alignment, compliance matrix, roadmap
    - Effort: 4-6 hours | Owner: Senior Engineer
+   - ✅ Completed: 2026-05-30 — Created root `STANDARDS.md` documenting actual
+     enforced standards (TDD, DELEGATE/HANDBACK, locked model policy, security,
+     Python conventions, conventional commits, branch/worktree workflow,
+     skill/agent authoring, quality-gate thresholds). Grounded in AGENTS.md,
+     CONTRIBUTING.md, .githooks/, and src/config/. models.yaml left untouched (LOCKED).
 
 ### Framework Integration (Opt-In Required)
 > **Status:** ⏸️ PAUSED — Research complete. No work starts until explicitly approved.  
