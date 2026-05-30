@@ -496,8 +496,11 @@ No new skills or agents may be added to the framework after this date. All API a
   - Gas City v1.0.0 released late April 2026 (refinement of Gastown by Steve Yegge)
   - Add to README.md Quick Comparison Table and detailed analysis
   - Effort: 2-3 hours | Owner: Engineer
-- [ ] **MONITORING-001:** Automated document quality monitoring
+- [x] **MONITORING-001:** Automated document quality monitoring
   - Continuous link validation, staleness detection (30+ days)
+  - ✅ Done: `src/skills/doc-quality-monitor` — broken-link, missing-section,
+    staleness, placeholder-leakage & structure checks; JSON + Markdown report
+    with configurable health-score gate. 37 tests passing (TDD). CLI + library API.
 - [ ] **ORCHESTRATOR-001:** Continuous compliance validation
   - Monthly full standards audit, automated alerts on drift
 - [ ] **SKILL-REPO-INIT-001:** Implement repo-init skill for new repository onboarding
