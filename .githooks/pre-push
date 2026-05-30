@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
 # .githooks/pre-push — SDLC pre-push quality gate
 #
-# Enforces:
-#   1. Agent YAML validation (agents/*.md frontmatter)
-#   2. Test suite execution (pytest)
-#   3. Documentation consistency (SPEC.md, AGENTS.md, etc.)
-#   4. Workflow validation (GitHub Actions YAML)
-#   5. Main/master push warnings
-#   6. DELEGATE/HANDBACK protocol compliance
+# Enforces (3 checks):
+#   1. Full test suite: `make test` (all tests must pass)
+#   2. Spec compliance: `make validate-spec` (no SPEC.md drift)
+#   3. No linting errors in committed code
+#
+# Additional validations:
+#   - Agent YAML validation (agents/*.md frontmatter)
+#   - Documentation consistency (SPEC.md, AGENTS.md, etc.)
+#   - Workflow validation (GitHub Actions YAML)
+#   - Main/master push warnings
+#   - DELEGATE/HANDBACK protocol compliance
+#   - Render pipeline completion
+#   - Concurrent test execution (race condition guard)
+#   - Queue path validation
+#   - Agent definition verification
 #
 # Install: git config core.hooksPath .githooks
-# Bypass: SKIP_HOOKS=1 git push
+# Bypass (emergency only): SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push
 
 set -euo pipefail
 
-if [ "${SKIP_HOOKS:-}" = "1" ]; then
-  echo "⚠️  SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
+if [ "${SKIP_HOOKS:-}" = "1" ] || [ "${GIT_SKIP_HOOKS:-}" = "1" ]; then
+  echo "⚠️  SKIP_HOOKS=1 or GIT_SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
   exit 0
 fi
 
@@ -547,7 +555,7 @@ echo ""
 if [ "$ERRORS" -gt 0 ]; then
   echo -e "${RED}❌ pre-push: $ERRORS error(s) found. Fix and retry.${NC}"
   echo ""
-  echo "   Emergency bypass: SKIP_HOOKS=1 git push"
+  echo "   Emergency bypass: SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push"
   echo ""
   exit 1
 fi
