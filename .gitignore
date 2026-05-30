@@ -100,3 +100,8 @@ src/skills/agent_creator
 src/skills/queue_management
 src/skills/spec_management
 src/skills/spec_validator
+
+# Generated coverage / compliance reports (build artifacts, not source)
+coverage.json
+coverage_copilot.json
+COMPLIANCE_REPORT.json
