@@ -77,7 +77,7 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 | **Senior Engineer** | claude-sonnet-4.5 | high | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
 | **Lead Engineer** | claude-sonnet-4.6 | high | Code review; quality decisions; medium-complexity planning; architectural guidance |
 | **Principal Engineer** | claude-opus-4.6 | high | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4.8 | max | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Security Engineer** | claude-opus-4.7 | max | Security analysis; threat modeling; vulnerability audits; final escalation path |
 | **Model Engineer** | claude-sonnet-4.5 | high | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
 **Routing Rules** (for Orchestrator):
