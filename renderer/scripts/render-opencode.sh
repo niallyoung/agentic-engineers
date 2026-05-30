@@ -159,10 +159,70 @@ derive_docs_url() {
 # with frontmatter (mode/model/temperature/permission/thinking). This function only emits global config
 # (schema, instructions, default_agent, model, compaction, permission, provider).
 
+# Detect an auto-generated *trivial* opencode.jsonc stub (e.g. the scaffold
+# OpenCode / @opencode-ai/plugin writes, containing only "$schema"). Such a
+# stub must NOT permanently block the managed config from installing — that is
+# exactly what leaves OpenCode unconfigured (no default_agent/provider/commands).
+# Exit 0 = trivial stub (safe to replace); Exit 1 = real user config or unparseable.
+_is_trivial_opencode_stub() {
+	python3 - "$1" <<'PY' 2>/dev/null
+import sys, json, re
+try:
+    raw = open(sys.argv[1]).read()
+except Exception:
+    sys.exit(1)
+
+# String-aware JSONC comment stripper: must NOT treat // or /* inside a JSON
+# string literal (e.g. the https:// in a $schema URL) as a comment.
+out = []
+i, n = 0, len(raw)
+in_str = False
+while i < n:
+    c = raw[i]
+    if in_str:
+        out.append(c)
+        if c == '\\' and i + 1 < n:      # keep escaped char verbatim
+            out.append(raw[i + 1]); i += 2; continue
+        if c == '"':
+            in_str = False
+        i += 1; continue
+    if c == '"':
+        in_str = True; out.append(c); i += 1; continue
+    if c == '/' and i + 1 < n and raw[i + 1] == '/':
+        while i < n and raw[i] != '\n':
+            i += 1
+        continue
+    if c == '/' and i + 1 < n and raw[i + 1] == '*':
+        i += 2
+        while i + 1 < n and not (raw[i] == '*' and raw[i + 1] == '/'):
+            i += 1
+        i += 2; continue
+    out.append(c); i += 1
+
+stripped = re.sub(r',\s*([}\]])', r'\1', ''.join(out))  # trailing commas
+try:
+    data = json.loads(stripped or '{}')
+except Exception:
+    sys.exit(1)  # unparseable → treat as NON-trivial (never clobber)
+if not isinstance(data, dict):
+    sys.exit(1)
+sys.exit(0 if not (set(data) - {'$schema'}) else 1)
+PY
+}
+
 write_config() {
+	local out="$DST_CONFIG"
 	if [ -f "$DST_CONFIG" ] && ! grep -q "$CONFIG_SENTINEL" "$DST_CONFIG"; then
-		echo "  ⚠️  skipping opencode.jsonc — foreign at $DST_CONFIG"
-		return
+		if _is_trivial_opencode_stub "$DST_CONFIG"; then
+			local backup="${DST_CONFIG}.bak-$(date +%Y%m%d-%H%M%S)"
+			cp "$DST_CONFIG" "$backup"
+			echo "  ↻ replacing auto-generated opencode.jsonc stub (backed up → $backup)"
+		else
+			out="${DST_CONFIG}.agentic"
+			echo "  ⚠️  foreign opencode.jsonc at $DST_CONFIG — NOT overwriting your config"
+			echo "      → managed reference written to $out"
+			echo "      → merge its keys (instructions, default_agent, model, provider, command) into your config"
+		fi
 	fi
 	
 	# IMPORTANT: Agents are NOT config entries. They are discovered as .md files in ~/.config/opencode/agents/
@@ -170,7 +230,7 @@ write_config() {
 	#
 	# We emit a minimal provider config with available models, but NO agent array.
 	
-	cat > "$DST_CONFIG" <<EOF
+	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
 {
   "\$schema": "https://opencode.ai/config.json",
