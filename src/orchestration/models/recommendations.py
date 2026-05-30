@@ -168,10 +168,15 @@ class RecommendationsEngine:
         if stats.over_provisioned_count > 0:
             cheaper = self._cheaper_model(model)
             if cheaper:
-                cost_savings = (
-                    1.0 - MODEL_COST_MULTIPLIERS.get(ModelTier(cheaper), 1.0)
-                    / MODEL_COST_MULTIPLIERS.get(ModelTier(model), 1.0)
-                ) * 100
+                cheaper_tier = self._get_tier_from_model(cheaper)
+                model_tier = self._get_tier_from_model(model)
+                if cheaper_tier and model_tier:
+                    cost_savings = (
+                        1.0 - MODEL_COST_MULTIPLIERS.get(cheaper_tier, 1.0)
+                        / MODEL_COST_MULTIPLIERS.get(model_tier, 1.0)
+                    ) * 100
+                else:
+                    cost_savings = 0.0
                 recs.append(Recommendation(
                     type=RecommendationType.DOWNGRADE,
                     role=role,
@@ -197,15 +202,21 @@ class RecommendationsEngine:
         if stats.escalation_rate > self.HIGH_ESCALATION_RATE or stats.avg_quality < self.POOR_QUALITY_THRESHOLD:
             better = self._better_model(model)
             if better:
-                quality_gain = (
-                    MODEL_QUALITY_BASELINES.get(ModelTier(better), 93.0)
-                    - MODEL_QUALITY_BASELINES.get(ModelTier(model), 82.0)
-                )
-                cost_increase = (
-                    MODEL_COST_MULTIPLIERS.get(ModelTier(better), 1.0)
-                    / MODEL_COST_MULTIPLIERS.get(ModelTier(model), 1.0)
-                    - 1.0
-                ) * 100
+                better_tier = self._get_tier_from_model(better)
+                model_tier = self._get_tier_from_model(model)
+                if better_tier and model_tier:
+                    quality_gain = (
+                        MODEL_QUALITY_BASELINES.get(better_tier, 93.0)
+                        - MODEL_QUALITY_BASELINES.get(model_tier, 82.0)
+                    )
+                    cost_increase = (
+                        MODEL_COST_MULTIPLIERS.get(better_tier, 1.0)
+                        / MODEL_COST_MULTIPLIERS.get(model_tier, 1.0)
+                        - 1.0
+                    ) * 100
+                else:
+                    quality_gain = 0.0
+                    cost_increase = 0.0
                 recs.append(Recommendation(
                     type=RecommendationType.UPGRADE,
                     role=role,
@@ -291,6 +302,14 @@ class RecommendationsEngine:
     # ------------------------------------------------------------------
     # Model tier helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _get_tier_from_model(model: str) -> Optional[ModelTier]:
+        """Find the ModelTier enum from a model string like 'opus-4-7'."""
+        for tier in ModelTier:
+            if tier.value == model:
+                return tier
+        return None
 
     @staticmethod
     def _cheaper_model(model: str) -> Optional[str]:
