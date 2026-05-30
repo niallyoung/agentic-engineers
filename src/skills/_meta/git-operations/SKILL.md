@@ -1,4 +1,5 @@
 ---
+name: git-operations
 title: "git-operations"
 description: "Git workflow helpers for the agentic-engineers framework: push with tags, tag management, and standard release workflow"
 role: "Senior Engineer"
