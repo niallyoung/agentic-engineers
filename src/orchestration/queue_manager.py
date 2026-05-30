@@ -25,7 +25,11 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 # Re-export base QueueManager for backwards compatibility
-from src.orchestration.agents.orchestrator import QueueManager
+from src.orchestration.agents.orchestrator import (
+    QueueManager,
+    sanitize_path_component,
+    ensure_within_directory,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +87,10 @@ class ExtendedQueueManager(QueueManager):
         else:
             raise ValueError(f"Invalid from_state for failed transition: '{from_state}'")
 
+        # Sanitize the task_id before it is used either to match files or to
+        # build the destination filename (prevents path traversal / poisoning).
+        task_id = sanitize_path_component(task_id, field="task_id")
+
         # Find task file
         task_filename = None
         for task_file in sorted(from_dir.glob("*.yaml")):
@@ -131,6 +139,8 @@ class ExtendedQueueManager(QueueManager):
         failed_filename = f"{task_id}-FAILED.yaml"
         to_path = self.failed_dir / failed_filename
         temp_path = self.failed_dir / f".tmp_{failed_filename}"
+        ensure_within_directory(to_path, self.failed_dir, field="failed_path")
+        ensure_within_directory(temp_path, self.failed_dir, field="failed_temp_path")
 
         with open(temp_path, "w") as f:
             yaml.dump(task_data, f, default_flow_style=False, sort_keys=False)
@@ -177,6 +187,8 @@ class ExtendedQueueManager(QueueManager):
         """
         # Find task in failed/
         task_filename = None
+        # Sanitize task_id before matching / filename reconstruction.
+        task_id = sanitize_path_component(task_id, field="task_id")
         for task_file in sorted(self.failed_dir.glob("*.yaml")):
             if task_id in task_file.name:
                 task_filename = task_file.name
@@ -221,6 +233,8 @@ class ExtendedQueueManager(QueueManager):
 
         to_path = self.incoming_dir / recovery_filename
         temp_path = self.incoming_dir / f".tmp_{recovery_filename}"
+        ensure_within_directory(to_path, self.incoming_dir, field="recovery_path")
+        ensure_within_directory(temp_path, self.incoming_dir, field="recovery_temp_path")
 
         with open(temp_path, "w") as f:
             yaml.dump(task_data, f, default_flow_style=False, sort_keys=False)
