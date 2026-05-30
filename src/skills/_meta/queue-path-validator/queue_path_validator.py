@@ -72,20 +72,36 @@ def validate_queue_path(path: Union[Path, str]) -> Dict[str, Any]:
     Raises:
         AssertionError: If contract violated (path is None, not a string/Path, or parent not accessible)
     """
-    # Contract validation: ensure input is Path or str
+    # Contract validation: ensure input is not None or proper type
+    if path is None:
+        return {
+            'valid': False,
+            'session_id': None,
+            'harness': None,
+            'subdir': None,
+            'error': 'Path must be a non-empty string or Path object'
+        }
+    
     if not isinstance(path, (Path, str)):
         raise AssertionError(
             f"validate_queue_path requires path to be Path or str, got {type(path).__name__}"
         )
-    
-    if path is None or (isinstance(path, str) and not path.strip()):
-        raise AssertionError("Path must be a non-empty string or Path object")
     
     # Convert Path to string for processing
     if isinstance(path, Path):
         path_str = str(path)
     else:
         path_str = path.strip()
+    
+    # Check for empty string after stripping
+    if not path_str:
+        return {
+            'valid': False,
+            'session_id': None,
+            'harness': None,
+            'subdir': None,
+            'error': 'Path must be a non-empty string or Path object'
+        }
     
     # Contract validation: if path exists, parent must be a directory
     try:
