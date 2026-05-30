@@ -1355,7 +1355,7 @@ Tests may pass on macOS but fail in Linux CI due to differences in:
 
 **The solution:**
 - Docker container matches **exact GitHub Actions environment** (Python 3.11, ubuntu-latest, git core.symlinks=true)
-- Dockerfile validates 46 CI-specific tests including:
+- **46 container-specific tests** validate:
   - ✅ Symlink creation, resolution, and relative symlink support
   - ✅ Absolute/relative path resolution with spaces and special chars
   - ✅ File permission handling (read/write/execute/denied)
@@ -1394,6 +1394,21 @@ git push
   - Run `make test-ci` on a system with Docker
   - Push to GitHub and rely on CI (slower feedback loop)
   - Or install Docker: https://docs.docker.com/get-docker/
+
+**Container test categories:**
+- `TestContainerSymlinks` (5 tests): symlink creation, resolution, broken symlinks, relative symlinks, path traversal
+- `TestContainerFilePaths` (6 tests): workspace paths, absolute/relative resolution, special chars and spaces
+- `TestContainerFilePermissions` (6 tests): read/write/execute permissions, denied errors, hidden files
+- `TestPython311Compatibility` (6 tests): version check, pathlib, typing, async/await, exception groups
+- `TestSystemDependencies` (4 tests): git, python3, pytest, pyyaml availability
+- `TestDockerfileBuild` (5 tests): Dockerfile exists, uses Python 3.11, sets WORKDIR, installs dependencies
+- `TestMakefileTargets` (5 tests): test-ci, test-ci-force, test-ci-shell targets exist
+- `TestGitConfiguration` (2 tests): symlinks and hooks configured
+- `TestPlatformDetection` (3 tests): platform detection and path separators
+- `TestContainerIntegration` (2 tests): imports work, test discovery succeeds
+- `TestErrorMessages` (1 test): clear error messages
+
+See `tests/test_ci_container_environment.py` for full test suite details.
 
 ---
 

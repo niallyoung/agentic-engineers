@@ -180,7 +180,7 @@ def validate_queue_path(path: Union[Path, str]) -> Dict[str, Any]:
             'session_id': None,
             'harness': None,
             'subdir': None,
-            'error': f'Queue directory not found in path: {normalized}'
+            'error': f'Path does not match canonical format: {normalized}'
         }
     
     # Extract just the canonical part: from '.agentic-engineers' to 'queue'
@@ -198,7 +198,7 @@ def validate_queue_path(path: Union[Path, str]) -> Dict[str, Any]:
             'session_id': None,
             'harness': None,
             'subdir': None,
-            'error': f'Canonical path marker (.agentic-engineers) not found: {normalized}'
+            'error': f'Path does not match canonical format: {normalized}'
         }
     
     # Reconstruct the canonical queue directory path
