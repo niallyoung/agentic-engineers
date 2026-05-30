@@ -330,7 +330,7 @@ class TestValidateQueuePathsErrorHandling:
             # Restore permissions for cleanup
             os.chmod(str(test_file), 0o644)
     
-    def test_handles_symlinks_in_queue_paths(self, orchestrator_with_mock_manager):
+    def test_handles_symlinks_in_queue_paths(self, orchestrator_with_mock_manager, monkeypatch):
         """
         Test that symlinks in queue paths are properly rejected (security property).
         
@@ -359,23 +359,30 @@ class TestValidateQueuePathsErrorHandling:
             pytest.skip("Symlinks not supported on this system")
         
         if symlink_created:
+            # Set SKIP_QUEUE_PATH_VALIDATION to get the result dict instead of exception
+            monkeypatch.setenv('SKIP_QUEUE_PATH_VALIDATION', 'true')
+            
             result = agent.validate_queue_paths()
             
-            # SECURITY PROPERTY: symlinks must be rejected
+            # SECURITY PROPERTY: symlinks must be rejected in the result
             # Result should show validation failure for the symlink
             assert result is not None
             assert isinstance(result, dict)
             
             # Verify the symlink was detected as invalid
-            if result.get('invalid_count', 0) > 0:
-                # Find the symlink error in the errors list
-                symlink_errors = [
-                    e for e in result.get('errors', [])
-                    if 'link.yaml' in e.get('path', '')
-                ]
-                assert any('Symlink' in e.get('reason', '') for e in symlink_errors), (
-                    "Symlink should be rejected with 'Symlink' in error reason"
-                )
+            assert result.get('invalid_count', 0) > 0, (
+                "Symlink should be detected as invalid"
+            )
+            
+            # Find the symlink error in the errors list
+            symlink_errors = [
+                e for e in result.get('errors', [])
+                if 'link.yaml' in e.get('path', '')
+            ]
+            assert len(symlink_errors) > 0, "Symlink error should be in errors list"
+            assert any('Symlink' in e.get('reason', '') for e in symlink_errors), (
+                f"Symlink should be rejected with 'Symlink' in error reason. Got: {symlink_errors}"
+            )
 
 
 class TestValidateQueuePathsDocstring:
@@ -461,8 +468,7 @@ class TestContainerSymlinkHandling:
         # Verify symlink was created
         assert symlink_path.is_symlink()
         
-        # Verify the symlink points to the external file
-        # Use resolve() to normalize paths (handles macOS /private prefix)
+        # Verify the symlink points to the external file (using resolve to handle /private prefix on macOS)
         assert symlink_path.resolve() == external_file.resolve()
     
     def test_container_path_traversal_prevention(self, container_queue_dir):
