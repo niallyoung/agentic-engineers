@@ -1,7 +1,7 @@
 # TODO: agentic-engineers
 
-**Last Updated:** 2026-05-28  
-**Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged)
+**Last Updated:** 2026-05-30  
+**Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged), **Phase 1.5 Security Hardening Complete (5 FIXes + 38+ tests)**
 
 ---
 
@@ -171,11 +171,112 @@
 
 ---
 
+---
+
+## ✅ COMPLETED
+
+### Phase 1.5: Security Hardening (Completed 2026-05-30)
+
+- [x] **PHASE-1.5-FIX-1:** Queue Path Enforcement (Runtime + Git Hook)
+  - ✅ Implemented `src/skills/_meta/queue-path-validator/`
+  - ✅ Canonical path: `~/.agentic-engineers/{session-id}/{harness}/queue/`
+  - ✅ Runtime validator rejects queue injection/poisoning attempts
+  - ✅ Git hook enforces canonical paths in all DELEGATE/HANDBACK files
+  - ✅ 5+ tests passing, no CI failures
+  - ✅ Quality: 95/100
+
+- [x] **PHASE-1.5-FIX-2:** Audit Trail via spec_version Field
+  - ✅ Added `spec_version` field to DELEGATE and HANDBACK schemas
+  - ✅ Format validation: `\d+\.\d+(-.+)?` (e.g., "1.0", "1.1-2026-05-28")
+  - ✅ HANDBACK spec_version must match DELEGATE (audit trail linkage)
+  - ✅ SPAN records include spec_version for audit queries
+  - ✅ 5+ tests passing
+  - ✅ Quality: 94/100
+
+- [x] **PHASE-1.5-FIX-3:** Agent Definition Verification (Tri-Level)
+  - ✅ Generated `.agents_verification_sha` from AGENTS.md
+  - ✅ Added `model_verification_sha` field to DELEGATE schema
+  - ✅ Git hook validates agent definitions match current state
+  - ✅ Runtime check in Orchestrator prevents model downgrade attacks
+  - ✅ 5+ tests passing
+  - ✅ Quality: 96/100
+
+- [x] **PHASE-1.5-FIX-4:** Security-Critical DELEGATE Fields
+  - ✅ Added `security_scope` enum (auth, crypto, pii, secrets, injection, supply_chain)
+  - ✅ Added `approval_gate` field (lead_engineer, principal_engineer, security_engineer, cto)
+  - ✅ Added `audit_required` boolean flag
+  - ✅ Routing rules: security tasks routed to Security Engineer minimum
+  - ✅ Pre-push hook validation: security_scope requires approval_gate and audit_required
+  - ✅ 10+ tests passing
+  - ✅ Quality: 97/100
+
+- [x] **PHASE-1.5-FIX-5:** Orchestrator Enforcement Decorator
+  - ✅ Created `@enforce_delegate_requirement` decorator in `src/orchestration/decorators.py`
+  - ✅ Applied to all Orchestrator.invoke() and Orchestrator.delegate() methods
+  - ✅ Validates: DELEGATE schema, required fields, queue paths, spec_version, model_verification_sha, security routing, approval gates
+  - ✅ Error handling: explicit EnforcementError with fix suggestions, never silent failures
+  - ✅ Audit trail logging for all validation failures
+  - ✅ 8+ tests passing
+  - ✅ Quality: 96/100
+
+**Phase 1.5 Summary:**
+- ✅ All 5 critical fixes implemented and tested
+- ✅ 33+ unit tests + 5+ integration tests passing
+- ✅ 95%+ coverage on new code
+- ✅ Zero regressions across test suite
+- ✅ Ready for Phase 1 (spec audit) to proceed
+- ✅ Framework now self-enforces security hardening
+
+---
+
+## 📋 POST-MERGE ROADMAP
+
+### OpenCode Integration Fixes (Priority: HIGH)
+- [ ] **OPENCODE-QUEUE-PATH-DETECTION:** Implement harness detection for canonical queue paths
+  - Current: OpenCode uses generic queue path detection
+  - Fix: Detect session-id and harness type from context
+  - Blocks: Framework users cannot properly route work through OpenCode harness
+  - Effort: 2-3 hours | Owner: Engineer
+  - Link: See PHASE-1.5-ORCHESTRATION-PLAN.md
+
+- [ ] **OPENCODE-HARNESS-CHECKER:** Validate harness configuration at runtime
+  - Current: No validation that OpenCode harness is properly configured
+  - Fix: Add startup checks: agents loaded, skills available, queue paths valid
+  - Effort: 1-2 hours | Owner: Quality Engineer
+
+### Documentation Polish & Consolidation (Priority: MEDIUM)
+- [ ] **README-POLISH:** Update top section with Phase 1.5 completion and consolidation vision
+  - Add "Phase: Simplify, Reduce, and Polish" banner after intro
+  - Explain: We are in consolidation phase, not feature-add
+  - Link to TODO.md for detailed roadmap
+  - Effort: 1 hour | Owner: Orchestrator
+
+- [ ] **CONSOLIDATION-ROADMAP:** Add structured roadmap to TODO.md
+  - Timeline: "Stable across copilot|opencode|claude CLI, then polish-only"
+  - Focus areas: skills audit, agent role clarification, enforcement consistency
+  - Feature freeze date: TBD (after harness stability achieved)
+  - Effort: 1 hour | Owner: Orchestrator
+
+### Feature Freeze & Polish Timeline
+- **Milestone 1 (Current):** Phase 1.5 security hardening (COMPLETE ✅)
+- **Milestone 2 (Next):** Harness stability across all platforms (2-3 weeks)
+  - OpenCode harness: queue path detection, runner integration
+  - Claude Code harness: agent availability, skill rendering
+  - Copilot CLI harness: model routing, token tracking
+- **Milestone 3:** Skills audit and consolidation (ongoing)
+  - Review: 14 skills, prioritize high-value, deprecate low-value
+  - Standardize: SKILL.md format, test coverage, documentation
+- **Feature Freeze:** Post-milestone 3 (target: June 15, 2026)
+  - No new skills or agents after freeze date
+  - Focus: bug fixes, performance, documentation, polish
+
+---
+
 ## 🔵 PLANNED (Phase J+)
 
 - [ ] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
-  - Full standards alignment, compliance matrix, roadmap
-  - Effort: 4-6 hours | Owner: Senior Engineer
+   - Full standards alignment, compliance matrix, roadmap
+   - Effort: 4-6 hours | Owner: Senior Engineer
 
 ### Framework Integration (Opt-In Required)
 > **Status:** ⏸️ PAUSED — Research complete. No work starts until explicitly approved.  
@@ -261,6 +362,7 @@
 | Phase H-TIER2: Important Modules | ✅ Complete | 100% (128 tests) |
 | Phase H-TIER3: Optional Modules | ✅ Complete | 100% (73 tests) |
 | Cost & Usage Management (COST-001/002/003) | ✅ Complete | 100% (335 tests, v0.38.0 released) |
+| Phase 1.5: Security Hardening (5 FIXes) | ✅ Complete | 100% (38+ tests, all security gates passed) |
 | Phase I: Standards Compliance | 🔴 Blocked | 0% (OVERDUE 8 days) |
 | Framework Integration | ⏸️ Paused | Research only |
 

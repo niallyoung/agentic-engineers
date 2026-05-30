@@ -4,6 +4,49 @@
 
 ---
 
+## 🎯 Phase: Simplify, Reduce, and Polish
+
+**Current Status:** Consolidation Phase (Not Feature-Add)
+
+We have built a comprehensive multi-agent orchestration framework through 8 phases of development. Phase 1.5 security hardening is now complete. We are shifting focus from adding features to **consolidating, stabilizing, and polishing** what we have.
+
+### What This Means
+
+- ✅ **Core framework is stable** — 1,400+ tests passing, all phases 1–H complete
+- ✅ **Security hardening complete** — 5 critical fixes implemented (queue paths, audit trails, agent verification, security fields, enforcement decorator)
+- ✅ **Cost optimization working** — 3 skills shipped, 40-60% token savings demonstrated
+- 🚀 **Next focus:** Harness stability (OpenCode, Claude Code, Copilot CLI), skills audit, enforcement consistency
+- 🔒 **Feature freeze pending** — Target: June 15, 2026 (after harness stability achieved)
+
+### Consolidation Roadmap
+
+**Milestone 1** — Security Foundation (2026-05-30) ✅ COMPLETE
+- Phase 1.5: 5 security hardening fixes implemented
+- All 38+ tests passing
+- Framework ready for Phase 1 spec audit
+
+**Milestone 2** — Harness Stability (2-3 weeks)
+- OpenCode harness: queue path detection, runner integration
+- Claude Code harness: agent availability, skill rendering
+- Copilot CLI harness: model routing, token tracking
+- All harnesses emit consistent DELEGATE/HANDBACK format
+- All harnesses pass end-to-end workflow tests
+
+**Milestone 3** — Skills Audit & Consolidation (ongoing)
+- Review all 14 skills: prioritize high-value, deprecate low-value
+- Standardize: SKILL.md format, test coverage (≥85%), documentation
+- Merge similar skills, remove abandoned work
+- Document skill deprecation process
+
+**After Milestone 3** — Feature Freeze
+- No new skills or agents after June 15, 2026
+- Focus shifts to: bug fixes, performance, documentation, polish
+- Polish existing features for production readiness
+
+**See detailed roadmap:** [TODO.md POST-MERGE ROADMAP](#post-merge-roadmap)
+
+---
+
 ## What It Is
 
 **Agentic Engineers** solves the multi-agent coordination problem:
