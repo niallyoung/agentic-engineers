@@ -12,24 +12,27 @@ def skills_root() -> Path:
 
 @pytest.fixture(scope="session")
 def test_skills_list() -> list:
-    """Fixture providing list of expected test skills."""
+    """Fixture providing list of expected test skills.
+    
+    Note: 5 skills have been deprecated and moved to archive:
+    - ab-testing (deprecated)
+    - cicd-monitor (deprecated)
+    - repo-init (deprecated)
+    - metrics-etl (deprecated)
+    - tokenadvisor (deprecated)
+    """
     return [
-        "ab-testing",
         "agent-creator",
-        "cicd-monitor",
         "consistency-checker",
         "cost-aggregation",
         "file-sync",
-        "metrics-etl",
         "model-engineer",
         "model-selection",
         "protocol-validator",
         "queue-management",
-        "repo-init",
         "skill-creator",
         "spec-management",
         "spec-validator",
-        "tokenadvisor",
         "usage-tracking",
         "voice-notify",
         "workflow-review",
