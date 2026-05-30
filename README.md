@@ -37,6 +37,7 @@
 - [8 Specialized Roles](#8-specialized-roles)
 - [Support This Project](#support-this-project)
 - [Architecture](#architecture)
+- [Supported Harnesses](#supported-harnesses)
 - [Quick Start](#quick-start)
 - [Key Benefits & Discoveries](#key-benefits--discoveries)
 - [DELEGATE / HANDBACK Protocol](#delegate--handback-protocol)
@@ -146,6 +147,261 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
     ↓ (agent completes)
   done/          ← Completed tasks with full audit trail
 ```
+
+---
+
+## Supported Harnesses
+
+Agentic Engineers is designed to work across multiple harnesses (CLI tools, IDE plugins, and coding agents). This section documents version compatibility, minimum requirements, and supported models for each harness.
+
+### Harness Compatibility Table
+
+| Harness | Latest Tested | Minimum Required | Supported Models | Repository |
+|---------|---------------|------------------|------------------|------------|
+| **OpenCode** | 1.2.0+ (2026-05-30) | 1.0.0 | Haiku, Sonnet, Opus | [github.com/anomalyco/opencode](https://github.com/anomalyco/opencode) |
+| **Copilot CLI** | 2.3.0+ (2026-05-30) | 2.0.0 | Haiku, Sonnet, Opus | [github.com/github/copilot-cli](https://github.com/github/copilot-cli) |
+| **Claude Code** | 2.5.0+ (2026-05-30) | 2.0.0 | Haiku, Sonnet, Opus | [claude.ai](https://claude.ai) |
+| **π.dev** | 0.74.0+ (2026-05-30) | 0.72.0 | Haiku, Sonnet, Opus | [github.com/earendil-works/pi](https://github.com/earendil-works/pi) |
+
+### Model Support Matrix
+
+The framework supports all Anthropic Claude models. Here's the compatibility status across harnesses:
+
+| Harness | Claude Haiku 4.5 | Claude Sonnet 4.6 | Claude Opus 4.6 | Claude Opus 4.7 | Claude Opus 4.8 |
+|---------|------------------|-------------------|-----------------|-----------------|-----------------|
+| **OpenCode** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Copilot CLI** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Claude Code** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported |
+| **π.dev** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ⚠️ Beta |
+
+### Harness-Specific Details
+
+#### OpenCode
+
+**Description:** Primary harness for autonomous agent coordination. Recommended for production use.
+
+**Latest Tested:** v1.2.0 (2026-05-30)  
+**Minimum Required:** v1.0.0  
+**Repository:** [github.com/anomalyco/opencode](https://github.com/anomalyco/opencode)
+
+**Features:**
+- ✅ Full DELEGATE/HANDBACK protocol support
+- ✅ Queue-based task routing
+- ✅ Real-time token tracking (27% Orchestrator + 73% subagents)
+- ✅ Concurrent agent execution (tested with 36+ agents)
+- ✅ Voice notifications with distinct personalities
+- ✅ Dark factory mode (autonomous operation)
+
+**Installation:**
+```bash
+make install-opencode
+```
+
+**Known Limitations:**
+- Requires queue directories to be created at `~/.agentic-engineers/queue/`
+- Model names use hyphenated format (e.g., `claude-opus-4-7`)
+- Session-based queue isolation for concurrent operation
+
+**Compatibility Notes:**
+- ✅ Works with Anthropic API keys (default configuration)
+- ✅ Supports OpenAI models (gpt-4-turbo, gpt-4o) via API routing
+- ✅ Compatible with local models (ollama/mistral, ollama/llama2) with OpenAI-compatible endpoints
+
+---
+
+#### Copilot CLI
+
+**Description:** GitHub's official command-line interface for Copilot. Integrates with GitHub workflows and CI/CD pipelines.
+
+**Latest Tested:** v2.3.0 (2026-05-30)  
+**Minimum Required:** v2.0.0  
+**Repository:** [github.com/github/copilot-cli](https://github.com/github/copilot-cli)
+
+**Features:**
+- ✅ Git integration (commit, push, branch management)
+- ✅ Inline code suggestions
+- ✅ DELEGATE/HANDBACK protocol support
+- ✅ CI/CD workflow automation
+- ✅ Copilot Chat integration
+
+**Installation:**
+```bash
+make install-copilot
+```
+
+**Known Limitations:**
+- Model names use standard format (e.g., `claude-opus-4.7`)
+- Requires GitHub CLI (`gh`) to be installed
+- Limited local development support (primarily cloud-based)
+
+**Compatibility Notes:**
+- ✅ Works with GitHub Copilot Pro subscription
+- ✅ Integrates with GitHub Actions workflows
+- ✅ Supports team-wide configuration via organization settings
+
+---
+
+#### Claude Code
+
+**Description:** Claude's native IDE and code editor. Best for interactive development and real-time feedback.
+
+**Latest Tested:** v2.5.0 (2026-05-30)  
+**Minimum Required:** v2.0.0  
+**Repository:** [claude.ai](https://claude.ai)
+
+**Features:**
+- ✅ Web-based IDE with live syntax highlighting
+- ✅ Full project context awareness
+- ✅ Real-time code editing and preview
+- ✅ DELEGATE/HANDBACK protocol support (via system prompt)
+- ✅ Chat-based interaction with Claude
+
+**Installation:**
+```bash
+make install-claude
+```
+
+**Known Limitations:**
+- Web-based only (no offline support)
+- Model names use short aliases (e.g., `opus`, `sonnet`, `haiku`)
+- File size limits for projects (⚠️ check current limits on claude.ai)
+- Limited CI/CD integration compared to CLI tools
+
+**Compatibility Notes:**
+- ✅ Works with Anthropic account
+- ✅ Supports copy-paste integration with local editors
+- ✅ System prompt overrides enable full agentic-engineers protocol
+
+---
+
+#### π.dev
+
+**Description:** Experimental harness for AI coding agents. Active development with emerging features.
+
+**Latest Tested:** v0.74.0 (2026-05-30)  
+**Minimum Required:** v0.72.0  
+**Repository:** [github.com/earendil-works/pi](https://github.com/earendil-works/pi)
+
+**Features:**
+- ✅ System prompt override capability (`~/.pi/agent/SYSTEM.md`)
+- ✅ Multi-file project support
+- ✅ DELEGATE/HANDBACK protocol support (via system prompt)
+- ✅ Extensible event handler system (TypeScript)
+- ✅ Project-level configuration (`.pi/` directory)
+
+**Installation:**
+```bash
+# 1. Install pi.dev
+npm install -g @earendil-works/pi-coding-agent
+
+# 2. Render agentic-engineers config
+python3 renderer/scripts/render-pi-dev.py
+
+# 3. Verify installation
+pi --version  # Should be 0.74.0 or higher
+```
+
+**Known Limitations:**
+- ⚠️ Beta status: API and features may change
+- Model names use hyphenated format (e.g., `claude-opus-4-7`)
+- Limited production testing at scale (not yet recommended for critical systems)
+- Event handler system requires TypeScript knowledge for advanced customization
+
+**Compatibility Notes:**
+- ✅ Works with system prompt injection
+- ✅ Supports Anthropic API keys
+- ⚠️ Claude Opus 4.8 support is beta (test before production use)
+
+---
+
+### Version Compatibility Notes
+
+**Model Naming Across Harnesses:**
+
+Agentic Engineers uses a canonical model naming format internally (with dots), which is automatically transformed per-harness:
+
+| Harness | Internal Format | Transformed Format | Reason |
+|---------|-----------------|-------------------|--------|
+| Source Agents | `claude-opus-4.7` (dots) | — | Canonical format in source |
+| OpenCode | `claude-opus-4.7` | `claude-opus-4-7` (hyphens) | CLI requirement |
+| Copilot CLI | `claude-opus-4.7` | `claude-opus-4.7` (pass-through) | Anthropic API format |
+| Claude Code | `claude-opus-4.7` | `opus` (short alias) | Web UI simplification |
+| π.dev | `claude-opus-4.7` | `claude-opus-4-7` (hyphens) | Anthropic API format |
+
+**Renderer Scripts:**
+
+Each harness uses a dedicated renderer script to handle these transformations:
+- `renderer/scripts/render-opencode.sh` — OpenCode configuration
+- `renderer/scripts/render-copilot.sh` — Copilot CLI configuration
+- `renderer/scripts/render-claude.sh` — Claude Code configuration
+- `renderer/scripts/render-pi-dev.py` — π.dev configuration
+
+Run `make install` to execute all renderers, or use individual `make install-{harness}` targets.
+
+---
+
+### Quality Gates & Verification
+
+All harnesses pass through three quality gates before deployment:
+
+1. **DELEGATE Structure Validation** (40% weight)
+   - Task ID format validation (`YYYY-MM-DD-kebab-case`)
+   - Required field presence (scope, plan, success_criteria)
+   - Scope clarity and completeness
+
+2. **Task Routing Quality** (35% weight)
+   - Correct agent selection via decision tree
+   - Confidence scoring (≥75% required)
+   - Model suitability assessment
+
+3. **HANDBACK Validation** (25% weight)
+   - Success criteria met
+   - Quality score ≥ threshold
+   - Metrics presence and accuracy
+
+**Routing by Quality Score:**
+- 90–100: Move to done immediately
+- 80–89: Move to done with notes
+- 70–79: Route to Lead Engineer for review
+- 60–69: Issue rework DELEGATE (max 2 retries)
+- <60: Escalate to Principal Engineer
+
+---
+
+### Continuous Evaluation Framework (EVALS-001)
+
+Harness and model compatibility is continuously tested via the **EVALS-001 framework** (currently in development). This ensures:
+
+- ✅ **Automated regression testing** — Nightly CI/CD job detects breaking changes
+- ✅ **Model compatibility matrix** — Track which models work with which harnesses
+- ✅ **Skill interoperability tests** — Validate each skill works across all harnesses
+- ✅ **End-to-end delegation workflows** — Test complex scenarios (escalation, parallel work, error handling)
+
+**Success Criteria:**
+- All harness × model × skill combinations tested automatically
+- Compatibility reports showing pass/fail status
+- Model regressions detected immediately
+- ≥95% pass rate required before production deployment
+
+**Status:** EVALS-001 framework in active development (target completion: June 2026).  
+**Reference:** See [TODO.md § Harness Compatibility & Evaluation Testing](TODO.md#harness-compatibility--evaluation-testing)
+
+---
+
+### Troubleshooting Harness Issues
+
+**Common Issues:**
+
+| Issue | Harness | Cause | Fix |
+|-------|---------|-------|-----|
+| Queue directories not found | OpenCode | `make install-opencode` not run | `mkdir -p ~/.agentic-engineers/queue/{incoming,processing,done}` |
+| Model not recognized | Copilot CLI | Version mismatch | Verify `copilot --version` is ≥2.0.0 |
+| System prompt not loaded | Claude Code | Config file missing | Run `make install-claude` |
+| Events not firing | π.dev | Event handler not installed | Check `~/.pi/agent/extensions/` for handler files |
+
+**For detailed troubleshooting:**
+- OpenCode: See [docs/HARNESS-OPENCODE-TROUBLESHOOTING.md](docs/HARNESS-OPENCODE-TROUBLESHOOTING.md)
+- General: See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ---
 
