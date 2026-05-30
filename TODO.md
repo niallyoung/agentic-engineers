@@ -345,15 +345,20 @@ No new skills or agents may be added to the framework after this date. All API a
 
 ## 📋 POST-MERGE ROADMAP
 
+> **Reconciliation note (2026-05-30):** The OpenCode integration fixes and EVALS-001…005 +
+> EVALS-INFRASTRUCTURE items below are **COMPLETE on the `feature/cleanup` integration branch**
+> (verified: `src/skills/_meta/evaluation_framework/`, `src/evals/`, `src/harness/`, nightly GH
+> Actions). They remain checklist-tracked here until `feature/cleanup` merges to `main`.
+
 ### OpenCode Integration Fixes (Priority: HIGH)
-- [ ] **OPENCODE-QUEUE-PATH-DETECTION:** Implement harness detection for canonical queue paths
+- [x] **OPENCODE-QUEUE-PATH-DETECTION:** Implement harness detection for canonical queue paths — ✅ DONE on feature/cleanup
   - Current: OpenCode uses generic queue path detection
   - Fix: Detect session-id and harness type from context
   - Blocks: Framework users cannot properly route work through OpenCode harness
   - Effort: 2-3 hours | Owner: Engineer
   - Link: See PHASE-1.5-ORCHESTRATION-PLAN.md
 
-- [ ] **OPENCODE-HARNESS-CHECKER:** Validate harness configuration at runtime
+- [x] **OPENCODE-HARNESS-CHECKER:** Validate harness configuration at runtime
   - Current: No validation that OpenCode harness is properly configured
   - Fix: Add startup checks: agents loaded, skills available, queue paths valid
   - Effort: 1-2 hours | Owner: Quality Engineer
@@ -361,7 +366,7 @@ No new skills or agents may be added to the framework after this date. All API a
 ### Harness Compatibility & Evaluation Testing (Priority: CRITICAL)
 **Problem:** Recent harness/model updates are causing silent compatibility flaps and feature regressions. Need end-to-end feedback loop testing.
 
-- [ ] **EVALS-001: Harness Integration Tests**
+- [x] **EVALS-001: Harness Integration Tests** — ✅ DONE on feature/cleanup
    - Build comprehensive test suite for copilot|opencode|claude CLI harnesses
    - Test standard prompts/delegations/skills across all harnesses
    - Capture success/fail results with pass/fail thresholds
@@ -369,33 +374,33 @@ No new skills or agents may be added to the framework after this date. All API a
    - Effort: 2-3 weeks | Priority: CRITICAL | Owner: Quality Engineer
    - Success Metric: All harnesses pass standard eval suite with ≥95% success rate
 
-- [ ] **EVALS-002: Model Compatibility Matrix**
+- [x] **EVALS-002: Model Compatibility Matrix** — ✅ DONE on feature/cleanup
    - Build test suite calling each model (haiku, sonnet, opus) with standard DELEGATE blocks
    - Measure response quality, latency, cost
    - Detect model regressions early (breaking changes after model updates)
    - Effort: 1-2 weeks | Priority: HIGH | Owner: Model Engineer
 
-- [ ] **EVALS-003: Skill Interoperability Tests**
+- [x] **EVALS-003: Skill Interoperability Tests** — ✅ DONE on feature/cleanup
    - Test each skill against all harnesses (copilot, opencode, claude, pi)
    - Validate skill outputs meet HANDBACK schema requirements
    - Report skill-by-harness compatibility
    - Effort: 1-2 weeks | Priority: HIGH | Owner: Quality Engineer
 
-- [ ] **EVALS-004: End-to-End Delegation Workflows**
+- [x] **EVALS-004: End-to-End Delegation Workflows** — ✅ DONE on feature/cleanup
    - Create standard delegation scenarios (simple task, escalation, parallel work)
    - Run through full workflow on each harness/model combo
    - Measure success rate, latency, cost
    - Report pass/fail + threshold analysis
    - Effort: 2-3 weeks | Priority: HIGH | Owner: Senior Engineer
 
-- [ ] **EVALS-005: Continuous Evaluation Pipeline (CI/CD Integration)**
+- [x] **EVALS-005: Continuous Evaluation Pipeline (CI/CD Integration)** — ✅ DONE on feature/cleanup
    - Add nightly evaluation job to GitHub Actions
    - Run standard eval suite against all harnesses + models
    - Generate compatibility report automatically
    - Alert on regressions (model incompatibility, harness drift)
    - Effort: 1-2 weeks | Priority: MEDIUM | Owner: Principal Engineer
 
-- [ ] **EVALS-INFRASTRUCTURE: Evaluation Framework**
+- [x] **EVALS-INFRASTRUCTURE: Evaluation Framework** — ✅ DONE on feature/cleanup
    - Create reusable `src/skills/_meta/evaluation-framework/` skill
    - Standardized test case format, result reporting, threshold checking
    - Integration with CI/CD, human-readable reports
@@ -538,7 +543,7 @@ No new skills or agents may be added to the framework after this date. All API a
 | Phase H-TIER3: Optional Modules | ✅ Complete | 100% (73 tests) |
 | Cost & Usage Management (COST-001/002/003) | ✅ Complete | 100% (335 tests, v0.38.0 released) |
 | Phase 1.5: Security Hardening (5 FIXes) | ✅ Complete | 100% (38+ tests, all security gates passed) |
-| Phase I: Standards Compliance | 🔴 Blocked | 0% (OVERDUE 8 days) |
+| Phase I: Standards Compliance | 🟡 In Progress | STANDARDS.md pending (see feat/standards-md) |
 | Framework Integration | ⏸️ Paused | Research only |
 
 ---
