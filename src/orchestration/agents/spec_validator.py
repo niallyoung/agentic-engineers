@@ -57,32 +57,32 @@ class SpecValidator:
                 "effort": "high",
                 "role": "lead_engineer"
             },
-            "PrincipalEngineerAgent": {
-                "model": "claude-opus-4.7",
-                "effort": "high",
-                "role": "principal_engineer"
-            },
-            "QualityEngineerAgent": {
-                "model": "claude-sonnet-4.6",
-                "effort": "medium",
-                "role": "quality_engineer"
-            },
-            "ModelEngineerAgent": {
-                "model": "claude-haiku-4.5",
-                "effort": "medium",
-                "role": "model_engineer"
-            },
-            "SecurityEngineerAgent": {
-                "model": "claude-opus-4.7",
-                "effort": "max",
-                "role": "security_engineer"
-            },
-            # QG Sub-agents
-            "SecurityAgentQG": {
-                "model": "claude-opus-4.7",
-                "effort": "high",
-                "role": "security_agent"
-            },
+             "PrincipalEngineerAgent": {
+                 "model": "claude-opus-4.6",
+                 "effort": "high",
+                 "role": "principal_engineer"
+             },
+             "QualityEngineerAgent": {
+                 "model": "claude-sonnet-4.6",
+                 "effort": "medium",
+                 "role": "quality_engineer"
+             },
+             "ModelEngineerAgent": {
+                 "model": "claude-haiku-4.5",
+                 "effort": "medium",
+                 "role": "model_engineer"
+             },
+             "SecurityEngineerAgent": {
+                 "model": "claude-opus-4.8",
+                 "effort": "max",
+                 "role": "security_engineer"
+             },
+             # QG Sub-agents
+             "SecurityAgentQG": {
+                 "model": "claude-opus-4.8",
+                 "effort": "high",
+                 "role": "security_agent"
+             },
             "TestingAgent": {
                 "model": "claude-haiku-4.5",
                 "effort": "medium",

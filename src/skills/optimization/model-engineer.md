@@ -181,7 +181,7 @@ When new models appear or improve, Model Engineer detects downgrade opportunitie
 Current State (Week of 2026-04-21):
   Haiku 4.5: avg quality 89, cost 1x
   Sonnet 4.6: avg quality 95, cost 2x
-  Opus 4.7: avg quality 97, cost 7.5x
+  Opus 4.8: avg quality 97, cost 7.5x
 
 New Model Introduced: Sonnet 4.7
 
@@ -318,7 +318,7 @@ Sonnet 4.6 (Tier 2x):
   Confidence: Increasing 85% → 88%
   Status: ✓ Strong performance on high-complexity
 
-Opus 4.7 (Tier 7.5x):
+Opus 4.8 (Tier 7.5x):
   Tasks: 1 (5% of work)
   Avg Quality: 97
   Avg Cost: $0.58
@@ -350,7 +350,7 @@ Recommendation Confidence by Model (2026-04-07 to 2026-04-24)
 
 Haiku 4.5:    80%  82%  85%  88%  90%  92%  92%  92%
 Sonnet 4.6:   75%  78%  80%  83%  85%  87%  87%  88%
-Opus 4.7:     85%  86%  88%  89%  90%  90%  90%  90%
+Opus 4.8:     85%  86%  88%  89%  90%  90%  90%  90%
 
 Trend: Haiku and Sonnet confidence increasing (more historical data).
        Opus confidence stable (fewer tasks, but consistent).

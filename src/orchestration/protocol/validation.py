@@ -27,7 +27,7 @@ DELEGATE_SCHEMA = {
         },
         "model": {
             "type": "string",
-            "enum": ["claude-haiku-4.5", "claude-sonnet-4.6", "claude-opus-4.6", "claude-opus-4.7"],
+             "enum": ["claude-haiku-4.5", "claude-sonnet-4.6", "claude-opus-4.6", "claude-opus-4.8"],
             "description": "Model to use"
         },
         "effort": {

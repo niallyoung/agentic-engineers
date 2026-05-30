@@ -216,11 +216,11 @@ token_metrics:
 | Engineer | Haiku 4.5 | high | $0.015 |
 | Senior Engineer | Sonnet 4.6 | high | $0.075 |
 | Lead Engineer | Sonnet 4.6 | high | $0.075 |
-| Principal Engineer | Opus 4.7 | high | $0.375 |
-| Quality Engineer | Sonnet 4.6 | medium | $0.045 |
-| Model Engineer | Haiku 4.5 | medium | $0.009 |
-| Security Engineer | Opus 4.7 | max | $0.375 |
-| Security Agent (QG) | Opus 4.7 | high | $0.375 |
+ | Principal Engineer | Opus 4.6 | high | $0.375 |
+ | Quality Engineer | Sonnet 4.6 | medium | $0.045 |
+ | Model Engineer | Haiku 4.5 | medium | $0.009 |
+ | Security Engineer | Opus 4.8 | max | $0.375 |
+ | Security Agent (QG) | Opus 4.8 | high | $0.375 |
 | Testing Agent | Haiku 4.5 | medium | $0.009 |
 | Metrics Agent | Haiku 4.5 | medium | $0.009 |
 | Healing Agent | Sonnet 4.6 | medium | $0.045 |
