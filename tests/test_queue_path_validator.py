@@ -29,7 +29,7 @@ class TestValidateQueuePath:
     
     def test_valid_canonical_path_absolute(self):
         """Valid canonical path with absolute format."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session-001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/session-001/opencode/queue')
         assert result['valid'] is True
         assert result['session_id'] == 'session-001'
         assert result['harness'] == 'opencode'
@@ -37,21 +37,21 @@ class TestValidateQueuePath:
     
     def test_valid_canonical_path_relative(self):
         """Valid canonical path with relative format."""
-        result = validate_queue_path('.agentic-engineers/artifacts/session-001/opencode/queue')
+        result = validate_queue_path('.agentic-engineers/session-001/opencode/queue')
         assert result['valid'] is True
         assert result['session_id'] == 'session-001'
         assert result['harness'] == 'opencode'
     
     def test_valid_canonical_path_with_trailing_slash(self):
         """Valid canonical path with trailing slash."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session-001/opencode/queue/')
+        result = validate_queue_path('~/.agentic-engineers/session-001/opencode/queue/')
         assert result['valid'] is True
         assert result['session_id'] == 'session-001'
     
     def test_valid_harness_names(self):
         """All valid harness names are accepted."""
         for harness in ['opencode', 'claude', 'copilot', 'pi', 'local', 'gpt', 'custom']:
-            result = validate_queue_path(f'~/.agentic-engineers/artifacts/session-001/{harness}/queue')
+            result = validate_queue_path(f'~/.agentic-engineers/session-001/{harness}/queue')
             assert result['valid'] is True
             assert result['harness'] == harness
     
@@ -65,7 +65,7 @@ class TestValidateQueuePath:
             'a1-b2-c3-d4-e5',
         ]
         for session_id in valid_ids:
-            result = validate_queue_path(f'~/.agentic-engineers/artifacts/{session_id}/opencode/queue')
+            result = validate_queue_path(f'~/.agentic-engineers/{session_id}/opencode/queue')
             assert result['valid'] is True, f"Session ID {session_id} should be valid"
             assert result['session_id'] == session_id
     
@@ -89,13 +89,13 @@ class TestValidateQueuePath:
     
     def test_reject_path_traversal_double_dot(self):
         """Reject path traversal with ..."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/../../../etc/passwd')
+        result = validate_queue_path('~/.agentic-engineers/../../../etc/passwd')
         assert result['valid'] is False
         assert 'traversal' in result['error'].lower()
     
     def test_reject_path_traversal_double_slash(self):
         """Reject path traversal with //."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts//session-001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers//session-001/opencode/queue')
         assert result['valid'] is False
         assert 'traversal' in result['error'].lower()
     
@@ -113,26 +113,26 @@ class TestValidateQueuePath:
     
     def test_reject_invalid_harness(self):
         """Reject invalid harness name with invalid format."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session-001/invalid_harness/queue')
+        result = validate_queue_path('~/.agentic-engineers/session-001/invalid_harness/queue')
         assert result['valid'] is False
         assert 'harness' in result['error'].lower()
     
     def test_reject_invalid_session_id_too_short(self):
         """Reject session ID that is too short."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/abc/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/abc/opencode/queue')
         assert result['valid'] is False
         assert 'Invalid session_id' in result['error']
     
     def test_reject_invalid_session_id_special_chars(self):
         """Reject session ID with invalid special characters."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session@001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/session@001/opencode/queue')
         assert result['valid'] is False
         # Special chars in session_id cause pattern mismatch, not session_id validation error
         assert 'does not match canonical format' in result['error'] or 'Invalid session_id' in result['error']
     
     def test_reject_malformed_path(self):
         """Reject malformed path."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session-001')
+        result = validate_queue_path('~/.agentic-engineers/session-001')
         assert result['valid'] is False
         assert 'does not match canonical format' in result['error']
 
@@ -142,38 +142,38 @@ class TestValidateQueueSubdir:
     
     def test_valid_incoming_subdir(self):
         """Valid path with incoming subdirectory."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/incoming')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/incoming')
         assert result['valid'] is True
         assert result['subdir'] == 'incoming'
         assert result['session_id'] == 'session-001'
     
     def test_valid_processing_subdir(self):
         """Valid path with processing subdirectory."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/processing')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/processing')
         assert result['valid'] is True
         assert result['subdir'] == 'processing'
     
     def test_valid_done_subdir(self):
         """Valid path with done subdirectory."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/done')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/done')
         assert result['valid'] is True
         assert result['subdir'] == 'done'
     
     def test_valid_subdir_with_trailing_slash(self):
         """Valid path with trailing slash."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/incoming/')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/incoming/')
         assert result['valid'] is True
         assert result['subdir'] == 'incoming'
     
     def test_reject_invalid_subdir(self):
         """Reject invalid subdirectory name."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/invalid')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/invalid')
         assert result['valid'] is False
         assert 'Invalid subdirectory' in result['error']
     
     def test_reject_subdir_path_traversal(self):
         """Reject path traversal in subdir path."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/../../../etc')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/../../../etc')
         assert result['valid'] is False
         assert 'traversal' in result['error'].lower()
     
@@ -192,7 +192,7 @@ class TestValidateQueueSubdir:
     def test_all_valid_subdirs(self):
         """All valid subdirectories are accepted."""
         for subdir in VALID_SUBDIRS:
-            result = validate_queue_subdir(f'~/.agentic-engineers/artifacts/session-001/opencode/queue/{subdir}')
+            result = validate_queue_subdir(f'~/.agentic-engineers/session-001/opencode/queue/{subdir}')
             assert result['valid'] is True, f"Subdir {subdir} should be valid"
             assert result['subdir'] == subdir
 
@@ -202,28 +202,28 @@ class TestEdgeCases:
     
     def test_path_with_spaces(self):
         """Reject path with spaces."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session 001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/session 001/opencode/queue')
         assert result['valid'] is False
     
     def test_path_with_uppercase(self):
         """Reject path with uppercase (should be lowercase)."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/Session-001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/Session-001/opencode/queue')
         assert result['valid'] is False
     
     def test_path_with_unicode(self):
         """Reject path with unicode characters."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/séssion-001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/séssion-001/opencode/queue')
         assert result['valid'] is False
     
     def test_very_long_session_id(self):
         """Accept very long but valid session ID."""
         long_id = 'a' * 100 + '-' + 'b' * 100
-        result = validate_queue_path(f'~/.agentic-engineers/artifacts/{long_id}/opencode/queue')
+        result = validate_queue_path(f'~/.agentic-engineers/{long_id}/opencode/queue')
         assert result['valid'] is True
     
     def test_whitespace_handling(self):
         """Whitespace is trimmed."""
-        result = validate_queue_path('  ~/.agentic-engineers/artifacts/session-001/opencode/queue  ')
+        result = validate_queue_path('  ~/.agentic-engineers/session-001/opencode/queue  ')
         assert result['valid'] is True
         assert result['session_id'] == 'session-001'
 
@@ -233,7 +233,7 @@ class TestReturnValues:
     
     def test_valid_path_return_structure(self):
         """Valid path returns all required fields."""
-        result = validate_queue_path('~/.agentic-engineers/artifacts/session-001/opencode/queue')
+        result = validate_queue_path('~/.agentic-engineers/session-001/opencode/queue')
         assert 'valid' in result
         assert 'session_id' in result
         assert 'harness' in result
@@ -253,7 +253,7 @@ class TestReturnValues:
     
     def test_subdir_valid_return_structure(self):
         """Valid subdir path returns all required fields."""
-        result = validate_queue_subdir('~/.agentic-engineers/artifacts/session-001/opencode/queue/incoming')
+        result = validate_queue_subdir('~/.agentic-engineers/session-001/opencode/queue/incoming')
         assert 'valid' in result
         assert 'session_id' in result
         assert 'harness' in result
