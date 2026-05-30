@@ -8,7 +8,24 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+import html
 import math
+
+
+# Severity levels permitted in CSS class names. Anything not in this set is
+# coerced to "medium" to prevent attribute/CSS injection via crafted result data.
+_ALLOWED_SEVERITIES = {"critical", "high", "medium", "low"}
+
+
+def _esc(value: Any) -> str:
+    """HTML-escape an arbitrary value for safe embedding in dashboard markup.
+
+    Eval results (test IDs, skill/harness names, regression types, error
+    messages) originate from untrusted runtime output and must never be
+    rendered into HTML verbatim, otherwise a crafted test name such as
+    ``<script>...`` would execute when the dashboard is opened.
+    """
+    return html.escape(str(value), quote=True)
 
 
 class DashboardGenerator:
@@ -310,7 +327,7 @@ class DashboardGenerator:
     <div class="container">
         <div class="header">
             <h1>📊 Evaluation Framework Dashboard</h1>
-            <p>Generated: {timestamp}</p>
+            <p>Generated: {_esc(timestamp)}</p>
         </div>
         
         <div class="content">
@@ -411,7 +428,7 @@ class DashboardGenerator:
             else:
                 cell_class = "fail"
 
-            heatmap_html += f'<div class="heatmap-cell {cell_class}" title="{harness}: {pass_rate:.0f}%">{harness[:3].upper()}</div>'
+            heatmap_html += f'<div class="heatmap-cell {cell_class}" title="{_esc(harness)}: {pass_rate:.0f}%">{_esc(str(harness)[:3].upper())}</div>'
 
         heatmap_html += '</div>'
 
@@ -433,11 +450,13 @@ class DashboardGenerator:
 
         for regression in self.regressions[:20]:  # Show top 20
             severity = regression.get("severity", "medium")
+            if severity not in _ALLOWED_SEVERITIES:
+                severity = "medium"
             reg_type = regression.get("regression_type", "unknown")
             table_html += f"""<tr>
-                <td>{regression.get('test_id', 'unknown')}</td>
-                <td>{reg_type}</td>
-                <td><span class="severity-badge severity-{severity}">{severity}</span></td>
+                <td>{_esc(regression.get('test_id', 'unknown'))}</td>
+                <td>{_esc(reg_type)}</td>
+                <td><span class="severity-badge severity-{severity}">{_esc(severity)}</span></td>
                 <td>{regression.get('baseline_value', 0):.2f}</td>
                 <td>{regression.get('current_value', 0):.2f}</td>
                 <td>{regression.get('change_percent', 0):+.1f}%</td>
