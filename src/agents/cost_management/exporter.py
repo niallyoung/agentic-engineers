@@ -12,12 +12,47 @@ Author: COST-002 Implementation Lead
 
 from enum import Enum
 from typing import Dict, List, Optional
+import html
 import json
 import csv
 from io import StringIO
 from datetime import datetime
 
 from .provider_tracker import ProviderTracker, ProviderType
+
+
+# Characters that trigger formula evaluation in spreadsheet applications
+# (Excel, LibreOffice, Google Sheets). Cells beginning with any of these must
+# be neutralised to prevent CSV injection (a.k.a. formula injection).
+_CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: object) -> str:
+    """Neutralise spreadsheet formula injection in a CSV cell value.
+
+    Untrusted strings (e.g. model or provider names) that begin with a formula
+    trigger character are prefixed with a single quote so spreadsheet programs
+    treat them as literal text rather than executable formulas.
+    """
+    text = str(value)
+    if text and text[0] in _CSV_INJECTION_PREFIXES:
+        return "'" + text
+    return text
+
+
+def _md_safe(value: object) -> str:
+    """Escape a value for safe inclusion in a Markdown table cell.
+
+    Escapes pipe characters (which would break table structure) and neutralises
+    HTML/newline injection so untrusted strings cannot alter the rendered
+    document or inject markup when the Markdown is rendered to HTML.
+    """
+    text = str(value)
+    text = text.replace("\\", "\\\\").replace("|", "\\|")
+    text = text.replace("\r", " ").replace("\n", " ")
+    # Neutralise raw HTML that many Markdown renderers pass through verbatim.
+    text = text.replace("<", "&lt;").replace(">", "&gt;")
+    return text
 
 
 class ExportFormat(str, Enum):
@@ -87,7 +122,7 @@ class CostExporter:
 
         for provider_name, metrics in active_metrics:
             writer.writerow({
-                "provider": provider_name,
+                "provider": _csv_safe(provider_name),
                 "total_requests": metrics.total_requests,
                 "successful_requests": metrics.successful_requests,
                 "failed_requests": metrics.failed_requests,
@@ -104,7 +139,7 @@ class CostExporter:
                 "max_cost_per_token": f"{metrics.max_cost_per_token:.8f}",
                 "total_duration_ms": metrics.total_duration_ms,
                 "models_used": ";".join(
-                    f"{m}({c})" for m, c in metrics.models_used.items()
+                    _csv_safe(f"{m}({c})") for m, c in metrics.models_used.items()
                 ),
             })
 
@@ -150,7 +185,7 @@ class CostExporter:
         # Header
         lines.append("# Cost Aggregation Report")
         lines.append(f"\n**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        lines.append(f"**Session ID:** {self.tracker.session_id}")
+        lines.append(f"**Session ID:** {_md_safe(self.tracker.session_id)}")
         
         # Summary
         efficiency = self.tracker.get_efficiency_metrics()
@@ -179,7 +214,7 @@ class CostExporter:
 
             for provider_name, m in active_metrics:
                 lines.append(
-                    f"| {provider_name} | {m.total_requests} | "
+                    f"| {_md_safe(provider_name)} | {m.total_requests} | "
                     f"${m.total_cost_usd:.6f} | {m.total_tokens:,} | "
                     f"${m.cost_per_token:.8f} | ${m.avg_cost_per_request:.6f} |"
                 )
@@ -193,7 +228,7 @@ class CostExporter:
             for model, cost in sorted(
                 cost_by_model.items(), key=lambda x: x[1], reverse=True
             ):
-                lines.append(f"| {model} | ${cost:.6f} |")
+                lines.append(f"| {_md_safe(model)} | ${cost:.6f} |")
 
         # Rankings
         comparison = self.tracker.get_comparison()
@@ -202,12 +237,12 @@ class CostExporter:
             rankings = comparison["rankings"]
             if rankings.get("cheapest_provider"):
                 lines.append(
-                    f"- **Cheapest:** {rankings['cheapest_provider']} "
+                    f"- **Cheapest:** {_md_safe(rankings['cheapest_provider'])} "
                     f"(${rankings['cheapest_cost_per_token']:.8f}/token)"
                 )
             if rankings.get("fastest_provider"):
                 lines.append(
-                    f"- **Fastest:** {rankings['fastest_provider']} "
+                    f"- **Fastest:** {_md_safe(rankings['fastest_provider'])} "
                     f"({rankings['fastest_avg_ms']:.2f}ms avg)"
                 )
 
@@ -252,7 +287,7 @@ class CostExporter:
             '<body>',
             '  <div class="container">',
             '    <h1>Cost Aggregation Dashboard</h1>',
-            f'    <p>Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Session: {self.tracker.session_id}</p>',
+            f'    <p>Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Session: {html.escape(str(self.tracker.session_id))}</p>',
         ]
 
         # Summary cards
@@ -286,7 +321,7 @@ class CostExporter:
             for provider_name, m in active_metrics:
                 error_class = "positive" if m.error_rate == 0 else "negative"
                 html_parts.append(
-                    f'        <tr><td><strong>{provider_name}</strong></td><td>{m.total_requests}</td>'
+                    f'        <tr><td><strong>{html.escape(str(provider_name))}</strong></td><td>{m.total_requests}</td>'
                     f'<td>${m.total_cost_usd:.6f}</td><td>{m.total_tokens:,}</td>'
                     f'<td>${m.cost_per_token:.8f}</td>'
                     f'<td class="{error_class}">{m.error_rate:.2%}</td></tr>'
@@ -301,7 +336,7 @@ class CostExporter:
                 '      <thead><tr><th>Model</th><th>Cost ($)</th></tr></thead>',
                 '      <tbody>'])
             for model, cost in sorted(cost_by_model.items(), key=lambda x: x[1], reverse=True):
-                html_parts.append(f'        <tr><td>{model}</td><td>${cost:.6f}</td></tr>')
+                html_parts.append(f'        <tr><td>{html.escape(str(model))}</td><td>${cost:.6f}</td></tr>')
             html_parts.extend(['      </tbody>', '    </table>'])
 
         # Rankings
@@ -311,12 +346,12 @@ class CostExporter:
             html_parts.extend(['    <h2>Rankings</h2>', '    <ul>'])
             if rankings.get("cheapest_provider"):
                 html_parts.append(
-                    f'      <li><strong>Cheapest:</strong> {rankings["cheapest_provider"]} '
+                    f'      <li><strong>Cheapest:</strong> {html.escape(str(rankings["cheapest_provider"]))} '
                     f'(${rankings["cheapest_cost_per_token"]:.8f}/token)</li>'
                 )
             if rankings.get("fastest_provider"):
                 html_parts.append(
-                    f'      <li><strong>Fastest:</strong> {rankings["fastest_provider"]} '
+                    f'      <li><strong>Fastest:</strong> {html.escape(str(rankings["fastest_provider"]))} '
                     f'({rankings["fastest_avg_ms"]:.2f}ms avg)</li>'
                 )
             html_parts.append('    </ul>')

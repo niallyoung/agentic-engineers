@@ -577,3 +577,65 @@ class TestExportConsistency:
         for fmt in ExportFormat:
             output = exporter.export(fmt)
             assert len(output) > 0
+
+
+class TestExportInjectionSafety:
+    """Security tests: untrusted model/provider/session strings must not
+    enable HTML/CSV/Markdown injection in rendered reports."""
+
+    XSS_MODEL = '<script>alert(1)</script>'
+    FORMULA_MODEL = '=cmd|/C calc'
+    PIPE_MODEL = 'evil|name'
+
+    def _tracker_with_model(self, model: str) -> ProviderTracker:
+        tracker = ProviderTracker()
+        tracker.record_request(
+            provider=ProviderType.ANTHROPIC,
+            model=model,
+            input_tokens=100,
+            output_tokens=50,
+            cost_usd=0.05,
+        )
+        return tracker
+
+    def test_html_export_escapes_script_in_model_name(self):
+        """A malicious model name must not produce a live <script> tag."""
+        exporter = CostExporter(self._tracker_with_model(self.XSS_MODEL))
+        html_output = exporter.export(ExportFormat.HTML)
+        assert "<script>alert(1)</script>" not in html_output
+        assert "&lt;script&gt;" in html_output
+
+    def test_html_export_escapes_script_in_session_id(self):
+        """A malicious session id must not produce a live <script> tag."""
+        tracker = ProviderTracker(session_id='<script>alert(2)</script>')
+        tracker.record_request(
+            provider=ProviderType.ANTHROPIC,
+            model="claude-opus-4-6",
+            input_tokens=100,
+            output_tokens=50,
+            cost_usd=0.05,
+        )
+        html_output = CostExporter(tracker).export(ExportFormat.HTML)
+        assert "<script>alert(2)</script>" not in html_output
+
+    def test_csv_export_neutralises_formula_injection(self):
+        """A model name starting with '=' must be neutralised in CSV output."""
+        exporter = CostExporter(self._tracker_with_model(self.FORMULA_MODEL))
+        csv_output = exporter.export(ExportFormat.CSV)
+        # The raw formula must not appear as a leading formula in any cell.
+        rows = list(csv.reader(StringIO(csv_output)))
+        for row in rows:
+            for cell in row:
+                assert not cell.startswith("=cmd")
+
+    def test_markdown_export_escapes_pipe_in_model_name(self):
+        """A model name containing '|' must not break the Markdown table."""
+        exporter = CostExporter(self._tracker_with_model(self.PIPE_MODEL))
+        md_output = exporter.export(ExportFormat.MARKDOWN)
+        assert "evil\\|name" in md_output
+
+    def test_markdown_export_escapes_html_in_model_name(self):
+        """Raw HTML in a model name must be neutralised in Markdown output."""
+        exporter = CostExporter(self._tracker_with_model(self.XSS_MODEL))
+        md_output = exporter.export(ExportFormat.MARKDOWN)
+        assert "<script>" not in md_output
