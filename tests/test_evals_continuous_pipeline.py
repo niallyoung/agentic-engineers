@@ -410,6 +410,58 @@ class TestDashboardGenerator:
             assert "<html" in content
             assert "</html>" in content
 
+    def test_dashboard_escapes_untrusted_regression_fields(self):
+        """Regression result fields must be HTML-escaped to prevent XSS."""
+        payload = "<script>alert('xss')</script>"
+        results = {"summary": {"total_tests": 1, "passed": 0, "failed": 1, "pass_rate": 0.0}}
+        regressions = [
+            {
+                "test_id": payload,
+                "regression_type": "<img src=x onerror=alert(1)>",
+                "severity": "high\"><script>alert(2)</script>",
+                "baseline_value": 95.0,
+                "current_value": 0.0,
+                "change_percent": -100.0,
+            }
+        ]
+        generator = DashboardGenerator(results, regressions=regressions)
+
+        with TemporaryDirectory() as tmpdir:
+            output_file = Path(tmpdir) / "dashboard.html"
+            generator.generate(str(output_file))
+            content = output_file.read_text()
+
+        # Raw payload must never appear unescaped in the output.
+        assert "<script>alert('xss')</script>" not in content
+        assert "<img src=x onerror=alert(1)>" not in content
+        # Escaped form must be present instead.
+        assert "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;" in content
+        # Untrusted severity must not leak into the CSS class verbatim.
+        assert "severity-high\"><script>" not in content
+
+    def test_dashboard_escapes_untrusted_harness_name(self):
+        """Harness names embedded in the heatmap must be HTML-escaped."""
+        results = {
+            "summary": {
+                "total_tests": 1,
+                "passed": 0,
+                "failed": 1,
+                "pass_rate": 0.0,
+                "by_harness": {
+                    "<script>alert(3)</script>": {"passed": 0, "failed": 1, "pass_rate": 0.0}
+                },
+            }
+        }
+        generator = DashboardGenerator(results)
+
+        with TemporaryDirectory() as tmpdir:
+            output_file = Path(tmpdir) / "dashboard.html"
+            generator.generate(str(output_file))
+            content = output_file.read_text()
+
+        assert "<script>alert(3)</script>" not in content
+        assert "&lt;script&gt;" in content
+
 
 class TestPipelineIntegration:
     """Integration tests for the full pipeline."""
