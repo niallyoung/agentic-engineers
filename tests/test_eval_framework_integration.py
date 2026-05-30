@@ -205,3 +205,79 @@ timeout_seconds: 30
             from fnmatch import fnmatch
             filtered = [tc for tc in runner.test_cases if fnmatch(tc.id, "test-delegate*")]
             assert len(filtered) == 3
+
+
+class TestReporterRegressionDetectorFieldAlignment:
+    """Regression tests for producer/consumer field-name alignment.
+
+    The RegressionDetector consumes the canonical ``failed_tests`` field
+    (a list of test IDs). The JSONReporter is the producer of the snapshot
+    dict that becomes the baseline/current input for the detector, so its
+    output MUST expose ``failed_tests`` with the same shape the detector
+    reads. Previously the reporter only emitted ``failures`` (a list of
+    full result dicts), which the detector could not consume — silently
+    dropping every new-failure regression.
+    """
+
+    def _build_matrix(self, fail_ids):
+        from src.skills._meta.evaluation_framework.framework import (
+            CompatibilityMatrix,
+            TestResult,
+            TestStatus,
+        )
+
+        matrix = CompatibilityMatrix()
+        # One passing result so the suite is non-trivial.
+        matrix.add_result(
+            TestResult(
+                test_id="test_pass",
+                harness="opencode",
+                model="haiku",
+                status=TestStatus.PASS,
+                duration_ms=100,
+            )
+        )
+        for fid in fail_ids:
+            matrix.add_result(
+                TestResult(
+                    test_id=fid,
+                    harness="opencode",
+                    model="haiku",
+                    status=TestStatus.FAIL,
+                    duration_ms=120,
+                    error_message="boom",
+                )
+            )
+        return matrix
+
+    def test_json_report_exposes_canonical_failed_tests(self):
+        """JSONReporter output exposes ``failed_tests`` as a list of test IDs."""
+        matrix = self._build_matrix(["test_a", "test_b"])
+        report = JSONReporter(matrix).generate()
+
+        assert "failed_tests" in report, (
+            "JSONReporter must emit the canonical 'failed_tests' field consumed "
+            "by RegressionDetector"
+        )
+        assert isinstance(report["failed_tests"], list)
+        # Must be plain test IDs (hashable), not nested dicts, so the detector
+        # can build a set() from them.
+        assert all(isinstance(t, str) for t in report["failed_tests"])
+        assert set(report["failed_tests"]) == {"test_a", "test_b"}
+
+    def test_detector_reads_failed_tests_from_reporter_output(self):
+        """A JSONReporter snapshot feeds the detector and surfaces new failures."""
+        from src.skills._meta.evaluation_framework.regression_detector import (
+            RegressionDetector,
+        )
+
+        baseline = JSONReporter(self._build_matrix(["test_a"])).generate()
+        current = JSONReporter(self._build_matrix(["test_a", "test_b"])).generate()
+
+        regressions = RegressionDetector().detect(baseline, current)
+        new_failures = [r for r in regressions if r.regression_type == "new_failure"]
+
+        assert [r.test_id for r in new_failures] == ["test_b"], (
+            "Detector should read 'failed_tests' from the reporter output and "
+            "flag exactly the newly-failing test"
+        )

@@ -46,7 +46,12 @@ class JSONReporter:
             },
             "summary": summary,
             "results": [r.to_dict() for r in self.matrix.results],
+            # Detailed failure records (full result dicts) for human reports.
             "failures": [r.to_dict() for r in failures],
+            # Canonical list of failing test IDs consumed by RegressionDetector.
+            # Must stay aligned with RegressionDetector's `failed_tests` reads —
+            # see tests/test_eval_framework_integration.py.
+            "failed_tests": [r.test_id for r in failures],
             "regressions": regressions,
         }
         
