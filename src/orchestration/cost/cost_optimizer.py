@@ -163,7 +163,7 @@ class CostOptimizer:
     # Primary API
     # ------------------------------------------------------------------
 
-    def analyze(self, date: str = None) -> OptimizationReport:
+    def analyze(self, date: Optional[str] = None) -> OptimizationReport:
         """Run full optimization analysis on loaded metrics."""
         if date is None:
             date = datetime.now().strftime("%Y-%m-%d")
