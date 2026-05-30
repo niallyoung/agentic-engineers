@@ -150,6 +150,303 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
 ---
 
+### Agent-Role-Model-Skill Composites: The Core Architecture
+
+The framework brings together four key concepts into a unified orchestration model:
+
+```
+                        🎯 WHAT WE BUILD
+        ╔═══════════════════════════════════════════════════════════╗
+        ║                                                             ║
+        ║  ORCHESTRATOR (Human-Facing Coordination Layer)           ║
+        ║  └─ Local on laptop/phone or cloud-based                  ║
+        ║  └─ Routes work, enforces quality, tracks costs           ║
+        ║  └─ Can use local Ollama/llama.cpp or cloud agents        ║
+        ║                                                             ║
+        ║          ↓ DELEGATE (task YAML) ↓                         ║
+        ║                                                             ║
+        ╠═════════════════════════════════════════════════════════════╣
+        ║                  AGENT ECOSYSTEM                            ║
+        ║  (Model + Role + Skills composites)                        ║
+        ║                                                             ║
+        ║   ┌─────────────────────────────────────────────────────┐  ║
+        ║   │ CLOUD AGENTS (Harness-Deployed)                    │  ║
+        ║   │                                                     │  ║
+        ║   │ Agent = Harness Feature                            │  ║
+        ║   │ Role = Specialization (Engineer/Lead/Security)     │  ║
+        ║   │ Model = LLM Flavor (Haiku/Sonnet/Opus)            │  ║
+        ║   │ Skills = Reusable Functions (via framework)        │  ║
+        ║   │                                                     │  ║
+        ║   │ Examples:                                           │  ║
+        ║   │ • OpenCode Agent (native parallelism)              │  ║
+        ║   │ • Claude Code Skill Agent (VS Code extension)      │  ║
+        ║   │ • Copilot Agent (GitHub infrastructure)            │  ║
+        ║   └─────────────────────────────────────────────────────┘  ║
+        ║                          ↑ HANDBACK (results + metrics)     ║
+        ║                                                             ║
+        ║   ┌─────────────────────────────────────────────────────┐  ║
+        ║   │ LOCAL/OFFLINE AGENTS (Optional)                    │  ║
+        ║   │                                                     │  ║
+        ║   │ On physical hardware (laptop, phone, edge device)  │  ║
+        ║   │ Completely offline capability                      │  ║
+        ║   │ Uses local LLM: Ollama, llama.cpp, MLX, vLLM       │  ║
+        ║   │ Same DELEGATE/HANDBACK protocol                    │  ║
+        ║   │                                                     │  ║
+        ║   │ Use cases:                                          │  ║
+        ║   │ • No cloud dependencies (privacy/security)         │  ║
+        ║   │ • Offline-first workflows                          │  ║
+        ║   │ • Hybrid: cloud for complex, local for simple      │  ║
+        ║   └─────────────────────────────────────────────────────┘  ║
+        ║                          ↑ HANDBACK (results + metrics)     ║
+        ║                                                             ║
+        ║          ↓ Metrics/Cost Feedback ↓                         ║
+        ║                                                             ║
+        ║  Quality Gates → Model Selection Optimization              ║
+        ║  Cost Aggregation → Budget Enforcement                     ║
+        ║  Regression Detection → Continuous Monitoring              ║
+        ║                                                             ║
+        ║          ↓ Back to ORCHESTRATOR ↓                          ║
+        ║                                                             ║
+        ╚═════════════════════════════════════════════════════════════╝
+```
+
+#### DELEGATE/HANDBACK Protocol in Action
+
+```
+USER INTERACTION:
+┌─────────────────────────────────────────────────────────────────┐
+│ User (via CLI, IDE, or API) → "Please code-review this PR"      │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR (Haiku on local Ollama or cloud)                   │
+│ • Parses user request                                           │
+│ • Consults AGENTS.md decision tree:                             │
+│   - "code-review" → needs Lead Engineer                         │
+│   - Complex? Yes → Sonnet 4.6                                   │
+│   - Effort: High                                                │
+│ • Creates DELEGATE task YAML                                    │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ DELEGATE TASK (YAML in queue/incoming/)                         │
+│                                                                  │
+│ id: task-code-review-1234                                      │
+│ role: lead-engineer                                             │
+│ model: claude-sonnet-4.6                                        │
+│ effort: high                                                    │
+│ priority: high                                                  │
+│ skills:                                                         │
+│   - code-review                                                │
+│   - architecture-analysis                                      │
+│ description: "Review PR #456 for quality, security, style"     │
+│ quality_threshold: 92                                          │
+│ cost_limit: $0.25                                              │
+│ security_required: true                                        │
+│ approval_gate: code-review-team                                │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ ROUTING TO AGENT (determined by harness)                        │
+│                                                                  │
+│ IF harness = OpenCode:                                          │
+│   → Invoke OpenCode native multi-agent API                     │
+│     (framework delegates to native capability)                  │
+│                                                                  │
+│ IF harness = Claude Code:                                       │
+│   → Load Lead Engineer skill in VS Code extension              │
+│     (framework adapts DELEGATE to skill format)                │
+│                                                                  │
+│ IF harness = Local Ollama:                                      │
+│   → Spawn Sonnet-equivalent task locally                       │
+│     (framework handles model availability & fallback)           │
+│                                                                  │
+│ IF harness = Copilot CLI:                                       │
+│   → Execute as GitHub Copilot command                          │
+│     (framework renders to CLI syntax)                           │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ AGENT EXECUTES (wherever it lives)                              │
+│                                                                  │
+│ Lead Engineer (Sonnet 4.6 + skills):                           │
+│ • Loads code-review skill (reusable function)                  │
+│ • Applies 8-point checklist                                    │
+│ • Evaluates PR against architecture-analysis skill             │
+│ • Measures: quality score, latency, tokens, cost               │
+│ • Returns structured results                                   │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ HANDBACK RESPONSE (YAML in queue/done/)                         │
+│                                                                  │
+│ id: task-code-review-1234                                      │
+│ status: complete                                               │
+│ quality_score: 94                                              │
+│ cost: $0.18                                                    │
+│ latency: 4.2s                                                  │
+│ tokens: {input: 2500, output: 1200}                            │
+│ results:                                                       │
+│   code_review:                                                 │
+│     issues_found: 3                                            │
+│     security_concerns: 1                                       │
+│     recommendations: [...]                                    │
+│   quality_gates:                                               │
+│     passed: true                                               │
+│     score: 94/100                                              │
+│ audit_trail:                                                   │
+│   agent: lead-engineer                                         │
+│   model: claude-sonnet-4.6                                     │
+│   harness: opencode                                            │
+│   timestamp: 2026-05-30T14:25:00Z                             │
+│   approval: pending (code-review-team)                         │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ QUALITY GATES & FEEDBACK                                        │
+│                                                                  │
+│ • Quality score 94 ≥ 92 threshold? ✅ YES                       │
+│ • Cost $0.18 ≤ $0.25 limit? ✅ YES                              │
+│ • Security review passed? ✅ YES                                │
+│ • Approval required? ⏳ AWAITING (code-review-team)             │
+│                                                                  │
+│ → Move to done/ (archived with full audit trail)               │
+│ → Feed metrics back to orchestrator:                           │
+│   - This task cost less than budget (save $0.07)              │
+│   - Sonnet performed well on this task (use again)             │
+│   - Lead Engineer is effective for code-review                 │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR REPORTS BACK TO USER                               │
+│                                                                  │
+│ ✅ Code Review Complete                                         │
+│ Quality: 94/100 | Cost: $0.18 | Time: 4.2s                    │
+│ Issues found: 3 (1 security concern)                           │
+│ Status: Pending approval from code-review-team                 │
+│                                                                  │
+│ Next steps: [link to results in queue/done/]                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Cloud vs. Local/Offline Deployment Options
+
+```
+                    DEPLOYMENT SPECTRUM
+                    
+LOCAL (100% Offline)                    HYBRID                    CLOUD (Full Featured)
+┌─────────────────────┐         ┌──────────────────┐         ┌──────────────────────┐
+│ On-Device LLM       │         │ Mixed Strategy   │         │ Cloud Harnesses      │
+│ • Ollama            │         │                  │         │ • OpenCode           │
+│ • llama.cpp         │    ↔    │ • Local: Simple  │    ↔    │ • Claude Code        │
+│ • MLX (Apple)       │         │ • Cloud: Complex │         │ • Copilot CLI        │
+│ • vLLM              │         │ • Smart routing  │         │ • π.dev              │
+│                     │         │                  │         │                      │
+│ Orchestrator: Local │         │ Orchestrator:    │         │ Orchestrator:        │
+│ (on laptop/phone)   │         │ Hybrid/Cloud     │         │ Cloud or Local       │
+│                     │         │                  │         │                      │
+│ Pros:               │         │ Pros:            │         │ Pros:                │
+│ • 100% offline      │         │ • Cost-optimized │         │ • Best performance   │
+│ • Privacy           │         │ • Flexible       │         │ • Full features      │
+│ • No cloud deps     │         │ • Scalable       │         │ • Auto-scaling       │
+│ • Instant response  │         │                  │         │ • Managed service    │
+│                     │         │ Cons:            │         │                      │
+│ Cons:               │         │ • Complex setup  │         │ Cons:                │
+│ • Limited models    │         │ • Routing logic  │         │ • Cost per task      │
+│ • Slower inference  │         │   overhead       │         │ • Cloud dependency   │
+│ • Less scale        │         │                  │         │ • Latency/network    │
+│                     │         │                  │         │                      │
+│ Use for:            │         │ Use for:         │         │ Use for:             │
+│ • Privacy-critical  │         │ • Production     │         │ • Large teams        │
+│ • Offline-first     │         │ • Multi-agent    │         │ • Enterprise         │
+│ • Development       │         │ • Cost control   │         │ • Complex workflows  │
+│ • Edge devices      │         │ • PoCs           │         │ • Auto-scaling       │
+└─────────────────────┘         └──────────────────┘         └──────────────────────┘
+                     
+                All use same DELEGATE/HANDBACK protocol
+                All render to native harness capabilities
+```
+
+#### Role + Model + Skill Composition
+
+```
+        BUILDING AGENTS FROM COMPOSABLE PIECES
+        
+        ┌─────────────────────────────────────────┐
+        │          ROLE (Specialization)          │
+        │  • What is this agent's expertise?      │
+        │  • Examples:                            │
+        │    - Lead Engineer (reviews code)       │
+        │    - Security Engineer (threat model)   │
+        │    - Model Engineer (optimize routing)  │
+        │                                         │
+        │  → Defined in AGENTS.md                 │
+        └─────────────────────────────────────────┘
+                          ⊕
+        ┌─────────────────────────────────────────┐
+        │          MODEL (LLM Flavor)             │
+        │  • Which LLM for this role?             │
+        │  • Examples:                            │
+        │    - Haiku (cheap, fast routing)        │
+        │    - Sonnet (balanced, thinking)        │
+        │    - Opus (complex, security)           │
+        │                                         │
+        │  → Assigned per role + harness          │
+        └─────────────────────────────────────────┘
+                          ⊕
+        ┌─────────────────────────────────────────┐
+        │          SKILLS (Functions)             │
+        │  • What tools/capabilities?             │
+        │  • Examples:                            │
+        │    - code-review (8-point checklist)    │
+        │    - security-audit (vuln analysis)     │
+        │    - cost-optimization (model routing)  │
+        │    - test-coverage (coverage analysis)  │
+        │                                         │
+        │  → Packaged in src/skills/ directory    │
+        │  → Reusable across roles/models         │
+        └─────────────────────────────────────────┘
+                          ↓
+        ┌─────────────────────────────────────────┐
+        │  COMPOSITE AGENT (Ready to Work)        │
+        │  • Lead Engineer (Sonnet 4.6)           │
+        │    + code-review skill                  │
+        │    + architecture-analysis skill        │
+        │    + quality-gate enforcement           │
+        │    = Expert code reviewer               │
+        └─────────────────────────────────────────┘
+
+
+        MINIMUM FRAMEWORK FOOTPRINT
+        
+        ┌───────────────────────────────────────────────────────┐
+        │  WE BUILD (agentic-engineers):                        │
+        │  • DELEGATE/HANDBACK protocol  ✓                      │
+        │  • Agent registry (AGENTS.md)  ✓                      │
+        │  • Orchestrator (routing logic) ✓                     │
+        │  • Quality gates               ✓                      │
+        │  • Cost tracking               ✓                      │
+        │  • Skill adapters              ✓                      │
+        │                                                       │
+        │  ~3,000-4,000 LOC (and shrinking as vendors improve) │
+        └───────────────────────────────────────────────────────┘
+
+        ┌───────────────────────────────────────────────────────┐
+        │  WE DON'T BUILD (left to providers):                  │
+        │  ❌ Models (Anthropic's job)                          │
+        │  ❌ Harnesses (OpenCode/Copilot/Claude's job)        │
+        │  ❌ Infrastructure (cloud providers' job)             │
+        │  ❌ LLM runtime (Ollama/vLLM's job)                   │
+        │                                                       │
+        │  WE ADAPT & INTEGRATE:                                │
+        │  ✓ Render portable specs → harness-native code       │
+        │  ✓ Auto-detect capabilities → use best available    │
+        │  ✓ Monitor & reduce footprint as vendors catch up   │
+        └───────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Supported Harnesses
 
 Agentic Engineers is designed to work across multiple harnesses (CLI tools, IDE plugins, and coding agents). This section documents version compatibility, minimum requirements, and supported models for each harness.
