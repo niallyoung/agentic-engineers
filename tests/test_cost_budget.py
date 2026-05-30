@@ -753,3 +753,34 @@ class TestMonthlyResetEdgeCases:
         mock_dt.now.return_value = datetime(2026, 9, 30, 0, 0, 1)
         assert level.reset_if_needed() is True
         assert level.spent == 0.0
+
+
+# ============================================================================
+# Transaction concurrency — hard limit must hold under parallel deductions
+# ============================================================================
+
+class TestTransactionConcurrency:
+    """The pre-deduct in transaction() must be atomic with its capacity check
+    so concurrent transactions cannot breach the hard budget limit."""
+
+    def test_concurrent_transactions_never_exceed_limit(self):
+        budget = CostBudget(session_budget=10.0)
+        successes = []
+        errors = []
+
+        def worker():
+            try:
+                with budget.transaction(1.0):
+                    successes.append(1)
+            except RuntimeError:
+                errors.append(1)
+
+        threads = [threading.Thread(target=worker) for _ in range(50)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Exactly 10 of 50 should succeed; spent must never exceed the limit.
+        assert len(successes) == 10
+        assert budget.utilization()["session"] <= 100.0
