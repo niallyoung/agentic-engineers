@@ -127,6 +127,22 @@ required_fields:
       - "Sufficient detail that agent needs no clarification questions"
     example: "Three specialist agents completed a comprehensive protocol review and architecture design. Quality Engineer identified 5 critical gaps in validation. Principal Engineer designed 5 architectural decisions with 400 LOC pseudocode. This task implements Week 1 Priority 1 tasks to enforce protocol compliance from the start."
 
+  spec_version:
+    type: string
+    pattern: "^\\d+\\.\\d+(-.*)?$"
+    description: "SPEC version authorizing this task for audit trail linking and compliance verification"
+    examples:
+      - "1.0"
+      - "1.1"
+      - "1.1-2026-05-28"
+      - "1.0-rc1"
+
+  model_verification_sha:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+    description: "SHA256 of AGENTS.md at task creation (for model downgrade detection)"
+    example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+
 subtask_fields:
   parent_task_id:
     type: string
@@ -215,6 +231,38 @@ optional_fields:
       - "Gray-zone manual review gate (70-79 range)"
       - "Metrics collection and aggregation"
       - "CI/CD integration"
+  
+  security_scope:
+    type: string
+    enum:
+      - none
+      - auth
+      - crypto
+      - pii
+      - secrets
+      - injection
+      - supply_chain
+    default: none
+    description: "Security classification for task (triggers routing to Security Engineer if set)"
+    example: "auth"
+  
+  approval_gate:
+    type: string
+    enum:
+      - none
+      - lead_engineer
+      - principal_engineer
+      - security_engineer
+      - cto
+    default: none
+    description: "Required approval authority before task execution"
+    example: "principal_engineer"
+  
+  audit_required:
+    type: boolean
+    default: false
+    description: "Whether task execution must be audited (required if approval_gate set)"
+    example: true
 
 # Validation Rules (enforced by orchestrator.py:validate_delegate_pre_flight)
 validation_groups:
@@ -320,6 +368,25 @@ validation_groups:
         rule: "Code review / validation → role = lead_engineer or quality_engineer"
         validator: "('review' not in scope.lower() and 'audit' not in scope.lower()) OR role in ['lead_engineer', 'quality_engineer']"
         severity: "MEDIUM"
+  
+  group_d:
+    name: "Security Fields (Critical for security-scoped tasks)"
+    description: "Any NO = invalid security configuration — reject DELEGATE"
+    checks:
+      - id: "D1"
+        rule: "If security_scope set (not 'none'), approval_gate MUST be set (not 'none')"
+        validator: "security_scope == 'none' OR approval_gate != 'none'"
+        severity: "CRITICAL"
+        
+      - id: "D2"
+        rule: "If approval_gate set (not 'none'), audit_required MUST be true"
+        validator: "approval_gate == 'none' OR audit_required == true"
+        severity: "CRITICAL"
+        
+      - id: "D3"
+        rule: "If security_scope set (not 'none'), role MUST be security_engineer"
+        validator: "security_scope == 'none' OR role == 'security_engineer'"
+        severity: "CRITICAL"
 
 # Effort × Role Mismatch Table
 effort_role_matrix:

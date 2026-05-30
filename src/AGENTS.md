@@ -292,7 +292,7 @@ priority: normal               # low | normal | high | urgent
 context:
   description: |
     One-paragraph description of what needs to be done and why.
-  repo: owner/repo-name
+  repo: github.com/owner/repo-name    # Full GitHub URL (e.g., github.com/niallyoung/agentic-engineers)
   branch: feature/branch-name
   commit: HEAD                 # SHA or HEAD
   files:
@@ -504,7 +504,7 @@ context:
   description: |
     Add AU PostalCode validation rule to the address validator.
     PostalCode is optional but when present must be exactly 4 digits.
-  repo: niall/payments-service
+  repo: github.com/niallyoung/payments-service
   branch: feature/postal-validation
   commit: HEAD
   files:
@@ -618,7 +618,7 @@ context:
     and checkout/ packages. Architectural boundary needs to be determined before
     implementation. Senior should plan the full change set and assess if an API
     contract decision is needed (escalate to Lead if so).
-  repo: niall/payments-service
+  repo: github.com/niallyoung/payments-service
   branch: feature/payment-refactor
   commit: HEAD
   files:
@@ -684,7 +684,7 @@ context:
     Introducing sliding-window refresh: access tokens are transparently reissued
     within a 15-minute window. Concerned about replay attacks, missing expiry
     checks, and insecure token storage patterns.
-  repo: niall/auth-service
+  repo: github.com/niallyoung/auth-service
   branch: feature/jwt-refresh
   commit: HEAD
   files:
@@ -760,7 +760,7 @@ context:
     Validate TASK-404 HANDBACK from Senior Engineer. Senior refactored the
     address validation module (3 files, 87 lines changed). Verify all
     acceptance criteria are met, run the test suite, assess model suitability.
-  repo: niall/validation-service
+  repo: github.com/niallyoung/validation-service
   branch: feature/address-refactor
   commit: HEAD
   files:
