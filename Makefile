@@ -4,7 +4,7 @@
         status \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
-        lint test quality-gate
+        lint test test-concurrent test-ci test-ci-force test-ci-shell quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -50,6 +50,10 @@ help:
 	@echo "Quality & Testing:"
 	@echo "  lint                Lint Python, Shell, and YAML files"
 	@echo "  test                Run pytest test suite with coverage"
+	@echo "  test-concurrent     Run concurrent invocation tests (race condition guard)"
+	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
+	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
+	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
 	@echo "  quality-gate        Pre-push quality checks (lint + test + verify)"
 
 install: install-copilot install-claude install-pi install-opencode ## Install to all 4 harnesses
@@ -276,6 +280,70 @@ test-concurrent: ## Run concurrent invocation tests (race condition guard)
 		-v --tb=short
 	@echo ""
 	@echo "✅ Concurrent tests passed — no race conditions detected"
+
+test-ci: ## Run tests in CI container (simulates GitHub Actions environment, first run, no-fail)
+	@echo "🐳 Starting CI environment simulation in Docker container..."
+	@echo "   This simulates the exact GitHub Actions ubuntu-latest environment."
+	@echo "   Tests will catch environment-specific issues (symlinks, permissions, paths)."
+	@echo ""
+	@if ! command -v docker &> /dev/null; then \
+		echo "❌ Docker is not installed. Please install Docker to use test-ci."; \
+		echo "   Visit: https://docs.docker.com/get-docker/"; \
+		exit 1; \
+	fi
+	@echo "📦 Building Docker image (may take 30-60 seconds on first run)..."
+	@docker build --rm -t agentic-engineers-ci:latest "$(REPO_ROOT)" 2>&1 | grep -E "^(Step|RUN|COPY|FROM|Successfully)" || true
+	@echo ""
+	@echo "🧪 Running tests in container..."
+	@docker run --rm \
+		-v "$(REPO_ROOT):/workspace" \
+		-w /workspace \
+		agentic-engineers-ci:latest \
+		pytest tests/ -v --tb=short
+	@echo ""
+	@echo "✅ CI container tests complete"
+	@echo "   Tip: Use 'make test-ci-force' for strict passing tests"
+	@echo "   Tip: Use 'make test-ci-shell' to debug in container interactively"
+
+test-ci-force: ## Run tests in CI container (strict, must pass)
+	@echo "🐳 Starting STRICT CI environment test in Docker container..."
+	@echo "   This will fail if any test fails (non-lenient mode)."
+	@echo ""
+	@if ! command -v docker &> /dev/null; then \
+		echo "❌ Docker is not installed. Please install Docker to use test-ci-force."; \
+		exit 1; \
+	fi
+	@echo "📦 Building Docker image..."
+	@docker build --rm -t agentic-engineers-ci:latest "$(REPO_ROOT)" > /dev/null 2>&1
+	@echo ""
+	@echo "🧪 Running tests in container (strict mode)..."
+	@docker run --rm \
+		-v "$(REPO_ROOT):/workspace" \
+		-w /workspace \
+		agentic-engineers-ci:latest \
+		pytest tests/ -v --tb=short --strict-markers
+	@echo ""
+	@echo "✅ All CI tests passed (strict mode)"
+
+test-ci-shell: ## Open interactive shell in CI container for debugging
+	@echo "🐳 Opening interactive shell in CI container..."
+	@echo "   You can run pytest, inspect files, and debug issues."
+	@echo "   Type 'exit' to return to your local shell."
+	@echo ""
+	@if ! command -v docker &> /dev/null; then \
+		echo "❌ Docker is not installed. Please install Docker to use test-ci-shell."; \
+		exit 1; \
+	fi
+	@echo "📦 Building Docker image..."
+	@docker build --rm -t agentic-engineers-ci:latest "$(REPO_ROOT)" > /dev/null 2>&1
+	@echo ""
+	@docker run -it --rm \
+		-v "$(REPO_ROOT):/workspace" \
+		-w /workspace \
+		agentic-engineers-ci:latest \
+		/bin/bash
+	@echo ""
+	@echo "👋 Exited CI container"
 
 quality-gate: lint test test-concurrent verify validate-renders ## Pre-push quality checks (lint + test + concurrent + verify + render validation)
 	@echo ""
