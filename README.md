@@ -1334,8 +1334,10 @@ For each TIER:
 
 ## Testing
 
+### Standard Test Suite
+
 ```bash
-make test          # Full test suite (1047+ tests)
+make test          # Full test suite (1047+ tests, ~60 seconds)
 make test-quick    # Quick smoke tests
 make coverage      # Coverage report
 make verify        # SPEC compliance check
@@ -1343,20 +1345,32 @@ make verify        # SPEC compliance check
 
 ### CI Environment Simulation (Local Docker Testing)
 
-For developers who want to catch environment-specific issues **locally** before pushing to GitHub Actions:
+**For developers:** Catch environment-specific issues **locally** before pushing to GitHub Actions.
+
+Tests may pass on macOS but fail in Linux CI due to differences in:
+- **Symlink handling** (CWD symlinks can break imports, security validations)
+- **File paths** (macOS: `/var/` → `/private/var/`; Linux: absolute paths differ)
+- **File permissions** (umask, ACLs, executable bits)
+- **Python environment** (Python 3.11 in CI vs local dev Python)
+
+**The solution:**
+- Docker container matches **exact GitHub Actions environment** (Python 3.11, ubuntu-latest, git core.symlinks=true)
+- Dockerfile validates 46 CI-specific tests including:
+  - ✅ Symlink creation, resolution, and relative symlink support
+  - ✅ Absolute/relative path resolution with spaces and special chars
+  - ✅ File permission handling (read/write/execute/denied)
+  - ✅ Python 3.11 compatibility (pathlib, typing, async, exception groups)
+  - ✅ System dependencies (git, python3, pytest, pyyaml)
+  - ✅ Dockerfile build validation
+  - ✅ Makefile target verification
+- Container startup: < 30 seconds (cached after first run)
 
 ```bash
 # Simulate GitHub Actions environment in Docker
 make test-ci                # First run (no-fail, informational)
-make test-ci-force          # Strict mode (must pass)
+make test-ci-force          # Strict mode (all tests must pass)
 make test-ci-shell          # Interactive shell for debugging
 ```
-
-**Why this matters:**
-- Tests may pass on macOS but fail in Linux (symlinks, paths, permissions)
-- Docker container matches the exact GitHub Actions CI environment (Python 3.11, ubuntu-latest)
-- Catch symlink security issues, path validation failures, and permission problems **before pushing**
-- Container startup < 30 seconds (cached after first run)
 
 **Example workflow:**
 ```bash
@@ -1365,6 +1379,7 @@ make test-ci
 
 # If it fails, debug interactively
 make test-ci-shell
+$ pytest tests/test_ci_container_environment.py -v
 
 # Fix and retest
 make test-ci-force
@@ -1372,6 +1387,13 @@ make test-ci-force
 # Push when green
 git push
 ```
+
+**Requirements:**
+- Docker installed and running: `docker --version`
+- If Docker is not available, you can:
+  - Run `make test-ci` on a system with Docker
+  - Push to GitHub and rely on CI (slower feedback loop)
+  - Or install Docker: https://docs.docker.com/get-docker/
 
 ---
 
