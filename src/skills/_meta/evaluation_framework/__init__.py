@@ -14,7 +14,8 @@ __version__ = "1.0.0"
 __author__ = "agentic-engineers"
 
 from .test_case import TestCase, TestCaseValidationError
-from .framework import TestRunner, TestResult, CompatibilityMatrix
+from .framework import TestRunner, TestResult, CompatibilityMatrix, TestStatus
+from .reporters import JSONReporter, MarkdownReporter, CSVReporter
 
 __all__ = [
     "TestCase",
@@ -22,4 +23,8 @@ __all__ = [
     "TestRunner",
     "TestResult",
     "CompatibilityMatrix",
+    "TestStatus",
+    "JSONReporter",
+    "MarkdownReporter",
+    "CSVReporter",
 ]
