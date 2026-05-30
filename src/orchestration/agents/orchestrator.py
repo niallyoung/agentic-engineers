@@ -36,7 +36,11 @@ from . import (
     MODEL_ENGINEER_CONFIG, SECURITY_ENGINEER_CONFIG
 )
 from .quality_validator import QualityValidator, RoutingDecision
-from .delegate_validator import validate_delegate_pre_flight
+from .delegate_validator import (
+    DelegateValidator,
+    RoleRoutingError,
+    validate_delegate_pre_flight,
+)
 from .metrics_writer import MetricsWriter
 from ..monitoring.metrics import MetricsRegistry
 from ..monitoring.token_tracker import TokenTracker
@@ -1012,7 +1016,21 @@ class TaskRouter:
             (agent_name, None)  — caller uses agent_name to invoke via AgentInvoker
         """
         # Priority 1: Explicit role in DELEGATE
-        if "role" in delegate:
+        if "role" in delegate and delegate.get("role"):
+            # Enforce the role validator at routing time: reject an invalid role
+            # or a role that conflicts with the task's scope/effort routing rules
+            # (e.g. a security-scoped task mis-tagged as `engineer`). Previously
+            # the validator was imported but never invoked, so mismatches were
+            # silently honoured.
+            ok, role_failures = DelegateValidator.validate_routing_role(delegate)
+            if not ok:
+                raise RoleRoutingError(
+                    "DELEGATE role "
+                    f"'{delegate.get('role')}' failed routing validation: "
+                    + "; ".join(role_failures),
+                    failures=role_failures,
+                )
+
             role = delegate.get("role", "").lower()
             if role in self.AGENT_NAMES:
                 return (role, None)
