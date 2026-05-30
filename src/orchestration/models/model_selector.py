@@ -39,7 +39,7 @@ class ModelTier(Enum):
      """Available model tiers with relative cost multipliers."""
      HAIKU = "haiku-4-5"
      SONNET = "sonnet-4-6"
-     OPUS = "opus-4-8"
+     OPUS = "opus-4-7"
      GPT_5_4 = "gpt-5-4"
      GPT_5_5 = "gpt-5-5"
 
