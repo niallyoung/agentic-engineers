@@ -924,6 +924,21 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 
 **Mentoring:** When reviewing Engineer HANDBACKs, provide specific actionable feedback.
 
+**SDLC Gate Maintenance:** Senior Engineer is responsible for:
+- Maintaining Git hooks in `.githooks/` directory
+- Updating pre-commit hooks when validation requirements change
+- Updating pre-push hooks when quality gates change
+- Documenting hook behavior in `.githooks/README.md`
+- Monitoring hook performance (target: pre-commit < 3s, pre-push < 10s excluding tests)
+- Addressing false positives or overly-strict checks that slow down development
+- Escalating hook breakage to Principal Engineer if fixes are needed
+
+**Hook Installation:** Senior Engineer ensures:
+- `make setup` target automatically installs hooks for all developers
+- Hooks are compatible with macOS and Linux
+- Emergency override mechanism (`GIT_SKIP_HOOKS=1`) is documented and working
+- Existing test suite passes with hooks enabled (no regressions)
+
 ### Lead Engineer
 
 **Gray-Zone Review (70–79 scores):**
