@@ -1341,6 +1341,38 @@ make coverage      # Coverage report
 make verify        # SPEC compliance check
 ```
 
+### CI Environment Simulation (Local Docker Testing)
+
+For developers who want to catch environment-specific issues **locally** before pushing to GitHub Actions:
+
+```bash
+# Simulate GitHub Actions environment in Docker
+make test-ci                # First run (no-fail, informational)
+make test-ci-force          # Strict mode (must pass)
+make test-ci-shell          # Interactive shell for debugging
+```
+
+**Why this matters:**
+- Tests may pass on macOS but fail in Linux (symlinks, paths, permissions)
+- Docker container matches the exact GitHub Actions CI environment (Python 3.11, ubuntu-latest)
+- Catch symlink security issues, path validation failures, and permission problems **before pushing**
+- Container startup < 30 seconds (cached after first run)
+
+**Example workflow:**
+```bash
+# Before pushing, verify tests pass in CI container
+make test-ci
+
+# If it fails, debug interactively
+make test-ci-shell
+
+# Fix and retest
+make test-ci-force
+
+# Push when green
+git push
+```
+
 ---
 
 ## Repository Structure

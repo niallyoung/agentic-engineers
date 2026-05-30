@@ -255,3 +255,20 @@ Potential improvements to the pre-push hook:
 - [.githooks/commit-msg](../commit-msg) - Commit message validation
 - [docs/SPEC.md](../../docs/SPEC.md) - Framework specification
 - [docs/AGENTS.md](../../docs/AGENTS.md) - Agent documentation
+
+## CI Environment Simulation (test-ci)
+
+For developers who want to test in an environment matching GitHub Actions before pushing:
+
+```bash
+# First run (simulates CI environment locally)
+make test-ci
+
+# Strict mode (must pass, useful before force push)
+make test-ci-force
+
+# Interactive debugging in container
+make test-ci-shell
+```
+
+See [Makefile](../../Makefile) for details on `test-ci` targets.
