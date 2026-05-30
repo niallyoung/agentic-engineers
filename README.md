@@ -2,83 +2,7 @@
 
 8 agent roles + queue-based orchestration + quality gates + cost optimization feedback loops.
 
----
-
-## 🎯 Phase: Simplify, Reduce, and Polish
-
-**Current Status:** Consolidation Phase (Not Feature-Add)
-
-We have built a comprehensive multi-agent orchestration framework through 8 phases of development. Phase 1.5 security hardening is now complete. We are shifting focus from adding features to **consolidating, stabilizing, and polishing** what we have.
-
-### What This Means
-
-- ✅ **Core framework is stable** — 1,400+ tests passing, all phases 1–H complete
-- ✅ **Security hardening complete** — 5 critical fixes implemented (queue paths, audit trails, agent verification, security fields, enforcement decorator)
-- ✅ **Cost optimization working** — 3 skills shipped, 40-60% token savings demonstrated
-- 🚀 **Next focus:** Harness stability (OpenCode, Claude Code, Copilot CLI), skills audit, enforcement consistency
-- 🔒 **Feature freeze pending** — Target: June 15, 2026 (after harness stability achieved)
-
-### Consolidation Roadmap
-
-**Milestone 1** — Security Foundation (2026-05-30) ✅ COMPLETE
-- Phase 1.5: 5 security hardening fixes implemented
-- All 38+ tests passing
-- Framework ready for Phase 1 spec audit
-
-**Milestone 2** — Harness Stability (2-3 weeks)
-- OpenCode harness: queue path detection, runner integration
-- Claude Code harness: agent availability, skill rendering
-- Copilot CLI harness: model routing, token tracking
-- All harnesses emit consistent DELEGATE/HANDBACK format
-- All harnesses pass end-to-end workflow tests
-
-**Milestone 3** — Skills Audit & Consolidation (ongoing)
-- Review all 14 skills: prioritize high-value, deprecate low-value
-- Standardize: SKILL.md format, test coverage (≥85%), documentation
-- Merge similar skills, remove abandoned work
-- Document skill deprecation process
-
-**After Milestone 3** — Feature Freeze
-- No new skills or agents after June 15, 2026
-- Focus shifts to: bug fixes, performance, documentation, polish
-- Polish existing features for production readiness
-
-**See detailed roadmap:** [TODO.md POST-MERGE ROADMAP](#post-merge-roadmap)
-
----
-
-## 🧪 Harness Compatibility & Evaluation Testing
-
-**Problem:** Silent compatibility flaps after harness/model updates. Need automated feedback loop.
-
-We're building a comprehensive evaluation framework to close the end-to-end feedback loop with developers and users:
-
-### What We're Adding
-
-1. **Harness Integration Tests** — Standard prompts + delegations across all harnesses (copilot, opencode, claude, pi)
-2. **Model Compatibility Matrix** — Track which models work with which harnesses + features
-3. **Skill Interoperability Tests** — Validate each skill works consistently across all harnesses
-4. **End-to-End Delegation Workflows** — Test complex scenarios (escalation, parallel work, error handling)
-5. **Continuous Evaluation Pipeline** — Nightly CI/CD job to detect regressions automatically
-
-### Why This Matters
-
-Recent updates have caused silent feature regressions. Instead of discovering issues weeks later in production, we'll:
-- ✅ Test every harness × model × skill combination automatically
-- ✅ Generate compatibility reports showing which combinations pass/fail
-- ✅ Alert on model regressions immediately (breaking changes)
-- ✅ Provide clear success/fail thresholds (e.g., "≥95% pass rate required")
-- ✅ Enable confident rollbacks if a harness update breaks workflows
-
-### Timeline
-
-- **Milestone 2a** — Evaluation Framework + Harness Tests (2-3 weeks)
-- **Milestone 2b** — Model Compatibility Matrix + CI/CD Integration (1-2 weeks)
-- **Target:** All harnesses passing 95%+ eval suite by June 2026
-
-### See Detailed Plan
-
-See [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](#harness-compatibility--evaluation-testing) for full roadmap, effort estimates, and ownership.
+**📍 Status:** Consolidation phase—focus on harness stability, skills audit, enforcement consistency. See [Current Status](#current-status) for details.
 
 ---
 
@@ -128,6 +52,7 @@ See [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](#harness-compatibility-
 - [When to Use This System](#when-to-use-this-system)
 - [Core Protocol Documents](#core-protocol-documents)
 - [Installation & Setup](#installation-verification)
+- [Current Status](#current-status)
 
 ---
 
@@ -176,7 +101,7 @@ If Agentic Engineers saves you time, money, or complexity, consider supporting i
 - NOSTR: npub1ydxa9ss3xkps49s2gck7lk6pptpx79uvh78p87ly8zg0setwaxps3edd7d
 - LN: bluemouse1@primal.net
 - BTC: bc1py8jw0s695nvx9efm7zfejjhxvzfx8m6q2zhxhyt8s6sukdh6wm9sy2nq0n
-- 🙏 Will rotate address / add BTCPay if any support
+- 🙏 Will rotate address / add BTCPayServer if any support
 
 Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
@@ -1864,3 +1789,69 @@ make uninstall-pi        # π.dev only
 | Model Engineer never fires | Queue missing `~/.agentic-engineers/artifacts/queue/done/` dir | `make init-queue` |
 | Skills show as `[MISSING]` in matrix | Skill file deleted or renamed | `make verify-skills` |
 | Token metrics not updating | `TOKEN_METRICS.md` path mismatch | Check `src/config/models.yaml` `metrics_path` |
+
+---
+
+## 🎯 Current Status
+
+We have built a comprehensive multi-agent orchestration framework through 8 phases of development. Phase 1.5 security hardening is now complete. We are shifting focus from adding features to **consolidating, stabilizing, and polishing** what we have.
+
+### What This Means
+
+- ✅ **Core framework is stable** — 1,400+ tests passing, all phases 1–H complete
+- ✅ **Security hardening complete** — 5 critical fixes implemented (queue paths, audit trails, agent verification, security fields, enforcement decorator)
+- ✅ **Cost optimization working** — 3 skills shipped, 40-60% token savings demonstrated
+- 🚀 **Next focus:** Harness stability (OpenCode, Claude Code, Copilot CLI), skills audit, enforcement consistency
+- 🔒 **Feature freeze pending** — Target: June 15, 2026 (after harness stability achieved)
+
+### Consolidation Roadmap
+
+**Milestone 1** — Security Foundation (2026-05-30) ✅ COMPLETE
+- Phase 1.5: 5 security hardening fixes implemented
+- All 38+ tests passing
+- Framework ready for Phase 1 spec audit
+
+**Milestone 2** — Harness Stability (2-3 weeks)
+- OpenCode harness: queue path detection, runner integration
+- Claude Code harness: agent availability, skill rendering
+- Copilot CLI harness: model routing, token tracking
+- All harnesses emit consistent DELEGATE/HANDBACK format
+- All harnesses pass end-to-end workflow tests
+
+**Milestone 3** — Skills Audit & Consolidation (ongoing)
+- Review all 14 skills: prioritize high-value, deprecate low-value
+- Standardize: SKILL.md format, test coverage (≥85%), documentation
+- Merge similar skills, remove abandoned work
+- Document skill deprecation process
+
+**After Milestone 3** — Feature Freeze
+- No new skills or agents after June 15, 2026
+- Focus shifts to: bug fixes, performance, documentation, polish
+- Polish existing features for production readiness
+
+See detailed roadmap: [TODO.md POST-MERGE ROADMAP](TODO.md#post-merge-roadmap)
+
+### 🧪 Harness Compatibility & Evaluation Testing
+
+**Problem:** Silent compatibility flaps after harness/model updates. Need automated feedback loop.
+
+**What We're Adding:**
+1. **Harness Integration Tests** — Standard prompts + delegations across all harnesses (copilot, opencode, claude, pi)
+2. **Model Compatibility Matrix** — Track which models work with which harnesses + features
+3. **Skill Interoperability Tests** — Validate each skill works consistently across all harnesses
+4. **End-to-End Delegation Workflows** — Test complex scenarios (escalation, parallel work, error handling)
+5. **Continuous Evaluation Pipeline** — Nightly CI/CD job to detect regressions automatically
+
+**Why This Matters:**
+- ✅ Test every harness × model × skill combination automatically
+- ✅ Generate compatibility reports showing which combinations pass/fail
+- ✅ Alert on model regressions immediately (breaking changes)
+- ✅ Provide clear success/fail thresholds (e.g., "≥95% pass rate required")
+- ✅ Enable confident rollbacks if a harness update breaks workflows
+
+**Timeline:**
+- Milestone 2a — Evaluation Framework + Harness Tests (2-3 weeks)
+- Milestone 2b — Model Compatibility Matrix + CI/CD Integration (1-2 weeks)
+- Target: All harnesses passing 95%+ eval suite by June 2026
+
+See detailed plan: [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](TODO.md#harness-compatibility--evaluation-testing)
