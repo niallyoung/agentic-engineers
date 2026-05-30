@@ -5,8 +5,6 @@ import time
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
-import subprocess
-import sys
 
 from .models import (
     SkillTestResult,
