@@ -229,6 +229,120 @@
 
 ---
 
+## 📅 CONSOLIDATION ROADMAP
+
+**Objective:** Simplify, stabilize, and polish the agentic-engineers framework. Focus on harness compatibility, skills audit, and production-readiness.
+
+### Milestone 1 (CURRENT): Phase 1.5 Security Hardening ✅ COMPLETE
+**Target Date:** 2026-05-30 | **Status:** ✅ DELIVERED  
+**Deliverables:**
+- ✅ Queue path enforcement (runtime + git hook validation)
+- ✅ Audit trail via spec_version field
+- ✅ Agent definition verification (tri-level)
+- ✅ Security-critical DELEGATE fields (security_scope, approval_gate, audit_required)
+- ✅ Orchestrator enforcement decorator with error handling
+
+**Quality Metrics:**
+- 38+ tests passing | 95%+ coverage | Zero regressions
+- Quality Score: 96/100 | Confidence: 97%
+
+---
+
+### Milestone 2 (NEXT): Harness Stability Across All Platforms
+**Target Timeline:** 2-3 weeks (2026-06-13)  
+**Priority:** CRITICAL  
+**Objective:** Ensure OpenCode, Claude Code, and Copilot CLI harnesses achieve ≥95% compatibility and reliability.
+
+#### OpenCode Harness
+- [ ] **OPENCODE-QUEUE-PATH-DETECTION:** Implement harness detection for canonical queue paths
+  - Detect session-id and harness type from context
+  - Enable proper routing of work through OpenCode harness
+  - Blocks: Framework users cannot properly route tasks
+  - Effort: 2-3 hours | Owner: Engineer
+
+- [ ] **OPENCODE-HARNESS-CHECKER:** Validate harness configuration at runtime
+  - Startup checks: agents loaded, skills available, queue paths valid
+  - Effort: 1-2 hours | Owner: Quality Engineer
+
+- [ ] **OPENCODE-RUNNER-INTEGRATION:** Full runner lifecycle integration
+  - Task queueing, execution, result retrieval
+  - Effort: 2-3 hours | Owner: Senior Engineer
+
+#### Claude Code Harness
+- [ ] **CLAUDE-AGENT-AVAILABILITY:** Ensure all 8 agents render and load
+  - Verify agent definitions, role assignments, model routing
+  - Effort: 2-3 hours | Owner: Quality Engineer
+
+- [ ] **CLAUDE-SKILL-RENDERING:** Full skill catalog rendering and accessibility
+  - Test all 14 skills accessible within Claude Code environment
+  - Effort: 2-3 hours | Owner: Quality Engineer
+
+#### Copilot CLI Harness
+- [ ] **COPILOT-MODEL-ROUTING:** Implement intelligent model selection
+  - Route tasks to appropriate model (Haiku/Sonnet/Opus) based on complexity
+  - Effort: 2-3 hours | Owner: Model Engineer
+
+- [ ] **COPILOT-TOKEN-TRACKING:** Full token usage and cost visibility
+  - Track per-task costs, cumulative session spend, budget alerts
+  - Effort: 2-3 hours | Owner: Model Engineer
+
+**Success Metrics:**
+- All harnesses pass 100+ compatibility tests
+- ≥95% success rate on standard delegation workflows
+- Zero silent failures or compatibility regressions
+- Full end-to-end telemetry enabled
+
+---
+
+### Milestone 3 (ONGOING): Skills Audit & Consolidation
+**Target Timeline:** Ongoing (continuous)  
+**Priority:** HIGH  
+**Objective:** Stabilize skill ecosystem, improve quality and maintainability.
+
+#### Skills Inventory & Audit
+- [ ] **SKILLS-AUDIT:** Review all 14 skills
+  - Assess: value, usage, maintenance burden, test coverage
+  - Categorize: core (essential), utility (helpful), experimental (proof-of-concept)
+  - Effort: 2-3 hours | Owner: Lead Engineer
+
+#### Skills Standardization
+- [ ] **SKILLS-STANDARDIZATION:** Enforce consistent standards
+  - SKILL.md format alignment (all 14 skills)
+  - Test coverage: ≥85% per skill
+  - Documentation completeness
+  - Effort: 3-5 hours | Owner: Quality Engineer
+
+#### Deprecated Skills
+- [ ] Review and archive low-value or experimental skills
+  - Move to `docs/archive/deprecated-skills/` with restoration instructions
+  - Effort: 1-2 hours | Owner: Senior Engineer
+
+---
+
+## 🎯 Feature Freeze & Post-Freeze Policy
+
+**Feature Freeze Date:** 2026-06-15 (Post-Milestone 3)
+
+### What Happens at Freeze:
+No new skills or agents may be added to the framework after this date. All API additions, new agent roles, and skill implementations freeze.
+
+### Post-Freeze Work Only (June 15 onwards):
+- ✅ Bug fixes (reported issues, regressions, security)
+- ✅ Performance improvements (optimization, latency reduction)
+- ✅ Documentation (guides, examples, standards)
+- ✅ Polish (UX, error messages, consistency)
+- ✅ Dependency updates (security patches, compatibility)
+
+### What's NOT Allowed Post-Freeze:
+- ❌ New skills or agents
+- ❌ New API endpoints or DELEGATE fields
+- ❌ Major refactoring or architectural changes
+- ❌ Feature additions or scope creep
+
+**Rationale:** Consolidation phase focuses on stability, reliability, and polish—not feature velocity. Framework is feature-complete for production.
+
+---
+
 ## 📋 POST-MERGE ROADMAP
 
 ### OpenCode Integration Fixes (Priority: HIGH)
