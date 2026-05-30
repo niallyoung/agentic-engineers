@@ -1,0 +1,29 @@
+id: test-handback-validation-001
+name: "Test HANDBACK protocol validation"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+  - pi-dev
+models:
+  - haiku
+  - sonnet
+  - opus
+category: protocol
+severity: critical
+prompt: |
+  Create a HANDBACK block from an Engineer completing a simple task.
+  The HANDBACK should include status, summary, changes, acceptance_verified,
+  metrics, and escalation fields as appropriate.
+  Verify it meets the SPEC.md requirements for HANDBACK blocks.
+expected_contains:
+  - "HANDBACK"
+  - "status"
+  - "metrics"
+expected_not_contains:
+  - "INCOMPLETE"
+  - "Invalid format"
+timeout_seconds: 30
+requirements:
+  - Must know HANDBACK protocol specification
+  - Must validate compliance with SPEC.md
