@@ -473,18 +473,20 @@ No new skills or agents may be added to the framework after this date. All API a
   - Effort: 2-3 days | Owner: Model Engineer
   - **Critical:** Must be ready by June 1
 
-- [ ] **COST-004:** Local model support (Ollama, llama.cpp, Apple MLX, NVidia)
-  - **Phase 1 (Planning):** Define harness architecture for local LLMs
-    - How agents connect to local Ollama instance
-    - Fallback logic when local unavailable (route to cloud)
-    - Cost accounting (local = $0 but slower)
-    - Model availability detection + auto-selection
-  - **Phase 2 (Minimal impl):** Ollama integration (most popular local runtime)
-    - Detect Ollama instance (localhost:11434 or env var)
-    - List available models, select best-fit by size/quality
-    - Route Haiku-class tasks to local, Sonnet/Opus to cloud when local insufficient
-    - Fallback: if local model not available, use cloud
-  - **Phase 3 (Future):** llama.cpp, Apple MLX, NVidia CUDA support
+- [~] **COST-004:** Local model support (Ollama, llama.cpp, Apple MLX, NVidia)
+  - [x] **Phase 1 (Planning):** Define harness architecture for local LLMs
+    - [x] How agents connect to local Ollama instance (`/api/tags`, injectable client)
+    - [x] Fallback logic when local unavailable (route to cloud)
+    - [x] Cost accounting (local = $0 but slower)
+    - [x] Model availability detection + auto-selection
+  - [x] **Phase 2 (Minimal impl):** Ollama integration (most popular local runtime)
+    - [x] Detect Ollama instance (localhost:11434 or env var)
+    - [x] List available models, select best-fit by size/quality
+    - [x] Route Haiku-class tasks to local, Sonnet/Opus to cloud when local insufficient
+    - [x] Fallback: if local model not available, use cloud
+    - ✅ Skill: `src/skills/local-model-runtime/` — 30 tests, 95% coverage
+    - ✅ Stdlib-only (urllib); reads zero-cost catalogue from `providers.yaml`
+  - [ ] **Phase 3 (Future):** llama.cpp, Apple MLX, NVidia CUDA support
   - Effort: Phase 1: 1-2 days (planning) | Phase 2: 3-5 days (impl) | Phase 3: TBD
   - Owner: Principal/Senior Engineer
   - **Strategic:** Local models → 95% cost reduction long-term, essential for users running on local hardware
