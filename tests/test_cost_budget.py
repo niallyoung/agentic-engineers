@@ -705,3 +705,51 @@ class TestIntegration:
 
         # 10.0 / 50.0 = 20%
         assert basic_budget.utilization()["daily"] == 20.0
+
+
+# ============================================================================
+# Monthly reset edge cases (day-of-month overflow)
+# ============================================================================
+
+class TestMonthlyResetEdgeCases:
+    """Regression tests for monthly reset when last_reset day does not exist
+    in the following month (e.g. Jan 31 -> Feb)."""
+
+    @patch("src.orchestration.cost.budget.datetime")
+    def test_jan31_does_not_reset_immediately(self, mock_dt):
+        """A budget last reset on Jan 31 must NOT reset two days later;
+        the next reset should land at the end of February."""
+        level = BudgetLevel(BudgetPeriod.MONTHLY, limit=100.0)
+        level.last_reset = datetime(2026, 1, 31, 12, 0, 0)
+        level.spent = 50.0
+
+        # Two days later — well before the next monthly boundary.
+        mock_dt.now.return_value = datetime(2026, 2, 2, 12, 0, 0)
+        assert level.reset_if_needed() is False
+        assert level.spent == 50.0
+
+    @patch("src.orchestration.cost.budget.datetime")
+    def test_jan31_resets_at_end_of_february(self, mock_dt):
+        """Once the end-of-February boundary is reached, the budget resets."""
+        level = BudgetLevel(BudgetPeriod.MONTHLY, limit=100.0)
+        level.last_reset = datetime(2026, 1, 31, 12, 0, 0)
+        level.spent = 50.0
+
+        mock_dt.now.return_value = datetime(2026, 2, 28, 12, 0, 1)
+        assert level.reset_if_needed() is True
+        assert level.spent == 0.0
+
+    @patch("src.orchestration.cost.budget.datetime")
+    def test_aug31_resets_at_end_of_september(self, mock_dt):
+        """Aug 31 (Sep has only 30 days) should reset at end of September."""
+        level = BudgetLevel(BudgetPeriod.MONTHLY, limit=100.0)
+        level.last_reset = datetime(2026, 8, 31, 0, 0, 0)
+        level.spent = 75.0
+
+        # Sep 15 — should not have reset yet.
+        mock_dt.now.return_value = datetime(2026, 9, 15, 0, 0, 0)
+        assert level.reset_if_needed() is False
+        # Sep 30 — boundary reached.
+        mock_dt.now.return_value = datetime(2026, 9, 30, 0, 0, 1)
+        assert level.reset_if_needed() is True
+        assert level.spent == 0.0
