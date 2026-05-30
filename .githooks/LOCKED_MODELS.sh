@@ -23,7 +23,7 @@ LOCKED_MODELS=(
     "claude-sonnet-4.5"
     "claude-sonnet-4.6"
     "claude-opus-4.6"
-    "claude-opus-4.8"
+    "claude-opus-4.7"
 )
 
 # Note: If a locked model becomes unavailable, the harness will auto-select:
@@ -47,7 +47,7 @@ AGENT_MODEL_ASSIGNMENTS=(
     "quality-engineer-agent:claude-sonnet-4.6"
     "senior-engineer-agent:claude-sonnet-4.5"
     "model-engineer-agent:claude-sonnet-4.5"
-    "security-engineer-agent:claude-opus-4.8"
+    "security-engineer-agent:claude-opus-4.7"
     "principal-engineer-agent:claude-opus-4.6"
 )
 
