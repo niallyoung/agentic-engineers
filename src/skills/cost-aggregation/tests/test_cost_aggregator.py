@@ -951,6 +951,39 @@ class TestCostTrend:
         trend = agg.cost_trend_for_provider("ollama", "2026-05-10", "2026-05-10")
         assert trend["total"] == pytest.approx(0.0)
 
+    def test_record_usage_rejects_path_traversal_date(self, agg, data_dir):
+        """A crafted date must not escape the provider data directory."""
+        with pytest.raises(ValueError):
+            agg.record_usage(
+                "anthropic", "claude-sonnet-4.6", 1000, 500,
+                date="../../../../tmp/evil",
+            )
+        # Nothing should have been written outside the data dir.
+        assert not (data_dir.parent.parent / "evil.json").exists()
+
+    def test_record_usage_rejects_malformed_date(self, agg):
+        """A non-ISO date string is rejected rather than silently used."""
+        with pytest.raises(ValueError):
+            agg.record_usage("anthropic", "claude-sonnet-4.6", 1000, 500, date="2026/05/10")
+
+    def test_record_usage_concurrent_writes_no_lost_updates(self, agg):
+        """Concurrent record_usage calls for the same day must all persist."""
+        import threading as _threading
+
+        def worker():
+            agg.record_usage("anthropic", "claude-sonnet-4.6", 1000, 500, date="2026-05-12")
+
+        threads = [_threading.Thread(target=worker) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        record_path = agg._data_dir / "anthropic" / "2026-05-12.json"
+        import json as _json
+        data = _json.loads(record_path.read_text())
+        assert len(data["records"]) == 20
+
 
 # ===========================================================================
 # CostAggregator.provider_health_check
