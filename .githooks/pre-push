@@ -497,13 +497,13 @@ if command -v python3 >/dev/null 2>&1; then
     
      # Check AGENTS.md hasn't been tampered with (compare computed vs stored SHA)
      if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ] && [ ! -z "$CURRENT_SHA" ]; then
-       COMPUTED_SHA=$(python3 << 'PYTHON_SHA_COMPUTE'
+       COMPUTED_SHA=$(python3 << 'PYTHON_SHA_COMPUTE' | grep "agent_sha256=" | cut -d= -f2
 import hashlib
 with open('src/AGENTS.md', 'rb') as f:
     COMPUTED_SHA = hashlib.sha256(f.read()).hexdigest()
 print(f"agent_sha256={COMPUTED_SHA}")
 PYTHON_SHA_COMPUTE
- | grep "agent_sha256=" | cut -d= -f2)
+)
       
       if [ ! -z "$COMPUTED_SHA" ]; then
         if [ "$CURRENT_SHA" = "$COMPUTED_SHA" ]; then
