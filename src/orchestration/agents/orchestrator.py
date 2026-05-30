@@ -143,9 +143,32 @@ def _try_import_queue_isolation():
     
     Returns the module if available, None if import fails.
     This allows graceful fallback to legacy paths if queue-isolation is unavailable.
+
+    The module lives at ``src/skills/_meta/queue-isolation/scripts/queue_isolation.py``.
+    The package directory uses a hyphen (``queue-isolation``), which is NOT a valid
+    Python module path, so the dotted ``src.skills._meta.queue_isolation.scripts``
+    import never resolves. We fall back to inserting the scripts directory on
+    ``sys.path`` and importing ``queue_isolation`` directly — the same mechanism
+    used by ``invoke_agent.py`` and the queue-management skill.
     """
     try:
+        # Preferred path if an importable (underscored) package alias exists.
         from src.skills._meta.queue_isolation.scripts import queue_isolation as qi
+        return qi
+    except ImportError:
+        pass
+
+    try:
+        # Fallback: add the hyphenated scripts directory to sys.path and import
+        # the bare module the way the orchestrator's runtime callers do.
+        import sys
+        queue_isolation_path = (
+            Path(__file__).parent.parent.parent
+            / "skills" / "_meta" / "queue-isolation" / "scripts"
+        )
+        if str(queue_isolation_path) not in sys.path:
+            sys.path.insert(0, str(queue_isolation_path))
+        import queue_isolation as qi
         return qi
     except ImportError:
         logger.debug("queue-isolation module not available, will use legacy paths")
