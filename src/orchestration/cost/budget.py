@@ -159,13 +159,23 @@ class BudgetLevel:
             try:
                 next_reset = self.last_reset.replace(year=year, month=month + 1, day=day)
             except ValueError:
-                # Handle month overflow (e.g., Jan 31 -> Feb 31)
+                # Handle month overflow (e.g., Jan 31 -> Feb 31 does not exist).
                 if month == 12:
                     next_reset = self.last_reset.replace(year=year + 1, month=1, day=day)
                 else:
-                    # Use last day of next month
-                    next_month_first = self.last_reset.replace(month=month + 1, day=1)
-                    next_reset = next_month_first + timedelta(days=-1)
+                    # Clamp to the last valid day of next month. Compute the
+                    # first day of the month *after* next, then step back one
+                    # day. (A naive "first of next month minus one day" would
+                    # incorrectly yield the last day of the CURRENT month.)
+                    if month + 1 == 12:
+                        following_first = self.last_reset.replace(
+                            year=year + 1, month=1, day=1
+                        )
+                    else:
+                        following_first = self.last_reset.replace(
+                            month=month + 2, day=1
+                        )
+                    next_reset = following_first - timedelta(days=1)
 
             should_reset = now >= next_reset
 
