@@ -248,7 +248,6 @@ class HarnessChecker:
                 found_agents.append(False)
 
         if not all(found_agents):
-            missing = [self.EXPECTED_AGENTS.pop() for i, f in enumerate(found_agents) if not f]
             return CheckResult(
                 check_name="check_agents_loaded",
                 passed=False,
