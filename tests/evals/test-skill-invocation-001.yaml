@@ -1,0 +1,22 @@
+id: test-skill-invocation-001
+name: "Test skill invocation and execution"
+harnesses:
+  - opencode
+  - copilot
+models:
+  - sonnet
+  - opus
+category: skill
+severity: high
+prompt: |
+  Demonstrate how to invoke the spec-validator skill to check DELEGATE/HANDBACK
+  format compliance. Show the expected output format and error messages.
+expected_contains:
+  - "skill"
+  - "spec-validator"
+expected_not_contains:
+  - "FAILED"
+timeout_seconds: 45
+requirements:
+  - Must understand agentic-engineers skill system
+  - Must know how skills are invoked and used

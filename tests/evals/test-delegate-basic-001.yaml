@@ -1,0 +1,27 @@
+id: test-delegate-basic-001
+name: "Test basic DELEGATE invocation"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - haiku
+  - sonnet
+category: delegation
+severity: critical
+prompt: |
+  Create a DELEGATE task for fixing a simple Python type annotation error.
+  The DELEGATE should follow the standard format with task_id, type, role, model,
+  context, requirements, acceptance_criteria, and escalation_triggers fields.
+expected_contains:
+  - "DELEGATE"
+  - "task_id"
+  - "role"
+  - "model"
+expected_not_contains:
+  - "ERROR"
+  - "Invalid"
+timeout_seconds: 30
+requirements:
+  - Must understand DELEGATE/HANDBACK protocol
+  - Must be able to generate structured task blocks
