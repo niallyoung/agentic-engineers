@@ -1,6 +1,7 @@
 """Main script to run the skills audit."""
 
 import sys
+import os
 from pathlib import Path
 from src.audit.skills_auditor import SkillsAuditor
 from src.audit.audit_reporter import AuditReporter
@@ -82,8 +83,9 @@ def main() -> int:
         
     except Exception as e:
         print(f"❌ Error: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
+        if os.environ.get("AE_DEBUG"):
+            import traceback
+            traceback.print_exc()
         return 1
 
 
