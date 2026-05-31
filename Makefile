@@ -8,6 +8,12 @@
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
+# Install destination root. Defaults to $(HOME) (real install). Override to a
+# sandbox for end-to-end pipeline testing, e.g.:
+#   make install DESTDIR=/tmp/ae-install-test
+# When DESTDIR != $(HOME), git-hook installation is skipped (sandbox-safe).
+DESTDIR ?= $(HOME)
+
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
@@ -16,6 +22,7 @@ help:
 	@echo ""
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
+	@echo "                      (override root for testing: make install DESTDIR=/tmp/ae-test)"
 	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
 	@echo "  fresh-install-copilot     Interactive: install Copilot only (with optional backup)"
 	@echo "  fresh-install-claude      Interactive: install Claude only (with optional backup)"
@@ -119,30 +126,30 @@ install-copilot: render-copilot ## Install rendered agents + skills → ~/.copil
 	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ dist/copilot/skills/ missing — run 'make render-copilot' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ dist/copilot/agents/ missing — run 'make render-copilot' first" && exit 1)
 	@echo "   ✓ dist/copilot/ validated"
-	@echo "📦 Installing from dist/copilot/ → ~/.copilot/..."
-	@mkdir -p "$(HOME)/.copilot"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(HOME)/.copilot/"
-	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+	@echo "📦 Installing from dist/copilot/ → $(DESTDIR)/.copilot/..."
+	@mkdir -p "$(DESTDIR)/.copilot"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(DESTDIR)/.copilot/"
+	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
 		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to ~/.copilot/ complete (agents + skills)"
+	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills)"
 
 install-claude: render-claude ## Install rendered agents → ~/.claude/
 	@echo "📋 Validating dist/claude/ is populated..."
 	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ dist/claude/skills/ missing — run 'make render-claude' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ dist/claude/agents/ missing — run 'make render-claude' first" && exit 1)
 	@echo "   ✓ dist/claude/ validated"
-	@echo "📦 Installing from dist/claude/ → ~/.claude/..."
-	@mkdir -p "$(HOME)/.claude"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/claude/" "$(HOME)/.claude/"
-	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+	@echo "📦 Installing from dist/claude/ → $(DESTDIR)/.claude/..."
+	@mkdir -p "$(DESTDIR)/.claude"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/claude/" "$(DESTDIR)/.claude/"
+	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
 		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to ~/.claude/ complete"
+	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
 
 # Copilot CLI now supports custom agents. Agents are rendered alongside skills.
 # render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
@@ -401,25 +408,25 @@ install-pi: render-pi ## Install π.dev harness from dist/pi/ → ~/.pi/
 	@test -d "$(REPO_ROOT)/dist/pi" || (echo "❌ dist/pi/ missing — run 'make render-pi' first" && exit 1)
 	@test -f "$(REPO_ROOT)/dist/pi/agent/SYSTEM.md" || (echo "❌ dist/pi/agent/SYSTEM.md missing — run 'make render-pi' first" && exit 1)
 	@echo "   ✓ dist/pi/ validated"
-	@echo "📦 Installing from dist/pi/ → ~/.pi/..."
-	@mkdir -p "$(HOME)/.pi"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(HOME)/.pi/"
-	@echo "✅ Installation to ~/.pi/ complete"
+	@echo "📦 Installing from dist/pi/ → $(DESTDIR)/.pi/..."
+	@mkdir -p "$(DESTDIR)/.pi"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(DESTDIR)/.pi/"
+	@echo "✅ Installation to $(DESTDIR)/.pi/ complete"
 
 install-opencode: render-opencode ## Install agents & skills to ~/.config/opencode/
 	@echo "📋 Validating dist/opencode/ is populated..."
 	@test -d "$(REPO_ROOT)/dist/opencode/skills" || (echo "❌ dist/opencode/skills/ missing — run 'make render-opencode' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/opencode/agents" || (echo "❌ dist/opencode/agents/ missing — run 'make render-opencode' first" && exit 1)
 	@echo "   ✓ dist/opencode/ validated"
-	@echo "📦 Installing from dist/opencode/ → ~/.config/opencode/..."
-	@mkdir -p "$(HOME)/.config/opencode"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(HOME)/.config/opencode/"
-	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+	@echo "📦 Installing from dist/opencode/ → $(DESTDIR)/.config/opencode/..."
+	@mkdir -p "$(DESTDIR)/.config/opencode"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(DESTDIR)/.config/opencode/"
+	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
 		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to ~/.config/opencode/ complete"
+	@echo "✅ Installation to $(DESTDIR)/.config/opencode/ complete"
 	@echo ""
 	@echo "ℹ️  To use agents via OpenCode CLI:"
 	@echo "  opencode --agent orchestrator 'Your task description'"
