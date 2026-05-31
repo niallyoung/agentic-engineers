@@ -150,7 +150,58 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
 ---
 
-### Agent-Role-Model-Skill Composites: The Core Architecture
+### Quick Overview: How It Works
+
+```
+   ┌─────────────────┐
+   │  YOUR TASK      │
+   └────────┬────────┘
+            │
+            ▼
+   ┌──────────────────────────┐
+   │   ORCHESTRATOR Agent     │
+   │  (Haiku 4.5 • Routing)   │
+   └────────┬─────────────────┘
+            │ DELEGATE
+            ▼
+   ┌──────────────────────────────────┐
+   │  Specialist Agents (Parallel)    │
+   │  • Engineer (Haiku, impl)        │
+   │  • Lead Eng (Sonnet, review)     │
+   │  • Security Eng (Opus, audit)    │
+   │  • Model Eng (optimize routing)  │
+   └────────┬─────────────────────────┘
+            │ HANDBACK (results + metrics)
+            ▼
+   ┌──────────────────────────────────┐
+   │  Quality Gates & Feedback        │
+   │  → Pass/Fail/Escalate            │
+   │  → Cost tracking                 │
+   │  → Model optimization            │
+   └────────┬─────────────────────────┘
+            │
+            ▼
+   ┌─────────────────┐
+   │  RESULTS        │
+   │  Quality: 94/100
+   │  Cost: $0.18
+   │  Time: 4.2s
+   └─────────────────┘
+```
+
+**Example: Fix a CI/CD failure**
+```bash
+opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflows/ci.yml"
+  → Orchestrator routes to Engineer (well-scoped fix)
+  → Engineer executes, measures quality + cost
+  → Returns: HANDBACK {status, quality_score, cost, changes}
+  → Quality gate validates (≥92/100 required?)
+  → Results in ~/.agentic-engineers/queue/done/ ✅
+```
+
+---
+
+### Agent-Role-Model-Skill Composites: The Core Architecture (Detailed)
 
 The framework brings together four key concepts into a unified orchestration model:
 

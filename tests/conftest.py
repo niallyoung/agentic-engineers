@@ -248,3 +248,32 @@ def tmp_queue(tmp_path: Path) -> Path:
     for subdir in ("incoming", "processing", "done"):
         (tmp_path / subdir).mkdir(parents=True)
     return tmp_path
+
+
+# ---------------------------------------------------------------------------
+# CI-compatible path resolution utilities
+# ---------------------------------------------------------------------------
+
+def get_ci_safe_skills_path() -> Path:
+    """Get CI-safe skills directory path.
+    
+    Returns the src/skills path relative to the current working directory.
+    Works in both local and CI environments.
+    """
+    # Try to resolve relative to cwd first (most reliable)
+    cwd = Path.cwd()
+    if (cwd / "src" / "skills").exists():
+        return cwd / "src" / "skills"
+    
+    # Fallback: check if we're in the repo root
+    if (cwd.parent / "src" / "skills").exists():
+        return cwd.parent / "src" / "skills"
+    
+    # Last resort: construct path dynamically
+    return Path(__file__).parent.parent / "src" / "skills"
+
+
+@pytest.fixture
+def ci_safe_skills_path() -> Path:
+    """Pytest fixture providing CI-safe skills path."""
+    return get_ci_safe_skills_path()

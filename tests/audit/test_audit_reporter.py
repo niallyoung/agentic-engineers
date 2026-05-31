@@ -13,9 +13,9 @@ from src.audit.audit_reporter import AuditReporter
 class TestAuditReporter:
     """Test AuditReporter functionality."""
 
-    def test_reporter_initialization(self) -> None:
+    def test_reporter_initialization(self, ci_safe_skills_path) -> None:
         """Test initializing audit reporter."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -23,9 +23,9 @@ class TestAuditReporter:
         assert reporter.auditor == auditor
         assert len(reporter.scorecards) > 10
 
-    def test_generate_markdown_report_creates_file(self) -> None:
+    def test_generate_markdown_report_creates_file(self, ci_safe_skills_path) -> None:
         """Test that markdown report is generated and written."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -42,9 +42,9 @@ class TestAuditReporter:
         assert isinstance(report, str)
         assert len(report) > 1000
 
-    def test_markdown_report_contains_sections(self) -> None:
+    def test_markdown_report_contains_sections(self, ci_safe_skills_path) -> None:
         """Test that report contains all required sections."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -63,9 +63,9 @@ class TestAuditReporter:
         assert "## Framework-Wide Recommendations" in report
         assert "## Audit Methodology" in report
 
-    def test_markdown_report_has_stats(self) -> None:
+    def test_markdown_report_has_stats(self, ci_safe_skills_path) -> None:
         """Test that report includes statistics."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -82,9 +82,9 @@ class TestAuditReporter:
         assert "UTILITY" in report
         assert "EXPERIMENTAL" in report
 
-    def test_executive_summary_generation(self) -> None:
+    def test_executive_summary_generation(self, ci_safe_skills_path) -> None:
         """Test executive summary generation."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -102,9 +102,9 @@ class TestAuditReporter:
         assert "Average Skill Score:" in content
         assert "Overall Framework Quality:" in content
 
-    def test_category_breakdown_generation(self) -> None:
+    def test_category_breakdown_generation(self, ci_safe_skills_path) -> None:
         """Test category breakdown generation."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -118,9 +118,9 @@ class TestAuditReporter:
         assert "UTILITY" in content
         assert "Count:" in content
 
-    def test_dimension_analysis_generation(self) -> None:
+    def test_dimension_analysis_generation(self, ci_safe_skills_path) -> None:
         """Test dimension analysis generation."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -139,9 +139,9 @@ class TestAuditReporter:
         assert "DOCS" in content
         assert "QUALITY" in content
 
-    def test_improvement_needed_generation(self) -> None:
+    def test_improvement_needed_generation(self, ci_safe_skills_path) -> None:
         """Test skills needing improvement section."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -155,9 +155,9 @@ class TestAuditReporter:
         content = "\n".join(lines)
         assert "Skills Needing Improvement" in content or "quality standards" in content
 
-    def test_scorecards_generation(self) -> None:
+    def test_scorecards_generation(self, ci_safe_skills_path) -> None:
         """Test individual skill scorecards generation."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -174,9 +174,9 @@ class TestAuditReporter:
         assert "Dimension" in content
         assert "Score" in content
 
-    def test_recommendations_generation(self) -> None:
+    def test_recommendations_generation(self, ci_safe_skills_path) -> None:
         """Test recommendations section generation."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -189,9 +189,9 @@ class TestAuditReporter:
         # Should have recommendations
         assert "Recommendations" in content or "Priority Actions" in content
 
-    def test_methodology_generation(self) -> None:
+    def test_methodology_generation(self, ci_safe_skills_path) -> None:
         """Test audit methodology section generation."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -209,9 +209,9 @@ class TestAuditReporter:
         assert "DOCS" in content
         assert "QUALITY" in content
 
-    def test_methodology_scoring_rubric(self) -> None:
+    def test_methodology_scoring_rubric(self, ci_safe_skills_path) -> None:
         """Test that methodology includes scoring rubric."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -226,9 +226,9 @@ class TestAuditReporter:
         assert "UTILITY" in content
         assert "EXPERIMENTAL" in content
 
-    def test_report_file_structure(self) -> None:
+    def test_report_file_structure(self, ci_safe_skills_path) -> None:
         """Test that generated report file has expected structure."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -246,9 +246,9 @@ class TestAuditReporter:
         section_count = sum(1 for line in lines if line.startswith("##"))
         assert section_count >= 6
 
-    def test_report_includes_all_skills(self) -> None:
+    def test_report_includes_all_skills(self, ci_safe_skills_path) -> None:
         """Test that report includes all audited skills."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -261,9 +261,9 @@ class TestAuditReporter:
         for skill_name in list(auditor.scorecards.keys())[:5]:  # Check first 5
             assert skill_name in report
 
-    def test_report_contains_dimension_scores(self) -> None:
+    def test_report_contains_dimension_scores(self, ci_safe_skills_path) -> None:
         """Test that report includes dimension scores for skills."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
         
@@ -280,9 +280,9 @@ class TestAuditReporter:
 class TestReportIntegration:
     """Integration tests for report generation."""
 
-    def test_full_report_generation_workflow(self) -> None:
+    def test_full_report_generation_workflow(self, ci_safe_skills_path) -> None:
         """Test complete report generation workflow."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         
         # Audit
         auditor = SkillsAuditor(skills_path)
@@ -300,9 +300,9 @@ class TestReportIntegration:
         assert "Skills Audit Report" in report
         assert "Executive Summary" in report
 
-    def test_report_markdown_validity(self) -> None:
+    def test_report_markdown_validity(self, ci_safe_skills_path) -> None:
         """Test that generated markdown is valid."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()
@@ -322,9 +322,9 @@ class TestReportIntegration:
         table_markers = sum(1 for line in lines if "|" in line)
         assert table_markers > 0
 
-    def test_report_recommendations_specific(self) -> None:
+    def test_report_recommendations_specific(self, ci_safe_skills_path) -> None:
         """Test that recommendations are specific."""
-        skills_path = Path("/Users/niall/git/agentic-engineers/src/skills")
+        skills_path = ci_safe_skills_path
         
         auditor = SkillsAuditor(skills_path)
         auditor.audit_all_skills()

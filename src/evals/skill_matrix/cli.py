@@ -1,10 +1,20 @@
 """CLI for skill interoperability matrix."""
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 from .matrix_runner import SkillInteropMatrix
+
+
+def _get_default_repo_root() -> Path:
+    """Get default repo root for CLI, CI-compatible."""
+    env_root = os.getenv("REPO_ROOT")
+    if env_root:
+        return Path(env_root)
+    # Fallback to sensible default for CI
+    return Path.home() / "git" / "agentic-engineers"
 
 
 def main() -> int:
@@ -38,7 +48,7 @@ def main() -> int:
     parser.add_argument(
         "--repo-root",
         type=Path,
-        default=Path("/Users/niall/git/agentic-engineers"),
+        default=_get_default_repo_root(),
         help="Repository root directory",
     )
     
