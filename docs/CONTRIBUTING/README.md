@@ -144,6 +144,114 @@ All framework extensions run through the validation pipeline automatically. See 
 
 ---
 
+## Creating New Skills
+
+**Important:** Skills are always created in the **framework source**, not in user config directories.
+
+### Correct Workflow
+
+1. **Create skill in framework source:**
+   ```bash
+   # Skills live in src/skills/{category}/{skill-name}/
+   mkdir -p ~/git/agentic-engineers/src/skills/{category}/{skill-name}/{scripts,references}
+   
+   # Example: test-sync-validator in testing category
+   mkdir -p ~/git/agentic-engineers/src/skills/testing/test-sync-validator/{scripts,references}
+   ```
+
+2. **Create SKILL.md with frontmatter:**
+   ```yaml
+   ---
+   name: test-sync-validator
+   description: Detects test fixture drift from code changes...
+   license: Proprietary
+   metadata:
+     author: agentic-engineers
+     version: "1.0"
+     category: testing
+     role: quality-engineer
+   ---
+   ```
+
+3. **Add scripts to scripts/ subdirectory:**
+   - Keep scripts modular and focused
+   - One responsibility per script
+   - Include error handling and help text
+
+4. **Build and install:**
+   ```bash
+   # Build renders src/ → dist/ → ~/.claude/, ~/.copilot/, etc.
+   make install
+   
+   # Verify skill was rendered to all harnesses
+   ls -la ~/.claude/skills/test-sync-validator/
+   ls -la ~/.copilot/skills/test-sync-validator/
+   ls -la ~/.config/opencode/skills/test-sync-validator/
+   ```
+
+### ❌ Anti-Pattern: Don't Create Directly in User Config
+
+**WRONG:**
+```bash
+# Never do this!
+mkdir -p ~/.claude/skills/my-skill
+# This gets overwritten by make install
+```
+
+**RIGHT:**
+```bash
+# Always do this
+mkdir -p ~/git/agentic-engineers/src/skills/{category}/my-skill
+make install  # Renders to ~/.claude/, ~/.copilot/, etc.
+```
+
+### Directory Structure Reference
+
+```
+agentic-engineers/
+├── src/skills/          # ← Authoritative source
+│   ├── testing/
+│   │   ├── test-sync-validator.md      # Main spec
+│   │   └── scripts/
+│   │       └── test_sync_validator.py  # Implementation
+│   ├── orchestration/
+│   ├── optimization/
+│   └── ...
+├── dist/                # ← Generated build artifacts
+│   ├── claude/skills/   # Rendered for Claude CLI
+│   ├── copilot/skills/  # Rendered for Copilot CLI
+│   ├── opencode/skills/ # Rendered for OpenCode
+│   └── pi/skills/       # Rendered for π.dev
+├── ~/.claude/skills/    # ← User installation (auto-generated, don't edit)
+├── ~/.copilot/skills/   # ← User installation (auto-generated, don't edit)
+└── ~/.config/opencode/skills/ # ← User installation (auto-generated, don't edit)
+```
+
+### Test Fixture Synchronization
+
+When making code changes, ensure tests stay in sync:
+
+1. **Use test-sync-validator to detect drift:**
+   ```bash
+   git diff origin/main...HEAD | \
+     python src/skills/testing/scripts/test_sync_validator.py \
+       --diff /dev/stdin --mode pre-merge --fail-on-critical
+   ```
+
+2. **Fix discovered mismatches before commit:**
+   - Update LOCKED_MODELS if models change
+   - Update router expectations if logic changes
+   - Update cost/quality thresholds if tiers change
+
+3. **Commit test updates with code changes:**
+   ```bash
+   git add src/agents/security-engineer-agent.md
+   git add tests/test_model_naming_compliance.py  # test fixture sync
+   git commit -m "feat(agents): upgrade to claude-opus-4.8"
+   ```
+
+---
+
 ## Making Changes
 
 1. **Branch:** `git checkout -b feature/your-change`

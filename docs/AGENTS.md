@@ -61,7 +61,7 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 
 ---
 
-## Primary Assignments (Dark Factory Model)
+## Primary Assignments
 
 **Default Entry Point:** Orchestrator (Claude Haiku 4.5, Low Effort)  
 **Entry Rule:** All work flows through Orchestrator for routing. No direct delegation from external sources.
@@ -385,7 +385,7 @@ Use voice notifications with distinct personalities for each (model + effort) co
 
 ---
 
-## Standard Workflows (Dark Factory)
+## Standard Workflows
 
 See [ORCHESTRATION.md](ORCHESTRATION.md) for detailed handoff protocol and daily workflow examples.
 
@@ -443,7 +443,7 @@ Measured quarterly; adjust if cost targets drift.
 
 ---
 
-## Dark Factory Best Practices
+## Agentic Engineering Best Practices
 
 ### Handoff Checklist
 
@@ -923,6 +923,21 @@ a bad DELEGATE forces re-work; a bad HANDBACK triggers retry or escalation.
 - Flag potential production hazards explicitly in HANDBACK notes
 
 **Mentoring:** When reviewing Engineer HANDBACKs, provide specific actionable feedback.
+
+**SDLC Gate Maintenance:** Senior Engineer is responsible for:
+- Maintaining Git hooks in `.githooks/` directory
+- Updating pre-commit hooks when validation requirements change
+- Updating pre-push hooks when quality gates change
+- Documenting hook behavior in `.githooks/README.md`
+- Monitoring hook performance (target: pre-commit < 3s, pre-push < 10s excluding tests)
+- Addressing false positives or overly-strict checks that slow down development
+- Escalating hook breakage to Principal Engineer if fixes are needed
+
+**Hook Installation:** Senior Engineer ensures:
+- `make setup` target automatically installs hooks for all developers
+- Hooks are compatible with macOS and Linux
+- Emergency override mechanism (`GIT_SKIP_HOOKS=1`) is documented and working
+- Existing test suite passes with hooks enabled (no regressions)
 
 ### Lead Engineer
 

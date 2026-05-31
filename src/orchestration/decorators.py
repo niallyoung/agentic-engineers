@@ -32,10 +32,19 @@ def enforce_delegate_requirement(
             if not isinstance(delegate, dict):
                 raise SecurityError("DELEGATE must be a dictionary")
             
-            # Check required fields
+            # Check required fields.
+            # FAIL CLOSED: a required field is only satisfied by a present,
+            # non-null, non-empty value. An empty / whitespace-only string is
+            # treated as missing so it cannot be used to bypass an enforced
+            # field (e.g. approval_gate="").
             if required_fields:
                 for field in required_fields:
-                    if field not in delegate or delegate[field] is None:
+                    value = delegate.get(field)
+                    if (
+                        field not in delegate
+                        or value is None
+                        or (isinstance(value, str) and not value.strip())
+                    ):
                         raise SecurityError(
                             f"DELEGATE missing required field: {field}"
                         )

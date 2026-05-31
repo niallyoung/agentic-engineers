@@ -98,7 +98,7 @@ model: claude-opus-4.6
 effort: high
 scope: >
   Redesign event store architecture for multi-region deployment.
-  Currently: Single DynamoDB table in ap-southeast-2.
+  Currently: Multi-region database setup (specific region TBD).
   Goal: Support disaster recovery, low-latency reads across regions.
 context:
   - Services affected: {example-service} (write master), {service-name} (read replica), {example-service} (read replica)

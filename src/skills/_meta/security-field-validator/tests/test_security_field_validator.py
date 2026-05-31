@@ -279,5 +279,52 @@ class TestValidationRules:
         assert result["valid"] is False
 
 
+class TestAuditRequiredTypeSafety:
+    """Regression: audit_required must be a real boolean (fail-closed).
+
+    A truthy non-bool value such as the string "false" must NOT silently
+    satisfy the audit requirement (type-confusion fail-open).
+    """
+
+    def test_string_false_does_not_bypass_audit_requirement(self):
+        validator = SecurityFieldValidator()
+        result = validator.validate({
+            "security_scope": "crypto",
+            "approval_gate": "security_engineer",
+            "audit_required": "false",  # truthy string, not a real bool
+        })
+        assert result["valid"] is False
+        assert any("audit_required" in err for err in result["errors"])
+
+    def test_string_true_is_rejected_as_non_bool(self):
+        validator = SecurityFieldValidator()
+        result = validator.validate({
+            "security_scope": "auth",
+            "approval_gate": "security_engineer",
+            "audit_required": "true",  # must be a real bool, not a string
+        })
+        assert result["valid"] is False
+        assert any("audit_required" in err for err in result["errors"])
+
+    def test_integer_one_is_rejected_as_non_bool(self):
+        validator = SecurityFieldValidator()
+        result = validator.validate({
+            "security_scope": "secrets",
+            "approval_gate": "security_engineer",
+            "audit_required": 1,
+        })
+        assert result["valid"] is False
+        assert any("audit_required" in err for err in result["errors"])
+
+    def test_real_bool_true_still_valid(self):
+        validator = SecurityFieldValidator()
+        result = validator.validate({
+            "security_scope": "auth",
+            "approval_gate": "security_engineer",
+            "audit_required": True,
+        })
+        assert result["valid"] is True
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

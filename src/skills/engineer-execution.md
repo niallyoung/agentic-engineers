@@ -55,7 +55,7 @@ from_plan: {workspace-name}/TODO.md → spec-extract → Phase 1
 
 ### Task Description
 
-Scan all 8 ERS services for pattern occurrences and synthesize INVENTORY.md.
+Scan all services for pattern occurrences and synthesize INVENTORY.md.
 
 **Input**: Planning notes, pattern heuristics doc
 **Output**: INVENTORY.md with pattern categories, service matrix, quick links
@@ -213,7 +213,7 @@ Engineer integrates mitigations and retries. If Security says "blocker, can't fi
 | **Effort exceeded** | Lead | May indicate scope creep or estimation error | "Phase 1 research is at 4h, estimated 3h; still not done" |
 | **Ambiguous success criteria** | Lead | Task was under-specified | "What counts as 'all 8 services scanned'? Just Makefile or all patterns?" |
 | **Security concern** | Security (via Lead) | Needs threat modeling expertise | "Scrub pass: are we scrubbing enough content?" |
-| **Strategic conflict** | Principal (via Lead) | Blocks implementation of task due to bigger tradeoff | "Should Phase 1.5 spike test non-ERS repos for generalizability?" |
+| **Strategic conflict** | Principal (via Lead) | Blocks implementation of task due to bigger tradeoff | "Should Phase 1.5 spike test new repos for generalizability?" |
 
 ---
 

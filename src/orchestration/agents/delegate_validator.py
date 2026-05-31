@@ -15,6 +15,20 @@ from typing import Tuple, List, Dict
 from pathlib import Path
 
 
+class RoleRoutingError(Exception):
+    """
+    Raised when a DELEGATE's explicit role is invalid or conflicts with the
+    routing-sanity requirements for its scope/effort.
+
+    Used by the orchestrator's TaskRouter to *reject* role mismatches at
+    routing time instead of silently honouring a mis-tagged role.
+    """
+
+    def __init__(self, message: str, failures: List[str] = None):
+        super().__init__(message)
+        self.failures = failures or []
+
+
 class DelegateValidator:
     """Validates DELEGATE blocks against protocol requirements."""
     
@@ -119,7 +133,44 @@ class DelegateValidator:
         failures.extend(validator._check_group_c(delegate))
         
         return (len(failures) == 0, failures)
-    
+
+    @staticmethod
+    def validate_routing_role(delegate: Dict) -> Tuple[bool, List[str]]:
+        """
+        Validate ONLY the role/routing-sanity aspects of a DELEGATE.
+
+        This is the subset of the pre-flight checks that the orchestrator's
+        TaskRouter must enforce at dispatch time: that an explicitly-tagged
+        role is a recognised role (A3) and that it does not conflict with the
+        task's scope/effort routing requirements (Group C: C1–C4).
+
+        Unlike ``validate_delegate_pre_flight`` it deliberately skips the
+        content-quality gates (Group A1/A2/A6/A7 and all of Group B) so that
+        routing can enforce role correctness without requiring a fully-formed,
+        content-complete DELEGATE.
+
+        Args:
+            delegate: DELEGATE block dictionary
+
+        Returns:
+            (True, []) if the role is valid and consistent with routing rules
+            (False, ['A3: ...', 'C2: ...']) otherwise
+        """
+        validator = DelegateValidator()
+        failures: List[str] = []
+
+        # A3: role must be a recognised agent role.
+        role = delegate.get('role', '')
+        if role not in validator.VALID_ROLES:
+            failures.append(
+                f'A3: role must be one of {sorted(validator.VALID_ROLES)}, got "{role}"'
+            )
+
+        # Group C: routing sanity (role vs effort/scope).
+        failures.extend(validator._check_group_c(delegate))
+
+        return (len(failures) == 0, failures)
+
     def _check_group_a(self, delegate: Dict) -> List[str]:
         """Check Group A: Structure (hard gates)."""
         failures = []

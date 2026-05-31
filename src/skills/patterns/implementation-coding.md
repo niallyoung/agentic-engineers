@@ -18,7 +18,7 @@
 - [ ] Maintains **80-95% test coverage** with high-value, user-focused tests
 - [ ] Runs `make verify` (lint + tests) before commit
 - [ ] Creates conventional commits with clear "why" (not "what")
-- [ ] Pushes with `ERS_AUTO_PUSH=1` to trigger cloud CI
+- [ ] Pushes with `AUTO_PUSH=1` to trigger cloud CI
 
 ---
 
@@ -124,7 +124,7 @@ If any item is "no", **fix it before committing**. Do not emit HANDBACK with unc
 
 ## Architectural Compliance
 
-Ensure code adheres to these ERS patterns:
+Ensure code adheres to these agentic-engineers patterns:
 
 **Event Sourcing & CQRS:**
 - Commands (ephemeral, 20100-20199) never stored; only domain events (8801-8899) persisted

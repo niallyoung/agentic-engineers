@@ -2,7 +2,7 @@
 name: tokenadvisor
 description: Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.
 license: Proprietary
-compatibility: Designed for agentic-engineers framework (ERS platform)
+compatibility: Designed for agentic-engineers framework
 metadata:
   author: agentic-engineers
   version: "1.0"
@@ -36,7 +36,7 @@ python scripts/tokenadvisor.py --daily --date 2026-04-24
 Daily at 17:00 UTC via `orchestration/config/tokenadvisor.cron`
 
 ```bash
-0 17 * * * cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily
+0 17 * * * cd <project-root> && python agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily
 ```
 
 ## Voice Notifications

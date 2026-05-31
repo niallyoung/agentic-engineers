@@ -848,23 +848,75 @@ class ComplianceChecker:
 
         return False
 
+    # Paths excluded from active-source security heuristics. The SPEC scopes
+    # the "NO EXTERNAL SCRIPTS / subprocess" prohibition to *agent code* and
+    # explicitly EXEMPTS build/installation and CI/dev tooling (see docs/SPEC.md
+    # §"EXEMPTIONS (Build & Installation Only)" and line 109 "in agent code").
+    # Archived, deprecated, and test files are historical/quoted, not runtime.
+    _HEURISTIC_EXCLUDE_SUBSTRINGS: Tuple[str, ...] = (
+        "docs/archive/",
+        "deprecated",
+        "/tests/",
+        "/test_",
+        "/fixtures/",
+        "/examples/",
+        # Build & installation tooling (SPEC-exempt)
+        "renderer/",
+        "setup/",
+        # CI/dev tooling that runs external dev tools (linters, pytest, git) —
+        # not agent-runtime queue/span/routing operations
+        "src/standardization/",
+        "src/audit/",
+        "src/skills/testing/",
+    )
+    # Only executable source files are scanned by the security heuristics.
+    _HEURISTIC_SOURCE_EXTENSIONS: Tuple[str, ...] = (
+        ".py", ".sh", ".bash", ".js", ".jsx", ".ts", ".tsx", ".go", ".rb",
+    )
+
+    def _is_scannable_source(self, file_path: Optional[str]) -> bool:
+        """Return True if a file should be scanned by active-source heuristics."""
+        if not file_path:
+            return True  # Unknown path — scan to be safe
+        fp = file_path.replace("\\", "/").lower()
+        if fp.startswith("tests/"):
+            return False
+        if any(sub in fp for sub in self._HEURISTIC_EXCLUDE_SUBSTRINGS):
+            return False
+        return fp.endswith(self._HEURISTIC_SOURCE_EXTENSIONS)
+
     def _check_security_heuristics(
         self, diff: DiffAnalysis, added_content: str
     ) -> List[Violation]:
-        """Check diff against hard-coded security heuristic patterns."""
-        violations: List[Violation] = []
-        added_lower = added_content.lower()
+        """Check diff against hard-coded security heuristic patterns.
 
-        for pattern, description, severity in self._SECURITY_PATTERNS:
-            if re.search(pattern, added_content, re.IGNORECASE):
-                file_path = self._find_violating_file_by_pattern(pattern, diff)
-                violations.append(Violation(
-                    rule=f"SECURITY-{self._slugify(description[:40])}",
-                    description=description,
-                    severity=severity,
-                    file_path=file_path,
-                    evidence=self._find_evidence_by_pattern(pattern, added_content),
-                ))
+        Scans per-file so that exclusions (archived/deprecated/test/non-source
+        paths) and accurate file attribution apply to each match.
+        """
+        violations: List[Violation] = []
+        seen: set = set()
+
+        for hunk in diff.hunks:
+            if not self._is_scannable_source(hunk.file_path):
+                continue
+            hunk_content = "\n".join(hunk.added_lines)
+            if not hunk_content:
+                continue
+            for pattern, description, severity in self._SECURITY_PATTERNS:
+                if re.search(pattern, hunk_content, re.IGNORECASE):
+                    key = (description, hunk.file_path)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    violations.append(Violation(
+                        rule=f"SECURITY-{self._slugify(description[:40])}",
+                        description=description,
+                        severity=severity,
+                        file_path=hunk.file_path,
+                        evidence=self._find_evidence_by_pattern(
+                            pattern, hunk_content
+                        ),
+                    ))
 
         return violations
 

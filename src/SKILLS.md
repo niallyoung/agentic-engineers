@@ -89,6 +89,7 @@
 | Skill | File | Roles | Purpose |
 |-------|------|-------|---------|
 | Queue Management | `src/skills/queue-management/SKILL.md` | Orchestrator | DELEGATE/HANDBACK protocol; queue lifecycle |
+| Queue Query | `src/skills/queue-query/SKILL.md` | Orchestrator | Read-only queue visibility (size, ls, orphans, done-summary) |
 | — | `src/skills/queue-management/references/EXAMPLES.md` | All | DELEGATE + HANDBACK YAML examples |
 | — | `src/skills/queue-management/references/QUEUE-OPS-API.md` | All | Queue operations API reference |
 
@@ -297,6 +298,7 @@ All `SKILL.md` files discovered in `src/skills/`. Status reflects implementation
 | Model Engineer (agent) | `model-engineer/SKILL.md` | ✅ Active | `scripts/model-engineer.py` (scheduled) |
 | Protocol Validator | `protocol-validator/SKILL.md` | ✅ Active | `scripts/protocol_validator.py` + tests |
 | Queue Management | `queue-management/SKILL.md` | ✅ Active | `queue_manager.py` + `scripts/queue_ops.py` + tests |
+| Queue Query | `queue-query/SKILL.md` | ✅ Active | `scripts/queue_query.py` + tests |
 | Repo Init | `repo-init/SKILL.md` | ✅ Active | `scripts/repo_init.py` + assets + tests |
 | Skill Creator | `skill-creator/SKILL.md` | ✅ Active | Authoring guide (instruction-only) |
 | Spec Management | `spec-management/SKILL.md` | ✅ Active | `scripts/spec_manager.py` + audit trail |

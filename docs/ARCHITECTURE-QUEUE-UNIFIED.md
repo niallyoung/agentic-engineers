@@ -64,8 +64,8 @@ Orchestration Module:
   └── src/orchestration/
       ├── agents/orchestrator.py        ← QueueManager init, session_queue_dir
       ├── agents/invoke_agent.py        ← Queue reads/writes
-      ├── queue_manager.py              ← ExtendedQueueManager (wrapper)
-      └── [15+ agents]                  ← Use orchestrator's queue_manager
+      ├── queue_compat.py               ← Backwards-compat shim (deprecated)
+      └── [15+ agents]                  ← Use orchestrator's QueueManager
 
 Skills (Queue Operations):
   └── src/skills/
