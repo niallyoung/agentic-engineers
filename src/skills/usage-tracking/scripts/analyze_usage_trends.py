@@ -137,7 +137,7 @@ def print_json(analysis):
         print(json.dumps({"error": "No usage data captured yet"}, indent=2))
 
 def main():
-    # Navigate: scripts → usage-tracking → skills → agentic-engineers → {workspace-name} → ERS project root
+    # Navigate: scripts → usage-tracking → skills → agentic-engineers → {workspace-name} → project root
     project_root = Path(__file__).parent.parent.parent.parent.parent.parent
     history_file = project_root / "data" / "metrics" / "usage_history.jsonl"
 

@@ -696,7 +696,7 @@ Assuming one engineer, full-time, working sequentially:
 
 4. **Environment variable naming** (All phases)
    - Use ORCHESTRATOR_ prefix?
-   - Use ERS_ prefix (if part of larger ERS system)?
+   - Use AGENTIC_ENGINEERS_ prefix (if part of larger agentic-engineers system)?
    - Keep minimal (BACKOFF_MS)?
    - Recommendation: ORCHESTRATOR_ for clarity and consistency
 

@@ -43,7 +43,7 @@ except ImportError:
 #   Versioned Claude models (canonical source format, DOTS required):
 #     - claude-haiku-4.5, claude-haiku-4.6
 #     - claude-sonnet-4.5, claude-sonnet-4.6
-#     - claude-opus-4.5, claude-opus-4.6, claude-opus-4.7
+#     - claude-opus-4.5, claude-opus-4.6, claude-opus-4.7, claude-opus-4.8
 #   
 #   Short aliases (for Claude Code harness only):
 #     - haiku, sonnet, opus (no version numbers)
@@ -73,6 +73,7 @@ KNOWN_MODELS = {
     "claude-opus-4.5",
     "claude-opus-4.6",
     "claude-opus-4.7",
+    "claude-opus-4.8",
     
     # Short aliases (Claude Code harness only, NO DOTS)
     # Used in dist/claude/agents/ after transformation from canonical format

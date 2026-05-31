@@ -392,5 +392,35 @@ class TestQueuePathBackwardsCompat:
                             f"Unexpected legacy path comment in {queue_file.name}:{i}"
 
 
+class TestGetQueueRootBehavior:
+    """Behavioral coverage for QueueManager._get_queue_root (canonical layout A).
+
+    The rest of this module asserts via static source-grep; these tests actually
+    instantiate QueueManager with queue-isolation active and assert the resolved
+    path, exercising the runtime branch at orchestrator.py:706-709.
+    """
+
+    def _make_manager(self, tmp_path, monkeypatch):
+        from src.orchestration.agents.orchestrator import QueueManager
+
+        # Isolate HOME so init_queue_structure / get_queue_path write under tmp.
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("AGENTIC_SESSION_ID", "sess-grqr")
+        monkeypatch.setenv("AGENTIC_HARNESS", "copilot")
+        return QueueManager()
+
+    def test_get_queue_root_returns_canonical_layout_a(self, tmp_path, monkeypatch):
+        qm = self._make_manager(tmp_path, monkeypatch)
+        assert qm._using_isolation is True
+        expected = tmp_path / ".agentic-engineers" / "artifacts" / "sess-grqr" / "copilot" / "queue"
+        assert qm._get_queue_root() == expected
+
+    def test_get_queue_root_honors_explicit_overrides(self, tmp_path, monkeypatch):
+        qm = self._make_manager(tmp_path, monkeypatch)
+        got = qm._get_queue_root(session_id="other-sess", harness="claude")
+        expected = tmp_path / ".agentic-engineers" / "artifacts" / "other-sess" / "claude" / "queue"
+        assert got == expected
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

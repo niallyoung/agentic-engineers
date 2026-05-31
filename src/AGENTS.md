@@ -24,11 +24,11 @@
 |---|------|-------|----------|-----------|---------|
 | 1 | **Orchestrator** | `claude-haiku-4.5` | ❌ | $0.03 | Entry point — routes all work via decision tree, never does implementation |
 | 2 | **Engineer** | `claude-haiku-4.5` | ❌ | $0.05 | Executes well-scoped, pre-planned tasks (file edits, tests, simple fixes) |
-| 3 | **Model Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Analyses HANDBACK metrics; recommends model/effort adjustments |
+| 3 | **Model Engineer** | `claude-sonnet-4.5` | ✅ | $0.09 | Analyses HANDBACK metrics; recommends model/effort adjustments |
 | 4 | **Quality Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Post-implementation validation; model suitability assessment |
 | 5 | **Lead Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
-| 6 | **Senior Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
-| 7 | **Principal Engineer** | `claude-opus-4-6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
+| 6 | **Senior Engineer** | `claude-sonnet-4.5` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
+| 7 | **Principal Engineer** | `claude-opus-4.6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
  | 8 | **Security Engineer** | `claude-opus-4.8` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
 
 ### Cost Tiers
@@ -128,7 +128,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
+**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
 
 **Purpose:** Plans unscoped work; handles multi-file implementations requiring architectural awareness.
 
@@ -203,7 +203,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
+**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
 
 **Purpose:** Analyse HANDBACK efficiency metrics; recommend model or effort tier adjustments.
 
@@ -292,7 +292,7 @@ priority: normal               # low | normal | high | urgent
 context:
   description: |
     One-paragraph description of what needs to be done and why.
-  repo: owner/repo-name
+  repo: github.com/owner/repo-name    # Full GitHub URL (e.g., github.com/niallyoung/agentic-engineers)
   branch: feature/branch-name
   commit: HEAD                 # SHA or HEAD
   files:
@@ -504,7 +504,7 @@ context:
   description: |
     Add AU PostalCode validation rule to the address validator.
     PostalCode is optional but when present must be exactly 4 digits.
-  repo: niall/payments-service
+  repo: github.com/niallyoung/payments-service
   branch: feature/postal-validation
   commit: HEAD
   files:
@@ -618,7 +618,7 @@ context:
     and checkout/ packages. Architectural boundary needs to be determined before
     implementation. Senior should plan the full change set and assess if an API
     contract decision is needed (escalate to Lead if so).
-  repo: niall/payments-service
+  repo: github.com/niallyoung/payments-service
   branch: feature/payment-refactor
   commit: HEAD
   files:
@@ -684,7 +684,7 @@ context:
     Introducing sliding-window refresh: access tokens are transparently reissued
     within a 15-minute window. Concerned about replay attacks, missing expiry
     checks, and insecure token storage patterns.
-  repo: niall/auth-service
+  repo: github.com/niallyoung/auth-service
   branch: feature/jwt-refresh
   commit: HEAD
   files:
@@ -760,7 +760,7 @@ context:
     Validate TASK-404 HANDBACK from Senior Engineer. Senior refactored the
     address validation module (3 files, 87 lines changed). Verify all
     acceptance criteria are met, run the test suite, assess model suitability.
-  repo: niall/validation-service
+  repo: github.com/niallyoung/validation-service
   branch: feature/address-refactor
   commit: HEAD
   files:

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║       ERS Voice Notifications — TTS Setup                 ║"
+echo "║       Agentic Engineers Voice Notifications — TTS Setup                 ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 

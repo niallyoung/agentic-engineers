@@ -37,8 +37,6 @@ def _try_import_queue_isolation():
         return None
 
 
-class QueueOperations:
-    """Atomic queue operations for DELEGATE/HANDBACK workflow."""
 _DEFAULT_QUEUE_PATH = "~/.agentic-engineers/artifacts"
 
 

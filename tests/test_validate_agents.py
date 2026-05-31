@@ -427,6 +427,7 @@ model: sonnet
     "claude-opus-4.5",
     "claude-opus-4.6",
     "claude-opus-4.7",
+    "claude-opus-4.8",
     "haiku",
     "sonnet",
     "opus",

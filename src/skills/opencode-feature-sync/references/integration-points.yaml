@@ -1,0 +1,99 @@
+# Machine-readable registry of OpenCode integration / configuration points that
+# the agentic-engineers OpenCode renderer must stay in sync with.
+#
+# This file is DATA, not logic. The opencode_feature_sync.py script reads it on
+# every run and (under --update-registry) rewrites it in place to refresh
+# `last_verified` timestamps and append newly discovered candidate points.
+#
+# Field contract per entry:
+#   id            — stable kebab-case identifier (never reused)
+#   opencode_path — path relative to the OpenCode repo root
+#   anchor        — symbol / regex / glob that locates the construct in the file
+#   what_to_check — human-readable description of the invariant to verify
+#   last_verified — ISO-8601 date the point was last confirmed to exist
+#   status        — verified | drifted | missing | candidate
+schema_version: 1
+opencode_repo_default: "~/git/opencode"
+renderer_path: "renderer/scripts/render-opencode.sh"
+integration_points:
+  - id: agent-config-schema
+    opencode_path: packages/opencode/src/config/agent.ts
+    anchor: "AgentSchema"
+    what_to_check: >
+      Agent frontmatter schema. The renderer must only emit keys recognized
+      here; unknown keys are swept into options and ignored.
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: agent-known-keys
+    opencode_path: packages/opencode/src/config/agent.ts
+    anchor: "KNOWN_KEYS"
+    what_to_check: >
+      The authoritative set of recognized frontmatter keys. Extracted each run
+      and diffed against keys the renderer emits.
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: agent-normalize
+    opencode_path: packages/opencode/src/config/agent.ts
+    anchor: "normalize"
+    what_to_check: >
+      Post-parse normalisation that promotes unknown keys into options (so
+      no-op keys like `thinking:` are silently ignored, not errored).
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: markdown-agent-loader
+    opencode_path: packages/opencode/src/config/agent.ts
+    anchor: "{agent,agents}/**/*.md"
+    what_to_check: >
+      Markdown agents are loaded from agent/ or agents/ dirs. The renderer must
+      output into an agents/ directory.
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: builtin-agents-permissions
+    opencode_path: packages/opencode/src/agent/agent.ts
+    anchor: "explore"
+    what_to_check: >
+      Built-in agents and their permission patterns. The `explore` agent models
+      least-privilege: `"*": "deny"` plus explicit allows. Renderer per-role
+      permissions should mirror this shape.
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: reasoning-variant-mapping
+    opencode_path: packages/opencode/src/provider/transform.ts
+    anchor: "thinking"
+    what_to_check: >
+      Maps the model `variant` field to reasoningEffort / Anthropic thinking
+      budgets. Reasoning is controlled by `variant`, NOT a top-level `thinking:`
+      agent key.
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: agents-docs
+    opencode_path: packages/web/src/content/docs/agents.mdx
+    anchor: "subagent"
+    what_to_check: >
+      Canonical docs for primary/subagent/all semantics and default_agent rules.
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: renderer-permission-emission
+    opencode_path: renderer/scripts/render-opencode.sh
+    anchor: "permission:"
+    what_to_check: >
+      Renderer emission site for per-agent permission frontmatter. Defect:
+      uniform allow-all block for every role (~lines 753-760).
+    last_verified: "2026-05-31"
+    status: verified
+
+  - id: renderer-thinking-emission
+    opencode_path: renderer/scripts/render-opencode.sh
+    anchor: "thinking:"
+    what_to_check: >
+      Renderer emission site for the no-op `thinking:` block (~lines 762-769).
+      Defect: key not in KNOWN_KEYS, so it never enables extended thinking.
+    last_verified: "2026-05-31"
+    status: drifted

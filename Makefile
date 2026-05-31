@@ -1,18 +1,28 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
         install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        status \
+        setup status \
         verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
-        lint test quality-gate
+        lint test test-concurrent test-ci test-ci-force test-ci-shell quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+# Install destination root. Defaults to $(HOME) (real install). Override to a
+# sandbox for end-to-end pipeline testing, e.g.:
+#   make install DESTDIR=/tmp/ae-install-test
+# When DESTDIR != $(HOME), git-hook installation is skipped (sandbox-safe).
+DESTDIR ?= $(HOME)
 
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
+	@echo "Setup:"
+	@echo "  setup               Install Git hooks (.githooks/ → .git/hooks) + dependencies"
+	@echo ""
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install to all 4 harnesses (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
+	@echo "                      (override root for testing: make install DESTDIR=/tmp/ae-test)"
 	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
 	@echo "  fresh-install-copilot     Interactive: install Copilot only (with optional backup)"
 	@echo "  fresh-install-claude      Interactive: install Claude only (with optional backup)"
@@ -50,7 +60,38 @@ help:
 	@echo "Quality & Testing:"
 	@echo "  lint                Lint Python, Shell, and YAML files"
 	@echo "  test                Run pytest test suite with coverage"
+	@echo "  test-concurrent     Run concurrent invocation tests (race condition guard)"
+	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
+	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
+	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
 	@echo "  quality-gate        Pre-push quality checks (lint + test + verify)"
+
+setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
+	@echo "🔒 Setting up Git hooks..."
+	@if [ ! -d "$(REPO_ROOT)/.githooks" ]; then \
+		echo "❌ .githooks/ directory not found"; \
+		exit 1; \
+	fi
+	@git -C "$(REPO_ROOT)" config core.hooksPath .githooks
+	@echo "✓ Git configured to use .githooks/"
+	@for hook in "$(REPO_ROOT)"/.githooks/pre-commit "$(REPO_ROOT)"/.githooks/pre-push "$(REPO_ROOT)"/.githooks/commit-msg "$(REPO_ROOT)"/.githooks/post-merge; do \
+		if [ -f "$$hook" ]; then \
+			chmod +x "$$hook"; \
+			echo "✓ Made executable: $$(basename $$hook)"; \
+		fi \
+	done
+	@echo ""
+	@echo "🧪 Verifying hook setup..."
+	@HOOK_PATH=$$(git -C "$(REPO_ROOT)" config core.hooksPath) && \
+		if [ "$$HOOK_PATH" = ".githooks" ]; then \
+			echo "✅ Git hooks configured: core.hooksPath = .githooks"; \
+		else \
+			echo "❌ Hook configuration failed: core.hooksPath = $$HOOK_PATH"; \
+			exit 1; \
+		fi
+	@echo ""
+	@echo "📖 Hook documentation: .githooks/README.md"
+	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
 install: install-copilot install-claude install-pi install-opencode ## Install to all 4 harnesses
 	@echo ""
@@ -85,30 +126,30 @@ install-copilot: render-copilot ## Install rendered agents + skills → ~/.copil
 	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ dist/copilot/skills/ missing — run 'make render-copilot' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ dist/copilot/agents/ missing — run 'make render-copilot' first" && exit 1)
 	@echo "   ✓ dist/copilot/ validated"
-	@echo "📦 Installing from dist/copilot/ → ~/.copilot/..."
-	@mkdir -p "$(HOME)/.copilot"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(HOME)/.copilot/"
-	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+	@echo "📦 Installing from dist/copilot/ → $(DESTDIR)/.copilot/..."
+	@mkdir -p "$(DESTDIR)/.copilot"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(DESTDIR)/.copilot/"
+	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
 		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to ~/.copilot/ complete (agents + skills)"
+	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills)"
 
 install-claude: render-claude ## Install rendered agents → ~/.claude/
 	@echo "📋 Validating dist/claude/ is populated..."
 	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ dist/claude/skills/ missing — run 'make render-claude' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ dist/claude/agents/ missing — run 'make render-claude' first" && exit 1)
 	@echo "   ✓ dist/claude/ validated"
-	@echo "📦 Installing from dist/claude/ → ~/.claude/..."
-	@mkdir -p "$(HOME)/.claude"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/claude/" "$(HOME)/.claude/"
-	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+	@echo "📦 Installing from dist/claude/ → $(DESTDIR)/.claude/..."
+	@mkdir -p "$(DESTDIR)/.claude"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/claude/" "$(DESTDIR)/.claude/"
+	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
 		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to ~/.claude/ complete"
+	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
 
 # Copilot CLI now supports custom agents. Agents are rendered alongside skills.
 # render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
@@ -277,6 +318,70 @@ test-concurrent: ## Run concurrent invocation tests (race condition guard)
 	@echo ""
 	@echo "✅ Concurrent tests passed — no race conditions detected"
 
+test-ci: ## Run tests in CI container (simulates GitHub Actions environment, first run, no-fail)
+	@echo "🐳 Starting CI environment simulation in Docker container..."
+	@echo "   This simulates the exact GitHub Actions ubuntu-latest environment."
+	@echo "   Tests will catch environment-specific issues (symlinks, permissions, paths)."
+	@echo ""
+	@if ! command -v docker &> /dev/null; then \
+		echo "❌ Docker is not installed. Please install Docker to use test-ci."; \
+		echo "   Visit: https://docs.docker.com/get-docker/"; \
+		exit 1; \
+	fi
+	@echo "📦 Building Docker image (may take 30-60 seconds on first run)..."
+	@docker build --rm -t agentic-engineers-ci:latest "$(REPO_ROOT)" 2>&1 | grep -E "^(Step|RUN|COPY|FROM|Successfully)" || true
+	@echo ""
+	@echo "🧪 Running tests in container..."
+	@docker run --rm \
+		-v "$(REPO_ROOT):/workspace" \
+		-w /workspace \
+		agentic-engineers-ci:latest \
+		pytest tests/ -v --tb=short
+	@echo ""
+	@echo "✅ CI container tests complete"
+	@echo "   Tip: Use 'make test-ci-force' for strict passing tests"
+	@echo "   Tip: Use 'make test-ci-shell' to debug in container interactively"
+
+test-ci-force: ## Run tests in CI container (strict, must pass)
+	@echo "🐳 Starting STRICT CI environment test in Docker container..."
+	@echo "   This will fail if any test fails (non-lenient mode)."
+	@echo ""
+	@if ! command -v docker &> /dev/null; then \
+		echo "❌ Docker is not installed. Please install Docker to use test-ci-force."; \
+		exit 1; \
+	fi
+	@echo "📦 Building Docker image..."
+	@docker build --rm -t agentic-engineers-ci:latest "$(REPO_ROOT)" > /dev/null 2>&1
+	@echo ""
+	@echo "🧪 Running tests in container (strict mode)..."
+	@docker run --rm \
+		-v "$(REPO_ROOT):/workspace" \
+		-w /workspace \
+		agentic-engineers-ci:latest \
+		pytest tests/ -v --tb=short --strict-markers
+	@echo ""
+	@echo "✅ All CI tests passed (strict mode)"
+
+test-ci-shell: ## Open interactive shell in CI container for debugging
+	@echo "🐳 Opening interactive shell in CI container..."
+	@echo "   You can run pytest, inspect files, and debug issues."
+	@echo "   Type 'exit' to return to your local shell."
+	@echo ""
+	@if ! command -v docker &> /dev/null; then \
+		echo "❌ Docker is not installed. Please install Docker to use test-ci-shell."; \
+		exit 1; \
+	fi
+	@echo "📦 Building Docker image..."
+	@docker build --rm -t agentic-engineers-ci:latest "$(REPO_ROOT)" > /dev/null 2>&1
+	@echo ""
+	@docker run -it --rm \
+		-v "$(REPO_ROOT):/workspace" \
+		-w /workspace \
+		agentic-engineers-ci:latest \
+		/bin/bash
+	@echo ""
+	@echo "👋 Exited CI container"
+
 quality-gate: lint test test-concurrent verify validate-renders ## Pre-push quality checks (lint + test + concurrent + verify + render validation)
 	@echo ""
 	@echo "✅✅✅ Quality gate PASSED ✅✅✅"
@@ -303,25 +408,25 @@ install-pi: render-pi ## Install π.dev harness from dist/pi/ → ~/.pi/
 	@test -d "$(REPO_ROOT)/dist/pi" || (echo "❌ dist/pi/ missing — run 'make render-pi' first" && exit 1)
 	@test -f "$(REPO_ROOT)/dist/pi/agent/SYSTEM.md" || (echo "❌ dist/pi/agent/SYSTEM.md missing — run 'make render-pi' first" && exit 1)
 	@echo "   ✓ dist/pi/ validated"
-	@echo "📦 Installing from dist/pi/ → ~/.pi/..."
-	@mkdir -p "$(HOME)/.pi"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(HOME)/.pi/"
-	@echo "✅ Installation to ~/.pi/ complete"
+	@echo "📦 Installing from dist/pi/ → $(DESTDIR)/.pi/..."
+	@mkdir -p "$(DESTDIR)/.pi"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(DESTDIR)/.pi/"
+	@echo "✅ Installation to $(DESTDIR)/.pi/ complete"
 
 install-opencode: render-opencode ## Install agents & skills to ~/.config/opencode/
 	@echo "📋 Validating dist/opencode/ is populated..."
 	@test -d "$(REPO_ROOT)/dist/opencode/skills" || (echo "❌ dist/opencode/skills/ missing — run 'make render-opencode' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/opencode/agents" || (echo "❌ dist/opencode/agents/ missing — run 'make render-opencode' first" && exit 1)
 	@echo "   ✓ dist/opencode/ validated"
-	@echo "📦 Installing from dist/opencode/ → ~/.config/opencode/..."
-	@mkdir -p "$(HOME)/.config/opencode"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(HOME)/.config/opencode/"
-	@if [ -d "$(REPO_ROOT)/.githooks" ]; then \
+	@echo "📦 Installing from dist/opencode/ → $(DESTDIR)/.config/opencode/..."
+	@mkdir -p "$(DESTDIR)/.config/opencode"
+	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(DESTDIR)/.config/opencode/"
+	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
 		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to ~/.config/opencode/ complete"
+	@echo "✅ Installation to $(DESTDIR)/.config/opencode/ complete"
 	@echo ""
 	@echo "ℹ️  To use agents via OpenCode CLI:"
 	@echo "  opencode --agent orchestrator 'Your task description'"

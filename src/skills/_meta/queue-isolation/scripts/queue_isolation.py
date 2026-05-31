@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,6 +36,33 @@ from typing import Optional
 
 # Subdirectories created under <queue_root>/
 _QUEUE_SUBDIRS = ("incoming", "processing", "done", "failed")
+
+# session_id / harness are interpolated directly into the queue path. They must
+# be restricted to a filename-safe character set so they cannot escape the
+# canonical ~/.agentic-engineers/artifacts/ root via path separators, parent
+# references ("..") or absolute paths.
+_SAFE_PATH_COMPONENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _validate_path_component(value: str, *, field: str) -> str:
+    """Validate a session_id/harness value before using it in a queue path.
+
+    Raises:
+        ValueError: if the value is empty, a path reference, or contains any
+            character that could enable path traversal.
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string, got {type(value).__name__}")
+    if value in ("", ".", ".."):
+        raise ValueError(f"{field} is empty or a path reference: {value!r}")
+    if "/" in value or "\\" in value or "\x00" in value:
+        raise ValueError(f"{field} contains illegal path separators: {value!r}")
+    if not _SAFE_PATH_COMPONENT_RE.match(value):
+        raise ValueError(
+            f"{field} contains illegal characters "
+            f"(allowed: letters, digits, '.', '_', '-'): {value!r}"
+        )
+    return value
 
 
 def _default_base_dir() -> Path:
@@ -123,7 +151,11 @@ def get_queue_path(
         pathlib.Path pointing to the queue root (not yet guaranteed to exist).
     """
     base = Path(base_dir) if base_dir is not None else _default_base_dir()
-    return base / "artifacts" / session_id / harness / "queue"
+    # Reject traversal / separator injection in session_id and harness so the
+    # resulting path cannot escape the canonical artifacts root.
+    safe_session = _validate_path_component(session_id, field="session_id")
+    safe_harness = _validate_path_component(harness, field="harness")
+    return base / "artifacts" / safe_session / safe_harness / "queue"
 
 
 def init_queue_structure(

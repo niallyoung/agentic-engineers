@@ -53,6 +53,7 @@ class TestModelNamingCompliance:
         "claude-sonnet-4.6",
         "claude-opus-4.6",
         "claude-opus-4.7",
+        "claude-opus-4.8",
     }
 
     # Official approved model names (hyphens only)
@@ -64,6 +65,7 @@ class TestModelNamingCompliance:
         "claude-opus-4.5",
         "claude-opus-4.6",
         "claude-opus-4.7",
+        "claude-opus-4.8",
     }
 
     # Forbidden patterns (old hyphenated format, underscores, uppercase, etc.)

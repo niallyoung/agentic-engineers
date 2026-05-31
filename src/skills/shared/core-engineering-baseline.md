@@ -8,7 +8,7 @@
 
 ## Section 1: Git Workflow
 
-Git workflow, SSH setup, and commit/push mechanics for the ERS platform.
+Git workflow, authentication setup, and commit/push mechanics for the agentic-engineers framework.
 
 ### Overview
 
@@ -21,31 +21,33 @@ edit code
   → main on GitHub ✅      [GitHub Actions: deploy dev + deploy prod + tag]
 ```
 
-### SSH & 1Password Setup
+### Git Authentication Setup
 
-**All pushes use SSH, not HTTPS.** SSH bypasses OAuth token scope restrictions and uses 1Password ssh-agent.
+**Use your Git configuration of choice (SSH or HTTPS).** The framework supports both authentication methods.
 
 #### Remote URLs
 
-All ERS repos must use SSH (not HTTPS):
+Configure your remote based on your organization's Git authentication policy:
 
 ```bash
-# Verify
+# Verify current remote
 git remote get-url origin
-# Should be: git@github.com:{your-org}/REPO.git
 
-# If HTTPS, change it:
+# If you use SSH:
 git remote set-url origin git@github.com:{your-org}/REPO.git
+
+# If you use HTTPS:
+git remote set-url origin https://github.com/{your-org}/REPO.git
 ```
 
-#### 1Password SSH Agent
+#### Authentication Configuration
 
-Unlocking 1Password activates ssh-agent on your Mac. SSH operations trigger a 1Password popup to confirm access.
+Whatever Git authentication method your organization requires (SSH keys, HTTPS tokens, OAuth, etc.), ensure it is properly configured before pushing.
 
-When using Claude Code or other tools:
-- If `git push` fails with "Permission denied (publickey)", ask for 1Password authentication
-- Wait for the user to unlock 1Password and confirm the SSH prompt
-- Do NOT try to work around by using on-disk keys or HTTPS credentials
+If `git push` fails with a permission error:
+- Verify your Git credentials are configured
+- Ensure the credentials have appropriate permissions on the remote repository
+- Consult your organization's Git authentication documentation
 
 ### Commit & Push Workflow
 
@@ -68,7 +70,7 @@ If hook fails, fix the issue and commit again (not amend).
 
 ```bash
 # Non-interactive (skip diff review + confirm)
-ERS_AUTO_PUSH=1 git push origin main
+AUTO_PUSH=1 git push origin main
 
 # Interactive (shows diff + asks "Push to main? [y/N]")
 git push origin main
@@ -140,17 +142,15 @@ git push origin chore/description
 ### Safety Rules
 
 #### Always follow
-- ✅ Use SSH (git@github.com:..., not HTTPS)
-- ✅ Use 1Password ssh-agent (unlock 1Password before pushing)
+- ✅ Use your configured Git authentication method (SSH, HTTPS, token-based, etc.)
 - ✅ Commit to main (no feature branches for routine work)
 - ✅ Push direct to main (no PRs unless risky)
 - ✅ Run `make verify` during development
 - ✅ Let pre-commit/pre-push hooks run fully
 - ✅ Use `gh` CLI ONLY for querying GitHub (gh pr view, gh issue list, etc)
-- ✅ Use `ERS_AUTO_PUSH=1` for non-interactive push (skips confirm, keeps E2E)
+- ✅ Use `AUTO_PUSH=1` for non-interactive push (skips confirm, keeps E2E)
 
 #### Never do
-- ❌ Use HTTPS remotes or OAuth tokens
 - ❌ Use `git push --no-verify` (bypass hooks)
 - ❌ Use `git commit --no-verify` (bypass pre-commit hook)
 - ❌ Use `gh` for commits or pushes

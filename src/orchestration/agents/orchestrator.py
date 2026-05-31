@@ -18,6 +18,7 @@ CANONICAL QUEUE PATH (all harnesses):
 """
 
 import os
+import re
 import logging
 import yaml
 import json
@@ -35,7 +36,11 @@ from . import (
     MODEL_ENGINEER_CONFIG, SECURITY_ENGINEER_CONFIG
 )
 from .quality_validator import QualityValidator, RoutingDecision
-from .delegate_validator import validate_delegate_pre_flight
+from .delegate_validator import (
+    DelegateValidator,
+    RoleRoutingError,
+    validate_delegate_pre_flight,
+)
 from .metrics_writer import MetricsWriter
 from ..monitoring.metrics import MetricsRegistry
 from ..monitoring.token_tracker import TokenTracker
@@ -44,6 +49,76 @@ from ..monitoring.budget_checker import BudgetStatus, BudgetResult
 from ..decorators import SecurityError
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Queue path / filename safety helpers
+# ============================================================================
+
+# A queue path component (task_id, status/decision label) is only allowed to
+# contain a conservative, filename-safe character set. This prevents path
+# traversal / queue poisoning where attacker-controlled task_id or status
+# values (read from DELEGATE/HANDBACK YAML) escape the canonical queue root
+# via "../", absolute paths, or embedded path separators.
+_SAFE_COMPONENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def sanitize_path_component(value: object, *, field: str = "component") -> str:
+    """Validate that *value* is safe to use as a single path/filename component.
+
+    Rejects values that are non-strings, empty, ``.``/``..``, or that contain
+    path separators, null bytes, or any character outside ``[A-Za-z0-9._-]``.
+
+    Args:
+        value: Candidate component (e.g. a task_id or status label).
+        field: Human-readable field name for error messages.
+
+    Returns:
+        The validated string (unchanged) when it is safe.
+
+    Raises:
+        ValueError: If the value is unsafe to interpolate into a path.
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string, got {type(value).__name__}")
+    if value in ("", ".", ".."):
+        raise ValueError(f"{field} is empty or a path reference: {value!r}")
+    if "/" in value or "\\" in value or "\x00" in value:
+        raise ValueError(f"{field} contains illegal path separators: {value!r}")
+    if not _SAFE_COMPONENT_RE.match(value):
+        raise ValueError(
+            f"{field} contains illegal characters "
+            f"(allowed: letters, digits, '.', '_', '-'): {value!r}"
+        )
+    return value
+
+
+def ensure_within_directory(candidate: Path, base_dir: Path, *, field: str = "path") -> Path:
+    """Ensure *candidate* resolves to a location inside *base_dir*.
+
+    Defence-in-depth guard against path traversal / symlink escape: even if a
+    component slips through :func:`sanitize_path_component`, the final resolved
+    path must remain within the intended queue directory.
+
+    Args:
+        candidate: The path about to be written/moved.
+        base_dir: The directory the candidate must stay within.
+        field: Human-readable field name for error messages.
+
+    Returns:
+        The resolved candidate path.
+
+    Raises:
+        ValueError: If the candidate escapes *base_dir*.
+    """
+    base_resolved = Path(base_dir).resolve()
+    candidate_resolved = Path(candidate).resolve()
+    if candidate_resolved != base_resolved and base_resolved not in candidate_resolved.parents:
+        raise ValueError(
+            f"{field} escapes the queue directory: {candidate} "
+            f"(resolved {candidate_resolved}) is not within {base_resolved}"
+        )
+    return candidate_resolved
 
 
 def _is_env_var_truthy(env_var_name: str) -> bool:
@@ -72,9 +147,32 @@ def _try_import_queue_isolation():
     
     Returns the module if available, None if import fails.
     This allows graceful fallback to legacy paths if queue-isolation is unavailable.
+
+    The module lives at ``src/skills/_meta/queue-isolation/scripts/queue_isolation.py``.
+    The package directory uses a hyphen (``queue-isolation``), which is NOT a valid
+    Python module path, so the dotted ``src.skills._meta.queue_isolation.scripts``
+    import never resolves. We fall back to inserting the scripts directory on
+    ``sys.path`` and importing ``queue_isolation`` directly — the same mechanism
+    used by ``invoke_agent.py`` and the queue-management skill.
     """
     try:
+        # Preferred path if an importable (underscored) package alias exists.
         from src.skills._meta.queue_isolation.scripts import queue_isolation as qi
+        return qi
+    except ImportError:
+        pass
+
+    try:
+        # Fallback: add the hyphenated scripts directory to sys.path and import
+        # the bare module the way the orchestrator's runtime callers do.
+        import sys
+        queue_isolation_path = (
+            Path(__file__).parent.parent.parent
+            / "skills" / "_meta" / "queue-isolation" / "scripts"
+        )
+        if str(queue_isolation_path) not in sys.path:
+            sys.path.insert(0, str(queue_isolation_path))
+        import queue_isolation as qi
         return qi
     except ImportError:
         logger.debug("queue-isolation module not available, will use legacy paths")
@@ -477,7 +575,7 @@ class QueueManager:
                 self.session_queue_dir = queue_root
                 self.base_dir = queue_root.parent.parent  # artifacts/
                 self._using_isolation = True
-                self.agent_context = agent_context or harness
+                self.agent_context = agent_context or self.harness
                 
                 logger.debug(
                     f"QueueManager: Using queue-isolation. "
@@ -605,9 +703,10 @@ class QueueManager:
         _session_id = session_id or self.session_id
         _harness = harness or self.harness
         
-        if self._using_isolation:
-            # New path: ~/.agentic-engineers/{harness}/{session_id}
-            return Path.home() / ".agentic-engineers" / _harness / _session_id
+        if self._using_isolation and _QUEUE_ISOLATION is not None:
+            # Canonical layout A (queue-isolation skill):
+            # ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue
+            return _QUEUE_ISOLATION.get_queue_path(_session_id, _harness)
         else:
             # Legacy path: queue base directory
             return self.base_dir / _session_id
@@ -643,8 +742,13 @@ class QueueManager:
         processing_path = self.processing_dir / filename
         task_id = handback.get("task_id", "unknown")
         status = handback.get("status", "UNKNOWN")
+        # Sanitize attacker-controllable values from the HANDBACK before using
+        # them to build a filename (prevents path traversal / queue poisoning).
+        task_id = sanitize_path_component(task_id, field="task_id")
+        status = sanitize_path_component(status, field="status")
         done_filename = f"{task_id}-{status}.yaml"
         done_path = self.done_dir / done_filename
+        ensure_within_directory(done_path, self.done_dir, field="done_path")
         
         # Write HANDBACK to done directory
         with open(done_path, 'w') as f:
@@ -763,12 +867,29 @@ class QueueManager:
                         f"Available files: {available}"
                     )
             else:
-                # Search by task_id substring match (backward compatibility)
-                for task_file in from_state_tasks:
-                    if task_id in task_file:
-                        task_filename = task_file
+                # Search by task_id. Prefer precise matches (exact stem, or
+                # "<task_id>-..." / "<task_id>...." prefix) before falling back
+                # to a substring match. A naive substring match lets a short or
+                # crafted task_id collide with an unrelated victim task file.
+                def _matches(name: str) -> int:
+                    stem = name[:-5] if name.endswith(".yaml") else name
+                    if stem == task_id:
+                        return 0  # exact
+                    if stem.startswith(f"{task_id}-") or stem.startswith(f"{task_id}."):
+                        return 1  # prefix
+                    if task_id in name:
+                        return 2  # substring fallback
+                    return 3  # no match
+
+                ranked = sorted(
+                    ((_matches(name), name) for name in from_state_tasks),
+                    key=lambda pair: (pair[0], pair[1]),
+                )
+                for rank, name in ranked:
+                    if rank < 3:
+                        task_filename = name
                         break
-                
+
                 if not task_filename:
                     available = from_state_tasks
                     raise FileNotFoundError(
@@ -820,14 +941,23 @@ class QueueManager:
             if to_state == "done":
                 # For done state, append decision to filename
                 decision = metadata.get("decision", "UNKNOWN") if metadata else "UNKNOWN"
-                to_filename = f"{task_id}-{decision}.yaml"
+                # Sanitize attacker-controllable values before path construction
+                # (prevents path traversal / queue poisoning via task_id/decision).
+                safe_task_id = sanitize_path_component(task_id, field="task_id")
+                safe_decision = sanitize_path_component(decision, field="decision")
+                to_filename = f"{safe_task_id}-{safe_decision}.yaml"
             else:
                 # For processing, keep same filename
                 to_filename = task_filename
-            
+
             # Atomic write to destination (write to temp file first, then move)
             to_path = to_dir / to_filename
             temp_path = to_dir / f".tmp_{to_filename}"
+
+            # Defence-in-depth: ensure both temp and final paths stay within the
+            # destination queue directory before any write occurs.
+            ensure_within_directory(to_path, to_dir, field="to_path")
+            ensure_within_directory(temp_path, to_dir, field="temp_path")
             
             # Write to temp file
             with open(temp_path, 'w') as f:
@@ -887,7 +1017,21 @@ class TaskRouter:
             (agent_name, None)  — caller uses agent_name to invoke via AgentInvoker
         """
         # Priority 1: Explicit role in DELEGATE
-        if "role" in delegate:
+        if "role" in delegate and delegate.get("role"):
+            # Enforce the role validator at routing time: reject an invalid role
+            # or a role that conflicts with the task's scope/effort routing rules
+            # (e.g. a security-scoped task mis-tagged as `engineer`). Previously
+            # the validator was imported but never invoked, so mismatches were
+            # silently honoured.
+            ok, role_failures = DelegateValidator.validate_routing_role(delegate)
+            if not ok:
+                raise RoleRoutingError(
+                    "DELEGATE role "
+                    f"'{delegate.get('role')}' failed routing validation: "
+                    + "; ".join(role_failures),
+                    failures=role_failures,
+                )
+
             role = delegate.get("role", "").lower()
             if role in self.AGENT_NAMES:
                 return (role, None)

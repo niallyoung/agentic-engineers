@@ -16,6 +16,21 @@ qm_mod = importlib.import_module("src.skills.queue-management.queue_manager")
 QueueManager = qm_mod.QueueManager
 
 
+@pytest.fixture(autouse=True)
+def _restore_cwd():
+    """Guard against tests that os.chdir() into a tmp dir without restoring.
+
+    The process working directory is global state; leaking it lets a later
+    (or concurrent) test run git in the wrong repository, which previously
+    corrupted the real working tree. Always restore the original cwd.
+    """
+    original_cwd = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(original_cwd)
+
+
 class TestQueueManagerParsing:
     """Test task specification parsing."""
 

@@ -160,7 +160,7 @@ Model Engineer phase complete. Focus: test optimization feedback loop on real ta
 - ~/.claude/* (found copilot-instructions.md)
 - ~/.github/* (no agentic-specific files)
 - {service-name}/ (copied global copilot-instructions)
-- All 13 ers/* repos (no additional agentic files found)
+- All service repos (no additional agentic files found)
 
 **Consolidation actions:**
 - ✓ Moved 6 reference docs to agentic-engineers/reference/
