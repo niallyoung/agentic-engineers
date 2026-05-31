@@ -294,6 +294,7 @@ All `SKILL.md` files discovered in `src/skills/`. Status reflects implementation
 | A/B Testing | `ab-testing/SKILL.md` | ✅ Active | `scripts/ab-testing.py` |
 | Agent Creator | `agent-creator/SKILL.md` | ✅ Active | `scripts/agent_creator.py` |
 | Consistency Checker | `consistency-checker/SKILL.md` | ✅ Active | `scripts/consistency_checker.py` + tests |
+| Harness Integration Tracker | `harness-integration-tracker/SKILL.md` | ✅ Active | `scripts/harness_integration_tracker.py` + tests |
 | Metrics ETL | `metrics-etl/SKILL.md` | ✅ Active | `scripts/metrics-etl.py` |
 | Model Engineer (agent) | `model-engineer/SKILL.md` | ✅ Active | `scripts/model-engineer.py` (scheduled) |
 | Protocol Validator | `protocol-validator/SKILL.md` | ✅ Active | `scripts/protocol_validator.py` + tests |

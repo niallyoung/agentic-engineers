@@ -1,0 +1,54 @@
+harnesses:
+  opencode:
+    status: active
+    version: ''
+    known_keys:
+      required: []
+      optional: []
+    known_models: []
+    drift: []
+    integration_points:
+      tests:
+      - tests/test_opencode_config_validation.py
+      - tests/test_opencode_hooks_integration.py
+      docs: docs/research/opencode-docs
+    last_updated: '2026-05-31T14:19:55.258275'
+  copilot:
+    status: active
+    version: ''
+    known_keys:
+      required: []
+      optional: []
+    known_models: []
+    drift: []
+    integration_points:
+      docs: docs/research/copilot-docs
+    last_updated: '2026-05-31T14:19:55.259473'
+  claude:
+    status: active
+    version: ''
+    known_keys:
+      required: []
+      optional: []
+    known_models: []
+    drift: []
+    integration_points:
+      docs: docs/research/claude-docs
+    last_updated: '2026-05-31T14:19:55.260691'
+  pi:
+    status: active
+    version: ''
+    known_keys:
+      required: []
+      optional: []
+    known_models: []
+    drift: []
+    integration_points:
+      tests:
+      - tests/test_render_pipeline.py
+      - tests/test_render_pi_dev_args.py
+      - tests/test_render_pi_dev_yaml.py
+      - tests/test_render_pi_dev_mkdir.py
+      - tests/test_evals_continuous_pipeline.py
+      docs: docs/research/pi-docs
+    last_updated: '2026-05-31T14:19:55.261584'
