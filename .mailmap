@@ -1,10 +1,15 @@
 # Git mailmap for commit history normalization
 # Maps variant names/emails to canonical forms
+# Canonical author: Niall Young <5465765+niallyoung@users.noreply.github.com>
 
-# Fix Test user commits (historical mapping)
+# Map legacy email variants to canonical form
+Niall Young <5465765+niallyoung@users.noreply.github.com> Niall Young <user@example.com>
+Niall Young <5465765+niallyoung@users.noreply.github.com> niallyoung <niall@users.noreply.github.com>
+
+# Fix Test user commits (historical mapping from cherry-pick artifacts)
 # Old test user accounts have been rewritten to canonical author
 Niall Young <5465765+niallyoung@users.noreply.github.com> Test <test@test.com>
 Niall Young <5465765+niallyoung@users.noreply.github.com> niallyoung <test@test.com>
 
-# Copilot normalization
+# Copilot normalization (co-author in commit messages)
 Copilot <223556219+Copilot@users.noreply.github.com> GitHub Copilot <copilot@github.com>
