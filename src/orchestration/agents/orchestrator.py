@@ -575,7 +575,7 @@ class QueueManager:
                 self.session_queue_dir = queue_root
                 self.base_dir = queue_root.parent.parent  # artifacts/
                 self._using_isolation = True
-                self.agent_context = agent_context or harness
+                self.agent_context = agent_context or self.harness
                 
                 logger.debug(
                     f"QueueManager: Using queue-isolation. "

@@ -5,10 +5,10 @@ description: >
   filesystem queue by state (incoming backlog, processing orphans to resume,
   done results/next-steps). Format-agnostic (json + yaml). The local stepping
   stone toward the external memory-API queue interface.
-version: "1.0.0"
+version: "1.0.1"
 dependencies:
   - skill: queue-isolation
-    optional: false
+    optional: true
   - skill: queue-management
     optional: true
 entry_points:
@@ -30,7 +30,10 @@ orchestrator poll-loop does not expose: backlog sizing, stale-task (orphan)
 detection for resumption, and completed-task summaries.
 
 Path math is delegated to the canonical `queue-isolation` skill; this skill
-never builds queue paths by hand. Reads are **format-agnostic** so the whole
+never builds queue paths by hand. When `queue-isolation` is unavailable (e.g. a
+rendered harness where `_meta/` is excluded from the install tree) it falls back
+to a drift-free internal copy of the canonical layout-A path math, so the skill
+remains functional once installed. Reads are **format-agnostic** so the whole
 queue is observable regardless of whether a task was written as `*.json`
 (QueueOperations) or `*.yaml` (orchestrator).
 

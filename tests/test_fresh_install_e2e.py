@@ -162,6 +162,40 @@ class TestFreshInstallE2E:
             "Found legacy processing directory (stale files from previous install)"
 
     @pytest.mark.skipif(not (has_make() and is_git_repo()), reason="make or git not available")
+    def test_install_with_destdir_override(self):
+        """`make install-copilot DESTDIR=<dir>` installs under DESTDIR and, when
+        DESTDIR != HOME, skips git-hook installation (sandbox-safe)."""
+        self._copy_repo_to_temp()
+        subprocess.run(['git', 'init'], cwd=self.temp_repo, capture_output=True)
+
+        destdir = tempfile.mkdtemp(prefix="test-agentic-destdir-")
+        try:
+            install_env = os.environ.copy()
+            # HOME deliberately differs from DESTDIR so the git-hook guard skips.
+            install_env['HOME'] = self.temp_home
+
+            result = subprocess.run(
+                ['make', 'install-copilot', f'DESTDIR={destdir}'],
+                cwd=self.temp_repo,
+                env=install_env,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            assert result.returncode == 0, f"Install failed:\n{result.stderr}"
+
+            # Files land under DESTDIR/.copilot, NOT under HOME/.copilot.
+            destdir_copilot = os.path.join(destdir, '.copilot')
+            assert os.path.isdir(os.path.join(destdir_copilot, 'agents')), \
+                f"agents/ not installed under DESTDIR at {destdir_copilot}"
+            assert os.path.isdir(os.path.join(destdir_copilot, 'skills')), \
+                f"skills/ not installed under DESTDIR at {destdir_copilot}"
+            assert not os.path.exists(os.path.join(self.temp_home, '.copilot')), \
+                "Install leaked into HOME/.copilot despite DESTDIR override"
+        finally:
+            shutil.rmtree(destdir, ignore_errors=True)
+
+    @pytest.mark.skipif(not (has_make() and is_git_repo()), reason="make or git not available")
     def test_queue_init_in_fresh_install(self):
         """
         Verify that queue directories are created correctly.
