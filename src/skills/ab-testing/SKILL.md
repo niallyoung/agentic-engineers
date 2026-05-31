@@ -2,7 +2,7 @@
 name: ab-testing
 description: Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. Use to test routing changes, model upgrades, and role assignments with Welch's t-test significance testing.
 license: Proprietary
-compatibility: Designed for agentic-engineers framework (ERS platform)
+compatibility: Designed for agentic-engineers framework
 metadata:
   author: agentic-engineers
   version: "1.0"
@@ -37,7 +37,7 @@ python scripts/ab-testing.py --stop EXPERIMENT_ID
 Daily at 18:00 UTC (for early stopping checks) via `orchestration/config/ab-testing-monitor.cron`
 
 ```bash
-0 18 * * * cd ~/git/ers/{workspace-name} && python agentic-engineers/skills/ab-testing/scripts/ab-testing.py --monitor
+0 18 * * * cd <project-root> && python agentic-engineers/skills/ab-testing/scripts/ab-testing.py --monitor
 ```
 
 ## Voice Notifications

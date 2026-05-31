@@ -40,6 +40,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -80,6 +81,27 @@ def _utcnow() -> datetime:
 def _utcdate(date_str: str) -> datetime:
     """Parse an ISO date string (YYYY-MM-DD) to UTC midnight datetime."""
     return datetime.strptime(date_str, DATE_FMT).replace(tzinfo=timezone.utc)
+
+
+def _validate_date_str(date_str: str) -> str:
+    """Validate and canonicalise an ISO ``YYYY-MM-DD`` date string.
+
+    Guards against path traversal: ``date`` is used to build the on-disk
+    record filename (``{date}.json``), so an unvalidated value such as
+    ``"../../etc/passwd"`` would let a caller escape the data directory.
+    Re-formatting via :func:`datetime.strptime`/``strftime`` guarantees the
+    result contains only digits and hyphens in canonical form.
+
+    Raises:
+        ValueError: If *date_str* is not a valid ``YYYY-MM-DD`` date.
+    """
+    try:
+        parsed = datetime.strptime(date_str, DATE_FMT)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(
+            f"Invalid date '{date_str}'; expected format {DATE_FMT}"
+        ) from exc
+    return parsed.strftime(DATE_FMT)
 
 
 def _date_range(start_date: str, end_date: str) -> List[str]:
@@ -133,6 +155,11 @@ class CostAggregator:
         # Health check cache
         self._health_cache: Dict[str, Any] = {}
         self._health_cache_ts: float = 0.0
+
+        # Serialises the read-modify-write cycle in record_usage() so that
+        # concurrent in-process writers to the same daily file do not lose
+        # updates. (Cross-process safety still relies on atomic replace.)
+        self._usage_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Initialisation helpers
@@ -395,36 +422,42 @@ class CostAggregator:
                 f"Must be one of {SUPPORTED_PROVIDERS}."
             )
 
-        date_str = date or _utcnow().strftime(DATE_FMT)
+        # Validate the date before it is used to build a file path, to prevent
+        # path traversal via crafted values (e.g. "../../etc/cron").
+        date_str = _validate_date_str(date) if date else _utcnow().strftime(DATE_FMT)
         adapter = self._adapters[provider]
         cost = adapter.calculate_cost(input_tokens, output_tokens, model)
 
         provider_dir = self._data_dir / provider
-        provider_dir.mkdir(parents=True, exist_ok=True)
         record_path = provider_dir / f"{date_str}.json"
 
-        # Load existing record (if any) and accumulate
-        existing = self._load_json(record_path) or {}
-        new_total = existing.get("total_spend", 0.0) + cost
-        records = existing.get("records", [])
-        records.append(
-            {
-                "model": model,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "cost": round(cost, 8),
-                "task_type": task_type,
-                "recorded_at": _utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            }
-        )
+        # Serialise the load → accumulate → write cycle to avoid lost updates
+        # when multiple threads record usage for the same provider/day.
+        with self._usage_lock:
+            provider_dir.mkdir(parents=True, exist_ok=True)
 
-        updated = {
-            "provider": provider,
-            "date": date_str,
-            "total_spend": round(new_total, 8),
-            "records": records,
-        }
-        self._write_json_atomic(record_path, updated)
+            # Load existing record (if any) and accumulate
+            existing = self._load_json(record_path) or {}
+            new_total = existing.get("total_spend", 0.0) + cost
+            records = existing.get("records", [])
+            records.append(
+                {
+                    "model": model,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "cost": round(cost, 8),
+                    "task_type": task_type,
+                    "recorded_at": _utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+            )
+
+            updated = {
+                "provider": provider,
+                "date": date_str,
+                "total_spend": round(new_total, 8),
+                "records": records,
+            }
+            self._write_json_atomic(record_path, updated)
 
     # ------------------------------------------------------------------
     # Convenience / introspection

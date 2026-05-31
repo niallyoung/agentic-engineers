@@ -2,7 +2,7 @@
 
 **Proven patterns for implementation, infrastructure, resilience, and event handling.**
 
-These skills document reusable patterns extracted from production ERS code. Use when implementing new features or services following established best practices.
+These skills document reusable patterns extracted from production agentic-engineers code. Use when implementing new features or services following established best practices.
 
 ## Skills in This Directory
 
@@ -40,7 +40,7 @@ These patterns are ordered by **scope**:
 ## Key Principles
 
 All patterns follow these principles:
-- **Production-tested** — Used in live ERS services
+- **Production-tested** — Used in live agentic-engineers services
 - **Minimal** — No unnecessary abstractions
 - **Documented** — Examples included
 - **Reusable** — Work across projects

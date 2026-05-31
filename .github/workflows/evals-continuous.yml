@@ -1,0 +1,247 @@
+name: Evaluation Framework Continuous CI/CD
+
+on:
+  schedule:
+    # 2 AM UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+# Least-privilege default token. Individual jobs only read repo contents;
+# nothing here needs write access (no commits, issues, or PRs are created).
+permissions:
+  contents: read
+
+jobs:
+  # Job 1: Run EVALS-002 (Harness Integration Tests)
+  evals-002:
+    name: EVALS-002 Harness Integration Tests
+    runs-on: ubuntu-latest
+    outputs:
+      results-json: ${{ steps.run-evals.outputs.json-path }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install pyyaml pytest pytest-cov
+      
+      - name: Run EVALS-002
+        id: run-evals
+        run: |
+          python -m src.skills._meta.evaluation_framework.main \
+            --run-tests tests/evals/ \
+            --json-report /tmp/evals_002_results.json \
+            --md-report /tmp/evals_002_results.md \
+            --verbose
+          echo "json-path=/tmp/evals_002_results.json" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Upload EVALS-002 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-002-results
+          path: |
+            /tmp/evals_002_results.json
+            /tmp/evals_002_results.md
+          retention-days: 30
+
+  # Job 2: Run EVALS-003 (Quality Metrics)
+  evals-003:
+    name: EVALS-003 Quality Metrics
+    runs-on: ubuntu-latest
+    outputs:
+      results-json: ${{ steps.run-evals.outputs.json-path }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install pyyaml pytest pytest-cov
+      
+      - name: Run EVALS-003
+        id: run-evals
+        run: |
+          python -m src.skills._meta.evaluation_framework.main \
+            --run-tests tests/evals/ \
+            --harnesses opencode copilot \
+            --json-report /tmp/evals_003_results.json \
+            --md-report /tmp/evals_003_results.md \
+            --verbose
+          echo "json-path=/tmp/evals_003_results.json" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Upload EVALS-003 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-003-results
+          path: |
+            /tmp/evals_003_results.json
+            /tmp/evals_003_results.md
+          retention-days: 30
+
+  # Job 3: Run EVALS-004 (Performance Benchmarks)
+  evals-004:
+    name: EVALS-004 Performance Benchmarks
+    runs-on: ubuntu-latest
+    outputs:
+      results-json: ${{ steps.run-evals.outputs.json-path }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install pyyaml pytest pytest-cov
+      
+      - name: Run EVALS-004
+        id: run-evals
+        run: |
+          python -m src.skills._meta.evaluation_framework.main \
+            --run-tests tests/evals/ \
+            --models haiku sonnet \
+            --json-report /tmp/evals_004_results.json \
+            --md-report /tmp/evals_004_results.md \
+            --verbose
+          echo "json-path=/tmp/evals_004_results.json" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Upload EVALS-004 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-004-results
+          path: |
+            /tmp/evals_004_results.json
+            /tmp/evals_004_results.md
+          retention-days: 30
+
+  # Job 4: Aggregate, detect regressions, and generate reports
+  analyze-results:
+    name: Analyze Results & Detect Regressions
+    needs: [evals-002, evals-003, evals-004]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/results
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml jinja2
+      
+      - name: Run regression detection and analysis
+        id: analyze
+        run: python scripts/eval_continuous_analysis.py
+        continue-on-error: true
+      
+      - name: Upload analysis results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-results
+          path: |
+            /tmp/aggregated_results.json
+            /tmp/regressions.json
+            /tmp/dashboard.html
+          retention-days: 30
+      
+      - name: Parse and display results
+        if: always()
+        run: |
+          echo "## 📊 Evaluation Framework Nightly Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **EVALS-002:** Harness Integration Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- **EVALS-003:** Quality Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "- **EVALS-004:** Performance Benchmarks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifacts:** Dashboard, regression report, and detailed metrics available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+
+  # Job 5: Final status and reporting
+  final-status:
+    name: Final Status Report
+    needs: [evals-002, evals-003, evals-004, analyze-results]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Report results
+        run: |
+          echo "✅ Evaluation Framework Nightly Run Complete"
+          echo ""
+          echo "Results Summary:"
+          echo "- EVALS-002: ${{ needs.evals-002.result }}"
+          echo "- EVALS-003: ${{ needs.evals-003.result }}"
+          echo "- EVALS-004: ${{ needs.evals-004.result }}"
+          echo "- Analysis: ${{ needs.analyze-results.result }}"

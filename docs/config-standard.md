@@ -1,11 +1,11 @@
 ---
-name: ERS Configuration & Dependency Management Standard
-description: Defines how all ERS services handle configuration, environment variables, and cross-service dependencies
+name: Agentic Engineers Configuration & Dependency Management Standard
+description: Defines how all agentic-engineers services handle configuration, environment variables, and cross-service dependencies
 type: skill
-applies_to: [all ERS services]
+applies_to: [all agentic-engineers services]
 ---
 
-# ERS Configuration & Dependency Management Standard
+# Agentic Engineers Configuration & Dependency Management Standard
 
 **Intent**: Fail loudly on missing required configuration; be explicit about optional features. No silent defaults.
 
@@ -88,7 +88,7 @@ Environment: &map[string]*string{
 ENV_NAME=prod
 APP_NAME=prod-{example-service}
 AWS_ACCOUNT=666109694932
-AWS_REGION=ap-southeast-2
+AWS_REGION=<region>
 # Optional: empty if not deployed
 FILES_API_URL=
 ```
@@ -206,7 +206,7 @@ Every workflow must:
     ENV_NAME=dev
     APP_NAME=dev-{example-service}
     AWS_ACCOUNT=417772279096
-    AWS_REGION=ap-southeast-2
+    AWS_REGION=<region>
     EOF
 
 - name: Deploy
@@ -245,7 +245,7 @@ func TestOptionalConfigEmpty(t *testing.T) {
 
 ## Audit Checklist
 
-For each ERS service, verify:
+For each agentic-engineers service, verify:
 
 - [ ] Makefile has `ENV_NAME ?= dev` and `-include env/.env.$(ENV_NAME)` + `export` at top
 - [ ] `.env.dev` and `.env.prod` have no quotes on variable values

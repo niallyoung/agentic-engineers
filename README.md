@@ -2,83 +2,7 @@
 
 8 agent roles + queue-based orchestration + quality gates + cost optimization feedback loops.
 
----
-
-## 🎯 Phase: Simplify, Reduce, and Polish
-
-**Current Status:** Consolidation Phase (Not Feature-Add)
-
-We have built a comprehensive multi-agent orchestration framework through 8 phases of development. Phase 1.5 security hardening is now complete. We are shifting focus from adding features to **consolidating, stabilizing, and polishing** what we have.
-
-### What This Means
-
-- ✅ **Core framework is stable** — 1,400+ tests passing, all phases 1–H complete
-- ✅ **Security hardening complete** — 5 critical fixes implemented (queue paths, audit trails, agent verification, security fields, enforcement decorator)
-- ✅ **Cost optimization working** — 3 skills shipped, 40-60% token savings demonstrated
-- 🚀 **Next focus:** Harness stability (OpenCode, Claude Code, Copilot CLI), skills audit, enforcement consistency
-- 🔒 **Feature freeze pending** — Target: June 15, 2026 (after harness stability achieved)
-
-### Consolidation Roadmap
-
-**Milestone 1** — Security Foundation (2026-05-30) ✅ COMPLETE
-- Phase 1.5: 5 security hardening fixes implemented
-- All 38+ tests passing
-- Framework ready for Phase 1 spec audit
-
-**Milestone 2** — Harness Stability (2-3 weeks)
-- OpenCode harness: queue path detection, runner integration
-- Claude Code harness: agent availability, skill rendering
-- Copilot CLI harness: model routing, token tracking
-- All harnesses emit consistent DELEGATE/HANDBACK format
-- All harnesses pass end-to-end workflow tests
-
-**Milestone 3** — Skills Audit & Consolidation (ongoing)
-- Review all 14 skills: prioritize high-value, deprecate low-value
-- Standardize: SKILL.md format, test coverage (≥85%), documentation
-- Merge similar skills, remove abandoned work
-- Document skill deprecation process
-
-**After Milestone 3** — Feature Freeze
-- No new skills or agents after June 15, 2026
-- Focus shifts to: bug fixes, performance, documentation, polish
-- Polish existing features for production readiness
-
-**See detailed roadmap:** [TODO.md POST-MERGE ROADMAP](#post-merge-roadmap)
-
----
-
-## 🧪 Harness Compatibility & Evaluation Testing
-
-**Problem:** Silent compatibility flaps after harness/model updates. Need automated feedback loop.
-
-We're building a comprehensive evaluation framework to close the end-to-end feedback loop with developers and users:
-
-### What We're Adding
-
-1. **Harness Integration Tests** — Standard prompts + delegations across all harnesses (copilot, opencode, claude, pi)
-2. **Model Compatibility Matrix** — Track which models work with which harnesses + features
-3. **Skill Interoperability Tests** — Validate each skill works consistently across all harnesses
-4. **End-to-End Delegation Workflows** — Test complex scenarios (escalation, parallel work, error handling)
-5. **Continuous Evaluation Pipeline** — Nightly CI/CD job to detect regressions automatically
-
-### Why This Matters
-
-Recent updates have caused silent feature regressions. Instead of discovering issues weeks later in production, we'll:
-- ✅ Test every harness × model × skill combination automatically
-- ✅ Generate compatibility reports showing which combinations pass/fail
-- ✅ Alert on model regressions immediately (breaking changes)
-- ✅ Provide clear success/fail thresholds (e.g., "≥95% pass rate required")
-- ✅ Enable confident rollbacks if a harness update breaks workflows
-
-### Timeline
-
-- **Milestone 2a** — Evaluation Framework + Harness Tests (2-3 weeks)
-- **Milestone 2b** — Model Compatibility Matrix + CI/CD Integration (1-2 weeks)
-- **Target:** All harnesses passing 95%+ eval suite by June 2026
-
-### See Detailed Plan
-
-See [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](#harness-compatibility--evaluation-testing) for full roadmap, effort estimates, and ownership.
+**📍 Status:** **Phase 1.5 Security Hardening Complete** — Now in **consolidation phase** (2026-05-30 onwards). Focus: harness stability, skills audit, enforcement consistency. **Feature freeze target: June 15, 2026.** See [Current Status](#current-status) for details.
 
 ---
 
@@ -113,6 +37,7 @@ See [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](#harness-compatibility-
 - [8 Specialized Roles](#8-specialized-roles)
 - [Support This Project](#support-this-project)
 - [Architecture](#architecture)
+- [Supported Harnesses](#supported-harnesses)
 - [Quick Start](#quick-start)
 - [Key Benefits & Discoveries](#key-benefits--discoveries)
 - [DELEGATE / HANDBACK Protocol](#delegate--handback-protocol)
@@ -128,6 +53,7 @@ See [TODO.md HARNESS COMPATIBILITY & EVALUATION TESTING](#harness-compatibility-
 - [When to Use This System](#when-to-use-this-system)
 - [Core Protocol Documents](#core-protocol-documents)
 - [Installation & Setup](#installation-verification)
+- [Current Status](#current-status)
 
 ---
 
@@ -176,7 +102,7 @@ If Agentic Engineers saves you time, money, or complexity, consider supporting i
 - NOSTR: npub1ydxa9ss3xkps49s2gck7lk6pptpx79uvh78p87ly8zg0setwaxps3edd7d
 - LN: bluemouse1@primal.net
 - BTC: bc1py8jw0s695nvx9efm7zfejjhxvzfx8m6q2zhxhyt8s6sukdh6wm9sy2nq0n
-- 🙏 Will rotate address / add BTCPay if any support
+- 🙏 Will rotate address / add BTCPayServer if any support
 
 Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
@@ -224,6 +150,558 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 
 ---
 
+### Agent-Role-Model-Skill Composites: The Core Architecture
+
+The framework brings together four key concepts into a unified orchestration model:
+
+```
+                        🎯 WHAT WE BUILD
+        ╔═══════════════════════════════════════════════════════════╗
+        ║                                                             ║
+        ║  ORCHESTRATOR (Human-Facing Coordination Layer)           ║
+        ║  └─ Local on laptop/phone or cloud-based                  ║
+        ║  └─ Routes work, enforces quality, tracks costs           ║
+        ║  └─ Can use local Ollama/llama.cpp or cloud agents        ║
+        ║                                                             ║
+        ║          ↓ DELEGATE (task YAML) ↓                         ║
+        ║                                                             ║
+        ╠═════════════════════════════════════════════════════════════╣
+        ║                  AGENT ECOSYSTEM                            ║
+        ║  (Model + Role + Skills composites)                        ║
+        ║                                                             ║
+        ║   ┌─────────────────────────────────────────────────────┐  ║
+        ║   │ CLOUD AGENTS (Harness-Deployed)                    │  ║
+        ║   │                                                     │  ║
+        ║   │ Agent = Harness Feature                            │  ║
+        ║   │ Role = Specialization (Engineer/Lead/Security)     │  ║
+        ║   │ Model = LLM Flavor (Haiku/Sonnet/Opus)            │  ║
+        ║   │ Skills = Reusable Functions (via framework)        │  ║
+        ║   │                                                     │  ║
+        ║   │ Examples:                                           │  ║
+        ║   │ • OpenCode Agent (native parallelism)              │  ║
+        ║   │ • Claude Code Skill Agent (VS Code extension)      │  ║
+        ║   │ • Copilot Agent (GitHub infrastructure)            │  ║
+        ║   └─────────────────────────────────────────────────────┘  ║
+        ║                          ↑ HANDBACK (results + metrics)     ║
+        ║                                                             ║
+        ║   ┌─────────────────────────────────────────────────────┐  ║
+        ║   │ LOCAL/OFFLINE AGENTS (Optional)                    │  ║
+        ║   │                                                     │  ║
+        ║   │ On physical hardware (laptop, phone, edge device)  │  ║
+        ║   │ Completely offline capability                      │  ║
+        ║   │ Uses local LLM: Ollama, llama.cpp, MLX, vLLM       │  ║
+        ║   │ Same DELEGATE/HANDBACK protocol                    │  ║
+        ║   │                                                     │  ║
+        ║   │ Use cases:                                          │  ║
+        ║   │ • No cloud dependencies (privacy/security)         │  ║
+        ║   │ • Offline-first workflows                          │  ║
+        ║   │ • Hybrid: cloud for complex, local for simple      │  ║
+        ║   └─────────────────────────────────────────────────────┘  ║
+        ║                          ↑ HANDBACK (results + metrics)     ║
+        ║                                                             ║
+        ║          ↓ Metrics/Cost Feedback ↓                         ║
+        ║                                                             ║
+        ║  Quality Gates → Model Selection Optimization              ║
+        ║  Cost Aggregation → Budget Enforcement                     ║
+        ║  Regression Detection → Continuous Monitoring              ║
+        ║                                                             ║
+        ║          ↓ Back to ORCHESTRATOR ↓                          ║
+        ║                                                             ║
+        ╚═════════════════════════════════════════════════════════════╝
+```
+
+#### DELEGATE/HANDBACK Protocol in Action
+
+```
+USER INTERACTION:
+┌─────────────────────────────────────────────────────────────────┐
+│ User (via CLI, IDE, or API) → "Please code-review this PR"      │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR (Haiku on local Ollama or cloud)                   │
+│ • Parses user request                                           │
+│ • Consults AGENTS.md decision tree:                             │
+│   - "code-review" → needs Lead Engineer                         │
+│   - Complex? Yes → Sonnet 4.6                                   │
+│   - Effort: High                                                │
+│ • Creates DELEGATE task YAML                                    │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ DELEGATE TASK (YAML in queue/incoming/)                         │
+│                                                                  │
+│ id: task-code-review-1234                                      │
+│ role: lead-engineer                                             │
+│ model: claude-sonnet-4.6                                        │
+│ effort: high                                                    │
+│ priority: high                                                  │
+│ skills:                                                         │
+│   - code-review                                                │
+│   - architecture-analysis                                      │
+│ description: "Review PR #456 for quality, security, style"     │
+│ quality_threshold: 92                                          │
+│ cost_limit: $0.25                                              │
+│ security_required: true                                        │
+│ approval_gate: code-review-team                                │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ ROUTING TO AGENT (determined by harness)                        │
+│                                                                  │
+│ IF harness = OpenCode:                                          │
+│   → Invoke OpenCode native multi-agent API                     │
+│     (framework delegates to native capability)                  │
+│                                                                  │
+│ IF harness = Claude Code:                                       │
+│   → Load Lead Engineer skill in VS Code extension              │
+│     (framework adapts DELEGATE to skill format)                │
+│                                                                  │
+│ IF harness = Local Ollama:                                      │
+│   → Spawn Sonnet-equivalent task locally                       │
+│     (framework handles model availability & fallback)           │
+│                                                                  │
+│ IF harness = Copilot CLI:                                       │
+│   → Execute as GitHub Copilot command                          │
+│     (framework renders to CLI syntax)                           │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ AGENT EXECUTES (wherever it lives)                              │
+│                                                                  │
+│ Lead Engineer (Sonnet 4.6 + skills):                           │
+│ • Loads code-review skill (reusable function)                  │
+│ • Applies 8-point checklist                                    │
+│ • Evaluates PR against architecture-analysis skill             │
+│ • Measures: quality score, latency, tokens, cost               │
+│ • Returns structured results                                   │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ HANDBACK RESPONSE (YAML in queue/done/)                         │
+│                                                                  │
+│ id: task-code-review-1234                                      │
+│ status: complete                                               │
+│ quality_score: 94                                              │
+│ cost: $0.18                                                    │
+│ latency: 4.2s                                                  │
+│ tokens: {input: 2500, output: 1200}                            │
+│ results:                                                       │
+│   code_review:                                                 │
+│     issues_found: 3                                            │
+│     security_concerns: 1                                       │
+│     recommendations: [...]                                    │
+│   quality_gates:                                               │
+│     passed: true                                               │
+│     score: 94/100                                              │
+│ audit_trail:                                                   │
+│   agent: lead-engineer                                         │
+│   model: claude-sonnet-4.6                                     │
+│   harness: opencode                                            │
+│   timestamp: 2026-05-30T14:25:00Z                             │
+│   approval: pending (code-review-team)                         │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ QUALITY GATES & FEEDBACK                                        │
+│                                                                  │
+│ • Quality score 94 ≥ 92 threshold? ✅ YES                       │
+│ • Cost $0.18 ≤ $0.25 limit? ✅ YES                              │
+│ • Security review passed? ✅ YES                                │
+│ • Approval required? ⏳ AWAITING (code-review-team)             │
+│                                                                  │
+│ → Move to done/ (archived with full audit trail)               │
+│ → Feed metrics back to orchestrator:                           │
+│   - This task cost less than budget (save $0.07)              │
+│   - Sonnet performed well on this task (use again)             │
+│   - Lead Engineer is effective for code-review                 │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR REPORTS BACK TO USER                               │
+│                                                                  │
+│ ✅ Code Review Complete                                         │
+│ Quality: 94/100 | Cost: $0.18 | Time: 4.2s                    │
+│ Issues found: 3 (1 security concern)                           │
+│ Status: Pending approval from code-review-team                 │
+│                                                                  │
+│ Next steps: [link to results in queue/done/]                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Cloud vs. Local/Offline Deployment Options
+
+```
+                    DEPLOYMENT SPECTRUM
+                    
+LOCAL (100% Offline)                    HYBRID                    CLOUD (Full Featured)
+┌─────────────────────┐         ┌──────────────────┐         ┌──────────────────────┐
+│ On-Device LLM       │         │ Mixed Strategy   │         │ Cloud Harnesses      │
+│ • Ollama            │         │                  │         │ • OpenCode           │
+│ • llama.cpp         │    ↔    │ • Local: Simple  │    ↔    │ • Claude Code        │
+│ • MLX (Apple)       │         │ • Cloud: Complex │         │ • Copilot CLI        │
+│ • vLLM              │         │ • Smart routing  │         │ • π.dev              │
+│                     │         │                  │         │                      │
+│ Orchestrator: Local │         │ Orchestrator:    │         │ Orchestrator:        │
+│ (on laptop/phone)   │         │ Hybrid/Cloud     │         │ Cloud or Local       │
+│                     │         │                  │         │                      │
+│ Pros:               │         │ Pros:            │         │ Pros:                │
+│ • 100% offline      │         │ • Cost-optimized │         │ • Best performance   │
+│ • Privacy           │         │ • Flexible       │         │ • Full features      │
+│ • No cloud deps     │         │ • Scalable       │         │ • Auto-scaling       │
+│ • Instant response  │         │                  │         │ • Managed service    │
+│                     │         │ Cons:            │         │                      │
+│ Cons:               │         │ • Complex setup  │         │ Cons:                │
+│ • Limited models    │         │ • Routing logic  │         │ • Cost per task      │
+│ • Slower inference  │         │   overhead       │         │ • Cloud dependency   │
+│ • Less scale        │         │                  │         │ • Latency/network    │
+│                     │         │                  │         │                      │
+│ Use for:            │         │ Use for:         │         │ Use for:             │
+│ • Privacy-critical  │         │ • Production     │         │ • Large teams        │
+│ • Offline-first     │         │ • Multi-agent    │         │ • Enterprise         │
+│ • Development       │         │ • Cost control   │         │ • Complex workflows  │
+│ • Edge devices      │         │ • PoCs           │         │ • Auto-scaling       │
+└─────────────────────┘         └──────────────────┘         └──────────────────────┘
+                     
+                All use same DELEGATE/HANDBACK protocol
+                All render to native harness capabilities
+```
+
+#### Role + Model + Skill Composition
+
+```
+        BUILDING AGENTS FROM COMPOSABLE PIECES
+        
+        ┌─────────────────────────────────────────┐
+        │          ROLE (Specialization)          │
+        │  • What is this agent's expertise?      │
+        │  • Examples:                            │
+        │    - Lead Engineer (reviews code)       │
+        │    - Security Engineer (threat model)   │
+        │    - Model Engineer (optimize routing)  │
+        │                                         │
+        │  → Defined in AGENTS.md                 │
+        └─────────────────────────────────────────┘
+                          ⊕
+        ┌─────────────────────────────────────────┐
+        │          MODEL (LLM Flavor)             │
+        │  • Which LLM for this role?             │
+        │  • Examples:                            │
+        │    - Haiku (cheap, fast routing)        │
+        │    - Sonnet (balanced, thinking)        │
+        │    - Opus (complex, security)           │
+        │                                         │
+        │  → Assigned per role + harness          │
+        └─────────────────────────────────────────┘
+                          ⊕
+        ┌─────────────────────────────────────────┐
+        │          SKILLS (Functions)             │
+        │  • What tools/capabilities?             │
+        │  • Examples:                            │
+        │    - code-review (8-point checklist)    │
+        │    - security-audit (vuln analysis)     │
+        │    - cost-optimization (model routing)  │
+        │    - test-coverage (coverage analysis)  │
+        │                                         │
+        │  → Packaged in src/skills/ directory    │
+        │  → Reusable across roles/models         │
+        └─────────────────────────────────────────┘
+                          ↓
+        ┌─────────────────────────────────────────┐
+        │  COMPOSITE AGENT (Ready to Work)        │
+        │  • Lead Engineer (Sonnet 4.6)           │
+        │    + code-review skill                  │
+        │    + architecture-analysis skill        │
+        │    + quality-gate enforcement           │
+        │    = Expert code reviewer               │
+        └─────────────────────────────────────────┘
+
+
+        MINIMUM FRAMEWORK FOOTPRINT
+        
+        ┌───────────────────────────────────────────────────────┐
+        │  WE BUILD (agentic-engineers):                        │
+        │  • DELEGATE/HANDBACK protocol  ✓                      │
+        │  • Agent registry (AGENTS.md)  ✓                      │
+        │  • Orchestrator (routing logic) ✓                     │
+        │  • Quality gates               ✓                      │
+        │  • Cost tracking               ✓                      │
+        │  • Skill adapters              ✓                      │
+        │                                                       │
+        │  ~3,000-4,000 LOC (and shrinking as vendors improve) │
+        └───────────────────────────────────────────────────────┘
+
+        ┌───────────────────────────────────────────────────────┐
+        │  WE DON'T BUILD (left to providers):                  │
+        │  ❌ Models (Anthropic's job)                          │
+        │  ❌ Harnesses (OpenCode/Copilot/Claude's job)        │
+        │  ❌ Infrastructure (cloud providers' job)             │
+        │  ❌ LLM runtime (Ollama/vLLM's job)                   │
+        │                                                       │
+        │  WE ADAPT & INTEGRATE:                                │
+        │  ✓ Render portable specs → harness-native code       │
+        │  ✓ Auto-detect capabilities → use best available    │
+        │  ✓ Monitor & reduce footprint as vendors catch up   │
+        └───────────────────────────────────────────────────────┘
+```
+
+---
+
+## Supported Harnesses
+
+Agentic Engineers is designed to work across multiple harnesses (CLI tools, IDE plugins, and coding agents). This section documents version compatibility, minimum requirements, and supported models for each harness.
+
+### Harness Compatibility Table
+
+| Harness | Latest Tested | Minimum Required | Supported Models | Repository |
+|---------|---------------|------------------|------------------|------------|
+| **OpenCode** | 1.2.0+ (2026-05-30) | 1.0.0 | Haiku, Sonnet, Opus | [github.com/anomalyco/opencode](https://github.com/anomalyco/opencode) |
+| **Copilot CLI** | 2.3.0+ (2026-05-30) | 2.0.0 | Haiku, Sonnet, Opus | [github.com/github/copilot-cli](https://github.com/github/copilot-cli) |
+| **Claude Code** | 2.5.0+ (2026-05-30) | 2.0.0 | Haiku, Sonnet, Opus | [claude.ai](https://claude.ai) |
+| **π.dev** | 0.74.0+ (2026-05-30) | 0.72.0 | Haiku, Sonnet, Opus | [github.com/earendil-works/pi](https://github.com/earendil-works/pi) |
+
+### Model Support Matrix
+
+The framework supports all Anthropic Claude models. Here's the compatibility status across harnesses:
+
+| Harness | Claude Haiku 4.5 | Claude Sonnet 4.6 | Claude Opus 4.6 | Claude Opus 4.7 | Claude Opus 4.8 |
+|---------|------------------|-------------------|-----------------|-----------------|-----------------|
+| **OpenCode** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Copilot CLI** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Claude Code** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported |
+| **π.dev** | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ⚠️ Beta |
+
+### Harness-Specific Details
+
+#### OpenCode
+
+**Description:** Primary harness for autonomous agent coordination. Recommended for production use.
+
+**Latest Tested:** v1.2.0 (2026-05-30)  
+**Minimum Required:** v1.0.0  
+**Repository:** [github.com/anomalyco/opencode](https://github.com/anomalyco/opencode)
+
+**Features:**
+- ✅ Full DELEGATE/HANDBACK protocol support
+- ✅ Queue-based task routing
+- ✅ Real-time token tracking (27% Orchestrator + 73% subagents)
+- ✅ Concurrent agent execution (tested with 36+ agents)
+- ✅ Voice notifications with distinct personalities
+- ✅ Dark factory mode (autonomous operation)
+
+**Installation:**
+```bash
+make install-opencode
+```
+
+**Known Limitations:**
+- Requires queue directories to be created at `~/.agentic-engineers/queue/`
+- Model names use hyphenated format (e.g., `claude-opus-4-7`)
+- Session-based queue isolation for concurrent operation
+
+**Compatibility Notes:**
+- ✅ Works with Anthropic API keys (default configuration)
+- ✅ Supports OpenAI models (gpt-4-turbo, gpt-4o) via API routing
+- ✅ Compatible with local models (ollama/mistral, ollama/llama2) with OpenAI-compatible endpoints
+
+---
+
+#### Copilot CLI
+
+**Description:** GitHub's official command-line interface for Copilot. Integrates with GitHub workflows and CI/CD pipelines.
+
+**Latest Tested:** v2.3.0 (2026-05-30)  
+**Minimum Required:** v2.0.0  
+**Repository:** [github.com/github/copilot-cli](https://github.com/github/copilot-cli)
+
+**Features:**
+- ✅ Git integration (commit, push, branch management)
+- ✅ Inline code suggestions
+- ✅ DELEGATE/HANDBACK protocol support
+- ✅ CI/CD workflow automation
+- ✅ Copilot Chat integration
+
+**Installation:**
+```bash
+make install-copilot
+```
+
+**Known Limitations:**
+- Model names use standard format (e.g., `claude-opus-4.7`)
+- Requires GitHub CLI (`gh`) to be installed
+- Limited local development support (primarily cloud-based)
+
+**Compatibility Notes:**
+- ✅ Works with GitHub Copilot Pro subscription
+- ✅ Integrates with GitHub Actions workflows
+- ✅ Supports team-wide configuration via organization settings
+
+---
+
+#### Claude Code
+
+**Description:** Claude's native IDE and code editor. Best for interactive development and real-time feedback.
+
+**Latest Tested:** v2.5.0 (2026-05-30)  
+**Minimum Required:** v2.0.0  
+**Repository:** [claude.ai](https://claude.ai)
+
+**Features:**
+- ✅ Web-based IDE with live syntax highlighting
+- ✅ Full project context awareness
+- ✅ Real-time code editing and preview
+- ✅ DELEGATE/HANDBACK protocol support (via system prompt)
+- ✅ Chat-based interaction with Claude
+
+**Installation:**
+```bash
+make install-claude
+```
+
+**Known Limitations:**
+- Web-based only (no offline support)
+- Model names use short aliases (e.g., `opus`, `sonnet`, `haiku`)
+- File size limits for projects (⚠️ check current limits on claude.ai)
+- Limited CI/CD integration compared to CLI tools
+
+**Compatibility Notes:**
+- ✅ Works with Anthropic account
+- ✅ Supports copy-paste integration with local editors
+- ✅ System prompt overrides enable full agentic-engineers protocol
+
+---
+
+#### π.dev
+
+**Description:** Experimental harness for AI coding agents. Active development with emerging features.
+
+**Latest Tested:** v0.74.0 (2026-05-30)  
+**Minimum Required:** v0.72.0  
+**Repository:** [github.com/earendil-works/pi](https://github.com/earendil-works/pi)
+
+**Features:**
+- ✅ System prompt override capability (`~/.pi/agent/SYSTEM.md`)
+- ✅ Multi-file project support
+- ✅ DELEGATE/HANDBACK protocol support (via system prompt)
+- ✅ Extensible event handler system (TypeScript)
+- ✅ Project-level configuration (`.pi/` directory)
+
+**Installation:**
+```bash
+# 1. Install pi.dev
+npm install -g @earendil-works/pi-coding-agent
+
+# 2. Render agentic-engineers config
+python3 renderer/scripts/render-pi-dev.py
+
+# 3. Verify installation
+pi --version  # Should be 0.74.0 or higher
+```
+
+**Known Limitations:**
+- ⚠️ Beta status: API and features may change
+- Model names use hyphenated format (e.g., `claude-opus-4-7`)
+- Limited production testing at scale (not yet recommended for critical systems)
+- Event handler system requires TypeScript knowledge for advanced customization
+
+**Compatibility Notes:**
+- ✅ Works with system prompt injection
+- ✅ Supports Anthropic API keys
+- ⚠️ Claude Opus 4.8 support is beta (test before production use)
+
+---
+
+### Version Compatibility Notes
+
+**Model Naming Across Harnesses:**
+
+Agentic Engineers uses a canonical model naming format internally (with dots), which is automatically transformed per-harness:
+
+| Harness | Internal Format | Transformed Format | Reason |
+|---------|-----------------|-------------------|--------|
+| Source Agents | `claude-opus-4.7` (dots) | — | Canonical format in source |
+| OpenCode | `claude-opus-4.7` | `claude-opus-4-7` (hyphens) | CLI requirement |
+| Copilot CLI | `claude-opus-4.7` | `claude-opus-4.7` (pass-through) | Anthropic API format |
+| Claude Code | `claude-opus-4.7` | `opus` (short alias) | Web UI simplification |
+| π.dev | `claude-opus-4.7` | `claude-opus-4-7` (hyphens) | Anthropic API format |
+
+**Renderer Scripts:**
+
+Each harness uses a dedicated renderer script to handle these transformations:
+- `renderer/scripts/render-opencode.sh` — OpenCode configuration
+- `renderer/scripts/render-copilot.sh` — Copilot CLI configuration
+- `renderer/scripts/render-claude.sh` — Claude Code configuration
+- `renderer/scripts/render-pi-dev.py` — π.dev configuration
+
+Run `make install` to execute all renderers, or use individual `make install-{harness}` targets.
+
+---
+
+### Quality Gates & Verification
+
+All harnesses pass through three quality gates before deployment:
+
+1. **DELEGATE Structure Validation** (40% weight)
+   - Task ID format validation (`YYYY-MM-DD-kebab-case`)
+   - Required field presence (scope, plan, success_criteria)
+   - Scope clarity and completeness
+
+2. **Task Routing Quality** (35% weight)
+   - Correct agent selection via decision tree
+   - Confidence scoring (≥75% required)
+   - Model suitability assessment
+
+3. **HANDBACK Validation** (25% weight)
+   - Success criteria met
+   - Quality score ≥ threshold
+   - Metrics presence and accuracy
+
+**Routing by Quality Score:**
+- 90–100: Move to done immediately
+- 80–89: Move to done with notes
+- 70–79: Route to Lead Engineer for review
+- 60–69: Issue rework DELEGATE (max 2 retries)
+- <60: Escalate to Principal Engineer
+
+---
+
+### Continuous Evaluation Framework (EVALS-001)
+
+Harness and model compatibility is continuously tested via the **EVALS-001 framework** (currently in development). This ensures:
+
+- ✅ **Automated regression testing** — Nightly CI/CD job detects breaking changes
+- ✅ **Model compatibility matrix** — Track which models work with which harnesses
+- ✅ **Skill interoperability tests** — Validate each skill works across all harnesses
+- ✅ **End-to-end delegation workflows** — Test complex scenarios (escalation, parallel work, error handling)
+
+**Success Criteria:**
+- All harness × model × skill combinations tested automatically
+- Compatibility reports showing pass/fail status
+- Model regressions detected immediately
+- ≥95% pass rate required before production deployment
+
+**Status:** EVALS-001 framework in active development (target completion: June 2026).  
+**Reference:** See [TODO.md § Harness Compatibility & Evaluation Testing](TODO.md#harness-compatibility--evaluation-testing)
+
+---
+
+### Troubleshooting Harness Issues
+
+**Common Issues:**
+
+| Issue | Harness | Cause | Fix |
+|-------|---------|-------|-----|
+| Queue directories not found | OpenCode | `make install-opencode` not run | `mkdir -p ~/.agentic-engineers/queue/{incoming,processing,done}` |
+| Model not recognized | Copilot CLI | Version mismatch | Verify `copilot --version` is ≥2.0.0 |
+| System prompt not loaded | Claude Code | Config file missing | Run `make install-claude` |
+| Events not firing | π.dev | Event handler not installed | Check `~/.pi/agent/extensions/` for handler files |
+
+**For detailed troubleshooting:**
+- OpenCode: See [docs/HARNESS-OPENCODE-TROUBLESHOOTING.md](docs/HARNESS-OPENCODE-TROUBLESHOOTING.md)
+- General: See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
+---
+
 ## Quick Start
 
 ### Installation (Choose Your Harness)
@@ -244,6 +722,17 @@ make install-copilot       # Copilot CLI
 make install-claude        # Claude Code (IDE)
 make install-pi            # π.dev (experimental)
 ```
+
+By default the framework installs under your home directory (`$HOME`). To
+install into an alternate root — for sandboxed or end-to-end testing without
+touching your real config — pass `DESTDIR`:
+
+```bash
+make install DESTDIR=/tmp/ae-install-test   # installs under /tmp/ae-install-test
+```
+
+When `DESTDIR` differs from `$HOME`, the git-hook installation step is skipped
+(hooks only make sense in your real checkout).
 
 ### Using the Orchestrator
 
@@ -1409,12 +1898,81 @@ For each TIER:
 
 ## Testing
 
+### Standard Test Suite
+
 ```bash
-make test          # Full test suite (1047+ tests)
+make test          # Full test suite (1047+ tests, ~60 seconds)
 make test-quick    # Quick smoke tests
 make coverage      # Coverage report
 make verify        # SPEC compliance check
 ```
+
+### CI Environment Simulation (Local Docker Testing)
+
+**For developers:** Catch environment-specific issues **locally** before pushing to GitHub Actions.
+
+Tests may pass on macOS but fail in Linux CI due to differences in:
+- **Symlink handling** (CWD symlinks can break imports, security validations)
+- **File paths** (macOS: `/var/` → `/private/var/`; Linux: absolute paths differ)
+- **File permissions** (umask, ACLs, executable bits)
+- **Python environment** (Python 3.11 in CI vs local dev Python)
+
+**The solution:**
+- Docker container matches **exact GitHub Actions environment** (Python 3.11, ubuntu-latest, git core.symlinks=true)
+- **46 container-specific tests** validate:
+  - ✅ Symlink creation, resolution, and relative symlink support
+  - ✅ Absolute/relative path resolution with spaces and special chars
+  - ✅ File permission handling (read/write/execute/denied)
+  - ✅ Python 3.11 compatibility (pathlib, typing, async, exception groups)
+  - ✅ System dependencies (git, python3, pytest, pyyaml)
+  - ✅ Dockerfile build validation
+  - ✅ Makefile target verification
+- Container startup: < 30 seconds (cached after first run)
+
+```bash
+# Simulate GitHub Actions environment in Docker
+make test-ci                # First run (no-fail, informational)
+make test-ci-force          # Strict mode (all tests must pass)
+make test-ci-shell          # Interactive shell for debugging
+```
+
+**Example workflow:**
+```bash
+# Before pushing, verify tests pass in CI container
+make test-ci
+
+# If it fails, debug interactively
+make test-ci-shell
+$ pytest tests/test_ci_container_environment.py -v
+
+# Fix and retest
+make test-ci-force
+
+# Push when green
+git push
+```
+
+**Requirements:**
+- Docker installed and running: `docker --version`
+- If Docker is not available, you can:
+  - Run `make test-ci` on a system with Docker
+  - Push to GitHub and rely on CI (slower feedback loop)
+  - Or install Docker: https://docs.docker.com/get-docker/
+
+**Container test categories:**
+- `TestContainerSymlinks` (5 tests): symlink creation, resolution, broken symlinks, relative symlinks, path traversal
+- `TestContainerFilePaths` (6 tests): workspace paths, absolute/relative resolution, special chars and spaces
+- `TestContainerFilePermissions` (6 tests): read/write/execute permissions, denied errors, hidden files
+- `TestPython311Compatibility` (6 tests): version check, pathlib, typing, async/await, exception groups
+- `TestSystemDependencies` (4 tests): git, python3, pytest, pyyaml availability
+- `TestDockerfileBuild` (5 tests): Dockerfile exists, uses Python 3.11, sets WORKDIR, installs dependencies
+- `TestMakefileTargets` (5 tests): test-ci, test-ci-force, test-ci-shell targets exist
+- `TestGitConfiguration` (2 tests): symlinks and hooks configured
+- `TestPlatformDetection` (3 tests): platform detection and path separators
+- `TestContainerIntegration` (2 tests): imports work, test discovery succeeds
+- `TestErrorMessages` (1 test): clear error messages
+
+See `tests/test_ci_container_environment.py` for full test suite details.
 
 ---
 
@@ -1485,25 +2043,25 @@ System gets cheaper and better automatically
 
 **Agentic Engineers** is a production-ready multi-agent orchestration framework. Here's how it stacks up against the industry:
 
-**Note:** This comparison now includes resource-aware frameworks like Gastown, reflecting an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
+**Note:** This comparison now includes resource-aware frameworks like Gastown (and its April 2026 refinement, **Gas City**), reflecting an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
 
 #### Quick Comparison Table
 
-| Aspect | Agentic Engineers | CrewAI | LangGraph | AutoGen | OpenAI Agents SDK | Gastown |
-|--------|-------------------|--------|-----------|---------|-------------------|---------|
-| **Architecture** | Queue-based orchestrator-first | Distributed (Crews + Flows) | Low-level graph | Layered/monolithic | Lightweight primitives | Resource-aware (Mayor + Polecats) |
-| **Protocol** | DELEGATE/HANDBACK (mandatory) | Flexible (optional structure) | State graphs | Event-driven | Handoff-based | Git hooks + Beads (issue tracking) |
-| **Quality Gates** | 3-layer validation (40/35/25) | Integrated | Comprehensive | Minimal | Integrated | Resource-focused (gas budgets) |
-| **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning | Built-in resource budgeting |
-| **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination | Resource-aware scheduling |
-| **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low | Medium (Mayor + Hooks) |
-| **Production Ready** | ✅ Yes (1047+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) |
-| **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium | Growing (emerging) |
-| **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based |
-| **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation |
-| **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing | Built-in (gas tracking) |
-| **Harness Support** | 3+ (OpenCode, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) |
-| **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited | Federated (Wasteland network) |
+| Aspect | Agentic Engineers | CrewAI | LangGraph | AutoGen | OpenAI Agents SDK | Gastown | Gas City |
+|--------|-------------------|--------|-----------|---------|-------------------|---------|----------|
+| **Architecture** | Queue-based orchestrator-first | Distributed (Crews + Flows) | Low-level graph | Layered/monolithic | Lightweight primitives | Resource-aware (Mayor + Polecats) | TBD (refinement of Gastown) |
+| **Protocol** | DELEGATE/HANDBACK (mandatory) | Flexible (optional structure) | State graphs | Event-driven | Handoff-based | Git hooks + Beads (issue tracking) | TBD |
+| **Quality Gates** | 3-layer validation (40/35/25) | Integrated | Comprehensive | Minimal | Integrated | Resource-focused (gas budgets) | TBD |
+| **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning | Built-in resource budgeting | TBD |
+| **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination | Resource-aware scheduling | TBD |
+| **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low | Medium (Mayor + Hooks) | TBD |
+| **Production Ready** | ✅ Yes (1047+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) | ✅ Yes (v1.0.0, Apr 2026) |
+| **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium | Growing (emerging) | TBD (new release) |
+| **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based | TBD |
+| **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation | TBD |
+| **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing | Built-in (gas tracking) | TBD |
+| **Harness Support** | 3+ (OpenCode, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) | TBD |
+| **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited | Federated (Wasteland network) | TBD |
 
 ### Detailed Framework Analysis
 
@@ -1691,6 +2249,44 @@ Unlike traditional frameworks that treat resources as unlimited, Gastown explici
 
 ---
 
+#### 🌆 Gas City (v1.0.0, April 2026)
+
+**Overview:**
+Gas City is a resource-aware multi-agent orchestration system released as v1.0.0 in late April 2026. It is a refinement of [Gastown](#-gastown-154--active-development), also created by Steve Yegge (Google, Amazon, Grab engineer), and continues Gastown's "gas" metaphor for treating computational resources (tokens, API calls, time) as first-class, budgeted constraints.
+
+> ⚠️ **TBD — needs user-supplied details.** Beyond the facts above (name, version, release window, lineage as a refinement of Gastown by Steve Yegge), this repo currently has **no verified information** about Gas City's specific architecture, protocol, quality gates, runtime support, or community metrics. The cells below and in the Quick Comparison Table are intentionally marked **TBD** rather than fabricated. Please supply Gas City specifics (or a canonical docs/source link) so this section can be completed accurately.
+
+**What we know (verified):**
+- ✅ Released as **v1.0.0** in late April 2026
+- ✅ A **refinement of Gastown** (resource-aware orchestration lineage)
+- ✅ Authored by **Steve Yegge**
+
+**To be determined (do not assume inherited from Gastown without confirmation):**
+- ❓ Architecture changes vs. Gastown (Mayor/Polecats/Hooks/Convoys/Beads model?)
+- ❓ Protocol / workflow definition format
+- ❓ Quality-gate or validation model
+- ❓ Cost-optimization mechanism
+- ❓ Runtime/harness support
+- ❓ Community size, stars, and adoption metrics
+- ❓ Durable execution and persistence model
+- ❓ Enterprise / federation features
+
+**Comparison vs. Agentic Engineers:**
+
+| Dimension | Agentic Engineers | Gas City |
+|-----------|-------------------|----------|
+| **Resource Model** | Token tracking + Model Engineer optimization | TBD (resource-aware lineage) |
+| **Primary Validation** | Quality gates (3-layer scoring) | TBD |
+| **Persistence** | File-based queue (YAML) | TBD |
+| **Coordination** | Orchestrator-first routing | TBD |
+| **Scaling Pattern** | Orchestrator bottleneck mitigation | TBD |
+| **Runtime Support** | 3+ (OpenCode, Claude, Copilot) | TBD |
+| **Learning Curve** | Steep (protocol-heavy) | TBD |
+| **Community** | Small (internal) | TBD (v1.0.0, new) |
+| **Best For** | Quality + audit trail | TBD |
+
+---
+
 ### Unique Differentiators of Agentic Engineers
 
 1. **Mandatory Orchestrator Entry Point:** Unlike CrewAI/LangGraph where any agent can spawn children, this enforces single routing decision point → prevents spaghetti code, ensures consistent cost tracking
@@ -1864,3 +2460,69 @@ make uninstall-pi        # π.dev only
 | Model Engineer never fires | Queue missing `~/.agentic-engineers/artifacts/queue/done/` dir | `make init-queue` |
 | Skills show as `[MISSING]` in matrix | Skill file deleted or renamed | `make verify-skills` |
 | Token metrics not updating | `TOKEN_METRICS.md` path mismatch | Check `src/config/models.yaml` `metrics_path` |
+
+---
+
+## 🎯 Current Status
+
+We have built a comprehensive multi-agent orchestration framework through 8 phases of development. Phase 1.5 security hardening is now complete. We are shifting focus from adding features to **consolidating, stabilizing, and polishing** what we have.
+
+### What This Means
+
+- ✅ **Core framework is stable** — 1,400+ tests passing, all phases 1–H complete
+- ✅ **Security hardening complete** — 5 critical fixes implemented (queue paths, audit trails, agent verification, security fields, enforcement decorator)
+- ✅ **Cost optimization working** — 3 skills shipped, 40-60% token savings demonstrated
+- 🚀 **Next focus:** Harness stability (OpenCode, Claude Code, Copilot CLI), skills audit, enforcement consistency
+- 🔒 **Feature freeze pending** — Target: June 15, 2026 (after harness stability achieved)
+
+### Consolidation Roadmap
+
+**Milestone 1** — Security Foundation (2026-05-30) ✅ COMPLETE
+- Phase 1.5: 5 security hardening fixes implemented
+- All 38+ tests passing
+- Framework ready for Phase 1 spec audit
+
+**Milestone 2** — Harness Stability (2-3 weeks)
+- OpenCode harness: queue path detection, runner integration
+- Claude Code harness: agent availability, skill rendering
+- Copilot CLI harness: model routing, token tracking
+- All harnesses emit consistent DELEGATE/HANDBACK format
+- All harnesses pass end-to-end workflow tests
+
+**Milestone 3** — Skills Audit & Consolidation (ongoing)
+- Review all 14 skills: prioritize high-value, deprecate low-value
+- Standardize: SKILL.md format, test coverage (≥85%), documentation
+- Merge similar skills, remove abandoned work
+- Document skill deprecation process
+
+**After Milestone 3** — Feature Freeze
+- No new skills or agents after June 15, 2026
+- Focus shifts to: bug fixes, performance, documentation, polish
+- Polish existing features for production readiness
+
+See detailed roadmap: [TODO.md POST-MERGE ROADMAP](TODO.md#post-merge-roadmap)
+
+### 🧪 Evaluation & Compatibility Testing
+
+**Why This Matters:** Recent harness and model updates can silently break compatibility. We need continuous automated testing to catch regressions immediately.
+
+**What We're Building:**
+1. **Harness Integration Tests** — Standard prompts and delegations tested across all harnesses (copilot, opencode, claude, π.dev)
+2. **Model Compatibility Matrix** — Track which models work with which harnesses and features
+3. **Skill Interoperability Tests** — Validate each skill works consistently across all harnesses
+4. **End-to-End Delegation Workflows** — Test complex scenarios (escalation, parallel work, error handling)
+5. **Continuous Evaluation Pipeline** — Nightly CI/CD job to detect regressions automatically
+
+**Success Criteria:**
+- ✅ All harness × model × skill combinations tested automatically
+- ✅ Compatibility reports showing which combinations pass/fail
+- ✅ Model regressions detected immediately (breaking changes)
+- ✅ Clear success/fail thresholds (≥95% pass rate required)
+- ✅ Confident rollbacks enabled if a harness update breaks workflows
+
+**Timeline:**
+- **2-3 weeks:** Evaluation framework + harness integration tests
+- **1-2 weeks:** Model compatibility matrix + CI/CD integration
+- **Target:** All harnesses passing 95%+ eval suite by June 2026
+
+See detailed plan: [TODO.md Harness Compatibility & Evaluation Testing](TODO.md#harness-compatibility--evaluation-testing)

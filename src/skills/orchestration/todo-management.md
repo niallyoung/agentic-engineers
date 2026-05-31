@@ -409,4 +409,4 @@ Archived files serve as session logs — useful for pattern analysis and metrics
 - `orchestration/task-routing.md` — How to assign tasks to roles
 - `orchestration/AGENTS.md` — Role decision tree
 - `monitoring/metrics-collection.md` — Track session metrics
-- Root `CLAUDE.md` — ERS platform conventions
+- Root `CLAUDE.md` — agentic-engineers platform conventions

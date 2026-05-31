@@ -218,13 +218,25 @@ def validate_handback(data: Dict) -> List[str]:
 
 
 def validate_json_schema(data: Dict, schema: Dict) -> List[str]:
-    """Validate data against JSON schema. Returns list of errors."""
+    """Validate data against JSON schema. Returns list of errors.
+
+    Security: this validator FAILS CLOSED. If the ``jsonschema`` library is not
+    available, validation cannot be performed and we MUST NOT silently accept
+    the payload (that would be a fail-open bypass of schema enforcement).
+    Instead we return an explicit error so callers reject the DELEGATE/HANDBACK.
+    """
     try:
         import jsonschema
-        jsonschema.validate(instance=data, schema=schema)
-        return []
     except ImportError:
-        # jsonschema not available, skip validation
+        # jsonschema not available — fail CLOSED, do not skip validation.
+        return [
+            "schema validation unavailable: 'jsonschema' library is not "
+            "installed; refusing to validate (fail-closed). Install jsonschema "
+            "to enable JSON Schema enforcement."
+        ]
+
+    try:
+        jsonschema.validate(instance=data, schema=schema)
         return []
     except Exception as e:
         return [str(e)]

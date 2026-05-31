@@ -1,8 +1,10 @@
 # Skills Available
 
-This document indexes all available skills in the agentic-engineers framework.
+This document indexes all available (active) skills in the agentic-engineers framework.
 
-Last updated: 2026-05-24
+**Last updated:** 2026-05-30  
+**Status:** 14 active skills; 5 deprecated skills archived in `docs/archive/deprecated-skills/`  
+**See also:** [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md) for archived skills and alternatives
 
 ## Validation Skills
 
@@ -25,26 +27,27 @@ Last updated: 2026-05-24
 | Skill | Description | Category | Model |
 |-------|-------------|----------|-------|
 | queue-management | Atomic queue operations for DELEGATE/HANDBACK lifecycle | queue | - |
+| queue-query | Read-only visibility over the local queue (size, ls, orphans, done-summary) | queue | claude-haiku-4.5 |
 
 ## Metrics Skills
 
 | Skill | Description | Category | Model |
 |-------|-------------|----------|-------|
-| metrics-etl | Data pipeline aggregating daily metrics | metrics | - |
-| tokenadvisor | Daily metrics analysis for cost optimization | metrics | - |
 | usage-tracking | Real-time and historical token usage | metrics | - |
-| ab-testing | Experiment orchestration framework | testing | - |
+
+> **Deprecated:** metrics-etl, tokenadvisor, ab-testing. See [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md)
 
 ## Operations Skills
 
 | Skill | Description | Category | Model |
 |-------|-------------|----------|-------|
-| repo-init | Initializes new repositories with the framework | operations | - |
 | file-sync | Discovers and analyzes scripts in the repository | operations | - |
 | skill-creator | Creates new skills following the specification | scaffolding | - |
 | voice-notify | Voice notification integration layer | notifications | - |
 | todo-maintenance | Auto-sync queue DELEGATEs with TODO.md | maintenance | - |
 | model-engineer | Cost-quality optimization agent | optimization | - |
+
+> **Deprecated:** repo-init. See [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md)
 
 ## Maintenance Cadence
 
@@ -52,8 +55,9 @@ Last updated: 2026-05-24
 - **consistency-checker**: Run on every heartbeat (hourly) and on protocol changes
 - **spec-validator**: Run as pre-merge gate on every PR
 - **protocol-validator**: Run inline during task processing (<5ms)
-- **tokenadvisor**: Run daily for cost optimization
-- **ab-testing**: Run on routing changes and model upgrades
+- **usage-tracking**: Real-time collection; analysis on demand
+
+> **Deprecated maintenance cadence items:** tokenadvisor (daily), ab-testing (routing changes). See [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md) for alternatives.
 
 ## Adding a New Skill
 

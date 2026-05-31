@@ -16,7 +16,7 @@
 
 | File | Audience | Purpose |
 |------|----------|---------|
-| **CLAUDE.md** | All agents | Team context, directory structure, integration with ERS platform |
+| **CLAUDE.md** | All agents | Team context, directory structure, integration with agentic-engineers platform |
 | **INDEX.md** | All agents | Complete file guide and quick reference by topic |
 | **DEPLOYMENT_STATUS.md** | Managers/Leads | Phase tracking, capacity, cost projections |
 | **SYSTEM_INTEGRATION.md** | Architects | 12-month roadmap and system architecture |

@@ -1,0 +1,131 @@
+---
+# ORCHESTRATOR-001: Continuous Compliance
+#
+# Continuously validates that the codebase stays compliant with docs/SPEC.md and
+# that the DELEGATE/HANDBACK protocol queue remains structurally sound.
+#
+#   * On pull requests -> SPEC validation runs in `pre-merge` mode and FAILS the
+#     check on any violation, acting as a merge gate.
+#   * On a daily schedule (and manual dispatch) -> SPEC validation runs in
+#     `audit` mode (never fails) and produces a compliance report artifact plus a
+#     job summary, so drift is surfaced even when no PR is open.
+name: Continuous Compliance
+
+on:
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # 03:00 UTC daily
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spec-compliance:
+    name: SPEC Compliance Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml pytest
+
+      - name: Determine validation mode and diff range
+        id: ctx
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "mode=pre-merge" >> "$GITHUB_OUTPUT"
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            echo "mode=audit" >> "$GITHUB_OUTPUT"
+            # Scheduled/manual: audit the last day of history (fallback to last commit)
+            base="$(git rev-list -n 1 --before='24 hours ago' HEAD || true)"
+            [ -z "$base" ] && base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+            head="$(git rev-parse HEAD)"
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          git diff "$base" "$head" > /tmp/compliance.diff || true
+          echo "Diff range: $base..$head ($(wc -l < /tmp/compliance.diff) lines)"
+
+      - name: Run SPEC validator
+        id: spec
+        run: |
+          set +e
+          python3 src/skills/spec-validator/scripts/spec_validator.py \
+            --spec docs/SPEC.md \
+            --diff /tmp/compliance.diff \
+            --mode "${{ steps.ctx.outputs.mode }}" \
+            --format markdown \
+            --output /tmp/spec-compliance.md
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Publish compliance report to job summary
+        if: always()
+        run: |
+          {
+            echo "# Continuous Compliance Report"
+            echo ""
+            echo "- Event: \`${{ github.event_name }}\`"
+            echo "- Mode: \`${{ steps.ctx.outputs.mode }}\`"
+            echo "- Range: \`${{ steps.ctx.outputs.base }}..${{ steps.ctx.outputs.head }}\`"
+            echo ""
+            cat /tmp/spec-compliance.md 2>/dev/null || echo "_No SPEC report produced._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload compliance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-compliance-report
+          path: /tmp/spec-compliance.md
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Enforce SPEC gate (pull requests only)
+        if: steps.ctx.outputs.mode == 'pre-merge'
+        run: |
+          if [ "${{ steps.spec.outputs.exit }}" != "0" ]; then
+            echo "::error::SPEC compliance violations detected — see job summary."
+            exit 1
+          fi
+          echo "SPEC compliance gate passed."
+
+  protocol-consistency:
+    name: Protocol Queue Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml pytest
+
+      - name: Run framework consistency tests
+        run: |
+          if [ -f tests/test_framework_consistency.py ]; then
+            python3 -m pytest tests/test_framework_consistency.py -v
+          else
+            echo "No framework consistency tests found; skipping."
+          fi
