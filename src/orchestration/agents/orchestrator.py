@@ -703,9 +703,10 @@ class QueueManager:
         _session_id = session_id or self.session_id
         _harness = harness or self.harness
         
-        if self._using_isolation:
-            # New path: ~/.agentic-engineers/{harness}/{session_id}
-            return Path.home() / ".agentic-engineers" / _harness / _session_id
+        if self._using_isolation and _QUEUE_ISOLATION is not None:
+            # Canonical layout A (queue-isolation skill):
+            # ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue
+            return _QUEUE_ISOLATION.get_queue_path(_session_id, _harness)
         else:
             # Legacy path: queue base directory
             return self.base_dir / _session_id
