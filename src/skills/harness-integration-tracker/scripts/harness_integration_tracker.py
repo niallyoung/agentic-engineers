@@ -659,8 +659,8 @@ def main():
     except Exception as e:
         print(f"❌ Error: {e}", file=sys.stderr)
         if args.verbose:
-            import traceback
-            traceback.print_exc()
+            import logging
+            logging.exception("Detailed error context")
         return 1
 
 
