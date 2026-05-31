@@ -72,6 +72,7 @@ map_model_opencode() {
 		claude-haiku-4.5|claude-haiku-4-5)   echo "github-copilot/claude-haiku-4-5" ;;
 		claude-sonnet-4.6|claude-sonnet-4-6) echo "github-copilot/claude-sonnet-4-6" ;;
 		claude-sonnet-4.5|claude-sonnet-4-5) echo "github-copilot/claude-sonnet-4-5" ;;
+		claude-opus-4.8|claude-opus-4-8)     echo "github-copilot/claude-opus-4-8" ;;
 		claude-opus-4.7|claude-opus-4-7)     echo "github-copilot/claude-opus-4-7" ;;
 		claude-opus-4.6|claude-opus-4-6)     echo "github-copilot/claude-opus-4-6" ;;
 		claude-opus-4.5|claude-opus-4-5)     echo "github-copilot/claude-opus-4-5" ;;
@@ -297,6 +298,31 @@ write_config() {
           "name": "Claude Opus 4.7",
           "family": "claude",
           "release_date": "2025-05-01",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0.000015,
+            "output": 0.00006,
+            "cache_read": 0.00000075,
+            "cache_write": 0.0000075
+          },
+          "limit": {
+            "context": 200000,
+            "output": 8192
+          },
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "status": "active"
+        },
+        "claude-opus-4-8": {
+          "id": "claude-opus-4-8",
+          "name": "Claude Opus 4.8",
+          "family": "claude",
+          "release_date": "2025-08-01",
           "attachment": true,
           "reasoning": true,
           "temperature": true,
