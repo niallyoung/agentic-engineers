@@ -1,5 +1,5 @@
 ---
-name: agentic-engine{service-name}
+name: agentic-engineers
 description: Central system definition and bootstrap configuration for all CLI harnesses
 type: system
 ---

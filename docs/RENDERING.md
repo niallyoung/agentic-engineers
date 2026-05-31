@@ -87,8 +87,8 @@ agents:
    - `config/token_budget.yaml` → `dist/specs/token_budget.yaml`
 
 4. **Marker files** — written to track managed files for safe uninstall:
-   - Skills: `<skill_dir>/.agentic-engine{service-name}`
-   - Agents: `agents/.agentic-engine{service-name}` (manifest file)
+   - Skills: `<skill_dir>/.agentic-engine-<harness>` (e.g. `.agentic-engine-claude`)
+   - Agents: `agents/.agentic-engine-<harness>` (manifest file, e.g. `.agentic-engine-claude`)
    - Specs: `dist/specs/.agentic-engine-specs`
 
 #### Renderer library architecture (post-consolidation):

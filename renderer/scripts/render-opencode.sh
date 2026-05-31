@@ -13,7 +13,7 @@
 #   - Agents:        src/agents/<name>-agent.md   →  $OPENCODE/agents/<name>.md
 #                    (frontmatter rewritten to OpenCode subagent shape: mode/model/temperature/permission)
 #
-# Marker file (.agentic-engine{service-name}) tracks which targets are ours.
+# Marker file (.agentic-engine-opencode) tracks which targets are ours.
 # Existing user files are never overwritten.
 #
 # OpenCode docs note (verified https://opencode.ai/docs/config 2026-05-15):
@@ -39,9 +39,9 @@ DST_SKILLS="$OPENCODE/skills"
 DST_AGENTS="$OPENCODE/agents"
 DST_CONFIG="$OPENCODE/opencode.jsonc"
 DST_RULES="$OPENCODE/AGENTS.md"
-SKILL_MARKER=".agentic-engine{service-name}"
+SKILL_MARKER=".agentic-engine-opencode"
 # Agents are single files; we use a sidecar manifest to track managed names.
-AGENT_MANIFEST="$DST_AGENTS/.agentic-engine{service-name}"
+AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-opencode"
 # Sentinel string embedded as a JSONC comment so we can detect ours vs foreign.
 # Top-level non-schema keys are rejected by OpenCode's strict config validator
 # (additionalProperties: false on Config). Using `.jsonc` + `//` comment keeps
