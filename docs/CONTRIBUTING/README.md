@@ -530,6 +530,125 @@ Different harnesses have incompatible model format requirements:
 
 ---
 
+## Automation Roadmap (Phase 4–6)
+
+This section consolidates opportunities to automate manual workflows and reduce human churn. See [`docs/automation-analysis.md`](../automation-analysis.md) for full analysis (session artifact).
+
+### Phase 4: Git Hooks Enforcement (HIGH PRIORITY)
+
+**Current State:** Pre-commit and pre-push hooks validate but only warn; they do not reject commits.
+**Gap:** Several checks should REJECT commits instead of warning.
+
+#### 4.1 Pre-Commit: File Permissions Enforcement
+- **Implementation:** Update `.githooks/pre-commit` to REJECT commits with executable `.md`, `.yaml`, `.json` files
+- **Reject if:** Scripts are NOT executable (`+x`)
+- **Allow bypass:** `ENFORCE_PERMS=0` for git-related workflows (rare)
+- **Effort:** 30 minutes
+
+#### 4.2 Pre-Commit: Staging Purity
+- **Implementation:** Validate that only staged changes are committed (no uncommitted changes outside staging area)
+- **Reject if:** `git status --short` shows unstaged changes
+- **Exception:** `.gitignore`'d files are OK
+- **Effort:** 45 minutes
+
+#### 4.3 Commit Message Task ID Enforcement
+- **Current State:** `commit-msg` hook validates format; warnings are informational only
+- **Gap:** Task ID format and conventional commits should be ERRORS (not warnings)
+- **Implementation:**
+  - Require task ID format: `YYYY-MM-DD-kebab-case`
+  - Require conventional commit: `type(scope): subject`
+  - Reject if missing (allow `GIT_SKIP_HOOKS=1` bypass with audit trail)
+- **Effort:** 20 minutes
+
+**Implementation Priority:**
+| Item | Effort | Impact | Blocker? |
+|------|--------|--------|----------|
+| File permissions REJECT | 30min | Medium | No |
+| Staging purity check | 45min | Medium | No |
+| Task ID enforcement | 20min | High | No |
+
+---
+
+### Phase 5: PR & Merge Automation (MEDIUM PRIORITY)
+
+#### 5.1 PR Body Auto-Generation (Future)
+- **Input:** Commit messages + SPEC.md cross-references
+- **Output:** Structured PR body (scannable, consistent)
+- **New skill:** `pr-body-generator` (reusable)
+- **Trigger:** CI on PR creation, or on-demand
+- **Effort:** 2–3 hours
+
+#### 5.2 Merge Strategy Enforcement (Future)
+- **Policy:** Always squash feature branches
+- **Implementation:** GitHub branch protection (simpler than custom workflow)
+- **Effort:** 1 hour
+
+#### 5.3 Post-Merge Branch Cleanup (NICE-TO-HAVE)
+- **Current:** Manual `gh pr merge --delete-branch`
+- **Future:** GitHub Actions post-merge workflow
+- **Effort:** 30 minutes
+
+---
+
+### Phase 6: Extended Memory & Observability (FUTURE)
+
+See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness checklist (session artifact).
+
+**Current Status:** Code ready for merge (all CI checks passing, no regressions).
+
+**Deferred Phases:**
+- **Phase 5:** External memory-API infrastructure (REST/GraphQL backend)
+- **Phase 6:** Metrics aggregation & observability (Prometheus + Grafana)
+
+---
+
+## OpenCode Renderer (Phase 4 Details)
+
+The `renderer/scripts/render-opencode.sh` emits agent frontmatter for OpenCode integration. Two defects prevent correct thinking/reasoning emission and overstate permission enforcement.
+
+See [`docs/OPENCODE-RENDERER-FIX-PLAN.md`](../OPENCODE-RENDERER-FIX-PLAN.md) for full analysis (session artifact).
+
+### Defect 1: No-op `thinking:` Block
+
+**Current:** Emits `thinking:` key (lines 762–769), but OpenCode ignores it (not in `KNOWN_KEYS`).
+**Impact:** Extended thinking never enabled for principal-engineer, security-engineer.
+**Fix:** Replace with supported `variant:` emission (requires variant support in provider block).
+
+### Defect 2: Uniform Permissions vs. Claimed Granularity
+
+**Current:** Every agent gets identical `permission:` block (allow-all).
+**Claim (false):** "Each agent has granular permissions enforced by OpenCode" (AGENTS.md).
+**Impact:** Review roles (quality, lead, model-engineer) incorrectly receive `edit: allow` and `bash: allow`.
+**Fix:** Implement least-privilege matrix (baseline `"*": deny`, explicit allows per role).
+
+### Proposed Per-Role Permission Matrix
+
+| Role | read | glob | grep | webfetch | websearch | edit | bash | task |
+|------|:----:|:----:|:----:|:--------:|:---------:|:----:|:----:|:----:|
+| orchestrator      | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| principal-engineer| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| senior-engineer   | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| engineer          | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| lead-engineer     | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| quality-engineer  | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| security-engineer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| model-engineer    | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+
+**Rationale:** Orchestrator routes without direct edits. Review roles are read-only. Implementation roles get edit/bash. Only orchestrator and senior-engineer may spawn subagents.
+
+### Implementation Steps (Phase 4)
+
+1. Remove the `thinking:` case from `render-opencode.sh` (lines 762–769)
+2. Add per-role `variant` emission for reasoning-capable roles
+3. Confirm/extend provider blocks in `opencode.jsonc` (variants + reasoning flag)
+4. Replace uniform permission block with least-privilege per-role lookup
+5. Gate `task` permission to orchestrator and senior-engineer only
+6. Add `websearch: allow` to research-capable roles
+7. Fix documentation: regenerate permission table from matrix, not hardcoded claims
+8. Validate: run renderer, parse `KNOWN_KEYS`, assert compliance
+
+---
+
 ## References
 
 - **Agent Roster:** [`src/AGENTS.md`](src/AGENTS.md) — all roles and responsibilities
