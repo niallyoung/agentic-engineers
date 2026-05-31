@@ -723,6 +723,17 @@ make install-claude        # Claude Code (IDE)
 make install-pi            # π.dev (experimental)
 ```
 
+By default the framework installs under your home directory (`$HOME`). To
+install into an alternate root — for sandboxed or end-to-end testing without
+touching your real config — pass `DESTDIR`:
+
+```bash
+make install DESTDIR=/tmp/ae-install-test   # installs under /tmp/ae-install-test
+```
+
+When `DESTDIR` differs from `$HOME`, the git-hook installation step is skipped
+(hooks only make sense in your real checkout).
+
 ### Using the Orchestrator
 
 The Orchestrator coordinates complex tasks across agents. Set up the recommended aliases in `~/.zshrc` or `~/.bashrc`:

@@ -236,3 +236,68 @@ def test_cli_summary_dispatch(tmp_path, queue_root, capsys):
     rc = _cli(tmp_path, "--json", "summary")
     assert rc == 0
     assert json.loads(capsys.readouterr().out)["total"] == 1
+
+
+def test_cli_invalid_older_than_returns_2(tmp_path, queue_root, capsys):
+    """A negative --older-than raises QueueQueryError → clean exit code 2."""
+    rc = _cli(tmp_path, "orphans", "--older-than", "-5")
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+
+
+def test_cli_human_readable_output(tmp_path, queue_root, capsys):
+    """Without --json the size command prints plain 'state: count' lines."""
+    _write_json_task(queue_root, "incoming", "h1")
+    rc = _cli(tmp_path, "states")
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "incoming: 1" in out
+    assert "processing: 0" in out
+
+
+def test_cli_human_readable_list(tmp_path, queue_root, capsys):
+    """Without --json, ls prints one task_id per line."""
+    _write_json_task(queue_root, "incoming", "plain-task")
+    rc = _cli(tmp_path, "ls", "--state", "incoming")
+    assert rc == 0
+    assert "plain-task" in capsys.readouterr().out
+
+
+# --- corrupt-file tolerance ------------------------------------------------
+
+def test_corrupt_task_file_does_not_abort_query(query, queue_root):
+    """A malformed task must surface as an _error entry, not crash the query."""
+    _write_json_task(queue_root, "incoming", "good")
+    (queue_root / "incoming" / "broken.json").write_text("{not valid json", encoding="utf-8")
+    tasks = {t["task_id"]: t for t in query.ls("incoming")}
+    assert "good" in tasks
+    assert "_error" in tasks["broken"]
+
+
+# --- fallback (installed-harness) path-math parity --------------------------
+
+def test_fallback_used_when_queue_isolation_unavailable(tmp_path, monkeypatch):
+    """When queue_isolation cannot be imported, _import_queue_isolation returns a
+    drift-free fallback that yields the identical canonical layout-A path so the
+    skill still works once installed (where _meta/ is excluded)."""
+    import scripts.queue_query as qq
+
+    # Simulate the meta-skill being absent: poison the module so `import
+    # queue_isolation` raises ImportError inside _import_queue_isolation.
+    monkeypatch.setitem(sys.modules, "queue_isolation", None)
+    resolved = qq._import_queue_isolation()
+    assert isinstance(resolved, qq._FallbackQueueIsolation)
+
+    got = resolved.get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
+    expected = qi.get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
+    assert got == expected
+
+
+def test_fallback_rejects_path_traversal(tmp_path):
+    """The fallback validates components, blocking traversal injection."""
+    from scripts.queue_query import _FallbackQueueIsolation
+
+    fb = _FallbackQueueIsolation()
+    with pytest.raises(QueueQueryError):
+        fb.get_queue_path("../escape", HARNESS, base_dir=tmp_path)
+
