@@ -13,6 +13,19 @@ make install && make verify && make test
 
 You're ready to contribute.
 
+### Python Version (Pinned: 3.11)
+
+This project targets **Python 3.11**. CI and the Docker container are the **source of truth** — all GitHub Actions workflows and the `Dockerfile` use Python 3.11, and `setup.py` requires `>=3.11`. A `.python-version` file pins 3.11 for pyenv/local tooling.
+
+To run the test suite under the exact CI Python version without installing 3.11 locally, use the container target:
+
+```bash
+make test-ci         # Run tests in the python:3.11 container (matches CI exactly)
+make test-ci-force   # Strict mode: fails if any test fails
+```
+
+This avoids environment-specific failures caused by a mismatched local Python version.
+
 ---
 
 ## Contributor Setup Guide
