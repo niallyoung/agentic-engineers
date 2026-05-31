@@ -6,6 +6,13 @@ This document indexes all available (active) skills in the agentic-engineers fra
 **Status:** 14 active skills; 5 deprecated skills archived in `docs/archive/deprecated-skills/`  
 **See also:** [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md) for archived skills and alternatives
 
+## Integration Skills
+
+| Skill | Description | Category | Model |
+|-------|-------------|----------|-------|
+| harness-integration-tracker | Discover and document harness integration code/docs across all harnesses | integration | - |
+| opencode-feature-sync | Drift/feature sync between OpenCode and agentic-engineers renderer | integration | - |
+
 ## Validation Skills
 
 | Skill | Description | Category | Model |

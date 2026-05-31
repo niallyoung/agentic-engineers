@@ -63,7 +63,7 @@ class SkillInteropMatrix:
             timeout_seconds: Timeout for each skill invocation
             latency_threshold_ms: Latency threshold (5s default)
         """
-        self.repo_root = repo_root or Path("/Users/niall/git/agentic-engineers")
+        self.repo_root = repo_root or self._get_default_repo_root()
         self.artifacts_dir = artifacts_dir or (self.repo_root / "artifacts" / "evals")
         self.timeout_seconds = timeout_seconds
         self.latency_threshold_ms = latency_threshold_ms
@@ -72,6 +72,30 @@ class SkillInteropMatrix:
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
         
         self.result = MatrixResult()
+
+    def _get_default_repo_root(self) -> Path:
+        """Get the default repository root path.
+        
+        Uses environment variable REPO_ROOT if set, otherwise derives from current file location.
+        Falls back to Path.home() for CI compatibility.
+        """
+        import os
+        
+        # Check environment variable first
+        env_root = os.getenv("REPO_ROOT")
+        if env_root:
+            return Path(env_root)
+        
+        # Try to derive from current file location (relative to src/evals)
+        current_file = Path(__file__)
+        if "src/evals" in str(current_file):
+            # Navigate up from src/evals/skill_matrix/matrix_runner.py
+            repo_root = current_file.parent.parent.parent.parent
+            if (repo_root / ".git").exists():
+                return repo_root
+        
+        # Fallback for CI: use home directory
+        return Path.home() / "git" / "agentic-engineers"
 
     def get_available_skills(self) -> List[str]:
         """Get list of available skills."""
