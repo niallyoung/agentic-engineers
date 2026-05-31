@@ -24,11 +24,11 @@
 |---|------|-------|----------|-----------|---------|
 | 1 | **Orchestrator** | `claude-haiku-4.5` | ❌ | $0.03 | Entry point — routes all work via decision tree, never does implementation |
 | 2 | **Engineer** | `claude-haiku-4.5` | ❌ | $0.05 | Executes well-scoped, pre-planned tasks (file edits, tests, simple fixes) |
-| 3 | **Model Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Analyses HANDBACK metrics; recommends model/effort adjustments |
+| 3 | **Model Engineer** | `claude-sonnet-4.5` | ✅ | $0.09 | Analyses HANDBACK metrics; recommends model/effort adjustments |
 | 4 | **Quality Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Post-implementation validation; model suitability assessment |
 | 5 | **Lead Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
-| 6 | **Senior Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
-| 7 | **Principal Engineer** | `claude-opus-4-6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
+| 6 | **Senior Engineer** | `claude-sonnet-4.5` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
+| 7 | **Principal Engineer** | `claude-opus-4.6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
  | 8 | **Security Engineer** | `claude-opus-4.8` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
 
 ### Cost Tiers
@@ -128,7 +128,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
+**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
 
 **Purpose:** Plans unscoped work; handles multi-file implementations requiring architectural awareness.
 
@@ -203,7 +203,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
+**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
 
 **Purpose:** Analyse HANDBACK efficiency metrics; recommend model or effort tier adjustments.
 

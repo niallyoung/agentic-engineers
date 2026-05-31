@@ -27,6 +27,7 @@ This document indexes all available (active) skills in the agentic-engineers fra
 | Skill | Description | Category | Model |
 |-------|-------------|----------|-------|
 | queue-management | Atomic queue operations for DELEGATE/HANDBACK lifecycle | queue | - |
+| queue-query | Read-only visibility over the local queue (size, ls, orphans, done-summary) | queue | claude-haiku-4.5 |
 
 ## Metrics Skills
 

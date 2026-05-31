@@ -33,8 +33,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -46,14 +49,81 @@ _QUEUE_ISOLATION_SCRIPTS = (
     / "_meta" / "queue-isolation" / "scripts"
 )
 
+# Canonical path-component allow-list (mirrors queue_isolation._SAFE_PATH_COMPONENT_RE).
+_SAFE_PATH_COMPONENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+class _FallbackQueueIsolation:
+    """Minimal, drift-free re-implementation of the subset of ``queue_isolation``
+    that queue-query needs, used only when the canonical meta-skill module is not
+    importable (e.g. in a rendered/installed harness where ``_meta/`` is excluded).
+
+    It reproduces *layout A* exactly —
+    ``<base>/artifacts/<session_id>/<harness>/queue/`` — so queue paths remain
+    identical whether or not the canonical module is present.
+    """
+
+    @staticmethod
+    def _validate_path_component(value: str, *, field: str) -> str:
+        if not isinstance(value, str):
+            raise QueueQueryError(
+                f"{field} must be a string, got {type(value).__name__}"
+            )
+        if value in ("", ".", "..") or "/" in value or "\\" in value or "\x00" in value:
+            raise QueueQueryError(f"{field} is empty or a path reference: {value!r}")
+        if not _SAFE_PATH_COMPONENT_RE.match(value):
+            raise QueueQueryError(
+                f"{field} contains illegal characters "
+                f"(allowed: letters, digits, '.', '_', '-'): {value!r}"
+            )
+        return value
+
+    @staticmethod
+    def detect_harness() -> str:
+        explicit = os.environ.get("AGENTIC_HARNESS")
+        if explicit:
+            return explicit
+        if os.environ.get("CLAUDE_SESSION_ID"):
+            return "claude"
+        if os.environ.get("COPILOT_SESSION_ID"):
+            return "copilot"
+        if os.environ.get("OPENAI_API_KEY"):
+            return "gpt"
+        return "local"
+
+    @staticmethod
+    def get_session_id() -> str:
+        for var in ("AGENTIC_SESSION_ID", "CLAUDE_SESSION_ID", "COPILOT_SESSION_ID"):
+            value = os.environ.get(var)
+            if value:
+                return value
+        return str(uuid.uuid4())
+
+    def get_queue_path(
+        self, session_id: str, harness: str, *, base_dir: Optional[Path] = None
+    ) -> Path:
+        base = Path(base_dir) if base_dir is not None else Path.home() / ".agentic-engineers"
+        safe_session = self._validate_path_component(session_id, field="session_id")
+        safe_harness = self._validate_path_component(harness, field="harness")
+        return base / "artifacts" / safe_session / safe_harness / "queue"
+
 
 def _import_queue_isolation():
-    """Import the canonical queue_isolation module (raises if unavailable)."""
-    if str(_QUEUE_ISOLATION_SCRIPTS) not in sys.path:
-        sys.path.insert(0, str(_QUEUE_ISOLATION_SCRIPTS))
-    import queue_isolation as _qi  # noqa: PLC0415
+    """Return the canonical ``queue_isolation`` module, or a drift-free fallback.
 
-    return _qi
+    Prefers the real meta-skill module (source checkouts). When it is not
+    importable — e.g. in a rendered harness where ``_meta/`` is excluded from
+    the install tree — a :class:`_FallbackQueueIsolation` is returned so the
+    skill remains functional instead of crashing with ``ModuleNotFoundError``.
+    """
+    try:
+        if str(_QUEUE_ISOLATION_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(_QUEUE_ISOLATION_SCRIPTS))
+        import queue_isolation as _qi  # noqa: PLC0415
+
+        return _qi
+    except ImportError:
+        return _FallbackQueueIsolation()
 
 
 # Optional YAML support — only required when YAML task files are present.
@@ -118,20 +188,34 @@ class QueueQuery:
 
     @staticmethod
     def _load_task(path: Path) -> Dict:
-        """Parse a task file (json or yaml); attach read-only queue metadata."""
-        text = path.read_text(encoding="utf-8")
-        data: Dict
-        if path.suffix.lower() in (".yaml", ".yml"):
-            if _yaml is None:  # pragma: no cover
-                raise QueueQueryError(
-                    "PyYAML is required to read YAML task files but is not installed"
-                )
-            data = _yaml.safe_load(text) or {}
-        else:
-            data = json.loads(text) if text.strip() else {}
+        """Parse a task file (json or yaml); attach read-only queue metadata.
+
+        A visibility tool must never abort on a single malformed file, so parse
+        failures are captured per-file as an ``_error`` marker rather than
+        propagating.
+        """
+        stat = path.stat()
+        meta = {
+            "task_id": path.stem,
+            "_file": path.name,
+            "_path": str(path),
+            "_mtime": stat.st_mtime,
+        }
+        try:
+            text = path.read_text(encoding="utf-8")
+            if path.suffix.lower() in (".yaml", ".yml"):
+                if _yaml is None:
+                    raise QueueQueryError(
+                        "PyYAML is required to read YAML task files but is not installed"
+                    )
+                data = _yaml.safe_load(text) or {}
+            else:
+                data = json.loads(text) if text.strip() else {}
+        except (ValueError, QueueQueryError, OSError) as exc:
+            # Surface the problem on the task itself instead of crashing the query.
+            return {**meta, "_error": str(exc)}
         if not isinstance(data, dict):
             data = {"_raw": data}
-        stat = path.stat()
         data.setdefault("task_id", path.stem)
         data["_file"] = path.name
         data["_path"] = str(path)
@@ -265,7 +349,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             _emit(query.find_orphans(args.older_than), as_json=args.as_json)
         elif args.command == "summary":
             _emit(query.summarize_done(), as_json=args.as_json)
-    except QueueQueryError as exc:
+    except (QueueQueryError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     return 0
