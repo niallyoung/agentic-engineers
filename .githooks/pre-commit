@@ -736,6 +736,169 @@ fi
 
 # ─── End: Queue Path Centralization Enforcement ────────────────────────────────
 
+# ─── DELEGATE/HANDBACK Protocol Validation ─────────────────────────────────────
+# Validates DELEGATE and HANDBACK YAML files committed to ensure protocol compliance:
+#   - DELEGATE: requires task_id (YYYY-MM-DD-kebab format), valid role, plan field
+#   - HANDBACK: requires task_id, valid status, quality_score, tokens_in
+#   - Both: detect hardcoded secrets/passwords
+#   - Both: support .yaml and .yml extensions
+#
+# Bypass: BYPASS_HOOK_VALIDATION=true (for emergency) or SKIP_HOOKS=1
+#
+# NOTE: This block is the single source of truth for protocol validation and is
+# installed verbatim by CI (cp .githooks/pre-commit .git/hooks/pre-commit). It
+# previously existed ONLY in a stale local .git/hooks/pre-commit, which caused the
+# tests/test_git_hooks.py::TestLegacyPreCommitHook suite to fail in CI.
+
+# Local message helper for protocol violations. Echoes to stdout (tests assert on
+# stdout, e.g. "status" in result.stdout) and increments PROTOCOL_ERRORS via the
+# explicit counter below — it does NOT touch the global fail()/ERRORS to avoid
+# double-counting; ERRORS is reconciled once at the end of this block.
+pfail() {
+  echo "❌ $1"
+}
+
+echo ""
+echo "🔐 Validating DELEGATE/HANDBACK protocol files..."
+
+PROTOCOL_ERRORS=0
+
+# Check bypass flag first
+if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
+  echo "⚠️  pre-commit: BYPASS_HOOK_VALIDATION=true — skipping DELEGATE/HANDBACK validation" >&2
+else
+  # Get all staged YAML/YML files
+  STAGED_YAML_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true)
+
+  for file in $STAGED_YAML_FILES; do
+    [ -f "$file" ] || continue
+
+    # Get file content from staging area
+    file_content=$(git show ":$file" 2>/dev/null) || continue
+
+    # Skip if not a DELEGATE or HANDBACK file
+    if ! echo "$file_content" | grep -q "^handoff_type:\s*"; then
+      continue
+    fi
+
+    handoff_type=$(echo "$file_content" | grep "^handoff_type:" | head -1 | sed 's/^handoff_type:\s*//;s/\s*$//' | xargs)
+
+    case "$handoff_type" in
+      DELEGATE)
+        # Validate DELEGATE protocol
+        task_id=$(echo "$file_content" | grep "^task_id:" | head -1 | sed 's/^task_id:\s*//;s/\s*$//' | xargs || true)
+        role=$(echo "$file_content" | grep "^role:" | head -1 | sed 's/^role:\s*//;s/\s*$//' | xargs || true)
+        plan=$(echo "$file_content" | grep "^plan:" | head -1 || true)
+
+        # Check for secret patterns
+        if echo "$file_content" | grep -qiE "^\s*(password|api_key|secret|token|credential):\s*"; then
+          pfail "🔓 SECURITY: DELEGATE file $file contains secret field(s) — remove before committing"
+          pfail "   → Use context/notes to reference secrets, never hardcode"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check task_id presence
+        if [ -z "$task_id" ]; then
+          pfail "DELEGATE $file: missing required field 'task_id'"
+          pfail "   → Format: YYYY-MM-DD-kebab-case (e.g., 2026-05-16-impl-feature-x)"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        elif ! echo "$task_id" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$'; then
+          pfail "DELEGATE $file: invalid task_id format '$task_id'"
+          pfail "   → Must be: YYYY-MM-DD-kebab-case (e.g., 2026-05-16-impl-feature)"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check role validity
+        if [ -z "$role" ]; then
+          pfail "DELEGATE $file: missing required field 'role'"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        elif ! echo "$role" | grep -qE '^(engineer|senior_engineer|lead_engineer|principal_engineer|security_engineer|quality_engineer|model_engineer)$'; then
+          pfail "DELEGATE $file: invalid role '$role'"
+          pfail "   → Valid roles: engineer, senior_engineer, lead_engineer, principal_engineer,"
+          pfail "                  security_engineer, quality_engineer, model_engineer"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check plan presence
+        if [ -z "$plan" ]; then
+          pfail "DELEGATE $file: missing required field 'plan'"
+          pfail "   → plan must be a non-empty list"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+        ;;
+
+      HANDBACK)
+        # Validate HANDBACK protocol
+        task_id=$(echo "$file_content" | grep "^task_id:" | head -1 | sed 's/^task_id:\s*//;s/\s*$//' | xargs || true)
+        status=$(echo "$file_content" | grep "^status:" | head -1 | sed 's/^status:\s*//;s/\s*$//' | xargs || true)
+        quality_score=$(echo "$file_content" | grep "^quality_score:" | head -1 | sed 's/^quality_score:\s*//;s/\s*$//' | xargs || true)
+        tokens_in=$(echo "$file_content" | grep "^tokens_in:" | head -1 | sed 's/^tokens_in:\s*//;s/\s*$//' | xargs || true)
+
+        # Check for secret patterns
+        if echo "$file_content" | grep -qiE "^\s*(password|api_key|secret|token|credential):\s*"; then
+          pfail "🔓 SECURITY: HANDBACK file $file contains secret field(s) — remove before committing"
+          pfail "   → Use notes field to reference, never hardcode"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check task_id
+        if [ -z "$task_id" ]; then
+          pfail "HANDBACK $file: missing required field 'task_id'"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check status validity
+        if [ -z "$status" ]; then
+          pfail "HANDBACK $file: missing required field 'status'"
+          pfail "   → Valid statuses: complete, failed, partial, blocked"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        elif ! echo "$status" | grep -qE '^(complete|failed|partial|blocked)$'; then
+          pfail "HANDBACK $file: invalid status '$status'"
+          pfail "   → Valid statuses: complete, failed, partial, blocked"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check quality_score
+        if [ -z "$quality_score" ]; then
+          pfail "HANDBACK $file: missing required field 'quality_score'"
+          pfail "   → Must be numeric (0-100)"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check tokens_in
+        if [ -z "$tokens_in" ]; then
+          pfail "HANDBACK $file: missing required field 'tokens_in'"
+          pfail "   → Must be numeric"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+        ;;
+    esac
+  done
+
+  if [ "$PROTOCOL_ERRORS" -gt 0 ]; then
+    echo ""
+    echo "❌ pre-commit: $PROTOCOL_ERRORS DELEGATE/HANDBACK validation error(s) found"
+    echo "   Emergency bypass (document reason in commit msg):"
+    echo "   → BYPASS_HOOK_VALIDATION=true git commit (bypasses only DELEGATE/HANDBACK validation)"
+    echo "   → SKIP_HOOKS=1 git commit (bypasses all checks)"
+    ERRORS=$((ERRORS + PROTOCOL_ERRORS))
+  else
+    # Report when DELEGATE/HANDBACK files were validated successfully
+    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true | while read -r f; do
+      content=$(git show ":$f" 2>/dev/null)
+      if echo "$content" | grep -q "^handoff_type:"; then
+        echo "1"
+      fi
+    done | wc -l)
+
+    if [ "$protocol_file_count" -gt 0 ]; then
+      echo "✅ DELEGATE/HANDBACK validation passed ($protocol_file_count protocol file(s) validated)"
+    fi
+  fi
+fi
+
+# ─── End: DELEGATE/HANDBACK Protocol Validation ────────────────────────────────
+
 
 if [ "$ERRORS" -gt 0 ]; then
   echo ""

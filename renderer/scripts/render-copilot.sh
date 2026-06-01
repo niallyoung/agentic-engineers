@@ -10,7 +10,7 @@
 # (those are docs, not skills). Existing user-owned skills (no source counterpart)
 # are never touched.
 #
-# A marker file (.agentic-engine{service-name}) is written to each managed skill so
+# A marker file (.agentic-engine-copilot) is written to each managed skill so
 # uninstall can identify what to remove.
 #
 # Streaming modes:
@@ -25,7 +25,7 @@ MODE="${3:-install}"
 
 SRC_SKILLS="$REPO_ROOT/src/skills"
 DST_SKILLS="$COPILOT/skills"
-MARKER=".agentic-engine{service-name}"
+MARKER=".agentic-engine-copilot"
 
 [ -d "$SRC_SKILLS" ] || { echo "❌ no source: $SRC_SKILLS" >&2; exit 1; }
 

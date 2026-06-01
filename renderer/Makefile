@@ -66,7 +66,7 @@ install-copilot: ## Install skills into ~/.copilot/ (skills only; agents not sup
 	@$(CURDIR)/scripts/render-copilot.sh "$(REPO_ROOT)" "$(COPILOT)"
 	@echo "✅ Installation to ~/.copilot/ complete (skills only)"
 
-uninstall-copilot: ## Remove agentic-engine{service-name} files from ~/.copilot/
+uninstall-copilot: ## Remove agentic-engine-copilot files from ~/.copilot/
 	@$(CURDIR)/scripts/render-copilot.sh "$(REPO_ROOT)" "$(COPILOT)" --uninstall
 
 # -----------------------------------------------------------------------------
@@ -75,7 +75,7 @@ uninstall-copilot: ## Remove agentic-engine{service-name} files from ~/.copilot/
 install-claude: ## Render agents → ~/.claude/agents/, skills → ~/.claude/skills/
 	@$(CURDIR)/scripts/render-claude.sh "$(REPO_ROOT)" "$(CLAUDE)"
 
-uninstall-claude: ## Remove agentic-engine{service-name} files from ~/.claude/
+uninstall-claude: ## Remove agentic-engine-claude files from ~/.claude/
 	@$(CURDIR)/scripts/render-claude.sh "$(REPO_ROOT)" "$(CLAUDE)" --uninstall
 
 uninstall-all: uninstall-github uninstall-copilot uninstall-claude ## Uninstall from all targets

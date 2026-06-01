@@ -11,7 +11,7 @@
 #   - Agents:  src/agents/<name>-agent.md   →  ~/.claude/agents/<name>.md
 #              (frontmatter transformed to Claude Code subagent shape)
 #
-# Marker file (.agentic-engine{service-name}) tracks which targets are ours.
+# Marker file (.agentic-engine-claude) tracks which targets are ours.
 # Existing user files are never overwritten.
 
 set -euo pipefail
@@ -31,9 +31,9 @@ SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
 DST_SKILLS="$CLAUDE/skills"
 DST_AGENTS="$CLAUDE/agents"
-SKILL_MARKER=".agentic-engine{service-name}"
+SKILL_MARKER=".agentic-engine-claude"
 # Agents are single files; we use a sidecar manifest to track managed names.
-AGENT_MANIFEST="$DST_AGENTS/.agentic-engine{service-name}"
+AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-claude"
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
