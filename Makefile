@@ -136,19 +136,15 @@ install-copilot: render-copilot ## Install rendered agents + skills → ~/.copil
 	fi
 	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills)"
 
-install-claude: render-claude ## Install rendered agents → ~/.claude/
-	@echo "📋 Validating dist/claude/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ dist/claude/skills/ missing — run 'make render-claude' first" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ dist/claude/agents/ missing — run 'make render-claude' first" && exit 1)
-	@echo "   ✓ dist/claude/ validated"
-	@echo "📦 Installing from dist/claude/ → $(DESTDIR)/.claude/..."
+install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing Claude agents + skills → $(DESTDIR)/.claude/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.claude"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/claude/" "$(DESTDIR)/.claude/"
-	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
-		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
-		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
-		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
-	fi
+	@# Use render-claude.sh's install function directly. Unlike a plain
+	@# 'rsync dist/claude/ → ~/.claude/', this enforces foreign-file protection
+	@# (skips overwriting user-authored agents/skills) and normalises permissions
+	@# (rsync --chmod=D755,F644). render-claude.sh renders fresh from source and
+	@# installs git hooks internally when the target is $(HOME).
+	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude"
 	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
 
 # Copilot CLI now supports custom agents. Agents are rendered alongside skills.

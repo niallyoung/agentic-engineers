@@ -69,8 +69,15 @@ case "$MODE" in
 		if [ -f "$AGENT_MANIFEST" ]; then
 			while IFS= read -r name; do
 				[ -n "$name" ] || continue
-				rm -f "$DST_AGENTS/$name.md"
-				count_a=$((count_a + 1))
+				# Validate the manifest entry is a safe, simple name before using it
+				# in a destructive rm. Reject anything containing path separators,
+				# '..', or other characters that could escape $DST_AGENTS.
+				if [[ "$name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+					rm -f "$DST_AGENTS/$name.md"
+					count_a=$((count_a + 1))
+				else
+					echo "  $(_yellow "⚠️  WARNING: skipping invalid name in manifest: $name")" >&2
+				fi
 			done < "$AGENT_MANIFEST"
 			rm -f "$AGENT_MANIFEST"
 		fi
@@ -113,7 +120,7 @@ case "$MODE" in
 			fi
 			skill_start=$(date +%s)
 			_use_color && printf '\r  ⏳ %-30s' "$name"
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
+			rsync -a --chmod=D755,F644 --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			skill_end=$(date +%s)
 			skill_duration=$(( skill_end - skill_start ))
@@ -126,7 +133,10 @@ case "$MODE" in
 		echo "📖 Parsing canonical agent definitions from docs/AGENTS.md..."
 		AGENTS_MD="$REPO_ROOT/docs/AGENTS.md"
 		AGENTS_MAP=$(mktemp)
-		trap "rm -f '$AGENTS_MAP'" EXIT
+		# Clean up the temp map on normal exit AND on interrupt/terminate signals.
+		# Single-quote the command so $AGENTS_MAP is expanded when the trap fires,
+		# not when the trap is installed.
+		trap 'rm -f "$AGENTS_MAP"' EXIT INT TERM
 		
 		if [ ! -f "$AGENTS_MD" ]; then
 			echo "❌ error: $AGENTS_MD not found" >&2
