@@ -97,9 +97,19 @@ class SkillInteropMatrix:
         # Fallback for CI: use home directory
         return Path.home() / "git" / "agentic-engineers"
 
+    def _skills_dir(self) -> Path:
+        """Return the rendered skills directory.
+
+        Uses the repository's deterministic rendered output
+        ``<repo_root>/dist/claude/skills`` (produced by ``make render-claude``)
+        rather than the developer's ``~/.claude/skills``, which is only
+        populated by ``make install-claude`` and is empty on fresh CI runners.
+        """
+        return self.repo_root / "dist" / "claude" / "skills"
+
     def get_available_skills(self) -> List[str]:
         """Get list of available skills."""
-        skills_dir = Path.home() / ".claude" / "skills"
+        skills_dir = self._skills_dir()
         if not skills_dir.exists():
             return []
         
@@ -119,7 +129,7 @@ class SkillInteropMatrix:
         Returns:
             Tuple of (is_available, error_message)
         """
-        skills_dir = Path.home() / ".claude" / "skills"
+        skills_dir = self._skills_dir()
         skill_path = skills_dir / skill_name
         
         if not skill_path.exists():
@@ -273,7 +283,7 @@ class SkillInteropMatrix:
                 }
             
             # Check 2: Skill metadata validation
-            skills_dir = Path.home() / ".claude" / "skills"
+            skills_dir = self._skills_dir()
             skill_path = skills_dir / skill_name
             
             if not skill_path.exists():

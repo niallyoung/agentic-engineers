@@ -327,7 +327,9 @@ validate_deployment() {
 # normalise whitespace. Output is safe to embed as: description: "OUTPUT"
 # Usage: desc_escaped=$(printf '%s' "$desc" | yaml_escape_inline)
 yaml_escape_inline() {
-	tr '\n' ' ' | sed -e 's/"/'\''/g' -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//'
+	# Escape backslashes FIRST (before quotes/whitespace) so a trailing or embedded
+	# backslash in the source description cannot corrupt the double-quoted YAML value.
+	tr '\n' ' ' | sed -e 's/\\/\\\\/g' -e 's/"/'\''/g' -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//'
 }
 
 # Map full model name to short form (for Claude Code, etc).
@@ -420,7 +422,11 @@ parse_agents_md() {
 lookup_agent_metadata() {
 	local agent_name="$1"
 	local agents_map="$2"
-	grep "^${agent_name}|" "$agents_map" | cut -d'|' -f2- || echo ""
+	# Match the agent name as a literal string against the first '|'-delimited field.
+	# Using awk with field equality (rather than grep "^name|") avoids treating
+	# regex metacharacters in agent_name (e.g. '.', '+') as patterns, which could
+	# otherwise match the wrong entry.
+	awk -v n="$agent_name" -F'|' '$1 == n { sub(/^[^|]*\|/, ""); print; exit }' "$agents_map" || echo ""
 }
 
 # ============================================================================
