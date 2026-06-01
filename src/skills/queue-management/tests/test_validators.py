@@ -148,7 +148,7 @@ class TestHandbackValidation:
         """Test valid HANDBACK."""
         handback = {
             "task_id": "test-task",
-            "status": "complete",
+            "status": "success",
             "quality_score": 85,
             "deliverables": ["deliverable1"],
         }
@@ -172,7 +172,7 @@ class TestHandbackValidation:
         """Test invalid quality_score."""
         handback = {
             "task_id": "test-task",
-            "status": "complete",
+            "status": "success",
             "quality_score": 150,
             "deliverables": ["deliverable1"],
         }

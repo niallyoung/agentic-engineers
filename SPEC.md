@@ -687,6 +687,12 @@ context: "≥20-word prose OR a non-empty array of strings: relevant files, erro
 handoff_type: HANDBACK
 task_id: {matching DELEGATE task_id}
 status: success | failure | partial | blocked | escalate
+# Canonical status enum (runtime-validated):
+#   success  — task completed successfully, all success_criteria met
+#   failure  — task attempted but could not be completed
+#   partial  — some success_criteria met, work remains
+#   blocked  — cannot proceed; external dependency or decision required
+#   escalate — requires higher-tier agent or human intervention
 output: "Summary of what was delivered (any value; key must be present)"
 metrics:
   quality: {0.0-1.0}

@@ -669,7 +669,13 @@ plan: [required for Engineer; step-by-step concrete steps; include Red-Green TDD
 ---
 handoff_type: HANDBACK
 task_id: {matching_delegate_task_id}
-status: complete | blocked | partial
+status: success | failure | partial | blocked | escalate
+# Canonical status enum (runtime-validated):
+#   success  — task completed successfully, all success_criteria met
+#   failure  — task attempted but could not be completed
+#   partial  — some success_criteria met, work remains
+#   blocked  — cannot proceed; external dependency or decision required
+#   escalate — requires higher-tier agent or human intervention
 deliverables: [files changed, tests added, etc.]
 tests: ["make verify": PASS (N tests), coverage: X%]
 tokens_in: {estimate}

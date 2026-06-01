@@ -124,7 +124,7 @@ decision_point: >
 handoff_type: HANDBACK
 task_id: 2026-06-02-principal-redesign-event-store
 timestamp: 2026-06-02T17:30:00Z
-status: complete
+status: success
 decision: OPTION_A_RECOMMENDED
 
 recommendation: |
