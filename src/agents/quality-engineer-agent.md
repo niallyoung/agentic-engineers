@@ -2,6 +2,11 @@
 name: quality-engineer
 description: Post-implementation quality gate; code review; model suitability assessment
 model: claude-sonnet-4.6
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: quality-engineer
 ---
 
 # Quality Engineer Agent — LIVE IMPLEMENTATION

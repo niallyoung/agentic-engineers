@@ -2,6 +2,11 @@
 name: lead-engineer
 description: Code review; quality decisions; medium-complexity planning; architectural guidance
 model: claude-sonnet-4.6
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: lead-engineer
 ---
 
 # Lead Engineer Agent — LIVE IMPLEMENTATION

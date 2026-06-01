@@ -2,6 +2,11 @@
 name: model-engineer
 description: Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks
 model: claude-sonnet-4.5
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: model-engineer
 ---
 
 # Model Engineer Agent — LIVE IMPLEMENTATION

@@ -6,6 +6,11 @@ description: Well-scoped task with pre-written plan; low-medium complexity codin
 # Renderers transform per-harness: OpenCode→hyphens, Claude Code→alias only, Copilot CLI→pass-through
 # See docs/SPEC.md "Model Naming Architecture" for complete per-harness transformation rules
 model: claude-haiku-4.5
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: engineer
 ---
 
 # Engineer Agent — LIVE IMPLEMENTATION

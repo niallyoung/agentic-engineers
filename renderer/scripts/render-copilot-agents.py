@@ -29,14 +29,48 @@ class CopilotAgentRenderer:
         
         yaml_block = match.group(1)
         body = match.group(2)
-        
-        # Parse YAML manually (simple key: value format)
+
+        # Parse YAML manually. Supports `key: value` scalars and block lists:
+        #   key:
+        #     - item1
+        #     - item2
+        # Block-list values are stored as Python lists; scalars as strings.
         frontmatter = {}
-        for line in yaml_block.split('\n'):
-            if ':' in line:
+        lines = yaml_block.split('\n')
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+            # Skip blank lines and comments at column 0.
+            if not stripped or stripped.startswith('#'):
+                i += 1
+                continue
+            # Only treat column-0 `key:` lines as new keys.
+            if re.match(r'^[A-Za-z0-9_]+:', line) and ':' in line:
                 key, value = line.split(':', 1)
-                frontmatter[key.strip()] = value.strip()
-        
+                key = key.strip()
+                value = value.strip()
+                if value:
+                    frontmatter[key] = value
+                else:
+                    # Possible block list — collect following `  - item` lines.
+                    items = []
+                    j = i + 1
+                    while j < len(lines):
+                        nxt = lines[j]
+                        m = re.match(r'^[ \t]+-[ \t]*(.*)$', nxt)
+                        if m:
+                            items.append(m.group(1).strip())
+                            j += 1
+                        elif nxt.strip() == '':
+                            j += 1
+                        else:
+                            break
+                    frontmatter[key] = items if items else ''
+                    i = j
+                    continue
+            i += 1
+
         return frontmatter, body
     
     def validate_frontmatter(self, frontmatter: Dict[str, str]) -> None:
@@ -61,11 +95,28 @@ class CopilotAgentRenderer:
         agent_name = src_file.stem
         dest_file = self.dest_dir / f"{agent_name}.agent.md"
         
+        # Protocol declaration: pass through machine-readable capability keys so
+        # the harness can detect DELEGATE/HANDBACK protocol support.
+        def _as_inline_array(value):
+            if isinstance(value, list):
+                return "[" + ", ".join(value) + "]"
+            return value
+
+        protocol_lines = []
+        if frontmatter.get('accepts'):
+            protocol_lines.append(f"accepts: {_as_inline_array(frontmatter['accepts'])}")
+        if frontmatter.get('returns'):
+            protocol_lines.append(f"returns: {_as_inline_array(frontmatter['returns'])}")
+        role_val = frontmatter.get('role') or agent_name
+        protocol_lines.append(f"role: {role_val}")
+        protocol_block = "\n".join(protocol_lines)
+
         # Rebuild with clean frontmatter (spec-compliant)
         output = f"""---
 name: {frontmatter['name']}
 description: {frontmatter['description']}
 model: {frontmatter['model']}
+{protocol_block}
 ---
 
 {body}"""
