@@ -321,22 +321,31 @@ class ConsistencyChecker:
                         f"(max 10 allowed)"
                     )
             
-            # 3. Check cycles and depth
+            # 3. Check cycles (shared visited set is fine for cycle detection —
+            #    each node only needs to be examined for membership in a cycle once).
             visited = set()
             for task_id in all_task_ids:
                 if task_id not in visited:
-                    cycle_path, max_depth = self._detect_cycle(
+                    cycle_path, _ = self._detect_cycle(
                         task_id, all_tasks[session_id], visited, parent_map
                     )
                     if cycle_path:
                         violations.append(
                             f"Session '{session_id}': Cycle detected: {' → '.join(cycle_path)}"
                         )
-                    if max_depth > 5:
-                        violations.append(
-                            f"Session '{session_id}': Chain depth {max_depth} exceeds max depth of 5 "
-                            f"(task: {task_id})"
-                        )
+
+            # 4. Check depth independently of cycle traversal. The cycle DFS above
+            #    shares a single `visited` set across roots, which truncates depth
+            #    measurement for descendants whose ancestors were already visited.
+            #    Measure each chain's depth from every node via its parent links so
+            #    the result is deterministic regardless of iteration order.
+            for task_id in sorted(all_task_ids):
+                chain_depth = self._chain_depth(task_id, all_tasks[session_id])
+                if chain_depth > 5:
+                    violations.append(
+                        f"Session '{session_id}': Chain depth {chain_depth} exceeds max depth of 5 "
+                        f"(task: {task_id})"
+                    )
         
         return violations
 
@@ -384,6 +393,28 @@ class ConsistencyChecker:
         
         path.pop()
         return None, depth
+
+    def _chain_depth(self, task_id: str, tasks: Dict[str, Dict]) -> int:
+        """
+        Compute the depth (number of parent edges) of a task's ancestor chain.
+
+        Depth is measured in edges: a root task (no parent) has depth 0, a task
+        with one ancestor has depth 1, and so on. Traversal stops if a parent is
+        missing or a cycle is encountered, so it is safe against malformed chains.
+        Independent of any shared visited state, so the result is deterministic.
+        """
+        depth = 0
+        seen: Set[str] = set()
+        current = task_id
+        while current and current not in seen:
+            seen.add(current)
+            task_data = tasks.get(current, {}).get('data', {})
+            parent_id = task_data.get('parent_task_id')
+            if not parent_id or parent_id not in tasks:
+                break
+            depth += 1
+            current = parent_id
+        return depth
 
     def _check_rate_limits(self, all_tasks: Dict[str, Dict[str, Dict]]) -> List[str]:
         """

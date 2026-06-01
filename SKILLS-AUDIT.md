@@ -594,7 +594,7 @@
 **Overall Score:** 58.3/100
 **Category:** UTILITY
 
-**Description:** Runtime protocol validation for DELEGATEs/HANDBACKs against spec-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.
+**Description:** Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.
 
 **Dimension Scores:**
 | Dimension | Score |

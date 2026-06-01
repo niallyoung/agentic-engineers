@@ -257,17 +257,22 @@ def validate_agents(
 
 
 def validate_handback_schema(src_dir: Path, strict: bool = False) -> list[ValidationError]:
-    """Verify AGENTS.md documents the HANDBACK metrics schema.
+    """Verify AGENTS.md documents the canonical HANDBACK schema.
 
-    HANDBACK packets must include a metrics block with:
-      - tokens_used
-      - tokens_estimated
-      - efficiency_ratio
-      - model_used
-      - duration_ms
-      - quality_score  (0.0–1.0, self-assessed by agent)
+    The single source of truth is ``docs/specs/protocol-core-v1.0.yaml`` (enforced
+    at runtime by ``core_protocol_validator.py``). A HANDBACK's required core is:
+      - task_id
+      - status              (success | failure | partial | blocked | escalate)
+      - output
+      - metrics             (object with the four subfields below)
+          - quality         (0.0–1.0, self-assessed by agent)
+          - tokens          (non-negative integer)
+          - cost            (non-negative USD)
+          - duration_seconds (non-negative)
 
-    This validates the protocol documentation, not runtime HANDBACK files.
+    This validates the protocol documentation, not runtime HANDBACK files. It
+    intentionally checks the same field set as the runtime validator so the docs
+    and the validator never drift into separate schemas.
     """
     errors: list[ValidationError] = []
     agents_md_path = src_dir / "AGENTS.md"
@@ -277,13 +282,16 @@ def validate_handback_schema(src_dir: Path, strict: bool = False) -> list[Valida
 
     content = agents_md_path.read_text(encoding="utf-8")
 
+    # Canonical HANDBACK core fields + required metrics subfields.
     required_handback_fields = [
-        "tokens_used",
-        "tokens_estimated",
-        "efficiency_ratio",
-        "model_used",
-        "duration_ms",
-        "quality_score",
+        "task_id",
+        "status",
+        "output",
+        "metrics",
+        "quality",
+        "tokens",
+        "cost",
+        "duration_seconds",
     ]
 
     for field in required_handback_fields:

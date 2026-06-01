@@ -1,0 +1,317 @@
+# =============================================================================
+# Protocol Core Specification v1.0 — Canonical Source of Truth
+# =============================================================================
+#
+# This file is the SINGLE SOURCE OF TRUTH for the DELEGATE/HANDBACK protocol.
+#
+# It is loaded at runtime by:
+#   - src/skills/protocol-validator/scripts/protocol_validator.py
+#   - src/skills/consistency-checker/scripts/consistency_checker.py
+#
+# The runtime validators (core_protocol_validator.py CoreProtocolValidator /
+# ExtensionValidator) are the prescriptive authority for *enforcement*. This
+# file documents and mirrors those rules in JSON-Schema (draft-07) form so the
+# spec, the validators, SPEC.md, and renderer/validate_agents.py all agree on
+# one field set.
+#
+# Precedence when reconciling drift:
+#   1. core_protocol_validator.py  (runtime enforcement — authoritative)
+#   2. docs/specs/protocol-core-v1.0.yaml  (this file — canonical description)
+#   3. SPEC.md  (human-readable narrative — descriptive only)
+#
+# Loader contract (do not rename these top-level keys):
+#   version                     -> spec version string
+#   delegate.core_fields        -> map of required DELEGATE field -> schema
+#   delegate.extensions         -> map of optional DELEGATE field -> schema
+#   handback.core_fields        -> map of required HANDBACK field -> schema
+#   handback.extensions         -> map of optional HANDBACK field -> schema
+# =============================================================================
+
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://agentic-engineers/specs/protocol-core-v1.0.yaml"
+title: "Agentic Engineers DELEGATE/HANDBACK Core Protocol"
+version: "1.0"
+description: >
+  Canonical schema for inter-agent handoff messages. A DELEGATE is sent from an
+  orchestrator (or any delegating agent) to a sub-agent. A HANDBACK is returned
+  from the sub-agent to the delegator. Core fields are strictly enforced;
+  extension fields are loosely validated and forward-compatible (unknown fields
+  produce warnings, never hard failures).
+
+# -----------------------------------------------------------------------------
+# Shared enumerations and reusable definitions
+# -----------------------------------------------------------------------------
+definitions:
+
+  status:
+    description: Terminal disposition of a delegated task as reported in a HANDBACK.
+    type: string
+    enum:
+      - success    # task completed, all success_criteria met
+      - failure    # task attempted but did not meet success_criteria
+      - partial    # some success_criteria met; remainder blocked or deferred
+      - blocked    # could not start/continue; external dependency required
+      - escalate   # requires human or higher-tier agent decision
+
+  effort:
+    description: Relative effort/reasoning budget tier.
+    type: string
+    enum: [low, medium, high]
+
+  agent:
+    description: Recognized agent roles permitted to receive a DELEGATE.
+    type: string
+    enum:
+      - orchestrator
+      - engineer
+      - senior-engineer
+      - lead-engineer
+      - principal-engineer
+      - security-engineer
+      - quality-engineer
+      - model-engineer
+
+  task_id:
+    description: Kebab-case identifier, 3-50 chars total.
+    type: string
+    pattern: "^[a-z0-9][a-z0-9\\-]{1,48}[a-z0-9]$"
+    minLength: 3
+    maxLength: 50
+
+  metrics:
+    description: >
+      Quantitative outcome of a HANDBACK. All four subfields are REQUIRED by the
+      runtime validator (core_protocol_validator.validate_handback_core).
+    type: object
+    required: [quality, tokens, cost, duration_seconds]
+    additionalProperties: true
+    properties:
+      quality:
+        description: Normalized quality score for the delivered work.
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+      tokens:
+        description: Total tokens consumed (input + output). Non-negative integer.
+        type: integer
+        minimum: 0
+      cost:
+        description: Monetary cost in USD. Non-negative number.
+        type: number
+        minimum: 0
+      duration_seconds:
+        description: Wall-clock execution time in seconds. Non-negative number.
+        type: number
+        minimum: 0
+
+# -----------------------------------------------------------------------------
+# DELEGATE message schema
+# -----------------------------------------------------------------------------
+delegate:
+  type: object
+  description: Orchestrator -> Agent task assignment.
+  required:
+    - task_id
+    - skill
+    - agent
+    - scope
+    - success_criteria
+    - plan
+    - context
+
+  # --- Required core fields (strictly enforced) ---------------------------
+  core_fields:
+
+    task_id:
+      $ref: "#/definitions/task_id"
+      description: Unique kebab-case task identifier.
+
+    skill:
+      type: string
+      description: >
+        Name of the skill responsible for the task. Must resolve to an existing
+        entry under skills/ (directory or <skill>.md) at validation time.
+
+    agent:
+      $ref: "#/definitions/agent"
+      description: Target agent role that will execute the task.
+
+    scope:
+      type: string
+      description: >
+        What will be done, to what, and explicit out-of-scope boundaries.
+      minWords: 15
+      x-rationale: >
+        The >=15-word floor is ENFORCED by core_protocol_validator.py
+        (validate_delegate_core, check #4). Its purpose is to force a delegator
+        to articulate a non-trivial, bounded scope rather than a vague one-liner
+        like "fix the bug". Empirically, sub-15-word scopes correlated with
+        ambiguous handoffs and rework. JSON Schema has no native word-count
+        keyword, so "minWords" is a custom annotation; the Python validator is
+        the authority that enforces it.
+
+    success_criteria:
+      type: array
+      description: Measurable outcomes that define "done".
+      minItems: 1
+      items:
+        type: string
+
+    plan:
+      type: array
+      description: >
+        Ordered concrete steps. >=2 steps, each step >=3 words. Include
+        Red-Green TDD phases for code changes.
+      minItems: 2
+      items:
+        type: string
+        minWords: 3
+
+    context:
+      description: >
+        Relevant files, error messages, root-cause analysis, prior art. May be a
+        single prose string (>=20 words) OR a non-empty array of strings.
+      oneOf:
+        - type: string
+          minWords: 20
+        - type: array
+          minItems: 1
+          items:
+            type: string
+
+  # --- Optional extension fields (loosely validated, forward-compatible) ---
+  extensions:
+
+    model:
+      type: string
+      description: Specific model identifier requested for the task.
+
+    effort:
+      $ref: "#/definitions/effort"
+      description: Requested effort tier.
+
+    parent_task_id:
+      type: string
+      description: task_id of the DELEGATE that spawned this one (for sub-tasks).
+
+    parallel_plan:
+      type: array
+      description: Sub-tasks that may be executed concurrently.
+      items:
+        type: string
+
+    tokens_estimate:
+      type: integer
+      minimum: 0
+      description: Pre-execution estimate of token budget.
+
+    budget:
+      type: number
+      minimum: 0
+      description: Monetary budget ceiling in USD.
+
+    priority:
+      type: integer
+      minimum: 1
+      maximum: 10
+      description: Scheduling priority, 1 (lowest) - 10 (highest).
+
+    deadline:
+      type: string
+      description: ISO-8601 timestamp by which the task should complete.
+
+    dependencies:
+      type: array
+      items:
+        type: string
+      description: task_ids that must complete before this task starts.
+
+    retry_context:
+      type: object
+      description: Diagnostic context carried over from a prior failed attempt.
+
+# -----------------------------------------------------------------------------
+# HANDBACK message schema
+# -----------------------------------------------------------------------------
+handback:
+  type: object
+  description: Agent -> Orchestrator result report.
+  required:
+    - task_id
+    - status
+    - output
+    - metrics
+
+  # --- Required core fields (strictly enforced) ---------------------------
+  core_fields:
+
+    task_id:
+      $ref: "#/definitions/task_id"
+      description: Must match the originating DELEGATE's task_id.
+
+    status:
+      $ref: "#/definitions/status"
+      description: Terminal disposition of the task.
+
+    output:
+      description: >
+        The result payload. Any value is acceptable (text, object, array) but
+        the key MUST be present. Typically a human-readable summary of what was
+        delivered.
+
+    metrics:
+      $ref: "#/definitions/metrics"
+      description: Required quantitative outcome (quality, tokens, cost, duration_seconds).
+
+  # --- Optional extension fields (loosely validated, forward-compatible) ---
+  extensions:
+
+    escalations:
+      type: integer
+      minimum: 0
+      description: Number of times the task was escalated during execution.
+
+    model_assessment:
+      type: string
+      description: >
+        Quality/Model Engineer judgement on whether the assigned model was
+        appropriate (e.g. haiku_suitable | sonnet_would_be_better | opus_required).
+
+    confidence:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: Agent's self-reported confidence in the result (0.0-1.0).
+
+    retry_count:
+      type: integer
+      minimum: 0
+      description: Number of internal retries performed.
+
+    model_used:
+      type: string
+      description: Actual model that executed the task.
+
+    effort_actual:
+      $ref: "#/definitions/effort"
+      description: Actual effort tier expended.
+
+    children_created:
+      type: array
+      items:
+        type: string
+      description: task_ids of sub-DELEGATEs created while executing this task.
+
+    children_results:
+      type: array
+      description: HANDBACK summaries from spawned sub-tasks.
+
+    flags:
+      type: array
+      items:
+        type: string
+      description: Free-form advisory flags raised during execution.
+
+    error:
+      type: string
+      description: Error detail when status is failure/blocked.

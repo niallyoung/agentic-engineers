@@ -55,7 +55,7 @@ All skills tested across all harnesses:
 #### DELEGATE Generation
 - Auto-generates unique task IDs (YYYY-MM-DD-kebab-case format)
 - Includes scope, success criteria, and multi-step plan
-- Follows spec-core-v1.0.yaml schema
+- Follows protocol-core-v1.0.yaml schema
 - Supports custom task IDs for testing
 
 #### HANDBACK Validation

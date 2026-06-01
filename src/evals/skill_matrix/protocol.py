@@ -44,7 +44,7 @@ class DelegateGenerator:
             "scope": f"Test skill '{skill_name}' on harness '{harness}' for interoperability validation",
             "success_criteria": [
                 f"Skill '{skill_name}' loads successfully on harness '{harness}'",
-                "DELEGATE block is valid per spec-core-v1.0.yaml",
+                "DELEGATE block is valid per protocol-core-v1.0.yaml",
                 "HANDBACK block is returned with proper schema",
                 "Latency is within acceptable bounds (<5 seconds)",
                 "No critical errors in skill execution",

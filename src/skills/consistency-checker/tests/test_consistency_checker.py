@@ -48,7 +48,7 @@ def valid_delegate():
         'scope': 'This is a valid scope with at least fifteen words to satisfy the requirement for comprehensive scope definition',
         'success_criteria': ['Success criterion'],
         'plan': ['Step one here now please do this', 'Step two here now please do this'],
-        'context': 'Context with at least twenty words required for validation test case setup and preparation of this test implementation',
+        'context': 'Context with at least twenty words required for validation test case setup and preparation of this particular test implementation scenario here',
     }
 
 
@@ -125,14 +125,16 @@ class TestQueueScanning:
         task_file = session_dir / 'incoming' / 'task-001.yaml'
         with open(task_file, 'w') as f:
             yaml.dump(valid_delegate, f)
-        
-        # Add handback to completed
-        task_file = session_dir / 'completed' / 'task-001.yaml'
+
+        # Add handback to completed. Tasks are keyed by their task_id, so use a
+        # distinct id from the incoming delegate to represent two separate tasks.
+        valid_handback = {**valid_handback, 'task_id': 'test-task-002'}
+        task_file = session_dir / 'completed' / 'task-002.yaml'
         with open(task_file, 'w') as f:
             yaml.dump(valid_handback, f)
-        
+
         tasks = checker._scan_session('session-1')
-        assert len(tasks) == 2  # Both task-001 versions (incoming and completed)
+        assert len(tasks) == 2  # incoming delegate + completed handback (distinct task_ids)
 
 
 class TestSchemaValidation:
@@ -241,8 +243,10 @@ class TestStructuralValidation:
 
     def test_detect_excessive_depth(self, checker, valid_delegate):
         """Chain depth >5 flagged"""
-        # Create chain: A -> B -> C -> D -> E -> F (depth 6)
-        letters = 'ABCDEF'
+        # Create chain A -> B -> C -> D -> E -> F -> G.
+        # Depth is measured in edges, so a 7-node chain has max depth 6 (>5),
+        # which is the smallest chain that should trip the depth>5 rule.
+        letters = 'ABCDEFG'
         all_tasks = {'session-1': {}}
         
         for i, letter in enumerate(letters):
@@ -361,10 +365,10 @@ class TestBackwardCompatibility:
             'task_id': 'auth-impl-001',
             'skill': 'queue-management',
             'agent': 'senior-engineer',
-            'scope': 'Implement JWT authentication with comprehensive testing and documentation for security',
+            'scope': 'Implement JWT authentication with comprehensive testing and documentation for security across the gateway and all downstream services',
             'success_criteria': ['All tests pass', 'Security reviewed'],
-            'plan': ['Design JWT', 'Implement auth', 'Test thoroughly', 'Document'],
-            'context': 'Critical security component required for Q1 roadmap delivery',
+            'plan': ['Design JWT scheme', 'Implement auth flow', 'Test thoroughly end to end', 'Document the integration'],
+            'context': 'Critical security component required for the Q1 roadmap delivery; the gateway currently lacks token validation and must be hardened before launch',
             'effort': 'high',
             'priority': 9,
         }

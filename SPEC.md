@@ -647,41 +647,59 @@ The following paths are **DEPRECATED and MUST NOT be used**:
 
 ## DELEGATE/HANDBACK Protocol
 
+The canonical, machine-readable schema lives in
+[`docs/specs/protocol-core-v1.0.yaml`](docs/specs/protocol-core-v1.0.yaml) and is
+enforced at runtime by `core_protocol_validator.py`. The runtime validator is the
+prescriptive authority; this section is descriptive and MUST stay aligned with it.
+
 ### DELEGATE Format (Orchestrator → Agent)
+
+**Required core fields** (strictly enforced):
 
 ```yaml
 ---
 handoff_type: DELEGATE
-task_id: {unique_id}
-role: Engineer | Senior Engineer | Lead Engineer | Quality Engineer | ...
-model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4-6 | ...
-effort: low | medium | high | max
-scope: "Clear one-sentence scope + explicit out-of-scope boundaries"
-context: [relevant files, error messages, root cause analysis]
-success_criteria: [measurable criteria; tests must pass, coverage maintained, etc.]
-plan: [required for Engineer; step-by-step concrete steps; include Red-Green TDD phases for code changes]
+task_id: {kebab-case, 3-50 chars}
+skill: {skill name; must exist under skills/}
+agent: orchestrator | engineer | senior-engineer | lead-engineer | principal-engineer | security-engineer | quality-engineer | model-engineer
+scope: "What will be done, to what, plus explicit out-of-scope boundaries (≥15 words)"
+success_criteria: [≥1 measurable outcomes; tests pass, coverage maintained, etc.]
+plan: [≥2 concrete steps, each ≥3 words; include Red-Green TDD phases for code changes]
+context: "≥20-word prose OR a non-empty array of strings: relevant files, errors, root-cause"
 ---
 ```
 
+**Optional extension fields** (loosely validated, forward-compatible):
+`model`, `effort` (low|medium|high), `parent_task_id`, `parallel_plan`,
+`tokens_estimate`, `budget`, `priority` (1-10), `deadline`, `dependencies`,
+`retry_context`. Unknown fields are logged as warnings, never hard failures.
+
+> **Why `scope ≥15 words`?** The floor forces a bounded, non-trivial scope
+> instead of a vague one-liner ("fix the bug"), which empirically correlated with
+> ambiguous handoffs and rework. It is enforced by `core_protocol_validator.py`.
+
 ### HANDBACK Format (Agent → Orchestrator)
+
+**Required core fields** (strictly enforced):
 
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: {matching_delegate_task_id}
-status: complete | blocked | partial
-deliverables: [files changed, tests added, etc.]
-tests: ["make verify": PASS (N tests), coverage: X%]
-tokens_in: {estimate}
-tokens_out: {estimate}
-model: {actual_model_used}
-effort: {actual_effort}
-duration_minutes: {wall_clock_time}
-escalations: {count}
-model_assessment: [for Quality Engineer] haiku_suitable | sonnet_would_be_better | opus_required
-confidence: [0.0-1.0, for Model Engineer feedback]
+task_id: {matching DELEGATE task_id}
+status: success | failure | partial | blocked | escalate
+output: "Summary of what was delivered (any value; key must be present)"
+metrics:
+  quality: {0.0-1.0}
+  tokens: {non-negative integer}
+  cost: {non-negative USD}
+  duration_seconds: {non-negative}
 ---
 ```
+
+**Optional extension fields** (loosely validated, forward-compatible):
+`escalations`, `model_assessment` (haiku_suitable | sonnet_would_be_better |
+opus_required), `confidence` (0.0-1.0), `retry_count`, `model_used`,
+`effort_actual`, `children_created`, `children_results`, `flags`, `error`.
 
 ---
 
