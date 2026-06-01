@@ -743,6 +743,13 @@ case "$MODE" in
 				agent_mode="subagent"
 			fi
 
+			# Protocol declaration: read machine-readable capability keys from the
+			# source agent frontmatter so the harness can detect protocol support.
+			accepts_list=$(extract_fm_list "$src_file" "accepts")
+			returns_list=$(extract_fm_list "$src_file" "returns")
+			role_val=$(extract_fm "$src_file" "role")
+			[ -n "$role_val" ] || role_val="$name"
+
 			# Emit OpenCode subagent frontmatter + transformed body.
 			{
 				echo "---"
@@ -750,6 +757,9 @@ case "$MODE" in
 				echo "mode: $agent_mode"
 				echo "model: $model_full"
 				echo "temperature: $temp"
+				[ -n "$accepts_list" ] && echo "accepts: [$accepts_list]"
+				[ -n "$returns_list" ] && echo "returns: [$returns_list]"
+				echo "role: $role_val"
 				echo "permission:"
 				echo "  read: allow"
 				echo "  edit: allow"

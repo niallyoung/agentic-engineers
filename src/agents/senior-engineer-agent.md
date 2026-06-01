@@ -2,6 +2,11 @@
 name: senior-engineer
 description: Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes
 model: claude-sonnet-4.5
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: senior-engineer
 ---
 
 # Senior Engineer Agent — LIVE IMPLEMENTATION

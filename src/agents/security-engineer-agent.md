@@ -2,6 +2,11 @@
 name: security-engineer
 description: Security analysis; threat modeling; vulnerability audits; final escalation path
 model: claude-opus-4.8
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: security-engineer
 ---
 
 # Security Engineer Agent

@@ -107,6 +107,43 @@ extract_fm() {
 	' "$file"
 }
 
+# Returns a YAML block-list value from frontmatter as a comma-joined string.
+# Handles both inline arrays (key: [A, B]) and block lists:
+#   key:
+#     - A
+#     - B
+# Returns empty string if the key is absent or has no items.
+# Usage: extract_fm_list <file> <key>
+extract_fm_list() {
+	local file="$1" key="$2"
+	awk -v key="$key" '
+		/^---$/ { fm = !fm; if (!fm) exit; next }
+		!fm { next }
+		# Inline array form: key: [A, B]
+		$0 ~ "^"key":[ \t]*\\[" {
+			line = $0
+			sub("^"key":[ \t]*\\[", "", line)
+			sub(/\].*$/, "", line)
+			gsub(/[ \t]/, "", line)
+			print line
+			exit
+		}
+		# Block list header: key:
+		$0 ~ "^"key":[ \t]*$" { collecting = 1; next }
+		collecting {
+			# A frontmatter key at column 0 ends the block list.
+			if ($0 ~ /^[A-Za-z0-9_]+:/) { collecting = 0 }
+			else if ($0 ~ /^[ \t]*-[ \t]*/) {
+				item = $0
+				sub(/^[ \t]*-[ \t]*/, "", item)
+				sub(/[ \t]+$/, "", item)
+				out = (out == "" ? item : out "," item)
+			}
+		}
+		END { if (out != "") print out }
+	' "$file"
+}
+
 # Strip source frontmatter (everything between first two --- lines), leaving body.
 # Usage: strip_fm <file>
 strip_fm() {
