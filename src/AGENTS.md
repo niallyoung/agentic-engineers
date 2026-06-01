@@ -341,7 +341,7 @@ estimated_cost: 0.09           # $ estimate based on model + budget
 task_id: TASK-NNN
 type: HANDBACK
 role: senior-engineer
-status: COMPLETE               # COMPLETE | PARTIAL | BLOCKED | ESCALATE
+status: success               # success | failure | partial | blocked | escalate
 
 summary: |
   One-paragraph summary of what was done and any important decisions made.
@@ -369,7 +369,7 @@ metrics:
 
 issues: []                     # list any blockers or anomalies
 
-escalation: null               # or ESCALATION block (see below) if status: ESCALATE
+escalation: null               # or ESCALATION block (see below) if status: escalate
 ```
 
 ### ESCALATION Packet Format
@@ -565,7 +565,7 @@ MODEL_USED: claude-haiku-4.5
 task_id: TASK-202
 type: HANDBACK
 role: engineer
-status: ESCALATE
+status: escalate
 
 summary: |
   Payment refactor requires changes to 5 files across payment/ and checkout/ packages.
@@ -655,7 +655,7 @@ estimated_cost: 0.09
 **Step 3: Senior hits arch escalation trigger → escalates to Lead**
 
 Senior reads related files, determines the PaymentRef type crosses a domain boundary that
-requires an explicit API contract decision, and emits a HANDBACK with `status: ESCALATE`
+requires an explicit API contract decision, and emits a HANDBACK with `status: escalate`
 targeting Lead Engineer — including its analysis as `findings_so_far`.
 
 **Step 4: Lead makes the decision, produces implementation DELEGATEs**

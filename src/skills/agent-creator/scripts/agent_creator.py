@@ -363,7 +363,7 @@ for the TDD RED-phase test suite.
     def _handback_example(self, config: AgentConfig) -> str:
         return (
             f"task_id: YYYY-MM-DD-{config.name}-task-name\n"
-            f"status: complete\n"
+            f"status: success\n"
             f"deliverables:\n"
             f"  - src/skills/{config.name}/SKILL.md\n"
             f"tests:\n"

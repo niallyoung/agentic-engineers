@@ -186,7 +186,7 @@ Engineer → Orchestrator (via HANDBACK block):
 ---
 handoff_type: HANDBACK
 task_id: 2026-04-24-fix-token-timeout
-status: complete
+status: success
 deliverables:
   - Modified: lambda/api/main.go:92
   - Added: lambda/api/main_test.go (TestTokenExpiryGracePeriod)
@@ -653,7 +653,7 @@ When a parent task completes, its HANDBACK includes aggregated results from all 
 ---
 handoff_type: HANDBACK
 task_id: payment-analysis-001
-status: complete
+status: success
 deliverables:
   - Analysis report: payment-analysis-report.md
 children_created:
@@ -662,15 +662,15 @@ children_created:
   - payment-analysis-crypto-001
 children_results:
   payment-analysis-stripe-001:
-    status: complete
+    status: success
     output: {risks: 2, mitigations: 3}
     quality: 92
   payment-analysis-paypal-001:
-    status: complete
+    status: success
     output: {risks: 1, mitigations: 2}
     quality: 88
   payment-analysis-crypto-001:
-    status: complete
+    status: success
     output: {risks: 3, mitigations: 4}
     quality: 85
 children_failed: []
