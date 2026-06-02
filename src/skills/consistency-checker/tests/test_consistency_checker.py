@@ -126,15 +126,17 @@ class TestQueueScanning:
         with open(task_file, 'w') as f:
             yaml.dump(valid_delegate, f)
 
-        # Add handback to completed. Tasks are keyed by their task_id, so use a
-        # distinct id from the incoming delegate to represent two separate tasks.
+        # Add handback to completed. _scan_session keys tasks by the file stem
+        # (task_file.stem), so use a distinct filename from the incoming delegate
+        # to represent two separate tasks. The handback's task_id is also set
+        # distinctly to keep the fixtures self-consistent.
         valid_handback = {**valid_handback, 'task_id': 'test-task-002'}
         task_file = session_dir / 'completed' / 'task-002.yaml'
         with open(task_file, 'w') as f:
             yaml.dump(valid_handback, f)
 
         tasks = checker._scan_session('session-1')
-        assert len(tasks) == 2  # incoming delegate + completed handback (distinct task_ids)
+        assert len(tasks) == 2  # incoming delegate + completed handback (distinct file stems)
 
 
 class TestSchemaValidation:
