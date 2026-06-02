@@ -539,6 +539,26 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 9b. GITCONFIG CREDENTIAL GUARD (token-in-gitconfig incident prevention)
+# ─────────────────────────────────────────────────────────────────────────────
+# Blocks a push if the developer's ~/.gitconfig or ~/.git-credentials contains
+# an embedded GitHub token (the `url.insteadOf` / `credential.helper store`
+# footgun). This protects against accidentally operating with — and later
+# committing tooling that reproduces — a leaked-on-disk credential.
+echo ""
+echo "🔐 Checking gitconfig for embedded tokens..."
+GITCONFIG_GUARD="$REPO_ROOT/scripts/check-gitconfig-no-tokens.sh"
+if [ -x "$GITCONFIG_GUARD" ]; then
+  if "$GITCONFIG_GUARD"; then
+    pass "gitconfig clean (no embedded tokens)"
+  else
+    fail "Embedded token / plaintext credential found in gitconfig — see remediation above"
+  fi
+else
+  warn "scripts/check-gitconfig-no-tokens.sh not found or not executable — skipping gitconfig guard"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 10. SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""

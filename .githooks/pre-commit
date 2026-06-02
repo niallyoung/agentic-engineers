@@ -179,9 +179,16 @@ for f in $STAGED_FILES; do
     SECRETS_ERRORS=$((SECRETS_ERRORS + 1))
   fi
 
-  # Check for explicit secret markers (env vars with sensitive values)
-  if git show ":$f" 2>/dev/null | grep -qE '(OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN|AWS_SECRET)'; then
-    fail "Sensitive environment variable found in $f — should use .env or secrets manager"
+  # Check for explicit secret markers (env vars assigned an inline literal value).
+  # NOTE: We only flag an *assignment to a literal* (e.g. GITHUB_TOKEN="ghp_...").
+  # A bare reference is the SAFE pattern and must NOT be flagged — e.g.
+  # `${{ secrets.GITHUB_TOKEN }}`, `auth_env: GITHUB_TOKEN`, `os.environ["GITHUB_TOKEN"]`,
+  # or documentation mentioning the variable name. Matching the bare name produced
+  # false positives on safe CI config and on the token-in-gitconfig security docs.
+  if git show ":$f" 2>/dev/null \
+       | grep -vE '(secrets\.|env\.|vars\.|\$\{|environ|getenv|auth_env|setenv|delenv)' \
+       | grep -qE '(OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN|AWS_SECRET[A-Z_]*)[[:space:]]*[:=][[:space:]]*["\x27]?[A-Za-z0-9/_+-]{16,}'; then
+    fail "Sensitive environment variable assigned a literal value in $f — use .env or a secrets manager"
     SECRETS_ERRORS=$((SECRETS_ERRORS + 1))
   fi
 done

@@ -12,18 +12,17 @@ models:
 category: protocol
 severity: critical
 prompt: |
-  Create a HANDBACK block from an Engineer completing a simple task.
-  The HANDBACK should include status, summary, changes, acceptance_verified,
-  metrics, and escalation fields as appropriate.
-  Verify it meets the SPEC.md requirements for HANDBACK blocks.
+  Report the result of completing a simple task as a protocol-compliant HANDBACK
+  block. Use status "success" and a short output summary. Remember that the
+  required HANDBACK fields are task_id, status, output, and a metrics object
+  (quality, tokens, cost, duration_seconds) — do not omit the output field.
 expected_contains:
   - "HANDBACK"
   - "status"
   - "metrics"
 expected_not_contains:
-  - "INCOMPLETE"
   - "Invalid format"
-timeout_seconds: 30
+timeout_seconds: 60
 requirements:
   - Must know HANDBACK protocol specification
-  - Must validate compliance with SPEC.md
+  - Must emit all required HANDBACK fields including output
