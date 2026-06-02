@@ -61,7 +61,7 @@ opencode-todo-sync check
 ### Programmatic Usage
 
 ```python
-from skills.todo_maintenance import TodoSyncManager
+from src.skills.todo_maintenance import TodoSyncManager
 
 manager = TodoSyncManager(
     todo_path=Path("TODO.md"),
@@ -339,13 +339,13 @@ The skill includes comprehensive tests with >80% coverage:
 
 ```bash
 # Run all tests
-pytest skills/todo-maintenance/tests/ -v
+pytest src/skills/todo-maintenance/tests/ -v
 
 # Run with coverage
-pytest skills/todo-maintenance/tests/ --cov=skills.todo_maintenance --cov-report=html
+pytest src/skills/todo-maintenance/tests/ --cov=src/skills/todo-maintenance --cov-report=html
 
 # Run specific test
-pytest skills/todo-maintenance/tests/test_sync_todo.py::TestDelegateEntry -v
+pytest src/skills/todo-maintenance/tests/test_sync_todo.py::TestDelegateEntry -v
 ```
 
 ### Test Coverage
