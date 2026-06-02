@@ -13,7 +13,7 @@ from .models import (
     FailureMode,
     SkillInvocationTest,
 )
-from .protocol import DelegateGenerator, HandbackValidator
+from .protocol import DelegateGenerator
 
 
 class SkillInteropMatrix:

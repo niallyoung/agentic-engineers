@@ -101,98 +101,15 @@ Test includes:
         
         return output_path
 
-
-class HandbackValidator:
-    """Validate HANDBACK blocks conform to protocol."""
-
-    REQUIRED_FIELDS = {
-        "handoff_type",
-        "task_id",
-        "type",
-        "status",
-        "spec_version",
-    }
-
-    OPTIONAL_FIELDS = {
-        "deliverables",
-        "tests",
-        "quality_score",
-        "tokens_in",
-        "tokens_out",
-        "cost_usd",
-        "effort_actual",
-        "duration_minutes",
-        "notes",
-        "error_message",
-    }
-
-    STATUS_VALUES = {
-        "complete",
-        "failed",
-        "partial",
-        "blocked",
-        "skipped",
-    }
-
-    @classmethod
-    def validate_handback(cls, handback: Dict[str, Any]) -> Tuple[bool, List[str]]:
-        """Validate HANDBACK schema compliance.
-        
-        Args:
-            handback: HANDBACK block dictionary
-            
-        Returns:
-            Tuple of (is_valid, list_of_errors)
-        """
-        errors = []
-        
-        # Check required fields
-        for field in cls.REQUIRED_FIELDS:
-            if field not in handback:
-                errors.append(f"Missing required field: {field}")
-        
-        # Check handoff_type
-        if handback.get("handoff_type") != "HANDBACK":
-            errors.append(f"handoff_type must be 'HANDBACK', got '{handback.get('handoff_type')}'")
-        
-        # Check status
-        status = handback.get("status")
-        if status not in cls.STATUS_VALUES:
-            errors.append(f"status must be one of {cls.STATUS_VALUES}, got '{status}'")
-        
-        # Check spec_version
-        spec_version = handback.get("spec_version")
-        if spec_version != "1.0":
-            errors.append(f"spec_version must be '1.0', got '{spec_version}'")
-        
-        # Check task_id format
-        task_id = handback.get("task_id")
-        if task_id and not isinstance(task_id, str):
-            errors.append(f"task_id must be a string, got {type(task_id)}")
-        
-        return len(errors) == 0, errors
-
-    @classmethod
-    def load_and_validate_handback(cls, handback_path: Path) -> Tuple[bool, Optional[Dict[str, Any]], List[str]]:
-        """Load HANDBACK from YAML and validate.
-        
-        Args:
-            handback_path: Path to HANDBACK YAML file
-            
-        Returns:
-            Tuple of (is_valid, handback_dict, errors)
-        """
-        errors = []
-        
-        if not handback_path.exists():
-            return False, None, [f"HANDBACK file not found: {handback_path}"]
-        
-        try:
-            with open(handback_path, 'r') as f:
-                handback = yaml.safe_load(f)
-        except Exception as e:
-            return False, None, [f"Failed to parse HANDBACK YAML: {str(e)}"]
-        
-        is_valid, validation_errors = cls.validate_handback(handback)
-        
-        return is_valid, handback, validation_errors
+# ---------------------------------------------------------------------------
+# HandbackValidator REMOVED — consolidated into the protocol-validation skill.
+#
+# The canonical DELEGATE/HANDBACK validator now lives at:
+#     src/skills/protocol-validation/scripts/protocol_validation.py
+#
+# Import the functional API directly:
+#     from protocol_validation import validate_delegate, validate_handback
+#
+# This module retains only DelegateGenerator, which builds standard DELEGATE
+# blocks for the skill-interoperability matrix tests.
+# ---------------------------------------------------------------------------
