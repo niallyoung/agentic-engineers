@@ -2,6 +2,11 @@
 name: principal-engineer
 description: Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos
 model: claude-opus-4.6
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: principal-engineer
 ---
 
 # Principal Engineer Agent — LIVE IMPLEMENTATION
@@ -124,7 +129,7 @@ decision_point: >
 handoff_type: HANDBACK
 task_id: 2026-06-02-principal-redesign-event-store
 timestamp: 2026-06-02T17:30:00Z
-status: complete
+status: success
 decision: OPTION_A_RECOMMENDED
 
 recommendation: |

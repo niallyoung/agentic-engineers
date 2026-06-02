@@ -1,6 +1,6 @@
 ---
 name: protocol-validator
-description: Runtime protocol validation for DELEGATEs/HANDBACKs against spec-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.
+description: Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1.0.yaml. Validates core fields, extensions, and unknown fields with forward-compatibility support. <5ms validation time.
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+. Requires Python 3.8+
 metadata:

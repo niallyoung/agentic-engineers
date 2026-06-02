@@ -51,10 +51,10 @@ Orchestrator must implement discovery in its SKILL:
 ### Findings
 - ✅ Validation rules documented in SKILL.md
 - ✅ ProtocolValidator class exists in protocol-validator SKILL
-- ❌ **GAP:** No spec-core-v1.0.yaml file found
-  - SPEC.md references this file but it doesn't exist
-  - Protocol-validator SKILL expects it at docs/specs/protocol-core-v1.0.yaml
-  - Validation currently uses inline rules, not external spec
+- ✅ **RESOLVED:** Canonical spec now exists at docs/specs/protocol-core-v1.0.yaml
+  - (Historical finding was: no protocol-core-v1.0.yaml file found)
+  - SPEC.md and the protocol-validator SKILL reference this file
+  - Validation rules in the file mirror the runtime validator (core_protocol_validator.py)
   
 - ❌ **GAP:** No DELEGATE validation integrated into Orchestrator
   - Protocol-validator is available but not called in Orchestrator

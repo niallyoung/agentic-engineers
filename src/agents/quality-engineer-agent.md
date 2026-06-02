@@ -2,6 +2,11 @@
 name: quality-engineer
 description: Post-implementation quality gate; code review; model suitability assessment
 model: claude-sonnet-4.6
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: quality-engineer
 ---
 
 # Quality Engineer Agent — LIVE IMPLEMENTATION
@@ -92,7 +97,7 @@ success_criteria:
 handoff_type: HANDBACK
 task_id: 2026-06-02-quality-validate-oauth-impl
 timestamp: 2026-06-02T14:45:00Z
-status: complete
+status: success
 assessment: PASS
 quality_score: 94
 

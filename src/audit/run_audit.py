@@ -15,8 +15,11 @@ def main() -> int:
     """
     try:
         # Set up paths
-        skills_dir = Path("/Users/niall/git/agentic-engineers/src/skills")
-        output_file = Path("/Users/niall/git/agentic-engineers/SKILLS-AUDIT.md")
+        repo_root = Path(__file__).resolve().parents[2]
+        skills_dir = repo_root / "src" / "skills"
+        audit_dir = repo_root / "docs" / "archive" / "audits"
+        audit_dir.mkdir(parents=True, exist_ok=True)
+        output_file = audit_dir / "SKILLS-AUDIT.md"
         
         print("🔍 Starting Skills Audit Framework...")
         print(f"📁 Skills directory: {skills_dir}")

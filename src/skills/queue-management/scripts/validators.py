@@ -10,6 +10,20 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
+# Canonical HANDBACK status enum (matches core_protocol_validator.VALID_STATUSES and SPEC.md).
+# This is the vocabulary new artifacts SHOULD use.
+CANONICAL_HANDBACK_STATUSES = {"success", "failure", "partial", "blocked", "escalate"}
+
+# Legacy aliases accepted for backward compatibility with existing on-disk
+# artifacts and historical queue records. New code should emit canonical values.
+# Mapping (legacy -> canonical): complete -> success, failed -> failure,
+# escalated -> escalate.
+LEGACY_HANDBACK_STATUSES = {"complete", "failed", "escalated"}
+
+# Accepted set = canonical ∪ legacy (forward-compatible validation).
+VALID_HANDBACK_STATUSES = CANONICAL_HANDBACK_STATUSES | LEGACY_HANDBACK_STATUSES
+
+
 class DelegateValidator:
     """DELEGATE validation (Groups A/B/C)."""
 
@@ -262,7 +276,8 @@ class HandbackValidator:
 
         HANDBACK must include:
         • task_id: string
-        • status: "complete" or "escalated"
+        • status: canonical "success" | "failure" | "partial" | "blocked" | "escalate"
+          (legacy "complete"/"failed"/"escalated" still accepted for back-compat)
         • quality_score: 0-100 (integer)
         • deliverables: list of strings
         • test_results: dict with at least "passed" and "total"
@@ -289,8 +304,11 @@ class HandbackValidator:
 
         # Check status
         status = handback.get("status", "")
-        if status not in {"complete", "escalated"}:
-            errors.append("status must be 'complete' or 'escalated'")
+        if status not in VALID_HANDBACK_STATUSES:
+            errors.append(
+                "status must be one of "
+                f"{sorted(VALID_HANDBACK_STATUSES)}"
+            )
 
         # Check quality_score
         quality = handback.get("quality_score")

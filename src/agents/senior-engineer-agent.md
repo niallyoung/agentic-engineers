@@ -2,6 +2,11 @@
 name: senior-engineer
 description: Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes
 model: claude-sonnet-4.5
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: senior-engineer
 ---
 
 # Senior Engineer Agent — LIVE IMPLEMENTATION
@@ -82,7 +87,7 @@ PROCESS:
      handoff_type: HANDBACK
      task_id: {task_id}
      timestamp: {iso8601}
-     status: complete | delegated
+     status: success | failure | partial | blocked | escalate
      
      plan_written: true
      plan_quality_score: {0-100}
@@ -162,7 +167,7 @@ estimated_complexity: high
 handoff_type: HANDBACK
 task_id: 2026-06-02-senior-refactor-event-store
 timestamp: 2026-06-02T12:40:00Z
-status: complete
+status: success
 approach: hybrid
 plan_written: true
 plan_quality_score: 92
@@ -180,13 +185,13 @@ approach: hybrid
 sub_tasks:
   - task: "Implement GetEventsWithCursor() method"
     delegated_to: Engineer
-    handback: { status: complete, deliverables: [store.go], tokens: 1500, quality: 94 }
+    handback: { status: success, deliverables: [store.go], tokens: 1500, quality: 94 }
   - task: "Refactor handlers + wire new method"
     delegated_to: Engineer
-    handback: { status: complete, deliverables: [handlers.go], tokens: 1200, quality: 92 }
+    handback: { status: success, deliverables: [handlers.go], tokens: 1200, quality: 92 }
   - task: "Write cursor edge case tests"
     delegated_to: Engineer
-    handback: { status: complete, deliverables: [store_test.go], tokens: 900, quality: 96 }
+    handback: { status: success, deliverables: [store_test.go], tokens: 900, quality: 96 }
 
 deliverables:
   - Modified: lambda/store/store.go (new GetEventsWithCursor method)

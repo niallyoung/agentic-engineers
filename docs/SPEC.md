@@ -669,19 +669,30 @@ plan: [required for Engineer; step-by-step concrete steps; include Red-Green TDD
 ---
 handoff_type: HANDBACK
 task_id: {matching_delegate_task_id}
-status: complete | blocked | partial
-deliverables: [files changed, tests added, etc.]
-tests: ["make verify": PASS (N tests), coverage: X%]
-tokens_in: {estimate}
-tokens_out: {estimate}
-model: {actual_model_used}
-effort: {actual_effort}
-duration_minutes: {wall_clock_time}
-escalations: {count}
-model_assessment: [for Quality Engineer] haiku_suitable | sonnet_would_be_better | opus_required
-confidence: [0.0-1.0, for Model Engineer feedback]
+status: success | failure | partial | blocked | escalate
+# Canonical status enum (runtime-validated):
+#   success  — task completed successfully, all success_criteria met
+#   failure  — task attempted but could not be completed
+#   partial  — some success_criteria met, work remains
+#   blocked  — cannot proceed; external dependency or decision required
+#   escalate — requires higher-tier agent or human intervention
+output: "Summary of what was delivered (any value; key must be present)"
+metrics:
+  quality: {0.0-1.0}
+  tokens: {non-negative integer}
+  cost: {non-negative USD}
+  duration_seconds: {non-negative}
 ---
 ```
+
+**Optional extension fields** (loosely validated, forward-compatible):
+`deliverables`, `tests`, `escalations`, `model_assessment` (haiku_suitable |
+sonnet_would_be_better | opus_required), `confidence` (0.0-1.0), `retry_count`,
+`model_used`, `effort_actual`, `children_created`, `children_results`, `flags`,
+`error`.
+
+See [docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml) for the
+canonical machine-readable schema.
 
 ---
 

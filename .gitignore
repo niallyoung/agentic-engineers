@@ -105,3 +105,6 @@ src/skills/spec_validator
 coverage.json
 coverage_copilot.json
 COMPLIANCE_REPORT.json
+
+# Regenerable skills audit output (produced by `python -m src.audit.run_audit`)
+docs/archive/audits/SKILLS-AUDIT.md

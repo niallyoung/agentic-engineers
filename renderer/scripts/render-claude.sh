@@ -180,12 +180,22 @@ case "$MODE" in
 			desc=$(echo "$canonical_metadata" | cut -d'|' -f3-)
 			model=$(map_model "$model_raw")
 
+		# Protocol declaration: read machine-readable capability keys from the
+		# source agent frontmatter so the harness can detect protocol support.
+		accepts_list=$(extract_fm_list "$src_file" "accepts")
+		returns_list=$(extract_fm_list "$src_file" "returns")
+		role_val=$(extract_fm "$src_file" "role")
+		[ -n "$role_val" ] || role_val="$name"
+
 		{
 			echo "---"
 			echo "name: $name"
 			desc_escaped=$(printf '%s' "$desc" | yaml_escape_inline)
 			printf 'description: "%s"\n' "$desc_escaped"
 			[ -n "$model" ] && echo "model: $model"
+			[ -n "$accepts_list" ] && echo "accepts: [$accepts_list]"
+			[ -n "$returns_list" ] && echo "returns: [$returns_list]"
+			echo "role: $role_val"
 			echo "---"
 			echo
 			strip_fm "$src_file"

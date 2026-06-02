@@ -522,43 +522,47 @@ class TestHandbackSchema:
     """Test validate_handback_schema function."""
 
     def test_handback_schema_complete(self, temp_repo):
-        """Test AGENTS.md with complete HANDBACK schema."""
+        """Test AGENTS.md with complete canonical HANDBACK schema."""
         src_dir = temp_repo["src_dir"]
-        
+
         agents_md = src_dir / "AGENTS.md"
         agents_md.write_text("""
-# HANDBACK Metrics
-- tokens_used
-- tokens_estimated
-- efficiency_ratio
-- model_used
-- duration_ms
-- quality_score
+# HANDBACK Core Schema (docs/specs/protocol-core-v1.0.yaml)
+- task_id
+- status
+- output
+- metrics
+  - quality
+  - tokens
+  - cost
+  - duration_seconds
 """)
-        
+
         errors = validate_handback_schema(src_dir)
-        
+
         assert len(errors) == 0
 
     def test_handback_schema_missing_field(self, temp_repo):
-        """Test AGENTS.md missing a HANDBACK field."""
+        """Test AGENTS.md missing a canonical HANDBACK metrics subfield."""
         src_dir = temp_repo["src_dir"]
-        
+
         agents_md = src_dir / "AGENTS.md"
         agents_md.write_text("""
-# HANDBACK Metrics
-- tokens_used
-- tokens_estimated
-- model_used
-- duration_ms
-- quality_score
+# HANDBACK Core Schema
+- task_id
+- status
+- output
+- metrics
+  - quality
+  - tokens
+  - duration_seconds
 """)
-        
+
         errors = validate_handback_schema(src_dir)
-        
-        # Should have warning about missing efficiency_ratio
+
+        # Should have warning about missing 'cost' metric subfield
         assert len(errors) > 0
-        assert any("efficiency_ratio" in e.message for e in errors)
+        assert any("cost" in e.message for e in errors)
 
     def test_handback_schema_no_agents_md(self, temp_repo):
         """Test when AGENTS.md doesn't exist."""
@@ -570,24 +574,26 @@ class TestHandbackSchema:
         assert errors == []
 
     def test_handback_schema_all_fields_present(self, temp_repo):
-        """Test AGENTS.md with all required fields mentioned."""
+        """Test AGENTS.md with all canonical required fields mentioned."""
         src_dir = temp_repo["src_dir"]
-        
+
         agents_md = src_dir / "AGENTS.md"
         agents_md.write_text("""
-## HANDBACK Format
+## HANDBACK Format (docs/specs/protocol-core-v1.0.yaml)
 
 Each HANDBACK must include:
-- tokens_used: number of tokens consumed
-- tokens_estimated: tokens budgeted
-- efficiency_ratio: tokens_used / tokens_estimated
-- model_used: which model was used
-- duration_ms: execution time in milliseconds
-- quality_score: self-assessed score 0.0-1.0
+- task_id: matching DELEGATE task_id
+- status: success | failure | partial | blocked | escalate
+- output: summary of what was delivered
+- metrics:
+  - quality: self-assessed score 0.0-1.0
+  - tokens: total tokens consumed
+  - cost: USD cost
+  - duration_seconds: wall-clock execution time
 """)
-        
+
         errors = validate_handback_schema(src_dir)
-        
+
         assert len(errors) == 0
 
 

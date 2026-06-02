@@ -335,41 +335,37 @@ estimated_cost: 0.09           # $ estimate based on model + budget
 
 ### HANDBACK Block Format
 
+Canonical schema: [`docs/specs/protocol-core-v1.0.yaml`](../docs/specs/protocol-core-v1.0.yaml).
+Required core fields: `task_id`, `status`, `output`, `metrics{quality, tokens, cost, duration_seconds}`.
+
 ```yaml
 # File: ~/.copilot/queue/done/TASK-NNN-handback.yaml
 ---
 task_id: TASK-NNN
 type: HANDBACK
 role: senior-engineer
-status: COMPLETE               # COMPLETE | PARTIAL | BLOCKED | ESCALATE
+status: success               # success | failure | partial | blocked | escalate
 
-summary: |
-  One-paragraph summary of what was done and any important decisions made.
-
-changes:
-  - file: path/to/file.py
-    lines: "45-67"
-    description: What changed and why
-  - file: path/to/other/file.ts
-    lines: "12-30"
-    description: What changed and why
-
-acceptance_verified:
-  - "AC1: PASS — description of how verified"
-  - "AC2: PASS — test output confirms"
-  - "AC3: PASS — ran make verify"
+output: |
+  One-paragraph summary of what was done, files changed, and key decisions.
+  e.g. "Modified path/to/file.py (lines 45-67) and path/to/other.ts (12-30);
+  AC1-AC3 PASS via make verify."
 
 metrics:
-  tokens_used: 5840
-  tokens_estimated: 8000
-  efficiency_ratio: 0.73       # tokens_used / tokens_estimated
-  model_used: claude-sonnet-4.6
-  duration_ms: 42000
-  quality_score: 0.88          # 0.0–1.0, self-assessed
+  quality: 0.88                # 0.0–1.0, self-assessed quality
+  tokens: 5840                 # total tokens (input + output), non-negative int
+  cost: 0.09                   # USD, non-negative
+  duration_seconds: 42         # wall-clock seconds, non-negative
 
+# --- Optional extension fields (forward-compatible) ---
+model_used: claude-sonnet-4.6
+effort_actual: medium
+confidence: 0.9                # 0.0–1.0
+escalations: 0
 issues: []                     # list any blockers or anomalies
-
-escalation: null               # or ESCALATION block (see below) if status: ESCALATE
+flags: []                      # advisory flags / anomalies
+error: null                    # error detail when status is failure/blocked
+escalation: null               # or ESCALATION block (see below) if status: escalate
 ```
 
 ### ESCALATION Packet Format
@@ -565,7 +561,7 @@ MODEL_USED: claude-haiku-4.5
 task_id: TASK-202
 type: HANDBACK
 role: engineer
-status: ESCALATE
+status: escalate
 
 summary: |
   Payment refactor requires changes to 5 files across payment/ and checkout/ packages.
@@ -655,7 +651,7 @@ estimated_cost: 0.09
 **Step 3: Senior hits arch escalation trigger → escalates to Lead**
 
 Senior reads related files, determines the PaymentRef type crosses a domain boundary that
-requires an explicit API contract decision, and emits a HANDBACK with `status: ESCALATE`
+requires an explicit API contract decision, and emits a HANDBACK with `status: escalate`
 targeting Lead Engineer — including its analysis as `findings_so_far`.
 
 **Step 4: Lead makes the decision, produces implementation DELEGATEs**

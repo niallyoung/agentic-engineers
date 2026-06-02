@@ -61,7 +61,7 @@ class ProtocolValidator:
         
         # Find spec relative to repo root if path is relative
         if not self.spec_path.is_absolute():
-            repo_root = Path(__file__).resolve().parents[3]  # skills/protocol-validator/scripts/script.py -> repo root
+            repo_root = Path(__file__).resolve().parents[4]  # src/skills/protocol-validator/scripts/script.py -> repo root
             self.spec_path = repo_root / spec_path
         
         if not self.spec_path.exists():

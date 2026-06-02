@@ -137,7 +137,7 @@ Use this checklist **EVERY TIME** you add:
   - [ ] Enforcement mechanisms (decorators, validators) active
 
 - [ ] **Protocol compliance verified (if DELEGATE/HANDBACK involved)**
-  - [ ] DELEGATE tasks follow protocol: `spec-core-v1.0.yaml`
+  - [ ] DELEGATE tasks follow protocol: `protocol-core-v1.0.yaml`
   - [ ] HANDBACK responses follow protocol
   - [ ] Protocol validation tool confirms compliance
   - [ ] No unknown/undefined protocol fields

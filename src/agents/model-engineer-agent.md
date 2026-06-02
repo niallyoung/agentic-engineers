@@ -2,6 +2,11 @@
 name: model-engineer
 description: Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks
 model: claude-sonnet-4.5
+accepts:
+  - DELEGATE
+returns:
+  - HANDBACK
+role: model-engineer
 ---
 
 # Model Engineer Agent — LIVE IMPLEMENTATION
@@ -93,7 +98,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
    HANDBACK = {
      handoff_type: "HANDBACK",
      task_id: ...,
-     status: "complete",
+     status: "success",
      recommendation: recommendation,
      confidence: mean confidence across all suggestions,
      next_suggested_models: {model: haiku|sonnet|opus for next similar task}
@@ -124,7 +129,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
 handoff_type: HANDBACK
 task_id: 2026-05-26-commit-{example-service}-abc123-model-feedback
 timestamp: 2026-05-26T09:05:00Z
-status: complete
+status: success
 recommendation:
   task_type: "commit-quality-gate"
   recommended_models:

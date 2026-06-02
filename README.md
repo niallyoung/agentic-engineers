@@ -2065,6 +2065,10 @@ agentic-engineers/
 | [docs/INDEX.md](docs/INDEX.md) | Complete documentation index |
 | [docs/OPENCODE-INSTALL.md](docs/OPENCODE-INSTALL.md) | OpenCode installation guide |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Troubleshooting (30+ scenarios) |
+| [docs/guides/agent-verification.md](docs/guides/agent-verification.md) | Agent availability verification guide |
+| [docs/guides/skills-standardization.md](docs/guides/skills-standardization.md) | Skills standardization framework guide |
+| [docs/reviews/](docs/reviews/) | Security reviews & evaluation-framework architecture |
+| [docs/archive/](docs/archive/) | Archived analyses, investigations & phase reports |
 
 ---
 

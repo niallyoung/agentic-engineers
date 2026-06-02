@@ -106,7 +106,7 @@ def test_ls_mixed_json_and_yaml(query, queue_root):
 
 
 def test_ls_attaches_file_metadata(query, queue_root):
-    _write_json_task(queue_root, "done", "meta-task", status="complete")
+    _write_json_task(queue_root, "done", "meta-task", status="success")
     task = query.ls("done")[0]
     assert task["_file"] == "meta-task.json"
     assert "_mtime" in task and "_path" in task
@@ -168,12 +168,12 @@ def test_orphans_only_consider_processing(query, queue_root):
 # --- summary ---------------------------------------------------------------
 
 def test_summary_done_aggregates_status_and_next_steps(query, queue_root):
-    _write_json_task(queue_root, "done", "d1", status="complete", next_steps="ship it")
-    _write_json_task(queue_root, "done", "d2", status="complete")
+    _write_json_task(queue_root, "done", "d1", status="success", next_steps="ship it")
+    _write_json_task(queue_root, "done", "d2", status="success")
     _write_json_task(queue_root, "done", "d3", status="partial")
     summary = query.summarize_done()
     assert summary["total"] == 3
-    assert summary["by_status"] == {"complete": 2, "partial": 1}
+    assert summary["by_status"] == {"success": 2, "partial": 1}
     d1 = next(t for t in summary["tasks"] if t["task_id"] == "d1")
     assert d1["next_steps"] == "ship it"
 
@@ -232,7 +232,7 @@ def test_cli_orphans_older_than(tmp_path, queue_root, capsys):
 
 
 def test_cli_summary_dispatch(tmp_path, queue_root, capsys):
-    _write_json_task(queue_root, "done", "d1", status="complete")
+    _write_json_task(queue_root, "done", "d1", status="success")
     rc = _cli(tmp_path, "--json", "summary")
     assert rc == 0
     assert json.loads(capsys.readouterr().out)["total"] == 1
