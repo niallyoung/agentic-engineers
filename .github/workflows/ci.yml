@@ -53,6 +53,18 @@ jobs:
           git config core.hooksPath
           ls -lh .git/hooks/{pre-commit,commit-msg,post-merge,pre-push} 2>/dev/null || echo "Some hooks missing"
 
+      - name: Credential scan (no tokens in tree or gitconfig)
+        run: |
+          # Defense-in-depth against the token-in-gitconfig incident class.
+          # 1. Fail if any committed file contains a real token signature.
+          if git grep -nIE 'x-access-token|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|https://[^/@[:space:]]+:[^/@[:space:]]+@github' \
+               -- ':!*test*' ':!*Test*' ':!scripts/check-gitconfig-no-tokens.sh' ':!docs/**' ':!*.md' ':!src/opencode/config_validator.py' ':!.github/workflows/ci.yml'; then
+            echo "::error::Embedded token/credential pattern found in tracked files"
+            exit 1
+          fi
+          # 2. Fail if the runner's gitconfig has an embedded token.
+          scripts/check-gitconfig-no-tokens.sh
+
       - name: Lint
         run: make lint
 

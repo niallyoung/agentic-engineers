@@ -14,7 +14,9 @@ from src.evals.skill_matrix.models import (
     FailureMode,
     SkillInvocationTest,
 )
-from src.evals.skill_matrix.protocol import DelegateGenerator, HandbackValidator
+# HANDBACK/DELEGATE validation now lives in the protocol-validation skill;
+# this module only needs DelegateGenerator for building test DELEGATE blocks.
+from src.evals.skill_matrix.protocol import DelegateGenerator
 from src.evals.skill_matrix.matrix_runner import SkillInteropMatrix
 
 
@@ -216,60 +218,9 @@ class TestDelegateGenerator:
             assert saved_path == output_path
 
 
-class TestHandbackValidator:
-    """Tests for HandbackValidator."""
-
-    def test_validate_handback_valid(self):
-        """Test validating a valid HANDBACK."""
-        handback = {
-            "handoff_type": "HANDBACK",
-            "task_id": "2026-05-01-test",
-            "type": "skill_test",
-            "status": "complete",
-            "spec_version": "1.0",
-        }
-        is_valid, errors = HandbackValidator.validate_handback(handback)
-        assert is_valid is True
-        assert len(errors) == 0
-
-    def test_validate_handback_missing_required_field(self):
-        """Test validation fails with missing required field."""
-        handback = {
-            "handoff_type": "HANDBACK",
-            "task_id": "2026-05-01-test",
-            # Missing "type" field
-            "status": "complete",
-            "spec_version": "1.0",
-        }
-        is_valid, errors = HandbackValidator.validate_handback(handback)
-        assert is_valid is False
-        assert any("type" in error for error in errors)
-
-    def test_validate_handback_invalid_status(self):
-        """Test validation fails with invalid status."""
-        handback = {
-            "handoff_type": "HANDBACK",
-            "task_id": "2026-05-01-test",
-            "type": "skill_test",
-            "status": "invalid_status",
-            "spec_version": "1.0",
-        }
-        is_valid, errors = HandbackValidator.validate_handback(handback)
-        assert is_valid is False
-        assert any("status" in error for error in errors)
-
-    def test_validate_handback_invalid_spec_version(self):
-        """Test validation fails with invalid spec_version."""
-        handback = {
-            "handoff_type": "HANDBACK",
-            "task_id": "2026-05-01-test",
-            "type": "skill_test",
-            "status": "complete",
-            "spec_version": "2.0",
-        }
-        is_valid, errors = HandbackValidator.validate_handback(handback)
-        assert is_valid is False
-        assert any("spec_version" in error for error in errors)
+# NOTE: HANDBACK validation tests previously lived here (TestHandbackValidator).
+# They moved with the validator itself to the protocol-validation skill:
+#   src/skills/protocol-validation/tests/test_protocol_validation.py
 
 
 class TestSkillInteropMatrix:
@@ -448,49 +399,8 @@ class TestFailureMode:
 class TestProtocolEdgeCases:
     """Tests for edge cases in protocol handling."""
 
-    def test_validate_handback_with_all_optional_fields(self):
-        """Test validating HANDBACK with all optional fields."""
-        handback = {
-            "handoff_type": "HANDBACK",
-            "task_id": "2026-05-01-test",
-            "type": "skill_test",
-            "status": "complete",
-            "spec_version": "1.0",
-            "deliverables": ["file1.py", "file2.py"],
-            "tests": {"passed": 10, "failed": 0},
-            "quality_score": 95,
-            "tokens_in": 1000,
-            "tokens_out": 500,
-            "cost_usd": 0.05,
-            "effort_actual": 2.5,
-            "duration_minutes": 150,
-            "notes": "Test completed successfully",
-        }
-        is_valid, errors = HandbackValidator.validate_handback(handback)
-        assert is_valid is True
-
-    def test_validate_handback_all_valid_statuses(self):
-        """Test that all valid statuses pass validation."""
-        base_handback = {
-            "handoff_type": "HANDBACK",
-            "task_id": "2026-05-01-test",
-            "type": "skill_test",
-            "spec_version": "1.0",
-        }
-        for status in ["complete", "failed", "partial", "blocked", "skipped"]:
-            handback = base_handback.copy()
-            handback["status"] = status
-            is_valid, errors = HandbackValidator.validate_handback(handback)
-            assert is_valid is True, f"Status {status} should be valid"
-
-    def test_load_and_validate_handback_file_not_found(self):
-        """Test loading handback from non-existent file."""
-        is_valid, handback, errors = HandbackValidator.load_and_validate_handback(
-            Path("/nonexistent/path/handback.yaml")
-        )
-        assert is_valid is False
-        assert handback is None
-        assert len(errors) > 0
+    # HANDBACK-validation edge cases moved to the protocol-validation skill's
+    # own test suite (src/skills/protocol-validation/tests/).
 
     def test_delegate_generator_auto_task_id_format(self):
         """Test that auto-generated task IDs have correct format."""

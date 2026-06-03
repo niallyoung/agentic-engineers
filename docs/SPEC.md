@@ -106,7 +106,7 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 - ❌ Do NOT add Makefile targets for Orchestrator operations (exception: `render-*` and `install*` targets that invoke renderer scripts)
 - ❌ Do NOT create shell scripts for queue automation, task processing, or external invocation (exception: `renderer/scripts/` for build-time rendering only)
 - ❌ Do NOT set up cron jobs for any system operations (all scheduling via agent SKILLs)
-- ❌ Do NOT invoke subprocess, os.system(), or exec() in agent code
+- ❌ Do NOT invoke subprocess, os.system(), or exec() in agent code (exception: `src/skills/_meta/evaluation_framework/` for real harness invocation in functional tests only)
 - ❌ Do NOT invoke agents directly without going through Orchestrator queue
 - ❌ Do NOT create manual DELEGATE blocks and send them to agents
 - ❌ Do NOT skip quality checks or escalation rules

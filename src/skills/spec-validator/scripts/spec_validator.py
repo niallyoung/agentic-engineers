@@ -868,6 +868,8 @@ class ComplianceChecker:
         "src/standardization/",
         "src/audit/",
         "src/skills/testing/",
+        # Evaluation framework that invokes external harnesses for functional testing
+        "src/skills/_meta/evaluation_framework/",
     )
     # Only executable source files are scanned by the security heuristics.
     _HEURISTIC_SOURCE_EXTENSIONS: Tuple[str, ...] = (

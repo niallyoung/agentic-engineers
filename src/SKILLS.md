@@ -167,7 +167,8 @@
 | Consistency Checker | `src/skills/consistency-checker/SKILL.md` | QE, Lead | Cross-file consistency validation |
 | Metrics ETL | `src/skills/metrics-etl/SKILL.md` | Model Eng | Extract/transform/load metrics from HANDBACKs |
 | Model Engineer (agent) | `src/skills/model-engineer/SKILL.md` | Model Eng | Scheduled cost-quality analysis agent (daily at 17:00) |
-| Protocol Validator | `src/skills/protocol-validator/SKILL.md` | QE | Validate DELEGATE/HANDBACK YAML schema compliance |
+| Protocol Validation | `src/skills/protocol-validation/SKILL.md` | All | Canonical DELEGATE/HANDBACK validator (single source of truth for evals, renderer, queue) |
+| Protocol Validator | `src/skills/protocol-validator/SKILL.md` | QE | Runtime spec-driven DELEGATE/HANDBACK validation (wraps protocol-validation) |
 | Repo Init | `src/skills/repo-init/SKILL.md` | Senior, Lead | Bootstrap a new repo with standard structure |
 | Skill Creator | `src/skills/skill-creator/SKILL.md` | Lead, Senior | Author new skills with consistent YAML frontmatter |
 | Spec Management | `src/skills/spec-management/SKILL.md` | Senior, Lead | Maintain SPEC.md and track compliance |

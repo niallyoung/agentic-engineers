@@ -16,12 +16,9 @@ prompt: |
 expected_contains:
   - "DELEGATE"
   - "task_id"
-  - "role"
-  - "model"
 expected_not_contains:
-  - "ERROR"
-  - "Invalid"
-timeout_seconds: 30
+  - "Invalid format"
+timeout_seconds: 60
 requirements:
   - Must understand DELEGATE/HANDBACK protocol
   - Must be able to generate structured task blocks

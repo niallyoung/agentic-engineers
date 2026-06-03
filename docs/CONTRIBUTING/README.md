@@ -277,6 +277,33 @@ When making code changes, ensure tests stay in sync:
 
 ---
 
+## Security: Credential Handling
+
+**Use SSH for all git operations. Never embed credentials in git config or write them to disk in plaintext.**
+
+SSH keys provide stronger cryptographic guarantees than tokens and eliminate credential leakage through git configuration.
+
+| Scenario | Do this | Why |
+| --- | --- | --- |
+| Local development (recommended) | SSH key: `git clone git@github.com:...` | Cryptographically secure; no credentials in config |
+| GitHub API via `gh` CLI | `gh auth login` with SSH or browser auth | `gh` uses SSH for git ops; tokens stored securely in credential helper |
+| One-off HTTPS clone | `git clone --config <key>=<value> ...` (repo-local only) | Repo-local config is safer; never use `--global` |
+| CI/CD pipelines | Pass `GH_TOKEN` / `GITHUB_TOKEN` via runner secrets | Temporary, scoped to job, rotated per environment |
+
+**Rules:**
+- No hardcoded secrets (`ghp_`, `gho_`, `ghs_`, `x-access-token`, `sk-`, `AKIA…`) in code, scripts, workflows, or config
+- Credentials belong in environment variables or secret managers—never in committed or persistent config
+- Never use `git config --global url.<url>.insteadOf` with embedded tokens; this persists credentials to disk permanently
+- If a secret is ever exposed, rotate it immediately at <https://github.com/settings/tokens> or <https://github.com/settings/keys>
+
+**Enforcement:** `scripts/check-gitconfig-no-tokens.sh` runs in the `pre-push` hook and prevents pushes if `~/.gitconfig` or `~/.git-credentials` contains embedded tokens. Run standalone anytime:
+
+```bash
+scripts/check-gitconfig-no-tokens.sh
+```
+
+---
+
 ## Working with Background Agents
 
 When using background agents (e.g., `skill-creator`, `agent-creator`) to create implementation files:

@@ -6,13 +6,23 @@ Executes test cases against harnesses, captures results, and builds compatibilit
 
 import json
 import time
+import sys
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any, Tuple
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
-from .test_case import TestCase, TestCaseValidationError
+# Support both package import (`from .test_case import ...`) and direct script
+# execution (`python framework.py ...`). When run as a script, __package__ is
+# empty, so fall back to absolute imports after adding our own dir to sys.path.
+try:
+    from .test_case import TestCase, TestCaseValidationError
+    from . import harness_invoker
+except ImportError:  # pragma: no cover - direct-script execution path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from test_case import TestCase, TestCaseValidationError  # type: ignore
+    import harness_invoker  # type: ignore
 
 
 class TestStatus(Enum):
@@ -322,18 +332,30 @@ class TestRunner:
     - Generate JSON and Markdown reports
     """
     
-    def __init__(self, working_dir: Path = None):
+    def __init__(self, working_dir: Path = None, live: Optional[bool] = None):
         """
         Initialize TestRunner.
-        
+
         Args:
             working_dir: Working directory for test execution (default: current directory)
+            live: When True, _invoke_harness performs real harness invocation
+                  (spawns CLIs / calls the Anthropic SDK). When False, it returns
+                  a hermetic non-live placeholder so the compatibility-matrix path
+                  stays fast and side-effect-free (e.g. for unit tests). Defaults
+                  to the EVALS_LIVE environment variable (off unless set to a
+                  truthy value). The functional eval path (FunctionalEvalRunner /
+                  the --run-tests CLI) always invokes for real, independent of
+                  this flag.
         """
+        import os
         self.working_dir = Path(working_dir or ".")
         self.test_cases: List[TestCase] = []
         self.matrix = CompatibilityMatrix()
         self.harnesses = {"opencode", "copilot", "claude-code", "pi-dev"}
         self.models = {"haiku", "sonnet", "opus"}
+        if live is None:
+            live = os.environ.get("EVALS_LIVE", "").lower() in ("1", "true", "yes", "on")
+        self.live = live
     
     def load_test_cases(self, tests_dir: Path):
         """
@@ -523,19 +545,508 @@ class TestRunner:
                 error_message=str(e),
             )
     
-    def _invoke_harness(self, harness: str, model: str, test_input: str) -> Tuple[str, str, int]:
+    def _invoke_harness(
+        self,
+        harness: str,
+        model: str,
+        test_input: str,
+        test_id: str = "eval-invocation",
+        agent: str = "engineer",
+        timeout_seconds: int = 60,
+        dry_run: bool = False,
+    ) -> Tuple[str, str, int]:
         """
-        Invoke a harness to run a test.
-        
-        Args:
-            harness: Harness name
-            model: Model name
-            test_input: Test prompt or delegation
-            
+        Invoke a harness to run a test (legacy 3-tuple interface).
+
+        Delegates to the functional harness_invoker. Retained for callers that
+        only need (output, error, tokens). New code should prefer
+        invoke_functional() which returns the parsed/validated HANDBACK too.
+
         Returns:
-            Tuple of (output, error_message, tokens_used)
+            Tuple of (output_text, error_message, tokens_used)
         """
-        # This is a placeholder implementation
-        # In real implementation, this would invoke the actual harness
-        # For now, return mock data
-        return ("Test output", "", 0)
+        # Hermetic by default: the compatibility-matrix path does not spawn real
+        # harnesses unless explicitly running live (EVALS_LIVE / live=True). The
+        # functional eval path (FunctionalEvalRunner) always invokes for real.
+        if not getattr(self, "live", False) and not dry_run:
+            return ("non-live eval output (set EVALS_LIVE=1 for real invocation)", "", 0)
+
+        result = harness_invoker.invoke(
+            test_id=test_id,
+            prompt=test_input,
+            harness=harness,
+            agent=agent,
+            model=model,
+            timeout_seconds=timeout_seconds,
+            dry_run=dry_run,
+        )
+        error = result.invocation_error or result.skipped_reason
+        tokens = 0
+        if isinstance(result.handback, dict):
+            metrics = result.handback.get("metrics") or {}
+            if isinstance(metrics, dict) and isinstance(metrics.get("tokens"), int):
+                tokens = metrics["tokens"]
+        return (result.output_text, error, tokens)
+
+    def invoke_functional(
+        self,
+        harness: str,
+        agent: str,
+        model: str,
+        test_id: str,
+        prompt: str,
+        timeout_seconds: int = 60,
+        dry_run: bool = False,
+    ) -> Tuple[str, Dict[str, Any], bool, List[str]]:
+        """
+        Invoke a harness and return the full functional result.
+
+        Returns:
+            Tuple of (output_text, handback_dict, valid, errors)
+        """
+        result = harness_invoker.invoke(
+            test_id=test_id,
+            prompt=prompt,
+            harness=harness,
+            agent=agent,
+            model=model,
+            timeout_seconds=timeout_seconds,
+            dry_run=dry_run,
+        )
+        return (result.output_text, result.handback, result.valid, result.errors)
+
+
+# ===========================================================================
+# Functional eval runner (real harness invocation + HANDBACK validation)
+# ===========================================================================
+
+# Where captured HANDBACKs are stored.
+HANDBACKS_DIR = harness_invoker._repo_root() / "artifacts" / "evals" / "handbacks"
+# Where raw (unparsed) harness responses are stored when --save-raw is set.
+RAW_RESPONSES_DIR = harness_invoker._repo_root() / "artifacts" / "evals" / "raw-responses"
+
+# Default agent used when a test case does not specify one.
+DEFAULT_AGENT = "engineer"
+
+try:
+    import yaml as _yaml  # type: ignore
+except ImportError:  # pragma: no cover
+    _yaml = None
+
+
+class FailureKind(Enum):
+    """Categorise why a functional eval did not pass (for clear reporting)."""
+    NONE = "none"
+    INVOCATION = "invocation"      # harness failed to run / exited non-zero
+    TIMEOUT = "timeout"            # harness exceeded the timeout
+    PARSE = "parse"               # could not extract/parse a HANDBACK block
+    VALIDATION = "validation"     # HANDBACK parsed but failed protocol schema
+    ASSERTION = "assertion"       # expected_contains / not_contains mismatch
+
+
+@dataclass
+class FunctionalEvalResult:
+    """Result of grading a single functional eval test."""
+    test_id: str
+    harness: str
+    passed: bool
+    valid_handback: bool
+    errors: List[str] = field(default_factory=list)
+    missing_assertions: List[str] = field(default_factory=list)
+    unexpected_assertions: List[str] = field(default_factory=list)
+    skipped: bool = False
+    skipped_reason: str = ""
+    handback_path: str = ""
+    raw_path: str = ""
+    duration_ms: int = 0
+    failure_kind: FailureKind = FailureKind.NONE
+    usage: Dict[str, Any] = field(default_factory=dict)
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
+
+
+def _store_handback(
+    test_id: str,
+    harness: str,
+    payload: Dict[str, Any],
+) -> Path:
+    """Write a captured HANDBACK (plus eval metadata) to artifacts dir."""
+    HANDBACKS_DIR.mkdir(parents=True, exist_ok=True)
+    fname = f"{test_id}-{harness}-{_timestamp()}.yaml"
+    path = HANDBACKS_DIR / fname
+    if _yaml is not None:
+        path.write_text(_yaml.safe_dump(payload, default_flow_style=False, sort_keys=False))
+    else:  # pragma: no cover
+        path.write_text(json.dumps(payload, indent=2))
+    return path
+
+
+def _store_raw_response(
+    test_id: str,
+    harness: str,
+    payload: str,
+    raw_output: str,
+    invocation_error: str = "",
+) -> Path:
+    """Write the raw (unparsed) harness response for forensic comparison."""
+    RAW_RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
+    fname = f"{test_id}-{harness}-{_timestamp()}.txt"
+    path = RAW_RESPONSES_DIR / fname
+    sep = "=" * 70
+    parts = [
+        f"{sep}\nTEST: {test_id}   HARNESS: {harness}\n{sep}",
+        f"\n----- PROMPT SENT -----\n{payload}",
+        f"\n----- RAW RESPONSE -----\n{raw_output}",
+    ]
+    if invocation_error:
+        parts.append(f"\n----- INVOCATION ERROR -----\n{invocation_error}")
+    path.write_text("".join(parts))
+    return path
+
+
+def _grade(output_text: str, test_case: TestCase) -> Tuple[List[str], List[str]]:
+    """Check expected_contains / expected_not_contains assertions.
+
+    Returns (missing_expected, present_unexpected).
+    """
+    missing = [s for s in (test_case.expected_contains or []) if s not in output_text]
+    unexpected = [s for s in (test_case.expected_not_contains or []) if s in output_text]
+    return missing, unexpected
+
+
+class FunctionalEvalRunner:
+    """Runs functional evals: real harness invocation + HANDBACK validation."""
+
+    def __init__(self, harness: str, agent: str = DEFAULT_AGENT, model: str = "sonnet",
+                 timeout_seconds: int = 60, verbose: bool = False, save_raw: bool = False):
+        self.harness = harness
+        self.agent = agent
+        self.model = model
+        self.timeout_seconds = timeout_seconds
+        self.verbose = verbose
+        self.save_raw = save_raw
+        self.runner = TestRunner()
+
+    def _classify_failure(self, result, missing, unexpected) -> FailureKind:
+        """Determine the primary reason a test failed (most-fundamental first)."""
+        inv = result.invocation_error or ""
+        if "timed out" in inv:
+            return FailureKind.TIMEOUT
+        if inv:
+            return FailureKind.INVOCATION
+        if not result.handback:
+            return FailureKind.PARSE
+        if not result.valid:
+            return FailureKind.VALIDATION
+        if missing or unexpected:
+            return FailureKind.ASSERTION
+        return FailureKind.NONE
+
+    def run_test(self, test_case: TestCase, dry_run: bool = False) -> FunctionalEvalResult:
+        """Invoke the harness for one test case, validate + grade the HANDBACK.
+
+        Per-test timeout precedence: the test case's own timeout_seconds wins if
+        it is larger than the runner default, so individual tests can ask for
+        more headroom (e.g. skill-invocation) without bumping the global default.
+        """
+        start = time.time()
+        prompt = test_case.prompt or test_case.delegation or ""
+        timeout = max(self.timeout_seconds, getattr(test_case, "timeout_seconds", 0) or 0)
+
+        result = harness_invoker.invoke(
+            test_id=test_case.id,
+            prompt=prompt,
+            harness=self.harness,
+            agent=self.agent,
+            model=self.model,
+            timeout_seconds=timeout,
+            dry_run=dry_run,
+            verbose=self.verbose,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+
+        raw_path = ""
+        if self.save_raw and not dry_run:
+            raw_path = str(_store_raw_response(
+                test_case.id, self.harness,
+                getattr(result, "payload", ""), result.output_text,
+                result.invocation_error,
+            ))
+
+        if result.skipped:
+            return FunctionalEvalResult(
+                test_id=test_case.id,
+                harness=self.harness,
+                passed=False,
+                valid_handback=False,
+                skipped=True,
+                skipped_reason=result.skipped_reason,
+                duration_ms=duration_ms,
+                raw_path=raw_path,
+            )
+
+        missing, unexpected = _grade(result.output_text, test_case)
+
+        # A test passes iff: HANDBACK is valid AND all expected assertions hold.
+        passed = bool(result.valid) and not missing and not unexpected and not result.invocation_error
+        failure_kind = FailureKind.NONE if passed else self._classify_failure(result, missing, unexpected)
+
+        # Persist the captured HANDBACK + grading metadata.
+        payload = {
+            "test_id": test_case.id,
+            "harness": self.harness,
+            "agent": self.agent,
+            "model": self.model,
+            "passed": passed,
+            "failure_kind": failure_kind.value,
+            "valid_handback": result.valid,
+            "validation_errors": result.errors,
+            "missing_assertions": missing,
+            "unexpected_assertions": unexpected,
+            "invocation_error": result.invocation_error,
+            "duration_ms": duration_ms,
+            "usage": result.usage,
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "handback": result.handback,
+            "raw_output": result.output_text,
+        }
+        handback_path = _store_handback(test_case.id, self.harness, payload)
+
+        errors = list(result.errors)
+        if result.invocation_error:
+            errors.append(result.invocation_error)
+
+        return FunctionalEvalResult(
+            test_id=test_case.id,
+            harness=self.harness,
+            passed=passed,
+            valid_handback=result.valid,
+            errors=errors,
+            missing_assertions=missing,
+            unexpected_assertions=unexpected,
+            handback_path=str(handback_path),
+            raw_path=raw_path,
+            duration_ms=duration_ms,
+            failure_kind=failure_kind,
+            usage=result.usage,
+        )
+
+
+def _load_eval_test_cases(tests_path: Path) -> List[TestCase]:
+    """Load eval test cases from a directory or single YAML file."""
+    cases: List[TestCase] = []
+    if tests_path.is_dir():
+        files = sorted(list(tests_path.glob("*.yaml")) + list(tests_path.glob("*.yml")))
+    else:
+        files = [tests_path]
+    for f in files:
+        cases.append(TestCase.from_yaml(f))
+    return cases
+
+
+def run_functional_evals(
+    tests_path: Path,
+    harness: str,
+    agent: str = DEFAULT_AGENT,
+    model: str = "sonnet",
+    min_pass_rate: float = 0.8,
+    max_tests: Optional[int] = None,
+    dry_run: bool = False,
+    timeout_seconds: int = 60,
+    verbose: bool = False,
+    save_raw: bool = False,
+) -> int:
+    """Load eval tests, invoke the harness, grade, and report. Returns exit code."""
+    cases = _load_eval_test_cases(tests_path)
+    if max_tests is not None:
+        cases = cases[:max_tests]
+
+    if not cases:
+        print(f"No eval test cases found in {tests_path}")
+        return 1
+
+    # Cost pre-flight.
+    est_per = harness_invoker.estimate_cost_usd(model)
+    est_total = est_per * len(cases)
+    available, reason = harness_invoker.harness_available(harness)
+    print("=" * 60)
+    print("Functional Eval Run")
+    print("=" * 60)
+    print(f"  Tests:        {len(cases)}")
+    print(f"  Harness:      {harness} ({'available' if available else 'UNAVAILABLE: ' + reason})")
+    print(f"  Agent:        {agent}")
+    print(f"  Model:        {model}")
+    print(f"  Min pass rate:{min_pass_rate:.0%}")
+    print(f"  Timeout:      {timeout_seconds}s (per test; test files may request more)")
+    print(f"  Dry run:      {dry_run}")
+    print(f"  Verbose:      {verbose}")
+    print(f"  Save raw:     {save_raw}" + (f" -> {RAW_RESPONSES_DIR}" if save_raw else ""))
+    print(f"  Est. cost:    ~${est_total:.4f} (~${est_per:.4f}/test)")
+    print(f"  HANDBACKs ->  {HANDBACKS_DIR}")
+    print("=" * 60)
+
+    runner = FunctionalEvalRunner(
+        harness=harness, agent=agent, model=model,
+        timeout_seconds=timeout_seconds, verbose=verbose, save_raw=save_raw,
+    )
+
+    results: List[FunctionalEvalResult] = []
+    for i, case in enumerate(cases, 1):
+        effective_timeout = max(timeout_seconds, getattr(case, "timeout_seconds", 0) or 0)
+        print(f"[{i}/{len(cases)}] {case.id} @ {harness} (timeout {effective_timeout}s) ...",
+              end=" ", flush=True)
+        res = runner.run_test(case, dry_run=dry_run)
+        results.append(res)
+        if res.skipped:
+            print(f"SKIPPED ({res.skipped_reason})")
+        elif res.passed:
+            usage = f", {res.usage.get('tokens')} tok" if res.usage.get("tokens") else ""
+            print(f"PASS ({res.duration_ms}ms{usage})")
+        else:
+            detail = []
+            detail.append(f"[{res.failure_kind.value}]")
+            if res.failure_kind is FailureKind.PARSE:
+                detail.append("could not extract HANDBACK")
+            if res.missing_assertions:
+                detail.append(f"missing {res.missing_assertions}")
+            if res.unexpected_assertions:
+                detail.append(f"unexpected {res.unexpected_assertions}")
+            if res.errors:
+                detail.append("; ".join(res.errors[:2]))
+            print(f"FAIL ({res.duration_ms}ms) {' '.join(detail) or 'graded fail'}")
+        # Warn when a test consumed >=80% of its timeout budget.
+        if not res.skipped and not dry_run and effective_timeout > 0:
+            frac = (res.duration_ms / 1000.0) / effective_timeout
+            if frac >= 0.8:
+                print(f"      WARNING: used {frac:.0%} of the {effective_timeout}s timeout "
+                      f"— consider raising it for '{case.id}'.")
+
+    graded = [r for r in results if not r.skipped]
+    passed = sum(1 for r in graded if r.passed)
+    skipped = sum(1 for r in results if r.skipped)
+    total_graded = len(graded)
+    pass_rate = (passed / total_graded) if total_graded else 0.0
+
+    print("-" * 60)
+    if dry_run:
+        print(f"Dry run complete: {len(results)} test(s) would be invoked, 0 API calls made.")
+        return 0
+
+    # Failure breakdown by kind for quick triage.
+    failed = [r for r in graded if not r.passed]
+    if failed:
+        kinds: Dict[str, int] = {}
+        for r in failed:
+            kinds[r.failure_kind.value] = kinds.get(r.failure_kind.value, 0) + 1
+        breakdown = ", ".join(f"{k}={v}" for k, v in sorted(kinds.items()))
+        print(f"Failures by kind: {breakdown}")
+
+    total_ms = sum(r.duration_ms for r in graded)
+    print(f"Total harness time: {total_ms/1000.0:.1f}s across {total_graded} graded test(s)")
+
+    pct = int(round(pass_rate * 100))
+    print(f"Test result: {passed}/{total_graded} passed ({pct}%)"
+          + (f", {skipped} skipped" if skipped else ""))
+
+    if total_graded == 0:
+        print("All tests were skipped (harness unavailable?). Treating as non-passing.")
+        return 1
+
+    if pass_rate + 1e-9 >= min_pass_rate:
+        print(f"PASS: {pct}% >= required {int(min_pass_rate*100)}%")
+        return 0
+    print(f"FAIL: {pct}% < required {int(min_pass_rate*100)}%")
+    return 1
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """CLI entry point for functional eval execution."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="evaluation_framework.framework",
+        description="Run functional evals against a real harness (Copilot/OpenCode/pi/Claude SDK).",
+    )
+    parser.add_argument(
+        "--run-tests",
+        metavar="PATH",
+        help="Directory or YAML file of eval test cases (e.g. tests/evals/).",
+    )
+    parser.add_argument(
+        "--harness",
+        default="copilot",
+        help="Harness to invoke: copilot, opencode, pi, pi-dev, claude (default: copilot).",
+    )
+    parser.add_argument(
+        "--agent",
+        default=DEFAULT_AGENT,
+        help=f"Agent name passed to the harness (default: {DEFAULT_AGENT}).",
+    )
+    parser.add_argument(
+        "--model",
+        default="sonnet",
+        help="Model alias: haiku, sonnet, opus (default: sonnet).",
+    )
+    parser.add_argument(
+        "--min-pass-rate",
+        type=float,
+        default=0.8,
+        help="Minimum pass rate (0.0-1.0) for the run to succeed (default: 0.8).",
+    )
+    parser.add_argument(
+        "--max-tests",
+        type=int,
+        default=None,
+        help="Run only the first N tests (cost control / manual testing).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would be invoked without making API calls or spawning CLIs.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=60,
+        help="Per-test timeout in seconds (default: 60). Test files may request more.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print the DELEGATE prompt, raw response, parsed HANDBACK and "
+             "validation errors to stderr (debugging).",
+    )
+    parser.add_argument(
+        "--save-raw",
+        action="store_true",
+        help=f"Save raw (unparsed) responses to {RAW_RESPONSES_DIR} for forensics.",
+    )
+
+    args = parser.parse_args(argv)
+
+    if not args.run_tests:
+        parser.error("--run-tests PATH is required")
+
+    tests_path = Path(args.run_tests)
+    if not tests_path.exists():
+        print(f"Tests path not found: {tests_path}")
+        return 1
+
+    return run_functional_evals(
+        tests_path=tests_path,
+        harness=args.harness,
+        agent=args.agent,
+        model=args.model,
+        min_pass_rate=args.min_pass_rate,
+        max_tests=args.max_tests,
+        dry_run=args.dry_run,
+        timeout_seconds=args.timeout,
+        verbose=args.verbose,
+        save_raw=args.save_raw,
+    )
+
+
+if __name__ == "__main__":
+    sys.exit(main())

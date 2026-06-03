@@ -734,7 +734,7 @@ bash ~/.config/opencode/skills/doc-quality/scripts/pre_commit_hook.sh
 
 ## todo-maintenance Skill
 
-**Location:** `skills/todo-maintenance/`  
+**Location:** `src/skills/todo-maintenance/`  
 **Role:** Engineer  
 **Trigger:** post-DELEGATE | post-HANDBACK | on-demand | scheduled (daily)
 
@@ -757,16 +757,16 @@ Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events. Maintains TODO.m
 # Called internally by Orchestrator after creating/receiving tasks
 
 # Manual sync (full bidirectional)
-python skills/todo-maintenance/scripts/opencode-todo-sync sync
+python src/skills/todo-maintenance/scripts/opencode-todo-sync sync
 
 # Generate weekly report
-python skills/todo-maintenance/scripts/opencode-todo-sync report
+python src/skills/todo-maintenance/scripts/opencode-todo-sync report
 
 # Check for issues (conflicts, orphans, missing)
-python skills/todo-maintenance/scripts/opencode-todo-sync check
+python src/skills/todo-maintenance/scripts/opencode-todo-sync check
 
 # With custom paths
-python skills/todo-maintenance/scripts/opencode-todo-sync sync \
+python src/skills/todo-maintenance/scripts/opencode-todo-sync sync \
   --todo-path /path/to/TODO.md \
   --queue-path /path/to/queue \
   -v  # verbose output
@@ -905,13 +905,13 @@ The skill includes comprehensive tests with >80% coverage:
 
 ```bash
 # Run all tests
-pytest skills/todo-maintenance/tests/ -v
+pytest src/skills/todo-maintenance/tests/ -v
 
 # Run with coverage
-pytest skills/todo-maintenance/tests/ --cov=skills --cov-report=html
+pytest src/skills/todo-maintenance/tests/ --cov=src/skills --cov-report=html
 
 # Run specific test
-pytest skills/todo-maintenance/tests/test_sync_todo.py::TestDelegateEntry -v
+pytest src/skills/todo-maintenance/tests/test_sync_todo.py::TestDelegateEntry -v
 ```
 
 **Test coverage:**
