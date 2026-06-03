@@ -61,7 +61,13 @@ opencode-todo-sync check
 ### Programmatic Usage
 
 ```python
-from src.skills.todo_maintenance import TodoSyncManager
+import importlib
+import sys
+from pathlib import Path
+
+# Import the skill module (directory has hyphen, so use importlib)
+todo_maintenance = importlib.import_module("src.skills.todo-maintenance")
+TodoSyncManager = todo_maintenance.TodoSyncManager
 
 manager = TodoSyncManager(
     todo_path=Path("TODO.md"),
