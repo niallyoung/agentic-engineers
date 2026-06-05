@@ -559,12 +559,14 @@ If you need a different model for an agent:
 
 Different harnesses have incompatible model format requirements:
 
-| Harness | Source | Renders to | Why |
-|---------|--------|------------|-----|
-| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | Uses Anthropic API format (dots required) |
-| **OpenCode** | `claude-opus-4.7` | `claude-opus-4-7` | CLI requires hyphens in version (platform constraint) |
-| **Claude Code** | `claude-opus-4.7` | `opus` | Web UI uses short aliases for UX |
-| **Pi.dev** | `claude-opus-4.7` | `claude-opus-4-7` | Anthropic API format (hyphens) |
+| Harness | Model Examples | Format |
+|---------|---|---|
+| Copilot CLI | `claude-opus-4.8`, `claude-opus-4.6` (multi-model) | Dots in version |
+| OpenCode | `claude-opus-4.7` | Hyphens in version (limitation) |
+| Claude Code | `opus` | Short alias |
+| π.dev | `claude-opus-4.6`, `claude-opus-4.8` | Anthropic API format (dots) |
+
+Note: Principal and Security Engineer roles support multi-model selection. Orchestrator chooses the appropriate opus variant (4.6, 4.7, or 4.8) at DELEGATE-creation time based on task complexity. See SPEC.md > Model Selection Architecture.
 
 **Key principle:** Source agents use ONE canonical format (DOTS). Renderers transform per-harness. This separation makes source maintainable and allows automation of transformations.
 

@@ -48,42 +48,13 @@ Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
 
 ## Multi-Model Selection (Tier 3)
 
-Principal Engineer and Security Engineer are Tier 3 roles where task complexity varies enough to warrant variant selection within the opus family. The Orchestrator selects the appropriate variant when creating a DELEGATE.
+Principal Engineer and Security Engineer support model variant selection based on task complexity.
 
-### Principal Engineer: Variant Selection
+**Decision criteria:**
+- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
+- Security Engineer: Always use `claude-opus-4.8` (non-downgrade rule)
 
-| Task Profile | Model | When to Use |
-|-------------|-------|-------------|
-| Pure architecture planning | `claude-opus-4.6` | Design-only; no cross-repo execution; extended thinking sufficient |
-| Design with cross-repo execution | `claude-opus-4.7` | Architecture decision drives implementation across ≥2 repos |
-| Security-critical design | `claude-opus-4.8` | Involves auth flows, cryptographic selection, or compliance policy |
-
-**Decision tree:**
-1. Pure planning task (no execution)? → `claude-opus-4.6`
-2. Design drives cross-repo implementation? → `claude-opus-4.7`
-3. Security-critical design (auth/crypto/compliance)? → `claude-opus-4.8`
-4. Default (unclear) → `claude-opus-4.6` (cheapest capable option)
-
-### Security Engineer: Non-Downgrade Rule
-
-Security Engineer **always** uses `claude-opus-4.8`. Security analysis is the highest-stakes task in the system; downgrading for cost savings introduces unacceptable risk of missed vulnerabilities or incomplete threat models.
-
-- `claude-opus-4.7` is permitted **only** as a fallback if 4.8 is unavailable (API outage)
-- Fallback must be documented in HANDBACK
-- Never downgrade by choice
-
-### Quality Engineer: model_assessment Feedback
-
-After each Tier 3 task, QE provides `model_assessment` in HANDBACK for the Model Engineer feedback loop:
-
-```yaml
-model_assessment:
-  role: principal-engineer
-  model_used: claude-opus-4.6
-  model_appropriate: true
-  rationale: "Pure planning task; 4.6 extended thinking sufficient"
-  recommendation: "Continue routing pure-planning Principal tasks to 4.6"
-```
+For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 ---
 

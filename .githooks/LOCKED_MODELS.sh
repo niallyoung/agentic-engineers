@@ -22,8 +22,7 @@
 # Note: Principal Engineer and Security Engineer support multi-model selection
 # within the opus family. The Orchestrator selects the appropriate opus variant
 # at DELEGATE-creation time based on task complexity and risk profile.
-# Principal/Security Engineer can select variant based on task complexity.
-# See docs/SPEC.md > Model Selection Architecture for full decision tree.
+# See docs/SPEC.md > Model Selection Architecture for the full decision tree.
 LOCKED_MODELS=(
     "claude-haiku-4.5"
     "claude-sonnet-4.5"

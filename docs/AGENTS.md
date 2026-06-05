@@ -88,43 +88,13 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 
 ## Multi-Model Selection (Tier 3)
 
-Principal Engineer and Security Engineer are Tier 3 (Opus) roles where task complexity varies enough to support variant selection within the opus family.
+Principal Engineer and Security Engineer support model variant selection based on task complexity.
 
-### Principal Engineer: Variant Selection
+**Decision criteria:**
+- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
+- Security Engineer: Always use `claude-opus-4.8` (non-downgrade rule)
 
-| Task Profile | Model | Trigger |
-|-------------|-------|---------|
-| Pure architecture planning | `claude-opus-4.6` | Design-only scope; no cross-repo execution required |
-| Design with cross-repo execution | `claude-opus-4.7` | Architecture decision drives implementation across ≥2 repos |
-| Security-critical design | `claude-opus-4.8` | Involves auth flows, cryptographic selection, or compliance policy |
-
-**Orchestrator decision tree for Principal Engineer DELEGATEs:**
-1. Pure planning (design-only, no execution)? → `claude-opus-4.6`
-2. Design directly drives cross-repo implementation? → `claude-opus-4.7`
-3. Security-critical design (auth/crypto/compliance)? → `claude-opus-4.8`
-4. Default (unclear scope) → `claude-opus-4.6` (cheapest capable option)
-
-### Security Engineer: Non-Downgrade Rule
-
-Security Engineer **always** uses `claude-opus-4.8`. Security analysis is the highest-stakes task in the system. Downgrading for cost savings risks missed vulnerabilities, incomplete threat models, or incorrect compliance assessments.
-
-- `claude-opus-4.7` permitted **only** as emergency fallback if 4.8 is unavailable (API outage)
-- Fallback must be documented in HANDBACK `model_assessment`
-- Never downgrade by choice; never use 4.6 for Security Engineer
-
-### Quality Engineer: model_assessment for Tier 3
-
-After each Tier 3 (Principal/Security) task, Quality Engineer provides `model_assessment` feedback in HANDBACK. This feeds the Model Engineer optimization loop for future routing decisions.
-
-```yaml
-model_assessment:
-  role: principal-engineer
-  model_used: claude-opus-4.6
-  model_appropriate: true
-  alternative_considered: claude-opus-4.7
-  rationale: "Pure planning task; 4.6 extended thinking was sufficient; 4.7 not needed"
-  recommendation: "Continue routing pure-planning Principal tasks to 4.6"
-```
+For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 **Routing Rules** (for Orchestrator):
 - If task is security-scoped → Security Engineer (block all other routes)
