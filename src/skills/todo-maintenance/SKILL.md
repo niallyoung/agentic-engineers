@@ -1,4 +1,5 @@
 ---
+name: "todo-maintenance"
 title: "todo-maintenance"
 description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
 role: "Engineer"

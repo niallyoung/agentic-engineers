@@ -1,7 +1,15 @@
 ---
 name: principal-engineer
-description: Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos
+description: >
+  Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos.
+  Multi-model: 4.6 for pure planning, 4.7 for design+execution, 4.8 for security-critical design.
 model: claude-opus-4.6
+model_guidance: |
+  Use claude-opus-4.6 for pure architecture planning (design-only; no cross-repo execution; extended thinking sufficient).
+  Use claude-opus-4.7 for design decisions with cross-repo execution impact (architecture directly drives implementation across ≥2 repos).
+  Use claude-opus-4.8 only for security-critical design choices (auth flows, cryptographic selection, compliance policy decisions).
+  Default (unclear scope): claude-opus-4.6 (cheapest capable option).
+  Orchestrator selects variant at DELEGATE-creation time based on incoming task profile.
 accepts:
   - DELEGATE
 returns:
@@ -12,7 +20,7 @@ role: principal-engineer
 # Principal Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Principal Engineer
-**Model**: claude-opus-4.6
+**Model**: claude-opus-4.6 (default; multi-model: 4.6/4.7/4.8 based on task profile — see model_guidance)
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 

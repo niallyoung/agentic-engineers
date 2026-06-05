@@ -28,8 +28,11 @@
 | 4 | **Quality Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Post-implementation validation; model suitability assessment |
 | 5 | **Lead Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
 | 6 | **Senior Engineer** | `claude-sonnet-4.5` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
-| 7 | **Principal Engineer** | `claude-opus-4.6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
- | 8 | **Security Engineer** | `claude-opus-4.8` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
+| 7 | **Principal Engineer** | `claude-opus-4.6` [^1] | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
+| 8 | **Security Engineer** | `claude-opus-4.8` [^2] | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
+
+[^1]: Principal Engineer supports multi-model selection: 4.6 (pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../SPEC.md).
+[^2]: Security Engineer always uses 4.8 (non-downgrade rule). 4.7 permitted only as fallback if 4.8 unavailable. See [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 ### Cost Tiers
 
@@ -40,6 +43,47 @@ Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
 ```
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
+
+---
+
+## Multi-Model Selection (Tier 3)
+
+Principal Engineer and Security Engineer are Tier 3 roles where task complexity varies enough to warrant variant selection within the opus family. The Orchestrator selects the appropriate variant when creating a DELEGATE.
+
+### Principal Engineer: Variant Selection
+
+| Task Profile | Model | When to Use |
+|-------------|-------|-------------|
+| Pure architecture planning | `claude-opus-4.6` | Design-only; no cross-repo execution; extended thinking sufficient |
+| Design with cross-repo execution | `claude-opus-4.7` | Architecture decision drives implementation across ≥2 repos |
+| Security-critical design | `claude-opus-4.8` | Involves auth flows, cryptographic selection, or compliance policy |
+
+**Decision tree:**
+1. Pure planning task (no execution)? → `claude-opus-4.6`
+2. Design drives cross-repo implementation? → `claude-opus-4.7`
+3. Security-critical design (auth/crypto/compliance)? → `claude-opus-4.8`
+4. Default (unclear) → `claude-opus-4.6` (cheapest capable option)
+
+### Security Engineer: Non-Downgrade Rule
+
+Security Engineer **always** uses `claude-opus-4.8`. Security analysis is the highest-stakes task in the system; downgrading for cost savings introduces unacceptable risk of missed vulnerabilities or incomplete threat models.
+
+- `claude-opus-4.7` is permitted **only** as a fallback if 4.8 is unavailable (API outage)
+- Fallback must be documented in HANDBACK
+- Never downgrade by choice
+
+### Quality Engineer: model_assessment Feedback
+
+After each Tier 3 task, QE provides `model_assessment` in HANDBACK for the Model Engineer feedback loop:
+
+```yaml
+model_assessment:
+  role: principal-engineer
+  model_used: claude-opus-4.6
+  model_appropriate: true
+  rationale: "Pure planning task; 4.6 extended thinking sufficient"
+  recommendation: "Continue routing pure-planning Principal tasks to 4.6"
+```
 
 ---
 
