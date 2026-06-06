@@ -264,16 +264,6 @@ See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/gui
 - ✅ **5-tier deep hierarchies** (parent → children → grandchildren → etc.)
 - ✅ **Automatic aggregation** of quality scores, tokens, costs
 
-### 4. Streamlined Skill Naming & Single Source of Truth (Phase 3)
-
-**Discovery:** Centralized skill registry + standardized naming eliminates installation errors and cognitive overhead.
-
-**Benefits:**
-- ✅ **98/100 Quality Score:** Phase 3 consolidation validated via automated testing
-- ✅ **66% Faster Execution:** Reduced skill lookup and disambiguation overhead
-- ✅ **Zero Installation Errors:** All skill references validated at build time
-- ✅ **Single Source of Truth:** `src/AGENTS.md` defines all skills; renderers transform for each harness
-
 ---
 
 ## Documentation

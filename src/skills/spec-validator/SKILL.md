@@ -6,7 +6,7 @@ compatibility: agentic-engineers framework v5.10+
 metadata:
   author: agentic-engineers
   version: "1.0"
-  category: governance
+  category: validation
   role: quality-engineer
   model: haiku-4-5
   effort: medium
