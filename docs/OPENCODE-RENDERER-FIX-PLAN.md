@@ -215,8 +215,8 @@ provider block exposes the tier.
    every emitted frontmatter key in `dist/opencode/agents/*.md` is a member.
 3. Assert per-role permission/variant emissions match the matrices above.
 4. Re-run `renderer/scripts/validate_renders.py` to confirm src↔dist parity.
-5. Run the new `opencode-feature-sync` skill (see
-   `src/skills/opencode-feature-sync/`) to detect any residual drift between
+5. Run the `harness-opencode-feature-sync` skill (see
+   `src/skills/harness-opencode-feature-sync/`) to detect any residual drift between
    OpenCode's integration points and the renderer emission.
 
 ---

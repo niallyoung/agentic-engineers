@@ -2263,6 +2263,10 @@ Successfully consolidated 37 skills into consistent naming patterns and removed 
 - Streamlined skill naming reduces cognitive overhead for agents and humans
 - Parallel delegation achieves 66% faster execution (15 min vs 20+ min for 4 phases)
 
+**Migrating?** See the [Skills Consolidation Migration Guide](docs/MIGRATION-2026-06-06.md)
+for before/after examples, and the [Consolidation Architecture Guide](docs/guides/ARCHITECTURE-CONSOLIDATION.md)
+for the rationale and folder structure.
+
 ### Consolidation Roadmap
 
 **Milestone 1** — Security Foundation (2026-05-30) ✅ COMPLETE
@@ -2284,10 +2288,12 @@ Successfully consolidated 37 skills into consistent naming patterns and removed 
 - All harnesses emit consistent DELEGATE/HANDBACK format
 - All harnesses pass end-to-end workflow tests
 
-**Milestone 4** — Documentation & Polish (2-3 weeks)
+**Milestone 4** — Documentation & Polish (2-3 weeks) 🔄 IN PROGRESS
 - Refresh SPEC.md with consolidation updates
+- ✅ Migration guide published ([docs/MIGRATION-2026-06-06.md](docs/MIGRATION-2026-06-06.md))
+- ✅ Consolidation architecture guide published ([docs/guides/ARCHITECTURE-CONSOLIDATION.md](docs/guides/ARCHITECTURE-CONSOLIDATION.md))
+- ✅ CONTRIBUTING updated with skill lifecycle, naming conventions, cost tracking
 - Update skill documentation for new naming conventions
-- Add Phase 4 completion metrics to documentation
 - Polish README for production readiness
 
 **After Milestone 4** — Feature Freeze

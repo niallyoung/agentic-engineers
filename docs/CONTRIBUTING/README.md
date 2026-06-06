@@ -265,6 +265,101 @@ When making code changes, ensure tests stay in sync:
 
 ---
 
+## Skill Naming Conventions
+
+As of the **Phase 3 Skills Consolidation (2026-06-06)**, skills follow
+consistent prefixes so related skills group together and are easy to discover.
+**New skills must adopt the matching prefix for their domain:**
+
+| Prefix | Domain | Existing members |
+|--------|--------|------------------|
+| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query, queue-todo-sync |
+| `harness-*` | Harness-specific integration | harness-integration-tracker, harness-opencode-feature-sync |
+| `spec-*` | SPEC.md governance | spec-validator, spec-management, spec-extract |
+| `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator *(single source of truth)* |
+| `model-*` | Model routing / cost-quality | model-engineer, model-selection |
+| `cost-*` | Token / cost tracking | cost-aggregation, cost-budgeting |
+| `agent-*` / `skill-*` | Scaffolding | agent-creator / skill-creator |
+
+**Internal vs. user-facing:** framework-internal "meta" skills live in
+`src/skills/_meta/` and are *not* part of the public skill catalog. Put plumbing
+(orchestration enforcement, queue isolation, eval harness) there; put
+agent-invokable capabilities directly under `src/skills/`.
+
+### Phase 3 Consolidation Summary
+
+Four skills changed identity during consolidation. If you reference any old
+name, see [docs/MIGRATION-2026-06-06.md](../MIGRATION-2026-06-06.md):
+
+| Old name | New name / status | Change |
+|----------|-------------------|--------|
+| `todo-maintenance` | `queue-todo-sync` | Rename |
+| `opencode-feature-sync` | `harness-opencode-feature-sync` | Rename |
+| `protocol-validation` | merged into `protocol-validator` | Merge (single source of truth) |
+| `voice-notify` | *(removed)* | Deletion — use HANDBACK status + logging |
+
+Background and rationale: [docs/guides/ARCHITECTURE-CONSOLIDATION.md](../guides/ARCHITECTURE-CONSOLIDATION.md).
+
+---
+
+## Skill Lifecycle
+
+Every skill moves through the same four stages. The source tree is
+authoritative; everything downstream is regenerated, never hand-edited.
+
+```
+1. CREATE            2. TEST                3. RENDER              4. DEPLOY
+   ──────               ────                   ──────                 ──────
+   src/skills/<name>/   src/skills/<name>/     make render-all        make install
+     SKILL.md             tests/      ───►     → dist/claude/   ───►  → ~/.claude/skills/
+     scripts/           tests/ (cross-skill)   → dist/copilot/        → ~/.copilot/skills/
+     references/        make verify            → dist/opencode/       → ~/.config/opencode/skills/
+     tests/             pytest tests/ -q       → dist/pi/             (+ π.dev)
+```
+
+1. **Create** — Author the skill in `src/skills/<name>/` with a `SKILL.md`
+   (frontmatter), `scripts/`, optional `references/`, and `tests/`. Use the
+   correct naming prefix (above). See [Creating New Skills](#creating-new-skills).
+2. **Test** — Add skill-local tests under `src/skills/<name>/tests/`; add
+   cross-skill behavior to the top-level `tests/`. **Test against rendered
+   output (`dist/`), not your dev install** (`~/.claude/` may be empty in CI).
+   Keep test-fixture skill counts in sync — see
+   [Test Fixture Synchronization](#test-fixture-synchronization).
+3. **Render** — `make render-all` regenerates `dist/<harness>/` with
+   provider-specific transformations. The skill name must appear identically
+   across all harnesses; see [docs/RENDERING.md](../RENDERING.md).
+4. **Deploy** — `make install` renders to the four user config directories. A
+   rename or merge is only "done" once it re-renders cleanly everywhere.
+
+> Renames use `git mv` to preserve history, and a rename is incomplete until
+> every reference (registries, docs, fixtures, imports) is updated. Verify with:
+> `grep -rn "<old-name>" src/ docs/ config/ | grep -v archive` returning empty.
+
+---
+
+## Cost Tracking & Budget Monitoring
+
+The framework tracks token spend per task and enforces budgets so agents stay
+within cost targets.
+
+- **Per-task budgets** — A `DELEGATE` block carries a token budget; the
+  executing agent should stay within it and report actuals in its `HANDBACK`.
+- **Budget enforcement & token limits** — see
+  [docs/BUDGET_MANAGEMENT.md](../BUDGET_MANAGEMENT.md) and
+  [docs/USAGE-BUDGET-MANAGER.md](../USAGE-BUDGET-MANAGER.md).
+- **Historical usage & trends** — see
+  [docs/TOKEN-USAGE-TRACKING.md](../TOKEN-USAGE-TRACKING.md); the `cost-*`
+  skills (`cost-aggregation`, `cost-budgeting`) aggregate spend across providers.
+- **Model selection drives cost** — pick the cheapest model that meets the
+  quality bar (see [Model Selection (Locked)](#model-selection-locked)); the
+  `model-*` skills recommend cost-quality-optimal routing.
+
+**Contributor guidance:** when adding a skill or agent, set a realistic token
+budget in its examples, prefer lower-cost models where quality allows, and never
+hard-code spend that bypasses budget enforcement.
+
+---
+
 ## Making Changes
 
 1. **Branch:** `git checkout -b feature/your-change`
@@ -371,6 +466,139 @@ python3 scripts/validate_changelog_ci.py  # See what's missing
 git add CHANGELOG.md
 git commit --amend
 ```
+
+---
+
+## CI/CD Requirements (Phase 5.1+)
+
+All contributions pass through a multi-gate CI pipeline defined in
+`.github/workflows/ci.yml`. This section documents each gate, what it checks,
+and how to satisfy it locally before pushing.
+
+### Gates Overview
+
+| Gate | Script | Failing Exit | When Added |
+|------|--------|-------------|------------|
+| Credential scan | `scripts/check-gitconfig-no-tokens.sh` | Hard fail | Phase 1 |
+| Lint | `make lint` | Hard fail | Phase 1 |
+| **SKILL.md compliance** | `scripts/validate_skills.py` | Hard fail on errors; warn on warnings | Phase 5.1 |
+| **Circular import detection** | `scripts/detect_circular_imports.py` | Hard fail | Phase 5.1 |
+| **Protocol compliance** | Inline (queue YAML validation) | Hard fail if queue files exist | Phase 5.1 |
+| **Conformance report** | `scripts/validate_skills.py --json` | Non-failing (audit trail) | Phase 5.1 |
+| Test suite | `make test` | Hard fail | Phase 1 |
+| Verify | `make verify` | Hard fail | Phase 1 |
+| Token cost annotation | Inline (reads `data/metrics/`) | Non-failing (audit only) | Phase 5.1 |
+
+### Gate 1: SKILL.md Frontmatter Compliance
+
+Every active skill listed in `ACTIVE_SKILLS` inside `scripts/validate_skills.py`
+must have a `SKILL.md` with all required frontmatter fields.
+
+**Run locally:**
+```bash
+python scripts/validate_skills.py           # errors cause CI failure
+python scripts/validate_skills.py --strict  # warnings also cause failure (use for Phase 5.2)
+python scripts/validate_skills.py --skill queue-management  # check a single skill
+python scripts/validate_skills.py --json    # machine-readable output
+```
+
+**Required frontmatter fields:**
+
+```yaml
+---
+name: <skill-name>
+description: "<brief description>"
+license: Proprietary
+compatibility: agentic-engineers framework v5.10+. Requires Python 3.11+
+metadata:
+  author: agentic-engineers
+  version: "1.0"
+  category: <category>
+  role: <role>
+  model: <model>
+  effort: low | medium | high
+---
+```
+
+**Required directory structure per skill:**
+```
+src/skills/<skill-name>/
+├── SKILL.md          ← required
+├── __init__.py       ← required (exports public API)
+├── scripts/          ← required directory
+│   └── <skill>.py
+└── tests/            ← required directory
+    └── test_<skill>.py   ← at least one test file required
+```
+
+See [`src/skills/_meta/skill-template/QUICKSTART.md`](src/skills/_meta/skill-template/QUICKSTART.md)
+for the 5-step guide to creating a conformant skill.
+
+### Gate 2: Circular Import Detection
+
+Static AST analysis over `src/` detects any circular import chains.
+
+**Run locally:**
+```bash
+python scripts/detect_circular_imports.py
+python scripts/detect_circular_imports.py --verbose  # print full import graph
+python scripts/detect_circular_imports.py --root src/skills  # skills only
+```
+
+If a cycle is detected, restructure the imports to eliminate it (e.g., move
+shared types to a dedicated `_types.py` module that neither importer depends on).
+
+### Gate 3: Protocol Compliance
+
+Any YAML files in the `queue/` directory (if present) are validated against the
+DELEGATE/HANDBACK protocol schema. This gate is a no-op on repos with no queue files.
+
+**Run locally:**
+```bash
+# If you have queue files:
+python -c "from src.skills.protocol_validator.scripts import validate_file; print(validate_file('queue/incoming/example.yaml'))"
+```
+
+### Gate 4: Conformance Report (Audit Trail)
+
+This gate runs `validate_skills.py --json` and writes the output to the GitHub
+Actions step summary. It is **non-failing** — it exists to create an audit trail
+of skill health over time. Check it in the "Summary" tab of any CI run.
+
+### Token Cost Annotation (Non-Failing)
+
+If `data/metrics/` contains JSON files with token usage data, the CI run
+annotates the step summary with the token cost of that commit. This is non-failing
+and informational only. Phase 5.2 will add a hard cost budget gate.
+
+---
+
+### Pre-Push Checklist
+
+Before pushing to a feature branch:
+
+```bash
+# 1. Lint
+make lint
+
+# 2. Skill compliance (if you touched any skill)
+python scripts/validate_skills.py
+
+# 3. Circular imports
+python scripts/detect_circular_imports.py
+
+# 4. Full test suite
+make test
+
+# 5. Harness render (if you touched skills or agents)
+make render-copilot render-claude render-opencode render-pi render-specs
+
+# 6. Verify manifest
+make verify
+```
+
+The pre-push git hook runs `make test-concurrent` automatically — do not bypass
+with `SKIP_HOOKS=1` except in documented emergencies.
 
 ---
 
@@ -776,7 +1004,7 @@ models, or budgets.
 
 ### Per-role budgets
 
-Authoritative source: [`src/config/token-budgets.yaml`](../../src/config/token-budgets.yaml).
+Authoritative source: [`src/config/token-budgets.yaml`](src/config/token-budgets.yaml).
 Each role has a hard `budget` (tokens) and three thresholds:
 
 - **warn** (default 80%) — emits a warning; task continues.
@@ -811,9 +1039,9 @@ for machine-readable output.
 ### Routing decisions
 
 The canonical task → (role, model, effort, budget) matrix lives in
-[`src/orchestration/routing/model_router.py`](../../src/orchestration/routing/model_router.py).
+[`src/orchestration/routing/model_router.py`](src/orchestration/routing/model_router.py).
 For the human-readable version and the cost/quality tradeoff rationale, see
-[`docs/COST-QUALITY-MATRIX.md`](../COST-QUALITY-MATRIX.md).
+[`docs/COST-QUALITY-MATRIX.md`](docs/COST-QUALITY-MATRIX.md).
 
 ### How to read a report
 
