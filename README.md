@@ -33,29 +33,29 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
 ## Architecture at a Glance
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AGENTIC-ENGINEERS                         │
-│              Framework & Multi-Harness System                │
-└─────────────────────────────────────────────────────────────┘
-                              │
+       ┌─────────────────────────────────────────────────────────────┐
+       │                    AGENTIC-ENGINEERS                         │
+       │              Framework & Multi-Harness System                │
+       └─────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+                          ┌──────────────────┐
+                          │  make install    │
+                          │  (per harness)   │
+                          └──────────────────┘
+                  /           │           │           \
+              ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+              │ Claude  │ │ Copilot │ │ OpenCode│ │   Pi    │
+              │ Config  │ │ Config  │ │ Config  │ │ Config  │
+              └─────────┘ └─────────┘ └─────────┘ └─────────┘
+                  │           │           │           │
+                  └───────────┼───────────┼───────────┘
                               ▼
-                    ┌──────────────────┐
-                    │  make install    │
-                    │  (per harness)   │
-                    └──────────────────┘
-        /           │           │           \
-    ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-    │ Claude  │ │ Copilot │ │ OpenCode│ │   Pi    │
-    │ Config  │ │ Config  │ │ Config  │ │ Config  │
-    └─────────┘ └─────────┘ └─────────┘ └─────────┘
-        │           │           │           │
-        └───────────┼───────────┼───────────┘
-                    ▼
-           ┌────────────────────┐
-           │ Invoke your harness│
-           │ claude|copilot|    │
-           │ opencode|pi        │
-           └────────────────────┘
+                     ┌────────────────────┐
+                     │ Invoke your harness│
+                     │ claude|copilot|    │
+                     │ opencode|pi        │
+                     └────────────────────┘
 ```
 
 **Framework → Configure → Deploy → Invoke.** Each harness installs customized agents, skills, and routing logic for its provider.
