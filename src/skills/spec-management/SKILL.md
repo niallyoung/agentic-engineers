@@ -6,7 +6,7 @@ compatibility: Agentic-Engineers framework v5.10+
 metadata:
   author: agentic-engineers
   version: "1.0"
-  category: governance
+  category: management
   role: principal-engineer
   authority: principal-engineer, security-engineer, lead-engineer
   model: claude-opus-4.8
