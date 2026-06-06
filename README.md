@@ -64,12 +64,12 @@
 |------|------|-------|---------|----------|--------|-----------|---------|
 | 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4.5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
 | 2️⃣ | **Engineer** | Haiku | claude-haiku-4.5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
-| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | Medium | $0.09 | Post-implementation validation; model suitability assessment |
-| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Analyzes metrics; optimizes routing and model selection |
+| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ❌ No | Medium | $0.09 | Post-implementation validation; model suitability assessment |
+| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.5 | ✅ Yes | Medium | $0.09 | Analyzes metrics; optimizes routing and model selection |
 | 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
-| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
-| 7️⃣ | **Principal Engineer** | Opus | claude-opus-4-6 | ✅ Yes | High | $0.15 | Cross-service architecture; major refactors |
-| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.7 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
+| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.5 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
+| 7️⃣ | **Principal Engineer** | Opus | claude-opus-4.6 | ✅ Yes | High | $0.15 | Cross-service architecture; major refactors |
+| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.8 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
 - **Haiku (Ranks 1-2):** $0.03–$0.05 per task — Routing, well-scoped implementation
@@ -80,7 +80,7 @@
 
 **Effort Levels:**
 - **Low:** Minimal reasoning, direct execution (Orchestrator routing)
-- **Medium:** Balanced reasoning and exploration (QE validation)
+- **Medium:** Balanced reasoning and exploration (QE validation, Model Engineer analysis)
 - **High:** Deep reasoning, multiple approaches considered (Engineers, Leads, Architects)
 - **Max:** Unconstrained reasoning, full exploration (Security analysis, threat modeling)
 
@@ -319,7 +319,7 @@ make install-opencode
 
 **Known Limitations:**
 - Requires queue directories to be created at `~/.agentic-engineers/queue/`
-- Model names use hyphenated format (e.g., `claude-opus-4-7`)
+- Model names use hyphenated format (e.g., `claude-opus-4-8`)
 - Session-based queue isolation for concurrent operation
 
 **Compatibility Notes:**
@@ -350,7 +350,7 @@ make install-copilot
 ```
 
 **Known Limitations:**
-- Model names use standard format (e.g., `claude-opus-4.7`)
+- Model names use standard format (e.g., `claude-opus-4.8`)
 - Requires GitHub CLI (`gh`) to be installed
 - Limited local development support (primarily cloud-based)
 
@@ -423,7 +423,7 @@ pi --version  # Should be 0.74.0 or higher
 
 **Known Limitations:**
 - ⚠️ Beta status: API and features may change
-- Model names use hyphenated format (e.g., `claude-opus-4-7`)
+- Model names use hyphenated format (e.g., `claude-opus-4-8`)
 - Limited production testing at scale (not yet recommended for critical systems)
 - Event handler system requires TypeScript knowledge for advanced customization
 
@@ -442,11 +442,11 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 
 | Harness | Internal Format | Transformed Format | Reason |
 |---------|-----------------|-------------------|--------|
-| Source Agents | `claude-opus-4.7` (dots) | — | Canonical format in source |
-| OpenCode | `claude-opus-4.7` | `claude-opus-4-7` (hyphens) | CLI requirement |
-| Copilot CLI | `claude-opus-4.7` | `claude-opus-4.7` (pass-through) | Anthropic API format |
-| Claude Code | `claude-opus-4.7` | `opus` (short alias) | Web UI simplification |
-| π.dev | `claude-opus-4.7` | `claude-opus-4-7` (hyphens) | Anthropic API format |
+| Source Agents | `claude-opus-4.8` (dots) | — | Canonical format in source |
+| OpenCode | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | CLI requirement |
+| Copilot CLI | `claude-opus-4.8` | `claude-opus-4.8` (pass-through) | Anthropic API format |
+| Claude Code | `claude-opus-4.8` | `opus` (short alias) | Web UI simplification |
+| π.dev | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | Anthropic API format |
 
 **Renderer Scripts:**
 
@@ -550,7 +550,7 @@ Harness and model compatibility is continuously tested via the **EVALS-001 frame
 **Real-World Data:**
 - **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
 - **Sonnet (claude-sonnet-4.6):** $0.09 per task, needed for complex analysis and planning
-- **Opus (claude-opus-4-6/4-7):** $0.15 per task, only for security/architecture decisions
+- **Opus (claude-opus-4.6/4.8):** $0.15 per task, only for security/architecture decisions
 
 **Cost Breakdown (Typical Workflow):**
 | Phase | Model | Cost | % of Total | Reason |
@@ -606,10 +606,10 @@ engineer:
 quality_engineer:
   model: claude-sonnet-4.6
   effort: medium
-  thinking: true
+  thinking: false
 
 senior_engineer:
-  model: claude-sonnet-4.6
+  model: claude-sonnet-4.5
   effort: high
   thinking: true
 
@@ -619,18 +619,18 @@ lead_engineer:
   thinking: true
 
 principal_engineer:
-  model: claude-opus-4-6
+  model: claude-opus-4.6
   effort: high
   thinking: true
 
 security_engineer:
-  model: claude-opus-4.7
+  model: claude-opus-4.8
   effort: max
   thinking: true
 
 model_engineer:
-  model: claude-sonnet-4.6
-  effort: high
+  model: claude-sonnet-4.5
+  effort: medium
   thinking: true
 ```
 
@@ -649,7 +649,7 @@ NOTE: this area may not be functional / not verified. Intent here is for `agenti
 **Method 1: Environment Variables (Temporary)**
 ```bash
 # Override a single agent's model
-ORCHESTRATOR_MODEL=claude-opus-4-6 make install-opencode
+ORCHESTRATOR_MODEL=claude-opus-4.6 make install-opencode
 
 # Override multiple agents
 ENGINEER_MODEL=gpt-4-turbo \
@@ -694,9 +694,10 @@ success_criteria:
 
 **Anthropic (Default):**
 - `claude-haiku-4.5` — Fast, cheap, good for well-scoped work
-- `claude-sonnet-4.6` — Balanced, good for planning and review
-- `claude-opus-4-6` — Powerful, good for architecture
-- `claude-opus-4.7` — Most powerful, good for security analysis
+- `claude-sonnet-4.5` — Balanced, good for planning, review, and optimization
+- `claude-sonnet-4.6` — Higher capability sonnet; lead engineering and quality gates
+- `claude-opus-4.6` — Powerful, good for architecture planning
+- `claude-opus-4.8` — Most powerful, required for security analysis (non-downgrade rule)
 
 **OpenAI (Supported):**
 - `gpt-4-turbo` — Equivalent to Sonnet (planning, review)
@@ -995,7 +996,7 @@ delegate parallel: audit security in user-service; audit security in payment-ser
 handoff_type: DELEGATE
 task_id: 2026-05-20-security-audit-1
 role: Security Engineer
-model: claude-opus-4.7
+model: claude-opus-4.8
 effort: max
 scope: |
   Perform comprehensive security audit of user-service.
@@ -1110,7 +1111,7 @@ delegate:
 handoff_type: DELEGATE
 task_id: 2026-05-20-payment-arch
 role: Principal Engineer
-model: claude-opus-4.7
+model: claude-opus-4.6
 effort: high
 scope: |
   Design microservices architecture for new payment system.
@@ -1656,7 +1657,7 @@ For each TIER:
 ### Standard Test Suite
 
 ```bash
-make test          # Full test suite (1047+ tests, ~60 seconds)
+make test          # Full test suite (4,584+ tests, ~60 seconds)
 make test-quick    # Quick smoke tests
 make coverage      # Coverage report
 make verify        # SPEC compliance check
@@ -1822,7 +1823,7 @@ System gets cheaper and better automatically
 | **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning | Built-in resource budgeting | TBD |
 | **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination | Resource-aware scheduling | TBD |
 | **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low | Medium (Mayor + Hooks) | TBD |
-| **Production Ready** | ✅ Yes (1047+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) | ✅ Yes (v1.0.0, Apr 2026) |
+| **Production Ready** | ✅ Yes (4,584+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) | ✅ Yes (v1.0.0, Apr 2026) |
 | **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium | Growing (emerging) | TBD (new release) |
 | **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based | TBD |
 | **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation | TBD |
@@ -1837,7 +1838,7 @@ System gets cheaper and better automatically
 **Strengths:**
 - ✅ **Bulletproof quality gates:** 3-layer validation (format/content/quality) with weighted scoring prevents bad work from merging
 - ✅ **Autonomous cost optimization:** Model Engineer analyzes every task and recommends optimal model/effort for next similar task (15-25% cost reduction proven)
-- ✅ **Production-proven:** 1047+ tests passing, 6 phases complete, real-world deployments at scale
+- ✅ **Production-proven:** 4,584+ tests passing, 6 phases complete, real-world deployments at scale
 - ✅ **Complete audit trail:** Every task tracked, every decision recorded in queue artifacts
 - ✅ **Graceful escalation:** Clear paths (Engineer → Senior → Lead → Principal) with bounded retries (max 2)
 - ✅ **Token visibility at scale:** Sees both Orchestrator (27%) and subagent tokens (73%); 36 concurrent agents tested
@@ -2128,7 +2129,7 @@ All protocol documents live in `src/` and are installed into each harness by `ma
 |----------|---------|-------------|
 | [`src/AGENTS.md`](src/AGENTS.md) | Agent roster, routing decision tree, Handover Packet spec, ACK protocol | Delegation Model |
 | [`src/DECISION-MAKING.md`](src/DECISION-MAKING.md) | Autonomous decision thresholds, escalation tiers, root-cause principle | Decision Tiers |
-| [`src/SKILLS.md`](src/SKILLS.md) | 40+ skill matrix with role→skill assignments and registration status | Skill Matrix |
+| [`src/SKILLS.md`](src/SKILLS.md) | Skill catalog (62 skills across 12 categories) with role→skill assignments and registration status | Skill Matrix |
 | [`src/TOKEN_METRICS.md`](src/TOKEN_METRICS.md) | Token usage schema, daily/weekly/monthly tracking, per-role cost attribution | Metrics Schema |
 | [`src/CLI-PERMISSIONS.md`](src/CLI-PERMISSIONS.md) | Tool access by role (GitHub, Buildkite, Atlassian, OpenCode-specific) | Permission Matrix |
 
@@ -2236,7 +2237,7 @@ We have built a comprehensive multi-agent orchestration framework through 8 phas
 
 ### What This Means
 
-- ✅ **Core framework is stable** — 4,474 tests passing, all phases 1–H complete
+- ✅ **Core framework is stable** — 4,584+ tests passing, all phases 1–H complete
 - ✅ **Security hardening complete** — 5 critical fixes implemented (queue paths, audit trails, agent verification, security fields, enforcement decorator)
 - ✅ **Skills consolidation complete** — 37 skills reorganized, 4 skills renamed/removed, 60 files modified, 98/100 quality score
 - ✅ **Cost optimization working** — 3 skills shipped, 40-60% token savings demonstrated
@@ -2256,6 +2257,7 @@ Successfully consolidated 37 skills into consistent naming patterns and removed 
 **Results:**
 - **60 files modified**, **17 files deleted**, **116+ tests passing**
 - **Quality score:** 98/100 (specification compliance)
+- **Current deployed skills:** 24 standalone skills per harness (in `dist/<harness>/skills/`)
 - **Consistency achieved:** `queue-*` (queue-management, queue-query, queue-todo-sync), `harness-*` (harness-integration-tracker, harness-opencode-feature-sync), `protocol-*` (protocol-validator as canonical)
 
 **Cost Impact:**
