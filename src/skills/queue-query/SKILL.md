@@ -5,21 +5,25 @@ description: >
   filesystem queue by state (incoming backlog, processing orphans to resume,
   done results/next-steps). Format-agnostic (json + yaml). The local stepping
   stone toward the external memory-API queue interface.
-version: "1.0.1"
-dependencies:
-  - skill: queue-isolation
-    optional: true
-  - skill: queue-management
-    optional: true
+license: Proprietary
+compatibility: agentic-engineers framework v5.10+. Requires Python 3.11+
+metadata:
+  author: agentic-engineers
+  version: "1.0.1"
+  category: observability
+  role: orchestrator
+  model: claude-haiku-4.5
+  effort: medium
+  dependencies:
+    - skill: queue-isolation
+      optional: true
+    - skill: queue-management
+      optional: true
 entry_points:
   - scripts/queue_query.py
 tests:
   - tests/test_queue_query.py
 coverage_minimum: 85
-metadata:
-  role: orchestrator
-  model: claude-haiku-4.5
-  effort: medium
 ---
 
 # queue-query: Local Queue Visibility

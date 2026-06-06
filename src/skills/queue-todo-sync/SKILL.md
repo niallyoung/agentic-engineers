@@ -1,12 +1,16 @@
 ---
-name: "queue-todo-sync"
-title: "queue-todo-sync"
-description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
-role: "Engineer"
-model: "claude-haiku-4.5"
-effort: "medium"
-status: "implemented"
-version: "1.0.0"
+name: queue-todo-sync
+description: Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events
+license: Proprietary
+compatibility: agentic-engineers framework v5.10+. Requires Python 3.11+
+metadata:
+  author: agentic-engineers
+  version: "1.0.0"
+  category: automation
+  role: engineer
+  model: claude-haiku-4.5
+  effort: medium
+status: implemented
 ---
 
 # queue-todo-sync Skill
