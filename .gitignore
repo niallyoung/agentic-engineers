@@ -110,7 +110,6 @@ COMPLIANCE_REPORT.json
 docs/archive/audits/SKILLS-AUDIT.md
 
 # Generated verification files
-.agents_verification_sha
 *.tmp
 .v3check.tmp
 artifacts/
