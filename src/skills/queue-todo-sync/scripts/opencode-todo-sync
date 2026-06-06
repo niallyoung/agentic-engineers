@@ -22,7 +22,7 @@ from sync_todo import TodoSyncManager
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
-        description="todo-maintenance skill: Auto-sync queue ↔ TODO.md",
+        description="queue-todo-sync skill: Auto-sync queue ↔ TODO.md",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
