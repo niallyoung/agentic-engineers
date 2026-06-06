@@ -54,13 +54,13 @@ The Orchestrator automatically invokes this skill:
 
 ```bash
 # Full bidirectional sync
-queue-todo-sync sync
+opencode-todo-sync sync
 
 # Generate weekly report
-queue-todo-sync report
+opencode-todo-sync report
 
 # Check for conflicts and issues
-queue-todo-sync check
+opencode-todo-sync check
 ```
 
 ### Programmatic Usage
