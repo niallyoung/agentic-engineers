@@ -60,29 +60,150 @@
 
 ## 8 Specialized Roles
 
-| Rank | Role | Model | Version | Thinking | Effort | Cost/Task | Purpose |
-|------|------|-------|---------|----------|--------|-----------|---------|
-| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4.5 | ❌ No | Low | $0.03 | Routes all work via decision tree; never does work itself |
-| 2️⃣ | **Engineer** | Haiku | claude-haiku-4.5 | ❌ No | High | $0.05 | Executes well-scoped, pre-planned tasks |
-| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ❌ No | Medium | $0.09 | Post-implementation validation; model suitability assessment |
-| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.5 | ✅ Yes | Medium | $0.09 | Analyzes metrics; optimizes routing and model selection |
-| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4.6 | ✅ Yes | High | $0.09 | Code review (8-point checklist); architectural guidance |
-| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.5 | ✅ Yes | High | $0.09 | Analyzes unscoped work; produces detailed plans |
-| 7️⃣ | **Principal Engineer** | Opus | claude-opus-4.6 | ✅ Yes | High | $0.15 | Cross-service architecture; major refactors |
-| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.8 | ✅ Yes | Max | $0.15 | Threat modeling; vulnerability assessment |
+| Rank | Role | Canonical Model | Claude Version | Thinking | Effort | Cost/Task | Purpose |
+|------|------|-----------------|----------------|----------|--------|-----------|---------|
+| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4.5 | ❌ Off — deterministic routing | Low | $0.03 | Routes all work via decision tree; never does work itself |
+| 2️⃣ | **Engineer** | Haiku | claude-haiku-4.5 | ❌ Off — pre-planned execution | High | $0.05 | Executes well-scoped, pre-planned tasks |
+| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ❌ Off — checklist validation | Medium | $0.09 | Post-implementation validation; model suitability assessment |
+| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.5 | ✅ On — metric analysis | Medium | $0.09 | Analyzes metrics; optimizes routing and model selection |
+| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4.6 | ✅ On — review judgment | High | $0.09 | Code review (8-point checklist); architectural guidance |
+| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.6 | ✅ On — design trade-offs | High | $0.09 | Analyzes unscoped work; produces detailed plans |
+| 7️⃣ | **Principal Engineer** | Opus | claude-opus-4.8 | ✅ On — cross-service reasoning | High | $0.15 | Cross-service architecture; major refactors |
+| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.8 | ✅ On — STRIDE threat modeling | Max | $0.15 | Threat modeling; vulnerability assessment |
+
+> **Canonical model** is the primary recommendation. Each role also maps to provider-specific equivalents (GPT-4o, Gemini, Llama) — see [Multi-Model Support & Provider Routing](#multi-model-support--provider-routing) below.
 
 **Cost Breakdown:**
 - **Haiku (Ranks 1-2):** $0.03–$0.05 per task — Routing, well-scoped implementation
 - **Sonnet (Ranks 3-6):** $0.09 per task — Planning, review, quality, optimization
 - **Opus (Ranks 7-8):** $0.15 per task — Complex architecture, security analysis
 
-**Thinking Mode:** Extended thinking (✅) enables deeper reasoning for complex tasks; disabled for fast routing/execution.
+**Thinking Mode:** Extended thinking (✅) enables deeper reasoning for complex tasks; disabled for fast routing/execution. See [Thinking Modes & Cost-Quality Trade-offs](#thinking-modes--cost-quality-trade-offs) for the full rationale.
 
 **Effort Levels:**
 - **Low:** Minimal reasoning, direct execution (Orchestrator routing)
 - **Medium:** Balanced reasoning and exploration (QE validation, Model Engineer analysis)
 - **High:** Deep reasoning, multiple approaches considered (Engineers, Leads, Architects)
 - **Max:** Unconstrained reasoning, full exploration (Security analysis, threat modeling)
+
+---
+
+## Thinking Modes & Cost-Quality Trade-offs
+
+Extended thinking lets the model "think out loud" before answering — useful for judgment-heavy tasks, harmful overhead for deterministic ones. The framework enables thinking selectively to maximise quality where it matters and minimise cost where it doesn't.
+
+> **Cost impact:** Extended thinking adds ~3–5× tokens and latency. Enabling it only for roles that genuinely require judgment reduces per-workflow cost by 40–60%.
+
+### Thinking OFF — Deterministic roles (Orchestrator, Engineer, Quality Engineer)
+
+| Role | Why Thinking is OFF |
+|------|---------------------|
+| **Orchestrator** | Routing is deterministic pattern-matching against a fixed decision tree. The correct next agent is unambiguous once the task is classified. Thinking adds 3–5× token cost with zero routing accuracy improvement. |
+| **Engineer** | Execution work is pre-planned by the Senior Engineer — the plan contains numbered steps, concrete file paths, and explicit success criteria. Executing a pre-written plan doesn't require extended reasoning. |
+| **Quality Engineer** | Validation runs an 8-point binary checklist (pass/fail per criterion). Checklist items have clear thresholds; extended thinking adds no incremental signal to binary decisions. |
+
+### Thinking ON — Judgment-intensive roles (Senior, Lead, Principal, Security, Model Engineers)
+
+| Role | Why Thinking is ON |
+|------|---------------------|
+| **Senior Engineer** | Receives unscoped, ambiguous problems. Must evaluate trade-offs, choose among approaches, and produce a concrete plan. Extended thinking is essential for problem decomposition and approach selection. |
+| **Lead Engineer** | Code review requires detecting subtle logic errors, architecture mismatches, and non-obvious security implications. Thinking surfaces issues that linear reading misses. |
+| **Principal Engineer** | Cross-service architecture must weigh competing design options, predict system-wide interactions, and reason about long-term maintainability. This is exactly the task extended thinking was designed for. |
+| **Security Engineer** | STRIDE threat modeling requires structured multi-step reasoning: enumerate assets → identify threats → assess likelihood → prioritise mitigations. Thinking is non-negotiable for thoroughness. |
+| **Model Engineer** | Identifies cost inefficiencies and routing accuracy patterns across metrics data. Analytical reasoning over metrics requires more than pattern matching. |
+
+### Decision rule
+
+```
+Is the output determined by a fixed rule or checklist?
+  YES → Thinking OFF  (Orchestrator, Engineer, QE)
+  NO  → Is judgment, trade-off analysis, or structured exploration required?
+          YES → Thinking ON  (Senior, Lead, Principal, Security, Model Engineers)
+```
+
+---
+
+## Multi-Model Support & Provider Routing
+
+Every role has a **canonical model tier** (the primary recommendation) plus **provider-specific equivalents** that the render pipeline substitutes automatically. The single source of truth is [`src/config/models.yaml`](src/config/models.yaml).
+
+### Role → Model Mapping (All Providers)
+
+| Role | Canonical | Claude (Anthropic) | GitHub Copilot | OpenAI | Google | Meta / Llama |
+|------|-----------|-------------------|----------------|--------|--------|--------------|
+| **Orchestrator** | Haiku | `claude-haiku-4.5` | `gpt-4o-mini` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Engineer** | Haiku | `claude-haiku-4.5` | `gpt-4o-mini` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Principal Engineer** | Opus | `claude-opus-4.8` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
+| **Security Engineer** | Opus | `claude-opus-4.8` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
+
+**Why these model choices:**
+- **Haiku / gpt-4o-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution
+- **Sonnet / gpt-4-turbo / gemini-1-5-pro / llama-3-70b** — mid-tier, balances cost and capability for planning, review, and validation
+- **Opus / gpt-4o / gemini-2-pro / llama-3-405b** — highest capability tier, required for architecture and security decisions
+
+### How Provider Routing Works
+
+The **render pipeline** (`renderer/`) reads `src/config/models.yaml` at build/install time and substitutes provider-specific model names into each agent's system prompt and configuration:
+
+```
+src/config/models.yaml          renderer/
+ ┌─────────────────────┐         ┌────────────────────────┐
+ │ role_models:        │ ──────► │ Reads canonical role   │
+ │   engineer:         │         │ Looks up active harness │
+ │     canonical: haiku│         │ Substitutes model name  │
+ │     providers:      │         │ Injects into agent conf │
+ │       copilot: ...  │         └────────────────────────┘
+ │       claude: ...   │                   │
+ │       openai: ...   │                   ▼
+ └─────────────────────┘        Agent runs correct model
+                                 for the active provider
+```
+
+**Example — Principal Engineer model by provider:**
+```yaml
+principal_engineer:
+  canonical: "claude-opus"     # Tier label (provider-agnostic)
+  thinking: true
+  providers:
+    claude:   "claude-opus-4.8"   # Highest capability — native thinking
+    copilot:  "gpt-4o"            # Closest equivalent in Copilot
+    openai:   "gpt-4o"            # Direct OpenAI equivalent
+    google:   "gemini-2-pro"      # Closest Gemini equivalent
+    meta:     "llama-3-405b"      # Largest open-source Llama model
+```
+
+### Provider Feature Deltas
+
+Not all providers support every feature. The framework degrades gracefully:
+
+| Feature | Claude (Anthropic) | GitHub Copilot | OpenAI | Google | Meta/Llama |
+|---------|-------------------|----------------|--------|--------|------------|
+| Extended Thinking | ✅ Native | ❌ Not supported | ⚠️ Limited | ❌ Not supported | ❌ Not supported |
+| Structured Output | ✅ | ✅ | ✅ | ✅ | ❌ Not guaranteed |
+| Max Context | 200K tokens | 4K tokens | 128K tokens | 1M tokens | 128K tokens |
+| Cost Tier | Premium | Premium | Premium | Standard | Budget/Free |
+
+> ⚠️ **Thinking mode on non-Claude providers:** When deploying to Copilot, OpenAI, Google, or Meta, `thinking: true` roles fall back to the best available reasoning of the target model. The framework does not error — it routes to the highest-capability model available for that provider.
+
+### Overriding Models
+
+Edit [`src/config/models.yaml`](src/config/models.yaml) to change any role's model across all providers:
+
+```yaml
+# Example: switch Engineer to a stronger model temporarily
+engineer:
+  canonical: "claude-sonnet"
+  thinking: false
+  providers:
+    claude: "claude-sonnet-4.6"   # Override from haiku
+    copilot: "gpt-4"
+```
+
+Then reinstall to apply: `make install-opencode`
 
 ---
 
