@@ -765,3 +765,63 @@ See [`docs/OPENCODE-RENDERER-FIX-PLAN.md`](../OPENCODE-RENDERER-FIX-PLAN.md) for
 ---
 
 **Start here:** Clone, install, verify, then use the framework's own meta-skills to extend it.
+
+---
+
+## Cost & Budget Reports
+
+Phase 5.2 added per-role token budgets and a routing matrix. Use these tools
+to interpret cost behavior locally before opening a PR that changes routing,
+models, or budgets.
+
+### Per-role budgets
+
+Authoritative source: [`src/config/token-budgets.yaml`](../../src/config/token-budgets.yaml).
+Each role has a hard `budget` (tokens) and three thresholds:
+
+- **warn** (default 80%) — emits a warning; task continues.
+- **error** (default 100%) — budget exceeded; investigate.
+- **escalate** (default 120%) — escalate to Principal Engineer.
+
+Security has an `escalate_pct` override (150%) so threat analyses are never
+cut short for cost reasons.
+
+### Check a single task
+
+```bash
+python3 -m src.skills.cost-aggregation.scripts.monitor_budgets \
+    --role engineer --tokens 1300
+# → [WARN] engineer: 1300/1500 tokens (86.7% ≥ 80%) — approaching cap.
+```
+
+Exit code is non-zero only when at least one record hits `escalate`, which
+makes the script safe to wire into CI as a soft gate.
+
+### Roll up recent metrics
+
+```bash
+python3 -m src.skills.cost-aggregation.scripts.cost_dashboard \
+    --metrics artifacts/metrics.jsonl
+```
+
+The dashboard groups tasks by role and reports `tasks`, `avg_tok`, `budget`,
+`over` (count exceeding the error threshold), and `escalated`. Use `--json`
+for machine-readable output.
+
+### Routing decisions
+
+The canonical task → (role, model, effort, budget) matrix lives in
+[`src/orchestration/routing/model_router.py`](../../src/orchestration/routing/model_router.py).
+For the human-readable version and the cost/quality tradeoff rationale, see
+[`docs/COST-QUALITY-MATRIX.md`](../COST-QUALITY-MATRIX.md).
+
+### How to read a report
+
+1. **Sustained `escalate` for a role** → the budget is wrong, or the routing
+   rule is sending the wrong task class to that role. Open a routing-change
+   PR; do not silently raise the cap.
+2. **High `avg_tok` near the warn line on Haiku roles** → consider promoting
+   one task class to Sonnet (still cheaper than chronic rework).
+3. **Zero `over` for Sonnet/Opus roles with low `avg_tok`** → candidate for
+   downgrade to Haiku on the matching rule.
+

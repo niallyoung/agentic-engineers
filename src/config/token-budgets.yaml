@@ -1,0 +1,97 @@
+---
+# Token Budgets — Per-Role Ceilings & Escalation Rules
+#
+# Phase 5.2 cost optimization. Derived from Phase 4.1-4.3 metrics:
+#   Phase 4.1 (Engineer, Haiku):       1,200 tokens, 97/100 quality
+#   Phase 4.2 (Engineer, Haiku):         800 tokens, 96/100 quality
+#   Phase 4.3 (Lead Engineer, Sonnet): 2,000 tokens, 98/100 quality (audit)
+#
+# Budgets are per-task token ceilings. They are NOT per-session caps —
+# see src/orchestration/cost/budget.py for session/hourly/daily/weekly/monthly.
+#
+# Enforcement model (soft-escalation, per Phase 5.2 decision):
+#   - warn_pct   (default 80%):  emit warning, continue task
+#   - error_pct  (default 100%): hard cap; abort or trim scope
+#   - escalate_pct (default 120%): escalate to Principal Engineer review
+#
+# Rationale: hard limits alone caused starvation in Phase 3; pure warnings
+# caused unbounded drift in Phase 4. Soft-escalation gives the orchestrator
+# room to triage without silent overspend.
+
+version: 1
+schema: token-budgets/v1
+
+# Default thresholds (overridable per-role)
+defaults:
+  warn_pct: 80
+  error_pct: 100
+  escalate_pct: 120
+
+# Per-role budgets (canonical role names match src/config/models.yaml)
+roles:
+  general_orchestrator:
+    budget: 500
+    model: claude-haiku
+    rationale: |
+      Pure routing — no business logic. Reads DELEGATE, picks role+model,
+      emits routing decision. Empirically ~200-400 tokens. Hard cap at 500.
+
+  engineer:
+    budget: 1500
+    model: claude-haiku
+    rationale: |
+      Well-scoped, pre-planned edits. Phase 4.1/4.2 averaged 1,000 tokens.
+      Budget of 1,500 provides 50% headroom for moderately complex fixes.
+
+  quality_engineer:
+    budget: 1000
+    model: claude-sonnet
+    rationale: |
+      Post-implementation 8-point checklist. Mostly diff reading + scoring.
+      Sonnet for nuanced quality judgment, but bounded scope.
+
+  senior_engineer:
+    budget: 2500
+    model: claude-sonnet
+    rationale: |
+      Complex/unscoped diagnosis + implementation. Needs room for
+      multi-file refactors and root-cause analysis.
+
+  lead_engineer:
+    budget: 2500
+    model: claude-sonnet
+    rationale: |
+      Code review + architectural guidance. Phase 4.3 audit hit 2,000.
+      Budget of 2,500 covers comprehensive reviews with headroom.
+
+  model_engineer:
+    budget: 1500
+    model: claude-sonnet
+    rationale: |
+      Analyzes QE feedback, recommends model/effort. Mostly metric reads
+      + structured recommendation. Bounded by metric corpus size.
+
+  principal_engineer:
+    budget: 5000
+    model: claude-opus
+    rationale: |
+      Cross-service architecture. Escalation target for budget overruns.
+      Higher ceiling intentional — Principal time is the right safety valve.
+
+  security_engineer:
+    budget: 5000
+    model: claude-opus
+    rationale: |
+      STRIDE threat modeling. Non-negotiable model (Opus). Higher budget
+      reflects security-first policy: never cap a threat analysis short.
+    # Security is non-negotiable — never auto-escalate-downgrade.
+    overrides:
+      escalate_pct: 150
+
+# Escalation routing — what to do when escalate_pct is exceeded
+escalation:
+  default_target: principal_engineer
+  notify:
+    - role: model_engineer
+      reason: "Recommend cheaper model/effort for future similar tasks"
+  audit_trail: artifacts/budget-escalations.jsonl
