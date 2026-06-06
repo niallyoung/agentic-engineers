@@ -1,6 +1,6 @@
 # Agentic Engineers
 
-A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops.
+A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **Claude**, **Copilot**, **OpenCode**, **Pi**.
 
 ## What It Is
 
