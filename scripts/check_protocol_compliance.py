@@ -51,12 +51,25 @@ def main() -> int:
 
     # Delegate to protocol-validator skill if available
     try:
-        from src.skills.protocol_validator.scripts import validate_file  # type: ignore[import]
+        import yaml
+        from src.skills.protocol_validator.scripts.protocol_validator import ProtocolValidator  # type: ignore[import]
+        
+        validator = ProtocolValidator()
         errors = []
         for f in yaml_files:
-            result = validate_file(str(f))
-            if not result.valid:
-                errors.append(f"{f}: {result.errors}")
+            with open(f) as fh:
+                data = yaml.safe_load(fh)
+            if not data:
+                continue
+            # Validate as DELEGATE or HANDBACK based on structure
+            if "task_id" in data:
+                valid, errs = validator.validate_delegate(data)
+            elif "handback_id" in data:
+                valid, errs = validator.validate_handback(data)
+            else:
+                continue
+            if not valid:
+                errors.append(f"{f}: {'; '.join(errs)}")
         if errors:
             for e in errors:
                 print(f"::error::{e}")

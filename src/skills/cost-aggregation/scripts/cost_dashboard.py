@@ -68,7 +68,7 @@ def aggregate(records: Iterable[Dict[str, Any]], monitor: BudgetMonitor) -> Dict
     by_role: Dict[str, List[int]] = defaultdict(list)
     for rec in records:
         role = rec.get("role") or rec.get("agent")
-        tokens = rec.get("tokens_used") or rec.get("tokens") or 0
+        tokens = rec.get("tokens_used") if rec.get("tokens_used") is not None else rec.get("tokens") or 0
         if not role or role not in monitor.roles:
             continue
         try:

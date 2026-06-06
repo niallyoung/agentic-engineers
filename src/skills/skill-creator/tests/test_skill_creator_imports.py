@@ -25,5 +25,4 @@ def test_scripts_directory_exists():
     """Scripts directory should exist."""
     from pathlib import Path
     scripts_dir = Path(__file__).parent.parent / "scripts"
-    # Note: skill-creator may not have scripts/ yet in RED phase
-    assert scripts_dir.exists() or True  # Lenient check for now
+    assert scripts_dir.exists()

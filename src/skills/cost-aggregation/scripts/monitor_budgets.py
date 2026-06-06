@@ -178,7 +178,7 @@ class BudgetMonitor:
         out: List[BudgetStatus] = []
         for rec in records:
             role = rec.get("role") or rec.get("agent")
-            tokens = rec.get("tokens_used") or rec.get("tokens") or 0
+            tokens = rec.get("tokens_used") if rec.get("tokens_used") is not None else rec.get("tokens") or 0
             if not role or role not in self._roles:
                 continue
             try:

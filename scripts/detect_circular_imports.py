@@ -52,9 +52,11 @@ def _parse_imports(file: Path) -> List[str]:
     We collect:
     - ``import foo.bar`` → [``foo.bar``]
     - ``from foo.bar import baz`` → [``foo.bar``]
+    - ``from .foo import bar`` → [``<absolute_path_to_foo>``]
+    - ``from ..foo import bar`` → [``<absolute_path_to_foo>``]
 
-    Only intra-package imports (those starting with ``src.``) are returned to
-    avoid flagging stdlib / third-party circular references.
+    All intra-package imports (those starting with ``src.`` or relative to src) are returned.
+    Stdlib / third-party circular references are avoided by module name filtering.
     """
     try:
         source = file.read_text(encoding="utf-8", errors="replace")
@@ -63,13 +65,31 @@ def _parse_imports(file: Path) -> List[str]:
         return []
 
     imports: List[str] = []
+    
+    # Compute the module name of this file for relative import resolution
+    try:
+        relative_path = file.relative_to(file.parent.parent.parent / "src").parent / file.stem
+        file_module = "src." + ".".join(relative_path.parts)
+    except ValueError:
+        file_module = None
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name.startswith("src."):
                     imports.append(alias.name)
         elif isinstance(node, ast.ImportFrom):
-            if node.module and node.level == 0 and node.module.startswith("src."):
+            if node.level > 0 and file_module:
+                # Relative import: compute absolute module name
+                base_parts = file_module.split(".")[:-1]  # Remove the module name itself
+                for _ in range(node.level - 1):
+                    if base_parts:
+                        base_parts.pop()
+                if node.module:
+                    abs_module = ".".join(base_parts) + "." + node.module if base_parts else node.module
+                    if abs_module.startswith("src."):
+                        imports.append(abs_module)
+            elif node.module and node.level == 0 and node.module.startswith("src."):
                 imports.append(node.module)
     return imports
 
