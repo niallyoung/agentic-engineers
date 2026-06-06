@@ -9,7 +9,7 @@ role_models:
     thinking: false
     effort: "high"
     providers:
-      copilot: "gpt-4o-mini"
+      copilot: "claude-haiku-4.5"
       claude: "claude-haiku-4.5"
       openai: "gpt-4o-mini"
       google: "gemini-2.0-flash"
@@ -21,7 +21,7 @@ role_models:
     thinking: true
     effort: "high"
     providers:
-      copilot: "gpt-4"
+      copilot: "claude-sonnet-4.6"
       claude: "claude-sonnet-4.6"
       openai: "gpt-4-turbo"
       google: "gemini-1-5-pro"
@@ -33,7 +33,7 @@ role_models:
     thinking: false
     effort: "medium"
     providers:
-      copilot: "gpt-4"
+      copilot: "claude-sonnet-4.6"
       claude: "claude-sonnet-4.6"
       openai: "gpt-4-turbo"
       google: "gemini-1-5-pro"
@@ -45,7 +45,7 @@ role_models:
     thinking: true
     effort: "high"
     providers:
-      copilot: "gpt-4"
+      copilot: "claude-sonnet-4.6"
       claude: "claude-sonnet-4.6"
       openai: "gpt-4"
       google: "gemini-1-5-pro"
@@ -57,7 +57,7 @@ role_models:
     thinking: true
     effort: "max"
     providers:
-      copilot: "gpt-4o"
+      copilot: "claude-opus-4.8"
       claude: "claude-opus-4.8"
       openai: "gpt-4o"
       google: "gemini-2-pro"
@@ -69,8 +69,8 @@ role_models:
     thinking: true
     effort: "high"
     providers:
-      copilot: "gpt-4o"
-      claude: "claude-opus-4.8"
+      copilot: "claude-opus-4.7"
+      claude: "claude-opus-4.7"
       openai: "gpt-4o"
       google: "gemini-2-pro"
       meta: "llama-3-405b"
@@ -81,7 +81,7 @@ role_models:
     thinking: true
     effort: "medium"
     providers:
-      copilot: "gpt-4"
+      copilot: "claude-sonnet-4.5"
       claude: "claude-sonnet-4.5"
       openai: "gpt-4-turbo"
       google: "gemini-1-5-pro"
@@ -93,7 +93,7 @@ role_models:
     thinking: false
     effort: "low"
     providers:
-      copilot: "gpt-4o-mini"
+      copilot: "claude-haiku-4.5"
       claude: "claude-haiku-4.5"
       openai: "gpt-4o-mini"
       google: "gemini-2.0-flash"

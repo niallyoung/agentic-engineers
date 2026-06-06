@@ -108,3 +108,9 @@ COMPLIANCE_REPORT.json
 
 # Regenerable skills audit output (produced by `python -m src.audit.run_audit`)
 docs/archive/audits/SKILLS-AUDIT.md
+
+# Generated verification files
+*.tmp
+.v3check.tmp
+artifacts/
+dist/
