@@ -222,6 +222,60 @@ See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/gui
 
 ---
 
+## Key Benefits & Discoveries
+
+### 1. DELEGATE/HANDBACK Protocol Enforces Quality
+
+**Discovery:** Structured handoff protocol (mandatory scope, plan, success_criteria) dramatically improves output quality and reduces rework.
+
+**Benefits:**
+- ✅ **Higher Quality Output:** 90+/100 average quality score (vs. 70-80 without protocol)
+- ✅ **Faster Turnaround:** 40-60% reduction in task completion time (clear scope eliminates ambiguity)
+- ✅ **Fewer Iterations:** 80% reduction in rework/escalations (success criteria prevent scope creep)
+- ✅ **Better Context:** Structured context (files, dependencies, constraints) prevents false starts
+
+**Why It Works:**
+- Orchestrator must write clear scope before delegating (forces clarity)
+- Engineer receives concrete plan with numbered steps (no guessing)
+- Success criteria are testable (no subjective "looks good")
+- HANDBACK includes metrics (quality score, tokens, duration) for continuous improvement
+
+### 2. Token Efficiency: 40-60% Reduction via Smart Model Selection
+
+**Discovery:** Well-scoped, pre-planned work can be executed by cheaper models (Haiku) with same quality as expensive models (Opus), but 60% cheaper.
+
+**Real-World Data:**
+- **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
+- **Sonnet (claude-sonnet-4.6):** $0.09 per task, needed for complex analysis and planning
+- **Opus (claude-opus-4.6/4.8):** $0.15 per task, only for security/architecture decisions
+
+**Token Savings Example:**
+- **Without protocol:** All tasks → Opus (max reasoning) = $0.15 × 100 tasks = $15.00
+- **With protocol:** Haiku (90 tasks) + Sonnet (8 tasks) + Opus (2 tasks) = $0.05×90 + $0.09×8 + $0.15×2 = $5.22
+- **Savings:** 65% reduction ($9.78 saved)
+
+### 3. Parallel Sub-Agent Execution at Scale
+
+**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization. `opencode` recommended.
+
+**Tested Capacity:**
+- ✅ **Tens to hundreds of concurrent agents** from single parent (observed in production)
+- ✅ **100+ sub-agents** in parallel delegation chains
+- ✅ **5-tier deep hierarchies** (parent → children → grandchildren → etc.)
+- ✅ **Automatic aggregation** of quality scores, tokens, costs
+
+### 4. Streamlined Skill Naming & Single Source of Truth (Phase 3)
+
+**Discovery:** Centralized skill registry + standardized naming eliminates installation errors and cognitive overhead.
+
+**Benefits:**
+- ✅ **98/100 Quality Score:** Phase 3 consolidation validated via automated testing
+- ✅ **66% Faster Execution:** Reduced skill lookup and disambiguation overhead
+- ✅ **Zero Installation Errors:** All skill references validated at build time
+- ✅ **Single Source of Truth:** `src/AGENTS.md` defines all skills; renderers transform for each harness
+
+---
+
 ## Documentation
 
 | Topic | Document | Description |
@@ -348,59 +402,6 @@ See [docs/market-comparison.md](docs/market-comparison.md) for detailed comparis
 | [π.dev](docs/guides/harness-setup/pi-dev.md) | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
 
 See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed setup guides per harness.
-
-
-## Key Benefits & Discoveries
-
-### 1. DELEGATE/HANDBACK Protocol Enforces Quality
-
-**Discovery:** Structured handoff protocol (mandatory scope, plan, success_criteria) dramatically improves output quality and reduces rework.
-
-**Benefits:**
-- ✅ **Higher Quality Output:** 90+/100 average quality score (vs. 70-80 without protocol)
-- ✅ **Faster Turnaround:** 40-60% reduction in task completion time (clear scope eliminates ambiguity)
-- ✅ **Fewer Iterations:** 80% reduction in rework/escalations (success criteria prevent scope creep)
-- ✅ **Better Context:** Structured context (files, dependencies, constraints) prevents false starts
-
-**Why It Works:**
-- Orchestrator must write clear scope before delegating (forces clarity)
-- Engineer receives concrete plan with numbered steps (no guessing)
-- Success criteria are testable (no subjective "looks good")
-- HANDBACK includes metrics (quality score, tokens, duration) for continuous improvement
-
-### 2. Token Efficiency: 40-60% Reduction via Smart Model Selection
-
-**Discovery:** Well-scoped, pre-planned work can be executed by cheaper models (Haiku) with same quality as expensive models (Opus), but 60% cheaper.
-
-**Real-World Data:**
-- **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
-- **Sonnet (claude-sonnet-4.6):** $0.09 per task, needed for complex analysis and planning
-- **Opus (claude-opus-4.6/4.8):** $0.15 per task, only for security/architecture decisions
-
-**Token Savings Example:**
-- **Without protocol:** All tasks → Opus (max reasoning) = $0.15 × 100 tasks = $15.00
-- **With protocol:** Haiku (90 tasks) + Sonnet (8 tasks) + Opus (2 tasks) = $0.05×90 + $0.09×8 + $0.15×2 = $5.22
-- **Savings:** 65% reduction ($9.78 saved)
-
-### 3. Parallel Sub-Agent Execution at Scale
-
-**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization. `opencode` recommended.
-
-**Tested Capacity:**
-- ✅ **Tens to hundreds of concurrent agents** from single parent (observed in production)
-- ✅ **100+ sub-agents** in parallel delegation chains
-- ✅ **5-tier deep hierarchies** (parent → children → grandchildren → etc.)
-- ✅ **Automatic aggregation** of quality scores, tokens, costs
-
-### 4. Streamlined Skill Naming & Single Source of Truth (Phase 3)
-
-**Discovery:** Centralized skill registry + standardized naming eliminates installation errors and cognitive overhead.
-
-**Benefits:**
-- ✅ **98/100 Quality Score:** Phase 3 consolidation validated via automated testing
-- ✅ **66% Faster Execution:** Reduced skill lookup and disambiguation overhead
-- ✅ **Zero Installation Errors:** All skill references validated at build time
-- ✅ **Single Source of Truth:** `src/AGENTS.md` defines all skills; renderers transform for each harness
 
 ---
 
