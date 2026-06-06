@@ -1,10 +1,6 @@
 # Agentic Engineers
 
-8 agent roles + queue-based orchestration + quality gates + cost optimization feedback loops.
-
-**📍 Status:** **Phase 3 Skills Consolidation Complete (2026-06-06)** — Framework consolidation 67% complete (Phases 1.5, 2A, 2B, 3). Now in **harness stability & documentation polish** phase. **Feature freeze target: June 15, 2026.** See [docs/guides/DEPLOYMENT_STATUS.md](docs/guides/DEPLOYMENT_STATUS.md) for details.
-
----
+A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops.
 
 ## What It Is
 
