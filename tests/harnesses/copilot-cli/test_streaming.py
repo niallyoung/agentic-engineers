@@ -47,7 +47,7 @@ class TestStreamEvent:
         """Start events have empty data dict."""
         event = StreamEvent(
             type="start",
-            skill="voice-notify",
+            skill="ab-testing",
             timestamp="2026-05-16T12:00:00Z",
         )
         parsed = json.loads(event.to_json())
@@ -72,7 +72,7 @@ class TestListSourceSkills:
     def skill_tree(self, tmp_path):
         """Create a minimal skill tree for testing."""
         src_dir = tmp_path / "src"
-        for name in ["ab-testing", "agent-creator", "voice-notify"]:
+        for name in ["ab-testing", "agent-creator", "tokenadvisor"]:
             skill_dir = src_dir / name
             skill_dir.mkdir(parents=True)
             (skill_dir / "SKILL.md").write_text(f"# {name}\n")
@@ -88,7 +88,7 @@ class TestListSourceSkills:
             ".agentic-engine{service-name}",
         )
         skills = renderer._list_source_skills()
-        assert skills == ["ab-testing", "agent-creator", "voice-notify"]
+        assert skills == ["ab-testing", "agent-creator", "tokenadvisor"]
 
     def test_list_source_skills_excludes_non_skill_dirs(self, skill_tree, tmp_path):
         """_list_source_skills excludes dirs without SKILL.md."""
@@ -191,7 +191,7 @@ class TestRenderAll:
     def skill_tree(self, tmp_path):
         """Create a minimal skill tree for testing."""
         src_dir = tmp_path / "src"
-        for name in ["ab-testing", "agent-creator", "voice-notify"]:
+        for name in ["ab-testing", "agent-creator", "tokenadvisor"]:
             skill_dir = src_dir / name
             skill_dir.mkdir(parents=True)
             (skill_dir / "SKILL.md").write_text(f"# {name}\n")

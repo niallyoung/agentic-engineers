@@ -175,16 +175,14 @@
 | Spec Validator | `src/skills/spec-validator/SKILL.md` | QE | Validate code against SPEC.md requirements |
 | Token Advisor (standalone) | `src/skills/tokenadvisor/SKILL.md` | Model Eng | Dedicated token budgeting advisor |
 | Usage Tracking | `src/skills/usage-tracking/SKILL.md` | Orchestrator, Model Eng | Aggregate and report usage + cost data |
-| Voice Notify (skill dir) | `src/skills/voice-notify/SKILL.md` | Orchestrator | Full voice-notify skill with macOS + Linux scripts |
 
-### Category 13: Standalone Markdown Skills (4 skills)
+### Category 13: Standalone Markdown Skills (3 skills)
 
 | Skill | File | Roles | Purpose |
 |-------|------|-------|---------|
 | Engineer Execution | `src/skills/engineer-execution.md` | Engineer | Step-by-step execution checklist for the Engineer |
 | Quality Gate Aggregator | `src/skills/quality-gate-aggregator.md` | QE | Aggregate results from multiple quality gate checks |
 | Quality Gate Orchestration | `src/skills/quality-gate-orchestration.md` | QE, Orchestrator | Orchestrate parallel quality gate execution |
-| Voice Notify | `src/skills/voice-notify.md` | Orchestrator | macOS voice notification for long-running task completion |
 
 ---
 
@@ -307,7 +305,6 @@ All `SKILL.md` files discovered in `src/skills/`. Status reflects implementation
 | Spec Validator | `spec-validator/SKILL.md` | ✅ Active | `scripts/spec_validator.py` |
 | Token Advisor | `tokenadvisor/SKILL.md` | ✅ Active | `scripts/tokenadvisor.py` (scheduled) |
 | Usage Tracking | `usage-tracking/SKILL.md` | ✅ Active | `scripts/usage-tracking.sh` + `capture_token_usage.sh` |
-| Voice Notify | `voice-notify/SKILL.md` | ✅ Active | `scripts/voice-notify.sh` (macOS + Linux) |
 
 ### Standalone Markdown Skills (no script, instruction-only)
 
@@ -316,7 +313,6 @@ All `SKILL.md` files discovered in `src/skills/`. Status reflects implementation
 | Engineer Execution | `engineer-execution.md` | ✅ Active |
 | Quality Gate Aggregator | `quality-gate-aggregator.md` | ✅ Active |
 | Quality Gate Orchestration | `quality-gate-orchestration.md` | ✅ Active |
-| Voice Notify (reference only) | `voice-notify.md` | ✅ Active |
 
 ### Directories Without a SKILL.md (Not Registered)
 

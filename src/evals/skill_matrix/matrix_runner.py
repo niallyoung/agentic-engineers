@@ -36,7 +36,6 @@ class SkillInteropMatrix:
         "spec-management",
         "spec-validator",
         "usage-tracking",
-        "voice-notify",
         "workflow-review",
     ]
 

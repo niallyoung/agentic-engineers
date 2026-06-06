@@ -153,8 +153,7 @@ All 19 skills are currently accessible:
 15. **spec-validator** - Implementation compliance checking
 16. **tokenadvisor** - Daily metrics analysis and optimization
 17. **usage-tracking** - Real-time token usage capture
-18. **voice-notify** - Voice notification integration
-19. **workflow-review** - End-to-end workflow validation
+18. **workflow-review** - End-to-end workflow validation
 
 ## Generated Reports
 

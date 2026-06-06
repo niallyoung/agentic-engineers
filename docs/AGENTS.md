@@ -467,7 +467,7 @@ Measured quarterly; adjust if cost targets drift.
 - [ ] Annotate handoff: "Escalating to [Personality] for [task type]"
 - [ ] Provide state: current repo, blocker, relevant TODO items
 - [ ] Set expectations: effort level, completion time, success criteria
-- [ ] Monitor progress: voice-notify on milestones, cost every 5–10 min
+- [ ] Monitor progress: assess milestones, cost every 5–10 min
 
 ### Avoid
 
@@ -485,7 +485,6 @@ Measured quarterly; adjust if cost targets drift.
 ✓ Cost targets: 70% Dispatch, 15% Engineer, 10% Architect, 3% Sage, 2% Guardian  
 ✓ Parallelizing within a repo (Dispatch coordinates multiple sub-agents)  
 ✓ Sequential repos (finish one, then move to next)  
-✓ Monitoring voice-notify every 5–10 min during active work  
 
 ---
 
@@ -497,10 +496,10 @@ Measured quarterly; adjust if cost targets drift.
 1. Advanced agent (Extra High effort, ~2 hours) → Create detailed TODO.md per repo
 2. Lightweight agents (Medium effort, parallel groups):
    - **Group A:** {service-name} + {example-service} (2 agents, 1 hour each)
-   - Check cost every 5 min; voice-notify on completion
+   - Check cost every 5 min; monitor on completion
    - **Group B:** {example-service} (1 agent, 1 hour)
 3. Standard agent (High effort, ~30 min) → E2E regression test + integration check
-4. Voice-notify: "All 3 repos green, ready for production deploy"
+4. All 3 repos green, ready for production deploy
 
 **Cost:** ~40% of doing everything with Standard tier  
 **Wall Clock Time:** ~4 hours (vs. 8+ hours if sequential)
@@ -544,7 +543,7 @@ Measured quarterly; adjust if cost targets drift.
 - [ ] Repo is in valid state (no uncommitted changes, main is green)
 - [ ] For security work: Guardian analysis done (TODO.md) before Engineer implementation
 - [ ] For bugs: Architect diagnosis done (plan) before Engineer implementation
-- [ ] Cost monitoring enabled (voice-notify every 5–10 min, personalities announced)
+- [ ] Cost monitoring enabled (assess progress every 5–10 min)
 
 ---
 
@@ -861,7 +860,7 @@ A: Not recommended. If there's uncertainty, Dispatch routes to Architect first f
 A: Engineer escalates to Architect (via Dispatch) with context: current state, attempted approaches, specific error. Architect diagnoses and refines the plan.
 
 **Q: Can multiple agents work in parallel?**  
-A: Yes, if they're in different repos or files. Dispatch coordinates; voice-notify alerts on milestones. Avoid same file (merge conflicts, contention). See [PARALLEL-DELEGATION-GUIDE.md](PARALLEL-DELEGATION-GUIDE.md) for detailed parallel delegation patterns.
+A: Yes, if they're in different repos or files. Dispatch coordinates; assess milestones periodically. Avoid same file (merge conflicts, contention). See [PARALLEL-DELEGATION-GUIDE.md](PARALLEL-DELEGATION-GUIDE.md) for detailed parallel delegation patterns.
 
 **Q: Is this harness-specific?**  
 A: No. AGENTS.md + ORCHESTRATION.md define the *model* assignments and *personality* framework. Any harness (Claude Code, GitHub Copilot, custom, open-harness) can implement these patterns by routing to the right Anthropic model.

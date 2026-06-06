@@ -1,7 +1,7 @@
 # Deprecated Skills Index
 
-**Last Updated:** 2026-05-30  
-**Total Deprecated Skills:** 5  
+**Last Updated:** 2026-06-06  
+**Total Deprecated Skills:** 6  
 **Archive Location:** `docs/archive/deprecated-skills/`
 
 ## Overview
@@ -27,6 +27,7 @@ Each deprecated skill has:
 | **ab-testing** | 2026-05-30 | optimization | Overlap with model-engineer; simple routing handles most cases | ✓ | See [RESTORATION.md](archive/deprecated-skills/ab-testing/RESTORATION.md) |
 | **metrics-etl** | 2026-05-30 | metrics | Overlap with usage-tracking; Prometheus/Grafana not standard; CSV export sufficient | ✓ | See [RESTORATION.md](archive/deprecated-skills/metrics-etl/RESTORATION.md) |
 | **tokenadvisor** | 2026-05-30 | metrics | Overlap with usage-tracking + model-engineer; better to separate concerns | ✓ | See [RESTORATION.md](archive/deprecated-skills/tokenadvisor/RESTORATION.md) |
+| **voice-notify** | 2026-06-06 | notifications | Simplification; audio notifications no longer needed in framework | ✗ | Removed entirely; use system notifications or logging instead |
 
 ## Detailed Deprecation Rationale
 

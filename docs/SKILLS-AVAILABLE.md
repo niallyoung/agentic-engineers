@@ -50,7 +50,6 @@ This document indexes all available (active) skills in the agentic-engineers fra
 |-------|-------------|----------|-------|
 | file-sync | Discovers and analyzes scripts in the repository | operations | - |
 | skill-creator | Creates new skills following the specification | scaffolding | - |
-| voice-notify | Voice notification integration layer | notifications | - |
 | queue-todo-sync | Auto-sync queue DELEGATEs with TODO.md | maintenance | - |
 | model-engineer | Cost-quality optimization agent | optimization | - |
 

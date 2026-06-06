@@ -39,13 +39,6 @@ Daily at 17:00 UTC via `orchestration/config/tokenadvisor.cron`
 0 17 * * * cd <project-root> && python agentic-engineers/skills/tokenadvisor/scripts/tokenadvisor.py --daily
 ```
 
-## Voice Notifications
-
-Status phrases (via voice-notify skill):
-- `"TokenAdvisor complete. Distribution healthy."` — All roles within budget
-- `"Engineer over budget by 3%."` — Specific role exceeds threshold
-- `"Escalation spike detected."` — Unusual re-routing rates
-
 ## Configuration
 
 - **Metrics input:** `agentic-engineers/data/metrics/YYYY-MM-DD/`

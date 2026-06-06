@@ -40,13 +40,7 @@ Daily at 18:00 UTC (for early stopping checks) via `orchestration/config/ab-test
 0 18 * * * cd <project-root> && python agentic-engineers/skills/ab-testing/scripts/ab-testing.py --monitor
 ```
 
-## Voice Notifications
-
-Status phrases (via voice-notify skill):
-- `"A/B test in progress. Quality stable, cost down 5%."` — Ongoing
-- `"Significant result. Variant winning, p=0.03."` — Threshold met
-- `"Early stop: regression detected."` — Control better
-- `"Complete: variant wins."` — Experiment concluded
+## Configuration
 
 ## Configuration
 

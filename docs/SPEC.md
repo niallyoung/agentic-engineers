@@ -318,11 +318,6 @@ All scripts in the skills directory are approved and compliant because they are 
 - `skills/usage-tracking/scripts/analyze_usage_trends.py`
 - `skills/usage-tracking/scripts/capture_token_usage.sh`
 - `skills/usage-tracking/scripts/usage-tracking.sh`
-- `skills/voice-notify/scripts/demo.sh`
-- `skills/voice-notify/scripts/select-voices.sh`
-- `skills/voice-notify/scripts/setup-tts.sh`
-- `skills/voice-notify/scripts/voice-notify.sh`
-- `skills/voice-notify/scripts/vote-all-voices.sh`
 
 **Rationale:** Each skill follows the formal SKILLS.md specification and is properly invoked through the Orchestrator's task routing system. These are the ONLY scripts permitted to execute autonomous logic at runtime.
 
