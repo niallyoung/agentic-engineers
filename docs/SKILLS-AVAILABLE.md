@@ -11,7 +11,7 @@ This document indexes all available (active) skills in the agentic-engineers fra
 | Skill | Description | Category | Model |
 |-------|-------------|----------|-------|
 | harness-integration-tracker | Discover and document harness integration code/docs across all harnesses | integration | - |
-| opencode-feature-sync | Drift/feature sync between OpenCode and agentic-engineers renderer | integration | - |
+| harness-opencode-feature-sync | Drift/feature sync between OpenCode and agentic-engineers renderer | integration | - |
 
 ## Validation Skills
 
@@ -50,8 +50,7 @@ This document indexes all available (active) skills in the agentic-engineers fra
 |-------|-------------|----------|-------|
 | file-sync | Discovers and analyzes scripts in the repository | operations | - |
 | skill-creator | Creates new skills following the specification | scaffolding | - |
-| voice-notify | Voice notification integration layer | notifications | - |
-| todo-maintenance | Auto-sync queue DELEGATEs with TODO.md | maintenance | - |
+| queue-todo-sync | Auto-sync queue DELEGATEs with TODO.md | maintenance | - |
 | model-engineer | Cost-quality optimization agent | optimization | - |
 
 > **Deprecated:** repo-init. See [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md)

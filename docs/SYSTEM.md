@@ -117,7 +117,6 @@ agentic-engineers/                 # Self-contained framework root
 │   │   ├── QUICK-START.md        # 5-minute start guide
 │   │   ├── AGENT-INTEGRATION.md  # When agents invoke
 │   │   └── scripts/              # capture, analyze, wrapper
-│   ├── voice-notify/             # Voice alert skill
 │   ├── [other domains]/          # architecture, patterns, review, etc.
 │   └── roles/                    # Per-role capability definitions
 │

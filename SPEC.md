@@ -318,11 +318,6 @@ All scripts in the skills directory are approved and compliant because they are 
 - `skills/usage-tracking/scripts/analyze_usage_trends.py`
 - `skills/usage-tracking/scripts/capture_token_usage.sh`
 - `skills/usage-tracking/scripts/usage-tracking.sh`
-- `skills/voice-notify/scripts/demo.sh`
-- `skills/voice-notify/scripts/select-voices.sh`
-- `skills/voice-notify/scripts/setup-tts.sh`
-- `skills/voice-notify/scripts/voice-notify.sh`
-- `skills/voice-notify/scripts/vote-all-voices.sh`
 
 **Rationale:** Each skill follows the formal SKILLS.md specification and is properly invoked through the Orchestrator's task routing system. These are the ONLY scripts permitted to execute autonomous logic at runtime.
 
@@ -1525,6 +1520,121 @@ All hooks and validators source this file to ensure consistency.
 4. **Code Comments**
    - Every agent file explains model choice
    - Renderer scripts document transformations
+
+### Model Selection Architecture
+
+This section documents how agent roles select among approved opus model variants. It extends — and does not replace — the Model Naming Architecture below.
+
+#### Overview
+
+Most roles have a single assigned model. Principal Engineer and Security Engineer are **Tier 3 (Premium/Opus)** roles where task complexity and risk profile vary enough that a single model is suboptimal. These roles support **multi-model selection**: the orchestrator chooses the appropriate opus variant at DELEGATE-creation time based on the incoming task.
+
+#### Opus Variant Comparison
+
+| Model | Strengths | Weaknesses | Best For |
+|-------|-----------|------------|----------|
+| `claude-opus-4.6` | Pure reasoning depth; extended thinking; cost-efficient at opus tier | Less capable at real-time cross-repo execution | Pure architecture planning; isolated design analysis; extended-thinking tasks |
+| `claude-opus-4.7` | Balanced reasoning + execution; strong cross-repo analysis | Higher cost than 4.6; more capability than needed for isolated planning | Design decisions with cross-repo execution impact; moderate-complexity architecture |
+| `claude-opus-4.8` | Highest reasoning fidelity; strongest at security analysis and threat modeling | Highest cost; should not be used outside security-critical contexts | Security-critical design; cryptographic protocol decisions; compliance-sensitive analysis |
+
+#### Principal Engineer: Model Guidance
+
+The Principal Engineer supports three opus variants based on scope:
+
+| Task Profile | Model | Trigger |
+|-------------|-------|---------|
+| Pure architecture planning (no execution) | `claude-opus-4.6` | Scope is design-only; no cross-repo execution required; analysis fits extended thinking |
+| Design decisions with cross-repo execution impact | `claude-opus-4.7` | Architecture decision directly drives implementation across ≥2 repos |
+| Security-critical design choices | `claude-opus-4.8` | Design involves auth flows, cryptographic selection, or compliance policy |
+
+**Decision tree (for Orchestrator when creating Principal Engineer DELEGATE):**
+
+```
+Is this a pure architecture/planning task (no cross-repo execution)?
+  └─► YES → use claude-opus-4.6
+
+Does this design decision directly drive implementation across ≥2 repos?
+  └─► YES → use claude-opus-4.7
+
+Does this task involve security-critical design (auth, crypto, compliance)?
+  └─► YES → use claude-opus-4.8 (defer to Security Engineer if primarily security-scoped)
+
+Default (unclear scope) → use claude-opus-4.6 (cheapest capable option)
+```
+
+#### Security Engineer: Non-Downgrade Rule
+
+Security Engineer **always** uses `claude-opus-4.8`. This is non-negotiable.
+
+**Rationale:** Security analysis, threat modeling, and compliance review are the highest-stakes tasks in the system. Using a lower-capability model for cost savings introduces unacceptable risk: missed vulnerabilities, incomplete threat models, or incorrect compliance assessments. The cost difference (4.6 vs 4.8) is marginal compared to the risk of a security miss.
+
+**Rule:** `claude-opus-4.7` is permitted only as a **fallback** if `claude-opus-4.8` is unavailable (API error, model outage). Never downgrade by choice. Document fallback in HANDBACK.
+
+#### DELEGATE Block: model_guidance Field
+
+When creating a DELEGATE for Principal Engineer or Security Engineer, the Orchestrator SHOULD include a `model_guidance` field to communicate the model selection rationale:
+
+```yaml
+---
+handoff_type: DELEGATE
+task_id: 2026-06-05-arch-event-store-delta
+role: principal-engineer
+model: claude-opus-4.6
+model_guidance: |
+  Pure architecture planning task — no cross-repo execution required.
+  Use claude-opus-4.6: design analysis fits extended thinking budget.
+  Escalate to claude-opus-4.7 if cross-repo execution scope is discovered.
+effort: high
+scope: >
+  Design delta-token cursor model for DynamoDB event store sync.
+context:
+  - Service: event-store (Go/Lambda)
+  - Problem: Full scan on every sync (slow)
+  - Solution: Incremental cursor (DynamoDB GSI + last_sync_cursor)
+---
+```
+
+```yaml
+---
+handoff_type: DELEGATE
+task_id: 2026-06-05-security-auth-review
+role: security-engineer
+model: claude-opus-4.8
+model_guidance: |
+  Security-critical task — non-downgrade rule applies.
+  Always use claude-opus-4.8 for Security Engineer.
+  Fallback to claude-opus-4.7 ONLY if 4.8 unavailable (document in HANDBACK).
+effort: max
+scope: >
+  Threat model and auth flow review for OAuth2 token refresh implementation.
+---
+```
+
+#### Quality Engineer: model_assessment Feedback
+
+After each Principal Engineer or Security Engineer task, the Quality Engineer provides `model_assessment` feedback in HANDBACK. This feeds the Model Engineer optimization loop.
+
+```yaml
+model_assessment:
+  role: principal-engineer
+  model_used: claude-opus-4.6
+  model_appropriate: true
+  alternative_considered: claude-opus-4.7
+  rationale: "Pure planning task; 4.6 extended thinking was sufficient; 4.7 not needed"
+  recommendation: "Continue routing pure-planning Principal tasks to 4.6"
+```
+
+#### Rollout Phases
+
+| Phase | Status | Scope | Description |
+|-------|--------|-------|-------------|
+| **Phase 1** | ✅ ACTIVE | Principal Engineer + Security Engineer | Multi-model selection for highest-complexity roles |
+| **Phase 2** | PLANNED | Senior Engineer | Extend to sonnet-4.5 vs 4.6 selection based on task complexity |
+| **Phase 3** | PLANNED | All roles | Full multi-model routing; Model Engineer drives all selections |
+
+Phase 1 is active. Phases 2–3 require Model Engineer feedback data from Phase 1 before rollout.
+
+---
 
 ### Model Naming Architecture (LOCKED)
 

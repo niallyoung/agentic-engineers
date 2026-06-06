@@ -10,7 +10,7 @@ This module replaces the mocked eval execution path. It:
      - pi        -> `pi --agent=<agent> --prompt <delegate>`
      - claude    -> Anthropic SDK (`anthropic`) if installed, else skipped
 3. Captures stdout, extracts and parses the HANDBACK YAML block.
-4. Validates the HANDBACK against the canonical protocol-validation skill.
+4. Validates the HANDBACK against the canonical protocol-validator skill.
 
 Returns a structured InvocationResult so the framework can grade the test.
 
@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover
 
 
 # ---------------------------------------------------------------------------
-# Canonical protocol validation (delegated to the protocol-validation skill)
+# Canonical protocol validation (delegated to the protocol-validator skill)
 # ---------------------------------------------------------------------------
 
 def _repo_root() -> Path:
@@ -48,12 +48,12 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
 
-_PV_SCRIPTS = _repo_root() / "src" / "skills" / "protocol-validation" / "scripts"
+_PV_SCRIPTS = _repo_root() / "src" / "skills" / "protocol-validator" / "scripts"
 if str(_PV_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_PV_SCRIPTS))
 
 try:
-    from protocol_validation import validate_handback as _validate_handback  # type: ignore
+    from protocol_validator import validate_handback as _validate_handback  # type: ignore
     _PV_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _validate_handback = None  # type: ignore
@@ -153,7 +153,7 @@ def build_delegate(
         "agent": agent,
         "model": model,
         "harness": harness,
-        "skill": "protocol-validation",
+        "skill": "protocol-validator",
         "scope": (
             f"Functional eval invocation for test '{test_id}'. Perform the requested "
             f"task and return a protocol-compliant HANDBACK block describing the result."
@@ -161,7 +161,7 @@ def build_delegate(
         "success_criteria": [
             "Task is performed as described in the prompt",
             "A HANDBACK YAML block is returned",
-            "HANDBACK validates against the protocol-validation skill",
+            "HANDBACK validates against the protocol-validator skill",
         ],
         "plan": [
             "Read and understand the requested prompt",
@@ -325,9 +325,9 @@ def extract_handback(output_text: str) -> Tuple[Optional[Dict[str, Any]], Option
 
 
 def validate_handback_block(handback: Dict[str, Any]) -> Tuple[bool, List[str]]:
-    """Validate a HANDBACK dict via the canonical protocol-validation skill."""
+    """Validate a HANDBACK dict via the canonical protocol-validator skill."""
     if not _PV_AVAILABLE or _validate_handback is None:  # pragma: no cover
-        return False, ["protocol-validation skill unavailable"]
+        return False, ["protocol-validator skill unavailable"]
     return _validate_handback(handback)
 
 

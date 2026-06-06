@@ -732,9 +732,9 @@ bash ~/.config/opencode/skills/doc-quality/scripts/pre_commit_hook.sh
 
 ---
 
-## todo-maintenance Skill
+## queue-todo-sync Skill
 
-**Location:** `src/skills/todo-maintenance/`  
+**Location:** `src/skills/queue-todo-sync/`  
 **Role:** Engineer  
 **Trigger:** post-DELEGATE | post-HANDBACK | on-demand | scheduled (daily)
 
@@ -757,16 +757,16 @@ Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events. Maintains TODO.m
 # Called internally by Orchestrator after creating/receiving tasks
 
 # Manual sync (full bidirectional)
-python src/skills/todo-maintenance/scripts/opencode-todo-sync sync
+python src/skills/queue-todo-sync/scripts/opencode-todo-sync sync
 
 # Generate weekly report
-python src/skills/todo-maintenance/scripts/opencode-todo-sync report
+python src/skills/queue-todo-sync/scripts/opencode-todo-sync report
 
 # Check for issues (conflicts, orphans, missing)
-python src/skills/todo-maintenance/scripts/opencode-todo-sync check
+python src/skills/queue-todo-sync/scripts/opencode-todo-sync check
 
 # With custom paths
-python src/skills/todo-maintenance/scripts/opencode-todo-sync sync \
+python src/skills/queue-todo-sync/scripts/opencode-todo-sync sync \
   --todo-path /path/to/TODO.md \
   --queue-path /path/to/queue \
   -v  # verbose output
@@ -781,7 +781,7 @@ The skill expects TODO.md to follow this format:
 
 ## IN PROGRESS
 - [ ] **TASK-ID:** Task description (Owner: role)
-- [ ] **2026-05-18-test-task:** Test task for todo-maintenance (Owner: engineer)
+- [ ] **2026-05-18-test-task:** Test task for queue-todo-sync (Owner: engineer)
 
 ## COMPLETED
 - [x] **TASK-001:** Completed task (Owner: engineer)
@@ -799,7 +799,7 @@ The skill expects TODO.md to follow this format:
 
 **DELEGATE → TODO.md:**
 1. DELEGATE created in `artifacts/queue/incoming/DELEGATE-*.yaml`
-2. Orchestrator invokes todo-maintenance skill
+2. Orchestrator invokes queue-todo-sync skill
 3. Skill reads DELEGATE file (task_id, role, scope, effort, plan)
 4. Skill formats as TODO line: `- [ ] **TASK-ID:** scope (Owner: role)`
 5. Skill adds to "## IN PROGRESS" section
@@ -807,7 +807,7 @@ The skill expects TODO.md to follow this format:
 
 **HANDBACK → TODO.md:**
 1. HANDBACK created in `artifacts/queue/done/HANDBACK-*.json`
-2. Orchestrator invokes todo-maintenance skill
+2. Orchestrator invokes queue-todo-sync skill
 3. Skill reads HANDBACK file (task_id, status, timestamp, quality_score)
 4. Skill finds matching TODO entry
 5. Skill marks as complete: `- [x] **TASK-ID:** ...`
@@ -905,13 +905,13 @@ The skill includes comprehensive tests with >80% coverage:
 
 ```bash
 # Run all tests
-pytest src/skills/todo-maintenance/tests/ -v
+pytest src/skills/queue-todo-sync/tests/ -v
 
 # Run with coverage
-pytest src/skills/todo-maintenance/tests/ --cov=src/skills --cov-report=html
+pytest src/skills/queue-todo-sync/tests/ --cov=src/skills --cov-report=html
 
 # Run specific test
-pytest src/skills/todo-maintenance/tests/test_sync_todo.py::TestDelegateEntry -v
+pytest src/skills/queue-todo-sync/tests/test_sync_todo.py::TestDelegateEntry -v
 ```
 
 **Test coverage:**

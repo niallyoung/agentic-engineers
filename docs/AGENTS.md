@@ -69,16 +69,32 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 **MODEL NAMING (LOCKED):** All models use canonical format with DOTS: `claude-{variant}-{major}.{minor}`
 (e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.8`). See [SPEC.md > Model Naming Architecture](../SPEC.md).
 
-| Role | Model | Effort | Use When |
-|---|---|---|---|
-| **Orchestrator** | claude-haiku-4.5 | low | All entry points; routing decisions; task management; metrics collection; model recommendations |
-| **Engineer** | claude-haiku-4.5 | high | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-4.6 | medium | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-4.5 | high | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-4.6 | high | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-4.6 | high | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4.8 | max | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-4.5 | high | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+| Role | Model | Effort | Multi-Model? | Use When |
+|---|---|---|---|---|
+| **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
+| **Quality Engineer** | claude-sonnet-4.6 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-4.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Lead Engineer** | claude-sonnet-4.6 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Principal Engineer** | claude-opus-4.6 | high | 4.6/4.7/4.8 | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
+| **Security Engineer** | claude-opus-4.8 | max | 4.8 only | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Model Engineer** | claude-sonnet-4.5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+
+**Multi-Model column notes:**
+- Principal Engineer: 4.6 (default/pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../SPEC.md).
+- Security Engineer: 4.8 always (non-downgrade rule). 4.7 only as emergency fallback if 4.8 unavailable; document in HANDBACK. See [SPEC.md > Model Selection Architecture](../SPEC.md).
+
+---
+
+## Multi-Model Selection (Tier 3)
+
+Principal Engineer and Security Engineer support model variant selection based on task complexity.
+
+**Decision criteria:**
+- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
+- Security Engineer: Always use `claude-opus-4.8` (non-downgrade rule)
+
+For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 **Routing Rules** (for Orchestrator):
 - If task is security-scoped → Security Engineer (block all other routes)
@@ -451,7 +467,7 @@ Measured quarterly; adjust if cost targets drift.
 - [ ] Annotate handoff: "Escalating to [Personality] for [task type]"
 - [ ] Provide state: current repo, blocker, relevant TODO items
 - [ ] Set expectations: effort level, completion time, success criteria
-- [ ] Monitor progress: voice-notify on milestones, cost every 5–10 min
+- [ ] Monitor progress: assess milestones, cost every 5–10 min
 
 ### Avoid
 
@@ -469,7 +485,6 @@ Measured quarterly; adjust if cost targets drift.
 ✓ Cost targets: 70% Dispatch, 15% Engineer, 10% Architect, 3% Sage, 2% Guardian  
 ✓ Parallelizing within a repo (Dispatch coordinates multiple sub-agents)  
 ✓ Sequential repos (finish one, then move to next)  
-✓ Monitoring voice-notify every 5–10 min during active work  
 
 ---
 
@@ -481,10 +496,10 @@ Measured quarterly; adjust if cost targets drift.
 1. Advanced agent (Extra High effort, ~2 hours) → Create detailed TODO.md per repo
 2. Lightweight agents (Medium effort, parallel groups):
    - **Group A:** {service-name} + {example-service} (2 agents, 1 hour each)
-   - Check cost every 5 min; voice-notify on completion
+   - Check cost every 5 min; monitor on completion
    - **Group B:** {example-service} (1 agent, 1 hour)
 3. Standard agent (High effort, ~30 min) → E2E regression test + integration check
-4. Voice-notify: "All 3 repos green, ready for production deploy"
+4. All 3 repos green, ready for production deploy
 
 **Cost:** ~40% of doing everything with Standard tier  
 **Wall Clock Time:** ~4 hours (vs. 8+ hours if sequential)
@@ -528,7 +543,7 @@ Measured quarterly; adjust if cost targets drift.
 - [ ] Repo is in valid state (no uncommitted changes, main is green)
 - [ ] For security work: Guardian analysis done (TODO.md) before Engineer implementation
 - [ ] For bugs: Architect diagnosis done (plan) before Engineer implementation
-- [ ] Cost monitoring enabled (voice-notify every 5–10 min, personalities announced)
+- [ ] Cost monitoring enabled (assess progress every 5–10 min)
 
 ---
 
@@ -845,7 +860,7 @@ A: Not recommended. If there's uncertainty, Dispatch routes to Architect first f
 A: Engineer escalates to Architect (via Dispatch) with context: current state, attempted approaches, specific error. Architect diagnoses and refines the plan.
 
 **Q: Can multiple agents work in parallel?**  
-A: Yes, if they're in different repos or files. Dispatch coordinates; voice-notify alerts on milestones. Avoid same file (merge conflicts, contention). See [PARALLEL-DELEGATION-GUIDE.md](PARALLEL-DELEGATION-GUIDE.md) for detailed parallel delegation patterns.
+A: Yes, if they're in different repos or files. Dispatch coordinates; assess milestones periodically. Avoid same file (merge conflicts, contention). See [PARALLEL-DELEGATION-GUIDE.md](PARALLEL-DELEGATION-GUIDE.md) for detailed parallel delegation patterns.
 
 **Q: Is this harness-specific?**  
 A: No. AGENTS.md + ORCHESTRATION.md define the *model* assignments and *personality* framework. Any harness (Claude Code, GitHub Copilot, custom, open-harness) can implement these patterns by routing to the right Anthropic model.

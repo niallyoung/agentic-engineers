@@ -1,3 +1,15 @@
+---
+name: add-feature-to-framework
+description: "Comprehensive checklist ensuring all new features are integrated into the framework correctly"
+type: meta
+role: senior-engineer
+category: integration-checklist
+version: 1.0
+maturity: draft
+applies_to: every new feature, SKILL, agent, decorator, validation gate
+effort_estimate: 2-4h additional for full framework integration (on top of implementation)
+---
+
 # ADD-FEATURE-TO-FRAMEWORK
 
 ## Metadata

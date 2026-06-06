@@ -176,6 +176,9 @@
 | [docs/SKILLS-OVERVIEW.md](SKILLS-OVERVIEW.md) | Detailed skills overview |
 | [docs/SKILL-SPECS.md](SKILL-SPECS.md) | Skill specifications |
 | [docs/TDD-SKILL.md](TDD-SKILL.md) | TDD skill reference |
+| [docs/MIGRATION-2026-06-06.md](MIGRATION-2026-06-06.md) | Skills consolidation migration guide (renames, removals, import changes) |
+| [docs/guides/ARCHITECTURE-CONSOLIDATION.md](guides/ARCHITECTURE-CONSOLIDATION.md) | Consolidation rationale, folder structure, render pipeline |
+| [docs/DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md) | Deprecated/removed skills index |
 
 ---
 

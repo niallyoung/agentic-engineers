@@ -28,8 +28,11 @@
 | 4 | **Quality Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | Post-implementation validation; model suitability assessment |
 | 5 | **Lead Engineer** | `claude-sonnet-4.6` | ✅ | $0.09 | 8-point code review; architectural guidance; conflict resolution |
 | 6 | **Senior Engineer** | `claude-sonnet-4.5` | ✅ | $0.09 | Plans unscoped work; multi-file implementations; moderate-complexity |
-| 7 | **Principal Engineer** | `claude-opus-4.6` | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
- | 8 | **Security Engineer** | `claude-opus-4.8` | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
+| 7 | **Principal Engineer** | `claude-opus-4.6` [^1] | ✅ | $0.15 | Cross-service architecture; hard debugging; critical design decisions |
+| 8 | **Security Engineer** | `claude-opus-4.8` [^2] | ✅ | $0.15 | Threat modelling; vulnerability assessment; compliance review |
+
+[^1]: Principal Engineer supports multi-model selection: 4.6 (pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../SPEC.md).
+[^2]: Security Engineer always uses 4.8 (non-downgrade rule). 4.7 permitted only as fallback if 4.8 unavailable. See [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 ### Cost Tiers
 
@@ -40,6 +43,18 @@ Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
 ```
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
+
+---
+
+## Multi-Model Selection (Tier 3)
+
+Principal Engineer and Security Engineer support model variant selection based on task complexity.
+
+**Decision criteria:**
+- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
+- Security Engineer: Always use `claude-opus-4.8` (non-downgrade rule)
+
+For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 ---
 

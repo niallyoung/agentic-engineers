@@ -8,6 +8,9 @@ metadata:
   author: agentic-engineers
   version: "1.0"
   category: observability
+  role: orchestrator
+  model: haiku-4-5
+  effort: low
   runtime: bash/python3
 ---
 
@@ -153,14 +156,13 @@ Check if usage consumption was reasonable for task scope:
 
 ## Configuration
 
-Voice alerts on usage thresholds:
+Token usage logging and archival:
 ```bash
-# Automatic alerts when session > 70% or > 85%
-# Daniel voice used (configured in voice-notify skill)
+# Automatic logging when session > 70% or > 85%
 bash skills/usage-tracking/scripts/capture_token_usage.sh
 ```
 
-Disable alerts if needed:
+Silent mode (no alerts):
 ```bash
 bash skills/usage-tracking/scripts/capture_token_usage.sh --silent
 ```
@@ -230,9 +232,9 @@ bash skills/usage-tracking/scripts/usage-tracking.sh cron-setup
    - Rationale: No database needed, easy to archive/rotate
    - Supports: Streaming analytics, Excel import
 
-3. **Voice alerts**: Immediate feedback on thresholds
-   - Rationale: Alerts don't require checking manually
-   - Integration: voice-notify skill (Daniel voice)
+3. **Local archival**: Persistent local records
+   - Rationale: Easy access to historical data
+   - Limitation: Manual export needed for external tools
 
 4. **No API calls**: Purely local analysis
    - Rationale: No external dependencies, works offline
@@ -249,7 +251,6 @@ bash skills/usage-tracking/scripts/usage-tracking.sh cron-setup
 
 ## Related Skills
 
-- `voice-notify` — Automatic alerts on thresholds
 - `usage-budget-manager` (orchestration/) — Real-time budget status checking
 - `metrics-analyzer` (operations/) — Daily analysis and recommendations
 

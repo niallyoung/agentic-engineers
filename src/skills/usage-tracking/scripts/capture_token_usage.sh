@@ -59,11 +59,6 @@ if [ "${VERBOSE:-false}" = "true" ]; then
     echo "  Written to: $USAGE_HISTORY"
 fi
 
-# Alert if approaching limit
-if (( $(echo "$SESSION_PCT > 85" | bc -l) )); then
-    bash "$SCRIPT_DIR/voice_notify.sh" "Session usage critical, $SESSION_PCT percent" --voice Daniel 2>/dev/null || true
-elif (( $(echo "$SESSION_PCT > 70" | bc -l) )); then
-    bash "$SCRIPT_DIR/voice_notify.sh" "Session usage high, $SESSION_PCT percent" --voice Daniel 2>/dev/null || true
-fi
+# Token usage logging complete
 
 exit 0

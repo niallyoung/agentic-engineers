@@ -88,11 +88,4 @@ echo "" >> "$REPORT_FILE"
 
 echo "Report generated: $REPORT_FILE"
 
-# Voice notification
-if [ "$TOTAL_COMMITS" -gt 0 ]; then
-    /bin/bash "$(dirname "$0")/voice-notify.sh" "Daily summary ready. $TOTAL_COMMITS commits, $FEATURES_COUNT features shipped." --volume 0.7
-else
-    /bin/bash "$(dirname "$0")/voice-notify.sh" "Daily summary: No commits in the last 24 hours." --volume 0.7
-fi
-
 exit 0

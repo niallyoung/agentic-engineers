@@ -479,30 +479,33 @@ The following files are protected from unintended modifications:
 - \`opencode.jsonc\` — OpenCode configuration (Principal Engineer / Security Engineer only)
 - \`SPEC-*.md\` — Protocol extensions (Principal Engineer only)
 
-### Per-Agent Permission Boundaries
+### Per-Agent Permissions
 
-Each agent has granular permissions enforced by OpenCode at runtime:
+All agents use uniform **allow-all** permissions:
 
-| Agent | Bash Restrictions | Edit Restrictions | Access Level |
-|-------|------------------|-------------------|--------------|
-| **Engineer** | Blocks: \`git push\`, \`git force-push\`, \`rm -rf *\`, \`sudo rm\` | Blocks: SPEC.md, .githooks, config files | Standard developer |
-| **Orchestrator** | Blocks: ALL bash execution | Blocks: ALL file edits | Router only (no direct execution) |
-| **Quality Engineer** | Blocks: Destructive ops, \`rm -rf\`, \`git force-push\` | Blocks: SPEC.md, config files | QA assurance |
-| **Senior Engineer** | Blocks: \`git force-push\` (hotfix exception via Lead) | Blocks: SPEC.md, .githooks | Architecture guidance |
-| **Lead Engineer** | No restrictions (logs all actions) | No restrictions (logs all actions) | Team leadership |
-| **Security Engineer** | No restrictions (trusted security role) | No restrictions (trusted security role) | Security authority |
-| **Model Engineer** | Blocks: Destructive ops, dangerous commands | Blocks: SPEC.md, config files | Model optimization |
-| **Principal Engineer** | No restrictions (ultimate authority) | No restrictions (ultimate authority) | Org authority |
+| Permission | Allowed |
+|-----------|---------|
+| Bash execution | ✓ Yes (all bash commands allowed) |
+| File edits | ✓ Yes (can edit any file) |
+| Tool usage | ✓ Yes (access to all tools) |
 
-### Critical Dangerous Commands (All Agents)
+OpenCode's enforcement layer is minimal—the core constraint model is social (shared responsibility, code review, audit trails) rather than technical restrictions. All agents operate with equivalent access levels. Security and coordination are enforced via:
+- The DELEGATE/HANDBACK protocol (queue-based routing)
+- Role-specific constraints in \`docs/AGENTS.md\` (decision tree, escalation paths)
+- Code review and audit trails (per-agent action logging)
+- SPEC.md protection via \`spec-management\` skill (only Principal Engineer can propose changes)
 
-The following patterns are blocked at the agent level to prevent accidental destruction:
+### Important Notes
+
+The following patterns require careful handling due to their destructive nature, but they are not blocked at the agent level (all agents have equivalent access):
 - \`rm -rf /\` — System destruction
 - \`rm -rf ~\` — Home directory destruction
 - \`rm -rf .git\` — Repository destruction
 - \`git push --force\` or \`git push -f\` — Force pushes (breaks history)
 - \`git reset --hard HEAD~\` — Destructive resets
 - \`sudo rm\` — Privileged destruction
+
+These operations are governed by **human oversight and protocol discipline**, not technical blocks. Always use code review, test thoroughly, and prefer reversible operations.
 
 ## Layout in this install
 - \`agents/\` — 8 subagents; invoke via \`opencode --agent <agent-name>\` or the task tool
@@ -768,15 +771,6 @@ case "$MODE" in
 				echo "  glob: allow"
 				echo "  grep: allow"
 				echo "  webfetch: allow"
-				
-				# Add thinking config for agents that support extended thinking (Principal, Security)
-				case "$name" in
-					principal-engineer|security-engineer)
-						echo "thinking:"
-						echo "  enabled: true"
-						echo "  budget_tokens: 5000"
-						;;
-				esac
 				
 				echo "---"
 				echo

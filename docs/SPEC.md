@@ -318,11 +318,6 @@ All scripts in the skills directory are approved and compliant because they are 
 - `skills/usage-tracking/scripts/analyze_usage_trends.py`
 - `skills/usage-tracking/scripts/capture_token_usage.sh`
 - `skills/usage-tracking/scripts/usage-tracking.sh`
-- `skills/voice-notify/scripts/demo.sh`
-- `skills/voice-notify/scripts/select-voices.sh`
-- `skills/voice-notify/scripts/setup-tts.sh`
-- `skills/voice-notify/scripts/voice-notify.sh`
-- `skills/voice-notify/scripts/vote-all-voices.sh`
 
 **Rationale:** Each skill follows the formal SKILLS.md specification and is properly invoked through the Orchestrator's task routing system. These are the ONLY scripts permitted to execute autonomous logic at runtime.
 
@@ -1417,6 +1412,96 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 - [docs/QUICK-START-PRODUCTION-DEPLOYMENT.md](QUICK-START-PRODUCTION-DEPLOYMENT.md)
 - [docs/TOKEN-COST-MONITORING.md](TOKEN-COST-MONITORING.md)
 - [docs/USAGE-BUDGET-MANAGER.md](USAGE-BUDGET-MANAGER.md)
+
+---
+
+## Model Selection Architecture
+
+This section documents how agent roles select among approved opus model variants. Principal Engineer and Security Engineer are Tier 3 (Opus) roles where task complexity varies enough to warrant variant selection within the opus family. The Orchestrator selects the appropriate variant at DELEGATE-creation time.
+
+### Opus Variant Comparison
+
+| Variant | Strengths | Weaknesses | Best For |
+|---------|-----------|------------|----------|
+| `claude-opus-4.6` | Extended thinking; lowest cost in opus tier | No cross-repo execution edge; not for security-critical tasks | Pure architecture planning; design-only scopes |
+| `claude-opus-4.7` | Balanced capability + cost; strong cross-repo reasoning | Not optimal for highest-stakes security tasks | Design decisions that drive implementation across ≥2 repos |
+| `claude-opus-4.8` | Highest capability; best for threat modeling and compliance | Highest cost | Security analysis; auth flows; cryptographic selection; compliance policy |
+
+### Principal Engineer: Variant Selection
+
+The Orchestrator applies this decision tree when creating a DELEGATE for Principal Engineer:
+
+| Task Profile | Model | Trigger |
+|-------------|-------|---------|
+| Pure architecture planning | `claude-opus-4.6` | Design-only scope; no cross-repo execution required; extended thinking sufficient |
+| Design with cross-repo execution | `claude-opus-4.7` | Architecture decision drives implementation across ≥2 repos |
+| Security-critical design | `claude-opus-4.8` | Involves auth flows, cryptographic selection, or compliance policy |
+
+**Orchestrator decision tree:**
+1. Pure planning (design-only, no execution)? → `claude-opus-4.6`
+2. Design directly drives cross-repo implementation? → `claude-opus-4.7`
+3. Security-critical design (auth/crypto/compliance)? → `claude-opus-4.8`
+4. Default (unclear scope) → `claude-opus-4.6` (cheapest capable option)
+
+### Security Engineer: Non-Downgrade Rule
+
+Security Engineer **always** uses `claude-opus-4.8`. Security analysis is the highest-stakes task in the system. Downgrading for cost savings risks missed vulnerabilities, incomplete threat models, or incorrect compliance assessments.
+
+- `claude-opus-4.7` permitted **only** as emergency fallback if 4.8 is unavailable (API outage)
+- Fallback must be documented in HANDBACK `model_assessment`
+- Never downgrade by choice; never use 4.6 for Security Engineer
+
+### Quality Engineer: model_assessment for Tier 3
+
+After each Tier 3 (Principal/Security) task, Quality Engineer provides `model_assessment` feedback in HANDBACK. This feeds the Model Engineer optimization loop for future routing decisions.
+
+```yaml
+model_assessment:
+  role: principal-engineer
+  model_used: claude-opus-4.6
+  model_appropriate: true
+  alternative_considered: claude-opus-4.7
+  rationale: "Pure planning task; 4.6 extended thinking was sufficient; 4.7 not needed"
+  recommendation: "Continue routing pure-planning Principal tasks to 4.6"
+```
+
+### Example DELEGATE Blocks with model_guidance
+
+**Principal Engineer — pure planning (4.6):**
+```yaml
+handoff_type: DELEGATE
+role: Principal Engineer
+model: claude-opus-4.6
+model_guidance: "Pure planning task — design-only, no cross-repo execution required"
+task: "Design the event-sourcing schema for the new audit trail feature"
+```
+
+**Principal Engineer — cross-repo execution (4.7):**
+```yaml
+handoff_type: DELEGATE
+role: Principal Engineer
+model: claude-opus-4.7
+model_guidance: "Architecture decision drives implementation across auth-service and api-gateway"
+task: "Design and specify OAuth2 refresh-token rotation across 3 services"
+```
+
+**Security Engineer — always 4.8:**
+```yaml
+handoff_type: DELEGATE
+role: Security Engineer
+model: claude-opus-4.8
+model_guidance: "Non-downgrade rule — security analysis always uses 4.8"
+task: "Threat model for the new payment processing flow"
+```
+
+### Rollout Phases
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| Phase 1 | Principal Engineer variant selection (4.6/4.7/4.8) | Active |
+| Phase 2 | Security Engineer non-downgrade rule enforcement | Active |
+| Phase 3 | Quality Engineer model_assessment feedback loop | Active |
+| Phase 4 | Model Engineer automated routing recommendations | Active |
 
 ---
 

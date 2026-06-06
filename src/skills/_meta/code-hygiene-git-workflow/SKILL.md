@@ -1,3 +1,14 @@
+---
+name: code-hygiene-git-workflow
+description: "Disciplined queue-to-branch-to-PR-to-merge workflow for code quality and CI stability"
+type: meta
+role: team-discipline
+category: workflow-standards
+version: 1.0
+maturity: draft
+effort_estimate: 15-20h for full team adoption
+---
+
 # CODE-HYGIENE-GIT-WORKFLOW
 
 ## Metadata

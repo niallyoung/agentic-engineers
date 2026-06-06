@@ -51,6 +51,5 @@ def test_skills_list() -> list:
         "spec-management",
         "spec-validator",
         "usage-tracking",
-        "voice-notify",
         "workflow-review",
     ]

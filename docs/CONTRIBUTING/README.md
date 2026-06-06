@@ -265,6 +265,101 @@ When making code changes, ensure tests stay in sync:
 
 ---
 
+## Skill Naming Conventions
+
+As of the **Phase 3 Skills Consolidation (2026-06-06)**, skills follow
+consistent prefixes so related skills group together and are easy to discover.
+**New skills must adopt the matching prefix for their domain:**
+
+| Prefix | Domain | Existing members |
+|--------|--------|------------------|
+| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query, queue-todo-sync |
+| `harness-*` | Harness-specific integration | harness-integration-tracker, harness-opencode-feature-sync |
+| `spec-*` | SPEC.md governance | spec-validator, spec-management, spec-extract |
+| `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator *(single source of truth)* |
+| `model-*` | Model routing / cost-quality | model-engineer, model-selection |
+| `cost-*` | Token / cost tracking | cost-aggregation, cost-budgeting |
+| `agent-*` / `skill-*` | Scaffolding | agent-creator / skill-creator |
+
+**Internal vs. user-facing:** framework-internal "meta" skills live in
+`src/skills/_meta/` and are *not* part of the public skill catalog. Put plumbing
+(orchestration enforcement, queue isolation, eval harness) there; put
+agent-invokable capabilities directly under `src/skills/`.
+
+### Phase 3 Consolidation Summary
+
+Four skills changed identity during consolidation. If you reference any old
+name, see [docs/MIGRATION-2026-06-06.md](../MIGRATION-2026-06-06.md):
+
+| Old name | New name / status | Change |
+|----------|-------------------|--------|
+| `todo-maintenance` | `queue-todo-sync` | Rename |
+| `opencode-feature-sync` | `harness-opencode-feature-sync` | Rename |
+| `protocol-validation` | merged into `protocol-validator` | Merge (single source of truth) |
+| `voice-notify` | *(removed)* | Deletion — use HANDBACK status + logging |
+
+Background and rationale: [docs/guides/ARCHITECTURE-CONSOLIDATION.md](../guides/ARCHITECTURE-CONSOLIDATION.md).
+
+---
+
+## Skill Lifecycle
+
+Every skill moves through the same four stages. The source tree is
+authoritative; everything downstream is regenerated, never hand-edited.
+
+```
+1. CREATE            2. TEST                3. RENDER              4. DEPLOY
+   ──────               ────                   ──────                 ──────
+   src/skills/<name>/   src/skills/<name>/     make render-all        make install
+     SKILL.md             tests/      ───►     → dist/claude/   ───►  → ~/.claude/skills/
+     scripts/           tests/ (cross-skill)   → dist/copilot/        → ~/.copilot/skills/
+     references/        make verify            → dist/opencode/       → ~/.config/opencode/skills/
+     tests/             pytest tests/ -q       → dist/pi/             (+ π.dev)
+```
+
+1. **Create** — Author the skill in `src/skills/<name>/` with a `SKILL.md`
+   (frontmatter), `scripts/`, optional `references/`, and `tests/`. Use the
+   correct naming prefix (above). See [Creating New Skills](#creating-new-skills).
+2. **Test** — Add skill-local tests under `src/skills/<name>/tests/`; add
+   cross-skill behavior to the top-level `tests/`. **Test against rendered
+   output (`dist/`), not your dev install** (`~/.claude/` may be empty in CI).
+   Keep test-fixture skill counts in sync — see
+   [Test Fixture Synchronization](#test-fixture-synchronization).
+3. **Render** — `make render-all` regenerates `dist/<harness>/` with
+   provider-specific transformations. The skill name must appear identically
+   across all harnesses; see [docs/RENDERING.md](../RENDERING.md).
+4. **Deploy** — `make install` renders to the four user config directories. A
+   rename or merge is only "done" once it re-renders cleanly everywhere.
+
+> Renames use `git mv` to preserve history, and a rename is incomplete until
+> every reference (registries, docs, fixtures, imports) is updated. Verify with:
+> `grep -rn "<old-name>" src/ docs/ config/ | grep -v archive` returning empty.
+
+---
+
+## Cost Tracking & Budget Monitoring
+
+The framework tracks token spend per task and enforces budgets so agents stay
+within cost targets.
+
+- **Per-task budgets** — A `DELEGATE` block carries a token budget; the
+  executing agent should stay within it and report actuals in its `HANDBACK`.
+- **Budget enforcement & token limits** — see
+  [docs/BUDGET_MANAGEMENT.md](../BUDGET_MANAGEMENT.md) and
+  [docs/USAGE-BUDGET-MANAGER.md](../USAGE-BUDGET-MANAGER.md).
+- **Historical usage & trends** — see
+  [docs/TOKEN-USAGE-TRACKING.md](../TOKEN-USAGE-TRACKING.md); the `cost-*`
+  skills (`cost-aggregation`, `cost-budgeting`) aggregate spend across providers.
+- **Model selection drives cost** — pick the cheapest model that meets the
+  quality bar (see [Model Selection (Locked)](#model-selection-locked)); the
+  `model-*` skills recommend cost-quality-optimal routing.
+
+**Contributor guidance:** when adding a skill or agent, set a realistic token
+budget in its examples, prefer lower-cost models where quality allows, and never
+hard-code spend that bypasses budget enforcement.
+
+---
+
 ## Making Changes
 
 1. **Branch:** `git checkout -b feature/your-change`
@@ -374,6 +469,139 @@ git commit --amend
 
 ---
 
+## CI/CD Requirements (Phase 5.1+)
+
+All contributions pass through a multi-gate CI pipeline defined in
+`.github/workflows/ci.yml`. This section documents each gate, what it checks,
+and how to satisfy it locally before pushing.
+
+### Gates Overview
+
+| Gate | Script | Failing Exit | When Added |
+|------|--------|-------------|------------|
+| Credential scan | `scripts/check-gitconfig-no-tokens.sh` | Hard fail | Phase 1 |
+| Lint | `make lint` | Hard fail | Phase 1 |
+| **SKILL.md compliance** | `scripts/validate_skills.py` | Hard fail on errors; warn on warnings | Phase 5.1 |
+| **Circular import detection** | `scripts/detect_circular_imports.py` | Hard fail | Phase 5.1 |
+| **Protocol compliance** | Inline (queue YAML validation) | Hard fail if queue files exist | Phase 5.1 |
+| **Conformance report** | `scripts/validate_skills.py --json` | Non-failing (audit trail) | Phase 5.1 |
+| Test suite | `make test` | Hard fail | Phase 1 |
+| Verify | `make verify` | Hard fail | Phase 1 |
+| Token cost annotation | Inline (reads `data/metrics/`) | Non-failing (audit only) | Phase 5.1 |
+
+### Gate 1: SKILL.md Frontmatter Compliance
+
+Every active skill listed in `ACTIVE_SKILLS` inside `scripts/validate_skills.py`
+must have a `SKILL.md` with all required frontmatter fields.
+
+**Run locally:**
+```bash
+python scripts/validate_skills.py           # errors cause CI failure
+python scripts/validate_skills.py --strict  # warnings also cause failure (use for Phase 5.2)
+python scripts/validate_skills.py --skill queue-management  # check a single skill
+python scripts/validate_skills.py --json    # machine-readable output
+```
+
+**Required frontmatter fields:**
+
+```yaml
+---
+name: <skill-name>
+description: "<brief description>"
+license: Proprietary
+compatibility: agentic-engineers framework v5.10+. Requires Python 3.11+
+metadata:
+  author: agentic-engineers
+  version: "1.0"
+  category: <category>
+  role: <role>
+  model: <model>
+  effort: low | medium | high
+---
+```
+
+**Required directory structure per skill:**
+```
+src/skills/<skill-name>/
+├── SKILL.md          ← required
+├── __init__.py       ← required (exports public API)
+├── scripts/          ← required directory
+│   └── <skill>.py
+└── tests/            ← required directory
+    └── test_<skill>.py   ← at least one test file required
+```
+
+See [`src/skills/_meta/skill-template/QUICKSTART.md`](src/skills/_meta/skill-template/QUICKSTART.md)
+for the 5-step guide to creating a conformant skill.
+
+### Gate 2: Circular Import Detection
+
+Static AST analysis over `src/` detects any circular import chains.
+
+**Run locally:**
+```bash
+python scripts/detect_circular_imports.py
+python scripts/detect_circular_imports.py --verbose  # print full import graph
+python scripts/detect_circular_imports.py --root src/skills  # skills only
+```
+
+If a cycle is detected, restructure the imports to eliminate it (e.g., move
+shared types to a dedicated `_types.py` module that neither importer depends on).
+
+### Gate 3: Protocol Compliance
+
+Any YAML files in the `queue/` directory (if present) are validated against the
+DELEGATE/HANDBACK protocol schema. This gate is a no-op on repos with no queue files.
+
+**Run locally:**
+```bash
+# If you have queue files:
+python -c "from src.skills.protocol_validator.scripts import validate_file; print(validate_file('queue/incoming/example.yaml'))"
+```
+
+### Gate 4: Conformance Report (Audit Trail)
+
+This gate runs `validate_skills.py --json` and writes the output to the GitHub
+Actions step summary. It is **non-failing** — it exists to create an audit trail
+of skill health over time. Check it in the "Summary" tab of any CI run.
+
+### Token Cost Annotation (Non-Failing)
+
+If `data/metrics/` contains JSON files with token usage data, the CI run
+annotates the step summary with the token cost of that commit. This is non-failing
+and informational only. Phase 5.2 will add a hard cost budget gate.
+
+---
+
+### Pre-Push Checklist
+
+Before pushing to a feature branch:
+
+```bash
+# 1. Lint
+make lint
+
+# 2. Skill compliance (if you touched any skill)
+python scripts/validate_skills.py
+
+# 3. Circular imports
+python scripts/detect_circular_imports.py
+
+# 4. Full test suite
+make test
+
+# 5. Harness render (if you touched skills or agents)
+make render-copilot render-claude render-opencode render-pi render-specs
+
+# 6. Verify manifest
+make verify
+```
+
+The pre-push git hook runs `make test-concurrent` automatically — do not bypass
+with `SKIP_HOOKS=1` except in documented emergencies.
+
+---
+
 ## Testing
 
 ```bash
@@ -437,6 +665,54 @@ failed validation. The fix is:
 
 ---
 
+## Multi-Model Agent Variants
+
+Some Tier 3 (Opus) roles support **multi-model selection** within the opus family. Rather than a single fixed model, the Orchestrator selects the optimal opus variant when creating DELEGATEs for these roles.
+
+### Roles with Multi-Model Support (Phase 1)
+
+**Principal Engineer** — selects among 4.6, 4.7, 4.8:
+- `claude-opus-4.6` — pure architecture planning (design-only; no cross-repo execution)
+- `claude-opus-4.7` — design decisions with cross-repo execution impact
+- `claude-opus-4.8` — security-critical design choices (auth, crypto, compliance)
+
+**Security Engineer** — always 4.8 (non-downgrade rule):
+- `claude-opus-4.8` — always; security analysis is non-negotiable
+- `claude-opus-4.7` — emergency fallback only if 4.8 is unavailable; document in HANDBACK
+- Never downgrade by choice
+
+### How It Works
+
+1. **Orchestrator selects variant** at DELEGATE-creation time based on the incoming task profile
+2. **model_guidance field** in the DELEGATE communicates the selection rationale to the receiving agent
+3. **Quality Engineer** provides `model_assessment` feedback in HANDBACK (model used, appropriateness, recommendation)
+4. **Model Engineer** analyzes `model_assessment` feedback and feeds recommendations back to the Orchestrator routing loop
+
+### DELEGATE Example with model_guidance
+
+```yaml
+---
+handoff_type: DELEGATE
+task_id: 2026-06-05-arch-cursor-design
+role: principal-engineer
+model: claude-opus-4.6
+model_guidance: |
+  Pure architecture planning — use claude-opus-4.6.
+  Escalate to 4.7 if cross-repo execution scope is discovered during analysis.
+effort: high
+scope: Design delta-token cursor model for event store sync.
+---
+```
+
+### Future Phases
+
+- **Phase 2** (planned): Extend multi-model selection to Senior Engineer (sonnet-4.5 vs 4.6)
+- **Phase 3** (planned): Full multi-model routing for all roles, driven by Model Engineer feedback data
+
+All changes are backward-compatible. Validators and tests require no updates for the Phase 1 rollout — `claude-opus-4.7` is now in `LOCKED_MODELS.sh`.
+
+---
+
 ## Model Selection (Locked)
 
 **CRITICAL: Model choices are LOCKED by strategic decision and enforced by pre-commit hooks.**
@@ -445,7 +721,9 @@ We have chosen these Claude models today for cost-quality alignment:
 - **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
 - **claude-sonnet-4.5** — model-engineer (analysis, cost-quality balance)
 - **claude-sonnet-4.6** — lead, quality, senior engineers (complex tasks)
-- **claude-opus-4.7** — security, principal engineers (high-stakes decisions)
+- **claude-opus-4.6** — principal-engineer default (pure planning tasks)
+- **claude-opus-4.7** — principal-engineer variant (design+execution tasks)
+- **claude-opus-4.8** — security-engineer (non-downgrade; all security tasks)
 
 ### Why Locked Models?
 
@@ -471,7 +749,9 @@ model: claude-{variant}-{major}.{minor}  # ← REQUIRED format (e.g., claude-hai
 - ✅ `claude-haiku-4.5`
 - ✅ `claude-sonnet-4.5`
 - ✅ `claude-sonnet-4.6`
+- ✅ `claude-opus-4.6`
 - ✅ `claude-opus-4.7`
+- ✅ `claude-opus-4.8`
 
 **Not locked** (rejected by pre-commit hook):
 - ❌ `claude-opus-4-7` (hyphens in version — use dots)
@@ -507,12 +787,14 @@ If you need a different model for an agent:
 
 Different harnesses have incompatible model format requirements:
 
-| Harness | Source | Renders to | Why |
-|---------|--------|------------|-----|
-| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | Uses Anthropic API format (dots required) |
-| **OpenCode** | `claude-opus-4.7` | `claude-opus-4-7` | CLI requires hyphens in version (platform constraint) |
-| **Claude Code** | `claude-opus-4.7` | `opus` | Web UI uses short aliases for UX |
-| **Pi.dev** | `claude-opus-4.7` | `claude-opus-4-7` | Anthropic API format (hyphens) |
+| Harness | Model Examples | Format |
+|---------|---|---|
+| Copilot CLI | `claude-opus-4.8`, `claude-opus-4.6` (multi-model) | Dots in version |
+| OpenCode | `claude-opus-4.7` | Hyphens in version (limitation) |
+| Claude Code | `opus` | Short alias |
+| π.dev | `claude-opus-4.6`, `claude-opus-4.8` | Anthropic API format (dots) |
+
+Note: Principal and Security Engineer roles support multi-model selection. Orchestrator chooses the appropriate opus variant (4.6, 4.7, or 4.8) at DELEGATE-creation time based on task complexity. See SPEC.md > Model Selection Architecture.
 
 **Key principle:** Source agents use ONE canonical format (DOTS). Renderers transform per-harness. This separation makes source maintainable and allows automation of transformations.
 
@@ -551,7 +833,9 @@ Different harnesses have incompatible model format requirements:
      - claude-haiku-4.5
      - claude-sonnet-4.5
      - claude-sonnet-4.6
+     - claude-opus-4.6
      - claude-opus-4.7
+     - claude-opus-4.8
    To request a model change, contact the Orchestrator
 ```
 
@@ -709,3 +993,63 @@ See [`docs/OPENCODE-RENDERER-FIX-PLAN.md`](../OPENCODE-RENDERER-FIX-PLAN.md) for
 ---
 
 **Start here:** Clone, install, verify, then use the framework's own meta-skills to extend it.
+
+---
+
+## Cost & Budget Reports
+
+Phase 5.2 added per-role token budgets and a routing matrix. Use these tools
+to interpret cost behavior locally before opening a PR that changes routing,
+models, or budgets.
+
+### Per-role budgets
+
+Authoritative source: [`src/config/token-budgets.yaml`](src/config/token-budgets.yaml).
+Each role has a hard `budget` (tokens) and three thresholds:
+
+- **warn** (default 80%) — emits a warning; task continues.
+- **error** (default 100%) — budget exceeded; investigate.
+- **escalate** (default 120%) — escalate to Principal Engineer.
+
+Security has an `escalate_pct` override (150%) so threat analyses are never
+cut short for cost reasons.
+
+### Check a single task
+
+```bash
+python3 -m src.skills.cost-aggregation.scripts.monitor_budgets \
+    --role engineer --tokens 1300
+# → [WARN] engineer: 1300/1500 tokens (86.7% ≥ 80%) — approaching cap.
+```
+
+Exit code is non-zero only when at least one record hits `escalate`, which
+makes the script safe to wire into CI as a soft gate.
+
+### Roll up recent metrics
+
+```bash
+python3 -m src.skills.cost-aggregation.scripts.cost_dashboard \
+    --metrics artifacts/metrics.jsonl
+```
+
+The dashboard groups tasks by role and reports `tasks`, `avg_tok`, `budget`,
+`over` (count exceeding the error threshold), and `escalated`. Use `--json`
+for machine-readable output.
+
+### Routing decisions
+
+The canonical task → (role, model, effort, budget) matrix lives in
+[`src/orchestration/routing/model_router.py`](src/orchestration/routing/model_router.py).
+For the human-readable version and the cost/quality tradeoff rationale, see
+[`docs/COST-QUALITY-MATRIX.md`](docs/COST-QUALITY-MATRIX.md).
+
+### How to read a report
+
+1. **Sustained `escalate` for a role** → the budget is wrong, or the routing
+   rule is sending the wrong task class to that role. Open a routing-change
+   PR; do not silently raise the cap.
+2. **High `avg_tok` near the warn line on Haiku roles** → consider promoting
+   one task class to Sonnet (still cheaper than chronic rework).
+3. **Zero `over` for Sonnet/Opus roles with low `avg_tok`** → candidate for
+   downgrade to Haiku on the matching rule.
+

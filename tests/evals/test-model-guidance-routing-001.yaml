@@ -1,0 +1,30 @@
+id: test-model-guidance-routing-001
+name: "Model Guidance Routing - Security-Critical Task"
+harnesses:
+  - claude-code
+models:
+  - opus
+category: model-strategy
+severity: high
+timeout_seconds: 60
+requirements:
+  - Must understand Principal Engineer role variant selection
+  - Must know model selection decision tree from SPEC.md
+prompt: |
+  You are the Orchestrator routing a task to the Principal Engineer.
+
+  A critical security incident requires deep threat analysis and architectural redesign.
+  The Principal Engineer is the best role for this task.
+
+  According to the model selection decision tree in SPEC.md > Model Selection Architecture:
+  - Use claude-opus-4.6 for pure planning/reasoning (no execution)
+  - Use claude-opus-4.7 for design decisions with cross-repo execution impact
+  - Use claude-opus-4.8 for security-critical design choices
+
+  Which opus variant should the Orchestrator assign for this task? Explain your reasoning.
+expected_contains:
+  - "4.8"
+  - "security"
+expected_not_contains:
+  - "incorrect"
+  - "wrong"

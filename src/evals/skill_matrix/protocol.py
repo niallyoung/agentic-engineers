@@ -102,10 +102,10 @@ Test includes:
         return output_path
 
 # ---------------------------------------------------------------------------
-# HandbackValidator REMOVED — consolidated into the protocol-validation skill.
+# HandbackValidator REMOVED — consolidated into the protocol-validator skill.
 #
 # The canonical DELEGATE/HANDBACK validator now lives at:
-#     src/skills/protocol-validation/scripts/protocol_validation.py
+#     src/skills/protocol-validator/scripts/protocol_validator.py
 #
 # Import the functional API directly:
 #     from protocol_validation import validate_delegate, validate_handback

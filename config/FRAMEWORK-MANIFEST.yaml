@@ -105,8 +105,8 @@ skills:
     required_by:
       - orchestrator
 
-  todo-maintenance:
-    name: todo-maintenance
+  queue-todo-sync:
+    name: queue-todo-sync
     status: active
     description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
     created: "2026-02-01"

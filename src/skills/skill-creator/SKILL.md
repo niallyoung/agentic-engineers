@@ -8,6 +8,8 @@ metadata:
   version: "1.0"
   category: orchestration
   role: orchestrator
+  model: sonnet-4-6
+  effort: medium
 ---
 
 ## Overview
@@ -114,12 +116,10 @@ Run: `scripts/analyze-metrics.py`
 **Valid examples:**
 - `tokenadvisor`
 - `ab-testing-monitor`
-- `voice-notify`
 
 **Invalid examples:**
 - `TokenAdvisor` (uppercase)
-- `-voice-notify` (leading hyphen)
-- `voice--notify` (consecutive hyphens)
+- `test--monitor` (consecutive hyphens)
 
 ## Categories
 
@@ -163,4 +163,3 @@ See existing skills in `agentic-engineers/skills/`:
 - `tokenadvisor/` — Daily metrics analysis agent
 - `model-engineer/` — Cost-quality optimization agent
 - `ab-testing/` — Experiment orchestration
-- `voice-notify/` — Voice notification integration
