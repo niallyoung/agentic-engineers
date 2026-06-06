@@ -18,7 +18,7 @@
 **The answer:** A queue-based ORCHESTRATOR-FIRST architecture:
 
 1. All work enters a queue as DELEGATE tasks (SPEC-compliant YAML)
-2. Orchestrator polls continuously and routes to the right specialist
+2. Orchestrator polls and routes to the right specialist
 3. Each agent returns a HANDBACK with results + metrics
 4. Quality gates validate all work before moving to done
 5. Metrics feed back into model selection and routing optimization
@@ -47,20 +47,19 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
                     │  make install    │
                     │  (per harness)   │
                     └──────────────────┘
-                    /       │       \
-        ┌───────────┘        │        └───────────┐
-        ▼                    ▼                     ▼
-    ┌────────┐         ┌────────┐          ┌────────┐
-    │ Claude │         │ Copilot│          │ OpenAI │
-    │ Config │         │ Config │          │ Config │
-    └────────┘         └────────┘          └────────┘
-        │                  │                    │
-        └──────────────────┼────────────────────┘
-                           ▼
-                   ┌───────────────────┐
-                   │ Invoke your agent │
-                   │  (via CLI/harness)│
-                   └───────────────────┘
+        /           │           │           \
+    ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+    │ Claude  │ │ Copilot │ │ OpenCode│ │   Pi    │
+    │ Config  │ │ Config  │ │ Config  │ │ Config  │
+    └─────────┘ └─────────┘ └─────────┘ └─────────┘
+        │           │           │           │
+        └───────────┼───────────┼───────────┘
+                    ▼
+           ┌────────────────────┐
+           │ Invoke your harness│
+           │ claude|copilot|    │
+           │ opencode|pi        │
+           └────────────────────┘
 ```
 
 **Framework → Configure → Deploy → Invoke.** Each harness installs customized agents, skills, and routing logic for its provider.
@@ -118,25 +117,21 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ## 8 Specialized Roles
 
-| Rank | Role | Canonical Model | Claude Version | Thinking | Effort | Cost/Task | Purpose |
-|------|------|-----------------|----------------|----------|--------|-----------|---------|
-| 1️⃣ | **Orchestrator** | Haiku | claude-haiku-4.5 | ❌ Off — deterministic routing | Low | $0.03 | Routes all work via decision tree; never does work itself |
-| 2️⃣ | **Engineer** | Haiku | claude-haiku-4.5 | ❌ Off — pre-planned execution | High | $0.05 | Executes well-scoped, pre-planned tasks |
-| 3️⃣ | **Quality Engineer** | Sonnet | claude-sonnet-4.6 | ❌ Off — checklist validation | Medium | $0.09 | Post-implementation validation; model suitability assessment |
-| 4️⃣ | **Model Engineer** | Sonnet | claude-sonnet-4.5 | ✅ On — metric analysis | Medium | $0.09 | Analyzes metrics; optimizes routing and model selection |
-| 5️⃣ | **Lead Engineer** | Sonnet | claude-sonnet-4.6 | ✅ On — review judgment | High | $0.09 | Code review (8-point checklist); architectural guidance |
-| 6️⃣ | **Senior Engineer** | Sonnet | claude-sonnet-4.6 | ✅ On — design trade-offs | High | $0.09 | Analyzes unscoped work; produces detailed plans |
-| 7️⃣ | **Principal Engineer** | Opus | claude-opus-4.8 | ✅ On — cross-service reasoning | High | $0.15 | Cross-service architecture; major refactors |
-| 8️⃣ | **Security Engineer** | Opus | claude-opus-4.8 | ✅ On — STRIDE threat modeling | Max | $0.15 | Threat modeling; vulnerability assessment |
-
-> **Canonical model** is the primary recommendation. Each role also maps to provider-specific equivalents (GPT-4o, Gemini, Llama) — see [Multi-Model Support](#multi-model-support--provider-routing) below.
+| Role | Model | Effort | Purpose |
+|------|-------|--------|---------|
+| **Orchestrator** | claude-haiku-4.5 | Low | Routes all work via decision tree; never does work itself |
+| **Engineer** | claude-haiku-4.5 | High | Executes well-scoped, pre-planned tasks |
+| **Model Engineer** | claude-sonnet-4.5 | Medium | Analyzes metrics; optimizes routing and model selection |
+| **Quality Engineer** | claude-sonnet-4.6 | Medium | Post-implementation validation; model suitability assessment |
+| **Lead Engineer** | claude-sonnet-4.6 | High | Code review (8-point checklist); architectural guidance |
+| **Senior Engineer** | claude-sonnet-4.6 | High | Analyzes unscoped work; produces detailed plans |
+| **Principal Engineer** | claude-opus-4.8 | High | Cross-service architecture; major refactors |
+| **Security Engineer** | claude-opus-4.8 | Max | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
-- **Haiku (Ranks 1-2):** $0.03–$0.05 per task — Routing, well-scoped implementation
-- **Sonnet (Ranks 3-6):** $0.09 per task — Planning, review, quality, optimization
-- **Opus (Ranks 7-8):** $0.15 per task — Complex architecture, security analysis
-
-**Thinking Mode:** Extended thinking (✅) enables deeper reasoning for complex tasks; disabled for fast routing/execution. See [docs/guides/thinking-modes-and-cost-quality-trade-offs.md](docs/guides/thinking-modes-and-cost-quality-trade-offs.md) for full details on why each role has thinking on/off.
+- **Haiku:** $0.03–$0.05 per task — Routing, well-scoped implementation
+- **Sonnet:** $0.09 per task — Planning, review, quality, optimization
+- **Opus:** $0.15 per task — Complex architecture, security analysis
 
 **Effort Levels:**
 - **Low:** Minimal reasoning, direct execution (Orchestrator routing)
@@ -144,7 +139,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 - **High:** Deep reasoning, multiple approaches considered (Engineers, Leads, Architects)
 - **Max:** Unconstrained reasoning, full exploration (Security analysis, threat modeling)
 
-> 💡 **Understanding Thinking Modes:** Extended thinking can add 3–5× tokens for deeper reasoning on complex tasks. We've documented the detailed rationale for when thinking is enabled/disabled per role → **See [docs/guides/thinking-modes-and-cost-quality-trade-offs.md](docs/guides/thinking-modes-and-cost-quality-trade-offs.md)**
+> 💡 **Model Selection:** Each role maps to provider-specific equivalents (GPT-4o, Gemini, Llama) — see [Multi-Model Support](#multi-model-support--provider-routing) below. For thinking mode details, see [docs/guides/thinking-modes-and-cost-quality-trade-offs.md](docs/guides/thinking-modes-and-cost-quality-trade-offs.md).
 
 ---
 
