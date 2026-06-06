@@ -287,14 +287,14 @@ Every role has a **canonical model tier** (the primary recommendation) plus **pr
 
 | Role | Canonical | Claude (Anthropic) | GitHub Copilot | OpenAI | Google | Meta / Llama |
 |------|-----------|-------------------|----------------|--------|--------|--------------|
-| **Orchestrator** | Haiku | `claude-haiku-4.5` | `gpt-4o-mini` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Engineer** | Haiku | `claude-haiku-4.5` | `gpt-4o-mini` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Principal Engineer** | Opus | `claude-opus-4.7` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
-| **Security Engineer** | Opus | `claude-opus-4.8` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
+| **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `claude-sonnet-4.5` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Principal Engineer** | Opus | `claude-opus-4.7` | `claude-opus-4.7` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
+| **Security Engineer** | Opus | `claude-opus-4.8` | `claude-opus-4.8` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
 
 **Why these model choices:**
 - **Haiku / gpt-4o-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution
@@ -307,12 +307,12 @@ Not all providers support every feature. The framework degrades gracefully:
 
 | Feature | Claude (Anthropic) | GitHub Copilot | OpenAI | Google | Meta/Llama |
 |---------|-------------------|----------------|--------|--------|------------|
-| Extended Thinking | ✅ Native | ❌ Not supported | ⚠️ Limited | ❌ Not supported | ❌ Not supported |
+| Extended Thinking | ✅ Native | ✅ Native | ⚠️ Limited | ❌ Not supported | ❌ Not supported |
 | Structured Output | ✅ | ✅ | ✅ | ✅ | ❌ Not guaranteed |
-| Max Context | 200K tokens | 4K tokens | 128K tokens | 1M tokens | 128K tokens |
+| Max Context | 200K tokens | 200K tokens | 128K tokens | 1M tokens | 128K tokens |
 | Cost Tier | Premium | Premium | Premium | Standard | Budget/Free |
 
-> ⚠️ **Thinking mode on non-Claude providers:** When deploying to Copilot, OpenAI, Google, or Meta, `thinking: true` roles fall back to the best available reasoning of the target model.
+> ⚠️ **Thinking mode on non-Claude providers:** When deploying to OpenAI, Google, or Meta, `thinking: true` roles fall back to the best available reasoning of the target model.
 
 See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed harness configuration.
 
