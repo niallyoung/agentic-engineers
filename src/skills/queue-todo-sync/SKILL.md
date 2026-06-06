@@ -1,6 +1,6 @@
 ---
-name: "todo-maintenance"
-title: "todo-maintenance"
+name: "queue-todo-sync"
+title: "queue-todo-sync"
 description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
 role: "Engineer"
 model: "claude-haiku-4.5"
@@ -9,7 +9,7 @@ status: "implemented"
 version: "1.0.0"
 ---
 
-# todo-maintenance Skill
+# queue-todo-sync Skill
 
 **Purpose:** Automatically synchronize task queue (DELEGATE/HANDBACK files) with TODO.md to maintain a single source of truth for task tracking.
 
@@ -19,7 +19,7 @@ version: "1.0.0"
 
 ## Overview
 
-The `todo-maintenance` skill provides bidirectional synchronization between:
+The `queue-todo-sync` skill provides bidirectional synchronization between:
 
 1. **DELEGATE files** in `artifacts/queue/incoming/` → TODO.md (add pending tasks)
 2. **HANDBACK files** in `artifacts/queue/done/` → TODO.md (mark tasks complete)
@@ -50,13 +50,13 @@ The Orchestrator automatically invokes this skill:
 
 ```bash
 # Full bidirectional sync
-opencode-todo-sync sync
+queue-todo-sync sync
 
 # Generate weekly report
-opencode-todo-sync report
+queue-todo-sync report
 
 # Check for conflicts and issues
-opencode-todo-sync check
+queue-todo-sync check
 ```
 
 ### Programmatic Usage
@@ -67,8 +67,8 @@ import sys
 from pathlib import Path
 
 # Import the skill module (directory has hyphen, so use importlib)
-todo_maintenance = importlib.import_module("src.skills.todo-maintenance")
-TodoSyncManager = todo_maintenance.TodoSyncManager
+queue_todo_sync = importlib.import_module("src.skills.queue-todo-sync")
+TodoSyncManager = queue_todo_sync.TodoSyncManager
 
 manager = TodoSyncManager(
     todo_path=Path("TODO.md"),
@@ -79,7 +79,7 @@ manager = TodoSyncManager(
 delegate_data = {
     "task_id": "2026-05-18-test-task",
     "role": "engineer",
-    "scope": "Test task for todo-maintenance",
+    "scope": "Test task for queue-todo-sync",
     "effort": "medium",
     "plan": ["Step 1", "Step 2"],
 }
@@ -114,7 +114,7 @@ The skill expects TODO.md to follow this format:
 
 ## IN PROGRESS
 - [ ] **TASK-ID:** Task description (Owner: role)
-- [ ] **2026-05-18-test-task:** Test task for todo-maintenance (Owner: engineer)
+- [ ] **2026-05-18-test-task:** Test task for queue-todo-sync (Owner: engineer)
 
 ## COMPLETED
 - [x] **TASK-001:** Completed task (Owner: engineer)
@@ -137,7 +137,7 @@ The skill expects TODO.md to follow this format:
 
 ```
 1. DELEGATE created in artifacts/queue/incoming/DELEGATE-*.yaml
-2. Orchestrator invokes todo-maintenance skill
+2. Orchestrator invokes queue-todo-sync skill
 3. Skill reads DELEGATE file
 4. Skill extracts: task_id, role, scope, effort, plan
 5. Skill formats as TODO line: - [ ] **TASK-ID:** scope (Owner: role)
@@ -149,7 +149,7 @@ The skill expects TODO.md to follow this format:
 
 ```
 1. HANDBACK created in artifacts/queue/done/HANDBACK-*.json
-2. Orchestrator invokes todo-maintenance skill
+2. Orchestrator invokes queue-todo-sync skill
 3. Skill reads HANDBACK file
 4. Skill extracts: task_id, status, timestamp, quality_score
 5. Skill finds matching TODO entry
@@ -346,13 +346,13 @@ The skill includes comprehensive tests with >80% coverage:
 
 ```bash
 # Run all tests
-pytest src/skills/todo-maintenance/tests/ -v
+pytest src/skills/queue-todo-sync/tests/ -v
 
 # Run with coverage
-pytest src/skills/todo-maintenance/tests/ --cov=src/skills/todo-maintenance --cov-report=html
+pytest src/skills/queue-todo-sync/tests/ --cov=src/skills/queue-todo-sync --cov-report=html
 
 # Run specific test
-pytest src/skills/todo-maintenance/tests/test_sync_todo.py::TestDelegateEntry -v
+pytest src/skills/queue-todo-sync/tests/test_sync_todo.py::TestDelegateEntry -v
 ```
 
 ### Test Coverage

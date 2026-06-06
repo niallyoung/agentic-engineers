@@ -1,5 +1,5 @@
 """
-Tests for todo-maintenance skill — Auto-sync queue DELEGATEs ↔ TODO.md
+Tests for queue-todo-sync skill — Auto-sync queue DELEGATEs ↔ TODO.md
 
 TDD RED-phase tests covering:
 1. DELEGATE → TODO.md sync
@@ -41,7 +41,7 @@ role: engineer
 model: claude-haiku-4.5
 effort: medium
 scope: |
-  Test task for todo-maintenance skill
+  Test task for queue-todo-sync skill
   This is a multi-line scope
 plan:
   - Step 1: Do something
@@ -60,7 +60,7 @@ plan:
         entry = DelegateEntry(
             task_id="2026-05-18-test-task",
             role="engineer",
-            scope="Test task for todo-maintenance skill",
+            scope="Test task for queue-todo-sync skill",
             effort="medium",
             plan=["Step 1", "Step 2"],
         )
@@ -173,7 +173,7 @@ class TestTodoSyncManager:
             "handoff_type": "DELEGATE",
             "task_id": "2026-05-18-test-task",
             "role": "engineer",
-            "scope": "Test task for todo-maintenance",
+            "scope": "Test task for queue-todo-sync",
             "effort": "medium",
             "plan": ["Step 1", "Step 2"],
         }

@@ -1,5 +1,5 @@
 """
-todo-maintenance skill: Auto-sync queue DELEGATEs ↔ TODO.md
+queue-todo-sync skill: Auto-sync queue DELEGATEs ↔ TODO.md
 
 This module provides bidirectional synchronization between:
 - DELEGATE files in artifacts/queue/incoming/
@@ -512,7 +512,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="todo-maintenance skill: Auto-sync queue ↔ TODO.md"
+        description="queue-todo-sync skill: Auto-sync queue ↔ TODO.md"
     )
     parser.add_argument(
         "--todo-path",

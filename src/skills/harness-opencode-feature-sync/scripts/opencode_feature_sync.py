@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""opencode-feature-sync — drift detection between OpenCode's agent/sub-agent
+"""harness-opencode-feature-sync — drift detection between OpenCode's agent/sub-agent
 integration points and the agentic-engineers OpenCode renderer.
 
 This script re-performs the analysis that compares OpenCode's recognized agent

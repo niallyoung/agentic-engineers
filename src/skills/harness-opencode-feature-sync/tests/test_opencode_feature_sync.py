@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for the opencode-feature-sync skill."""
+"""Tests for the harness-opencode-feature-sync skill."""
 
 import sys
 from pathlib import Path

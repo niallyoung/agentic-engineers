@@ -1,5 +1,5 @@
 ---
-name: opencode-feature-sync
+name: harness-opencode-feature-sync
 description: >
   Drift/feature sync between OpenCode's agent and sub-agent integration points
   and the agentic-engineers OpenCode renderer. Re-performs the analysis of
@@ -20,7 +20,7 @@ metadata:
 
 ## Overview
 
-**opencode-feature-sync** keeps the agentic-engineers OpenCode renderer
+**harness-opencode-feature-sync** keeps the agentic-engineers OpenCode renderer
 (`renderer/scripts/render-opencode.sh`) aligned with how OpenCode actually loads
 agents and sub-agents. OpenCode recognizes a **fixed** set of agent frontmatter
 keys; any unknown key is silently swept into an `options` bag and ignored. When
@@ -119,7 +119,7 @@ checks the expanded, current set of points — it has literally updated itself.
 ## Files
 
 ```
-opencode-feature-sync/
+harness-opencode-feature-sync/
 ├── SKILL.md
 ├── __init__.py
 ├── references/

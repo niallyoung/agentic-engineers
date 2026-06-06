@@ -41,7 +41,7 @@
 
 ### Skills Implementation (Completed 2026-05-19)
 
-- [x] **SKILL-TODO-001:** Implement todo-maintenance skill
+- [x] **SKILL-TODO-001:** Implement queue-todo-sync skill
   - ✅ Auto-sync queue DELEGATEs ↔ TODO.md on HANDBACK received
   - ✅ Bidirectional sync, conflict detection, weekly reporting
   - ✅ 20/20 tests passing (100%), 80% coverage
@@ -531,7 +531,7 @@ No new skills or agents may be added to the framework after this date. All API a
 | Phase B–E: Skills & Harness | ✅ Complete | 100% |
 | Phase G: Documentation Refresh | ✅ Complete | 100% |
 | Doc Consolidation Round 2 | ✅ Complete | 100% |
-| Skills: todo-maintenance | ✅ Complete | 100% (92/100 quality) |
+| Skills: queue-todo-sync | ✅ Complete | 100% (92/100 quality) |
 | Skills: doc-quality | ✅ Complete | 100% (94/100 quality) |
 | Market: Gastown Comparison | ✅ Complete | 100% (94/100 quality) |
 | README: Key Benefits & Discoveries | ✅ Complete | 100% (94/100 quality) |

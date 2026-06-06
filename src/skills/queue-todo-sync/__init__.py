@@ -1,5 +1,5 @@
 """
-todo-maintenance skill package
+queue-todo-sync skill package
 """
 
 from .scripts.sync_todo import (

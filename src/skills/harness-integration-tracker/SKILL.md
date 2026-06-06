@@ -359,7 +359,7 @@ Tests cover:
 
 ## Related Skills
 
-- **opencode-feature-sync**: Monitors OpenCode-specific renderer alignment
+- **harness-opencode-feature-sync**: Monitors OpenCode-specific renderer alignment
 - **protocol-validator**: Validates DELEGATE/HANDBACK protocols
 - **spec-validator**: Ensures code complies with SPEC.md
 
