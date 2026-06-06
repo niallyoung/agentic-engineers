@@ -8,6 +8,8 @@ metadata:
   version: "1.0"
   category: governance
   role: quality-engineer
+  model: haiku-4-5
+  effort: medium
   trigger: pre-merge | on-demand | post-merge-audit
 ---
 

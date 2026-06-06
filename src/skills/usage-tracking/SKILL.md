@@ -8,6 +8,9 @@ metadata:
   author: agentic-engineers
   version: "1.0"
   category: observability
+  role: orchestrator
+  model: haiku-4-5
+  effort: low
   runtime: bash/python3
 ---
 

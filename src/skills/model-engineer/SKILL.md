@@ -9,6 +9,7 @@ metadata:
   category: optimization
   role: senior-engineer
   model: sonnet-4-6
+  effort: high
   schedule: "0 17 * * *"
 ---
 

@@ -8,6 +8,8 @@ metadata:
   version: "1.0"
   category: orchestration
   role: orchestrator
+  model: sonnet-4-6
+  effort: medium
 ---
 
 ## Overview

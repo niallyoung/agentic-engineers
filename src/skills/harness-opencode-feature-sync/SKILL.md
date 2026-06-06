@@ -14,6 +14,8 @@ metadata:
   version: "1.0"
   category: hygiene
   role: senior-engineer
+  model: sonnet-4-6
+  effort: high
   trigger: on-demand | post-opencode-upgrade | pre-render
   tdd_phase: GREEN  # 19 tests passing
 ---

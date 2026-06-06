@@ -11,6 +11,8 @@ metadata:
   version: "1.0"
   category: hygiene
   role: senior-engineer
+  model: haiku-4-5
+  effort: medium
   trigger: on-demand | pre-cleanup
   tdd_phase: GREEN  # All 41 tests passing
 ---
