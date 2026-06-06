@@ -125,7 +125,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 | **Quality Engineer** | claude-sonnet-4.6 | Medium | Post-implementation validation; model suitability assessment |
 | **Lead Engineer** | claude-sonnet-4.6 | High | Code review (8-point checklist); architectural guidance |
 | **Senior Engineer** | claude-sonnet-4.6 | High | Analyzes unscoped work; produces detailed plans |
-| **Principal Engineer** | claude-opus-4.8 | High | Cross-service architecture; major refactors |
+| **Principal Engineer** | claude-opus-4.7 | High | Cross-service architecture; major refactors |
 | **Security Engineer** | claude-opus-4.8 | Max | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
@@ -297,7 +297,7 @@ Every role has a **canonical model tier** (the primary recommendation) plus **pr
 | **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
 | **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4` | `gemini-1-5-pro` | `llama-3-70b` |
 | **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `gpt-4` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Principal Engineer** | Opus | `claude-opus-4.8` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
+| **Principal Engineer** | Opus | `claude-opus-4.7` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
 | **Security Engineer** | Opus | `claude-opus-4.8` | `gpt-4o` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
 
 **Why these model choices:**
