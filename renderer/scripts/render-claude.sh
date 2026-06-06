@@ -120,7 +120,7 @@ case "$MODE" in
 			fi
 			skill_start=$(date +%s)
 			_use_color && printf '\r  ⏳ %-30s' "$name"
-			rsync -a --chmod=D755,F644 --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			skill_end=$(date +%s)
 			skill_duration=$(( skill_end - skill_start ))
