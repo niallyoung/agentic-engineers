@@ -98,8 +98,8 @@ verdict, and timing. Dry runs do **not** write artifacts.
 ## Verifying protocol validation
 
 - Every captured HANDBACK is auto-validated by the canonical
-  **`protocol-validation`** skill
-  (`src/skills/protocol-validation/scripts/protocol_validation.py`), the single
+  **`protocol-validator`** skill
+  (`src/skills/protocol-validator/scripts/protocol_validator.py`), the single
   source of truth shared with the renderer and queue system.
 - A test is marked **failed** if the HANDBACK is invalid, **even when the
   harness ran successfully**. The validation errors are recorded in the stored

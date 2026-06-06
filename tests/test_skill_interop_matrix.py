@@ -14,7 +14,7 @@ from src.evals.skill_matrix.models import (
     FailureMode,
     SkillInvocationTest,
 )
-# HANDBACK/DELEGATE validation now lives in the protocol-validation skill;
+# HANDBACK/DELEGATE validation now lives in the protocol-validator skill;
 # this module only needs DelegateGenerator for building test DELEGATE blocks.
 from src.evals.skill_matrix.protocol import DelegateGenerator
 from src.evals.skill_matrix.matrix_runner import SkillInteropMatrix
@@ -219,8 +219,8 @@ class TestDelegateGenerator:
 
 
 # NOTE: HANDBACK validation tests previously lived here (TestHandbackValidator).
-# They moved with the validator itself to the protocol-validation skill:
-#   src/skills/protocol-validation/tests/test_protocol_validation.py
+# They moved with the validator itself to the protocol-validator skill:
+#   src/skills/protocol-validator/tests/test_protocol_validator.py
 
 
 class TestSkillInteropMatrix:
@@ -399,8 +399,8 @@ class TestFailureMode:
 class TestProtocolEdgeCases:
     """Tests for edge cases in protocol handling."""
 
-    # HANDBACK-validation edge cases moved to the protocol-validation skill's
-    # own test suite (src/skills/protocol-validation/tests/).
+    # HANDBACK-validation edge cases moved to the protocol-validator skill's
+    # own test suite (src/skills/protocol-validator/tests/).
 
     def test_delegate_generator_auto_task_id_format(self):
         """Test that auto-generated task IDs have correct format."""
