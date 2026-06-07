@@ -103,51 +103,6 @@ effort_to_variant() {
 	esac
 }
 
-# Per-role least-privilege permission matrix for OpenCode agents.
-# Mirrors OpenCode's built-in `explore` agent shape: a `"*": deny` baseline plus
-# explicit allows. Replaces the previous uniform allow-all block, which overstated
-# enforcement (review roles incorrectly received edit/bash). Matrix is the
-# canonical one documented in docs/CONTRIBUTING/README.md (Phase 4).
-#
-# Columns: read glob grep webfetch websearch edit bash task
-# Emits an indented YAML permission block to stdout (caller prepends "permission:").
-emit_permission_block() {
-	local role="$1"
-	# Defaults: everything denied; opt in per role below.
-	local read=allow glob=allow grep=allow webfetch=allow websearch=deny \
-	      edit=deny bash=deny task=deny
-	case "$role" in
-		orchestrator)
-			websearch=allow; task=allow ;;
-		principal-engineer)
-			websearch=allow; edit=allow; bash=allow ;;
-		senior-engineer)
-			websearch=allow; edit=allow; bash=allow; task=allow ;;
-		engineer)
-			edit=allow; bash=allow ;;
-		lead-engineer)
-			websearch=allow ;;
-		quality-engineer)
-			: ;;  # read-only review role (defaults)
-		security-engineer)
-			websearch=allow; edit=allow; bash=allow ;;
-		model-engineer)
-			websearch=allow ;;
-		*)
-			# Unknown role: conservative read-only baseline (defaults).
-			: ;;
-	esac
-	# Baseline deny-all, then explicit grants (mirrors explore's least-privilege).
-	echo '  "*": deny'
-	echo "  read: $read"
-	echo "  glob: $glob"
-	echo "  grep: $grep"
-	echo "  webfetch: $webfetch"
-	echo "  websearch: $websearch"
-	echo "  edit: $edit"
-	echo "  bash: $bash"
-	echo "  task: $task"
-}
 
 # Parse docs/AGENTS.md primary roster table for a given role's (model, effort, description).
 # Output: tab-separated "model<TAB>effort<TAB>description"; empty if not found.
@@ -765,8 +720,9 @@ case "$MODE" in
 			# Emit OpenCode subagent frontmatter + transformed body.
 			# Only KNOWN_KEYS are emitted at the top level (description, mode, model,
 			# temperature, variant, permission, options) so nothing is silently
-			# discarded. Per-role least-privilege permission block mirrors the
-			# built-in `explore` agent (`"*": deny` baseline + explicit allows).
+			# discarded. All agents use uniform allow-all permissions; behavioral
+			# constraints are enforced via the DELEGATE/HANDBACK protocol and system
+			# prompt, not tool restrictions.
 			{
 				echo "---"
 				printf 'description: "%s"\n' "$desc"
@@ -775,7 +731,7 @@ case "$MODE" in
 				echo "temperature: $temp"
 				[ -n "$variant" ] && echo "variant: $variant"
 				echo "permission:"
-				emit_permission_block "$name"
+				echo '  "*": allow'
 				echo "options:"
 				echo "  role: $role_val"
 				[ -n "$accepts_list" ] && echo "  accepts: [$accepts_list]"
