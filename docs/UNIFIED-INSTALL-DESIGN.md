@@ -34,7 +34,7 @@ This script replaces the previous separate flows and provides:
 | `make install` | Non-interactive | Render all, auto-backup existing dirs, install to all 4 harnesses |
 | `make clean-install` | Interactive | Prompt for each harness (install?), prompt for backup, then install |
 | `make fresh-install-{harness}` | Interactive | Prompt for single harness only |
-| `make install-{harness}` | Direct | Low-level: direct render → rsync (unchanged, for advanced users) |
+| `make install-{harness}` | Direct | Low-level: render directly into the harness dir via the marker-aware render script (for advanced users) |
 
 ### 3. Backup Strategy
 
@@ -149,7 +149,7 @@ Future: Add `make status` command to show backup history and manage retention
 
 **Problem**: Harness directories contain both our managed code AND user config files (settings, auth tokens, session state).
 
-**Solution**: Use marker files (`.agentic-engine-{harness}`) to track which files are managed by us. Install only our files, leave user config untouched. This is already implemented for Claude/OpenCode; Copilot/Pi are being strengthened.
+**Solution**: Use marker files (`.agentic-engine-{harness}`) to track which files are managed by us. Install only our files, leave user config untouched. This is now implemented consistently across **all four harnesses** — every `install-{harness}` target invokes that harness's marker-aware render script directly against the destination (no blind `rsync dist/ → dest/`), so user-authored agents, skills, configs (`config.json`, `opencode.jsonc`), and docs are never overwritten.
 
 **Benefits**:
 - Safe: No accidental overwrites of user data
@@ -161,7 +161,8 @@ Future: Add `make status` command to show backup history and manage retention
 **Problem**: Previous system had separate implementations:
 - `install-harness.sh`: Interactive per-harness
 - `backup-harnesses.sh`: Backup logic
-- Makefile install targets: Direct render+rsync
+- Makefile install targets: blind `rsync dist/ → dest/` for Copilot/OpenCode/Pi
+  (no foreign-file protection) vs. marker-aware render script for Claude
 
 **Solution**: Single `unified-install.sh` with flags:
 - `--interactive`: Prompt per harness
@@ -180,10 +181,10 @@ Future: Add `make status` command to show backup history and manage retention
 
 Each harness uses marker files to track ownership:
 
-**Copilot**: `~/.copilot/skills/skill-name/.agentic-engine-copilot`  
-**Claude**: `~/.claude/skills/skill-name/.agentic-engine-claude`  
-**OpenCode**: Same pattern as Claude  
-**Pi**: `~/.pi/agent/.agentic-engine-pi` (single marker, per-file tracking coming)
+**Copilot**: `~/.copilot/skills/<skill>/.agentic-engine-copilot` (per-skill marker) + `~/.copilot/agents/.agentic-engine-copilot` (agent manifest) + sentinel line in `AGENTS.md`  
+**Claude**: `~/.claude/skills/<skill>/.agentic-engine-claude` + `~/.claude/agents/.agentic-engine-claude` (agent manifest) + sentinel line in `CLAUDE.md`/`AGENTS.md`  
+**OpenCode**: Same per-skill marker + agent manifest; sentinel comments in `AGENTS.md` and `opencode.jsonc`  
+**Pi**: `~/.pi/agent/.agentic-engine-pi`
 
 ### Installation Flow
 
@@ -194,7 +195,7 @@ Each harness uses marker files to track ownership:
    b. If no-backup skip: go to render
    c. If dir exists: back it up
    d. Render: make render-{harness}
-   e. Install: make install-{harness} (rsync with marker protection)
+   e. Install: make install-{harness} (marker-aware render directly into dest)
    f. Report: success/failure
 3. Print summary and exit
 ```

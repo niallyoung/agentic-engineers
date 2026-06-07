@@ -238,15 +238,18 @@ model: {frontmatter['model']}
         return 0
 
 def main():
-    # Parse arguments
-    if len(sys.argv) < 2:
-        # Default: render to ~/.copilot/agents
+    # Parse arguments. Optional trailing --uninstall removes managed agents.
+    args = [a for a in sys.argv[1:] if a != "--uninstall"]
+    uninstall = "--uninstall" in sys.argv[1:]
+
+    if len(args) < 1:
+        # Default: operate on ~/.copilot/agents
         src_dir = 'src/agents'
         dest_dir = os.path.expanduser('~/.copilot/agents')
     else:
-        src_dir = sys.argv[1]
-        dest_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser('~/.copilot/agents')
-    
+        src_dir = args[0]
+        dest_dir = args[1] if len(args) > 1 else os.path.expanduser('~/.copilot/agents')
+
     # Get absolute paths
     repo_root = Path(__file__).parent.parent.parent  # ../../ from scripts/
     if Path(src_dir).is_absolute():
@@ -254,14 +257,18 @@ def main():
     else:
         src_path = (repo_root / src_dir).resolve()
     dest_path = Path(dest_dir).expanduser().resolve()
-    
+
     print(f"\n{'='*60}")
     print(f"Copilot CLI Agent Renderer")
     print(f"{'='*60}\n")
-    
+
     renderer = CopilotAgentRenderer(str(src_path), str(dest_path))
+
+    if uninstall:
+        return renderer.uninstall()
+
     exit_code = renderer.render_all()
-    
+
     if exit_code == 0:
         print(f"✅ All agents ready for Copilot CLI!")
         print(f"📍 Location: {dest_path}")

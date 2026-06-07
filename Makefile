@@ -155,13 +155,14 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 # render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
 # Both are called by make install-copilot for complete agent + skill installation.
 
-uninstall-copilot: ## Remove from ~/.copilot/ (managed only)
-	@echo "🧹 Uninstalling from ~/.copilot/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot" --uninstall
+uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.copilot/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot" --uninstall
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.py" "$(REPO_ROOT)/src/agents" "$(DESTDIR)/.copilot/agents" --uninstall
 
-uninstall-claude: ## Remove from ~/.claude/ (managed only)
-	@echo "🧹 Uninstalling from ~/.claude/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude" --uninstall
+uninstall-claude: ## Remove from ~/.claude/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.claude/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude" --uninstall
 
 
 
@@ -441,13 +442,13 @@ install-opencode: ## Install agents & skills → ~/.config/opencode/ (marker-awa
 uninstall-all: uninstall-copilot uninstall-claude uninstall-pi uninstall-opencode ## Remove from all 4 locations
 	@echo "✅ Uninstall complete"
 
-uninstall-pi: ## Remove from ~/.pi/ (managed only)
-	@echo "🧹 Uninstalling from ~/.pi/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi" --uninstall
+uninstall-pi: ## Remove from ~/.pi/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.pi/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(DESTDIR)/.pi" --uninstall
 
-uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only)
-	@echo "🧹 Uninstalling from ~/.config/opencode/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --uninstall
+uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.config/opencode/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(DESTDIR)/.config/opencode" --uninstall
 
 render-pi: ## Generate dist/pi/ config (π.dev harness)
 	@echo "🔨 Rendering π.dev harness configuration → dist/pi/..."
