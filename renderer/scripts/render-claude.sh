@@ -31,9 +31,14 @@ SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
 DST_SKILLS="$CLAUDE/skills"
 DST_AGENTS="$CLAUDE/agents"
+DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
 SKILL_MARKER=".agentic-engine-claude"
 # Agents are single files; we use a sidecar manifest to track managed names.
 AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-claude"
+# Sentinel on line 1 of generated docs (CLAUDE.md/AGENTS.md) so we can tell ours
+# apart from a user's own file and never overwrite or delete a foreign one.
+# CLAUDE.md is the user's primary memory file — foreign protection is critical.
+DOC_SENTINEL='<!-- managed by agentic-engineers render-claude.sh'
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
@@ -52,6 +57,62 @@ map_model() {
 }
 
 # parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
+
+# Write a managed framework doc with a sentinel on line 1, refusing to overwrite
+# a foreign (user-authored) file of the same name. Used for CLAUDE.md/AGENTS.md.
+# Usage: write_managed_doc <dst_path> <producer_fn>
+#   producer_fn: name of a function that emits the doc BODY to stdout
+write_managed_doc() {
+	local dst="$1" producer="$2" label
+	label=$(basename "$dst")
+	if [ -f "$dst" ] && ! head -n1 "$dst" | grep -q "$DOC_SENTINEL"; then
+		echo "  $(_yellow "⚠️  skipping $label — foreign file at $dst (move it aside to let the framework manage it)")"
+		return 0
+	fi
+	{
+		echo "$DOC_SENTINEL; do not edit directly — re-render overwrites it. -->"
+		"$producer"
+	} > "$dst"
+	echo "  $(_green "✅") $label"
+}
+
+# Body producer: ~/.claude/AGENTS.md — canonical framework rules + roster.
+emit_agents_doc() {
+	cat "$DOCS_AGENTS"
+}
+
+# Body producer: ~/.claude/CLAUDE.md — concise, self-contained pointer to the
+# installed agents and skills (Claude Code memory file). Kept short on purpose.
+emit_claude_doc() {
+	cat <<'DOC'
+# Agentic Engineers Framework — Claude Code Integration
+
+You are part of the **agentic-engineers** distributed AI orchestration system.
+Eight specialised agents collaborate via a structured DELEGATE/HANDBACK protocol
+on a queue-based work pipeline.
+
+## Available agents
+
+Invoke a specialist with `@<agent-name>`:
+
+- `@orchestrator` — Task routing and team coordination
+- `@engineer` — Implementation of well-scoped tasks
+- `@senior-engineer` — Complex problem-solving and planning
+- `@lead-engineer` — Code review and quality assurance
+- `@quality-engineer` — Post-implementation verification
+- `@principal-engineer` — Cross-service architecture decisions
+- `@security-engineer` — Security analysis and threat modeling
+- `@model-engineer` — Cost/quality model-routing recommendations
+
+## Where things live
+
+- Agent definitions: `~/.claude/agents/<name>.md`
+- Skills: `~/.claude/skills/<name>/`
+- Full framework rules, routing decision tree, and protocol: `~/.claude/AGENTS.md`
+
+For the authoritative protocol and roster, read `~/.claude/AGENTS.md`.
+DOC
+}
 
 case "$MODE" in
 	--uninstall)
@@ -81,7 +142,16 @@ case "$MODE" in
 			done < "$AGENT_MANIFEST"
 			rm -f "$AGENT_MANIFEST"
 		fi
-		echo "✅ Removed $count_s skill(s), $count_a agent(s)"
+		# Framework docs: remove only files carrying our sentinel (never a user's).
+		count_d=0
+		for doc in "$CLAUDE/CLAUDE.md" "$CLAUDE/AGENTS.md"; do
+			if [ -f "$doc" ] && head -n1 "$doc" | grep -q "$DOC_SENTINEL"; then
+				rm -f "$doc"; count_d=$((count_d + 1))
+			elif [ -f "$doc" ]; then
+				echo "  $(_yellow "⚠️  keeping $(basename "$doc") — foreign (not managed by us)")"
+			fi
+		done
+		echo "✅ Removed $count_s skill(s), $count_a agent(s), $count_d doc(s)"
 		;;
 
 	--status)
@@ -104,6 +174,13 @@ case "$MODE" in
 			else echo "  ⚠️  agent $name (foreign)"; foreign=$((foreign + 1)); fi
 		done
 		echo "  agents: $ok ok / $missing missing / $foreign foreign"
+		# Framework docs
+		for doc in "$CLAUDE/CLAUDE.md" "$CLAUDE/AGENTS.md"; do
+			label=$(basename "$doc")
+			if [ ! -f "$doc" ]; then echo "  ❌ $label (not installed)"
+			elif head -n1 "$doc" | grep -q "$DOC_SENTINEL"; then echo "  ✅ $label"
+			else echo "  ⚠️  $label (foreign)"; fi
+		done
 		;;
 
 	install|"")
@@ -207,17 +284,17 @@ case "$MODE" in
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
 
-		# 2.5 Framework documentation: Copy CLAUDE.md and AGENTS.md if installing to home dir
-		# (Skip if rendering to dist/, since files are already there)
-		if [[ "$CLAUDE" == *"/.claude" ]]; then
-			for doc in CLAUDE.md AGENTS.md; do
-				src_doc="$REPO_ROOT/dist/claude/$doc"
-				if [ -f "$src_doc" ]; then
-					cp "$src_doc" "$CLAUDE/$doc"
-					echo "  $(_green "✅") $doc"
-				fi
-			done
+		# 2.5 Framework documentation: generate CLAUDE.md + AGENTS.md.
+		# Generated (not copied from a stale dist artifact) so the files always
+		# exist, and marker-protected so a user's own CLAUDE.md/AGENTS.md is never
+		# overwritten. Runs for both dist rendering and home install.
+		echo "📖 Writing framework docs → $CLAUDE/..."
+		if [ -f "$DOCS_AGENTS" ]; then
+			write_managed_doc "$CLAUDE/AGENTS.md" emit_agents_doc
+		else
+			echo "  $(_yellow "⚠️  skipping AGENTS.md — canonical source not found at $DOCS_AGENTS")" >&2
 		fi
+		write_managed_doc "$CLAUDE/CLAUDE.md" emit_claude_doc
 
 		install_end=$(date +%s)
 		install_duration=$(( install_end - install_start ))

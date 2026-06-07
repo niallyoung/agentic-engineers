@@ -183,7 +183,10 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 	@echo "🔍 Validating rendered Claude config..."
 	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ agents directory not rendered" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/claude/AGENTS.md" || (echo "❌ AGENTS.md not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/claude/CLAUDE.md" || (echo "❌ CLAUDE.md not rendered" && exit 1)
 	@echo "   ✓ Claude config validated"
+	@echo "   ✓ Claude docs (CLAUDE.md + AGENTS.md) validated"
 	@echo "✅ Claude rendering complete (see dist/claude/)"
 
 verify: ## Verify framework structure and tests (agents, skills, dependencies, queue)
