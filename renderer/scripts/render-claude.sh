@@ -58,6 +58,50 @@ map_model() {
 
 # parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
 
+# Per-role tool allow-list for Claude Code subagents.
+#
+# Claude Code supports a `tools:` frontmatter key on subagents: a comma-separated
+# allow-list of tools the subagent may use. When omitted, the subagent inherits
+# ALL tools (no restriction). Emitting a per-role list applies least-privilege,
+# mirroring the OpenCode per-role permission matrix in render-opencode.sh and the
+# canonical matrix in docs/CONTRIBUTING/README.md (Phase 4).
+#
+# Tool name reference (Claude Code built-ins):
+#   Read, Glob, Grep, WebFetch, WebSearch — read/research (granted to all roles)
+#   Edit, Write, Bash                      — mutation/execution (implementers only)
+#   Task                                   — spawn subagents (orchestrator/senior)
+#
+# Returns a comma-separated tool list on stdout (empty for "inherit all").
+claude_tools_for_role() {
+	local role="$1"
+	local base="Read, Glob, Grep, WebFetch"
+	case "$role" in
+		orchestrator)
+			# Routing-only entry point: no edit/bash, but may spawn subagents.
+			echo "$base, WebSearch, Task" ;;
+		principal-engineer)
+			echo "$base, WebSearch, Edit, Write, Bash" ;;
+		senior-engineer)
+			echo "$base, WebSearch, Edit, Write, Bash, Task" ;;
+		engineer)
+			echo "$base, Edit, Write, Bash" ;;
+		security-engineer)
+			echo "$base, WebSearch, Edit, Write, Bash" ;;
+		lead-engineer)
+			# Read-only review role.
+			echo "$base, WebSearch" ;;
+		quality-engineer)
+			# Read-only review role.
+			echo "$base" ;;
+		model-engineer)
+			# Read-only analysis role.
+			echo "$base, WebSearch" ;;
+		*)
+			# Unknown role: omit (inherit all) rather than risk over-restriction.
+			echo "" ;;
+	esac
+}
+
 # Write a managed framework doc with a sentinel on line 1, refusing to overwrite
 # a foreign (user-authored) file of the same name. Used for CLAUDE.md/AGENTS.md.
 # Usage: write_managed_doc <dst_path> <producer_fn>
@@ -264,12 +308,16 @@ case "$MODE" in
 		role_val=$(extract_fm "$src_file" "role")
 		[ -n "$role_val" ] || role_val="$name"
 
+		# Per-role least-privilege tool allow-list (Claude Code `tools:` key).
+		tools_list=$(claude_tools_for_role "$name")
+
 		{
 			echo "---"
 			echo "name: $name"
 			desc_escaped=$(printf '%s' "$desc" | yaml_escape_inline)
 			printf 'description: "%s"\n' "$desc_escaped"
 			[ -n "$model" ] && echo "model: $model"
+			[ -n "$tools_list" ] && echo "tools: $tools_list"
 			[ -n "$accepts_list" ] && echo "accepts: [$accepts_list]"
 			[ -n "$returns_list" ] && echo "returns: [$returns_list]"
 			echo "role: $role_val"
