@@ -13,12 +13,31 @@ from typing import Dict, Tuple
 class CopilotAgentRenderer:
     """Renders source agent definitions to Copilot CLI agent profiles"""
     
+    # Sidecar manifest listing the agent base-names this renderer manages, so we
+    # can detect (and refuse to overwrite) a user's own foreign agent files.
+    # Mirrors the marker/manifest approach used by render-claude.sh.
+    MANIFEST_NAME = ".agentic-engine-copilot"
+
     def __init__(self, src_dir: str, dest_dir: str):
         self.src_dir = Path(src_dir)
         self.dest_dir = Path(dest_dir)
-        
+
         # Ensure destination exists
         self.dest_dir.mkdir(parents=True, exist_ok=True)
+
+        self.manifest_path = self.dest_dir / self.MANIFEST_NAME
+        # Names previously managed by us (from a prior install). Used to decide
+        # whether an existing dest file is ours (safe to overwrite) or foreign.
+        self.managed_names = self._load_manifest()
+
+    def _load_manifest(self) -> set:
+        names = set()
+        if self.manifest_path.is_file():
+            for line in self.manifest_path.read_text().splitlines():
+                name = line.strip()
+                if name:
+                    names.add(name)
+        return names
     
     def extract_frontmatter(self, content: str) -> Tuple[Dict[str, str], str]:
         """Extract YAML frontmatter and body from markdown"""
@@ -81,19 +100,36 @@ class CopilotAgentRenderer:
         if missing:
             raise ValueError(f"Missing required frontmatter fields: {missing}")
     
-    def render_agent(self, src_file: Path) -> None:
-        """Render a single source agent to Copilot CLI format"""
-        
+    def render_agent(self, src_file: Path) -> str:
+        """Render a single source agent to Copilot CLI format.
+
+        Returns "rendered" on success, or "skipped-foreign" when the destination
+        file already exists and was not created by us (no manifest entry) — so a
+        user's own agent file is never silently overwritten.
+        """
+
         with open(src_file, 'r') as f:
             content = f.read()
-        
+
         # Extract and validate
         frontmatter, body = self.extract_frontmatter(content)
         self.validate_frontmatter(frontmatter)
-        
+
         # Build output filename: engineer.md → engineer.agent.md
         agent_name = src_file.stem
         dest_file = self.dest_dir / f"{agent_name}.agent.md"
+
+        # Foreign-file protection: if the dest exists but we have a manifest that
+        # does NOT list this agent, it belongs to the user — do not overwrite it.
+        # (When no manifest exists yet, treat existing files as ours for a clean
+        #  first install, matching the dist-rsync behavior this replaces.)
+        if (
+            dest_file.exists()
+            and self.manifest_path.is_file()
+            and agent_name not in self.managed_names
+        ):
+            print(f"⚠️  Skipping {agent_name}.agent.md — foreign (not managed by us)")
+            return "skipped-foreign"
         
         # Protocol declaration: pass through machine-readable capability keys so
         # the harness can detect DELEGATE/HANDBACK protocol support.
@@ -124,9 +160,9 @@ model: {frontmatter['model']}
         # Write to destination
         with open(dest_file, 'w') as f:
             f.write(output)
-        
+
         print(f"✅ Rendered: {src_file.name} → {dest_file.name}")
-        return dest_file
+        return "rendered"
     
     def render_all(self) -> int:
         """Render all source agents"""
@@ -146,22 +182,59 @@ model: {frontmatter['model']}
         print(f"📁 Output: {self.dest_dir}\n")
         
         rendered = 0
+        skipped = 0
         errors = 0
-        
+        newly_managed = set()
+
         for src_file in sorted(agent_files):
             try:
-                self.render_agent(src_file)
-                rendered += 1
+                status = self.render_agent(src_file)
+                if status == "rendered":
+                    rendered += 1
+                    newly_managed.add(src_file.stem)
+                elif status == "skipped-foreign":
+                    skipped += 1
             except Exception as e:
                 print(f"❌ Error rendering {src_file.name}: {e}")
                 errors += 1
-        
+
+        # Persist the manifest of names we manage so future installs/uninstalls
+        # can distinguish our files from the user's. Keep any previously-managed
+        # names whose source agent still exists (they were rendered this run).
+        if newly_managed:
+            self._write_manifest(newly_managed)
+
         print(f"\n✅ Rendering complete!")
-        print(f"   {rendered} agents rendered, {errors} errors")
-        
+        print(f"   {rendered} agents rendered, {skipped} skipped (foreign), {errors} errors")
+
         if errors > 0:
             return 1
-        
+
+        return 0
+
+    def _write_manifest(self, managed_names: set) -> None:
+        """Write the sidecar manifest listing the agent base-names we manage."""
+        content = "\n".join(sorted(managed_names)) + "\n"
+        self.manifest_path.write_text(content)
+
+    def uninstall(self) -> int:
+        """Remove only the agent files we manage (per the manifest), then the
+        manifest itself. Foreign/user agent files are never touched."""
+        if not self.manifest_path.is_file():
+            print(f"ℹ️  No manifest at {self.manifest_path} — nothing to uninstall")
+            return 0
+        removed = 0
+        for name in sorted(self.managed_names):
+            # Defend against a tampered manifest: only simple base-names.
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                print(f"⚠️  Skipping invalid manifest entry: {name}")
+                continue
+            dest_file = self.dest_dir / f"{name}.agent.md"
+            if dest_file.exists():
+                dest_file.unlink()
+                removed += 1
+        self.manifest_path.unlink()
+        print(f"✅ Removed {removed} managed agent(s)")
         return 0
 
 def main():

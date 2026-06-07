@@ -127,20 +127,17 @@ fresh-install-pi: ## Interactive: install π.dev only (prompt for backup)
 fresh-install-opencode: ## Interactive: install OpenCode only (prompt for backup)
 	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" opencode
 
-install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
-	@echo "📋 Validating dist/copilot/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ dist/copilot/skills/ missing — run 'make render-copilot' first" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ dist/copilot/agents/ missing — run 'make render-copilot' first" && exit 1)
-	@test -f "$(REPO_ROOT)/dist/copilot/AGENTS.md" || (echo "❌ AGENTS.md missing — run 'make render-copilot' first" && exit 1)
-	@echo "   ✓ dist/copilot/ validated"
-	@echo "📦 Installing from dist/copilot/ → $(DESTDIR)/.copilot/..."
+install-copilot: ## Install rendered agents + skills → ~/.copilot/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing Copilot agents + skills + docs → $(DESTDIR)/.copilot/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.copilot"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(DESTDIR)/.copilot/"
-	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
-		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
-		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
-		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
-	fi
+	@# Install directly via the marker-aware render scripts (same model as
+	@# install-claude) rather than 'rsync dist/copilot/ → ~/.copilot/'. This
+	@# enforces foreign-file protection: user-authored agents/skills and a user's
+	@# own AGENTS.md are never overwritten, and user config/auth/session files are
+	@# left untouched. render-copilot-agents.sh renders agents (sidecar manifest);
+	@# render-copilot.sh renders skills + AGENTS.md and installs git hooks.
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
 	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills + docs)"
 
 install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never overwrites foreign files)
@@ -411,29 +408,24 @@ clean: ## Clean build artifacts (no external scripts)
 
 .DEFAULT_GOAL := help
 
-install-pi: render-pi ## Install π.dev harness from dist/pi/ → ~/.pi/
-	@echo "📋 Validating dist/pi/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/pi" || (echo "❌ dist/pi/ missing — run 'make render-pi' first" && exit 1)
-	@test -f "$(REPO_ROOT)/dist/pi/agent/SYSTEM.md" || (echo "❌ dist/pi/agent/SYSTEM.md missing — run 'make render-pi' first" && exit 1)
-	@echo "   ✓ dist/pi/ validated"
-	@echo "📦 Installing from dist/pi/ → $(DESTDIR)/.pi/..."
+install-pi: ## Install π.dev harness → ~/.pi/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing π.dev harness → $(DESTDIR)/.pi/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.pi"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(DESTDIR)/.pi/"
+	@# Install directly via the marker-aware render script (same model as
+	@# install-claude) rather than 'rsync dist/pi/ → ~/.pi/'. render-pi.sh writes
+	@# its marker and refuses to clobber a foreign (user-managed) install.
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(DESTDIR)/.pi"
 	@echo "✅ Installation to $(DESTDIR)/.pi/ complete"
 
-install-opencode: render-opencode ## Install agents & skills to ~/.config/opencode/
-	@echo "📋 Validating dist/opencode/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/opencode/skills" || (echo "❌ dist/opencode/skills/ missing — run 'make render-opencode' first" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/opencode/agents" || (echo "❌ dist/opencode/agents/ missing — run 'make render-opencode' first" && exit 1)
-	@echo "   ✓ dist/opencode/ validated"
-	@echo "📦 Installing from dist/opencode/ → $(DESTDIR)/.config/opencode/..."
+install-opencode: ## Install agents & skills → ~/.config/opencode/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing OpenCode agents + skills + config → $(DESTDIR)/.config/opencode/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.config/opencode"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(DESTDIR)/.config/opencode/"
-	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
-		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
-		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
-		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
-	fi
+	@# Install directly via the marker-aware render script (same model as
+	@# install-claude) rather than 'rsync dist/opencode/ → ~/.config/opencode/'.
+	@# render-opencode.sh enforces foreign-file protection for skills, agents,
+	@# AGENTS.md and opencode.jsonc (a user's own config is never overwritten) and
+	@# installs git hooks.
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(DESTDIR)/.config/opencode"
 	@echo "✅ Installation to $(DESTDIR)/.config/opencode/ complete"
 	@echo ""
 	@echo "ℹ️  To use agents via OpenCode CLI:"
