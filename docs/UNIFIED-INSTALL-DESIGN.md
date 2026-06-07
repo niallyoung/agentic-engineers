@@ -40,8 +40,11 @@ This script replaces the previous separate flows and provides:
 
 **Default behavior** (non-interactive):
 - If harness dir exists → auto-backup with timestamp suffix: `~/.copilot.YYYYMMDD_HHMMSS/`
-- Then install new version
-- Maintains consistent state
+- The backup is a non-destructive **copy** (`cp -a`), NOT a move. The live dir is
+  left in place so the install step (a marker-aware merge) can preserve files we
+  do not manage — `config.json`, auth tokens, session/history state.
+- Then install new version on top of the preserved dir
+- Maintains consistent state; the timestamped copy is a safety snapshot
 
 **Interactive behavior**:
 - Ask user: "Install {harness}? (y/n)"
@@ -198,9 +201,12 @@ Each harness uses marker files to track ownership:
 
 ### Error Handling
 
-**Backup fails**: Stop installation (rollback not implemented yet)  
-**Render fails**: Stop installation for that harness (continue others)  
-**Install fails**: Report error (rollback from backup planned for future)  
+**Backup fails**: Stop that harness, report failure (the live config is untouched
+because the backup is a non-destructive copy).
+**Render fails**: Stop installation for that harness (continue others); roll back
+from the backup snapshot if one was taken.
+**Install fails**: Report error and roll back the harness dir from the backup
+snapshot, so a partially-applied install never corrupts the user's config.
 
 ## Migration Guide
 
@@ -267,15 +273,16 @@ make lint
 
 Check:
 ```bash
-make render-copilot   # Does rendering work?
-make install-copilot --no-backup DESTDIR=/tmp/test  # Does install work?
+make render-copilot                         # Does rendering work?
+make install BACKUP=never DESTDIR=/tmp/test # Does install work (no backup)?
 ```
 
 ### Restore from backup
 
 ```bash
-ls -la ~/.copilot*   # Find backups
-mv ~/.copilot.YYYYMMDD_HHMMSS/ ~/.copilot/   # Restore specific backup
+ls -la ~/.copilot*                              # Find backups
+rm -rf ~/.copilot && \
+  mv ~/.copilot.YYYYMMDD_HHMMSS/ ~/.copilot/    # Restore specific backup
 ```
 
 ### Verify marker files

@@ -14,6 +14,17 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 # When DESTDIR != $(HOME), git-hook installation is skipped (sandbox-safe).
 DESTDIR ?= $(HOME)
 
+# Backup behavior for install targets. BACKUP=never disables the pre-install
+# backup snapshot (safe for sandbox/CI installs where there is nothing to keep):
+#   make install BACKUP=never DESTDIR=/tmp/ae-test
+# Any other value (or unset) keeps the default auto-backup-by-copy behavior.
+BACKUP ?=
+ifeq ($(BACKUP),never)
+BACKUP_FLAG := --no-backup
+else
+BACKUP_FLAG :=
+endif
+
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
@@ -94,7 +105,7 @@ setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
 install: render-all ## Install to all 4 harnesses (auto-backup, non-interactive)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --destdir "$(DESTDIR)" copilot claude pi opencode
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" $(BACKUP_FLAG) --destdir "$(DESTDIR)" copilot claude pi opencode
 	@echo ""
 	@echo "✅ Installation complete!"
 	@echo ""

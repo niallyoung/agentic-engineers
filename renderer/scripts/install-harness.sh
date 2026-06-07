@@ -82,6 +82,12 @@ get_render_target() {
 }
 
 main() {
+    # Runtime deprecation notice (stderr so it is visible even when run directly).
+    echo "⚠️  install-harness.sh is DEPRECATED — use unified-install.sh instead:" >&2
+    echo "    make fresh-install-$HARNESS_NAME   # interactive, single harness" >&2
+    echo "    make install                        # non-interactive, all harnesses" >&2
+    echo "" >&2
+
     # Validate arguments
     if [ -z "$HARNESS_NAME" ]; then
         log_error "Usage: bash install-harness.sh {harness_name}"

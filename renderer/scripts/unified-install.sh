@@ -221,14 +221,22 @@ backup_harness_dir() {
     log_info "Backing up $harness: $harness_dir → $backup_dir ($size)"
 
     # SECURITY NOTE: harness config dirs may contain credentials / session
-    # tokens (e.g. auth.json, oauth_creds.json, session state). The backup is a
-    # plain `mv` that preserves the original permissions, but it does create a
-    # second copy of those secrets at a predictable, timestamped path. Warn the
-    # user so they can clean up stale backups containing sensitive material.
+    # tokens (e.g. auth.json, oauth_creds.json, session state). The backup
+    # preserves the original permissions, but it does create a second copy of
+    # those secrets at a predictable, timestamped path. Warn the user so they
+    # can clean up stale backups containing sensitive material.
     log_warn "$harness: Backup may contain credentials/session tokens — remove old backups when no longer needed: $backup_dir"
 
-    if ! mv "$harness_dir" "$backup_dir"; then
+    # COPY (not move): the install step merges into the EXISTING harness dir
+    # (rsync without --delete) so it can preserve user files we do not manage —
+    # config.json, auth tokens, session/history state. Moving the dir aside
+    # would leave the merge with nothing to layer onto and silently destroy that
+    # user state on every successful install. A copy keeps the live dir intact
+    # AND leaves a timestamped snapshot for safety/rollback.
+    if ! cp -a "$harness_dir" "$backup_dir"; then
         log_error "$harness: Backup failed"
+        # Clean up any partial copy so a later run does not see a stale backup.
+        rm -rf "$backup_dir" 2>/dev/null || true
         return 1
     fi
 
@@ -239,22 +247,18 @@ backup_harness_dir() {
 }
 
 # Install a single harness
-# Restore a harness directory from its backup (used on install failure so an
-# interrupted/failed install does not leave the user with no config at all,
-# since the backup step is a destructive `mv`).
+# Restore a harness directory from its backup snapshot (used on install failure
+# so a partially-applied install does not leave the user with a corrupted config).
+# The backup is a COPY of the pre-install state, so on failure we discard the
+# (possibly half-merged) live dir and move the snapshot into its place.
 rollback_harness_dir() {
     local harness_dir="$1"
     local backup_dir="$2"
     [ -n "$backup_dir" ] || return 0
     [ -d "$backup_dir" ] || return 0
-    # Only restore if the live dir is missing or empty — never clobber a freshly
-    # installed dir that already has content.
-    if [ -d "$harness_dir" ] && [ -n "$(ls -A "$harness_dir" 2>/dev/null)" ]; then
-        return 0
-    fi
     rm -rf "$harness_dir" 2>/dev/null || true
     if mv "$backup_dir" "$harness_dir"; then
-        log_warn "Rolled back: restored $harness_dir from backup"
+        log_warn "Rolled back: restored $harness_dir from backup snapshot"
     else
         log_error "Rollback failed — original config remains at $backup_dir"
     fi
@@ -274,7 +278,7 @@ install_harness() {
         read -r install_choice
         if [[ ! $install_choice =~ ^[Yy]$ ]]; then
             log_warn "$harness: Skipped by user"
-            return 0
+            return 2  # distinct from 0 (installed) so the summary counts it as skipped
         fi
     fi
     
@@ -373,12 +377,21 @@ main() {
         echo ""
     fi
     
-    # Install each harness
+    # Install each harness.
+    # NOTE: use $((x + 1)) assignment, NOT ((x++)). Under `set -e`, `((x++))`
+    # returns exit status 1 when the pre-increment value is 0 (the first count),
+    # which would abort the script. The assignment form always returns 0.
     for harness in "${HARNESSES[@]}"; do
-        if install_harness "$harness"; then
-            ((installed_count++))
+        # Capture the status explicitly (0=installed, 2=skipped, other=failed).
+        # `|| rc=$?` keeps `set -e` from aborting on a non-zero return.
+        local rc=0
+        install_harness "$harness" || rc=$?
+        if [ "$rc" -eq 0 ]; then
+            installed_count=$((installed_count + 1))
+        elif [ "$rc" -eq 2 ]; then
+            skipped_count=$((skipped_count + 1))
         else
-            ((failed_count++))
+            failed_count=$((failed_count + 1))
             exit_code=1
         fi
     done
