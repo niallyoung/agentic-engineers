@@ -6,6 +6,41 @@
 
 ---
 
+## Rendered Skills Inventory (24 Active)
+
+This is the canonical registry of all rendered skills available for agents to reference. Each skill has a corresponding `SKILL.md` frontmatter file with metadata (name, description, roles, model, effort, version).
+
+### Skill Definitions
+
+| Skill | Path | Description |
+|-------|------|-------------|
+| ab-testing | `src/skills/ab-testing/SKILL.md` | Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. |
+| agent-creator | `src/skills/agent-creator/SKILL.md` | Scaffolds new SPEC-compliant agentic-engineers agents with a single call. |
+| consistency-checker | `src/skills/consistency-checker/SKILL.md` | Automated cross-validation of protocol queue integrity. |
+| cost-aggregation | `src/skills/cost-aggregation/SKILL.md` | Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. |
+| doc-quality-monitor | `src/skills/doc-quality-monitor/SKILL.md` | Automated documentation-quality monitoring (MONITORING-001). |
+| file-sync | `src/skills/file-sync/SKILL.md` | Discovers and analyzes scripts in the repository, scoring them for utility and integration. |
+| harness-integration-tracker | `src/skills/harness-integration-tracker/SKILL.md` | Continuously discover and document agent/sub-agent integration code/docs/info across all harnesses (OpenCode, Copilot, Claude, PI) to prevent drift and keep integrations fresh. |
+| harness-opencode-feature-sync | `src/skills/harness-opencode-feature-sync/SKILL.md` | Drift/feature sync between OpenCode's agent and sub-agent integration points and the agentic-engineers OpenCode renderer. |
+| local-model-runtime | `src/skills/local-model-runtime/SKILL.md` | Local Model Runtime support (COST-004) — detects a running local Ollama instance, lists locally-available models, and routes tasks to a zero-cost local model when a suitable one exists, falling back to a cloud provider otherwise. |
+| metrics-etl | `src/skills/metrics-etl/SKILL.md` | Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. |
+| model-engineer | `src/skills/model-engineer/SKILL.md` | Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. |
+| model-selection | `src/skills/model-selection/SKILL.md` | Model Selection Optimization (COST-003) — recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. |
+| protocol-validator | `src/skills/protocol-validator/SKILL.md` | Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1. |
+| queue-management | `src/skills/queue-management/SKILL.md` | Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation. |
+| queue-query | `src/skills/queue-query/SKILL.md` | Local-queue visibility skill — query and inspect the per-session, per-harness filesystem queue by state (incoming backlog, processing orphans to resume, done results/next-steps). |
+| queue-todo-sync | `src/skills/queue-todo-sync/SKILL.md` | Auto-sync queue DELEGATEs ↔ TODO. |
+| repo-init | `src/skills/repo-init/SKILL.md` | [DISABLED] Initializes new repositories with the agentic-engineers framework. |
+| skill-creator | `src/skills/skill-creator/SKILL.md` | Create new agentic-engineers skills following the agentskills. |
+| spec-management | `src/skills/spec-management/SKILL.md` | Exclusive SPEC. |
+| spec-validator | `src/skills/spec-validator/SKILL.md` | Validates implementation compliance with SPEC. |
+| test-sync-validator | `src/skills/testing/SKILL.md` | Validates test fixture synchronization with code changes. |
+| tokenadvisor | `src/skills/tokenadvisor/SKILL.md` | Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. |
+| usage-tracking | `src/skills/usage-tracking/SKILL.md` | Real-time and historical token usage capture, analysis, and forecasting skill for agents. |
+| workflow-review | `src/skills/workflow-review/SKILL.md` | Validates end-to-end delegation workflows for correctness. |
+
+---
+
 ## Role × Capability Matrix
 
 | Capability | Orchestrator | Engineer | Model Eng | Quality Eng | Lead Eng | Senior Eng | Principal | Security |
