@@ -42,13 +42,14 @@ parse_args() {
     QUIET=false
     BACKUP_ROOT=""
     DEST_ROOT="${DESTDIR:-$HOME}"
-    
-    # Shift past repo root if it looks like a flag
-    if [[ "$1" == /* ]] || [ "$1" = "." ]; then
+
+    # Shift past repo root if it looks like a path (first positional arg).
+    # Guard the $1 access so an invocation with no args does not trip `set -u`.
+    if [ $# -gt 0 ] && { [[ "$1" == /* ]] || [ "$1" = "." ]; }; then
         REPO_ROOT="$1"
         shift || true
     fi
-    
+
     # Parse flags
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -66,6 +67,13 @@ parse_args() {
                 shift
                 ;;
             --backup-root)
+                # Require an explicit value; otherwise `set -u` would abort with a
+                # cryptic "unbound variable" and we would later run mkdir/mv on an
+                # empty path.
+                if [ $# -lt 2 ] || [[ "$2" == -* ]]; then
+                    log_error "--backup-root requires a directory argument"
+                    exit 2
+                fi
                 BACKUP_ROOT="$2"
                 shift 2
                 ;;
@@ -74,12 +82,22 @@ parse_args() {
                 shift
                 ;;
             --destdir)
+                if [ $# -lt 2 ] || [[ "$2" == -* ]]; then
+                    log_error "--destdir requires a directory argument"
+                    exit 2
+                fi
                 DEST_ROOT="$2"
                 shift 2
                 ;;
             --)
                 shift
                 break
+                ;;
+            -*)
+                # Unknown flag — fail loudly rather than silently treating it as a
+                # harness name (which would only surface as an opaque error later).
+                log_error "Unknown option: $1"
+                exit 2
                 ;;
             *)
                 break
@@ -199,24 +217,57 @@ backup_harness_dir() {
     # Calculate size for reporting
     local size
     size=$(du -sh "$harness_dir" 2>/dev/null | cut -f1 || echo "unknown")
-    
+
     log_info "Backing up $harness: $harness_dir → $backup_dir ($size)"
-    
+
+    # SECURITY NOTE: harness config dirs may contain credentials / session
+    # tokens (e.g. auth.json, oauth_creds.json, session state). The backup is a
+    # plain `mv` that preserves the original permissions, but it does create a
+    # second copy of those secrets at a predictable, timestamped path. Warn the
+    # user so they can clean up stale backups containing sensitive material.
+    log_warn "$harness: Backup may contain credentials/session tokens — remove old backups when no longer needed: $backup_dir"
+
     if ! mv "$harness_dir" "$backup_dir"; then
         log_error "$harness: Backup failed"
         return 1
     fi
-    
+
     log_success "$harness: Backed up to $backup_dir"
+    # Record where this harness was backed up so a failed install can roll back.
+    LAST_BACKUP_DIR="$backup_dir"
     return 0
 }
 
 # Install a single harness
+# Restore a harness directory from its backup (used on install failure so an
+# interrupted/failed install does not leave the user with no config at all,
+# since the backup step is a destructive `mv`).
+rollback_harness_dir() {
+    local harness_dir="$1"
+    local backup_dir="$2"
+    [ -n "$backup_dir" ] || return 0
+    [ -d "$backup_dir" ] || return 0
+    # Only restore if the live dir is missing or empty — never clobber a freshly
+    # installed dir that already has content.
+    if [ -d "$harness_dir" ] && [ -n "$(ls -A "$harness_dir" 2>/dev/null)" ]; then
+        return 0
+    fi
+    rm -rf "$harness_dir" 2>/dev/null || true
+    if mv "$backup_dir" "$harness_dir"; then
+        log_warn "Rolled back: restored $harness_dir from backup"
+    else
+        log_error "Rollback failed — original config remains at $backup_dir"
+    fi
+}
+
 install_harness() {
     local harness="$1"
     local harness_dir
     harness_dir=$(get_harness_dir "$harness")
-    
+    # Per-harness backup tracker; reset for each harness so rollback only ever
+    # touches the backup created in this iteration.
+    LAST_BACKUP_DIR=""
+
     # Step 1: Ask if user wants to install (interactive mode only)
     if [ "$INTERACTIVE" = true ] && [ "$FORCE" != true ]; then
         echo -n "Install $harness? (y/n): "
@@ -254,21 +305,26 @@ install_harness() {
     log_info "Rendering $harness..."
     local render_target
     render_target=$(get_render_target "$harness")
-    if ! cd "$REPO_ROOT" && make "$render_target" > /dev/null 2>&1; then
+    # NOTE: must group cd+make in a subshell. Writing `if ! cd X && make ...`
+    # binds `!` to `cd` only, so a successful cd short-circuits the `&&` and
+    # `make` is never run nor its exit status checked (render failures would be
+    # silently swallowed and rollback would never fire). Run in a subshell so the
+    # cd does not leak into the next harness iteration either.
+    if ! ( cd "$REPO_ROOT" && make "$render_target" > /dev/null 2>&1 ); then
         log_error "$harness: Failed to render"
+        rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
         return 1
     fi
-    
+
     # Step 4: Install
     log_info "Installing $harness..."
     local install_target
     install_target=$(get_install_target "$harness")
-    if ! cd "$REPO_ROOT" && make "$install_target" DESTDIR="$DEST_ROOT" > /dev/null 2>&1; then
+    if ! ( cd "$REPO_ROOT" && make "$install_target" DESTDIR="$DEST_ROOT" > /dev/null 2>&1 ); then
         log_error "$harness: Failed to install"
-        
-        # TODO: Rollback backup if install failed
-        # This is a future enhancement for safety
-        
+        # Restore the original config that the backup step moved aside, so a
+        # failed install does not leave the user with no harness config.
+        rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
         return 1
     fi
     
