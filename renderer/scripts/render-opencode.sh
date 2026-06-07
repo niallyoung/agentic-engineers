@@ -89,6 +89,66 @@ effort_to_temperature() {
 	esac
 }
 
+# Effort → OpenCode reasoning `variant`.
+# OpenCode controls Anthropic extended-thinking budgets via the model `variant`
+# field (NOT a top-level `thinking:` key, which is swept into options and ignored).
+# See harness-opencode-feature-sync registry: reasoning-variant-mapping.
+# Mapping: low → none (omit, no reasoning); medium → medium; high/max → high.
+# Returns empty string when no variant should be emitted.
+effort_to_variant() {
+	case "$1" in
+		medium)   echo "medium" ;;
+		high|max) echo "high" ;;
+		*)        echo "" ;;   # low / unknown → no reasoning variant
+	esac
+}
+
+# Per-role least-privilege permission matrix for OpenCode agents.
+# Mirrors OpenCode's built-in `explore` agent shape: a `"*": deny` baseline plus
+# explicit allows. Replaces the previous uniform allow-all block, which overstated
+# enforcement (review roles incorrectly received edit/bash). Matrix is the
+# canonical one documented in docs/CONTRIBUTING/README.md (Phase 4).
+#
+# Columns: read glob grep webfetch websearch edit bash task
+# Emits an indented YAML permission block to stdout (caller prepends "permission:").
+emit_permission_block() {
+	local role="$1"
+	# Defaults: everything denied; opt in per role below.
+	local read=allow glob=allow grep=allow webfetch=allow websearch=deny \
+	      edit=deny bash=deny task=deny
+	case "$role" in
+		orchestrator)
+			websearch=allow; task=allow ;;
+		principal-engineer)
+			websearch=allow; edit=allow; bash=allow ;;
+		senior-engineer)
+			websearch=allow; edit=allow; bash=allow; task=allow ;;
+		engineer)
+			edit=allow; bash=allow ;;
+		lead-engineer)
+			websearch=allow ;;
+		quality-engineer)
+			: ;;  # read-only review role (defaults)
+		security-engineer)
+			websearch=allow; edit=allow; bash=allow ;;
+		model-engineer)
+			websearch=allow ;;
+		*)
+			# Unknown role: conservative read-only baseline (defaults).
+			: ;;
+	esac
+	# Baseline deny-all, then explicit grants (mirrors explore's least-privilege).
+	echo '  "*": deny'
+	echo "  read: $read"
+	echo "  glob: $glob"
+	echo "  grep: $grep"
+	echo "  webfetch: $webfetch"
+	echo "  websearch: $websearch"
+	echo "  edit: $edit"
+	echo "  bash: $bash"
+	echo "  task: $task"
+}
+
 # Parse docs/AGENTS.md primary roster table for a given role's (model, effort, description).
 # Output: tab-separated "model<TAB>effort<TAB>description"; empty if not found.
 # Role lookup is by kebab-case agent name (matches AGENT_ROLE_MAPPING from old python renderer).
@@ -675,8 +735,9 @@ case "$MODE" in
 				continue
 			fi
 
-			# Effort → temperature
+			# Effort → temperature + reasoning variant
 			temp=$(effort_to_temperature "${docs_effort:-medium}")
+			variant=$(effort_to_variant "${docs_effort:-medium}")
 
 			# Mode: orchestrator is the framework's entry point, so it must be
 			# selectable as a primary agent (--agent orchestrator, default_agent).
@@ -691,30 +752,34 @@ case "$MODE" in
 
 			# Protocol declaration: read machine-readable capability keys from the
 			# source agent frontmatter so the harness can detect protocol support.
+			# NOTE: accepts/returns/role are NOT in OpenCode's KNOWN_KEYS, so when
+			# emitted as top-level frontmatter they are swept into `options` and
+			# have no effect. We instead nest them under the recognized `options:`
+			# key so the metadata is preserved as structured agent options rather
+			# than silently dropped no-op top-level keys.
 			accepts_list=$(extract_fm_list "$src_file" "accepts")
 			returns_list=$(extract_fm_list "$src_file" "returns")
 			role_val=$(extract_fm "$src_file" "role")
 			[ -n "$role_val" ] || role_val="$name"
 
 			# Emit OpenCode subagent frontmatter + transformed body.
+			# Only KNOWN_KEYS are emitted at the top level (description, mode, model,
+			# temperature, variant, permission, options) so nothing is silently
+			# discarded. Per-role least-privilege permission block mirrors the
+			# built-in `explore` agent (`"*": deny` baseline + explicit allows).
 			{
 				echo "---"
 				printf 'description: "%s"\n' "$desc"
 				echo "mode: $agent_mode"
 				echo "model: $model_full"
 				echo "temperature: $temp"
-				[ -n "$accepts_list" ] && echo "accepts: [$accepts_list]"
-				[ -n "$returns_list" ] && echo "returns: [$returns_list]"
-				echo "role: $role_val"
+				[ -n "$variant" ] && echo "variant: $variant"
 				echo "permission:"
-				echo "  read: allow"
-				echo "  edit: allow"
-				echo "  bash: allow"
-				echo "  task: allow"
-				echo "  glob: allow"
-				echo "  grep: allow"
-				echo "  webfetch: allow"
-				
+				emit_permission_block "$name"
+				echo "options:"
+				echo "  role: $role_val"
+				[ -n "$accepts_list" ] && echo "  accepts: [$accepts_list]"
+				[ -n "$returns_list" ] && echo "  returns: [$returns_list]"
 				echo "---"
 				echo
 				strip_fm "$src_file"

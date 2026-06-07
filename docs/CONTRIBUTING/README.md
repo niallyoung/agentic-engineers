@@ -926,26 +926,22 @@ See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness chec
 
 ---
 
-## OpenCode Renderer (Phase 4 Details)
+## OpenCode Renderer (Phase 4 Details) — IMPLEMENTED
 
-The `renderer/scripts/render-opencode.sh` emits agent frontmatter for OpenCode integration. Two defects prevent correct thinking/reasoning emission and overstate permission enforcement.
+The `renderer/scripts/render-opencode.sh` emits agent frontmatter for OpenCode integration. Two defects previously prevented correct reasoning emission and overstated permission enforcement. **Both are now fixed** (see `effort_to_variant()` and `emit_permission_block()` in the renderer). The same per-role least-privilege intent is also applied to the Claude renderer via per-role `tools:` allow-lists (`claude_tools_for_role()` in `render-claude.sh`).
 
-See [`docs/OPENCODE-RENDERER-FIX-PLAN.md`](../OPENCODE-RENDERER-FIX-PLAN.md) for full analysis (session artifact).
+### Defect 1: No-op `thinking:` Block — FIXED
 
-### Defect 1: No-op `thinking:` Block
-
-**Current:** Emits `thinking:` key (lines 762–769), but OpenCode ignores it (not in `KNOWN_KEYS`).
-**Impact:** Extended thinking never enabled for principal-engineer, security-engineer.
-**Fix:** Replace with supported `variant:` emission (requires variant support in provider block).
+**Was:** Emitted a `thinking:` key, but OpenCode ignores it (not in `KNOWN_KEYS`), so extended thinking was never enabled for principal-engineer / security-engineer.
+**Fix (done):** The `thinking:` block was removed and replaced with the supported `variant:` key (`effort_to_variant`: medium→medium, high/max→high, low→omit). `variant` is in OpenCode `KNOWN_KEYS` and maps to Anthropic extended-thinking budgets. Protocol metadata (`role`/`accepts`/`returns`), which are also non-`KNOWN_KEYS`, were moved under the recognized `options:` block so they are preserved rather than silently swept away.
 
 ### Defect 2: Uniform Permissions vs. Claimed Granularity
 
 **Current:** Every agent gets identical `permission:` block (allow-all).
-**Claim (false):** "Each agent has granular permissions enforced by OpenCode" (AGENTS.md).
-**Impact:** Review roles (quality, lead, model-engineer) incorrectly receive `edit: allow` and `bash: allow`.
-**Fix:** Implement least-privilege matrix (baseline `"*": deny`, explicit allows per role).
+**Was:** Every agent received an identical allow-all `permission:` block, so review roles (quality, lead, model-engineer) incorrectly had `edit`/`bash`.
+**Fix (done):** `emit_permission_block()` now emits a least-privilege block (baseline `"*": deny`, explicit allows per role) implementing the matrix below. The Claude renderer mirrors this with per-role `tools:` allow-lists.
 
-### Proposed Per-Role Permission Matrix
+### Per-Role Permission Matrix (IMPLEMENTED)
 
 | Role | read | glob | grep | webfetch | websearch | edit | bash | task |
 |------|:----:|:----:|:----:|:--------:|:---------:|:----:|:----:|:----:|
@@ -960,16 +956,16 @@ See [`docs/OPENCODE-RENDERER-FIX-PLAN.md`](../OPENCODE-RENDERER-FIX-PLAN.md) for
 
 **Rationale:** Orchestrator routes without direct edits. Review roles are read-only. Implementation roles get edit/bash. Only orchestrator and senior-engineer may spawn subagents.
 
-### Implementation Steps (Phase 4)
+### Implementation Steps (Phase 4) — COMPLETE
 
-1. Remove the `thinking:` case from `render-opencode.sh` (lines 762–769)
-2. Add per-role `variant` emission for reasoning-capable roles
-3. Confirm/extend provider blocks in `opencode.jsonc` (variants + reasoning flag)
-4. Replace uniform permission block with least-privilege per-role lookup
-5. Gate `task` permission to orchestrator and senior-engineer only
-6. Add `websearch: allow` to research-capable roles
-7. Fix documentation: regenerate permission table from matrix, not hardcoded claims
-8. Validate: run renderer, parse `KNOWN_KEYS`, assert compliance
+1. ✅ Removed the `thinking:` case from `render-opencode.sh`
+2. ✅ Added per-role reasoning `variant` emission (`effort_to_variant`)
+3. ✅ Provider blocks in `opencode.jsonc` declare `reasoning: true` per model
+4. ✅ Replaced uniform permission block with least-privilege per-role lookup (`emit_permission_block`)
+5. ✅ Gated `task` permission to orchestrator and senior-engineer only
+6. ✅ Added `websearch: allow` to research-capable roles
+7. ✅ Moved no-op protocol keys (`role`/`accepts`/`returns`) under the recognized `options:` block
+8. ✅ Validated: `harness-opencode-feature-sync` reports "No drift detected"; tests green
 
 ---
 

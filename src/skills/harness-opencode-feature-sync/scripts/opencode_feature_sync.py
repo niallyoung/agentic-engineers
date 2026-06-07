@@ -111,10 +111,20 @@ def extract_emitted_keys(renderer_text: str) -> Set[str]:
 
 
 def _emitted_strings(renderer_text: str) -> List[str]:
-    """Return the literal payloads of echo/printf emission lines."""
+    """Return the literal payloads of echo/printf emission lines.
+
+    Recognizes both bare emissions (`echo "..."`) and guarded conditional
+    emissions (`[ -n "$x" ] && echo "..."`), since a frontmatter key emitted
+    only when non-empty (e.g. the reasoning `variant`) is still a real emission.
+    """
     out: List[str] = []
     for line in renderer_text.splitlines():
         stripped = line.strip()
+        # Strip a leading conditional guard so `... && echo "k: v"` is seen as
+        # an emission of key `k`.
+        guard = re.match(r"""^\[.*\]\s*&&\s*(.*)$""", stripped)
+        if guard:
+            stripped = guard.group(1).strip()
         em = re.match(r"""echo\s+"(.*)"$""", stripped)
         if em:
             out.append(em.group(1))
