@@ -14,6 +14,17 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 # When DESTDIR != $(HOME), git-hook installation is skipped (sandbox-safe).
 DESTDIR ?= $(HOME)
 
+# Backup behavior for install targets. BACKUP=never disables the pre-install
+# backup snapshot (safe for sandbox/CI installs where there is nothing to keep):
+#   make install BACKUP=never DESTDIR=/tmp/ae-test
+# Any other value (or unset) keeps the default auto-backup-by-copy behavior.
+BACKUP ?=
+ifeq ($(BACKUP),never)
+BACKUP_FLAG := --no-backup
+else
+BACKUP_FLAG :=
+endif
+
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
@@ -93,33 +104,28 @@ setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "📖 Hook documentation: .githooks/README.md"
 	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
-install: install-copilot install-claude install-pi install-opencode ## Install to all 4 harnesses
+install: render-all ## Install to all 4 harnesses (auto-backup, non-interactive)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" $(BACKUP_FLAG) --destdir "$(DESTDIR)" copilot claude pi opencode
 	@echo ""
 	@echo "✅ Installation complete!"
 	@echo ""
-	@echo "Next: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
-	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
+	@echo "Next: copilot --autopilot --agent orchestrator 'Your task'"
+	@echo "Or: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 
-clean-install: ## Fresh install with interactive backup prompts (timestamped backups)
-	@echo "🔄 Starting clean installation with interactive backup..."
-	@echo "   (You will be prompted to confirm each harness backup)"
-	@echo ""
-	@bash "$(REPO_ROOT)/renderer/scripts/backup-harnesses.sh" copilot claude pi opencode
-	@echo ""
-	@echo "📦 Proceeding with fresh installation..."
-	@$(MAKE) install
+clean-install: render-all ## Interactive: Install to all 4 harnesses (prompt for each)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot claude pi opencode
 
-fresh-install-copilot: ## Interactive: install Copilot only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" copilot
+fresh-install-copilot: ## Interactive: install Copilot only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot
 
-fresh-install-claude: ## Interactive: install Claude only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" claude
+fresh-install-claude: ## Interactive: install Claude only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" claude
 
-fresh-install-pi: ## Interactive: install π.dev only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" pi
+fresh-install-pi: ## Interactive: install π.dev only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" pi
 
-fresh-install-opencode: ## Interactive: install OpenCode only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" opencode
+fresh-install-opencode: ## Interactive: install OpenCode only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" opencode
 
 install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
 	@echo "📋 Validating dist/copilot/ is populated..."

@@ -432,46 +432,58 @@ class TestBackupHarnesses:
 
 
 class TestBackupMakeTarget:
-    """Test make clean-install target integration."""
+    """Test make install / clean-install target integration with the unified installer.
 
-    def test_make_clean_install_calls_backup(self):
-        """Test that 'make clean-install' calls backup script."""
+    The install workflow was unified onto renderer/scripts/unified-install.sh:
+    'make install' is non-interactive auto-backup; 'make clean-install' is the
+    interactive variant. Both route through unified-install.sh (the legacy
+    backup-harnesses.sh + 'make install' two-step is no longer wired in).
+    """
+
+    def test_make_clean_install_uses_unified_installer(self):
+        """'make clean-install' runs unified-install.sh interactively for all harnesses."""
         repo_root = Path(__file__).parent.parent
         makefile = repo_root / "Makefile"
-        
-        # Read Makefile
+
         makefile_content = makefile.read_text()
-        
+
         # Verify clean-install target exists
         assert "clean-install:" in makefile_content
-        
-        # Verify it calls backup-harnesses.sh
-        assert "backup-harnesses.sh" in makefile_content
-        
-        # Verify it passes all harnesses
-        clean_install_section = makefile_content.split("clean-install:")[1].split("\n\n")[0]
-        assert "copilot" in clean_install_section
-        assert "claude" in clean_install_section
-        assert "pi" in clean_install_section
-        assert "opencode" in clean_install_section
-        
-        # Verify it calls make install after backup
-        assert "$(MAKE) install" in clean_install_section or "make install" in clean_install_section
 
-    def test_make_install_unchanged(self):
-        """Test that 'make install' is unchanged (no auto-backup)."""
+        # Extract the clean-install recipe
+        clean_install_section = makefile_content.split("clean-install:")[1].split("\n\n")[0]
+
+        # Verify it routes through the unified installer in interactive mode
+        assert "unified-install.sh" in clean_install_section
+        assert "--interactive" in clean_install_section
+
+        # Verify it passes all four harnesses
+        for harness in ("copilot", "claude", "pi", "opencode"):
+            assert harness in clean_install_section
+
+    def test_make_install_auto_backs_up(self):
+        """'make install' is non-interactive and auto-backs-up via the unified installer.
+
+        Auto-backup is the safe default for the unified installer; the backup is a
+        non-destructive copy so user config/auth is preserved across installs.
+        """
         repo_root = Path(__file__).parent.parent
         makefile = repo_root / "Makefile"
-        
-        # Read Makefile
+
         makefile_content = makefile.read_text()
-        
-        # Extract install target (before clean-install)
-        install_section = makefile_content.split("install:")[1].split("clean-install:")[0]
-        
-        # Verify install target does NOT call backup
-        assert "backup-harnesses.sh" not in install_section
-        assert "backup" not in install_section.lower() or "clean-install" in install_section
+
+        # Extract install target recipe (the line(s) after 'install:' up to clean-install:)
+        install_section = makefile_content.split("\ninstall:")[1].split("clean-install:")[0]
+
+        # Verify install routes through the unified installer
+        assert "unified-install.sh" in install_section
+
+        # Verify install is NON-interactive (no --interactive flag on the install recipe)
+        assert "--interactive" not in install_section
+
+        # Verify all four harnesses are installed
+        for harness in ("copilot", "claude", "pi", "opencode"):
+            assert harness in install_section
 
 
 if __name__ == "__main__":
