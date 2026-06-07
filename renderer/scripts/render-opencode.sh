@@ -58,24 +58,23 @@ source "$(dirname "$0")/lib.sh"
 #
 # IMPORTANT: OpenCode uses Anthropic's official model IDs (hyphens, not dots).
 # This mapping accepts both hyphen and dot formats for compatibility.
-# Output is always hyphen-format per Anthropic API specification:
-# https://docs.anthropic.com/claude/docs/models-overview
+# Output is always "anthropic/<id-hyphen>" per OpenCode's native provider support.
 #
-# Provider is hardcoded to github-copilot (the standard Copilot provider for
-# Claude models in OpenCode). For users with anthropic/ provider, the mapping
-# would be different (e.g., anthropic/claude-haiku-4.5).
-#
-# Note: claude-opus-4-6 is now declared in the custom provider config (see write_config)
-# so it maps directly instead of falling back to 4.7.
+# We use the "anthropic" provider because:
+#   1. OpenCode's binary natively knows anthropic/claude-* model IDs
+#   2. The "github-copilot" provider does NOT include Claude 4 models in its
+#      built-in registry; custom provider.models entries for it are not sufficient
+#      when the user has no GitHub Copilot credentials configured
+#   3. anthropic/ is the universal fallback that works for any ANTHROPIC_API_KEY user
 map_model_opencode() {
 	case "$1" in
-		claude-haiku-4.5|claude-haiku-4-5)   echo "github-copilot/claude-haiku-4-5" ;;
-		claude-sonnet-4.6|claude-sonnet-4-6) echo "github-copilot/claude-sonnet-4-6" ;;
-		claude-sonnet-4.5|claude-sonnet-4-5) echo "github-copilot/claude-sonnet-4-5" ;;
-		claude-opus-4.8|claude-opus-4-8)     echo "github-copilot/claude-opus-4-8" ;;
-		claude-opus-4.7|claude-opus-4-7)     echo "github-copilot/claude-opus-4-7" ;;
-		claude-opus-4.6|claude-opus-4-6)     echo "github-copilot/claude-opus-4-6" ;;
-		claude-opus-4.5|claude-opus-4-5)     echo "github-copilot/claude-opus-4-5" ;;
+		claude-haiku-4.5|claude-haiku-4-5)   echo "anthropic/claude-haiku-4-5" ;;
+		claude-sonnet-4.6|claude-sonnet-4-6) echo "anthropic/claude-sonnet-4-6" ;;
+		claude-sonnet-4.5|claude-sonnet-4-5) echo "anthropic/claude-sonnet-4-5" ;;
+		claude-opus-4.8|claude-opus-4-8)     echo "anthropic/claude-opus-4-8" ;;
+		claude-opus-4.7|claude-opus-4-7)     echo "anthropic/claude-opus-4-7" ;;
+		claude-opus-4.6|claude-opus-4-6)     echo "anthropic/claude-opus-4-6" ;;
+		claude-opus-4.5|claude-opus-4-5)     echo "anthropic/claude-opus-4-5" ;;
 		*) echo "" ;;  # sentinel — caller warns + skips model emission
 	esac
 }
@@ -251,7 +250,7 @@ write_config() {
   "\$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
-  "model": "github-copilot/claude-haiku-4-5",
+  "model": "anthropic/claude-haiku-4-5",
   "compaction": {
     "auto": true,
     "reserved": 30000
@@ -264,162 +263,6 @@ write_config() {
     "glob": "allow",
     "grep": "allow",
     "webfetch": "allow"
-  },
-  "provider": {
-    "github-copilot": {
-      "models": {
-        "claude-haiku-4-5": {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000003,
-            "output": 0.000012,
-            "cache_read": 0.00000015,
-            "cache_write": 0.0000018
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-sonnet-4-5": {
-          "id": "claude-sonnet-4-5",
-          "name": "Claude Sonnet 4.5",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000003,
-            "output": 0.000015,
-            "cache_read": 0.00000015,
-            "cache_write": 0.0000018
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-sonnet-4-6": {
-          "id": "claude-sonnet-4-6",
-          "name": "Claude Sonnet 4.6",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000003,
-            "output": 0.000015,
-            "cache_read": 0.00000015,
-            "cache_write": 0.0000018
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-opus-4-6": {
-          "id": "claude-opus-4-6",
-          "name": "Claude Opus 4.6",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000015,
-            "output": 0.00006,
-            "cache_read": 0.00000075,
-            "cache_write": 0.0000075
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-opus-4-7": {
-          "id": "claude-opus-4-7",
-          "name": "Claude Opus 4.7",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000015,
-            "output": 0.00006,
-            "cache_read": 0.00000075,
-            "cache_write": 0.0000075
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-opus-4-8": {
-          "id": "claude-opus-4-8",
-          "name": "Claude Opus 4.8",
-          "family": "claude",
-          "release_date": "2025-08-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000015,
-            "output": 0.00006,
-            "cache_read": 0.00000075,
-            "cache_write": 0.0000075
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        }
-      }
-    }
   }
 }
 EOF
