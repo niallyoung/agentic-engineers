@@ -26,7 +26,7 @@ MODE="${3:-install}"
 SRC_SKILLS="$REPO_ROOT/src/skills"
 DST_SKILLS="$COPILOT/skills"
 DST_RULES="$COPILOT/AGENTS.md"
-DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
+SRC_AGENTS_MD="$REPO_ROOT/src/AGENTS.md"
 MARKER=".agentic-engine-copilot"
 # Sentinel on line 1 of AGENTS.md so we can tell ours apart from a user's file.
 # User overrides should live in AGENTS.md.local (never written/removed by us).
@@ -35,13 +35,13 @@ RULES_SENTINEL='<!-- managed by agentic-engineers render-copilot.sh'
 [ -d "$SRC_SKILLS" ] || { echo "❌ no source: $SRC_SKILLS" >&2; exit 1; }
 
 # Generate the Copilot framework routing guide (AGENTS.md) from the canonical
-# docs/AGENTS.md. Marker-aware: refuses to overwrite a foreign AGENTS.md (one
+# src/AGENTS.md. Marker-aware: refuses to overwrite a foreign AGENTS.md (one
 # that does not carry our sentinel), preventing data loss of a user's own file.
 # Works for both dist rendering and home install (DST_RULES is derived from
 # $COPILOT, which is either the repo's dist/copilot dir or ~/.copilot).
 write_agents_md() {
-	if [ ! -f "$DOCS_AGENTS" ]; then
-		echo "  ⚠️  skipping AGENTS.md — canonical source not found at $DOCS_AGENTS" >&2
+	if [ ! -f "$SRC_AGENTS_MD" ]; then
+		echo "  ⚠️  skipping AGENTS.md — canonical source not found at $SRC_AGENTS_MD" >&2
 		return 0
 	fi
 	if [ -f "$DST_RULES" ] && ! head -n1 "$DST_RULES" | grep -q "$RULES_SENTINEL"; then
@@ -50,7 +50,7 @@ write_agents_md() {
 	fi
 	{
 		echo "$RULES_SENTINEL; user edits to AGENTS.md.local are loaded after this file. Do not edit directly — re-render overwrites it. -->"
-		cat "$DOCS_AGENTS"
+		cat "$SRC_AGENTS_MD"
 	} > "$DST_RULES"
 	echo "  ✅ AGENTS.md (routing guide + framework rules)"
 }
@@ -205,7 +205,7 @@ case "$MODE" in
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
 		# 2. Framework documentation: generate AGENTS.md (routing guide) from the
-		# canonical docs/AGENTS.md. Runs for both dist rendering and home install
+		# canonical src/AGENTS.md. Runs for both dist rendering and home install
 		# so the file always exists where downstream steps expect it, and is
 		# marker-protected so a user's own AGENTS.md is never clobbered.
 		echo "📖 Writing AGENTS.md → $DST_RULES ..."

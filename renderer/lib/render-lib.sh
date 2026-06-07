@@ -419,7 +419,7 @@ emit_progress() {
 	fi
 }
 
-# Parse docs/AGENTS.md canonical agent definitions table.
+# Parse src/AGENTS.md canonical agent definitions table.
 # Returns lines of: agent_name|model|effort|description
 # Usage: parse_agents_md <agents_md_file>
 parse_agents_md() {

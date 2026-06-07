@@ -31,7 +31,7 @@ SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
 DST_SKILLS="$CLAUDE/skills"
 DST_AGENTS="$CLAUDE/agents"
-DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
+SRC_AGENTS_MD="$REPO_ROOT/src/AGENTS.md"
 SKILL_MARKER=".agentic-engine-claude"
 # Agents are single files; we use a sidecar manifest to track managed names.
 AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-claude"
@@ -79,7 +79,7 @@ write_managed_doc() {
 
 # Body producer: ~/.claude/AGENTS.md — canonical framework rules + roster.
 emit_agents_doc() {
-	cat "$DOCS_AGENTS"
+	cat "$SRC_AGENTS_MD"
 }
 
 # Body producer: ~/.claude/CLAUDE.md — concise, self-contained pointer to the
@@ -207,9 +207,9 @@ case "$MODE" in
 			count_s=$((count_s + 1))
 		done
 
-		# 2. Parse canonical agent definitions from docs/AGENTS.md
-		echo "📖 Parsing canonical agent definitions from docs/AGENTS.md..."
-		AGENTS_MD="$REPO_ROOT/docs/AGENTS.md"
+		# 2. Parse canonical agent definitions from src/AGENTS.md
+		echo "📖 Parsing canonical agent definitions from src/AGENTS.md..."
+		AGENTS_MD="$SRC_AGENTS_MD"
 		AGENTS_MAP=$(mktemp)
 		# Clean up the temp map on normal exit AND on interrupt/terminate signals.
 		# Single-quote the command so $AGENTS_MAP is expanded when the trap fires,
@@ -245,10 +245,10 @@ case "$MODE" in
 				continue
 			fi
 
-			# Lookup canonical metadata from docs/AGENTS.md
+			# Lookup canonical metadata from src/AGENTS.md
 			canonical_metadata=$(lookup_agent_metadata "$name" "$AGENTS_MAP")
 			if [ -z "$canonical_metadata" ]; then
-				echo "  $(_yellow "⚠️  skipping agent $name — not found in docs/AGENTS.md")"
+				echo "  $(_yellow "⚠️  skipping agent $name — not found in src/AGENTS.md")"
 				continue
 			fi
 			
@@ -293,10 +293,10 @@ case "$MODE" in
 		# exist, and marker-protected so a user's own CLAUDE.md/AGENTS.md is never
 		# overwritten. Runs for both dist rendering and home install.
 		echo "📖 Writing framework docs → $CLAUDE/..."
-		if [ -f "$DOCS_AGENTS" ]; then
+		if [ -f "$SRC_AGENTS_MD" ]; then
 			write_managed_doc "$CLAUDE/AGENTS.md" emit_agents_doc
 		else
-			echo "  $(_yellow "⚠️  skipping AGENTS.md — canonical source not found at $DOCS_AGENTS")" >&2
+			echo "  $(_yellow "⚠️  skipping AGENTS.md — canonical source not found at $SRC_AGENTS_MD")" >&2
 		fi
 		write_managed_doc "$CLAUDE/CLAUDE.md" emit_claude_doc
 

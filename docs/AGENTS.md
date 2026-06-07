@@ -63,26 +63,7 @@ Model naming broke repeatedly across commits due to confusion about per-harness 
 
 ## Primary Assignments
 
-**Default Entry Point:** Orchestrator (Claude Haiku 4.5, Low Effort)  
-**Entry Rule:** All work flows through Orchestrator for routing. No direct delegation from external sources.
-
-**MODEL NAMING (LOCKED):** All models use canonical format with DOTS: `claude-{variant}-{major}.{minor}`
-(e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.8`). See [SPEC.md > Model Naming Architecture](../SPEC.md).
-
-| Role | Model | Effort | Multi-Model? | Use When |
-|---|---|---|---|---|
-| **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
-| **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-4.6 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-4.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-4.6 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-4.6 | high | 4.6/4.7/4.8 | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4.8 | max | 4.8 only | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-4.5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
-
-**Multi-Model column notes:**
-- Principal Engineer: 4.6 (default/pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../SPEC.md).
-- Security Engineer: 4.8 always (non-downgrade rule). 4.7 only as emergency fallback if 4.8 unavailable; document in HANDBACK. See [SPEC.md > Model Selection Architecture](../SPEC.md).
+See [src/AGENTS.md](../src/AGENTS.md) for the canonical agent roster.
 
 ---
 

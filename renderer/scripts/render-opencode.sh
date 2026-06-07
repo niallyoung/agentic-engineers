@@ -34,7 +34,7 @@ MODE="${3:-install}"
 
 SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
-DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
+SRC_AGENTS_MD="$REPO_ROOT/src/AGENTS.md"
 DST_SKILLS="$OPENCODE/skills"
 DST_AGENTS="$OPENCODE/agents"
 DST_CONFIG="$OPENCODE/opencode.jsonc"
@@ -104,7 +104,7 @@ effort_to_variant() {
 }
 
 
-# Parse docs/AGENTS.md primary roster table for a given role's (model, effort, description).
+# Parse src/AGENTS.md primary roster table for a given role's (model, effort, description).
 # Output: tab-separated "model<TAB>effort<TAB>description"; empty if not found.
 # Role lookup is by kebab-case agent name (matches AGENT_ROLE_MAPPING from old python renderer).
 docs_lookup_role() {
@@ -121,7 +121,7 @@ docs_lookup_role() {
 		model-engineer)    role="Model Engineer" ;;
 		*) return 0 ;;
 	esac
-	[ -f "$DOCS_AGENTS" ] || return 0
+	[ -f "$SRC_AGENTS_MD" ] || return 0
 	awk -v role="$role" -F'|' '
 		$0 ~ "\\| \\*\\*"role"\\*\\*" {
 			# fields: 1=empty 2=role 3=model 4=effort 5=cost 6=use_when 7=trailing
@@ -133,7 +133,7 @@ docs_lookup_role() {
 			print model "\t" effort "\t" desc
 			exit
 		}
-	' "$DOCS_AGENTS"
+	' "$SRC_AGENTS_MD"
 }
 
 # JSON-escape a string for embedding inside double quotes.
@@ -447,7 +447,7 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 ### Queue-based routing
 - ALL work flows through \`~/.agentic-engineers/{session-id}/opencode/queue/incoming/ → processing/ → done/\`.
 - The Orchestrator polls the queue and routes per the decision tree in
-  \`docs/AGENTS.md\`. No direct delegation from external sources.
+  \`src/AGENTS.md\`. No direct delegation from external sources.
 - DELEGATEs are written to the queue's \`incoming/\` directory; HANDBACKs are written to
   \`processing/\` and moved to \`done/\` after Quality Engineer review.
 
@@ -506,7 +506,7 @@ All agents use uniform **allow-all** permissions:
 
 OpenCode's enforcement layer is minimal—the core constraint model is social (shared responsibility, code review, audit trails) rather than technical restrictions. All agents operate with equivalent access levels. Security and coordination are enforced via:
 - The DELEGATE/HANDBACK protocol (queue-based routing)
-- Role-specific constraints in \`docs/AGENTS.md\` (decision tree, escalation paths)
+- Role-specific constraints in \`src/AGENTS.md\` (decision tree, escalation paths)
 - Code review and audit trails (per-agent action logging)
 - SPEC.md protection via \`spec-management\` skill (only Principal Engineer can propose changes)
 
@@ -540,7 +540,7 @@ These operations are governed by **human oversight and protocol discipline**, no
 - **Permission enforcement** is runtime-based; violations are logged and blocked at execution time.
 
 ## Full specification
-See [\`docs/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
+See [\`src/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
 [\`docs/QUEUE-PROTOCOL.md\`]($docs_url), and [\`docs/SKILLS.md\`]($docs_url)
 in the source repository for the authoritative protocol.
 EOF
@@ -638,7 +638,7 @@ case "$MODE" in
 			count_s=$((count_s + 1))
 		done
 
-		# 2. Agents: hybrid frontmatter merge (docs/AGENTS.md + src frontmatter), write .md
+		# 2. Agents: hybrid frontmatter merge (src/AGENTS.md + src frontmatter), write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
 		: > "$AGENT_MANIFEST.tmp"
 		count_a=0
@@ -656,7 +656,7 @@ case "$MODE" in
 				continue
 			fi
 
-			# Hybrid metadata: docs/AGENTS.md is authoritative for model+effort+description.
+			# Hybrid metadata: src/AGENTS.md is authoritative for model+effort+description.
 			# Source frontmatter is the fallback and may carry richer per-agent description.
 			docs_row=$(docs_lookup_role "$name" || true)
 			docs_model=""; docs_effort=""; docs_desc=""
@@ -683,7 +683,7 @@ case "$MODE" in
 			model_full=$(map_model_opencode "$model_raw")
 			if [ -z "$model_full" ]; then
 				if [ -z "$model_raw" ]; then
-					echo "  ⚠️  skipping agent $name — no model in docs/AGENTS.md or source frontmatter (non-canonical role?)"
+					echo "  ⚠️  skipping agent $name — no model in src/AGENTS.md or source frontmatter (non-canonical role?)"
 				else
 					echo "  ⚠️  skipping agent $name — model '$model_raw' not in OpenCode registry (see map_model_opencode)"
 				fi

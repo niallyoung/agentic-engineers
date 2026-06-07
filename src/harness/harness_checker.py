@@ -228,16 +228,16 @@ class HarnessChecker:
         content = agents_md.read_text()
 
         # Extract agent table from AGENTS.md
-        # Expected format: "| # | Role | Model | ..." with agent rows
+        # Expected format: "| Role | Model | Effort | Multi-Model? | Use When |" with agent rows
         agent_patterns = [
-            r"\|\s*1\s*\|\s*\*\*Orchestrator\*\*",
-            r"\|\s*2\s*\|\s*\*\*Engineer\*\*",
-            r"\|\s*3\s*\|\s*\*\*Model Engineer\*\*",
-            r"\|\s*4\s*\|\s*\*\*Quality Engineer\*\*",
-            r"\|\s*5\s*\|\s*\*\*Lead Engineer\*\*",
-            r"\|\s*6\s*\|\s*\*\*Senior Engineer\*\*",
-            r"\|\s*7\s*\|\s*\*\*Principal Engineer\*\*",
-            r"\|\s*8\s*\|\s*\*\*Security Engineer\*\*",
+            r"\|\s*\*\*Orchestrator\*\*",
+            r"\|\s*\*\*Engineer\*\*",
+            r"\|\s*\*\*Model Engineer\*\*",
+            r"\|\s*\*\*Quality Engineer\*\*",
+            r"\|\s*\*\*Lead Engineer\*\*",
+            r"\|\s*\*\*Senior Engineer\*\*",
+            r"\|\s*\*\*Principal Engineer\*\*",
+            r"\|\s*\*\*Security Engineer\*\*",
         ]
 
         found_agents = []

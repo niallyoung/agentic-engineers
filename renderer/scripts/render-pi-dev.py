@@ -92,14 +92,14 @@ class PiDevRenderer:
         self._agent_models: Optional[Dict[str, Dict[str, str]]] = None
 
     def parse_agents_md(self, agents_file: Path) -> Dict[str, Dict[str, str]]:
-        """Parse docs/AGENTS.md to extract role -> {model, effort} mapping.
+        """Parse src/AGENTS.md to extract role -> {model, effort} mapping.
 
         Returns dict: {'orchestrator': {'model': 'claude-haiku-4.5', 'effort': 'low'}, ...}
         """
         result = {}
 
         if not agents_file.exists():
-            print(f"⚠️  docs/AGENTS.md not found at {agents_file}")
+            print(f"⚠️  src/AGENTS.md not found at {agents_file}")
             return result
 
         try:
@@ -159,20 +159,20 @@ class PiDevRenderer:
         return result
 
     def get_agent_metadata(self, role: str) -> Dict[str, str]:
-        """Get {model, effort} for a role from canonical AGENTS.md"""
+        """Get {model, effort} for a role from canonical src/AGENTS.md"""
         if self._agent_models is None:
-            # Try to find docs/AGENTS.md relative to source or repo root
-            agents_file = self.src_dir.parent / "docs" / "AGENTS.md"
+            # Try to find src/AGENTS.md relative to source or repo root
+            agents_file = self.src_dir.parent / "src" / "AGENTS.md"
             if not agents_file.exists():
                 # Try parent of parent (if in renderer/)
-                agents_file = self.src_dir.parent.parent / "docs" / "AGENTS.md"
+                agents_file = self.src_dir.parent.parent / "src" / "AGENTS.md"
 
             self._agent_models = self.parse_agents_md(agents_file)
 
         return self._agent_models.get(role, {})
     
     def substitute_models(self, content: str, filename: str) -> str:
-        """Substitute hardcoded models with canonical values from docs/AGENTS.md.
+        """Substitute hardcoded models with canonical values from src/AGENTS.md.
 
         For pi.yml: replaces model/effort values in agent definitions.
         For settings.json: replaces defaultModel with a canonical model.

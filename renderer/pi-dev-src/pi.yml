@@ -22,7 +22,7 @@ core:
     enabled: true
     level: "medium"
 
-# Agent role definitions for reference (dynamically substituted from docs/AGENTS.md at render time)
+# Agent role definitions for reference (dynamically substituted from src/AGENTS.md at render time)
 agents:
   - id: "orchestrator"
     role: "Orchestrator"
