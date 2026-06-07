@@ -435,11 +435,12 @@ parse_agents_md() {
 			gsub(/^\| /, "")
 			gsub(/ \|$/, "")
 			n = split($0, fields, "|")
-			if (n < 4) next
+			if (n < 5) next
 			for (i = 1; i <= n; i++) {
 				gsub(/^[ \t]+|[ \t]+$/, "", fields[i])
 			}
-			role = fields[1]; model = fields[2]; effort = fields[3]; description = fields[4]
+			# Table columns: Role | Model | Effort | Multi-Model? | Use When (description)
+			role = fields[1]; model = fields[2]; effort = fields[3]; description = fields[5]
 			gsub(/\*\*/, "", role)
 			role_lower = tolower(role)
 			gsub(/ /, "-", role_lower)

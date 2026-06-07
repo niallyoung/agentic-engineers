@@ -125,6 +125,7 @@ install-copilot: render-copilot ## Install rendered agents + skills → ~/.copil
 	@echo "📋 Validating dist/copilot/ is populated..."
 	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ dist/copilot/skills/ missing — run 'make render-copilot' first" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ dist/copilot/agents/ missing — run 'make render-copilot' first" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/copilot/AGENTS.md" || (echo "❌ AGENTS.md missing — run 'make render-copilot' first" && exit 1)
 	@echo "   ✓ dist/copilot/ validated"
 	@echo "📦 Installing from dist/copilot/ → $(DESTDIR)/.copilot/..."
 	@mkdir -p "$(DESTDIR)/.copilot"
@@ -134,7 +135,7 @@ install-copilot: render-copilot ## Install rendered agents + skills → ~/.copil
 		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
 		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
 	fi
-	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills)"
+	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills + docs)"
 
 install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never overwrites foreign files)
 	@echo "📦 Installing Claude agents + skills → $(DESTDIR)/.claude/ (marker-aware)..."
@@ -169,8 +170,10 @@ render-copilot: ## Generate dist/copilot/ with agents + skills (provider-specifi
 	@echo "🔍 Validating rendered Copilot config..."
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ agents directory not rendered" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/copilot/AGENTS.md" || (echo "❌ AGENTS.md not found" && exit 1)
 	@echo "   ✓ Copilot agents validated"
 	@echo "   ✓ Copilot skills validated"
+	@echo "   ✓ Copilot docs (AGENTS.md) validated"
 	@echo "✅ Copilot rendering complete (see dist/copilot/)"
 
 render-claude: ## Generate dist/claude/ (provider-specific)
@@ -180,7 +183,10 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 	@echo "🔍 Validating rendered Claude config..."
 	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ agents directory not rendered" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/claude/AGENTS.md" || (echo "❌ AGENTS.md not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/claude/CLAUDE.md" || (echo "❌ CLAUDE.md not rendered" && exit 1)
 	@echo "   ✓ Claude config validated"
+	@echo "   ✓ Claude docs (CLAUDE.md + AGENTS.md) validated"
 	@echo "✅ Claude rendering complete (see dist/claude/)"
 
 verify: ## Verify framework structure and tests (agents, skills, dependencies, queue)

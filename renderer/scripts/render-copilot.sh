@@ -25,9 +25,35 @@ MODE="${3:-install}"
 
 SRC_SKILLS="$REPO_ROOT/src/skills"
 DST_SKILLS="$COPILOT/skills"
+DST_RULES="$COPILOT/AGENTS.md"
+DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
 MARKER=".agentic-engine-copilot"
+# Sentinel on line 1 of AGENTS.md so we can tell ours apart from a user's file.
+# User overrides should live in AGENTS.md.local (never written/removed by us).
+RULES_SENTINEL='<!-- managed by agentic-engineers render-copilot.sh'
 
 [ -d "$SRC_SKILLS" ] || { echo "❌ no source: $SRC_SKILLS" >&2; exit 1; }
+
+# Generate the Copilot framework routing guide (AGENTS.md) from the canonical
+# docs/AGENTS.md. Marker-aware: refuses to overwrite a foreign AGENTS.md (one
+# that does not carry our sentinel), preventing data loss of a user's own file.
+# Works for both dist rendering and home install (DST_RULES is derived from
+# $COPILOT, which is either the repo's dist/copilot dir or ~/.copilot).
+write_agents_md() {
+	if [ ! -f "$DOCS_AGENTS" ]; then
+		echo "  ⚠️  skipping AGENTS.md — canonical source not found at $DOCS_AGENTS" >&2
+		return 0
+	fi
+	if [ -f "$DST_RULES" ] && ! head -n1 "$DST_RULES" | grep -q "$RULES_SENTINEL"; then
+		echo "  ⚠️  skipping AGENTS.md — foreign file at $DST_RULES (move it aside to let the framework manage it)"
+		return 0
+	fi
+	{
+		echo "$RULES_SENTINEL; user edits to AGENTS.md.local are loaded after this file. Do not edit directly — re-render overwrites it. -->"
+		cat "$DOCS_AGENTS"
+	} > "$DST_RULES"
+	echo "  ✅ AGENTS.md (routing guide + framework rules)"
+}
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
@@ -69,7 +95,14 @@ case "$MODE" in
 				count=$((count + 1))
 			fi
 		done
-		echo "✅ Removed $count managed skill(s)"
+		# Remove AGENTS.md only if it carries our sentinel (never a user's file)
+		if [ -f "$DST_RULES" ] && head -n1 "$DST_RULES" | grep -q "$RULES_SENTINEL"; then
+			rm -f "$DST_RULES"
+			echo "  removed AGENTS.md"
+		elif [ -f "$DST_RULES" ]; then
+			echo "  ⚠️  keeping AGENTS.md — foreign (not managed by us)"
+		fi
+		echo "✅ Removed $count managed skill(s) + docs"
 		;;
 
 	--status)
@@ -91,7 +124,11 @@ case "$MODE" in
 				drift=$((drift + 1))
 			fi
 		done
-		echo "  --- $ok in sync, $drift drift, $missing missing, $foreign foreign ---"
+		echo "  skills: $ok ok / $drift drift / $missing missing / $foreign foreign"
+		# Documentation
+		if [ ! -f "$DST_RULES" ]; then echo "  ❌ AGENTS.md (not installed)"
+		elif head -n1 "$DST_RULES" | grep -q "$RULES_SENTINEL"; then echo "  ✅ AGENTS.md (routing guide)"
+		else echo "  ⚠️  AGENTS.md (foreign — not managed by us)"; fi
 		;;
 
 	install|""|--stream|--stream=json)
@@ -167,7 +204,14 @@ case "$MODE" in
 			"{\"count\":$count,\"total_kb\":$total_bytes,\"duration_s\":$install_duration}"
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
-		# 2. Git hooks: configure core.hooksPath and ensure hooks are executable
+		# 2. Framework documentation: generate AGENTS.md (routing guide) from the
+		# canonical docs/AGENTS.md. Runs for both dist rendering and home install
+		# so the file always exists where downstream steps expect it, and is
+		# marker-protected so a user's own AGENTS.md is never clobbered.
+		echo "📖 Writing AGENTS.md → $DST_RULES ..."
+		write_agents_md
+
+		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
 		# Note: Copilot uses the same git repo as OpenCode/Claude, so hooks are shared.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
