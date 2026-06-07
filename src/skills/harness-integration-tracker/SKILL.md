@@ -12,7 +12,7 @@ metadata:
   author: agentic-engineers
   version: "1.0"
   category: integration
-  role: senior-engineer | orchestrator
+  role: orchestrator
   model: sonnet-4-6
   effort: high
   trigger: on-demand | post-framework-update | monthly-schedule

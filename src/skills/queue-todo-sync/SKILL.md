@@ -6,7 +6,7 @@ compatibility: agentic-engineers framework v5.10+. Requires Python 3.11+
 metadata:
   author: agentic-engineers
   version: "1.0.0"
-  category: automation
+  category: queue
   role: engineer
   model: claude-haiku-4.5
   effort: medium

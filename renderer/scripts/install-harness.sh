@@ -1,10 +1,20 @@
 #!/bin/bash
-# install-harness.sh - Interactive single-harness installation with optional backup
-# Part of agentic-engineers fresh install workflow
+# install-harness.sh - DEPRECATED: Use unified-install.sh instead
+# Part of agentic-engineers fresh install workflow (legacy)
 #
-# Usage: bash install-harness.sh {harness_name}
-# Example: bash install-harness.sh copilot
+# DEPRECATION WARNING:
+# This script is no longer used by the Makefile. It has been replaced by
+# unified-install.sh which provides a more consistent and safer installation
+# experience with unified backup strategy across all harnesses.
 #
+# To use the new unified installer:
+#   make fresh-install-{harness}   # Interactive (prompts per harness)
+#   make clean-install              # Interactive (prompts for all 4)
+#   make install                     # Non-interactive (auto-backup, safe default)
+#
+# Legacy usage (still supported for backward compatibility):
+#   bash install-harness.sh {harness_name}
+#   
 # Flow:
 # 1. Prompt: "Install {harness}? (y/n)"
 # 2. If yes: prompt "Backup {harness} first? (y/n)"
