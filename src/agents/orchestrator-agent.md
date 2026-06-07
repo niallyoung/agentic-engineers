@@ -107,7 +107,7 @@ Your goal is to maximize team efficiency, code quality, and cost-effectiveness t
 The Orchestrator operates differently from other agents:
 
 **CONTINUE polling and processing when:**
-- ✓ Tasks exist in `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/`
+- ✓ Tasks exist in `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/`
 - ✓ HANDBACK results are waiting to be routed
 - ✓ Metrics need to be collected and analyzed
 - → Continue polling every 30-60 seconds
@@ -162,5 +162,5 @@ Or via Copilot CLI:
 copilot --allow-all --autopilot --agent orchestrator "Your task"
 ```
 
-Polls `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/` every 30-60 seconds in harness mode.
+Polls `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` every 30-60 seconds in harness mode.
 All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure.

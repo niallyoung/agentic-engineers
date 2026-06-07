@@ -122,16 +122,6 @@ def test_pi_system_embeds_protocol():
     assert "HANDBACK" in body, "pi SYSTEM.md missing HANDBACK protocol context"
 
 
-@pytest.mark.xfail(
-    reason=(
-        "KNOWN SPEC GAP — rendered framework doc AGENTS.md still uses the "
-        "deprecated ~/.copilot/queue/ path. SPEC §'Queue Architecture & Paths' "
-        "(LOCKED) mandates ~/.agentic-engineers/. Source: src/AGENTS.md. "
-        "Audit reports this gap; it is not fixed here. Flips to XPASS once "
-        "src/AGENTS.md is migrated."
-    ),
-    strict=True,
-)
 @pytest.mark.parametrize("harness", ["claude", "copilot"])
 def test_rendered_agents_md_uses_canonical_queue_path(harness):
     agents_md = (DIST / harness / "AGENTS.md").read_text(encoding="utf-8")

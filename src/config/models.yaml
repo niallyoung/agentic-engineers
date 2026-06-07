@@ -21,8 +21,8 @@ role_models:
     thinking: true
     effort: "high"
     providers:
-      copilot: "claude-sonnet-4.6"
-      claude: "claude-sonnet-4.6"
+      copilot: "claude-sonnet-4.5"
+      claude: "claude-sonnet-4.5"
       openai: "gpt-4-turbo"
       google: "gemini-1-5-pro"
       meta: "llama-3-70b"
@@ -69,8 +69,8 @@ role_models:
     thinking: true
     effort: "high"
     providers:
-      copilot: "claude-opus-4.7"
-      claude: "claude-opus-4.7"
+      copilot: "claude-opus-4.6"
+      claude: "claude-opus-4.6"
       openai: "gpt-4o"
       google: "gemini-2-pro"
       meta: "llama-3-405b"

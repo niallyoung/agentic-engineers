@@ -189,12 +189,8 @@ def test_skill_frontmatter_required_fields(skill_path):
 
 
 # KNOWN SOURCE-INTEGRITY GAP (reported by this audit, NOT fixed here):
-# src/skills/testing/SKILL.md declares name 'test-sync-validator', which does
-# not match its directory 'testing'. Harnesses key skills by directory name, so
-# the frontmatter id is inconsistent with how the skill is discovered. Captured
-# as xfail so the suite stays green while the defect remains visible; flips to
-# XPASS once the name is reconciled.
-_KNOWN_SKILL_NAME_MISMATCH = {"testing"}
+# [CLEARED 2026-06-08] All known skill name mismatches have been fixed.
+_KNOWN_SKILL_NAME_MISMATCH = set()
 
 
 @pytest.mark.parametrize(

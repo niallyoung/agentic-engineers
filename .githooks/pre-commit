@@ -694,8 +694,12 @@ fi
 
 QUEUE_ERRORS=0
 
-# Get all staged files
+# Get all staged files (Python, JSON, YAML, and markdown under src/)
 STAGED_QUEUE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|json|yaml|yml|jsonc)$' || true)
+# Also scan markdown files under src/
+STAGED_MD_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^src/.*\.md$' || true)
+# Combine all files to check
+STAGED_QUEUE_FILES="$STAGED_QUEUE_FILES $STAGED_MD_FILES"
 
 for file in $STAGED_QUEUE_FILES; do
     [ -f "$file" ] || continue

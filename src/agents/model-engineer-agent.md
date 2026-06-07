@@ -92,7 +92,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
      reasoning: reasoning
    }
    
-   APPEND to ~/.agentic-engineers/artifacts/{session-id}/{harness}/feedback/model-recommendations.jsonl
+   APPEND to ~/.agentic-engineers/{session-id}/{harness}/feedback/model-recommendations.jsonl
 
 6. WRITE HANDBACK (for orchestrator):
    HANDBACK = {
@@ -119,7 +119,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
      confidence += 0.1 if PASS, confidence -= 0.2 if FAIL
      Re-store updated recommendation
 
-8. WRITE SPAN to ~/.agentic-engineers/artifacts/{session-id}/{harness}/SPAN-{timestamp}-agent-model-engineer.yaml
+8. WRITE SPAN to ~/.agentic-engineers/{session-id}/{harness}/SPAN-{timestamp}-agent-model-engineer.yaml
 ```
 
 ## HANDBACK Format

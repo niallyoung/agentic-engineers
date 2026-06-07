@@ -8,7 +8,7 @@
 
 ## Philosophy
 
-- **Queue-first** — every task enters `~/.copilot/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
+- **Queue-first** — every task enters `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
 - **Reduced autonomy** — agents pause when the queue is empty; they do NOT invent work
 - **Start cheap, escalate deliberately** — route to the cheapest capable model; upgrade only when blocked
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
@@ -103,7 +103,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 - Parse incoming requests and create DELEGATE blocks
 - Route tasks to the correct role using routing rules above
 - Fan out parallel DELEGATEs when tasks are independent
-- Poll `~/.copilot/queue/done/` for HANDBACKs and update `TODO.md`
+- Poll `~/.agentic-engineers/{session-id}/{harness}/queue/done/` for HANDBACKs and update `TODO.md`
 - Re-delegate ESCALATION packets at the higher tier
 - Summarise squad status as tables (not prose)
 
@@ -293,13 +293,13 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ## Handover Packet Protocol
 
-All work is delegated via a **DELEGATE block** written to `~/.copilot/queue/incoming/TASK-NNN.yaml`.  
-On completion, agents return a **HANDBACK block** to `~/.copilot/queue/done/TASK-NNN-handback.yaml`.
+All work is delegated via a **DELEGATE block** written to `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml`.  
+On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml`.
 
 ### DELEGATE Block Format
 
 ```yaml
-# File: ~/.copilot/queue/incoming/TASK-NNN.yaml
+# File: ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml
 ---
 task_id: TASK-NNN
 type: DELEGATE
@@ -358,7 +358,7 @@ Canonical schema: [`docs/specs/protocol-core-v1.0.yaml`](../docs/specs/protocol-
 Required core fields: `task_id`, `status`, `output`, `metrics{quality, tokens, cost, duration_seconds}`.
 
 ```yaml
-# File: ~/.copilot/queue/done/TASK-NNN-handback.yaml
+# File: ~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml
 ---
 task_id: TASK-NNN
 type: HANDBACK
@@ -461,7 +461,7 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 ### Full Flow
 
 ```
-1.  User drops DELEGATE into ~/.copilot/queue/incoming/TASK-NNN.yaml
+1.  User drops DELEGATE into ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml
     (or Orchestrator generates DELEGATE from a user request)
 
 2.  Orchestrator polls queue → reads TASK-NNN.yaml → applies routing rules
@@ -472,7 +472,7 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
       a. ACKs the task (first output)
       b. Loads its skill file from skill_refs
       c. Performs work
-      d. Writes HANDBACK to ~/.copilot/queue/done/TASK-NNN-handback.yaml
+      d. Writes HANDBACK to ~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml
 
 5.  Quality Engineer validates the HANDBACK:
       - Checks acceptance_criteria are met
@@ -494,7 +494,7 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 
 ### Pause Condition
 
-The Orchestrator **pauses** when `~/.copilot/queue/incoming/` is empty.  
+The Orchestrator **pauses** when `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` is empty.  
 It does NOT invent new work. This is by design — reduced autonomy prevents runaway scope.
 
 To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
@@ -506,7 +506,7 @@ To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
 ### Example 1 — Simple File Edit (Engineer)
 
 ```yaml
-# ~/.copilot/queue/incoming/TASK-101.yaml
+# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-101.yaml
 ---
 task_id: TASK-101
 type: DELEGATE
@@ -618,7 +618,7 @@ escalation:
 **Step 2: Orchestrator re-delegates to Senior Engineer**
 
 ```yaml
-# ~/.copilot/queue/incoming/TASK-202-senior.yaml
+# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-202-senior.yaml
 ---
 task_id: TASK-202-senior
 type: DELEGATE
@@ -684,7 +684,7 @@ the updated `processor.py` call site.
 ### Example 3 — Security Audit (Security Engineer)
 
 ```yaml
-# ~/.copilot/queue/incoming/TASK-303.yaml
+# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-303.yaml
 ---
 task_id: TASK-303
 type: DELEGATE
@@ -761,7 +761,7 @@ MODEL_USED: claude-opus-4.8
 ### Example 4 — Post-Implementation Validation (Quality Engineer)
 
 ```yaml
-# ~/.copilot/queue/incoming/TASK-404-qe.yaml
+# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-404-qe.yaml
 ---
 task_id: TASK-404-qe
 type: DELEGATE
