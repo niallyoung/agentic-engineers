@@ -53,7 +53,7 @@ extensions:
 
       - id: "senior-engineer"
         role: "Senior Engineer"
-        model: "claude-sonnet-4.6"
+        model: "claude-sonnet-4.5"
         effort: "high"
         expertise: "Complex system design, debugging, root-cause diagnosis"
         scope: "Multi-service, complex logic"
@@ -74,21 +74,21 @@ extensions:
 
       - id: "principal-engineer"
         role: "Principal Engineer"
-        model: "claude-opus-4.7"
+        model: "claude-opus-4.6"
         effort: "high"
         expertise: "Cross-organization architecture, strategy"
         scope: "Organization-wide impact, decisions affecting >2 repos"
 
       - id: "security-engineer"
         role: "Security Engineer"
-        model: "claude-opus-4.7"
+        model: "claude-opus-4.8"
         effort: "max"
         expertise: "Security architecture, vulnerability analysis, threat modeling"
         scope: "Security decisions only — all other routes blocked"
 
       - id: "model-engineer"
         role: "Model Engineer"
-        model: "claude-sonnet-4.6"
+        model: "claude-sonnet-4.5"
         effort: "high"
         expertise: "Token optimization, cost-quality trade-offs, model selection"
         scope: "Performance metrics, cost analysis, optimization recommendations"
