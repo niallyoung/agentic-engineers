@@ -206,6 +206,19 @@ case "$MODE" in
 			count_a=$((count_a + 1))
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
+
+		# 2.5 Framework documentation: Copy CLAUDE.md and AGENTS.md if installing to home dir
+		# (Skip if rendering to dist/, since files are already there)
+		if [[ "$CLAUDE" == *"/.claude" ]]; then
+			for doc in CLAUDE.md AGENTS.md; do
+				src_doc="$REPO_ROOT/dist/claude/$doc"
+				if [ -f "$src_doc" ]; then
+					cp "$src_doc" "$CLAUDE/$doc"
+					echo "  $(_green "✅") $doc"
+				fi
+			done
+		fi
+
 		install_end=$(date +%s)
 		install_duration=$(( install_end - install_start ))
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s) $(_dim "(${install_duration}s total)")"

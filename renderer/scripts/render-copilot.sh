@@ -69,7 +69,12 @@ case "$MODE" in
 				count=$((count + 1))
 			fi
 		done
-		echo "✅ Removed $count managed skill(s)"
+		# Remove AGENTS.md if it was managed by us
+		if [ -f "$COPILOT/AGENTS.md" ]; then
+			rm -f "$COPILOT/AGENTS.md"
+			echo "  removed AGENTS.md"
+		fi
+		echo "✅ Removed $count managed skill(s) + docs"
 		;;
 
 	--status)
@@ -91,7 +96,9 @@ case "$MODE" in
 				drift=$((drift + 1))
 			fi
 		done
-		echo "  --- $ok in sync, $drift drift, $missing missing, $foreign foreign ---"
+		echo "  skills: $ok ok / $drift drift / $missing missing / $foreign foreign"
+		# Documentation
+		if [ -f "$COPILOT/AGENTS.md" ]; then echo "  ✅ AGENTS.md (routing guide)"; else echo "  ❌ AGENTS.md (not installed)"; fi
 		;;
 
 	install|""|--stream|--stream=json)
@@ -167,7 +174,17 @@ case "$MODE" in
 			"{\"count\":$count,\"total_kb\":$total_bytes,\"duration_s\":$install_duration}"
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
-		# 2. Git hooks: configure core.hooksPath and ensure hooks are executable
+		# 2. Framework documentation: Copy AGENTS.md if installing to home dir
+		# (Skip if rendering to dist/, since file is already there)
+		if [[ "$COPILOT" == *"/.copilot" ]]; then
+			src_doc="$REPO_ROOT/dist/copilot/AGENTS.md"
+			if [ -f "$src_doc" ]; then
+				cp "$src_doc" "$COPILOT/AGENTS.md"
+				echo "  ✅ AGENTS.md (routing guide + framework rules)"
+			fi
+		fi
+
+		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
 		# Note: Copilot uses the same git repo as OpenCode/Claude, so hooks are shared.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
