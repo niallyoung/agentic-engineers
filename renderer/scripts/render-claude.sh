@@ -64,6 +64,50 @@ map_model() {
 	esac
 }
 
+# inject_settings_model SETTINGS_FILE MODEL_ALIAS
+# Merges {"model": MODEL_ALIAS} into the JSON settings file using Python.
+# Creates the file if absent; preserves all other keys.
+inject_settings_model() {
+	local settings="$1" model_alias="$2"
+	python3 - "$settings" "$model_alias" <<'PY'
+import json, sys, os
+settings_file, model_alias = sys.argv[1], sys.argv[2]
+try:
+	with open(settings_file) as f:
+		data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+	data = {}
+data["model"] = model_alias
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
+# remove_settings_model SETTINGS_FILE
+# Removes the "model" key from the JSON settings file (used by --uninstall).
+remove_settings_model() {
+	local settings="$1"
+	[ -f "$settings" ] || return 0
+	python3 - "$settings" <<'PY'
+import json, sys, os
+settings_file = sys.argv[1]
+try:
+	with open(settings_file) as f:
+		data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+	sys.exit(0)
+data.pop("model", None)
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
 # parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
 
 
@@ -160,6 +204,9 @@ case "$MODE" in
 				echo "  $(_yellow "⚠️  keeping $(basename "$doc") — foreign (not managed by us)")"
 			fi
 		done
+		# Remove session model (if we set it)
+		remove_settings_model "$CLAUDE/settings.json"
+		echo "  removed model from settings.json"
 		echo "✅ Removed $count_s skill(s), $count_a agent(s), $count_d doc(s)"
 		;;
 
@@ -190,6 +237,13 @@ case "$MODE" in
 			elif head -n1 "$doc" | grep -q "$DOC_SENTINEL"; then echo "  ✅ $label"
 			else echo "  ⚠️  $label (foreign)"; fi
 		done
+		# settings.json model
+		settings_model=$(python3 -c "import json,sys; d=json.load(open('$CLAUDE/settings.json')); print(d.get('model',''))" 2>/dev/null || true)
+		if [ -n "$settings_model" ]; then
+			echo "  ✅ settings.json model: $settings_model"
+		else
+			echo "  ❌ settings.json model: not set (session will use Anthropic default)"
+		fi
 		;;
 
 	install|"")
@@ -324,6 +378,18 @@ case "$MODE" in
 			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
 		else
 			echo "⚠️  git hooks not found at $REPO_ROOT/.githooks — skipping"
+		fi
+
+		# 4. Settings: set session model to orchestrator's model so Claude Code
+		# starts as the Orchestrator agent rather than defaulting to Sonnet.
+		orchestrator_meta=$(lookup_agent_metadata "orchestrator" "$AGENTS_MAP" 2>/dev/null || true)
+		if [ -n "$orchestrator_meta" ]; then
+			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
+			orchestrator_model=$(map_model "$orchestrator_model_raw")
+			if [ -n "$orchestrator_model" ]; then
+				inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
+				echo "✅ Set session model → $orchestrator_model (orchestrator default)"
+			fi
 		fi
 		;;
 
