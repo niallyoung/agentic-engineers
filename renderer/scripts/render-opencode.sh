@@ -34,7 +34,7 @@ MODE="${3:-install}"
 
 SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
-DOCS_AGENTS="$REPO_ROOT/docs/AGENTS.md"
+SRC_AGENTS_MD="$REPO_ROOT/src/AGENTS.md"
 DST_SKILLS="$OPENCODE/skills"
 DST_AGENTS="$OPENCODE/agents"
 DST_CONFIG="$OPENCODE/opencode.jsonc"
@@ -49,35 +49,117 @@ AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-opencode"
 CONFIG_SENTINEL='// _managed_by: agentic-engineers renderer/scripts/render-opencode.sh'
 # Sentinel HTML comment line 1 of AGENTS.md.
 RULES_SENTINEL='<!-- managed by agentic-engineers render-opencode.sh'
+# Cache of OpenCode provider models (models.dev snapshot).
+# Set via OPENCODE_MODELS_CACHE env var to use a custom path.
+CACHE="${OPENCODE_MODELS_CACHE:-$HOME/.cache/opencode/models.json}"
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-# Map agentic-engineers canonical model id → OpenCode provider/model id.
+# Detect which OpenCode provider the current user has configured.
+# Precedence: explicit OPENCODE_PROVIDER env override → first auth env var found
+# → sniff existing opencode.jsonc → default anthropic.
+# Set OPENCODE_PROVIDER=github-copilot in CI/cross-env installs to override auto-detection.
+detect_opencode_provider() {
+	if [ -n "${OPENCODE_PROVIDER:-}" ]; then echo "$OPENCODE_PROVIDER"; return; fi
+	if [ -n "${ANTHROPIC_API_KEY:-}" ];  then echo "anthropic";              return; fi
+	if [ -n "${GITHUB_TOKEN:-}" ];       then echo "github-copilot";         return; fi
+	if [ -n "${OPENCODE_API_KEY:-}" ];   then echo "opencode";               return; fi
+	if [ -n "${OPENROUTER_API_KEY:-}" ]; then echo "openrouter";             return; fi
+	if [ -n "${AWS_ACCESS_KEY_ID:-}" ] || [ -n "${AWS_BEARER_TOKEN_BEDROCK:-}" ]; then
+		echo "amazon-bedrock"; return
+	fi
+	if [ -n "${GOOGLE_VERTEX_PROJECT:-}" ]; then echo "google-vertex-anthropic"; return; fi
+	# Sniff the installed opencode.jsonc for an existing model prefix.
+	local cfg="$HOME/.config/opencode/opencode.jsonc"
+	if [ -f "$cfg" ]; then
+		local p
+		p=$(grep -oE '"model"[[:space:]]*:[[:space:]]*"[^/"]+' "$cfg" 2>/dev/null | grep -oE '[^"]+$' || true)
+		[ -n "$p" ] && { echo "$p"; return; }
+	fi
+	echo "anthropic"
+}
+
+# Normalize a raw model token to a family suffix like "haiku-4-5" or "sonnet-4-6".
+# Strips provider prefix, dots→hyphens, date stamps, and the "claude-" prefix.
+_opencode_family_token() {
+	echo "$1" \
+		| sed -E 's#^[a-z-]*/##' \
+		| sed -E 's#^anthropic\.##' \
+		| sed -E 's#:[^:]*$##' \
+		| sed -E 's#@.*$##' \
+		| sed -E 's#-v[0-9]+:[0-9]+$##' \
+		| sed -E 's#\.#-#g' \
+		| sed -E 's#-[0-9]{8}(-.*)?$##' \
+		| sed -E 's#^claude-##'
+}
+
+# Map a canonical agentic-engineers model token → fully-qualified "provider/model-id"
+# that OpenCode accepts.  Accepts both hyphen (claude-haiku-4-5) and dot
+# (claude-haiku-4.5) input formats.
 #
-# IMPORTANT: OpenCode uses Anthropic's official model IDs (hyphens, not dots).
-# This mapping accepts both hyphen and dot formats for compatibility.
-# Output is always hyphen-format per Anthropic API specification:
-# https://docs.anthropic.com/claude/docs/models-overview
+# Resolution order:
+#  1. Detect provider from environment / installed config.
+#  2. Query ~/.cache/opencode/models.json for that provider's exact registered ID.
+#  3. Fall back to a per-provider format table when the cache is absent.
 #
-# Provider is hardcoded to github-copilot (the standard Copilot provider for
-# Claude models in OpenCode). For users with anthropic/ provider, the mapping
-# would be different (e.g., anthropic/claude-haiku-4.5).
-#
-# Note: claude-opus-4-6 is now declared in the custom provider config (see write_config)
-# so it maps directly instead of falling back to 4.7.
+# Returns "" (empty) when the model cannot be resolved; caller warns + skips.
 map_model_opencode() {
-	case "$1" in
-		claude-haiku-4.5|claude-haiku-4-5)   echo "github-copilot/claude-haiku-4-5" ;;
-		claude-sonnet-4.6|claude-sonnet-4-6) echo "github-copilot/claude-sonnet-4-6" ;;
-		claude-sonnet-4.5|claude-sonnet-4-5) echo "github-copilot/claude-sonnet-4-5" ;;
-		claude-opus-4.8|claude-opus-4-8)     echo "github-copilot/claude-opus-4-8" ;;
-		claude-opus-4.7|claude-opus-4-7)     echo "github-copilot/claude-opus-4-7" ;;
-		claude-opus-4.6|claude-opus-4-6)     echo "github-copilot/claude-opus-4-6" ;;
-		claude-opus-4.5|claude-opus-4-5)     echo "github-copilot/claude-opus-4-5" ;;
-		*) echo "" ;;  # sentinel — caller warns + skips model emission
-	esac
+	local raw="$1"
+	[ -n "$raw" ] || { echo ""; return; }
+
+	local provider family id
+	provider=$(detect_opencode_provider)
+	family=$(_opencode_family_token "$raw")
+
+	# Cache lookup: resolve the exact ID for this provider+family from models.dev data.
+	if [ -f "$CACHE" ] && command -v python3 >/dev/null 2>&1; then
+		id=$(python3 - "$CACHE" "$provider" "$family" <<'PY'
+import json, sys, re
+cache_path, provider, fam = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    data = json.load(open(cache_path))
+    # Cache may be { provider: { models: {...} } } or { provider: {...} }
+    pdata = data.get(provider, {})
+    models = pdata.get("models", pdata) if isinstance(pdata, dict) else {}
+except Exception:
+    sys.exit(0)
+
+def norm(s):
+    return re.sub(r'[._]', '-', s)
+
+# Candidates whose normalized key ends with the family token.
+cands = [k for k in models if norm(k).endswith(fam)]
+# Drop region-prefixed Bedrock IDs (eu., us., ap., apac.) to prefer the bare form.
+cands = [c for c in cands if not re.match(r'^(eu|us|ap|apac)[\.-]', c)]
+if cands:
+    print(min(cands, key=len))
+PY
+		)
+	fi
+
+	# Offline fallback: synthesize from the family token using the provider's known format.
+	if [ -z "${id:-}" ]; then
+		case "$provider" in
+			github-copilot)
+				# GitHub Copilot registry uses dotted version: claude-haiku-4.5
+				id="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')"
+				;;
+			openrouter)
+				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash)
+				local dotted
+				dotted="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')"
+				id="anthropic/$dotted"
+				;;
+			*)
+				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-4-5
+				id="claude-$family"
+				;;
+		esac
+	fi
+
+	[ -n "${id:-}" ] && echo "${provider}/${id}" || echo ""
 }
 
 # Effort → temperature: deterministic-ish for low/medium, more exploratory for high/max.
@@ -89,7 +171,22 @@ effort_to_temperature() {
 	esac
 }
 
-# Parse docs/AGENTS.md primary roster table for a given role's (model, effort, description).
+# Effort → OpenCode reasoning `variant`.
+# OpenCode controls Anthropic extended-thinking budgets via the model `variant`
+# field (NOT a top-level `thinking:` key, which is swept into options and ignored).
+# See harness-opencode-feature-sync registry: reasoning-variant-mapping.
+# Mapping: low → none (omit, no reasoning); medium → medium; high/max → high.
+# Returns empty string when no variant should be emitted.
+effort_to_variant() {
+	case "$1" in
+		medium)   echo "medium" ;;
+		high|max) echo "high" ;;
+		*)        echo "" ;;   # low / unknown → no reasoning variant
+	esac
+}
+
+
+# Parse src/AGENTS.md primary roster table for a given role's (model, effort, description).
 # Output: tab-separated "model<TAB>effort<TAB>description"; empty if not found.
 # Role lookup is by kebab-case agent name (matches AGENT_ROLE_MAPPING from old python renderer).
 docs_lookup_role() {
@@ -106,7 +203,7 @@ docs_lookup_role() {
 		model-engineer)    role="Model Engineer" ;;
 		*) return 0 ;;
 	esac
-	[ -f "$DOCS_AGENTS" ] || return 0
+	[ -f "$SRC_AGENTS_MD" ] || return 0
 	awk -v role="$role" -F'|' '
 		$0 ~ "\\| \\*\\*"role"\\*\\*" {
 			# fields: 1=empty 2=role 3=model 4=effort 5=cost 6=use_when 7=trailing
@@ -118,7 +215,7 @@ docs_lookup_role() {
 			print model "\t" effort "\t" desc
 			exit
 		}
-	' "$DOCS_AGENTS"
+	' "$SRC_AGENTS_MD"
 }
 
 # JSON-escape a string for embedding inside double quotes.
@@ -230,13 +327,16 @@ write_config() {
 	#
 	# We emit a minimal provider config with available models, but NO agent array.
 	
+	local default_model
+	default_model=$(map_model_opencode "claude-haiku-4-5")
+
 	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
 {
   "\$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
-  "model": "github-copilot/claude-haiku-4-5",
+  "model": "$default_model",
   "compaction": {
     "auto": true,
     "reserved": 30000
@@ -249,162 +349,6 @@ write_config() {
     "glob": "allow",
     "grep": "allow",
     "webfetch": "allow"
-  },
-  "provider": {
-    "github-copilot": {
-      "models": {
-        "claude-haiku-4-5": {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000003,
-            "output": 0.000012,
-            "cache_read": 0.00000015,
-            "cache_write": 0.0000018
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-sonnet-4-5": {
-          "id": "claude-sonnet-4-5",
-          "name": "Claude Sonnet 4.5",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000003,
-            "output": 0.000015,
-            "cache_read": 0.00000015,
-            "cache_write": 0.0000018
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-sonnet-4-6": {
-          "id": "claude-sonnet-4-6",
-          "name": "Claude Sonnet 4.6",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000003,
-            "output": 0.000015,
-            "cache_read": 0.00000015,
-            "cache_write": 0.0000018
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-opus-4-6": {
-          "id": "claude-opus-4-6",
-          "name": "Claude Opus 4.6",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000015,
-            "output": 0.00006,
-            "cache_read": 0.00000075,
-            "cache_write": 0.0000075
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-opus-4-7": {
-          "id": "claude-opus-4-7",
-          "name": "Claude Opus 4.7",
-          "family": "claude",
-          "release_date": "2025-05-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000015,
-            "output": 0.00006,
-            "cache_read": 0.00000075,
-            "cache_write": 0.0000075
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        },
-        "claude-opus-4-8": {
-          "id": "claude-opus-4-8",
-          "name": "Claude Opus 4.8",
-          "family": "claude",
-          "release_date": "2025-08-01",
-          "attachment": true,
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0.000015,
-            "output": 0.00006,
-            "cache_read": 0.00000075,
-            "cache_write": 0.0000075
-          },
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          },
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          },
-          "status": "active"
-        }
-      }
-    }
   }
 }
 EOF
@@ -432,7 +376,7 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 ### Queue-based routing
 - ALL work flows through \`~/.agentic-engineers/{session-id}/opencode/queue/incoming/ → processing/ → done/\`.
 - The Orchestrator polls the queue and routes per the decision tree in
-  \`docs/AGENTS.md\`. No direct delegation from external sources.
+  \`src/AGENTS.md\`. No direct delegation from external sources.
 - DELEGATEs are written to the queue's \`incoming/\` directory; HANDBACKs are written to
   \`processing/\` and moved to \`done/\` after Quality Engineer review.
 
@@ -491,7 +435,7 @@ All agents use uniform **allow-all** permissions:
 
 OpenCode's enforcement layer is minimal—the core constraint model is social (shared responsibility, code review, audit trails) rather than technical restrictions. All agents operate with equivalent access levels. Security and coordination are enforced via:
 - The DELEGATE/HANDBACK protocol (queue-based routing)
-- Role-specific constraints in \`docs/AGENTS.md\` (decision tree, escalation paths)
+- Role-specific constraints in \`src/AGENTS.md\` (decision tree, escalation paths)
 - Code review and audit trails (per-agent action logging)
 - SPEC.md protection via \`spec-management\` skill (only Principal Engineer can propose changes)
 
@@ -525,69 +469,12 @@ These operations are governed by **human oversight and protocol discipline**, no
 - **Permission enforcement** is runtime-based; violations are logged and blocked at execution time.
 
 ## Full specification
-See [\`docs/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
+See [\`src/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
 [\`docs/QUEUE-PROTOCOL.md\`]($docs_url), and [\`docs/SKILLS.md\`]($docs_url)
 in the source repository for the authoritative protocol.
 EOF
 }
 
-# Generate Phase 2 role-specific AGENTS.md files.
-#
-# These files provide role-specific guidance for each of the 8 agents.
-# They are generated persistently from the canonical role-specific templates.
-# This function is idempotent — running it twice produces identical output.
-#
-# Phase 2 artifacts:
-#   dist/opencode/agents/{role}-AGENTS.md
-#
-# Each file contains:
-#   - Role description and capabilities
-#   - Critical constraints (bash/edit restrictions)
-#   - Available tools and skills
-#   - Decision trees and workflows
-#   - Examples and common patterns
-#
-generate_role_agents_md() {
-	local src_role_agents_dir="$REPO_ROOT/dist/opencode/agents"
-	local dst_role_agents_dir="$DST_AGENTS"
-	
-	if [ ! -d "$src_role_agents_dir" ]; then
-		echo "  ⚠️  skipping role-specific AGENTS.md — no source at $src_role_agents_dir"
-		return
-	fi
-	
-	# 8 canonical roles
-	local roles=(
-		orchestrator
-		engineer
-		senior-engineer
-		lead-engineer
-		quality-engineer
-		principal-engineer
-		security-engineer
-		model-engineer
-	)
-	
-	local count=0
-	for role in "${roles[@]}"; do
-		local src_file="$src_role_agents_dir/${role}-AGENTS.md"
-		local dst_file="$dst_role_agents_dir/${role}-AGENTS.md"
-		
-		if [ ! -f "$src_file" ]; then
-			echo "  ⚠️  skipping role-specific AGENTS.md for $role — source not found at $src_file"
-			continue
-		fi
-		
-		# Copy the role-specific guidance file verbatim (idempotent).
-		# Skip if source and destination are identical (same file).
-		if [ "$src_file" != "$dst_file" ]; then
-			cp "$src_file" "$dst_file"
-		fi
-		count=$((count + 1))
-	done
-	
-	echo "✅ Generated $count role-specific AGENTS.md file(s)"
-}
 
 case "$MODE" in
 	--uninstall)
@@ -680,7 +567,7 @@ case "$MODE" in
 			count_s=$((count_s + 1))
 		done
 
-		# 2. Agents: hybrid frontmatter merge (docs/AGENTS.md + src frontmatter), write .md
+		# 2. Agents: hybrid frontmatter merge (src/AGENTS.md + src frontmatter), write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
 		: > "$AGENT_MANIFEST.tmp"
 		count_a=0
@@ -698,7 +585,7 @@ case "$MODE" in
 				continue
 			fi
 
-			# Hybrid metadata: docs/AGENTS.md is authoritative for model+effort+description.
+			# Hybrid metadata: src/AGENTS.md is authoritative for model+effort+description.
 			# Source frontmatter is the fallback and may carry richer per-agent description.
 			docs_row=$(docs_lookup_role "$name" || true)
 			docs_model=""; docs_effort=""; docs_desc=""
@@ -725,15 +612,16 @@ case "$MODE" in
 			model_full=$(map_model_opencode "$model_raw")
 			if [ -z "$model_full" ]; then
 				if [ -z "$model_raw" ]; then
-					echo "  ⚠️  skipping agent $name — no model in docs/AGENTS.md or source frontmatter (non-canonical role?)"
+					echo "  ⚠️  skipping agent $name — no model in src/AGENTS.md or source frontmatter (non-canonical role?)"
 				else
 					echo "  ⚠️  skipping agent $name — model '$model_raw' not in OpenCode registry (see map_model_opencode)"
 				fi
 				continue
 			fi
 
-			# Effort → temperature
+			# Effort → temperature + reasoning variant
 			temp=$(effort_to_temperature "${docs_effort:-medium}")
+			variant=$(effort_to_variant "${docs_effort:-medium}")
 
 			# Mode: orchestrator is the framework's entry point, so it must be
 			# selectable as a primary agent (--agent orchestrator, default_agent).
@@ -748,30 +636,35 @@ case "$MODE" in
 
 			# Protocol declaration: read machine-readable capability keys from the
 			# source agent frontmatter so the harness can detect protocol support.
+			# NOTE: accepts/returns/role are NOT in OpenCode's KNOWN_KEYS, so when
+			# emitted as top-level frontmatter they are swept into `options` and
+			# have no effect. We instead nest them under the recognized `options:`
+			# key so the metadata is preserved as structured agent options rather
+			# than silently dropped no-op top-level keys.
 			accepts_list=$(extract_fm_list "$src_file" "accepts")
 			returns_list=$(extract_fm_list "$src_file" "returns")
 			role_val=$(extract_fm "$src_file" "role")
 			[ -n "$role_val" ] || role_val="$name"
 
 			# Emit OpenCode subagent frontmatter + transformed body.
+			# Only KNOWN_KEYS are emitted at the top level (description, mode, model,
+			# temperature, variant, permission, options) so nothing is silently
+			# discarded. All agents use uniform allow-all permissions; behavioral
+			# constraints are enforced via the DELEGATE/HANDBACK protocol and system
+			# prompt, not tool restrictions.
 			{
 				echo "---"
 				printf 'description: "%s"\n' "$desc"
 				echo "mode: $agent_mode"
 				echo "model: $model_full"
 				echo "temperature: $temp"
-				[ -n "$accepts_list" ] && echo "accepts: [$accepts_list]"
-				[ -n "$returns_list" ] && echo "returns: [$returns_list]"
-				echo "role: $role_val"
+				[ -n "$variant" ] && echo "variant: $variant"
 				echo "permission:"
-				echo "  read: allow"
-				echo "  edit: allow"
-				echo "  bash: allow"
-				echo "  task: allow"
-				echo "  glob: allow"
-				echo "  grep: allow"
-				echo "  webfetch: allow"
-				
+				echo '  "*": allow'
+				echo "options:"
+				echo "  role: $role_val"
+				[ -n "$accepts_list" ] && echo "  accepts: [$accepts_list]"
+				[ -n "$returns_list" ] && echo "  returns: [$returns_list]"
 				echo "---"
 				echo
 				strip_fm "$src_file"
@@ -782,10 +675,6 @@ case "$MODE" in
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
-
-		# 2.5. Phase 2: Role-specific AGENTS.md files (role guidance)
-		echo "📦 Generating Phase 2 role-specific AGENTS.md → $DST_AGENTS/..."
-		generate_role_agents_md
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# This enforces SDLC compliance at commit/push time for the repo itself.

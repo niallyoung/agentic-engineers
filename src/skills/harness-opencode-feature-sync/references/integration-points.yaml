@@ -82,18 +82,20 @@ integration_points:
 
   - id: renderer-permission-emission
     opencode_path: renderer/scripts/render-opencode.sh
-    anchor: "permission:"
+    anchor: "emit_permission_block"
     what_to_check: >
-      Renderer emission site for per-agent permission frontmatter. Defect:
-      uniform allow-all block for every role (~lines 753-760).
-    last_verified: "2026-05-31"
+      Renderer emission site for per-agent permission frontmatter. FIXED:
+      per-role least-privilege matrix (`"*": deny` baseline + explicit allows)
+      via emit_permission_block(), mirroring the built-in `explore` agent.
+    last_verified: "2026-06-07"
     status: verified
 
-  - id: renderer-thinking-emission
+  - id: renderer-variant-emission
     opencode_path: renderer/scripts/render-opencode.sh
-    anchor: "thinking:"
+    anchor: "variant:"
     what_to_check: >
-      Renderer emission site for the no-op `thinking:` block (~lines 762-769).
-      Defect: key not in KNOWN_KEYS, so it never enables extended thinking.
-    last_verified: "2026-05-31"
-    status: drifted
+      Renderer emission site for the reasoning `variant` key (effort_to_variant).
+      Replaces the former no-op `thinking:` block; `variant` IS in KNOWN_KEYS and
+      maps effort → Anthropic extended-thinking budget. Reasoning fidelity.
+    last_verified: "2026-06-07"
+    status: verified

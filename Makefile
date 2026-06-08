@@ -14,6 +14,17 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 # When DESTDIR != $(HOME), git-hook installation is skipped (sandbox-safe).
 DESTDIR ?= $(HOME)
 
+# Backup behavior for install targets. BACKUP=never disables the pre-install
+# backup snapshot (safe for sandbox/CI installs where there is nothing to keep):
+#   make install BACKUP=never DESTDIR=/tmp/ae-test
+# Any other value (or unset) keeps the default auto-backup-by-copy behavior.
+BACKUP ?=
+ifeq ($(BACKUP),never)
+BACKUP_FLAG := --no-backup
+else
+BACKUP_FLAG :=
+endif
+
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
 	@echo ""
@@ -93,48 +104,41 @@ setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "📖 Hook documentation: .githooks/README.md"
 	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
-install: install-copilot install-claude install-pi install-opencode ## Install to all 4 harnesses
+install: render-all ## Install to all 4 harnesses (auto-backup, non-interactive)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" $(BACKUP_FLAG) --destdir "$(DESTDIR)" copilot claude pi opencode
 	@echo ""
 	@echo "✅ Installation complete!"
 	@echo ""
-	@echo "Next: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
-	@echo "See ENTRYPOINT.md for complete workflow and queue-based execution model."
+	@echo "Next: copilot --autopilot --agent orchestrator 'Your task'"
+	@echo "Or: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 
-clean-install: ## Fresh install with interactive backup prompts (timestamped backups)
-	@echo "🔄 Starting clean installation with interactive backup..."
-	@echo "   (You will be prompted to confirm each harness backup)"
-	@echo ""
-	@bash "$(REPO_ROOT)/renderer/scripts/backup-harnesses.sh" copilot claude pi opencode
-	@echo ""
-	@echo "📦 Proceeding with fresh installation..."
-	@$(MAKE) install
+clean-install: render-all ## Interactive: Install to all 4 harnesses (prompt for each)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot claude pi opencode
 
-fresh-install-copilot: ## Interactive: install Copilot only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" copilot
+fresh-install-copilot: ## Interactive: install Copilot only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot
 
-fresh-install-claude: ## Interactive: install Claude only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" claude
+fresh-install-claude: ## Interactive: install Claude only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" claude
 
-fresh-install-pi: ## Interactive: install π.dev only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" pi
+fresh-install-pi: ## Interactive: install π.dev only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" pi
 
-fresh-install-opencode: ## Interactive: install OpenCode only (with optional backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/install-harness.sh" "$(REPO_ROOT)" opencode
+fresh-install-opencode: ## Interactive: install OpenCode only (prompt for backup)
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" opencode
 
-install-copilot: render-copilot ## Install rendered agents + skills → ~/.copilot/ (full agent support)
-	@echo "📋 Validating dist/copilot/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ dist/copilot/skills/ missing — run 'make render-copilot' first" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ dist/copilot/agents/ missing — run 'make render-copilot' first" && exit 1)
-	@echo "   ✓ dist/copilot/ validated"
-	@echo "📦 Installing from dist/copilot/ → $(DESTDIR)/.copilot/..."
+install-copilot: ## Install rendered agents + skills → ~/.copilot/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing Copilot agents + skills + docs → $(DESTDIR)/.copilot/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.copilot"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/copilot/" "$(DESTDIR)/.copilot/"
-	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
-		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
-		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
-		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
-	fi
-	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills)"
+	@# Install directly via the marker-aware render scripts (same model as
+	@# install-claude) rather than 'rsync dist/copilot/ → ~/.copilot/'. This
+	@# enforces foreign-file protection: user-authored agents/skills and a user's
+	@# own AGENTS.md are never overwritten, and user config/auth/session files are
+	@# left untouched. render-copilot-agents.sh renders agents (sidecar manifest);
+	@# render-copilot.sh renders skills + AGENTS.md and installs git hooks.
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
+	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills + docs)"
 
 install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never overwrites foreign files)
 	@echo "📦 Installing Claude agents + skills → $(DESTDIR)/.claude/ (marker-aware)..."
@@ -151,13 +155,14 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 # render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
 # Both are called by make install-copilot for complete agent + skill installation.
 
-uninstall-copilot: ## Remove from ~/.copilot/ (managed only)
-	@echo "🧹 Uninstalling from ~/.copilot/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot" --uninstall
+uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.copilot/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot" --uninstall
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.py" "$(REPO_ROOT)/src/agents" "$(DESTDIR)/.copilot/agents" --uninstall
 
-uninstall-claude: ## Remove from ~/.claude/ (managed only)
-	@echo "🧹 Uninstalling from ~/.claude/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude" --uninstall
+uninstall-claude: ## Remove from ~/.claude/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.claude/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude" --uninstall
 
 
 
@@ -169,8 +174,10 @@ render-copilot: ## Generate dist/copilot/ with agents + skills (provider-specifi
 	@echo "🔍 Validating rendered Copilot config..."
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ agents directory not rendered" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/copilot/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/copilot/AGENTS.md" || (echo "❌ AGENTS.md not found" && exit 1)
 	@echo "   ✓ Copilot agents validated"
 	@echo "   ✓ Copilot skills validated"
+	@echo "   ✓ Copilot docs (AGENTS.md) validated"
 	@echo "✅ Copilot rendering complete (see dist/copilot/)"
 
 render-claude: ## Generate dist/claude/ (provider-specific)
@@ -180,7 +187,10 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 	@echo "🔍 Validating rendered Claude config..."
 	@test -d "$(REPO_ROOT)/dist/claude/agents" || (echo "❌ agents directory not rendered" && exit 1)
 	@test -d "$(REPO_ROOT)/dist/claude/skills" || (echo "❌ skills directory not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/claude/AGENTS.md" || (echo "❌ AGENTS.md not rendered" && exit 1)
+	@test -f "$(REPO_ROOT)/dist/claude/CLAUDE.md" || (echo "❌ CLAUDE.md not rendered" && exit 1)
 	@echo "   ✓ Claude config validated"
+	@echo "   ✓ Claude docs (CLAUDE.md + AGENTS.md) validated"
 	@echo "✅ Claude rendering complete (see dist/claude/)"
 
 verify: ## Verify framework structure and tests (agents, skills, dependencies, queue)
@@ -399,29 +409,24 @@ clean: ## Clean build artifacts (no external scripts)
 
 .DEFAULT_GOAL := help
 
-install-pi: render-pi ## Install π.dev harness from dist/pi/ → ~/.pi/
-	@echo "📋 Validating dist/pi/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/pi" || (echo "❌ dist/pi/ missing — run 'make render-pi' first" && exit 1)
-	@test -f "$(REPO_ROOT)/dist/pi/agent/SYSTEM.md" || (echo "❌ dist/pi/agent/SYSTEM.md missing — run 'make render-pi' first" && exit 1)
-	@echo "   ✓ dist/pi/ validated"
-	@echo "📦 Installing from dist/pi/ → $(DESTDIR)/.pi/..."
+install-pi: ## Install π.dev harness → ~/.pi/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing π.dev harness → $(DESTDIR)/.pi/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.pi"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/pi/" "$(DESTDIR)/.pi/"
+	@# Install directly via the marker-aware render script (same model as
+	@# install-claude) rather than 'rsync dist/pi/ → ~/.pi/'. render-pi.sh writes
+	@# its marker and refuses to clobber a foreign (user-managed) install.
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(DESTDIR)/.pi"
 	@echo "✅ Installation to $(DESTDIR)/.pi/ complete"
 
-install-opencode: render-opencode ## Install agents & skills to ~/.config/opencode/
-	@echo "📋 Validating dist/opencode/ is populated..."
-	@test -d "$(REPO_ROOT)/dist/opencode/skills" || (echo "❌ dist/opencode/skills/ missing — run 'make render-opencode' first" && exit 1)
-	@test -d "$(REPO_ROOT)/dist/opencode/agents" || (echo "❌ dist/opencode/agents/ missing — run 'make render-opencode' first" && exit 1)
-	@echo "   ✓ dist/opencode/ validated"
-	@echo "📦 Installing from dist/opencode/ → $(DESTDIR)/.config/opencode/..."
+install-opencode: ## Install agents & skills → ~/.config/opencode/ (marker-aware: never overwrites foreign files)
+	@echo "📦 Installing OpenCode agents + skills + config → $(DESTDIR)/.config/opencode/ (marker-aware)..."
 	@mkdir -p "$(DESTDIR)/.config/opencode"
-	@rsync -a --exclude='.DS_Store' "$(REPO_ROOT)/dist/opencode/" "$(DESTDIR)/.config/opencode/"
-	@if [ "$(DESTDIR)" = "$(HOME)" ] && [ -d "$(REPO_ROOT)/.githooks" ]; then \
-		git -C "$(REPO_ROOT)" config core.hooksPath .githooks; \
-		for hook in "$(REPO_ROOT)"/.githooks/*; do [ -f "$$hook" ] && chmod +x "$$hook"; done; \
-		echo "✅ Git hooks installed (core.hooksPath = .githooks)"; \
-	fi
+	@# Install directly via the marker-aware render script (same model as
+	@# install-claude) rather than 'rsync dist/opencode/ → ~/.config/opencode/'.
+	@# render-opencode.sh enforces foreign-file protection for skills, agents,
+	@# AGENTS.md and opencode.jsonc (a user's own config is never overwritten) and
+	@# installs git hooks.
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(DESTDIR)/.config/opencode"
 	@echo "✅ Installation to $(DESTDIR)/.config/opencode/ complete"
 	@echo ""
 	@echo "ℹ️  To use agents via OpenCode CLI:"
@@ -437,13 +442,13 @@ install-opencode: render-opencode ## Install agents & skills to ~/.config/openco
 uninstall-all: uninstall-copilot uninstall-claude uninstall-pi uninstall-opencode ## Remove from all 4 locations
 	@echo "✅ Uninstall complete"
 
-uninstall-pi: ## Remove from ~/.pi/ (managed only)
-	@echo "🧹 Uninstalling from ~/.pi/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(HOME)/.pi" --uninstall
+uninstall-pi: ## Remove from ~/.pi/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.pi/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-pi.sh" "$(REPO_ROOT)" "$(DESTDIR)/.pi" --uninstall
 
-uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only)
-	@echo "🧹 Uninstalling from ~/.config/opencode/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --uninstall
+uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.config/opencode/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(DESTDIR)/.config/opencode" --uninstall
 
 render-pi: ## Generate dist/pi/ config (π.dev harness)
 	@echo "🔨 Rendering π.dev harness configuration → dist/pi/..."

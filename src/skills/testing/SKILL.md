@@ -1,5 +1,5 @@
 ---
-name: test-sync-validator
+name: testing
 description: Validates test fixture synchronization with code changes. Detects orphaned test expectations, stale fixtures, and missing test coverage for code updates. Use as pre-merge gate to catch test-code drift before regressions reach CI.
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+

@@ -33,8 +33,9 @@ import json
 import shutil
 import argparse
 import time
+import re
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from datetime import datetime
 
 
@@ -64,9 +65,19 @@ except ImportError:
     YAML_AVAILABLE = False
 
 
+# Tier fallback defaults for Pi.dev — updated when Pi.dev adds new tiers.
+# These are the conservative "known stable" IDs; the validator warns when
+# the AGENTS.md model is unrecognised and a fallback is used.
+_PI_DEV_TIER_DEFAULTS = {
+    "haiku":  "claude-haiku-4.5",
+    "sonnet": "claude-sonnet-4.5",
+    "opus":   "claude-opus-4.5",
+}
+
+
 class PiDevRenderer:
     """Renders agentic-engineers config to pi.dev harness"""
-    
+
     # Files that should be rendered
     MANAGED_FILES = [
         "SYSTEM.md",
@@ -75,37 +86,225 @@ class PiDevRenderer:
         "pi.yml",
         "SUB_AGENT_SETUP.md",
     ]
-    
+
     # Files/dirs managed by Pi itself (never touch)
     PI_MANAGED = {
         "auth.json",
         "bin",
         "sessions",
     }
-    
+
     def __init__(self, src_dir: str, dest_dir: str):
         self.src_dir = Path(src_dir)
         self.dest_dir = Path(dest_dir)
         self.agent_dir = self.dest_dir / "agent"
         # Do NOT create directories here — defer to render_all()
+        self._agent_models: Optional[Dict[str, Dict[str, str]]] = None
+
+    def parse_agents_md(self, agents_file: Path) -> Dict[str, Dict[str, str]]:
+        """Parse src/AGENTS.md to extract role -> {model, effort} mapping.
+
+        Returns dict: {'orchestrator': {'model': 'claude-haiku-4.5', 'effort': 'low'}, ...}
+        """
+        result = {}
+
+        if not agents_file.exists():
+            print(f"⚠️  src/AGENTS.md not found at {agents_file}")
+            return result
+
+        try:
+            with open(agents_file, 'r') as f:
+                content = f.read()
+
+            # Find the Primary Assignments table (after "| Role | Model | Effort |" header)
+            # Table format:
+            # | Role | Model | Effort | Multi-Model? | Use When |
+            # |---|---|---|---|---|
+            # | **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; ... |
+
+            lines = content.split('\n')
+            in_table = False
+
+            for line in lines:
+                # Start of table (header with Role | Model | Effort)
+                if '| Role |' in line and '| Model |' in line:
+                    in_table = True
+                    continue
+
+                # Skip separator line
+                if line.strip().startswith('|---'):
+                    continue
+
+                # Parse table rows
+                if in_table and line.strip().startswith('|'):
+                    parts = [p.strip() for p in line.split('|')]
+
+                    # Skip header and empty entries
+                    if len(parts) < 5 or not parts[1]:
+                        continue
+
+                    # Extract fields (1-indexed after leading |)
+                    role_raw = parts[1]  # e.g., "**Orchestrator**"
+                    model = parts[2]      # e.g., "claude-haiku-4.5"
+                    effort = parts[3]     # e.g., "low"
+
+                    # Skip if no model/effort (end of table)
+                    if not model or not effort or effort.startswith('---'):
+                        if in_table and model == '':
+                            in_table = False
+                        continue
+
+                    # Clean up role: remove ** and normalize
+                    role = re.sub(r'\*+', '', role_raw).strip().lower().replace(' ', '-')
+                    model = model.strip()
+                    effort = effort.strip()
+
+                    # Only store valid roles
+                    if role and model and effort:
+                        result[role] = {'model': model, 'effort': effort}
+
+        except Exception as e:
+            print(f"⚠️  Error parsing {agents_file}: {e}")
+
+        return result
+
+    def get_agent_metadata(self, role: str) -> Dict[str, str]:
+        """Get {model, effort} for a role from canonical src/AGENTS.md"""
+        if self._agent_models is None:
+            # Try to find src/AGENTS.md relative to source or repo root
+            agents_file = self.src_dir.parent / "src" / "AGENTS.md"
+            if not agents_file.exists():
+                # Try parent of parent (if in renderer/)
+                agents_file = self.src_dir.parent.parent / "src" / "AGENTS.md"
+
+            self._agent_models = self.parse_agents_md(agents_file)
+
+        return self._agent_models.get(role, {})
     
+    def resolve_pi_model(self, raw_model: str) -> str:
+        """Resolve a canonical model ID to a Pi.dev-compatible model ID.
+
+        Pi.dev uses dotted version format (claude-haiku-4.5).
+        Falls back to tier default when the exact model isn't recognised.
+        """
+        if not raw_model:
+            return raw_model
+
+        # Normalise: convert hyphen-separated version numbers to dotted format.
+        # claude-haiku-4-5 → claude-haiku-4.5
+        normalised = re.sub(r'-(\d+)-(\d+)$', r'-\1.\2', raw_model)
+
+        # Check against known Pi.dev model IDs (those in the tier defaults).
+        known_ids = set(_PI_DEV_TIER_DEFAULTS.values())
+        if normalised in known_ids:
+            return normalised
+
+        # Fallback: detect tier and use tier default.
+        tier = None
+        for t in ("haiku", "sonnet", "opus"):
+            if t in normalised:
+                tier = t
+                break
+
+        if tier and normalised not in known_ids:
+            fallback = _PI_DEV_TIER_DEFAULTS[tier]
+            print(
+                f"  Warning: Pi.dev: model '{normalised}' not in known set"
+                f" -- using tier fallback '{fallback}'",
+                file=sys.stderr,
+            )
+            return fallback
+
+        # No tier match: return as-is and let Pi.dev reject it at runtime.
+        return normalised
+
+    def substitute_models(self, content: str, filename: str) -> str:
+        """Substitute hardcoded models with canonical values from src/AGENTS.md.
+
+        For pi.yml: replaces model/effort values in agent definitions.
+        For settings.json: replaces defaultModel with a canonical model.
+        """
+        if filename == "pi.yml":
+            # Pattern: parse agents section and replace model/effort values
+            # Each agent block: id: "role-name", then model: and effort: lines
+            lines = content.split('\n')
+            result_lines = []
+            current_role = None
+
+            for line in lines:
+                # Track current role context from id: field
+                if 'id:' in line and '"' in line:
+                    match = re.search(r'id:\s*"([a-z-]+)"', line)
+                    if match:
+                        current_role = match.group(1)
+
+                # Substitute model in agent blocks
+                if current_role and 'model:' in line:
+                    metadata = self.get_agent_metadata(current_role)
+                    if metadata and 'model' in metadata:
+                        # Resolve to Pi.dev-compatible model ID (validated + fallback)
+                        resolved_model = self.resolve_pi_model(metadata['model'])
+                        line = re.sub(
+                            r'model:\s*"[^"]*"',
+                            f'model: "{resolved_model}"',
+                            line
+                        )
+
+                # Substitute effort in agent blocks
+                if current_role and 'effort:' in line:
+                    metadata = self.get_agent_metadata(current_role)
+                    if metadata and 'effort' in metadata:
+                        # Replace with canonical effort from AGENTS.md
+                        line = re.sub(
+                            r'effort:\s*"[^"]*"',
+                            f'effort: "{metadata["effort"]}"',
+                            line
+                        )
+
+                result_lines.append(line)
+
+            return '\n'.join(result_lines)
+
+        elif filename == "settings.json":
+            # For settings.json, update defaultModel to orchestrator's model
+            try:
+                config = json.loads(content)
+
+                # Use orchestrator's model as the default (entry point role)
+                orch_metadata = self.get_agent_metadata('orchestrator')
+                if orch_metadata and 'model' in orch_metadata:
+                    # Resolve to Pi.dev-compatible model ID (validated + fallback)
+                    config['defaultModel'] = self.resolve_pi_model(orch_metadata['model'])
+
+                return json.dumps(config, indent=2)
+            except (json.JSONDecodeError, Exception) as e:
+                # If JSON parse fails, return original content
+                print(f"⚠️  Could not parse {filename} as JSON: {e}")
+                return content
+
+        return content
+
     def copy_file(self, src_name: str, dest_name: str = None) -> bool:
-        """Copy a file from source to destination"""
+        """Copy a file from source to destination, substituting models for pi.yml/settings.json"""
         dest_name = dest_name or src_name
         src_file = self.src_dir / src_name
         dest_file = self.agent_dir / dest_name
-        
+
         if not src_file.exists():
             print(f"❌ Source not found: {src_file}")
             return False
-        
+
         try:
             with open(src_file, 'r') as f:
                 content = f.read()
-            
+
+            # Substitute canonical models for pi.yml and settings.json
+            if src_name in ("pi.yml", "settings.json"):
+                content = self.substitute_models(content, src_name)
+
             with open(dest_file, 'w') as f:
                 f.write(content)
-            
+
             print(f"✅ Rendered: {src_name} → ~/.pi/agent/{dest_name}")
             return True
         except Exception as e:

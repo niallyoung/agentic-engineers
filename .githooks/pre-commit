@@ -694,8 +694,12 @@ fi
 
 QUEUE_ERRORS=0
 
-# Get all staged files
+# Get all staged files (Python, JSON, YAML, and markdown under src/)
 STAGED_QUEUE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|json|yaml|yml|jsonc)$' || true)
+# Also scan markdown files under src/
+STAGED_MD_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^src/.*\.md$' || true)
+# Combine all files to check
+STAGED_QUEUE_FILES="$STAGED_QUEUE_FILES $STAGED_MD_FILES"
 
 for file in $STAGED_QUEUE_FILES; do
     [ -f "$file" ] || continue
@@ -744,18 +748,31 @@ fi
 # ─── End: Queue Path Centralization Enforcement ────────────────────────────────
 
 # ─── DELEGATE/HANDBACK Protocol Validation ─────────────────────────────────────
-# Validates DELEGATE and HANDBACK YAML files committed to ensure protocol compliance:
-#   - DELEGATE: requires task_id (YYYY-MM-DD-kebab format), valid role, plan field
-#   - HANDBACK: requires task_id, valid status, quality_score, tokens_in
-#   - Both: detect hardcoded secrets/passwords
-#   - Both: support .yaml and .yml extensions
+# Validates DELEGATE and HANDBACK YAML files committed to ensure protocol compliance.
+#
+# Canonical authority: docs/specs/protocol-core-v1.0.yaml
+#                      src/skills/protocol-validator/scripts/protocol_validator.py
+#
+# DELEGATE required core fields (canonical schema):
+#   - task_id: kebab-case, 3-50 chars (^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$)
+#   - agent:   hyphenated role name (e.g. senior-engineer, NOT senior_engineer)
+#   - scope:   string, >=15 words
+#   - plan:    non-empty list
+#   - success_criteria: non-empty list
+#   - context: string or array
+#   - skill:   string
+#
+# HANDBACK required core fields (canonical schema):
+#   - task_id: string
+#   - status:  success | failure | partial | blocked | escalate
+#   - output:  any value
+#   - metrics: object with quality (0.0-1.0), tokens (int), cost (float), duration_seconds (float)
+#
+# Discriminator field: handoff_type: DELEGATE | HANDBACK (canonical)
+#   Backward compat: type: DELEGATE | HANDBACK also accepted, but produces a deprecation WARNING.
+#   Files using type: will be validated normally; committer is warned to migrate to handoff_type:.
 #
 # Bypass: BYPASS_HOOK_VALIDATION=true (for emergency) or SKIP_HOOKS=1
-#
-# NOTE: This block is the single source of truth for protocol validation and is
-# installed verbatim by CI (cp .githooks/pre-commit .git/hooks/pre-commit). It
-# previously existed ONLY in a stale local .git/hooks/pre-commit, which caused the
-# tests/test_git_hooks.py::TestLegacyPreCommitHook suite to fail in CI.
 
 # Local message helper for protocol violations. Echoes to stdout (tests assert on
 # stdout, e.g. "status" in result.stdout) and increments PROTOCOL_ERRORS via the
@@ -770,6 +787,44 @@ echo "🔐 Validating DELEGATE/HANDBACK protocol files..."
 
 PROTOCOL_ERRORS=0
 
+# ── Inline self-test: backward-compat detection for type: vs handoff_type: ──────
+# This test runs every time the hook runs and verifies that:
+#   1. Files using type: DELEGATE are detected (backward compat) and produce a warning
+#   2. Files using handoff_type: DELEGATE are detected and pass through to validation
+#   3. Files with neither field are correctly skipped
+# If this self-test fails the hook aborts immediately before checking real staged files.
+_protocol_selftest() {
+  local old_fmt new_fmt neither_fmt
+  old_fmt="task_id: selftest-old\ntype: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one\n"
+  new_fmt="task_id: selftest-new\nhandoff_type: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one\n"
+  neither_fmt="task_id: selftest-neither\nsome_key: value\n"
+
+  # Old format (type:) must be detected as a protocol file
+  if ! printf "%b" "$old_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
+    echo "❌ protocol selftest FAILED: old format (type:) not detected" >&2
+    return 1
+  fi
+
+  # New format (handoff_type:) must be detected as a protocol file
+  if ! printf "%b" "$new_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
+    echo "❌ protocol selftest FAILED: new format (handoff_type:) not detected" >&2
+    return 1
+  fi
+
+  # Neither format must NOT be detected as a protocol file
+  if printf "%b" "$neither_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
+    echo "❌ protocol selftest FAILED: non-protocol file incorrectly detected" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+if ! _protocol_selftest; then
+  echo "❌ pre-commit: DELEGATE/HANDBACK protocol self-test failed — hook is broken, aborting"
+  exit 1
+fi
+
 # Check bypass flag first
 if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
   echo "⚠️  pre-commit: BYPASS_HOOK_VALIDATION=true — skipping DELEGATE/HANDBACK validation" >&2
@@ -783,19 +838,36 @@ else
     # Get file content from staging area
     file_content=$(git show ":$file" 2>/dev/null) || continue
 
-    # Skip if not a DELEGATE or HANDBACK file
-    if ! echo "$file_content" | grep -q "^handoff_type:\s*"; then
+    # Skip if not a DELEGATE or HANDBACK file (accept both discriminator forms)
+    if ! echo "$file_content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
       continue
     fi
 
-    handoff_type=$(echo "$file_content" | grep "^handoff_type:" | head -1 | sed 's/^handoff_type:\s*//;s/\s*$//' | xargs)
+    # Detect which discriminator field is used. Warn on deprecated type: form.
+    uses_deprecated_type=false
+    if echo "$file_content" | grep -qE "^type:\s*(DELEGATE|HANDBACK)"; then
+      if ! echo "$file_content" | grep -qE "^handoff_type:\s*"; then
+        uses_deprecated_type=true
+        warn "$file uses deprecated discriminator 'type:' — migrate to 'handoff_type:' (will become an error in next major version)"
+      fi
+    fi
+
+    # Extract the handoff type value from whichever discriminator is present
+    # Use awk for portable field extraction (avoids macOS sed \s issue)
+    if echo "$file_content" | grep -qE "^handoff_type:[[:space:]]*"; then
+      handoff_type=$(echo "$file_content" | awk '/^handoff_type:/{print $2; exit}')
+    else
+      handoff_type=$(echo "$file_content" | awk '/^type:/{print $2; exit}')
+    fi
 
     case "$handoff_type" in
       DELEGATE)
-        # Validate DELEGATE protocol
-        task_id=$(echo "$file_content" | grep "^task_id:" | head -1 | sed 's/^task_id:\s*//;s/\s*$//' | xargs || true)
-        role=$(echo "$file_content" | grep "^role:" | head -1 | sed 's/^role:\s*//;s/\s*$//' | xargs || true)
+        # Validate DELEGATE protocol (canonical schema: docs/specs/protocol-core-v1.0.yaml)
+        task_id=$(echo "$file_content" | awk '/^task_id:/{print $2; exit}' || true)
+        agent=$(echo "$file_content" | awk '/^agent:/{print $2; exit}' || true)
         plan=$(echo "$file_content" | grep "^plan:" | head -1 || true)
+        scope=$(echo "$file_content" | awk '/^scope:/{print $2; exit}' || true)
+        success_criteria=$(echo "$file_content" | grep "^success_criteria:" | head -1 || true)
 
         # Check for secret patterns
         if echo "$file_content" | grep -qiE "^\s*(password|api_key|secret|token|credential):\s*"; then
@@ -804,47 +876,61 @@ else
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
 
-        # Check task_id presence
+        # Check task_id (canonical: kebab-case, 3-50 chars, ^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$)
         if [ -z "$task_id" ]; then
           pfail "DELEGATE $file: missing required field 'task_id'"
-          pfail "   → Format: YYYY-MM-DD-kebab-case (e.g., 2026-05-16-impl-feature-x)"
+          pfail "   → Format: kebab-case, 3-50 chars (e.g., my-task-123 or 2026-05-16-impl-feature)"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        elif ! echo "$task_id" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$'; then
+        elif ! echo "$task_id" | grep -qE '^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$'; then
           pfail "DELEGATE $file: invalid task_id format '$task_id'"
-          pfail "   → Must be: YYYY-MM-DD-kebab-case (e.g., 2026-05-16-impl-feature)"
+          pfail "   → Must be: kebab-case, 3-50 chars (e.g., my-task-123)"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
 
-        # Check role validity
-        if [ -z "$role" ]; then
-          pfail "DELEGATE $file: missing required field 'role'"
+        # Check agent validity (canonical: hyphenated names, per VALID_AGENTS in protocol_validator.py)
+        if [ -z "$agent" ]; then
+          pfail "DELEGATE $file: missing required field 'agent'"
+          pfail "   → Valid agents: engineer, senior-engineer, lead-engineer, principal-engineer,"
+          pfail "                   security-engineer, quality-engineer, model-engineer, orchestrator"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        elif ! echo "$role" | grep -qE '^(engineer|senior_engineer|lead_engineer|principal_engineer|security_engineer|quality_engineer|model_engineer)$'; then
-          pfail "DELEGATE $file: invalid role '$role'"
-          pfail "   → Valid roles: engineer, senior_engineer, lead_engineer, principal_engineer,"
-          pfail "                  security_engineer, quality_engineer, model_engineer"
+        elif ! echo "$agent" | grep -qE '^(orchestrator|engineer|senior-engineer|lead-engineer|principal-engineer|security-engineer|quality-engineer|model-engineer)$'; then
+          pfail "DELEGATE $file: invalid agent '$agent'"
+          pfail "   → Valid agents: engineer, senior-engineer, lead-engineer, principal-engineer,"
+          pfail "                   security-engineer, quality-engineer, model-engineer, orchestrator"
+          pfail "   → Note: use hyphens not underscores (senior-engineer, not senior_engineer)"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
 
-        # Check plan presence
+        # Check plan presence (must be a non-empty list)
         if [ -z "$plan" ]; then
           pfail "DELEGATE $file: missing required field 'plan'"
-          pfail "   → plan must be a non-empty list"
+          pfail "   → plan must be a non-empty list (>= 2 items)"
+          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        fi
+
+        # Check success_criteria presence
+        if [ -z "$success_criteria" ]; then
+          pfail "DELEGATE $file: missing required field 'success_criteria'"
+          pfail "   → success_criteria must be a non-empty list"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
         ;;
 
       HANDBACK)
-        # Validate HANDBACK protocol
-        task_id=$(echo "$file_content" | grep "^task_id:" | head -1 | sed 's/^task_id:\s*//;s/\s*$//' | xargs || true)
-        status=$(echo "$file_content" | grep "^status:" | head -1 | sed 's/^status:\s*//;s/\s*$//' | xargs || true)
-        quality_score=$(echo "$file_content" | grep "^quality_score:" | head -1 | sed 's/^quality_score:\s*//;s/\s*$//' | xargs || true)
-        tokens_in=$(echo "$file_content" | grep "^tokens_in:" | head -1 | sed 's/^tokens_in:\s*//;s/\s*$//' | xargs || true)
+        # Validate HANDBACK protocol (canonical schema: docs/specs/protocol-core-v1.0.yaml)
+        task_id=$(echo "$file_content" | awk '/^task_id:/{print $2; exit}' || true)
+        status=$(echo "$file_content" | awk '/^status:/{print $2; exit}' || true)
+        # metrics: is a block key — check for its presence and required sub-fields
+        metrics_block=$(echo "$file_content" | grep "^metrics:" | head -1 || true)
+        metrics_quality=$(echo "$file_content" | awk '/^[[:space:]]+quality:/{print $2; exit}' || true)
+        metrics_tokens=$(echo "$file_content" | awk '/^[[:space:]]+tokens:/{print $2; exit}' || true)
+        metrics_cost=$(echo "$file_content" | awk '/^[[:space:]]+cost:/{print $2; exit}' || true)
+        metrics_duration=$(echo "$file_content" | awk '/^[[:space:]]+duration_seconds:/{print $2; exit}' || true)
 
         # Check for secret patterns
         if echo "$file_content" | grep -qiE "^\s*(password|api_key|secret|token|credential):\s*"; then
           pfail "🔓 SECURITY: HANDBACK file $file contains secret field(s) — remove before committing"
-          pfail "   → Use notes field to reference, never hardcode"
+          pfail "   → Use output/flags fields to reference, never hardcode"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
 
@@ -854,29 +940,52 @@ else
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
 
-        # Check status validity
+        # Check status validity (canonical: success|failure|partial|blocked|escalate)
         if [ -z "$status" ]; then
           pfail "HANDBACK $file: missing required field 'status'"
-          pfail "   → Valid statuses: complete, failed, partial, blocked"
+          pfail "   → Valid statuses: success, failure, partial, blocked, escalate"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        elif ! echo "$status" | grep -qE '^(complete|failed|partial|blocked)$'; then
+        elif ! echo "$status" | grep -qE '^(success|failure|partial|blocked|escalate)$'; then
           pfail "HANDBACK $file: invalid status '$status'"
-          pfail "   → Valid statuses: complete, failed, partial, blocked"
+          pfail "   → Valid statuses: success, failure, partial, blocked, escalate"
+          pfail "   → Note: 'complete' and 'failed' are NOT valid (use 'success' and 'failure')"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
         fi
 
-        # Check quality_score
-        if [ -z "$quality_score" ]; then
-          pfail "HANDBACK $file: missing required field 'quality_score'"
-          pfail "   → Must be numeric (0-100)"
+        # Check metrics block (canonical: nested object with quality, tokens, cost, duration_seconds)
+        if [ -z "$metrics_block" ]; then
+          pfail "HANDBACK $file: missing required field 'metrics'"
+          pfail "   → metrics must be an object with: quality (0.0-1.0), tokens (int),"
+          pfail "     cost (float), duration_seconds (float)"
+          pfail "   → Example:"
+          pfail "     metrics:"
+          pfail "       quality: 0.92"
+          pfail "       tokens: 5000"
+          pfail "       cost: 0.09"
+          pfail "       duration_seconds: 42"
           PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check tokens_in
-        if [ -z "$tokens_in" ]; then
-          pfail "HANDBACK $file: missing required field 'tokens_in'"
-          pfail "   → Must be numeric"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+        else
+          # Check required sub-fields within metrics
+          if [ -z "$metrics_quality" ]; then
+            pfail "HANDBACK $file: missing required field 'metrics.quality'"
+            pfail "   → Must be a float 0.0–1.0"
+            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+          fi
+          if [ -z "$metrics_tokens" ]; then
+            pfail "HANDBACK $file: missing required field 'metrics.tokens'"
+            pfail "   → Must be a non-negative integer"
+            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+          fi
+          if [ -z "$metrics_cost" ]; then
+            pfail "HANDBACK $file: missing required field 'metrics.cost'"
+            pfail "   → Must be a non-negative float (USD)"
+            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+          fi
+          if [ -z "$metrics_duration" ]; then
+            pfail "HANDBACK $file: missing required field 'metrics.duration_seconds'"
+            pfail "   → Must be a non-negative float (wall-clock seconds)"
+            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
+          fi
         fi
         ;;
     esac
@@ -885,15 +994,16 @@ else
   if [ "$PROTOCOL_ERRORS" -gt 0 ]; then
     echo ""
     echo "❌ pre-commit: $PROTOCOL_ERRORS DELEGATE/HANDBACK validation error(s) found"
+    echo "   Canonical schema: docs/specs/protocol-core-v1.0.yaml"
     echo "   Emergency bypass (document reason in commit msg):"
     echo "   → BYPASS_HOOK_VALIDATION=true git commit (bypasses only DELEGATE/HANDBACK validation)"
     echo "   → SKIP_HOOKS=1 git commit (bypasses all checks)"
     ERRORS=$((ERRORS + PROTOCOL_ERRORS))
   else
     # Report when DELEGATE/HANDBACK files were validated successfully
-    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true | while read -r f; do
+    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | while read -r f; do
       content=$(git show ":$f" 2>/dev/null)
-      if echo "$content" | grep -q "^handoff_type:"; then
+      if echo "$content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
         echo "1"
       fi
     done | wc -l)

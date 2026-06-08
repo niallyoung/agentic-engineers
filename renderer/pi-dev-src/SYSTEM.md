@@ -81,12 +81,12 @@ You are integrated into the **pi.dev coding agent harness**, giving you access t
 |------|-------|--------|----------|
 | **Orchestrator** | claude-haiku-4.5 | low | All entry points; routing decisions; task management |
 | **Engineer** | claude-haiku-4.5 | high | Well-scoped tasks with pre-written plans |
-| **Senior Engineer** | claude-sonnet-4-20250514 | high | Complex coding; root-cause diagnosis |
-| **Lead Engineer** | claude-sonnet-4-20250514 | high | Code review; quality decisions; architectural guidance |
-| **Quality Engineer** | claude-sonnet-4-20250514 | medium | Post-implementation quality gate; model assessment |
-| **Principal Engineer** | claude-opus-4-20250514 | high | Cross-service architecture; design decisions |
-| **Security Engineer** | claude-opus-4-20250514 | max | Security analysis; threat modeling; vulnerability audits |
-| **Model Engineer** | claude-sonnet-4-20250514 | high | Cost optimization; model/effort recommendations |
+| **Senior Engineer** | claude-sonnet-4.5 | high | Complex coding; root-cause diagnosis |
+| **Lead Engineer** | claude-sonnet-4.6 | high | Code review; quality decisions; architectural guidance |
+| **Quality Engineer** | claude-sonnet-4.6 | medium | Post-implementation quality gate; model assessment |
+| **Principal Engineer** | claude-opus-4.6 | high | Cross-service architecture; design decisions |
+| **Security Engineer** | claude-opus-4.8 | max | Security analysis; threat modeling; vulnerability audits |
+| **Model Engineer** | claude-sonnet-4.5 | high | Cost optimization; model/effort recommendations |
 
 ## Communication Patterns
 

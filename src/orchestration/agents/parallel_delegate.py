@@ -610,17 +610,30 @@ class ParallelDelegationManager:
     """
     Orchestrates the full parallel delegation workflow.
 
+    The ``queue_writer`` passed to ``dispatch_tier()`` and
+    ``dispatch_consolidation()`` MUST be backed by
+    ``QueueOperations.enqueue()`` from the ``queue-management`` skill.
+    Direct filesystem writes to queue subdirectories are forbidden.
+
     Usage::
+
+        from skills.queue_management.scripts.queue_ops import QueueOperations
+
+        class EnqueueWriter:
+            def __init__(self, ops: QueueOperations):
+                self._ops = ops
+            def write(self, task_id: str, delegate_dict: dict) -> None:
+                self._ops.enqueue(delegate_dict)
+
+        ops = QueueOperations(session_id=session_id)
+        writer = EnqueueWriter(ops)
 
         mgr = ParallelDelegationManager(config_path="decomposition_config.yaml")
         if mgr.should_parallelize(delegate):
             plan = mgr.plan(delegate)
-            # Dispatch tier-0 sub-delegates immediately
-            for sd in plan.tier_groups[0]:
-                queue.write(sd.to_delegate_dict())
+            mgr.dispatch_tier(plan, tier=0, queue_writer=writer)
             # ... wait for tier-0, then dispatch tier-1, etc.
-            # Finally dispatch consolidation
-            queue.write(plan.consolidation_delegate.to_delegate_dict())
+            mgr.dispatch_consolidation(plan, queue_writer=writer)
     """
 
     def __init__(self, config_path: Optional[str] = None):
@@ -663,6 +676,8 @@ class ParallelDelegationManager:
             plan:         ParallelPlan.
             tier:         Execution tier to dispatch.
             queue_writer: Object with a ``write(task_id, delegate_dict)`` method.
+                          MUST be backed by ``QueueOperations.enqueue()`` — direct
+                          filesystem writes to queue dirs are forbidden.
 
         Returns:
             List of task_ids dispatched.
@@ -685,6 +700,8 @@ class ParallelDelegationManager:
         Args:
             plan:          ParallelPlan.
             queue_writer:  Object with a ``write(task_id, delegate_dict)`` method.
+                           MUST be backed by ``QueueOperations.enqueue()`` — direct
+                           filesystem writes to queue dirs are forbidden.
             sub_handbacks: Optional completed sub-task HANDBACKs for enrichment.
 
         Returns:

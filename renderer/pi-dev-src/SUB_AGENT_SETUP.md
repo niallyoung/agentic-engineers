@@ -34,7 +34,7 @@ These features may have no effect.
 Unlike the OpenCode and Claude Code harnesses, the π.dev renderer does **not** transform
 `src/agents/` or `src/skills/`. It copies a manually-maintained set of files verbatim.
 This means:
-- Source files must be manually kept in sync with `docs/AGENTS.md`
+- Source files must be manually kept in sync with `src/AGENTS.md`
 - Model IDs are set directly in `settings.json` and `pi.yml`
 
 ### 3. Hardcoded Paths in This Document
@@ -190,7 +190,7 @@ The routing rules in `pi.yml` are speculative. If they don't work:
 
 ### Configuration sync issues
 
-If you update `docs/AGENTS.md` in the main repo:
+If you update `src/AGENTS.md` in the main repo:
 1. Update `renderer/pi-dev-src/AGENTS.md` to match
 2. Update `renderer/pi-dev-src/SYSTEM.md` with new model IDs
 3. Update `renderer/pi-dev-src/pi.yml` with new model IDs
@@ -237,5 +237,5 @@ Before marking tasks complete, verify:
 - **Agent Roles**: `~/.pi/agent/AGENTS.md`
 - **Configuration**: `~/.pi/agent/pi.yml`
 - **Settings**: `~/.pi/agent/settings.json`
-- **Canonical Roles**: `docs/AGENTS.md` in the agentic-engineers repo
+- **Canonical Roles**: `src/AGENTS.md` in the agentic-engineers repo
 - **Install Guide**: `renderer/PI-DEV-RENDERER.md`
