@@ -44,15 +44,23 @@ DOC_SENTINEL='<!-- managed by agentic-engineers render-claude.sh'
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-# Map "claude-haiku-4.5" → "haiku", "claude-sonnet-4.6" → "sonnet", "claude-opus-4.7" → "opus"
-# Claude Code accepts short tier names rather than fully-qualified provider/model IDs.
-# Note: does not distinguish between minor versions (e.g., sonnet-4-5 vs sonnet-4-6).
+# Map canonical model ID → Claude Code tier name or full ID fallback.
+# Claude Code accepts short tier aliases (haiku/sonnet/opus) and resolves
+# them to the latest available version in that tier — inherently version-agnostic.
+# Unknown tiers: emit the full hyphenated model ID so the agent still gets a model
+# rather than silently inheriting the session default.
 map_model() {
-	case "$1" in
-		*haiku*) echo "haiku" ;;
+	local raw="$1"
+	case "$raw" in
+		*haiku*)  echo "haiku"  ;;
 		*sonnet*) echo "sonnet" ;;
-		*opus*) echo "opus" ;;
-		*) echo "" ;;
+		*opus*)   echo "opus"   ;;
+		"")       echo ""       ;;
+		*)
+			# Unknown tier: normalise dots→hyphens and emit the full ID.
+			# Claude Code accepts fully-qualified model IDs when no tier alias matches.
+			printf '%s' "$raw" | sed 's/\./-/g'
+			;;
 	esac
 }
 

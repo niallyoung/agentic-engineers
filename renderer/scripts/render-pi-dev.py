@@ -65,6 +65,16 @@ except ImportError:
     YAML_AVAILABLE = False
 
 
+# Tier fallback defaults for Pi.dev — updated when Pi.dev adds new tiers.
+# These are the conservative "known stable" IDs; the validator warns when
+# the AGENTS.md model is unrecognised and a fallback is used.
+_PI_DEV_TIER_DEFAULTS = {
+    "haiku":  "claude-haiku-4.5",
+    "sonnet": "claude-sonnet-4.5",
+    "opus":   "claude-opus-4.5",
+}
+
+
 class PiDevRenderer:
     """Renders agentic-engineers config to pi.dev harness"""
 
@@ -171,6 +181,43 @@ class PiDevRenderer:
 
         return self._agent_models.get(role, {})
     
+    def resolve_pi_model(self, raw_model: str) -> str:
+        """Resolve a canonical model ID to a Pi.dev-compatible model ID.
+
+        Pi.dev uses dotted version format (claude-haiku-4.5).
+        Falls back to tier default when the exact model isn't recognised.
+        """
+        if not raw_model:
+            return raw_model
+
+        # Normalise: convert hyphen-separated version numbers to dotted format.
+        # claude-haiku-4-5 → claude-haiku-4.5
+        normalised = re.sub(r'-(\d+)-(\d+)$', r'-\1.\2', raw_model)
+
+        # Check against known Pi.dev model IDs (those in the tier defaults).
+        known_ids = set(_PI_DEV_TIER_DEFAULTS.values())
+        if normalised in known_ids:
+            return normalised
+
+        # Fallback: detect tier and use tier default.
+        tier = None
+        for t in ("haiku", "sonnet", "opus"):
+            if t in normalised:
+                tier = t
+                break
+
+        if tier and normalised not in known_ids:
+            fallback = _PI_DEV_TIER_DEFAULTS[tier]
+            print(
+                f"  Warning: Pi.dev: model '{normalised}' not in known set"
+                f" -- using tier fallback '{fallback}'",
+                file=sys.stderr,
+            )
+            return fallback
+
+        # No tier match: return as-is and let Pi.dev reject it at runtime.
+        return normalised
+
     def substitute_models(self, content: str, filename: str) -> str:
         """Substitute hardcoded models with canonical values from src/AGENTS.md.
 
@@ -195,10 +242,11 @@ class PiDevRenderer:
                 if current_role and 'model:' in line:
                     metadata = self.get_agent_metadata(current_role)
                     if metadata and 'model' in metadata:
-                        # Replace with canonical model from AGENTS.md
+                        # Resolve to Pi.dev-compatible model ID (validated + fallback)
+                        resolved_model = self.resolve_pi_model(metadata['model'])
                         line = re.sub(
                             r'model:\s*"[^"]*"',
-                            f'model: "{metadata["model"]}"',
+                            f'model: "{resolved_model}"',
                             line
                         )
 
@@ -225,7 +273,8 @@ class PiDevRenderer:
                 # Use orchestrator's model as the default (entry point role)
                 orch_metadata = self.get_agent_metadata('orchestrator')
                 if orch_metadata and 'model' in orch_metadata:
-                    config['defaultModel'] = orch_metadata['model']
+                    # Resolve to Pi.dev-compatible model ID (validated + fallback)
+                    config['defaultModel'] = self.resolve_pi_model(orch_metadata['model'])
 
                 return json.dumps(config, indent=2)
             except (json.JSONDecodeError, Exception) as e:
