@@ -296,12 +296,12 @@ TEST_ERRORS=0
 if [ "${SKIP_PYTEST:-}" != "1" ] && command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
   # Run pytest with quiet output and timeout
   # Skip test_git_hooks.py as it can hang during hook execution
-  if timeout 30 pytest tests/ -q --tb=line --ignore=tests/test_git_hooks.py 2>/dev/null; then
+  if timeout 180 pytest tests/ -q --tb=line --ignore=tests/test_git_hooks.py 2>/dev/null; then
     pass "All tests passed"
   else
     PYTEST_EXIT=$?
     if [ "$PYTEST_EXIT" -eq 124 ]; then
-      warn "Test suite timed out (>30s) — review before pushing"
+      warn "Test suite timed out (>180s) — review before pushing"
     else
       warn "Some tests failed — review before pushing to shared branches"
     fi

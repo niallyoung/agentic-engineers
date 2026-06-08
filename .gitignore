@@ -88,6 +88,8 @@ node_modules/
 # Uncomment the line below to gitignore the active TODO.md.
 # By default TODO.md IS committed so it can be the resume point across sessions.
 # /TODO.md
+# Session planning documents (working files, not source)
+/PLAN.md
 # ============================================================================
 # AGENTIC-ENGINEERS RUNTIME ARTIFACTS (DO NOT COMMIT)
 # ============================================================================
