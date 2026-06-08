@@ -9,6 +9,7 @@
 ## Philosophy
 
 - **Queue-first** — every task enters `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
+- **enqueue() is mandatory** — ALL DELEGATEs and HANDBACKs MUST be created via `QueueOperations.enqueue()` (the `queue-management` skill). Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
 - **Reduced autonomy** — agents pause when the queue is empty; they do NOT invent work
 - **Start cheap, escalate deliberately** — route to the cheapest capable model; upgrade only when blocked
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
@@ -47,6 +48,81 @@ Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
 ```
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
+
+---
+
+## Orchestrator Entry Point
+
+**All work flows through the Orchestrator.** The Orchestrator is your default handler and never performs implementation work itself—it routes, coordinates, and applies Model Engineer recommendations.
+
+```
+User request / External trigger
+  └─► Orchestrator (haiku — cheap routing)
+        ├─► Issues DELEGATE to the correct specialist
+        ├─► Specialist performs work and returns HANDBACK
+        └─► Orchestrator interprets result and coordinates next steps
+```
+
+**Why Orchestrator-first?**
+- **Auditability** — all work is tracked as DELEGATE/HANDBACK blocks in the queue
+- **Cost discipline** — starts cheap (Haiku), escalates only when needed
+- **Protocol enforcement** — routing rules and model selection are consistent
+- **Parallel execution** — independent tasks fan out simultaneously
+
+Direct `@agent-name` invocation is available as an advanced escape hatch but skips protocol enforcement and audit trails. The canonical flow always goes through Orchestrator.
+
+---
+
+## Canonical DELEGATE/HANDBACK Schema
+
+All work follows the DELEGATE/HANDBACK protocol. DELEGATEs are enqueued by the Orchestrator, processed by specialist agents, and HANDBACKs are returned with metrics.
+
+### DELEGATE Format (Request)
+
+```yaml
+---
+handoff_type: DELEGATE
+agent: engineer                    # target specialist role (hyphenated)
+task_id: unique-identifier
+scope: "Clear, bounded description of what will be done (≥15 words)"
+context:
+  - "Relevant file: src/module.py (lines 45-67)"
+  - "Error message or requirement summary"
+plan:
+  - "Step 1: Read and understand requirement"
+  - "Step 2: Identify affected files"
+  - "Step 3: Implement feature"
+  - "Step 4: Run tests"
+success_criteria:
+  - "All tests pass"
+  - "Code follows style guide"
+  - "No linter warnings"
+estimated_tokens: 1500
+---
+```
+
+### HANDBACK Format (Response)
+
+```yaml
+---
+handoff_type: HANDBACK
+task_id: unique-identifier
+status: success                    # success | failure | partial | blocked | escalate
+deliverables:
+  - "Modified: src/module.py (feature implemented)"
+  - "Added: tests/test_feature.py (100% coverage)"
+tests:
+  - "All unit tests: PASS (47 tests)"
+  - "Code coverage: 92%"
+tokens:
+  used: 1200
+  estimated: 1500
+  efficiency: 0.80
+quality_score: 95                  # 0-100
+confidence: 0.95                   # 0.0-1.0
+notes: "Straightforward implementation, all edge cases covered."
+---
+```
 
 ---
 
@@ -100,17 +176,40 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 **Purpose:** Entry point for all user requests. Routes work via the decision tree. Never implements.
 
 **Capabilities:**
-- Parse incoming requests and create DELEGATE blocks
+- Parse incoming requests and create DELEGATE blocks **via `queue-management` skill (`enqueue()`)**
 - Route tasks to the correct role using routing rules above
 - Fan out parallel DELEGATEs when tasks are independent
 - Poll `~/.agentic-engineers/{session-id}/{harness}/queue/done/` for HANDBACKs and update `TODO.md`
 - Re-delegate ESCALATION packets at the higher tier
 - Summarise squad status as tables (not prose)
 
+**MANDATORY — Creating DELEGATEs:**
+All DELEGATEs MUST be created via `QueueOperations.enqueue()` from the `queue-management` skill.  
+Direct file writes to queue directories are forbidden and bypass schema validation.
+
+```python
+# Correct — use enqueue() via queue-management skill
+from skills.queue_management.scripts.queue_ops import QueueOperations
+ops = QueueOperations(session_id=session_id)
+ops.enqueue({
+    "handoff_type": "DELEGATE",
+    "task_id": "my-task-001",
+    "agent": "engineer",         # NOT "role": "Engineer"
+    "scope": "...",
+    "plan": ["step 1 ...", "step 2 ..."],
+    "context": "...",
+    "success_criteria": ["criterion 1"],
+})
+
+# FORBIDDEN — never write directly to queue dirs
+# open("~/.agentic-engineers/.../incoming/my-task.json", "w")  # NO
+```
+
 **Boundaries — Orchestrator MUST NOT:**
 - Write code, edit files, or run tests
 - Make architecture or security decisions
 - Hold state across sessions (use `TODO.md` and the queue)
+- Write DELEGATE or HANDBACK files directly to the queue directory (always use `enqueue()`)
 
 **Escalation triggers:** None — the Orchestrator is the top of the routing chain. If the user's request requires human input (security/compliance critical, budget exceeded), pause and surface to the user.
 
@@ -206,7 +305,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 - Validate acceptance criteria against delivered changes
 - Run `CONFIG=dev make lint && make test && make build` and report results
 - Assess whether the model/effort tier was appropriate for the task
-- Populate `metrics.quality_score` in the HANDBACK
+- Populate `metrics.quality` in the HANDBACK (0.0–1.0 float)
 - Flag regressions, missing tests, or inadequate implementation
 
 **Boundaries — QE MUST NOT:**
@@ -227,7 +326,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 **Purpose:** Analyse HANDBACK efficiency metrics; recommend model or effort tier adjustments.
 
 **Capabilities:**
-- Parse HANDBACK `metrics` blocks (tokens_used, efficiency_ratio, quality_score, duration_ms)
+- Parse HANDBACK `metrics` blocks (tokens, cost, quality, duration_seconds)
 - Compare actual vs. estimated token usage across task history
 - Recommend model downgrade (cost saving) or upgrade (quality improvement)
 - Identify effort-level mismatches (task was too small/large for the assigned tier)
@@ -480,10 +579,10 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 5.  Quality Engineer validates the HANDBACK:
       - Checks acceptance_criteria are met
       - Runs repro command to verify
-      - Writes quality_score into metrics
+      - Populates metrics.quality (0.0–1.0) in the HANDBACK
 
 6.  Model Engineer analyses HANDBACK metrics:
-      - Compares efficiency_ratio vs. baseline
+      - Compares tokens used vs. estimated across task history
       - Emits model/effort recommendation if drift detected
 
 7.  Orchestrator reads HANDBACK status:
@@ -789,6 +888,6 @@ budget: 0.09
 - **Chain bash commands** — use `&&` to combine related operations
 - **Trust tool confirmations** — never re-read a file you just edited
 - **Grep before view** — find exact lines first, then `view_range` only that section
-- **Model Engineer feedback loop** — use efficiency_ratio trends to downgrade over-provisioned roles
+- **Model Engineer feedback loop** — use token usage trends to downgrade over-provisioned roles
 
 > For full cost tracking spec, see [`src/TOKEN_METRICS.md`](TOKEN_METRICS.md).

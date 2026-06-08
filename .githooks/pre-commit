@@ -1001,7 +1001,7 @@ else
     ERRORS=$((ERRORS + PROTOCOL_ERRORS))
   else
     # Report when DELEGATE/HANDBACK files were validated successfully
-    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true | while read -r f; do
+    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | while read -r f; do
       content=$(git show ":$f" 2>/dev/null)
       if echo "$content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
         echo "1"
