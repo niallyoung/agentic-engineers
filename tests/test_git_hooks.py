@@ -805,21 +805,22 @@ class TestLegacyPreCommitHook:
     # ── DELEGATE validation ────────────────────────────────────────────────────
 
     def test_valid_delegate_yaml_passes(self):
-        """Well-formed DELEGATE YAML must pass validation."""
+        """Well-formed DELEGATE YAML must pass validation (canonical schema)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
                 task_id: 2026-05-16-test-task
-                role: engineer
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test the system
+                scope: Test the entire system end to end with comprehensive coverage
                 success_criteria:
                   - Tests pass
                 plan:
-                  - Step 1
-                context: Some context here
+                  - Step 1 read the code
+                  - Step 2 implement the change
+                context: Some context here about what needs to be done
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -833,15 +834,16 @@ class TestLegacyPreCommitHook:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
-                role: engineer
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the system end to end with full coverage
                 success_criteria:
-                  - Pass
+                  - Tests pass
                 plan:
-                  - Step
-                context: ctx
+                  - Step 1 read code
+                  - Step 2 implement
+                context: Some context about what needs to be done here
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -849,21 +851,22 @@ class TestLegacyPreCommitHook:
             )
         assert result.returncode != 0
     def test_delegate_invalid_task_id_format_fails(self):
-        """DELEGATE with malformed task_id (not YYYY-MM-DD-kebab) must fail."""
+        """DELEGATE with malformed task_id (uppercase, underscores) must fail."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
-                task_id: bad-format-task
-                role: engineer
+                task_id: TASK_101_UPPERCASE
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the system end to end with full coverage
                 success_criteria:
-                  - Pass
+                  - Tests pass
                 plan:
-                  - Step
-                context: ctx
+                  - Step 1 read code
+                  - Step 2 implement
+                context: Some context about what needs to be done here
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -872,22 +875,23 @@ class TestLegacyPreCommitHook:
         assert result.returncode != 0
         combined = result.stdout + result.stderr
 
-    def test_delegate_invalid_role_fails(self):
-        """DELEGATE with an invalid role must fail validation."""
+    def test_delegate_invalid_agent_fails(self):
+        """DELEGATE with an invalid agent (underscore format) must fail validation."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
                 task_id: 2026-05-16-test-task
-                role: invalid_role
+                agent: invalid_agent_name
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the system end to end with full coverage
                 success_criteria:
-                  - Pass
+                  - Tests pass
                 plan:
-                  - Step
-                context: ctx
+                  - Step 1 read code
+                  - Step 2 implement
+                context: Some context about what needs to be done here
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -895,35 +899,37 @@ class TestLegacyPreCommitHook:
             )
         assert result.returncode != 0
         combined = result.stdout + result.stderr
-        assert "role" in combined or "A3" in combined
+        assert "agent" in combined or "invalid" in combined.lower()
 
-    def test_delegate_all_valid_roles_pass(self):
-        """All 7 valid agent roles must be accepted."""
-        valid_roles = [
-            "engineer", "senior_engineer", "lead_engineer",
-            "principal_engineer", "security_engineer",
-            "quality_engineer", "model_engineer",
+    def test_delegate_all_valid_agents_pass(self):
+        """All 8 valid agents (hyphenated) must be accepted."""
+        valid_agents = [
+            "orchestrator", "engineer", "senior-engineer", "lead-engineer",
+            "principal-engineer", "security-engineer",
+            "quality-engineer", "model-engineer",
         ]
-        for role in valid_roles:
+        for agent in valid_agents:
             with tempfile.TemporaryDirectory() as tmpdir:
                 make_git_repo(tmpdir)
                 stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                     handoff_type: DELEGATE
                     task_id: 2026-05-16-test-task
-                    role: {role}
+                    agent: {agent}
+                    skill: engineer
                     effort: low
-                    estimated_hours: 2
-                    scope: Test the system
+                    scope: Test the entire system end to end with coverage
                     success_criteria:
                       - Tests pass
                     plan:
-                      - Step 1
-                    context: Some context here
-                """.format(role=role)))
+                      - Step 1 read the code carefully
+                      - Step 2 implement the change
+                    context: Some context here about the task requirements
+                """.format(agent=agent)))
                 result = run_hook_in_repo(
                     self.HOOK, tmpdir,
                     env_overrides={"BYPASS_HOOK_VALIDATION": ""},
                 )
+                assert result.returncode == 0, f"agent '{agent}' should pass but got returncode {result.returncode}: {result.stdout}"
 
     def test_delegate_with_secrets_fails(self):
         """DELEGATE containing secret-like fields must be rejected."""
@@ -932,15 +938,16 @@ class TestLegacyPreCommitHook:
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
                 task_id: 2026-05-16-test-task
-                role: engineer
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the system end to end with full coverage
                 success_criteria:
-                  - Pass
+                  - Tests pass
                 plan:
-                  - Step
-                context: ctx
+                  - Step 1 read code
+                  - Step 2 implement
+                context: Some context about what needs to be done here
                 password: supersecret123
             """))
             result = run_hook_in_repo(
@@ -957,13 +964,13 @@ class TestLegacyPreCommitHook:
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
                 task_id: 2026-05-16-test-task
-                role: engineer
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the system end to end with full coverage
                 success_criteria:
-                  - Pass
-                context: ctx
+                  - Tests pass
+                context: Some context about what needs to be done here
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -971,29 +978,128 @@ class TestLegacyPreCommitHook:
             )
         assert result.returncode != 0
 
-    # ── HANDBACK validation ────────────────────────────────────────────────────
+    def test_deprecated_type_discriminator_warns_but_passes(self):
+        """DELEGATE using deprecated 'type:' discriminator must warn but still pass validation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
+                type: DELEGATE
+                task_id: 2026-05-16-test-task
+                agent: engineer
+                skill: engineer
+                effort: low
+                scope: Test the entire system end to end with comprehensive coverage
+                success_criteria:
+                  - Tests pass with no failures
+                plan:
+                  - Step 1 read the code carefully
+                  - Step 2 implement the change
+                context: Some context here about the task requirements and approach
+            """))
+            result = run_hook_in_repo(
+                self.HOOK, tmpdir,
+                env_overrides={"BYPASS_HOOK_VALIDATION": ""},
+            )
+        # Must pass (backward compat) but produce a deprecation warning
+        assert result.returncode == 0, f"deprecated type: should pass with warning but got returncode {result.returncode}: {result.stdout}"
+        combined = result.stdout + result.stderr
+        assert "deprecated" in combined.lower() or "deprecat" in combined.lower() or "handoff_type" in combined
 
-    def test_valid_handback_yaml_passes(self):
-        """Well-formed HANDBACK YAML must pass validation."""
+    def test_underscored_agent_produces_error_with_hint(self):
+        """DELEGATE with underscore agent (senior_engineer) must fail with hint to use hyphens."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
+                handoff_type: DELEGATE
+                task_id: 2026-05-16-test-task
+                agent: senior_engineer
+                skill: senior-engineer
+                effort: high
+                scope: Test the entire system end to end with comprehensive coverage
+                success_criteria:
+                  - Tests pass with no failures
+                plan:
+                  - Step 1 read the code carefully
+                  - Step 2 implement the change
+                context: Some context here about the task requirements and approach
+            """))
+            result = run_hook_in_repo(
+                self.HOOK, tmpdir,
+                env_overrides={"BYPASS_HOOK_VALIDATION": ""},
+            )
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "hyphens" in combined.lower() or "hyphen" in combined.lower() or "senior-engineer" in combined
+
+    def test_invalid_handback_status_complete_fails(self):
+        """HANDBACK with status 'complete' (old/invalid value) must fail."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "handback.yaml", textwrap.dedent("""\
                 handoff_type: HANDBACK
                 task_id: 2026-05-16-test-task
                 status: complete
-                deliverables:
-                  - tests/test_hooks.py
-                tests: pytest tests/test_hooks.py
-                quality_score: 90
-                tokens_in: 1000
-                tokens_out: 500
-                duration_minutes: 30
-                notes: All tests pass
+                output: All done
+                metrics:
+                  quality: 0.9
+                  tokens: 1000
+                  cost: 0.09
+                  duration_seconds: 30
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
                 env_overrides={"BYPASS_HOOK_VALIDATION": ""},
             )
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "status" in combined
+
+    def test_invalid_handback_status_failed_fails(self):
+        """HANDBACK with status 'failed' (old/invalid value) must fail — use 'failure'."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "handback.yaml", textwrap.dedent("""\
+                handoff_type: HANDBACK
+                task_id: 2026-05-16-test-task
+                status: failed
+                output: Task failed due to errors
+                metrics:
+                  quality: 0.0
+                  tokens: 500
+                  cost: 0.02
+                  duration_seconds: 10
+            """))
+            result = run_hook_in_repo(
+                self.HOOK, tmpdir,
+                env_overrides={"BYPASS_HOOK_VALIDATION": ""},
+            )
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "status" in combined
+
+    # ── HANDBACK validation ────────────────────────────────────────────────────
+
+    def test_valid_handback_yaml_passes(self):
+        """Well-formed HANDBACK YAML must pass validation (canonical schema)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "handback.yaml", textwrap.dedent("""\
+                handoff_type: HANDBACK
+                task_id: 2026-05-16-test-task
+                status: success
+                output: |
+                  All acceptance criteria met. Modified postal.py and test_postal.py.
+                metrics:
+                  quality: 0.92
+                  tokens: 5000
+                  cost: 0.09
+                  duration_seconds: 42
+            """))
+            result = run_hook_in_repo(
+                self.HOOK, tmpdir,
+                env_overrides={"BYPASS_HOOK_VALIDATION": ""},
+            )
+        assert result.returncode == 0
 
     def test_handback_invalid_status_fails(self):
         """HANDBACK with invalid status value must fail."""
@@ -1003,14 +1109,12 @@ class TestLegacyPreCommitHook:
                 handoff_type: HANDBACK
                 task_id: 2026-05-16-test-task
                 status: done
-                deliverables:
-                  - file.py
-                tests: pytest
-                quality_score: 90
-                tokens_in: 1000
-                tokens_out: 500
-                duration_minutes: 30
-                notes: Done
+                output: All done
+                metrics:
+                  quality: 0.9
+                  tokens: 1000
+                  cost: 0.09
+                  duration_seconds: 30
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -1020,8 +1124,8 @@ class TestLegacyPreCommitHook:
         assert "status" in result.stdout
 
     def test_handback_all_valid_statuses_pass(self):
-        """All 4 valid HANDBACK statuses must be accepted."""
-        valid_statuses = ["complete", "failed", "partial", "blocked"]
+        """All 5 canonical HANDBACK statuses must be accepted."""
+        valid_statuses = ["success", "failure", "partial", "blocked", "escalate"]
         for status in valid_statuses:
             with tempfile.TemporaryDirectory() as tmpdir:
                 make_git_repo(tmpdir)
@@ -1029,56 +1133,66 @@ class TestLegacyPreCommitHook:
                     handoff_type: HANDBACK
                     task_id: 2026-05-16-test-task
                     status: {status}
-                    deliverables:
-                      - file.py
-                    tests: pytest
-                    quality_score: 90
-                    tokens_in: 1000
-                    tokens_out: 500
-                    duration_minutes: 30
-                    notes: Done
+                    output: Task completed with all criteria met
+                    metrics:
+                      quality: 0.9
+                      tokens: 1000
+                      cost: 0.09
+                      duration_seconds: 30
                 """.format(status=status)))
                 result = run_hook_in_repo(
                     self.HOOK, tmpdir,
                     env_overrides={"BYPASS_HOOK_VALIDATION": ""},
                 )
+                assert result.returncode == 0, f"status '{status}' should pass but got returncode {result.returncode}: {result.stdout}"
 
-    def test_handback_missing_quality_score_fails(self):
-        """HANDBACK missing quality_score must fail."""
+    def test_handback_missing_metrics_block_fails(self):
+        """HANDBACK missing metrics block must fail (canonical schema requires nested metrics)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "handback.yaml", textwrap.dedent("""\
                 handoff_type: HANDBACK
                 task_id: 2026-05-16-test-task
-                status: complete
-                deliverables:
-                  - file.py
-                tests: pytest
-                tokens_in: 1000
-                tokens_out: 500
-                duration_minutes: 30
-                notes: Done
+                status: success
+                output: All done
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
                 env_overrides={"BYPASS_HOOK_VALIDATION": ""},
             )
+        assert result.returncode != 0
+        assert "metrics" in result.stdout
 
-    def test_handback_missing_tokens_in_fails(self):
-        """HANDBACK missing tokens_in must fail."""
+    def test_handback_missing_metrics_subfields_fails(self):
+        """HANDBACK with metrics block but missing required sub-fields must fail."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            # Provide only quality — tokens, cost, duration_seconds missing
+            stage_file(tmpdir, "handback.yaml", textwrap.dedent("""\
+                handoff_type: HANDBACK
+                task_id: 2026-05-16-test-task
+                status: success
+                output: All done
+                metrics:
+                  quality: 0.9
+            """))
+            result = run_hook_in_repo(
+                self.HOOK, tmpdir,
+                env_overrides={"BYPASS_HOOK_VALIDATION": ""},
+            )
+        assert result.returncode != 0
+
+    def test_handback_deprecated_flat_metrics_rejected(self):
+        """HANDBACK using old flat quality_score/tokens_in (not nested metrics:) must fail."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "handback.yaml", textwrap.dedent("""\
                 handoff_type: HANDBACK
                 task_id: 2026-05-16-test-task
-                status: complete
-                deliverables:
-                  - file.py
-                tests: pytest
+                status: success
+                output: All done
                 quality_score: 90
-                tokens_out: 500
-                duration_minutes: 30
-                notes: Done
+                tokens_in: 1000
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -1088,21 +1202,23 @@ class TestLegacyPreCommitHook:
 
 
     def test_error_message_includes_bypass_hint(self):
-        """On failure, legacy hook must mention BYPASS_HOOK_VALIDATION bypass."""
+        """On failure, hook must mention BYPASS_HOOK_VALIDATION bypass."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
+            # Use uppercase task_id which is invalid under canonical pattern
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
-                task_id: bad-id
-                role: engineer
+                task_id: INVALID_UPPERCASE_ID
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the system end to end with full coverage
                 success_criteria:
-                  - Pass
+                  - Tests pass
                 plan:
-                  - Step
-                context: ctx
+                  - Step 1 read code
+                  - Step 2 implement
+                context: Some context about what needs to be done here
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -1119,15 +1235,16 @@ class TestLegacyPreCommitHook:
             stage_file(tmpdir, "delegate.yaml", textwrap.dedent("""\
                 handoff_type: DELEGATE
                 task_id: 2026-05-16-test-task
-                role: engineer
+                agent: engineer
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test the system
+                scope: Test the entire system end to end with comprehensive coverage
                 success_criteria:
-                  - Tests pass
+                  - Tests pass with no failures
                 plan:
-                  - Step 1
-                context: Some context here
+                  - Step 1 read the code carefully
+                  - Step 2 implement the change
+                context: Some context here about the task requirements and approach
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
@@ -1153,24 +1270,26 @@ class TestLegacyPreCommitHook:
         """Files with .yml extension must also be validated."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
+            # Use an invalid agent (uppercase) to trigger failure
             stage_file(tmpdir, "delegate.yml", textwrap.dedent("""\
                 handoff_type: DELEGATE
-                task_id: bad-id
-                role: engineer
+                task_id: bad-task-id-uppercase
+                agent: INVALID_UPPERCASE_AGENT
+                skill: engineer
                 effort: low
-                estimated_hours: 2
-                scope: Test
+                scope: Test the entire system end to end with comprehensive coverage
                 success_criteria:
-                  - Pass
+                  - Tests pass
                 plan:
-                  - Step
-                context: ctx
+                  - Step 1 read the code carefully
+                  - Step 2 implement the change
+                context: Some context here about what needs to be done correctly
             """))
             result = run_hook_in_repo(
                 self.HOOK, tmpdir,
                 env_overrides={"BYPASS_HOOK_VALIDATION": ""},
             )
-        assert result.returncode != 0  # bad task_id format
+        assert result.returncode != 0  # invalid agent format
 
 
 # ══════════════════════════════════════════════════════════════════════════════

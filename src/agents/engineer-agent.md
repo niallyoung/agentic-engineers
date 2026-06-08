@@ -73,22 +73,16 @@ PROCESS:
      ---
      handoff_type: HANDBACK
      task_id: {task_id}
-     timestamp: {iso8601}
-     status: success | escalate
-     deliverables:
-       - {what was created/modified}
-       - {list of files changed}
-     tests:
-       - {what passed}
-       - {coverage if applicable}
-     tokens:
-       used: {actual}
-       estimated: {from DELEGATE}
-       efficiency: {0.0-1.0}
-     quality_score: {0-100}
-     escalations: {any items pushed to human}
+     status: success | failure | partial | blocked | escalate
+     output: |
+       Summary of what was done, files changed, and key decisions.
+     metrics:
+       quality: {float 0.0-1.0}
+       tokens: {actual int}
+       cost: {USD float}
+       duration_seconds: {wall-clock float}
      confidence: {0.0-1.0}
-     notes: {what went well, what was hard}
+     escalations: {any items pushed to human}
      ---
      ```
 
@@ -124,8 +118,7 @@ Engineer will ESCALATE if:
 ---
 handoff_type: DELEGATE
 task_id: 2026-06-02-engineer-fix-token-timeout
-timestamp: 2026-06-02T10:00:00Z
-role: Engineer
+agent: engineer
 model: claude-haiku-4.5
 effort: high
 scope: >
@@ -162,26 +155,18 @@ estimated_tokens: 1500
 ---
 handoff_type: HANDBACK
 task_id: 2026-06-02-engineer-fix-token-timeout
-timestamp: 2026-06-02T10:18:00Z
 status: success
-deliverables:
-  - Modified: lambda/api/main.go (lines 92-96, added grace period)
-  - Added: lambda/api/main_test.go::TestTokenExpiryGracePeriod
-  - Updated: lambda/api/main.go (added inline comment explaining grace period)
-tests:
-  - "make verify": PASS (47 tests, all passing)
-  - Mobile E2E token auth: PASS
-  - Grace period acceptance: PASS (30s old token accepted)
-  - Grace period rejection: PASS (31s old token rejected)
-  - Coverage: 87.3% (maintained)
-tokens:
-  used: 1200
-  estimated: 1500
-  efficiency: 0.80
-quality_score: 95
-escalations: []
+output: |
+  Modified lambda/api/main.go (lines 92-96) to add 30-second grace period to exp claim
+  validation. Added TestTokenExpiryGracePeriod covering acceptance/rejection edge cases.
+  All 47 tests pass; coverage 87.3% maintained. AC1-AC5 PASS via make verify.
+metrics:
+  quality: 0.95
+  tokens: 1200
+  cost: 0.04
+  duration_seconds: 180
 confidence: 0.95
-notes: "Straightforward fix, well-planned. Grace period implementation clean. All edge cases covered in tests. High confidence in solution."
+escalations: []
 ---
 ```
 

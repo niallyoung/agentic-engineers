@@ -18,9 +18,9 @@ See **docs/SPEC.md - Queue Architecture & Paths (LOCKED SPEC)** for full specifi
 
 Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
 
-**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
 
-All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure under `~/.agentic-engineers/artifacts/`.
+All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure under `~/.agentic-engineers/`.
 
 ---
 
@@ -30,32 +30,36 @@ All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory str
 
 ```
 ~/.agentic-engineers/
-└── artifacts/
-    └── {session-id}/                   # UUID: unique per session
-        ├── claude/                     # Claude harness
-        │   ├── metadata.json           # Harness metadata
-        │   └── queue/
-        │       ├── incoming/           # New work, ready for Orchestrator
-        │       ├── processing/         # Work assigned to agent, awaiting HANDBACK
-        │       ├── done/               # Completed work, ready for decision
-        │       └── failed/             # Errored tasks
-        ├── copilot/                    # GitHub Copilot harness
-        │   ├── metadata.json
-        │   └── queue/
-        │       ├── incoming/
-        │       ├── processing/
-        │       ├── done/
-        │       └── failed/
-        ├── gpt/                        # OpenAI GPT harness
-        │   ├── metadata.json
-        │   └── queue/ ...
-        └── local/                      # Local harness
-            ├── metadata.json
-            └── queue/ ...
-    └── {other-session-id}/             # Other session
-        ├── claude/ ...
-        ├── copilot/ ...
-        └── ...
+├── {session-id}/                       # UUID: unique per session
+│   ├── claude/                         # Claude harness
+│   │   ├── metadata.json               # Harness metadata
+│   │   └── queue/
+│   │       ├── incoming/               # New work, ready for Orchestrator
+│   │       ├── processing/             # Work assigned to agent, awaiting HANDBACK
+│   │       ├── done/                   # Completed work, ready for decision
+│   │       └── failed/                 # Errored tasks
+│   ├── copilot/                        # GitHub Copilot harness
+│   │   ├── metadata.json
+│   │   └── queue/
+│   │       ├── incoming/
+│   │       ├── processing/
+│   │       ├── done/
+│   │       └── failed/
+│   ├── opencode/                       # OpenCode harness
+│   │   ├── metadata.json
+│   │   └── queue/
+│   │       ├── incoming/
+│   │       ├── processing/
+│   │       ├── done/
+│   │       └── failed/
+│   └── pi/                             # Pi.dev harness
+│       ├── metadata.json
+│       └── queue/ ...
+└── {other-session-id}/                 # Other session
+    ├── claude/ ...
+    ├── copilot/ ...
+    ├── opencode/ ...
+    └── pi/ ...
 ```
 
 **Legacy Structure (Deprecated):**
@@ -74,9 +78,9 @@ Queue-isolation skill provides mandatory isolation. No backward compatibility.
 
 ### 1. Incoming Queue
 
-**New task arrives as:** `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/{task_id}.yaml`
+**New task arrives as:** `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/{task_id}.yaml`
 
-Example path: `~/.agentic-engineers/artifacts/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/incoming/2026-04-30-fix-token-timeout.yaml`
+Example path: `~/.agentic-engineers/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/incoming/2026-04-30-fix-token-timeout.yaml`
 
 ```yaml
 ---
@@ -97,9 +101,9 @@ priority: high
 
 ### 2. Processing Queue
 
-**Agent returns work as:** `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
+**Agent returns work as:** `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
 
-Example path: `~/.agentic-engineers/artifacts/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
+Example path: `~/.agentic-engineers/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
 
 ```yaml
 ---
@@ -124,9 +128,9 @@ escalations: 0
 
 ### 3. Done Queue
 
-**Final decision stored as:** `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml`
+**Final decision stored as:** `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml`
 
-Example path: `~/.agentic-engineers/artifacts/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
+Example path: `~/.agentic-engineers/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
 
 ```yaml
 task_id: 2026-04-30-fix-token-timeout
@@ -217,7 +221,7 @@ Each harness's Orchestrator only polls and processes its own queue partition. No
 - `artifacts/queue/` → ❌ DEPRECATED
 
 **Current:** All harnesses now use the canonical path:
-- `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/` ✅ REQUIRED
+- `~/.agentic-engineers/{session-id}/{harness}/queue/` ✅ REQUIRED
 
 If you encounter legacy path references, ensure the queue-isolation skill is properly initialized. See `src/skills/_meta/queue-isolation/SKILL.md` for configuration details.
 
@@ -227,9 +231,9 @@ If you encounter legacy path references, ensure the queue-isolation skill is pro
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
-| DELEGATE | `~/.agentic-engineers/artifacts/{session-id}/{harness}/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
-| HANDBACK | `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
-| Decision | `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
+| DELEGATE | `~/.agentic-engineers/{session-id}/{harness}/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
+| HANDBACK | `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
+| Decision | `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
 
 **DELEGATE Format (from HANDOFF.md):**
 ```yaml

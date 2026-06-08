@@ -141,21 +141,70 @@ emit_claude_doc() {
 # Agentic Engineers Framework — Claude Code Integration
 
 You are part of the **agentic-engineers** distributed AI orchestration system.
-Eight specialised agents collaborate via a structured DELEGATE/HANDBACK protocol
-on a queue-based work pipeline.
+All user requests flow through the **Orchestrator** first. The Orchestrator routes
+work to specialised agents via the DELEGATE/HANDBACK protocol — never bypassing it.
 
-## Available agents
+## Default flow
 
-Invoke a specialist with `@<agent-name>`:
+```
+User request
+  └─► Orchestrator  (entry point — always)
+        ├─► issues DELEGATE to the correct specialist agent
+        ├─► specialist performs work and returns HANDBACK
+        └─► Orchestrator interprets result and responds to the user
+```
 
-- `@orchestrator` — Task routing and team coordination
-- `@engineer` — Implementation of well-scoped tasks
-- `@senior-engineer` — Complex problem-solving and planning
-- `@lead-engineer` — Code review and quality assurance
-- `@quality-engineer` — Post-implementation verification
-- `@principal-engineer` — Cross-service architecture decisions
-- `@security-engineer` — Security analysis and threat modeling
-- `@model-engineer` — Cost/quality model-routing recommendations
+The Orchestrator is the default handler for every request. Direct `@agent-name`
+invocation is available as an advanced escape hatch but skips protocol enforcement,
+auditability, and the DELEGATE/HANDBACK coordination layer.
+
+## Why protocol-first matters
+
+- **Auditability** — every task is a DELEGATE block in the queue; every result is a HANDBACK
+- **Enforcement** — routing rules, model selection, and escalation triggers are applied consistently
+- **Cost discipline** — the Orchestrator starts with cheap Haiku models and escalates only when needed
+- **Coordination** — independent tasks are fanned out in parallel; escalation chains are tracked
+
+## Specialist agents (invoked by the Orchestrator, not directly by users)
+
+| Role | Purpose |
+|---|---|
+| `@engineer` | Well-scoped implementation with a pre-written plan |
+| `@senior-engineer` | Complex or unscoped coding, planning phase |
+| `@lead-engineer` | Code review, architecture decisions |
+| `@quality-engineer` | Post-implementation validation |
+| `@principal-engineer` | Cross-service architecture, hard debugging |
+| `@security-engineer` | Security audits, threat modelling |
+| `@model-engineer` | Cost/quality optimisation recommendations |
+
+## Canonical DELEGATE/HANDBACK schema
+
+```yaml
+# DELEGATE (request)
+handoff_type: DELEGATE        # discriminator — not type:
+agent: senior-engineer        # hyphenated role name
+task_id: my-task-id
+scope: "What will be done and what is out of scope (>=15 words)"
+context:
+  - "Relevant file: path/to/file.py (lines 45-67)"
+plan:
+  - "Step 1: ..."
+success_criteria:
+  - "AC1: describe done"
+```
+
+```yaml
+# HANDBACK (response)
+handoff_type: HANDBACK        # discriminator — not type:
+task_id: my-task-id
+status: success               # success | failure | partial | blocked | escalate
+output: "Summary of what was done and key decisions."
+metrics:                      # all four sub-fields required
+  quality: 0.88
+  tokens: 5840
+  cost: 0.09
+  duration_seconds: 42
+```
 
 ## Where things live
 

@@ -122,14 +122,57 @@ WHEN Orchestrator finishes quality gate and wants feedback:
 8. WRITE SPAN to ~/.agentic-engineers/{session-id}/{harness}/SPAN-{timestamp}-agent-model-engineer.yaml
 ```
 
+## Example DELEGATE Block
+
+```yaml
+---
+handoff_type: DELEGATE
+task_id: 2026-05-26-model-feedback-quality-gate
+agent: model-engineer
+model: claude-sonnet-4.5
+effort: medium
+scope: >
+  Analyse token efficiency and quality metrics from the most recent commit-quality-gate
+  HANDBACK set. Recommend model or effort tier adjustments for each agent role.
+  Produce recommendations in standardised format for Orchestrator to apply.
+context:
+  - HANDBACK sources: orchestrator (850 tokens), security (2845), testing (5120), metrics (950), healing (3200)
+  - Token estimates: orchestrator (1000), security (3000), testing (6000), metrics (1500), healing (4000)
+  - Decision quality: PROCEED (quality gate passed)
+  - Session: {session-id}
+plan:
+  - "Compute efficiency ratio per agent (tokens_observed / tokens_estimated)"
+  - "Apply thresholds: <0.5 → suggest downgrade, 0.5-0.8 → keep, >0.8 → consider upgrade"
+  - "Assess decision quality (PROCEED = 1.0, ESCALATE = 0.85 baseline)"
+  - "Build recommendation struct with model, confidence, reasoning per agent"
+  - "Append to ~/.agentic-engineers/{session-id}/{harness}/feedback/model-recommendations.jsonl"
+success_criteria:
+  - Efficiency ratio calculated for all 5 agents
+  - Recommendation produced for each agent with confidence >= 0.70
+  - Recommendations written to model-recommendations.jsonl
+  - HANDBACK returned with next_suggested_models map
+estimated_tokens: 1500
+---
+```
+
+---
+
 ## HANDBACK Format
 
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{example-service}-abc123-model-feedback
-timestamp: 2026-05-26T09:05:00Z
+task_id: 2026-05-26-model-feedback-quality-gate
 status: success
+output: |
+  Analysed token efficiency across 5 agents for commit-quality-gate session.
+  Overall efficiency 0.84. Metrics agent underutilised (63%) — recommend Haiku downgrade.
+  All other agents appropriately sized. Recommendations written to model-recommendations.jsonl.
+metrics:
+  quality: 0.90
+  tokens: 950
+  cost: 0.03
+  duration_seconds: 120
 recommendation:
   task_type: "commit-quality-gate"
   recommended_models:
@@ -163,6 +206,7 @@ next_suggested_models:
   testing: sonnet
   metrics: haiku
   healing: sonnet
+---
 ```
 
 ## Feedback Loop: Learning Over Time

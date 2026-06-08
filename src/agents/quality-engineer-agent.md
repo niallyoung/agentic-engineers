@@ -66,8 +66,7 @@ ASSESSMENT FRAMEWORK:
 ---
 handoff_type: DELEGATE
 task_id: 2026-06-02-quality-validate-oauth-impl
-timestamp: 2026-06-02T14:00:00Z
-role: Quality Engineer
+agent: quality-engineer
 model: claude-sonnet-4.6
 effort: medium
 scope: >
@@ -96,38 +95,28 @@ success_criteria:
 ---
 handoff_type: HANDBACK
 task_id: 2026-06-02-quality-validate-oauth-impl
-timestamp: 2026-06-02T14:45:00Z
 status: success
-assessment: PASS
-quality_score: 94
-
+output: |
+  Validated OAuth2 refresh token rotation implementation against spec.
+  Spec compliance 100%, test coverage 96%, no regression risk detected.
+  All 5 acceptance criteria met. Production-ready: PASS.
+  Model assessment: Sonnet appropriate for complex OAuth validation.
+metrics:
+  quality: 0.94
+  tokens: 2100
+  cost: 0.06
+  duration_seconds: 900
 validation_checklist:
-  spec_compliance: ✅ PASS (100% matches {example-service}/DESIGN.md)
-  acceptance_criteria: ✅ PASS (all 5 criteria met)
-  test_coverage: ✅ PASS (96% coverage, edge cases covered)
-  regression_risk: ✅ PASS (isolated change, no side effects detected)
-  performance: ✅ PASS (benchmarks show 10% improvement)
-  documentation: ✅ PASS (code comments clear, design doc updated)
-  code_quality: ✅ PASS (no linting warnings, style consistent)
-  production_ready: ✅ PASS (high confidence for production)
-
-quality_score_breakdown:
-  correctness: 95/100 (implementation matches spec perfectly)
-  completeness: 95/100 (all requirements covered, one minor doc improvement)
-  testing: 96/100 (excellent coverage, edge cases handled)
-  risk: 95/100 (isolated, low regression risk)
-
-assessment_summary: |
-  Implementation is high-quality and ready for production.
-  Spec compliance: 100%
-  Test coverage: 96%
-  Risk: LOW
-  Quality score: 94/100
-  
-  Recommendation: PASS - Ready to merge and deploy
-
-model_assessment: "Quality Engineer Sonnet was appropriate (medium effort). Could potentially downgrade to Haiku for simpler validations, but complex OAuth validation benefits from Sonnet's reasoning."
-
+  spec_compliance: PASS (100% matches {example-service}/DESIGN.md)
+  acceptance_criteria: PASS (all 5 criteria met)
+  test_coverage: PASS (96% coverage, edge cases covered)
+  regression_risk: PASS (isolated change, no side effects detected)
+  performance: PASS (benchmarks show 10% improvement)
+  documentation: PASS (code comments clear, design doc updated)
+  code_quality: PASS (no linting warnings, style consistent)
+  production_ready: PASS (high confidence for production)
+assessment: PASS
+confidence: 0.95
 ---
 ```
 

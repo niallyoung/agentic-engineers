@@ -67,8 +67,7 @@ OUTPUT: HANDBACK with assessment + recommendations
 ---
 handoff_type: DELEGATE
 task_id: 2026-06-02-lead-review-auth-refresh
-timestamp: 2026-06-02T13:00:00Z
-role: Lead Engineer
+agent: lead-engineer
 model: claude-sonnet-4.6
 effort: high
 scope: >
@@ -96,11 +95,18 @@ success_criteria:
 ---
 handoff_type: HANDBACK
 task_id: 2026-06-02-lead-review-auth-refresh
-timestamp: 2026-06-02T13:35:00Z
 status: success
+output: |
+  Completed 8-point code review of OAuth2 refresh token rotation.
+  State machine sound; 96% test coverage; no race conditions detected.
+  One minor documentation finding (line 42 comment). Recommendation: APPROVE.
+metrics:
+  quality: 0.95
+  tokens: 1800
+  cost: 0.05
+  duration_seconds: 630
 review_type: code_review
 assessment: APPROVE_WITH_MINOR_NOTES
-
 checklist:
   correctness: PASS (logic matches spec, state machine sound)
   safety: PASS (no race conditions, refresh token rotation correct)
@@ -110,22 +116,13 @@ checklist:
   documentation: MINOR_ISSUE (add comment on line 42 explaining cursor validation)
   maintainability: PASS (code is clear and testable)
   risk: LOW (well-isolated change, thorough tests)
-
 findings:
-  - Issue 1: Line 42 - cursor validation logic could use comment (WHY this validation?)
-    Severity: MINOR
-    Recommendation: Add 2-line comment explaining why we validate cursor format
-  - Positive: Excellent test coverage (96%), all edge cases covered
-  - Positive: State machine is elegant and easy to follow
-  - Positive: No performance regressions detected
-
+  - severity: MINOR
+    location: "line 42"
+    description: "cursor validation logic could use comment explaining WHY this validation"
+    recommendation: "Add 2-line comment explaining cursor format requirement"
 recommendation: APPROVE
 confidence: 0.95
-rationale: |
-  Thorough implementation with excellent test coverage. State machine is sound.
-  One minor documentation suggestion. Ready to merge after comment added.
-  Risk: LOW (well-isolated, thoroughly tested). Safety: HIGH confidence.
-
 ---
 ```
 

@@ -107,24 +107,67 @@ When security issues are found:
 - **Medium**: Fix required, schedule follow-up testing
 - **Low**: Document and prioritize in backlog
 
+## Example DELEGATE Block
+
+```yaml
+---
+handoff_type: DELEGATE
+task_id: 2026-05-26-commit-security-abc123
+agent: security-engineer
+model: claude-opus-4.8
+effort: max
+scope: >
+  Security scan of {example-service} commit abc123. Assess credentials exposure,
+  IAM permission policy, OWASP Top 10 vulnerabilities, and auth/crypto usage
+  across all modified files. Produce findings table with severity and remediation.
+context:
+  - Repo: github.com/{your-org}/{example-service}, commit: abc123
+  - Files changed: 45 files (lambda/auth/, lambda/api/, infra/iam/)
+  - Trigger: Pre-merge security gate on auth-touching PR
+  - Risk level: HIGH (auth changes in scope)
+plan:
+  - "Scan for credential patterns (AWS keys, DB passwords, private keys)"
+  - "Review IAM roles and permission policies for over-permissioning"
+  - "Assess auth/crypto code (token handling, key management, algorithm choices)"
+  - "Check OWASP Top 10 surface (injection, broken auth, sensitive data exposure)"
+  - "Produce findings table with severity, file:line, and remediation"
+success_criteria:
+  - All modified files scanned for credentials and vulnerabilities
+  - Findings table produced with severity classification
+  - CRITICAL or HIGH findings result in status: failure
+  - Remediation recommendations provided for each finding
+estimated_tokens: 4000
+---
+```
+
+---
+
 ## Example HANDBACK Format
 
 ```yaml
 ---
 handoff_type: HANDBACK
-task_id: 2026-05-26-commit-{example-service}-abc123-security
-timestamp: 2026-05-26T09:03:45Z
-status: PASS  # or FAIL
-severity: INFO  # or LOW, MEDIUM, HIGH, CRITICAL
-findings_count: 0
-findings: []
+task_id: 2026-05-26-commit-security-abc123
+status: success
+output: |
+  Scanned 45 files in {example-service} commit abc123. No credentials or HIGH/CRITICAL
+  vulnerabilities found. One LOW finding: verbose error message in lambda/api/errors.go:34
+  may expose internal stack traces. Remediation: wrap with generic error response.
+  All OWASP Top 10 checks passed. Auth and crypto usage is correct.
+metrics:
+  quality: 0.99
+  tokens: 3200
+  cost: 0.14
+  duration_seconds: 480
+severity: LOW
+findings_count: 1
+findings:
+  - severity: LOW
+    location: "lambda/api/errors.go:34"
+    description: "Error response may expose internal stack trace to caller"
+    recommendation: "Wrap with generic error response; log details server-side only"
 confidence: 0.99
-recommendation: "No security issues detected"
-attributes:
-  files_scanned: 45
-  credentials_found: 0
-  permission_issues: 0
-  vulnerabilities: 0
+---
 ```
 
 ## Autonomy & Task Boundaries

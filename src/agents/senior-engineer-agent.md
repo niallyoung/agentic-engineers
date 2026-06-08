@@ -86,33 +86,17 @@ PROCESS:
      ---
      handoff_type: HANDBACK
      task_id: {task_id}
-     timestamp: {iso8601}
      status: success | failure | partial | blocked | escalate
-     
+     output: |
+       Summary of approach, files changed, and key decisions.
+     metrics:
+       quality: {float 0.0-1.0}
+       tokens: {actual int}
+       cost: {USD float}
+       duration_seconds: {wall-clock float}
      plan_written: true
-     plan_quality_score: {0-100}
-     
      approach: "executed" | "delegated" | "hybrid"
-     
-     IF approach == "executed":
-       deliverables:
-         - {files changed}
-       quality_score: {0-100}
-       confidence: {0.0-1.0}
-     
-     IF approach == "delegated":
-       sub_tasks:
-         - task: {description}
-           delegated_to: {agent}
-           handback: {sub-agent HANDBACK}
-       quality_score: {aggregate from sub-agents}
-       confidence: {aggregate from sub-agents}
-     
-     tokens:
-       used: {actual}
-       efficiency: {0.0-1.0}
-     
-     notes: {what was hard, what was learned}
+     confidence: {0.0-1.0}
      ---
      ```
 ```
@@ -138,8 +122,7 @@ PROCESS:
 ---
 handoff_type: DELEGATE
 task_id: 2026-06-02-senior-refactor-event-store
-timestamp: 2026-06-02T11:00:00Z
-role: Senior Engineer
+agent: senior-engineer
 model: claude-sonnet-4.6
 effort: high
 scope: >
@@ -166,47 +149,30 @@ estimated_complexity: high
 ---
 handoff_type: HANDBACK
 task_id: 2026-06-02-senior-refactor-event-store
-timestamp: 2026-06-02T12:40:00Z
 status: success
-approach: hybrid
+output: |
+  Refactored {example-service} DynamoDB event store via hybrid delegation.
+  Added GetEventsWithCursor() method (store.go), cursor model + validation (cursor.go),
+  wired into handlers (handlers.go), edge case tests (store_test.go).
+  Plan held up; 90% API call reduction validated. AC1-AC4 PASS.
+metrics:
+  quality: 0.94
+  tokens: 3600
+  cost: 0.11
+  duration_seconds: 5400
 plan_written: true
-plan_quality_score: 92
-
-plan_summary: |
-  1. Analyze current store.go (full scan logic)
-  2. Design delta cursor model (cursor storage, validation)
-  3. Implement GetEventsWithCursor() method
-  4. Add cursor management (save, retrieve, validate)
-  5. Create comprehensive test suite (edge cases)
-  6. Refactor handlers to use new method
-  7. Benchmark: old vs new (expect 90% fewer calls)
-
 approach: hybrid
 sub_tasks:
   - task: "Implement GetEventsWithCursor() method"
-    delegated_to: Engineer
-    handback: { status: success, deliverables: [store.go], tokens: 1500, quality: 94 }
+    delegated_to: engineer
+    handback: { status: success, metrics: { quality: 0.94, tokens: 1500 } }
   - task: "Refactor handlers + wire new method"
-    delegated_to: Engineer
-    handback: { status: success, deliverables: [handlers.go], tokens: 1200, quality: 92 }
+    delegated_to: engineer
+    handback: { status: success, metrics: { quality: 0.92, tokens: 1200 } }
   - task: "Write cursor edge case tests"
-    delegated_to: Engineer
-    handback: { status: success, deliverables: [store_test.go], tokens: 900, quality: 96 }
-
-deliverables:
-  - Modified: lambda/store/store.go (new GetEventsWithCursor method)
-  - Modified: lambda/store/handlers.go (wire new method)
-  - Added: lambda/store/cursor.go (cursor model + validation)
-  - Modified: lambda/store/store_test.go (edge case tests)
-
-quality_score: 94
+    delegated_to: engineer
+    handback: { status: success, metrics: { quality: 0.96, tokens: 900 } }
 confidence: 0.93
-tokens:
-  planned: 3500
-  used: 3600
-  efficiency: 0.97
-
-notes: "Complex refactoring executed well through delegation. Each sub-task assigned to Engineer. Plan held up perfectly. New cursor logic is clean and testable. Benchmarking pending on deployment."
 ---
 ```
 
