@@ -49,34 +49,117 @@ AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-opencode"
 CONFIG_SENTINEL='// _managed_by: agentic-engineers renderer/scripts/render-opencode.sh'
 # Sentinel HTML comment line 1 of AGENTS.md.
 RULES_SENTINEL='<!-- managed by agentic-engineers render-opencode.sh'
+# Cache of OpenCode provider models (models.dev snapshot).
+# Set via OPENCODE_MODELS_CACHE env var to use a custom path.
+CACHE="${OPENCODE_MODELS_CACHE:-$HOME/.cache/opencode/models.json}"
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-# Map agentic-engineers canonical model id → OpenCode provider/model id.
+# Detect which OpenCode provider the current user has configured.
+# Precedence: explicit OPENCODE_PROVIDER env override → first auth env var found
+# → sniff existing opencode.jsonc → default anthropic.
+# Set OPENCODE_PROVIDER=github-copilot in CI/cross-env installs to override auto-detection.
+detect_opencode_provider() {
+	if [ -n "${OPENCODE_PROVIDER:-}" ]; then echo "$OPENCODE_PROVIDER"; return; fi
+	if [ -n "${ANTHROPIC_API_KEY:-}" ];  then echo "anthropic";              return; fi
+	if [ -n "${GITHUB_TOKEN:-}" ];       then echo "github-copilot";         return; fi
+	if [ -n "${OPENCODE_API_KEY:-}" ];   then echo "opencode";               return; fi
+	if [ -n "${OPENROUTER_API_KEY:-}" ]; then echo "openrouter";             return; fi
+	if [ -n "${AWS_ACCESS_KEY_ID:-}" ] || [ -n "${AWS_BEARER_TOKEN_BEDROCK:-}" ]; then
+		echo "amazon-bedrock"; return
+	fi
+	if [ -n "${GOOGLE_VERTEX_PROJECT:-}" ]; then echo "google-vertex-anthropic"; return; fi
+	# Sniff the installed opencode.jsonc for an existing model prefix.
+	local cfg="$HOME/.config/opencode/opencode.jsonc"
+	if [ -f "$cfg" ]; then
+		local p
+		p=$(grep -oE '"model"[[:space:]]*:[[:space:]]*"[^/"]+' "$cfg" 2>/dev/null | grep -oE '[^"]+$' || true)
+		[ -n "$p" ] && { echo "$p"; return; }
+	fi
+	echo "anthropic"
+}
+
+# Normalize a raw model token to a family suffix like "haiku-4-5" or "sonnet-4-6".
+# Strips provider prefix, dots→hyphens, date stamps, and the "claude-" prefix.
+_opencode_family_token() {
+	echo "$1" \
+		| sed -E 's#^[a-z-]*/##' \
+		| sed -E 's#^anthropic\.##' \
+		| sed -E 's#:[^:]*$##' \
+		| sed -E 's#@.*$##' \
+		| sed -E 's#-v[0-9]+:[0-9]+$##' \
+		| sed -E 's#\.#-#g' \
+		| sed -E 's#-[0-9]{8}(-.*)?$##' \
+		| sed -E 's#^claude-##'
+}
+
+# Map a canonical agentic-engineers model token → fully-qualified "provider/model-id"
+# that OpenCode accepts.  Accepts both hyphen (claude-haiku-4-5) and dot
+# (claude-haiku-4.5) input formats.
 #
-# IMPORTANT: OpenCode uses Anthropic's official model IDs (hyphens, not dots).
-# This mapping accepts both hyphen and dot formats for compatibility.
-# Output is always "anthropic/<id-hyphen>" per OpenCode's native provider support.
+# Resolution order:
+#  1. Detect provider from environment / installed config.
+#  2. Query ~/.cache/opencode/models.json for that provider's exact registered ID.
+#  3. Fall back to a per-provider format table when the cache is absent.
 #
-# We use the "anthropic" provider because:
-#   1. OpenCode's binary natively knows anthropic/claude-* model IDs
-#   2. The "github-copilot" provider does NOT include Claude 4 models in its
-#      built-in registry; custom provider.models entries for it are not sufficient
-#      when the user has no GitHub Copilot credentials configured
-#   3. anthropic/ is the universal fallback that works for any ANTHROPIC_API_KEY user
+# Returns "" (empty) when the model cannot be resolved; caller warns + skips.
 map_model_opencode() {
-	case "$1" in
-		claude-haiku-4.5|claude-haiku-4-5)   echo "anthropic/claude-haiku-4-5" ;;
-		claude-sonnet-4.6|claude-sonnet-4-6) echo "anthropic/claude-sonnet-4-6" ;;
-		claude-sonnet-4.5|claude-sonnet-4-5) echo "anthropic/claude-sonnet-4-5" ;;
-		claude-opus-4.8|claude-opus-4-8)     echo "anthropic/claude-opus-4-8" ;;
-		claude-opus-4.7|claude-opus-4-7)     echo "anthropic/claude-opus-4-7" ;;
-		claude-opus-4.6|claude-opus-4-6)     echo "anthropic/claude-opus-4-6" ;;
-		claude-opus-4.5|claude-opus-4-5)     echo "anthropic/claude-opus-4-5" ;;
-		*) echo "" ;;  # sentinel — caller warns + skips model emission
-	esac
+	local raw="$1"
+	[ -n "$raw" ] || { echo ""; return; }
+
+	local provider family id
+	provider=$(detect_opencode_provider)
+	family=$(_opencode_family_token "$raw")
+
+	# Cache lookup: resolve the exact ID for this provider+family from models.dev data.
+	if [ -f "$CACHE" ] && command -v python3 >/dev/null 2>&1; then
+		id=$(python3 - "$CACHE" "$provider" "$family" <<'PY'
+import json, sys, re
+cache_path, provider, fam = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    data = json.load(open(cache_path))
+    # Cache may be { provider: { models: {...} } } or { provider: {...} }
+    pdata = data.get(provider, {})
+    models = pdata.get("models", pdata) if isinstance(pdata, dict) else {}
+except Exception:
+    sys.exit(0)
+
+def norm(s):
+    return re.sub(r'[._]', '-', s)
+
+# Candidates whose normalized key ends with the family token.
+cands = [k for k in models if norm(k).endswith(fam)]
+# Drop region-prefixed Bedrock IDs (eu., us., ap., apac.) to prefer the bare form.
+cands = [c for c in cands if not re.match(r'^(eu|us|ap|apac)[\.-]', c)]
+if cands:
+    print(min(cands, key=len))
+PY
+		)
+	fi
+
+	# Offline fallback: synthesize from the family token using the provider's known format.
+	if [ -z "${id:-}" ]; then
+		case "$provider" in
+			github-copilot)
+				# GitHub Copilot registry uses dotted version: claude-haiku-4.5
+				id="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')"
+				;;
+			openrouter)
+				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash)
+				local dotted
+				dotted="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')"
+				id="anthropic/$dotted"
+				;;
+			*)
+				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-4-5
+				id="claude-$family"
+				;;
+		esac
+	fi
+
+	[ -n "${id:-}" ] && echo "${provider}/${id}" || echo ""
 }
 
 # Effort → temperature: deterministic-ish for low/medium, more exploratory for high/max.
@@ -244,13 +327,16 @@ write_config() {
 	#
 	# We emit a minimal provider config with available models, but NO agent array.
 	
+	local default_model
+	default_model=$(map_model_opencode "claude-haiku-4-5")
+
 	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
 {
   "\$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "default_agent": "orchestrator",
-  "model": "anthropic/claude-haiku-4-5",
+  "model": "$default_model",
   "compaction": {
     "auto": true,
     "reserved": 30000
