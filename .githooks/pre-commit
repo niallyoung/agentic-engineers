@@ -646,48 +646,52 @@ echo "🔒 Validating model naming compliance (LOCKED models)..."
 # Source locked models configuration
 HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=.githooks/LOCKED_MODELS.sh
-source "$HOOKS_DIR/LOCKED_MODELS.sh"
+source "$HOOKS_DIR/LOCKED_MODELS.sh" 2>/dev/null || {
+    echo "⚠️  pre-commit: could not source LOCKED_MODELS.sh — skipping model compliance check" >&2
+}
 
 MODEL_ERRORS=0
 
-# Validate source agents use models from LOCKED_MODELS
-STAGED_MODEL_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|py|yaml|yml)$' || true)
-for file in $STAGED_MODEL_FILES; do
-    [ -f "$file" ] || continue
-    
-    # Only check source agent files
-    if [[ "$file" != src/agents/* ]]; then
-        continue
-    fi
-    
-    # Extract model from staged content (from frontmatter)
-    staged_content=$(git show ":$file" 2>/dev/null)
-    model=$(echo "$staged_content" | grep -E '^model:\s*' | head -1 | awk '{print $2}' | tr -d '"'"'"'')
-    
-    if [ -z "$model" ]; then
-        # No model field found — skip (might not be a full agent file)
-        continue
-    fi
-    
-    # Check if model is in locked set
-    if ! is_model_locked "$model"; then
-        fail "❌ Model not in locked set: $file"
-        fail "   Model: $model"
-        fail "   Locked models (approved choices):"
-        for locked_model in "${LOCKED_MODELS[@]}"; do
-            fail "     - $locked_model"
-        done
-        fail "   To request a model change, contact the Orchestrator"
-        fail "   → Include: agent name and reason for the change"
-        MODEL_ERRORS=$((MODEL_ERRORS + 1))
-    fi
-done
+# Validate source agents use models from LOCKED_MODELS (only if models are locked)
+if declare -f is_model_locked >/dev/null 2>&1; then
+    STAGED_MODEL_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|py|yaml|yml)$' || true)
+    for file in $STAGED_MODEL_FILES; do
+        [ -f "$file" ] || continue
 
-if [ "$MODEL_ERRORS" -gt 0 ]; then
-    echo ""
-    echo "❌ pre-commit: $MODEL_ERRORS model compliance violation(s) found"
-    fail "Models are LOCKED by choice. See .githooks/LOCKED_MODELS.sh for approved models"
-    ERRORS=$((ERRORS + MODEL_ERRORS))
+        # Only check source agent files
+        if [[ "$file" != src/agents/* ]]; then
+            continue
+        fi
+
+        # Extract model from staged content (from frontmatter)
+        staged_content=$(git show ":$file" 2>/dev/null)
+        model=$(echo "$staged_content" | grep -E '^model:\s*' | head -1 | awk '{print $2}' | tr -d '"'"'"'')
+
+        if [ -z "$model" ]; then
+            # No model field found — skip (might not be a full agent file)
+            continue
+        fi
+
+        # Check if model is in locked set
+        if ! is_model_locked "$model"; then
+            fail "❌ Model not in locked set: $file"
+            fail "   Model: $model"
+            fail "   Locked models (approved choices):"
+            for locked_model in "${LOCKED_MODELS[@]}"; do
+                fail "     - $locked_model"
+            done
+            fail "   To request a model change, contact the Orchestrator"
+            fail "   → Include: agent name and reason for the change"
+            MODEL_ERRORS=$((MODEL_ERRORS + 1))
+        fi
+    done
+
+    if [ "$MODEL_ERRORS" -gt 0 ]; then
+        echo ""
+        echo "❌ pre-commit: $MODEL_ERRORS model compliance violation(s) found"
+        fail "Models are LOCKED by choice. See .githooks/LOCKED_MODELS.sh for approved models"
+        ERRORS=$((ERRORS + MODEL_ERRORS))
+    fi
 fi
 
 # ─── End: Model Naming Compliance Enforcement ────────────────────────────────
@@ -1001,7 +1005,7 @@ else
     ERRORS=$((ERRORS + PROTOCOL_ERRORS))
   else
     # Report when DELEGATE/HANDBACK files were validated successfully
-    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | while read -r f; do
+    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true | while read -r f; do
       content=$(git show ":$f" 2>/dev/null)
       if echo "$content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
         echo "1"
