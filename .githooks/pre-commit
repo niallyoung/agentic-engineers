@@ -799,24 +799,24 @@ PROTOCOL_ERRORS=0
 # If this self-test fails the hook aborts immediately before checking real staged files.
 _protocol_selftest() {
   local old_fmt new_fmt neither_fmt
-  old_fmt="task_id: selftest-old\ntype: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one\n"
-  new_fmt="task_id: selftest-new\nhandoff_type: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one\n"
-  neither_fmt="task_id: selftest-neither\nsome_key: value\n"
+  old_fmt=$'task_id: selftest-old\ntype: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one'
+  new_fmt=$'task_id: selftest-new\nhandoff_type: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one'
+  neither_fmt=$'task_id: selftest-neither\nsome_key: value'
 
   # Old format (type:) must be detected as a protocol file
-  if ! printf "%b" "$old_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
+  if ! echo "$old_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
     echo "❌ protocol selftest FAILED: old format (type:) not detected" >&2
     return 1
   fi
 
   # New format (handoff_type:) must be detected as a protocol file
-  if ! printf "%b" "$new_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
+  if ! echo "$new_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
     echo "❌ protocol selftest FAILED: new format (handoff_type:) not detected" >&2
     return 1
   fi
 
   # Neither format must NOT be detected as a protocol file
-  if printf "%b" "$neither_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
+  if echo "$neither_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
     echo "❌ protocol selftest FAILED: non-protocol file incorrectly detected" >&2
     return 1
   fi
