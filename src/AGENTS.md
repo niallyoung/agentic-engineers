@@ -108,19 +108,18 @@ estimated_tokens: 1500
 handoff_type: HANDBACK
 task_id: unique-identifier
 status: success                    # success | failure | partial | blocked | escalate
-deliverables:
-  - "Modified: src/module.py (feature implemented)"
-  - "Added: tests/test_feature.py (100% coverage)"
-tests:
-  - "All unit tests: PASS (47 tests)"
-  - "Code coverage: 92%"
-tokens:
-  used: 1200
-  estimated: 1500
-  efficiency: 0.80
-quality_score: 95                  # 0-100
-confidence: 0.95                   # 0.0-1.0
-notes: "Straightforward implementation, all edge cases covered."
+
+output: |
+  Modified src/module.py to implement feature. Added tests/test_feature.py
+  with 100% coverage. All unit tests pass (47 tests). Code coverage: 92%.
+
+metrics:
+  quality: 0.95                    # 0.0-1.0 float
+  tokens: 1200                     # total input + output
+  cost: 0.019                      # USD
+  duration_seconds: 42             # wall-clock time
+
+confidence: 0.95                   # 0.0-1.0 float
 ---
 ```
 

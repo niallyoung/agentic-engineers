@@ -227,41 +227,109 @@ If you encounter legacy path references, ensure the queue-isolation skill is pro
 
 ---
 
+## Runtime Enforcement: enqueue() is the Mandatory Gateway
+
+**`QueueOperations.enqueue()` is the ONLY sanctioned way to create DELEGATE or HANDBACK files.**
+
+Queue files live at `~/.agentic-engineers/{session-id}/{harness}/queue/` — outside git control.  
+The pre-commit hook validates example files in the repo; `enqueue()` is the gate for runtime artifacts.
+
+### Why enqueue() is mandatory
+
+- Validates canonical schema before any file is written (no partial/invalid artifacts on disk)
+- Enforces atomic writes (no torn files visible to the polling Orchestrator)
+- Applies rate limiting, duplicate-id checks, and cycle detection
+- Returns a structured result including the written file path for auditability
+
+### Enforcement rules
+
+| Rule | What happens if violated |
+|------|--------------------------|
+| Missing `handoff_type` | `ValueError` — must be `DELEGATE` or `HANDBACK` |
+| Using `type:` instead of `handoff_type:` | `ValueError` — rejected as legacy field |
+| Using `role:` instead of `agent:` | `ValueError` — rejected as legacy field |
+| Top-level `quality_score:` | `ValueError` — must be `metrics.quality` (0.0-1.0 float) |
+| Invalid `agent:` name | `ValueError` — must be hyphenated e.g. `senior-engineer` |
+| Invalid `status:` in HANDBACK | `ValueError` — must be `success\|failure\|partial\|blocked\|escalate` |
+| Missing `metrics` in HANDBACK | `ValueError` — `quality`, `tokens`, `cost`, `duration_seconds` all required |
+| Duplicate `task_id` | `FileExistsError` |
+| Rate limit exceeded | `RuntimeError` |
+
+### Canonical Schema
+
+**DELEGATE** (required fields):
+```yaml
+handoff_type: DELEGATE            # REQUIRED — was "type" in old schema
+task_id: my-task-001              # kebab-case, 3-50 chars
+agent: engineer                   # hyphenated lowercase — NOT "role: Engineer"
+scope: ">=15 words describing the task scope"
+plan:
+  - "Step 1 with at least 3 words"
+  - "Step 2 with at least 3 words"
+context: ">=20 words of context"  # or non-empty list
+success_criteria:
+  - "Criterion 1"
+# Optional: effort, model, priority, deadline, parent_task_id
+```
+
+**HANDBACK** (required fields):
+```yaml
+handoff_type: HANDBACK            # REQUIRED
+task_id: my-task-001              # matches DELEGATE task_id
+agent: engineer                   # agent that completed the work
+status: success                   # success | failure | partial | blocked | escalate
+output: {}                        # any value — result of the work
+metrics:                          # REQUIRED — NOT top-level quality_score
+  quality: 0.95                   # float 0.0-1.0 — NOT 0-100
+  tokens: 3200                    # non-negative integer
+  cost: 0.016                     # non-negative float (USD)
+  duration_seconds: 38.5          # non-negative float
+# Optional: model_used, effort_actual, flags, error, children_created
+```
+
+### Usage
+
+```python
+from skills.queue_management.scripts.queue_ops import QueueOperations
+
+ops = QueueOperations(session_id=session_id)
+
+# Enqueue a DELEGATE — validated, atomic, rate-limited
+result = ops.enqueue({
+    "handoff_type": "DELEGATE",
+    "task_id": "fix-auth-timeout",
+    "agent": "engineer",
+    "scope": "Fix the token validation timeout that causes intermittent 401 errors under load",
+    "plan": [
+        "Read src/auth/token_validator.py to understand current timeout logic",
+        "Identify the race condition in the concurrent validation path",
+        "Apply fix with appropriate locking and update tests",
+    ],
+    "context": [
+        "Service: auth-service (Go/Lambda)",
+        "Problem: 401s spike under 100+ concurrent requests",
+        "Token validator uses Redis with a 30s TTL; concurrent reads race on expiry",
+    ],
+    "success_criteria": [
+        "No 401 errors under 200 concurrent requests in load test",
+        "All existing auth tests still pass",
+    ],
+})
+# result: {"status": "enqueued", "handoff_type": "DELEGATE", "task_id": "fix-auth-timeout", ...}
+
+# NEVER write directly to the queue directory:
+# open("~/.agentic-engineers/.../incoming/fix-auth-timeout.json", "w")  # FORBIDDEN
+```
+
+---
+
 ## DELEGATE/HANDBACK Storage
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
-| DELEGATE | `~/.agentic-engineers/{session-id}/{harness}/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
-| HANDBACK | `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
-| Decision | `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
-
-**DELEGATE Format (from HANDOFF.md):**
-```yaml
-handoff_type: DELEGATE
-task_id: {unique_id}
-role: Engineer | Senior Engineer | Lead Engineer | ...
-model: claude-haiku-4.5 | claude-sonnet-4.6 | ...
-effort: low | medium | high | max
-scope: "Clear one-sentence scope + out-of-scope"
-context: [...]
-success_criteria: [...]
-plan: [...]  # Required for Engineer; steps should include Red-Green TDD phases for code changes
-```
-
-**HANDBACK Format (from HANDOFF.md):**
-```yaml
-handoff_type: HANDBACK
-task_id: {matching_delegate_task_id}
-status: complete | blocked | partial
-deliverables: [...]
-tests: [...]
-tokens_in: estimate
-tokens_out: estimate
-model: actual_model_used
-effort: actual_effort
-duration_minutes: wall_clock_time
-escalations: count
-```
+| DELEGATE | `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/{task_id}.json` | `enqueue()` only | Orchestrator (polls), Agent (receives) |
+| HANDBACK | `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}.json` | `enqueue()` only | Orchestrator (routes), QE (verifies) |
+| Decision | `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}.json` | Orchestrator `move_task()` | Human / external system |
 
 ---
 
@@ -269,9 +337,12 @@ escalations: count
 
 | Queue | Format | Example |
 |-------|--------|---------|
-| incoming | `{task_id}.yaml` | `2026-04-30-fix-token-timeout.yaml` |
-| processing | `{task_id}-HANDBACK-{role}.yaml` | `2026-04-30-fix-token-timeout-HANDBACK-Engineer.yaml` |
-| done | `{task_id}-{decision}.yaml` | `2026-04-30-fix-token-timeout-PROCEED.yaml` |
+| incoming | `{task_id}.json` | `2026-04-30-fix-token-timeout.json` |
+| processing | `{task_id}.json` | `2026-04-30-fix-token-timeout.json` |
+| done | `{task_id}.json` | `2026-04-30-fix-token-timeout.json` |
+
+Note: All queue files are JSON (written by `enqueue()`) and named by `task_id` only.  
+The state is tracked by which subdirectory (`incoming/`, `processing/`, etc.) the file lives in.
 
 ---
 

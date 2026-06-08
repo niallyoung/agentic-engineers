@@ -188,24 +188,17 @@ success_criteria:
 ```yaml
 handoff_type: HANDBACK
 task_id: 2026-04-29-fix-auth-abc123
-timestamp: 2026-04-29T14:32:00
-status: PASS  # PASS or ESCALATE
-severity: PASS  # PASS, LOW, MEDIUM, HIGH
-confidence: 0.92  # 0.0-1.0
-deliverables:
-  - Task completed per plan
-execution_results:
-  - step: 1
-    description: Add grace period
-    status: SUCCESS
-success_criteria_results:
-  - criterion: make verify passes
-    passed: true
-quality_score: 95  # 0-100
-token_metrics:
-  input_tokens: 340
-  output_tokens: 580
-  total_tokens: 920
+status: success
+output: |
+  Task completed per plan. Modified lambda/api/main.go:92-96 to add 30-second
+  grace period to token expiry check. Added TestTokenExpiryGracePeriod test.
+  All acceptance criteria pass via make verify.
+
+metrics:
+  quality: 0.95
+  tokens: 920
+  cost: 0.015
+  duration_seconds: 28
 ```
 
 ## Agent Models & Costs

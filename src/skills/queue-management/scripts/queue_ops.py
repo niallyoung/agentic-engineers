@@ -3,6 +3,26 @@ Queue Operations Module
 
 Atomic queue operations for DELEGATE/HANDBACK workflow with cycle detection,
 rate limiting, and validation.
+
+MANDATORY ENQUEUE CONTRACT
+--------------------------
+``QueueOperations.enqueue()`` is the ONLY sanctioned way to create a DELEGATE
+or HANDBACK file in the queue directory.  Direct file writes to any queue
+subdirectory (incoming/, processing/, done/, failed/) bypass schema validation
+and are explicitly forbidden.
+
+All agents MUST use the ``queue-management`` skill (and therefore enqueue())
+to create queue artifacts.  The method enforces:
+
+  * Canonical schema: ``handoff_type`` (DELEGATE|HANDBACK), ``agent``
+    (hyphenated), ``metrics`` (nested object with quality/tokens/cost/
+    duration_seconds), ``status`` (success|failure|partial|blocked|escalate).
+  * Rejection of legacy fields: ``type``, ``role`` (use ``agent``),
+    top-level ``quality_score`` (move inside ``metrics``).
+  * Atomic write via ``AtomicQueueOps`` — no partial files.
+  * Rate limiting, cycle detection, and duplicate prevention.
+
+See docs/QUEUE-PROTOCOL.md for the full specification.
 """
 
 import json
@@ -17,6 +37,41 @@ from .validators import DelegateValidator, HandbackValidator, CycleDetector
 from .rate_limiter import RateLimiter
 from .consistency import AtomicQueueOps
 from .subtask_validators import SubTaskValidator
+
+# ---------------------------------------------------------------------------
+# Canonical schema constants (single source of truth for enqueue validation)
+# ---------------------------------------------------------------------------
+
+VALID_HANDOFF_TYPES = {"DELEGATE", "HANDBACK"}
+
+VALID_AGENTS = {
+    "orchestrator",
+    "engineer",
+    "senior-engineer",
+    "lead-engineer",
+    "principal-engineer",
+    "security-engineer",
+    "quality-engineer",
+    "model-engineer",
+}
+
+VALID_STATUSES = {"success", "failure", "partial", "blocked", "escalate"}
+
+# Legacy field names that are no longer accepted in canonical schema
+_REJECTED_LEGACY_FIELDS = {
+    "type": (
+        "Use 'handoff_type' (value: 'DELEGATE' or 'HANDBACK') instead of 'type'. "
+        "Old 'type:' field is no longer accepted."
+    ),
+    "role": (
+        "Use 'agent' (hyphenated lowercase, e.g. 'senior-engineer') instead of 'role'. "
+        "Old 'role:' field is no longer accepted."
+    ),
+    "quality_score": (
+        "Move 'quality_score' inside the 'metrics' object as 'metrics.quality' (0.0-1.0 float). "
+        "Top-level 'quality_score' is no longer accepted."
+    ),
+}
 
 # ---------------------------------------------------------------------------
 # queue-isolation integration (optional — graceful fallback)
@@ -241,6 +296,305 @@ class QueueOperations:
             "parent_task_id": parent_task_id,
             "task_tier": task_tier,
         }
+
+    def enqueue(self, artifact: Dict) -> Dict:
+        """
+        MANDATORY entry point for creating DELEGATE or HANDBACK queue files.
+
+        This is the ONLY sanctioned way to write a file to any queue
+        subdirectory.  Direct file writes to ``incoming/``, ``processing/``,
+        ``done/``, or ``failed/`` are forbidden and bypass schema validation.
+
+        Validates canonical schema:
+          * ``handoff_type``: must be ``DELEGATE`` or ``HANDBACK``
+          * ``agent``: must be hyphenated lowercase agent name
+          * ``task_id``: required, kebab-case
+          * DELEGATE: requires ``scope`` (≥15 words), ``plan`` (≥2 steps),
+            ``context``, ``success_criteria``
+          * HANDBACK: requires ``status`` (canonical enum), ``output``,
+            ``metrics`` (object with ``quality``, ``tokens``, ``cost``,
+            ``duration_seconds``)
+          * Legacy fields ``type``, ``role``, ``quality_score`` are rejected
+            with clear error messages.
+          * Rate limit and duplicate-task-id checks are applied for DELEGATEs.
+
+        Args:
+            artifact: Dict representing the DELEGATE or HANDBACK to enqueue.
+
+        Returns:
+            {
+                "status": "enqueued",
+                "handoff_type": str,
+                "task_id": str,
+                "timestamp": str,
+                "queue_path": str,
+            }
+
+        Raises:
+            ValueError: Schema validation failed — message lists all errors.
+            FileExistsError: Duplicate task_id (DELEGATE only).
+            RuntimeError: Rate limit exceeded or cycle detected.
+        """
+        errors: List[str] = []
+
+        # ------------------------------------------------------------------
+        # 1. Reject legacy field names immediately with actionable messages
+        # ------------------------------------------------------------------
+        for legacy_field, guidance in _REJECTED_LEGACY_FIELDS.items():
+            if legacy_field in artifact:
+                errors.append(f"Rejected legacy field '{legacy_field}': {guidance}")
+
+        if errors:
+            raise ValueError(
+                "enqueue() rejected artifact with legacy schema fields. "
+                "All agents must use canonical schema.\n"
+                + "\n".join(f"  - {e}" for e in errors)
+            )
+
+        # ------------------------------------------------------------------
+        # 2. Validate handoff_type
+        # ------------------------------------------------------------------
+        handoff_type = artifact.get("handoff_type")
+        if not handoff_type:
+            errors.append(
+                "handoff_type: required — must be 'DELEGATE' or 'HANDBACK'"
+            )
+        elif handoff_type not in VALID_HANDOFF_TYPES:
+            errors.append(
+                f"handoff_type: invalid value '{handoff_type}' — "
+                f"must be one of {sorted(VALID_HANDOFF_TYPES)}"
+            )
+
+        # ------------------------------------------------------------------
+        # 3. Validate task_id (common to both types)
+        # ------------------------------------------------------------------
+        task_id = artifact.get("task_id")
+        if not task_id or not isinstance(task_id, str):
+            errors.append("task_id: required, must be a non-empty string")
+        elif len(task_id) < 3 or len(task_id) > 50:
+            errors.append(
+                f"task_id: must be 3-50 characters (got {len(task_id)})"
+            )
+        elif not __import__("re").match(r"^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$", task_id):
+            errors.append(
+                "task_id: must be kebab-case [a-z0-9-]+ (lowercase, digits, hyphens)"
+            )
+
+        # ------------------------------------------------------------------
+        # 4. Validate agent
+        # ------------------------------------------------------------------
+        agent = artifact.get("agent")
+        if not agent or not isinstance(agent, str):
+            errors.append(
+                "agent: required — use hyphenated name e.g. 'senior-engineer'"
+            )
+        elif agent not in VALID_AGENTS:
+            errors.append(
+                f"agent: invalid value '{agent}' — "
+                f"must be one of {sorted(VALID_AGENTS)}"
+            )
+
+        # ------------------------------------------------------------------
+        # 5. Type-specific field validation
+        # ------------------------------------------------------------------
+        if handoff_type == "DELEGATE":
+            errors.extend(self._validate_delegate_fields(artifact))
+        elif handoff_type == "HANDBACK":
+            errors.extend(self._validate_handback_fields(artifact))
+
+        if errors:
+            raise ValueError(
+                "enqueue() schema validation failed — artifact rejected:\n"
+                + "\n".join(f"  - {e}" for e in errors)
+            )
+
+        # ------------------------------------------------------------------
+        # 6. DELEGATE-specific runtime checks (rate limit, duplicate, cycle)
+        # ------------------------------------------------------------------
+        parent_task_id = artifact.get("parent_task_id")
+
+        if handoff_type == "DELEGATE":
+            # Rate limit check
+            allowed, rate_info = self.rate_limiter.check_limit(
+                self.session_id, parent_task_id
+            )
+            if not allowed:
+                if parent_task_id and rate_info.get("children_count", 0) >= rate_info.get(
+                    "children_limit", 10
+                ):
+                    raise RuntimeError(
+                        f"Parent task '{parent_task_id}' already has "
+                        f"{rate_info['children_count']} children (max 10 per parent)"
+                    )
+                raise RuntimeError(
+                    f"Rate limit exceeded: "
+                    f"{rate_info['tasks_this_hour']}/{rate_info['limit']} tasks/hour"
+                )
+
+            # Duplicate task_id check
+            if task_id and self._task_exists(task_id):
+                raise FileExistsError(
+                    f"Task '{task_id}' already exists in queue"
+                )
+
+            # Cycle detection
+            if parent_task_id and task_id:
+                if self.cycle_detector.has_cycle(task_id, parent_task_id):
+                    raise RuntimeError(
+                        f"Cycle detected: {task_id} -> {parent_task_id} creates a cycle"
+                    )
+
+        # ------------------------------------------------------------------
+        # 7. Determine target queue state and write atomically
+        # ------------------------------------------------------------------
+        if handoff_type == "DELEGATE":
+            target_state = "incoming"
+        else:
+            # HANDBACKs land in processing for Orchestrator to pick up
+            target_state = "processing"
+
+        artifact_with_meta = {
+            **artifact,
+            "enqueued_at": datetime.utcnow().isoformat(),
+            "queue_state": target_state,
+        }
+
+        state_dir = self.session_queue_path / target_state
+        state_dir.mkdir(parents=True, exist_ok=True)
+        file_path = state_dir / f"{task_id}.json"
+        self.atomic_ops.write_atomic(
+            file_path, json.dumps(artifact_with_meta, indent=2, default=str)
+        )
+
+        # Record rate limit for DELEGATEs
+        if handoff_type == "DELEGATE" and task_id:
+            self.rate_limiter.record_task(self.session_id, task_id, parent_task_id)
+
+        return {
+            "status": "enqueued",
+            "handoff_type": handoff_type,
+            "task_id": task_id,
+            "timestamp": artifact_with_meta["enqueued_at"],
+            "queue_path": str(file_path),
+        }
+
+    def _validate_delegate_fields(self, artifact: Dict) -> List[str]:
+        """Validate DELEGATE-specific required fields. Returns list of errors."""
+        errors: List[str] = []
+
+        # scope: required, >=15 words
+        scope = artifact.get("scope", "")
+        if not scope or not isinstance(scope, str):
+            errors.append("scope: required for DELEGATE, must be a string")
+        elif len(scope.split()) < 15:
+            errors.append(
+                f"scope: must be >=15 words (got {len(scope.split())})"
+            )
+
+        # plan: required, >=2 steps, each >=3 words
+        plan = artifact.get("plan")
+        if plan is None:
+            errors.append("plan: required for DELEGATE")
+        elif not isinstance(plan, list):
+            errors.append("plan: must be a list of strings")
+        elif len(plan) < 2:
+            errors.append(
+                f"plan: must have >=2 steps (got {len(plan)})"
+            )
+        else:
+            for i, step in enumerate(plan):
+                if not isinstance(step, str):
+                    errors.append(f"plan[{i}]: each step must be a string")
+                elif len(step.split()) < 3:
+                    errors.append(
+                        f"plan[{i}]: each step must be >=3 words (got '{step}')"
+                    )
+
+        # context: required, >=20 words (string) or non-empty list
+        context = artifact.get("context")
+        if context is None:
+            errors.append("context: required for DELEGATE")
+        elif isinstance(context, str):
+            if len(context.split()) < 20:
+                errors.append(
+                    f"context: must be >=20 words when string (got {len(context.split())})"
+                )
+        elif isinstance(context, list):
+            if len(context) == 0:
+                errors.append("context: must be non-empty when provided as list")
+        else:
+            errors.append("context: must be a string or list of strings")
+
+        # success_criteria: required, non-empty list
+        sc = artifact.get("success_criteria")
+        if sc is None:
+            errors.append("success_criteria: required for DELEGATE")
+        elif not isinstance(sc, list) or len(sc) == 0:
+            errors.append("success_criteria: must be a non-empty list")
+
+        return errors
+
+    def _validate_handback_fields(self, artifact: Dict) -> List[str]:
+        """Validate HANDBACK-specific required fields. Returns list of errors."""
+        errors: List[str] = []
+
+        # status: required, canonical enum
+        status = artifact.get("status")
+        if not status:
+            errors.append(
+                "status: required for HANDBACK — "
+                f"must be one of {sorted(VALID_STATUSES)}"
+            )
+        elif status not in VALID_STATUSES:
+            errors.append(
+                f"status: invalid value '{status}' — "
+                f"must be one of {sorted(VALID_STATUSES)}"
+            )
+
+        # output: required (any value acceptable)
+        if "output" not in artifact:
+            errors.append("output: required for HANDBACK")
+
+        # metrics: required object with quality, tokens, cost, duration_seconds
+        metrics = artifact.get("metrics")
+        if metrics is None:
+            errors.append("metrics: required for HANDBACK")
+        elif not isinstance(metrics, dict):
+            errors.append("metrics: must be an object")
+        else:
+            q = metrics.get("quality")
+            if q is None:
+                errors.append("metrics.quality: required (float 0.0-1.0)")
+            elif not isinstance(q, (int, float)) or isinstance(q, bool) or not (0.0 <= q <= 1.0):
+                errors.append(
+                    f"metrics.quality: must be float 0.0-1.0 (got {q!r})"
+                )
+
+            tokens = metrics.get("tokens")
+            if tokens is None:
+                errors.append("metrics.tokens: required (non-negative integer)")
+            elif not isinstance(tokens, int) or isinstance(tokens, bool) or tokens < 0:
+                errors.append(
+                    f"metrics.tokens: must be non-negative integer (got {tokens!r})"
+                )
+
+            cost = metrics.get("cost")
+            if cost is None:
+                errors.append("metrics.cost: required (non-negative number)")
+            elif not isinstance(cost, (int, float)) or isinstance(cost, bool) or cost < 0:
+                errors.append(
+                    f"metrics.cost: must be non-negative number (got {cost!r})"
+                )
+
+            dur = metrics.get("duration_seconds")
+            if dur is None:
+                errors.append("metrics.duration_seconds: required (non-negative number)")
+            elif not isinstance(dur, (int, float)) or isinstance(dur, bool) or dur < 0:
+                errors.append(
+                    f"metrics.duration_seconds: must be non-negative number (got {dur!r})"
+                )
+
+        return errors
 
     def validate_delegate(self, delegate: Dict) -> Tuple[bool, List[str]]:
         """

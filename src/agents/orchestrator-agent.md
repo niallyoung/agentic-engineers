@@ -100,6 +100,69 @@ domain keywords, and role routing per domain.
 7. Make model/agent selection recommendations
 8. Continue with next task
 
+## Example DELEGATE Block (Orchestrator sending work to Engineer)
+
+```yaml
+---
+task_id: task-2026-06-08-auth-grace-period
+handoff_type: DELEGATE
+agent: engineer
+skill: engineer
+model: claude-haiku-4.5
+effort: high
+
+scope: |
+  Add 30-second grace period to JWT exp claim validation in lambda/api/main.go
+  to account for clock skew on mobile devices. The service currently rejects tokens
+  30+ seconds past expiry; this change allows a 30-second tolerance. Out of scope:
+  changes to other token validation logic or public API contracts.
+
+context:
+  - "File: lambda/api/main.go:92 (token expiry check logic)"
+  - "Error: Mobile users report 'Token rejected after 1hr' — root cause is clock skew (device time differs from server by 20-30 seconds)"
+  - "Reference: lambda/DESIGN.md line 156 (token lifecycle documentation)"
+
+plan:
+  - "Step 1: Open lambda/api/main.go and locate token expiry validation at line 92"
+  - "Step 2: Add 30-second grace period to exp claim check"
+  - "Step 3: Add inline comment explaining why (clock skew tolerance)"
+  - "Step 4: Create test TestTokenExpiryGracePeriod in main_test.go"
+  - "Step 5: Run 'make verify' and confirm all tests pass"
+
+success_criteria:
+  - "AC1: make verify passes (all unit tests green)"
+  - "AC2: Token with exp 30 seconds ago is accepted (grace period applies)"
+  - "AC3: Token with exp 31+ seconds ago is rejected"
+  - "AC4: Code coverage maintained above 87%"
+
+tokens_estimate: 1500
+budget: 0.024
+```
+
+## Example HANDBACK Block (Orchestrator receiving work from Engineer)
+
+```yaml
+---
+task_id: task-2026-06-08-auth-grace-period
+handoff_type: HANDBACK
+status: success
+
+output: |
+  Modified lambda/api/main.go:92-96 to add 30-second grace period to token expiry
+  check. Added TestTokenExpiryGracePeriod test covering grace period acceptance
+  and rejection edge cases. All acceptance criteria pass.
+
+metrics:
+  quality: 0.95
+  tokens: 1200
+  cost: 0.019
+  duration_seconds: 34
+
+model_used: claude-haiku-4.5
+confidence: 0.95
+escalations: 0
+```
+
 Your goal is to maximize team efficiency, code quality, and cost-effectiveness through smart routing and continuous optimization.
 
 ## Autonomy & Task Boundaries
