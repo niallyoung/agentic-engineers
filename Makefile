@@ -4,7 +4,7 @@
         setup status migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
         verify verify-harness-sync validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
-        lint test test-concurrent test-ci test-ci-force test-ci-shell quality-gate
+        lint test test-evals test-concurrent test-ci test-ci-force test-ci-shell quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -362,6 +362,15 @@ test: ## Run pytest test suite with coverage
 		-v --tb=short
 	@echo ""
 	@echo "✅ Tests complete. HTML coverage report: htmlcov/index.html"
+
+test-evals: ## Run DELEGATE/HANDBACK quality evaluation tests
+	@echo "🧪 Running eval framework tests (20+ quality checks)..."
+	@echo "   Tests: DELEGATE required fields, plan quality, scope substance"
+	@echo "   Tests: HANDBACK metrics, status canonicity, output substance"
+	@echo "   Tests: Orchestrator routing correctness, model/effort alignment"
+	@cd "$(REPO_ROOT)" && python3 -m pytest tests/evals/ -v --tb=short
+	@echo ""
+	@echo "✅ All eval tests passed"
 
 test-concurrent: ## Run concurrent invocation tests (race condition guard)
 	@echo "🔀 Running concurrent invocation tests (race condition guard)..."

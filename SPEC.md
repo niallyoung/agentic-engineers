@@ -18,7 +18,7 @@ type: specification
 
 ## Executive Summary
 
-The Agentic Engineers system uses queue-based delegation to route all work through specialized AI agents (Orchestrator, Engineer, Senior Engineer, Quality Engineer, Lead Engineer, Principal Engineer, Security Engineer, Model Engineer). Each agent is assigned a specific role, model, and effort level. Work flows through a file-based queue system (`artifacts/queue/`) with complete audit trails. Phase 5.10 adds observability via span capture and artifact indexing, both implemented within agent SKILLS (not external tools).
+The Agentic Engineers system uses queue-based delegation to route all work through specialized AI agents (Orchestrator, Engineer, Senior Engineer, Quality Engineer, Lead Engineer, Principal Engineer, Security Engineer, Model Engineer). Each agent is assigned a specific role, model, and effort level. Work flows through a file-based queue system (`~/.agentic-engineers/{session-id}/{harness}/queue/`) with complete audit trails. Phase 5.10 adds observability via span capture and artifact indexing, both implemented within agent SKILLS (not external tools).
 
 ---
 
@@ -34,19 +34,19 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
    - Work only flows through the Orchestrator queue system
 
 2. **All Work Enters the Queue**
-   - New tasks arrive as files in `~/.copilot/queue/{session-id}/incoming/{task_id}.yaml` (Copilot context)
+   - New tasks arrive as files in `~/.agentic-engineers/{session-id}/{harness}/incoming/{task_id}.yaml`
    - Each session has its own isolated queue partition
    - Orchestrator polls this directory every 30-60 seconds
    - No other entry point exists (no Makefile targets, no scripts, no cron jobs, no ad-hoc invocations)
 
 3. **Orchestrator is the Router**
-   - Reads incoming task from session-partitioned queue
+   - Reads incoming task from session-partitioned queue at `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/`
    - Applies AGENTS.md routing decision tree to determine which agent to delegate to
    - Creates DELEGATE block in `artifacts/delegates/YYYY-MM-DD/` with complete context
    - Sends DELEGATE to agent
    - Receives HANDBACK from agent
    - Routes HANDBACK to Quality Engineer for verification
-   - Moves completed task to session-partitioned `done/` queue
+   - Moves completed task to session-partitioned `~/.agentic-engineers/{session-id}/{harness}/queue/done/`
    - Applies Model Engineer recommendations to improve future routing
 
 4. **No External Scripts, Tools, or Cron Jobs (Agent Operations)**
@@ -68,8 +68,9 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 **When creating an agent implementation:**
 
 1. **Implement QUEUE POLLING**
-   - Orchestrator SKILL detects session-id (from COPILOT_SESSION_ID or filesystem scan)
-   - Orchestrator SKILL polls `~/.copilot/queue/{session-id}/incoming/` every 30-60 seconds
+   - Orchestrator SKILL detects session-id (from COPILOT_SESSION_ID or CLAUDE_SESSION_ID environment variable)
+   - Orchestrator SKILL detects harness name (copilot, claude, opencode, or pi)
+   - Orchestrator SKILL polls `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` every 30-60 seconds
    - Each poll reads new tasks from session's queue partition only
    - This is the ONLY way work enters the system
 
@@ -113,7 +114,7 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 - ❌ Do NOT implement observability outside of agent SKILLS
 - ❌ Do NOT use "trivial fixes" or other undefined escape clauses to bypass queue
 - ❌ Do NOT allow CI/CD or external systems to invoke scripts directly
-- ❌ Do NOT allow any automated external system to write files directly to `artifacts/queue/incoming/` — all queue entries originate from humans or the Orchestrator
+- ❌ Do NOT allow any automated external system to write files directly to `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` — all queue entries originate from humans or the Orchestrator
 - ❌ Do NOT create automated cron job installers or pre-configured cron jobs
 
 **Why This Constraint Exists:**
@@ -255,7 +256,7 @@ This creates exponential improvement instead of linear.
 
 **If you need the functionality these scripts provided:**
 1. Implement the logic as an Agent SKILL
-2. Queue work as a DELEGATE block in `artifacts/queue/incoming/`
+2. Queue work as a DELEGATE block in `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/`
 3. Let Orchestrator route and delegate to the appropriate agent
 4. Agent executes and returns HANDBACK
 
@@ -399,10 +400,10 @@ This section defines canonical terms used throughout the agentic-engineers frame
 
 | Term | Definition | Example |
 |------|-----------|---------|
-| **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `artifacts/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
-| **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `artifacts/queue/incoming/` only by humans or the Orchestrator itself. Automated external systems MUST NOT write directly to the queue. Core unit of work. | `artifacts/queue/incoming/task-2026-05-02.yaml` |
-| **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `artifacts/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `artifacts/queue/done/task-2026-05-02-HANDBACK.yaml` |
-| **Queue System** | File-based work queue with three session-id partitioned directories: `~/.copilot/queue/{session-id}/{incoming,processing,done}/` (Copilot context) or `~/.claude/queue/{session-id}/{incoming,processing,done}/` (Claude context). Each Copilot or Claude session has isolated queue partition identified by UUID. Automatic migration of legacy queues on first run. Both use identical DELEGATE/HANDBACK protocol. | All work coordination happens through context-specific, session-partitioned queue file operations. No cross-session contamination. |
+| **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
+| **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` only by humans or the Orchestrator itself. Automated external systems MUST NOT write directly to the queue. Core unit of work. | `~/.agentic-engineers/{session-id}/copilot/queue/incoming/task-2026-05-02.yaml` |
+| **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `~/.agentic-engineers/{session-id}/{harness}/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `~/.agentic-engineers/{session-id}/copilot/queue/done/task-2026-05-02-HANDBACK.yaml` |
+| **Queue System** | File-based work queue with four session-id partitioned directories per harness: `~/.agentic-engineers/{session-id}/{harness}/queue/{incoming,processing,done,failed}/`. Each harness (copilot, claude, opencode, pi) has isolated queue partition identified by UUID. All harnesses use canonical base path `~/.agentic-engineers/`. Both use identical DELEGATE/HANDBACK protocol. | All work coordination happens through canonical session-partitioned queue file operations. No cross-session contamination. All harnesses use same base directory. |
 | **Agent SKILL** | A Python module implementing an agent's core capabilities. Invoked only through agent context (not external scripts). Located in `orchestration/agents/`. | `orchestration/agents/engineer_agent.py` |
 | **Span Capture** | Observability mechanism that tracks work execution from initiation through completion, including decision points, delays, and handoffs. | `artifacts/spans/ directory records all task spans. |
 | **Task Routing** | The process by which Orchestrator examines a DELEGATE block and applies the decision tree to select the appropriate agent role. | "Routing determined this was a security task, so Principal Engineer was selected." |
@@ -412,7 +413,7 @@ This section defines canonical terms used throughout the agentic-engineers frame
 
 ## Routing Decision Tree (Orchestrator)
 
-When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
+When Orchestrator polls `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` and finds a task:
 
 1. **Is task security-scoped?** (auth, crypto, data protection, vulnerability)  
    → **Security Engineer** (block all other routes)
@@ -435,31 +436,60 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
 
 ## Queue-Based Delegation Mechanics
 
-### Queue Structure (Session-ID Partitioned)
+### Queue Structure (Session-ID & Harness Partitioned)
 
 ```
-~/.copilot/queue/
+~/.agentic-engineers/
 ├── {session-id}/                    # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
-│   ├── incoming/                    # New tasks, ready for Orchestrator to process
-│   ├── processing/                  # Work assigned to agent, awaiting HANDBACK
-│   └── done/                        # Completed work, ready for human decision
+│   ├── copilot/
+│   │   ├── queue/
+│   │   │   ├── incoming/            # New tasks, ready for Orchestrator to process
+│   │   │   ├── processing/          # Work assigned to agent, awaiting HANDBACK
+│   │   │   ├── done/                # Completed work, ready for human decision
+│   │   │   └── failed/              # Failed work (archival)
+│   │   └── session-state/
+│   ├── claude/
+│   │   ├── queue/
+│   │   │   ├── incoming/
+│   │   │   ├── processing/
+│   │   │   ├── done/
+│   │   │   └── failed/
+│   │   └── session-state/
+│   ├── opencode/
+│   │   ├── queue/
+│   │   │   ├── incoming/
+│   │   │   ├── processing/
+│   │   │   ├── done/
+│   │   │   └── failed/
+│   │   └── session-state/
+│   └── pi/
+│       ├── queue/
+│       │   ├── incoming/
+│       │   ├── processing/
+│       │   ├── done/
+│       │   └── failed/
+│       └── session-state/
 ├── {other-session-id}/
-│   ├── incoming/
-│   ├── processing/
-│   └── done/
+│   ├── copilot/
+│   ├── claude/
+│   ├── opencode/
+│   └── pi/
 └── .migration-log                   # Migration record
 ```
 
-**Session-ID Detection:**
-- COPILOT_SESSION_ID environment variable (highest priority)
-- CLAUDE_SESSION_ID environment variable
-- Filesystem scan of `~/.copilot/session-state/` or `~/.claude/session-state/` (lowest priority)
+**Session-ID & Harness Detection:**
+- COPILOT_SESSION_ID environment variable → harness: copilot (highest priority)
+- CLAUDE_SESSION_ID environment variable → harness: claude
+- OPENCODE_SESSION_ID environment variable → harness: opencode
+- PI_SESSION_ID environment variable → harness: pi
+- Filesystem scan of `~/.agentic-engineers/*/session-state/` (lowest priority, detects all harnesses)
 
-**Backward Compatibility:**
-- Old queue structure (`~/.copilot/queue/{incoming,processing,done}/`) automatically migrated on first run
-- All files copied to new session-id location
+**Backward Compatibility (Legacy Path Migration):**
+- Old queue structures (`~/.copilot/queue/`, `~/.claude/queue/`, `artifacts/queue/`) automatically migrated on first run
+- All files copied to canonical session-id/harness location
 - Old directories renamed to backup location (e.g., `incoming-legacy-{timestamp}/`)
 - Migration recorded in `.migration-log`
+- After migration: Orchestrator uses ONLY canonical paths, never legacy paths
 
 ### Queue Flow
 
@@ -482,9 +512,9 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a task:
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
 | DELEGATE | `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
-| HANDBACK | `~/.copilot/queue/{session-id}/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
+| HANDBACK | `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
 | SPAN | `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml` | Orchestrator | Model Engineer (analysis), index generation |
-| Decision | `~/.copilot/queue/{session-id}/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
+| Decision | `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
 
 ---
 
@@ -1025,10 +1055,10 @@ Runs continuously in harness. Polls queues every 30-60 seconds.
 ## Constraints & Mandatory Rules
 
 ### Queue-Based Routing
-- **ALL work flows through queue:** `artifacts/queue/incoming/ → processing/ → done/`
+- **ALL work flows through queue:** `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/ → processing/ → done/`
 - **Orchestrator polls** every 30-60 seconds (runs in harness, no external cron/tools)
 - **DELEGATE stored** in `artifacts/delegates/YYYY-MM-DD/` for reference
-- **HANDBACK stored** in `artifacts/queue/processing/` (moved to done/ after QE review)
+- **HANDBACK stored** in `~/.agentic-engineers/{session-id}/{harness}/queue/processing/` (moved to done/ after QE review)
 
 ### Planning & Escalation
 - **Engineer MUST NOT receive task without pre-written `plan`** in DELEGATE. No exceptions — all tasks require a plan. If scope is unclear, return status: blocked and Orchestrator escalates to Senior Engineer to write the plan.
