@@ -13,11 +13,13 @@ A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, a
 
 **The answer:** A queue-based ORCHESTRATOR-FIRST architecture:
 
-1. All work enters a queue as DELEGATE tasks (SPEC-compliant YAML)
+1. All work enters a queue as DELEGATE tasks (SPEC-compliant YAML)[1]
 2. Orchestrator polls and routes to the right specialist
 3. Each agent returns a HANDBACK with results + metrics
 4. Quality gates validate all work before moving to done
 5. Metrics feed back into model selection and routing optimization
+
+[1] oops, soon with "actually works again" 🤦‍♂️ 20260609 PR on its way
 
 ### Key Benefits
 
