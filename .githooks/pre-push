@@ -368,6 +368,19 @@ if grep -E "^\s+@(bash|sh|python).*scripts" Makefile 2>/dev/null | grep -v "rend
   SPEC_ERRORS=$((SPEC_ERRORS + 1))
 fi
 
+# NEW: Validate SPEC architectural constraints (generic system for all rules)
+# Uses scripts/validate-spec-constraints.py which enforces rules defined in docs/SPEC.md
+# Makes it easy to add new constraints without modifying this hook.
+if command -v python3 >/dev/null 2>&1 && [ -f "scripts/validate-spec-constraints.py" ]; then
+  if ! python3 scripts/validate-spec-constraints.py 2>/dev/null | grep -q "^✅"; then
+    # Run again to capture output for error reporting
+    CONSTRAINT_ERRORS=$(python3 scripts/validate-spec-constraints.py 2>&1)
+    fail "SPEC constraint violations detected (see scripts/validate-spec-constraints.py):"
+    echo "$CONSTRAINT_ERRORS" | sed 's/^/  /'
+    SPEC_ERRORS=$((SPEC_ERRORS + 1))
+  fi
+fi
+
 if [ "$SPEC_ERRORS" -eq 0 ]; then
   pass "SPEC compliance verified"
 fi
