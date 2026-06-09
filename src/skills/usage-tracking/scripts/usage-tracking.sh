@@ -34,22 +34,27 @@ case "${1:-help}" in
         ;;
     cron-setup)
         # Print cron job setup instructions
-        cat << 'EOF'
+        SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+        CAPTURE_SCRIPT="$SKILL_DIR/scripts/capture_token_usage.sh"
+        cat << EOF
 Add to crontab (crontab -e) to capture usage every 30 minutes:
 
   # Capture token usage every 30 minutes
-  */30 * * * * /home/user/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh
+  */30 * * * * $CAPTURE_SCRIPT
 
 Or every hour:
 
   # Capture token usage every hour
-  0 * * * * /home/user/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh
+  0 * * * * $CAPTURE_SCRIPT
 
 Install with:
-  (crontab -l 2>/dev/null; echo "*/30 * * * * /home/user/git/ers/{workspace-name}/agentic-engineers/orchestration/scripts/capture_token_usage.sh") | crontab -
+  (crontab -l 2>/dev/null; echo "*/30 * * * * $CAPTURE_SCRIPT") | crontab -
 
 View installed cron jobs:
   crontab -l
+
+Note: The cron job captures token usage from ~/.agentic-engineers/metrics/
+and stores results in {workspace-root}/data/metrics/usage_history.jsonl
 EOF
         ;;
     *)

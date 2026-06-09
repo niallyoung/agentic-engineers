@@ -9,19 +9,28 @@ WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 ERS_ROOT="$(cd "$WORKSPACE_ROOT/.." && pwd)"
 METRICS_DIR="$ERS_ROOT/data/metrics"
 USAGE_HISTORY="$METRICS_DIR/usage_history.jsonl"
-BUDGET_CHECK_SCRIPT="$WORKSPACE_ROOT/agentic-engineers/orchestration/scripts/usage_budget_check.py"
 
 # Ensure metrics directory exists
 mkdir -p "$METRICS_DIR"
 
-# Get current budget status from usage_budget_check.py
+# Locate budget check script (primary: skill-relative; fallback: orchestration/)
+# Per SPEC §"Queue Architecture & Paths", external scripts must not live in
+# orchestration/ — this skill-relative path is canonical.
+BUDGET_CHECK_SCRIPT="$SCRIPT_DIR/usage_budget_check.py"
 if [ ! -f "$BUDGET_CHECK_SCRIPT" ]; then
-    # Fallback: look in same directory (for local development)
-    if [ ! -f "$SCRIPT_DIR/usage_budget_check.py" ]; then
-        echo "ERROR: usage_budget_check.py not found" >&2
+    # Fallback for legacy deployments only
+    LEGACY_PATH="$WORKSPACE_ROOT/agentic-engineers/orchestration/scripts/usage_budget_check.py"
+    if [ -f "$LEGACY_PATH" ]; then
+        BUDGET_CHECK_SCRIPT="$LEGACY_PATH"
+        if [ "${VERBOSE:-}" = "true" ]; then
+            echo "[usage-tracking] Using legacy orchestration/scripts path: $LEGACY_PATH" >&2
+        fi
+    else
+        echo "ERROR: usage_budget_check.py not found in $SCRIPT_DIR or legacy location" >&2
         exit 1
     fi
-    BUDGET_CHECK_SCRIPT="$SCRIPT_DIR/usage_budget_check.py"
+elif [ "${VERBOSE:-}" = "true" ]; then
+    echo "[usage-tracking] Using canonical skill-relative path: $BUDGET_CHECK_SCRIPT" >&2
 fi
 
 # Capture current usage data as JSON

@@ -368,6 +368,51 @@ if grep -E "^\s+@(bash|sh|python).*scripts" Makefile 2>/dev/null | grep -v "rend
   SPEC_ERRORS=$((SPEC_ERRORS + 1))
 fi
 
+# NEW: Check source files for hardcoded orchestration/scripts references (in string values, not comments)
+# These can accidentally get copied or recreated during deploys/renders.
+# Per SPEC §"Queue Architecture & Paths": all automation must flow through DELEGATE/HANDBACK;
+# orchestration/scripts/ must never contain actual scripts (even as examples/docs).
+#
+# We grep for the path only in active code/strings (inside quotes, cron examples, etc),
+# not in comments which are OK for explaining the guard-rail.
+if command -v python3 >/dev/null 2>&1 && [ -d "src/skills" ]; then
+  FORBIDDEN_REFS=$(python3 << 'PYTHON_FORBIDDEN_PATHS'
+import os
+import re
+
+violations = []
+
+# Check skill scripts for hardcoded orchestration/scripts references
+for root, dirs, files in os.walk('src/skills'):
+    for f in files:
+        if not f.endswith(('.sh', '.py')):
+            continue
+        fpath = os.path.join(root, f)
+        try:
+            with open(fpath, 'r') as file:
+                for i, line in enumerate(file, 1):
+                    # Skip comment-only lines
+                    if line.strip().startswith('#') or line.strip().startswith('//'):
+                        continue
+                    # Look for the path in actual code (variable assignments, strings, etc)
+                    if 'orchestration/scripts' in line and not 'LEGACY' in line and not 'fallback' in line.lower():
+                        # This is likely a primary code reference, not just a comment
+                        violations.append(f"{fpath}:{i}: {line.rstrip()}")
+        except:
+            pass
+
+for v in violations:
+    print(v)
+PYTHON_FORBIDDEN_PATHS
+)
+
+  if [ -n "$FORBIDDEN_REFS" ]; then
+    fail "Found hardcoded orchestration/scripts references in skill code (violates SPEC):"
+    echo "$FORBIDDEN_REFS" | sed 's/^/  /'
+    SPEC_ERRORS=$((SPEC_ERRORS + 1))
+  fi
+fi
+
 if [ "$SPEC_ERRORS" -eq 0 ]; then
   pass "SPEC compliance verified"
 fi
