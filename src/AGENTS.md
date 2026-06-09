@@ -37,7 +37,7 @@
 
 **Multi-Model column notes:**
 - Principal Engineer: 4.6 (default/pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../SPEC.md).
-- Security Engineer: 4.8 always (non-downgrade rule). 4.7 only as emergency fallback if 4.8 unavailable; document in HANDBACK. See [SPEC.md > Model Selection Architecture](../SPEC.md).
+- Security Engineer: 4.8 (default, pinned) | fable-5 (defensive-only alternative at effort:medium). 4.7 only as emergency fallback if 4.8 unavailable; document in HANDBACK. Fable-5 restricted to defensive analysis (vulnerability assessment, threat modelling, compliance review). See [SPEC.md > Model Selection Architecture](../SPEC.md).
 
 ### Cost Tiers
 
@@ -131,7 +131,7 @@ Principal Engineer and Security Engineer support model variant selection based o
 
 **Decision criteria:**
 - Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
-- Security Engineer: Always use `claude-opus-4.8` (non-downgrade rule)
+- Security Engineer: Use `claude-opus-4.8` (default, pinned) | `claude-fable-5` with adaptive thinking at effort:medium (defensive analysis only; see SPEC.md constraint)
 
 For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../SPEC.md).
 
@@ -367,7 +367,7 @@ ops.enqueue({
 
 ### 8. Security Engineer
 
-**Model:** `claude-opus-4.8`  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
+**Model:** `claude-opus-4.8` (pinned) | `claude-fable-5` (defensive-only alternative)  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
 
 **Purpose:** Threat modelling, vulnerability assessment, compliance review. Always assigned for security-scoped work.
 
