@@ -92,7 +92,7 @@ def _try_import_queue_isolation():
         return None
 
 
-_DEFAULT_QUEUE_PATH = "~/.agentic-engineers/artifacts"
+_DEFAULT_QUEUE_PATH = "~/.agentic-engineers"
 
 
 class QueueOperations:
@@ -109,7 +109,7 @@ class QueueOperations:
 
         When the ``queue-isolation`` skill is available **and** no explicit
         ``queue_path`` override is provided, the queue is automatically scoped to
-        ``~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/``.
+        ``~/.agentic-engineers/{session_id}/{harness}/queue/``.
 
         Passing an explicit ``queue_path`` (e.g., a temporary directory in tests)
         bypasses queue-isolation and uses the legacy session-subdirectory layout

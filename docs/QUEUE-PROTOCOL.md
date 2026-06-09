@@ -161,6 +161,77 @@ Orchestrator is a harness agent (defined in AGENTS.md) that:
 
 ---
 
+## Escalation Chaining (C2c)
+
+When an agent returns a HANDBACK with status `escalate`, the Orchestrator automatically creates a new DELEGATE for the target agent and enqueues it in the `incoming/` queue. This enables seamless agent-to-agent escalation without manual intervention.
+
+### When Escalation Happens
+
+An agent returns a HANDBACK with:
+
+```yaml
+---
+handoff_type: HANDBACK
+task_id: original-task-id
+status: escalate
+output:
+  escalate_to: lead-engineer
+  escalation_reason: "Complex architectural issues require senior review"
+escalation_chain: [engineer, senior-engineer]  # Track the escalation path
+---
+```
+
+### Orchestrator Escalation Chaining Process
+
+1. **Detect escalate status**: Check if `handback.status == 'escalate'`
+
+2. **Extract escalation target**: Read `handback.output.escalate_to` (e.g., "lead-engineer")
+
+3. **Create escalation DELEGATE**:
+   - New task_id: `{original_task_id}-escalated-to-{role}`
+   - Agent: escalation target role
+   - Scope: summarizes escalation reason
+   - Context: includes original HANDBACK and metadata
+   - Escalation chain: appends current role to track the path
+
+4. **Enqueue in incoming/**: Write escalation DELEGATE to `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/`
+
+5. **Move original to done/**: Archive original task with escalation metadata
+
+6. **Return escalation result**: Task is now queued for the next agent in the chain
+
+### Example Escalation Chain
+
+```
+Engineer receives DELEGATE
+  ↓
+Engineer finds complex architecture issue
+  ↓
+Engineer returns HANDBACK with status=escalate, escalate_to=senior-engineer
+  ↓
+Orchestrator creates DELEGATE for Senior Engineer
+  ↓
+Senior Engineer receives DELEGATE with original context
+  ↓
+(Process repeats if Senior Engineer also escalates)
+```
+
+### Escalation Chain Tracking
+
+Each escalation appends the current role to the `escalation_chain` array:
+
+```yaml
+escalation_chain: [engineer, senior-engineer, principal-engineer]
+```
+
+This prevents circular escalations and helps debugging by showing the full path.
+
+### Escalation Timeout (Future Enhancement)
+
+If `escalation_chain` length exceeds 3, the Orchestrator treats it as a **circular escalation** and escalates to `security-engineer` for manual review.
+
+---
+
 ## Session-ID Based Partitioning
 
 Each Copilot or Claude session has its own isolated queue, identified by a unique session-id (UUID). This ensures that multiple simultaneous Copilot/Claude instances don't interfere with each other's tasks.

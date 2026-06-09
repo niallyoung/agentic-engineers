@@ -56,9 +56,8 @@ if [ -d "$AGENTIC_ENGINEERS_ROOT/.githooks" ]; then
 fi
 
 # 4. Verify framework readiness
-if [ ! -d "$AGENTIC_ENGINEERS_ROOT/orchestration" ] || \
-   [ ! -d "$AGENTIC_ENGINEERS_ROOT/skills" ] || \
-   [ ! -f "$AGENTIC_ENGINEERS_ROOT/MANIFEST.md" ]; then
+if [ ! -d "$AGENTIC_ENGINEERS_ROOT/src/orchestration" ] || \
+   [ ! -f "$AGENTIC_ENGINEERS_ROOT/src/AGENTS.md" ]; then
     echo "WARNING: agentic-engineers framework incomplete" >&2
     exit 1
 fi

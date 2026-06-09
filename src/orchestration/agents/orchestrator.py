@@ -42,6 +42,7 @@ from .delegate_validator import (
     validate_delegate_pre_flight,
 )
 from .metrics_writer import MetricsWriter
+from .queue_enforcement_middleware import QueueEnforcingProxy
 from ..monitoring.metrics import MetricsRegistry
 from ..monitoring.token_tracker import TokenTracker
 from ..monitoring.orchestrator_cli import OrchestratorCLI
@@ -1085,7 +1086,8 @@ class OrchestratorAgent(Agent):
         no_color: Optional[bool] = None,
     ):
         super().__init__(ORCHESTRATOR_CONFIG)
-        self.queue_manager = QueueManager(queue_dir, agent_context)
+        base_queue_manager = QueueManager(queue_dir, agent_context)
+        self.queue_manager = QueueEnforcingProxy(base_queue_manager, agent_role="queue_manager")
         self.task_router = TaskRouter()
         self.idle_timeout = idle_timeout
         self.last_task_time = time.time()
@@ -1954,6 +1956,68 @@ class OrchestratorAgent(Agent):
             else:
                 handback = agent.execute(effective_delegate)
                 print(f"   ✓ Agent executed with status: {handback.get('status')}")
+
+            # 5.5 HANDBACK Escalation Chaining (C2c)
+            # If HANDBACK status is "escalate", create a new DELEGATE for the target agent
+            handback_status = handback.get('status', '')
+            if handback_status == 'escalate':
+                escalate_to_role = handback.get('output', {}).get('escalate_to') if isinstance(handback.get('output'), dict) else None
+                if not escalate_to_role:
+                    # Fallback: check for escalate_to at top level
+                    escalate_to_role = handback.get('escalate_to', 'lead-engineer')
+
+                escalation_context = {
+                    "original_task_id": task_id,
+                    "original_role": role,
+                    "original_handback": handback,
+                    "escalation_reason": handback.get('output', {}).get('escalation_reason') if isinstance(handback.get('output'), dict) else handback.get('escalation_reason'),
+                }
+
+                # Create escalation DELEGATE for incoming queue
+                escalation_delegate_new = {
+                    "handoff_type": "DELEGATE",
+                    "task_id": f"{task_id}-escalated-to-{escalate_to_role}",
+                    "agent": escalate_to_role,
+                    "role": escalate_to_role,
+                    "scope": f"Escalation from {role}: {escalation_context.get('escalation_reason', 'See original_handback')}",
+                    "context": escalation_context,
+                    "success_criteria": [
+                        "Review original work and HANDBACK",
+                        "Address escalation reason",
+                        "Provide assessment and next steps",
+                    ],
+                    "escalation_chain": handback.get('escalation_chain', []) + [role],
+                }
+
+                # Write escalation DELEGATE to incoming queue
+                try:
+                    # Generate filename from task_id
+                    escalation_task_id = escalation_delegate_new['task_id']
+                    escalation_filename = f"{escalation_task_id}.yaml"
+                    escalation_filepath = self.queue_manager._agent.incoming_dir / escalation_filename
+
+                    # Write DELEGATE to incoming queue
+                    with open(escalation_filepath, 'w') as f:
+                        yaml.dump(escalation_delegate_new, f, default_flow_style=False, sort_keys=False)
+
+                    print(f"   ↪️  Escalation chaining: created new DELEGATE for {escalate_to_role}")
+                    print(f"       New task ID: {escalation_delegate_new['task_id']}")
+                    print(f"       Queue file: {escalation_filename}")
+
+                    # Move original task to done with escalation metadata
+                    move_done_result = self.queue_manager._agent.move_task(
+                        task_id=task_id,
+                        from_state="processing",
+                        to_state="done",
+                        filename=move_result.get("filename"),
+                        metadata={**handback, "escalation_delegate_created": escalation_filename}
+                    )
+                    self.tasks_processed += 1
+                    self.tasks_escalated += 1
+                    return (f'ESCALATE-TO-{escalate_to_role.upper()}', escalation_delegate_new)
+                except Exception as esc_err:
+                    print(f"   ⚠️  Failed to create escalation DELEGATE: {esc_err}")
+                    # Fall through to normal quality validation
 
             # 6. Layer 3 quality validation (post-completion)
             handback_validation = self.quality_validator.validate_handback(handback, delegate)

@@ -80,7 +80,7 @@ class MigrationProgressMetrics:
     def __init__(self, legacy_base: Optional[Path] = None, new_base: Optional[Path] = None):
         """Initialize migration tracking."""
         self.legacy_base = legacy_base or Path.home() / ".copilot" / "queue"
-        self.new_base = new_base or Path.home() / ".agentic-engineers" / "artifacts"
+        self.new_base = new_base or Path.home() / ".agentic-engineers"
         
         self.migration_started = datetime.now()
         self.tasks_migrated = {}

@@ -140,7 +140,7 @@ def get_queue_path(
     """
     Construct the queue directory path for a given session and harness.
 
-    Path: <base_dir>/artifacts/<session_id>/<harness>/queue/
+    Path: <base_dir>/<session_id>/<harness>/queue/
 
     Args:
         session_id: Unique session identifier.
@@ -152,10 +152,10 @@ def get_queue_path(
     """
     base = Path(base_dir) if base_dir is not None else _default_base_dir()
     # Reject traversal / separator injection in session_id and harness so the
-    # resulting path cannot escape the canonical artifacts root.
+    # resulting path cannot escape the canonical queue root.
     safe_session = _validate_path_component(session_id, field="session_id")
     safe_harness = _validate_path_component(harness, field="harness")
-    return base / "artifacts" / safe_session / safe_harness / "queue"
+    return base / safe_session / safe_harness / "queue"
 
 
 def init_queue_structure(

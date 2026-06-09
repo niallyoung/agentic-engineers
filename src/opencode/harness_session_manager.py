@@ -242,7 +242,7 @@ class HarnessSessionManager:
 
         Format: ~/.agentic-engineers/{session-id}/{harness}/queue/
         """
-        return self._base_dir / "artifacts" / self.session_id / self.harness / "queue"
+        return self._base_dir / self.session_id / self.harness / "queue"
 
     @property
     def harness_root(self) -> Path:
