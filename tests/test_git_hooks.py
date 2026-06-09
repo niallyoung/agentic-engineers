@@ -436,9 +436,10 @@ class TestCommitMsgHook:
             feat: add delegate for testing 2026-05-16-test-delegate
 
             DELEGATE block:
+            handoff_type: DELEGATE
             task_id: 2026-05-16-test-delegate
-            role: engineer
-            scope: Test the system
+            agent: engineer
+            scope: Test the system with required scope description
             plan: Run tests
             success_criteria: All pass
         """)
@@ -450,9 +451,11 @@ class TestCommitMsgHook:
         msg = textwrap.dedent("""\
             feat: add incomplete delegate
 
-            DELEGATE block:
+            ---
+            handoff_type: DELEGATE
             task_id: 2026-05-16-test
-            role: engineer
+            agent: engineer
+            ---
         """)
         result = self._run_with_msg(msg)
         assert result.returncode != 0

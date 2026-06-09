@@ -135,58 +135,81 @@ fi
 # ────────────────────────────────────────────────────────────────────────────────
 # 6. VALIDATE: DELEGATE/HANDBACK protocol compliance
 # ────────────────────────────────────────────────────────────────────────────────
+# NOTE: Forward-compatible with both 'type:' (deprecated) and 'handoff_type:' (canonical)
 
-if echo "$COMMIT_MSG" | grep -qi 'DELEGATE'; then
+if echo "$COMMIT_MSG" | grep -qE '^\s*handoff_type:\s*DELEGATE|^\s*type:\s*DELEGATE'; then
   info "DELEGATE block detected in commit message"
-  
-  # Check for required DELEGATE fields
-  DELEGATE_FIELDS=("task_id" "role" "scope" "plan" "success_criteria")
+
+  # Check for required DELEGATE fields (canonical schema)
+  DELEGATE_FIELDS=("task_id" "agent" "scope" "plan" "success_criteria")
   MISSING_FIELDS=()
-  
+
   for field in "${DELEGATE_FIELDS[@]}"; do
     if ! echo "$COMMIT_MSG" | grep -qi "^${field}:"; then
       MISSING_FIELDS+=("$field")
     fi
   done
-  
+
   if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
     fail "DELEGATE block missing required fields: ${MISSING_FIELDS[*]}"
   else
     success "DELEGATE block has all required fields"
   fi
-  
+
   # Validate task_id format within DELEGATE
   if echo "$COMMIT_MSG" | grep -qE "task_id: +[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9\-]+"; then
     success "DELEGATE task_id format is valid"
   else
     fail "DELEGATE task_id format invalid (expected: YYYY-MM-DD-kebab-case)"
   fi
+
+  # Check for deprecated fields and warn about them
+  if echo "$COMMIT_MSG" | grep -qE '^\s*role:'; then
+    warn "DELEGATE uses deprecated field 'role:' — use 'agent:' instead"
+  fi
+  if echo "$COMMIT_MSG" | grep -qE '^\s*type:\s*DELEGATE'; then
+    warn "DELEGATE uses deprecated field 'type:' — use 'handoff_type:' instead"
+  fi
 fi
 
-if echo "$COMMIT_MSG" | grep -qi 'HANDBACK'; then
+if echo "$COMMIT_MSG" | grep -qE '^\s*handoff_type:\s*HANDBACK|^\s*type:\s*HANDBACK'; then
   info "HANDBACK block detected in commit message"
-  
-  # Check for required HANDBACK fields
-  HANDBACK_FIELDS=("task_id" "status" "deliverables" "tests" "quality_score")
+
+  # Check for required HANDBACK fields (canonical schema)
+  HANDBACK_FIELDS=("task_id" "agent" "status" "output" "metrics")
   MISSING_FIELDS=()
-  
+
   for field in "${HANDBACK_FIELDS[@]}"; do
     if ! echo "$COMMIT_MSG" | grep -qi "^${field}:"; then
       MISSING_FIELDS+=("$field")
     fi
   done
-  
+
   if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
     fail "HANDBACK block missing required fields: ${MISSING_FIELDS[*]}"
   else
     success "HANDBACK block has all required fields"
   fi
-  
-  # Validate status value
-  if echo "$COMMIT_MSG" | grep -qE "status: +(complete|failed|partial|blocked)"; then
+
+  # Validate status value (canonical enum)
+  if echo "$COMMIT_MSG" | grep -qE "status: +(success|failure|partial|blocked|escalate)"; then
     success "HANDBACK status value is valid"
   else
-    fail "HANDBACK status must be one of: complete, failed, partial, blocked"
+    fail "HANDBACK status must be one of: success, failure, partial, blocked, escalate"
+  fi
+
+  # Check for deprecated fields and warn about them
+  if echo "$COMMIT_MSG" | grep -qE '^\s*deliverables:'; then
+    warn "HANDBACK uses deprecated field 'deliverables:' — use 'output:' instead"
+  fi
+  if echo "$COMMIT_MSG" | grep -qE '^\s*tests:'; then
+    warn "HANDBACK uses deprecated field 'tests:' — use 'metrics:' instead"
+  fi
+  if echo "$COMMIT_MSG" | grep -qE '^\s*quality_score:'; then
+    warn "HANDBACK uses deprecated field 'quality_score:' — use 'metrics.quality' instead"
+  fi
+  if echo "$COMMIT_MSG" | grep -qE '^\s*type:\s*HANDBACK'; then
+    warn "HANDBACK uses deprecated field 'type:' — use 'handoff_type:' instead"
   fi
 fi
 

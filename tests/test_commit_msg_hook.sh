@@ -123,14 +123,14 @@ echo ""
 # 5. DELEGATE VALIDATION TESTS
 # ────────────────────────────────────────────────────────────────────────────────
 
-echo -e "${BLUE}5. DELEGATE Block Validation Tests${NC}"
-test_case "Valid DELEGATE block" 0 "feat: DELEGATE implementation
+echo -e "${BLUE}5. DELEGATE Block Validation Tests (Canonical Schema)${NC}"
+test_case "Valid DELEGATE block with agent field" 0 "feat: DELEGATE implementation
 
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-16-hooks-commitmsg-implementation
-role: engineer
-scope: Implement commit-msg hook
+agent: engineer
+scope: Implement commit-msg hook for canonical schema validation
 plan:
   1. Create hook script
   2. Add validation rules
@@ -139,11 +139,11 @@ success_criteria:
   - Tests pass
 ---"
 
-test_case "DELEGATE missing task_id" 1 "feat: DELEGATE implementation
+test_case "DELEGATE missing agent field (should fail)" 1 "feat: DELEGATE implementation
 
 ---
 handoff_type: DELEGATE
-role: engineer
+task_id: 2026-05-16-test
 scope: Implement commit-msg hook
 plan:
   1. Create hook script
@@ -151,25 +151,27 @@ success_criteria:
   - Hook validates messages
 ---"
 
-test_case "DELEGATE missing scope" 1 "feat: DELEGATE implementation
+test_case "DELEGATE with deprecated role field (warns but passes)" 0 "feat: DELEGATE with deprecated role
 
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-16-test
+agent: engineer
 role: engineer
+scope: Test implementation with forward-compat
 plan:
-  1. Create hook script
+  1. Create script
 success_criteria:
-  - Hook validates messages
+  - Tests pass
 ---"
 
-test_case "DELEGATE with all fields" 0 "feat: DELEGATE with complete fields
+test_case "DELEGATE with canonical fields" 0 "feat: DELEGATE with all fields
 
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-16-test
-role: engineer
-scope: Test implementation
+agent: engineer
+scope: Test implementation with complete fields here
 plan:
   1. Create script
 success_criteria:
@@ -181,95 +183,144 @@ echo ""
 # 6. HANDBACK VALIDATION TESTS
 # ────────────────────────────────────────────────────────────────────────────────
 
-echo -e "${BLUE}6. HANDBACK Block Validation Tests${NC}"
-test_case "Valid HANDBACK block" 0 "feat: HANDBACK completion
+echo -e "${BLUE}6. HANDBACK Block Validation Tests (Canonical Schema)${NC}"
+test_case "Valid HANDBACK block with output and metrics" 0 "feat: HANDBACK completion
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-hooks-commitmsg-implementation
-status: complete
-deliverables:
-  - .githooks/commit-msg
-tests:
-  - All validation tests pass
-quality_score: 95
+agent: engineer
+status: success
+output: Implementation complete, all tests pass
+metrics:
+  quality: 0.95
+  tokens: 1500
+  cost: 0.05
+  duration_seconds: 120
 ---"
 
-test_case "HANDBACK missing status" 1 "feat: HANDBACK incomplete
+test_case "HANDBACK missing output (should fail)" 1 "feat: HANDBACK incomplete
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-test
-deliverables:
-  - file.txt
-tests:
-  - test passes
-quality_score: 90
+agent: engineer
+status: success
+metrics:
+  quality: 0.95
+  tokens: 1500
+  cost: 0.05
+  duration_seconds: 120
 ---"
 
-test_case "HANDBACK invalid status" 1 "feat: HANDBACK with invalid status
+test_case "HANDBACK invalid status value (should fail)" 1 "feat: HANDBACK with invalid status
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-test
+agent: engineer
 status: invalid_status
-deliverables:
-  - file.txt
-tests:
-  - test passes
-quality_score: 90
+output: Some work done
+metrics:
+  quality: 0.95
+  tokens: 1500
+  cost: 0.05
+  duration_seconds: 120
 ---"
 
-test_case "HANDBACK with valid status: complete" 0 "feat: HANDBACK complete
+test_case "HANDBACK with canonical status: success" 0 "feat: HANDBACK success
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-test
-status: complete
-deliverables:
-  - file.txt
-tests:
-  - test passes
-quality_score: 90
+agent: engineer
+status: success
+output: Work completed successfully
+metrics:
+  quality: 0.95
+  tokens: 1500
+  cost: 0.05
+  duration_seconds: 120
 ---"
 
-test_case "HANDBACK with valid status: failed" 0 "feat: HANDBACK failed
+test_case "HANDBACK with canonical status: failure" 0 "feat: HANDBACK failure
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-test
-status: failed
-deliverables:
-  - none
-tests:
-  - test failed
-quality_score: 10
+agent: engineer
+status: failure
+output: Work failed
+metrics:
+  quality: 0.1
+  tokens: 500
+  cost: 0.01
+  duration_seconds: 60
 ---"
 
-test_case "HANDBACK with valid status: partial" 0 "feat: HANDBACK partial
+test_case "HANDBACK with canonical status: partial" 0 "feat: HANDBACK partial
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-test
+agent: engineer
 status: partial
-deliverables:
-  - partial.txt
-tests:
-  - some tests pass
-quality_score: 50
+output: Work partially complete
+metrics:
+  quality: 0.5
+  tokens: 1000
+  cost: 0.03
+  duration_seconds: 90
 ---"
 
-test_case "HANDBACK with valid status: blocked" 0 "feat: HANDBACK blocked
+test_case "HANDBACK with canonical status: blocked" 0 "feat: HANDBACK blocked
 
 ---
 handoff_type: HANDBACK
 task_id: 2026-05-16-test
+agent: engineer
 status: blocked
+output: Work blocked on dependency
+metrics:
+  quality: 0.0
+  tokens: 500
+  cost: 0.01
+  duration_seconds: 30
+---"
+
+test_case "HANDBACK with canonical status: escalate" 0 "feat: HANDBACK escalate
+
+---
+handoff_type: HANDBACK
+task_id: 2026-05-16-test
+agent: engineer
+status: escalate
+output: Work escalated to senior engineer
+metrics:
+  quality: 0.0
+  tokens: 800
+  cost: 0.02
+  duration_seconds: 45
+---"
+
+test_case "HANDBACK with deprecated fields (forward-compat)" 0 "feat: HANDBACK deprecated fields
+
+---
+handoff_type: HANDBACK
+task_id: 2026-05-16-test
+agent: engineer
+status: success
+output: Work done
 deliverables:
-  - none
+  - file.txt
 tests:
-  - blocked
-quality_score: 0
+  - test passes
+quality_score: 0.95
+metrics:
+  quality: 0.95
+  tokens: 1500
+  cost: 0.05
+  duration_seconds: 120
 ---"
 echo ""
 
