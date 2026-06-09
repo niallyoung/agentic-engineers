@@ -665,7 +665,8 @@ if declare -f is_model_locked >/dev/null 2>&1; then
 
         # Extract model from staged content (from frontmatter)
         staged_content=$(git show ":$file" 2>/dev/null)
-        model=$(echo "$staged_content" | grep -E '^model:\s*' | head -1 | awk '{print $2}' | tr -d '"'"'"'')
+        # Guard: grep -E returns 1 when no match; under pipefail+set-e this would abort.
+        model=$( { echo "$staged_content" | grep -E '^model:\s*' | head -1 | awk '{print $2}' | tr -d '"'"'"''; } || true)
 
         if [ -z "$model" ]; then
             # No model field found — skip (might not be a full agent file)
@@ -1004,15 +1005,22 @@ else
     echo "   → SKIP_HOOKS=1 git commit (bypasses all checks)"
     ERRORS=$((ERRORS + PROTOCOL_ERRORS))
   else
-    # Report when DELEGATE/HANDBACK files were validated successfully
-    protocol_file_count=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | while read -r f; do
+    # Report when DELEGATE/HANDBACK files were validated successfully.
+    # NOTE: under `set -o pipefail`, the inner `grep` exits 1 when no YAML files
+    # are staged; that non-zero status propagates as the pipeline's status and,
+    # combined with `set -e`, silently aborts the hook with exit 1 right after the
+    # banner. The trailing `|| true` neutralises the empty-match exit so the
+    # command-substitution always succeeds. We also strip the leading whitespace
+    # that BSD `wc -l` emits before the numeric comparison.
+    protocol_file_count=$( { git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | while read -r f; do
       content=$(git show ":$f" 2>/dev/null)
       if echo "$content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
         echo "1"
       fi
-    done | wc -l)
+    done | wc -l; } || true)
+    protocol_file_count=$(echo "$protocol_file_count" | tr -d '[:space:]')
 
-    if [ "$protocol_file_count" -gt 0 ]; then
+    if [ "${protocol_file_count:-0}" -gt 0 ]; then
       echo "✅ DELEGATE/HANDBACK validation passed ($protocol_file_count protocol file(s) validated)"
     fi
   fi
