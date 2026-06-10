@@ -1476,7 +1476,7 @@ Security analysis is the highest-stakes task in the system. Opus 4.8 is pinned a
 
 #### Alternative: `claude-fable-5` with `output_config.effort: medium` (Defensive-Only)
 
-Fable-5 is approved **exclusively for defensive security analysis** — prevention, detection, and remediation of existing vulnerabilities. Fable-5 uses adaptive thinking for nuanced threat analysis at lower cost.
+Fable-5 is approved **exclusively for defensive security analysis** — prevention, detection, and remediation of existing vulnerabilities. Fable-5 is the highest-capability tier (above Opus) and uses adaptive thinking for nuanced threat analysis. Note: Fable-5 is priced at $10/$50 per MTok — 2× Opus 4.8's $5/$25 — so this is a **capability upgrade, not a cost saving**; `effort: medium` bounds token spend per task but does not make it cheaper per token.
 
 **Approved use cases (defensive only):**
 - Vulnerability assessment (OWASP Top 10, injection, broken auth, secrets exposure)
@@ -1510,8 +1510,8 @@ ELSE
 
 | Model | Task Complexity | Cost (Input/Output) | Best For | Constraint |
 |-------|-----------------|--------|----------|------------|
-| `claude-opus-4.8` | Any | $10/$50 per MTok | All security tasks (default) | None |
-| `claude-fable-5` | Low-medium defensive | $10/$50 per MTok | Defensive vulnerability analysis at medium effort | **Defensive-only** (no offensive capability) |
+| `claude-opus-4.8` | Any | $5/$25 per MTok | All security tasks (default) | None |
+| `claude-fable-5` | High-nuance defensive | $10/$50 per MTok | Deep defensive vulnerability analysis at medium effort | **Defensive-only** (no offensive use) |
 
 ### Quality Engineer: model_assessment for Tier 3
 
