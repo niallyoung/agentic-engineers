@@ -520,9 +520,10 @@ token_tracking:
     - "tokens_out"
     - "total_tokens: tokens_in + tokens_out"
   cost_per_million:
-    "claude-haiku-4.5": "$0.80 input, $4.00 output"
+    "claude-haiku-4.5": "$1.00 input, $5.00 output"
     "claude-sonnet-4.6": "$3.00 input, $15.00 output"
-    "claude-opus-4.8": "$15.00 input, $75.00 output"
+    "claude-opus-4.8": "$5.00 input, $25.00 output"
+    "claude-fable-5": "$10.00 input, $50.00 output"
   metrics_aggregation:
     destination: "metrics/cost-quality-analysis.json"
     frequency: "per-task"

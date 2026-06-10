@@ -108,8 +108,8 @@ role_models:
 providers:
   anthropic:
     claude-haiku-4.5:
-      input: 0.00008
-      output: 0.00024
+      input: 0.001
+      output: 0.005
     claude-sonnet-4.5:
       input: 0.003
       output: 0.015
@@ -117,8 +117,11 @@ providers:
       input: 0.003
       output: 0.015
     claude-opus-4.8:
-      input: 0.015
-      output: 0.075
+      input: 0.005
+      output: 0.025
+    claude-fable-5:
+      input: 0.010
+      output: 0.050
   openai:
     gpt-4o-mini:
       input: 0.00015
@@ -189,6 +192,13 @@ model_selection:
       tier: opus
       base_quality: 0.95
       avg_latency_sec: 7.0
+    # Fable-5: highest-capability tier; Security Engineer defensive-only
+    # alternative (see docs/SPEC.md > Security Engineer: Multi-Model Strategy)
+    claude-fable-5:
+      provider: anthropic
+      tier: opus
+      base_quality: 0.97
+      avg_latency_sec: 8.0
     gpt-4o-mini:
       provider: openai
       tier: mini
