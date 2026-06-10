@@ -107,6 +107,18 @@ class DelegateValidator:
         'password', 'secret', 'token', 'api_key', 'apikey',
         'private_key', 'private-key', 'aws_secret', 'db_password'
     ]
+
+    # Fable-5 defensive-only gate (SPEC.md > Security Engineer: Multi-Model
+    # Strategy). Fable-5 is approved only for security_engineer, only for
+    # defensive analysis, at effort <= medium, and the DELEGATE must carry an
+    # explicit `model_constraint: defensive-only` field.
+    FABLE5_MODEL_MARKER = 'fable'
+    FABLE5_ALLOWED_ROLE = 'security_engineer'
+    FABLE5_ALLOWED_EFFORTS = {'low', 'medium'}
+    OFFENSIVE_SCOPE_PATTERNS = [
+        'exploit', 'attack automation', 'offensive', 'red team',
+        'proof-of-concept attack', 'jailbreak', 'prompt injection',
+    ]
     
     @staticmethod
     def validate_delegate_pre_flight(delegate: Dict) -> Tuple[bool, List[str]]:
@@ -339,7 +351,55 @@ class DelegateValidator:
                     failures.append(
                         'C4: review/audit task must route to lead_engineer or quality_engineer'
                     )
-        
+
+        # C5: fable-5 defensive-only gate (SPEC.md > Security Engineer:
+        # Multi-Model Strategy). Offensive-scoped work must route to
+        # claude-opus-4.8 — never fable-5.
+        failures.extend(self._check_fable5_gate(delegate))
+
+        return failures
+
+    def _check_fable5_gate(self, delegate: Dict) -> List[str]:
+        """Enforce the fable-5 defensive-only constraint on a DELEGATE.
+
+        Returns C5 failures when the DELEGATE requests a fable-5 model but:
+        - the role is not security_engineer, or
+        - the scope matches an offensive-work pattern, or
+        - effort exceeds medium, or
+        - the explicit ``model_constraint: defensive-only`` field is missing.
+        """
+        model = str(delegate.get('model', '')).lower()
+        if self.FABLE5_MODEL_MARKER not in model:
+            return []
+
+        failures = []
+        role = delegate.get('role', '')
+        if role != self.FABLE5_ALLOWED_ROLE:
+            failures.append(
+                f'C5: model "{delegate.get("model")}" is approved only for '
+                f'{self.FABLE5_ALLOWED_ROLE} (defensive-only), got role "{role}"'
+            )
+
+        scope = str(delegate.get('scope', '')).lower()
+        offensive_hits = [p for p in self.OFFENSIVE_SCOPE_PATTERNS if p in scope]
+        if offensive_hits:
+            failures.append(
+                'C5: offensive-scoped task must route to claude-opus-4.8, '
+                f'never fable-5 (matched: {", ".join(sorted(offensive_hits))})'
+            )
+
+        effort = delegate.get('effort', '')
+        if effort and effort not in self.FABLE5_ALLOWED_EFFORTS:
+            failures.append(
+                f'C5: fable-5 is approved at effort <= medium, got "{effort}"'
+            )
+
+        if delegate.get('model_constraint') != 'defensive-only':
+            failures.append(
+                'C5: fable-5 DELEGATE must carry explicit '
+                '`model_constraint: defensive-only` field'
+            )
+
         return failures
     
     @staticmethod
