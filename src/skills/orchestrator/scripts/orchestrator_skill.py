@@ -485,26 +485,188 @@ class OrchestratorSkill:
 
         return (recovered_count, failed_count)
 
-    def run_idle_loop(self) -> None:
+    def run_idle_loop(self) -> Dict[str, Any]:
         """
-        Implement 3-minute sleep with deep sleep after 3 consecutive clean polls.
+        Implement 3-minute polling sleep with deep sleep after 3 consecutive clean polls.
+
+        Behavior:
+        - If clean_poll_count < 3: sleep POLL_INTERVAL_SEC (3 minutes), return 'normal'
+        - If clean_poll_count >= 3: enter deep sleep, block until file system event or signal
+        - On wake: reset clean_poll_count = 0 and return 'file_event' or 'signal'
+
+        Returns:
+            Dict with keys:
+            - 'work_processed': int (always 0 in idle loop, indicates if any tasks were processed during sleep)
+            - 'idle_entered': bool (True if deep sleep was entered)
+            - 'wake_reason': str ('normal' | 'deep_sleep' | 'file_event' | 'signal')
         """
         if self.clean_poll_count >= self.IDLE_THRESHOLD_POLLS:
             logger.info(
                 f"Queue idle ({self.IDLE_THRESHOLD_POLLS} clean polls), "
-                f"entering deep sleep ({self.DEEP_SLEEP_SEC}s)"
+                f"entering deep sleep"
             )
-            self.capture_span("idle_loop", sleep_type="deep", duration_sec=self.DEEP_SLEEP_SEC)
-            time.sleep(self.DEEP_SLEEP_SEC)
+            self.capture_span(
+                "idle_loop",
+                sleep_type="deep",
+                duration_sec=self.DEEP_SLEEP_SEC,
+                idle_entered=True,
+            )
+
+            # Enter deep sleep - block until file system event or signal
+            wake_reason = self._deep_sleep()
             self.clean_poll_count = 0
+
+            logger.info(f"Woken from deep sleep: {wake_reason}")
+
+            return {
+                'work_processed': 0,
+                'idle_entered': True,
+                'wake_reason': wake_reason,
+            }
         else:
-            logger.debug(f"Queue polling sleep ({self.POLL_INTERVAL_SEC}s)")
+            logger.debug(
+                f"Queue polling sleep ({self.POLL_INTERVAL_SEC}s, "
+                f"clean_poll_count={self.clean_poll_count}/{self.IDLE_THRESHOLD_POLLS})"
+            )
             self.capture_span(
                 "idle_loop",
                 sleep_type="normal",
                 duration_sec=self.POLL_INTERVAL_SEC,
+                idle_entered=False,
             )
             time.sleep(self.POLL_INTERVAL_SEC)
+
+            return {
+                'work_processed': 0,
+                'idle_entered': False,
+                'wake_reason': 'normal',
+            }
+
+    def _deep_sleep(self) -> str:
+        """
+        Enter deep sleep and block until woken by file system event or signal.
+
+        Uses file system watching on the queue/incoming/ directory to detect
+        new DELEGATE files. Falls back to signal handling (SIGUSR1) if available.
+
+        Returns:
+            'file_event' if woken by new file in incoming/
+            'signal' if woken by SIGUSR1 signal
+            'timeout' if deep sleep timeout reached (DEEP_SLEEP_SEC)
+        """
+        import select
+        import signal as sig
+
+        incoming_dir = self.queue_root / "incoming"
+        wake_reason = 'timeout'
+
+        # Setup SIGUSR1 handler
+        def signal_handler(signum, frame):
+            nonlocal wake_reason
+            wake_reason = 'signal'
+            logger.debug("Received SIGUSR1, waking from deep sleep")
+
+        old_handler = sig.signal(sig.SIGUSR1, signal_handler)
+
+        try:
+            # Try to use inotify if available (Linux)
+            try:
+                import inotify_simple
+                inotify = inotify_simple.INotify()
+                watch_fd = inotify.add_watch(str(incoming_dir), inotify_simple.flags.CREATE)
+
+                logger.debug(f"Watching {incoming_dir} for new files (inotify)")
+
+                # Wait for file creation event with timeout
+                start = time.time()
+                timeout_remaining = self.DEEP_SLEEP_SEC
+
+                while timeout_remaining > 0:
+                    try:
+                        events = inotify.read(timeout=timeout_remaining)
+                        if events:
+                            logger.debug(f"File system event detected: {events}")
+                            wake_reason = 'file_event'
+                            break
+                    except Exception as e:
+                        logger.debug(f"inotify read error: {e}, retrying")
+
+                    if wake_reason == 'signal':
+                        break
+
+                    elapsed = time.time() - start
+                    timeout_remaining = self.DEEP_SLEEP_SEC - elapsed
+
+                return wake_reason
+
+            except (ImportError, AttributeError):
+                # Fallback: polling-based deep sleep (no inotify available)
+                logger.debug(f"inotify not available, using polling-based deep sleep")
+                return self._deep_sleep_polling()
+
+        finally:
+            # Restore original signal handler
+            sig.signal(sig.SIGUSR1, old_handler)
+
+    def _deep_sleep_polling(self) -> str:
+        """
+        Fallback deep sleep using polling and signal handling.
+
+        Polls the incoming/ directory every 10 seconds for new files,
+        with overall timeout of DEEP_SLEEP_SEC.
+
+        Returns:
+            'file_event' if new file detected
+            'signal' if SIGUSR1 received
+            'timeout' if timeout reached
+        """
+        import signal as sig
+
+        incoming_dir = self.queue_root / "incoming"
+        wake_reason = 'timeout'
+        poll_interval = 10  # seconds between checks
+
+        def signal_handler(signum, frame):
+            nonlocal wake_reason
+            wake_reason = 'signal'
+            logger.debug("Received SIGUSR1, waking from deep sleep")
+
+        old_handler = sig.signal(sig.SIGUSR1, signal_handler)
+
+        try:
+            # Get initial file list
+            initial_files = set(incoming_dir.glob("*.yaml"))
+            logger.debug(f"Initial incoming/ file count: {len(initial_files)}")
+
+            start = time.time()
+
+            while True:
+                if wake_reason == 'signal':
+                    break
+
+                # Check if timeout reached
+                elapsed = time.time() - start
+                if elapsed >= self.DEEP_SLEEP_SEC:
+                    break
+
+                # Sleep for poll_interval or remaining time, whichever is smaller
+                remaining = self.DEEP_SLEEP_SEC - elapsed
+                sleep_time = min(poll_interval, remaining)
+
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+
+                # Check for new files
+                current_files = set(incoming_dir.glob("*.yaml"))
+                if len(current_files) > len(initial_files):
+                    logger.debug(f"New file(s) detected in incoming/")
+                    wake_reason = 'file_event'
+                    break
+
+            return wake_reason
+
+        finally:
+            sig.signal(sig.SIGUSR1, old_handler)
 
     def invoke_qe_gate(self, task_id: str, handback: Dict[str, Any]) -> bool:
         """

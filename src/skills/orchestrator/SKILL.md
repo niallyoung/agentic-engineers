@@ -165,19 +165,68 @@ Metadata:   {task_id}.meta.json (claimed_at, retry_count, last_error)
 
 ---
 
-### `run_idle_loop()`
+### `run_idle_loop() -> Dict[str, Any]`
 
-**Purpose:** Implement 3-minute sleep with deep sleep after 3 consecutive clean polls.
+**Purpose:** Implement intelligent idle detection with 3-minute polling sleep and deep sleep after 3 consecutive clean polls.
 
 **Behavior:**
-1. If `clean_poll_count >= 3`:
-   - Log "Queue idle, entering deep sleep"
-   - Sleep for 10 minutes (or until woken by external signal)
+1. **Normal polling (clean_poll_count < 3):**
+   - Sleep for `POLL_INTERVAL_SEC` (180 seconds / 3 minutes)
+   - Return: `{'work_processed': 0, 'idle_entered': False, 'wake_reason': 'normal'}`
+
+2. **Idle detected (clean_poll_count >= 3):**
+   - Log "Queue idle ({IDLE_THRESHOLD_POLLS} clean polls), entering deep sleep"
+   - Call `_deep_sleep()` to block until woken
    - Reset `clean_poll_count = 0`
-2. Else:
-   - Sleep 3 minutes
-   - Call `poll_queue()` again
-   - Repeat
+   - Return: `{'work_processed': 0, 'idle_entered': True, 'wake_reason': <wake_type>}`
+
+**Returns:**
+```python
+{
+    'work_processed': int,    # 0 in idle loop (for future extension)
+    'idle_entered': bool,     # True if deep sleep was triggered
+    'wake_reason': str        # 'normal' | 'timeout' | 'file_event' | 'signal'
+}
+```
+
+**Wake Reasons:**
+- `'normal'` — completed POLL_INTERVAL_SEC sleep (normal polling cycle)
+- `'timeout'` — deep sleep duration (DEEP_SLEEP_SEC) completed without event
+- `'file_event'` — new file detected in `incoming/` directory (wakes early)
+- `'signal'` — received SIGUSR1 signal (external wake)
+
+---
+
+### `_deep_sleep() -> str`
+
+**Purpose:** Enter deep sleep and block until woken by file system event or signal.
+
+**Behavior:**
+1. Setup SIGUSR1 signal handler
+2. Attempt to use inotify (Linux) to watch `incoming/` for new files
+   - If available: wait for file creation event with timeout
+   - If not available: fall back to `_deep_sleep_polling()`
+3. On wake: return wake_reason and restore signal handler
+
+**Returns:** `'file_event' | 'signal' | 'timeout'`
+
+---
+
+### `_deep_sleep_polling() -> str`
+
+**Purpose:** Fallback deep sleep implementation using polling and signal handling.
+
+**Behavior:**
+1. Get initial file count in `incoming/`
+2. Setup SIGUSR1 signal handler
+3. Loop with ~10-second poll interval:
+   - Check if new files have appeared in `incoming/`
+   - If found: return `'file_event'`
+   - If SIGUSR1 received: return `'signal'`
+   - If DEEP_SLEEP_SEC timeout reached: return `'timeout'`
+4. Restore signal handler
+
+**Returns:** `'file_event' | 'signal' | 'timeout'`
 
 ---
 
@@ -256,31 +305,76 @@ Metadata:   {task_id}.meta.json (claimed_at, retry_count, last_error)
 
 ## Examples
 
-### Minimal Orchestrator Usage
+### Minimal Orchestrator Usage with Idle Loop
 
 ```python
 from src.skills.orchestrator import OrchestratorSkill
 
 skill = OrchestratorSkill()
 
-# Continuous polling
+# Continuous polling with idle detection
 while True:
     processed, failed = skill.poll_queue()
-    if processed == 0 and failed == 0:
-        skill.run_idle_loop()
+    
+    # run_idle_loop() handles both normal and deep sleep automatically
+    result = skill.run_idle_loop()
+    
+    # Check wake reason (useful for logging/monitoring)
+    if result['idle_entered']:
+        print(f"Woken from deep sleep: {result['wake_reason']}")
 ```
 
-### With crash recovery
+### Orchestrator Agent Loop Pattern
+
+```python
+# This is how the Orchestrator agent calls run_idle_loop in a loop
+skill = OrchestratorSkill(session_id="my-session", harness="claude")
+
+for cycle in range(100):  # ~5 hours of polling
+    # Poll once
+    processed, failed = skill.poll_queue()
+    
+    # Handle idle with automatic deep sleep after 3 clean polls
+    result = skill.run_idle_loop()
+    
+    # Log for observability
+    logger.info(
+        f"Poll cycle {cycle}: "
+        f"processed={processed}, failed={failed}, "
+        f"idle_entered={result['idle_entered']}, "
+        f"wake_reason={result['wake_reason']}"
+    )
+```
+
+### With Crash Recovery
 
 ```python
 skill = OrchestratorSkill()
 
-# On startup
+# On startup: recover any orphaned tasks
 recovered, newly_failed = skill.recover_crashed_tasks()
 print(f"Recovered {recovered} tasks, failed {newly_failed}")
 
-# Then run normal polling
-skill.poll_queue()
+# Then run normal polling with idle loop
+while True:
+    processed, failed = skill.poll_queue()
+    result = skill.run_idle_loop()
+```
+
+### Manual Deep Sleep with Signal Handling
+
+```python
+import signal
+import os
+
+skill = OrchestratorSkill()
+skill.clean_poll_count = 3  # Trigger deep sleep
+
+# Send SIGUSR1 from another process to wake immediately
+# os.kill(os.getpid(), signal.SIGUSR1)
+
+result = skill.run_idle_loop()
+print(f"Wake reason: {result['wake_reason']}")  # 'signal' or 'timeout'
 ```
 
 ## Testing
