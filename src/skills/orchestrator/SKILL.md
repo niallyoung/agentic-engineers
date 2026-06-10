@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: In-harness queue orchestration system that implements the DELEGATE/HANDBACK protocol lifecycle. Manages queue state machine (7 states: incoming, claimed, processing, done, failed, crashed, retry-pending), polls queue for new tasks, spawns sub-agents via Agent tool, correlates HANDBACK results, recovers from crashes, invokes quality gates, and detects idle conditions. Core system that makes DELEGATE/HANDBACK actually work.
+description: "In-harness queue orchestration system that implements the DELEGATE/HANDBACK protocol lifecycle. Manages queue state machine (7 states: incoming, claimed, processing, done, failed, crashed, retry-pending), polls queue for new tasks, spawns sub-agents via Agent tool, correlates HANDBACK results, recovers from crashes, invokes quality gates, and detects idle conditions. Core system that makes DELEGATE/HANDBACK actually work."
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+
 metadata:

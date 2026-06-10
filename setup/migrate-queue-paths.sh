@@ -74,7 +74,7 @@ migrate_session_dir() {
         # Check if this is a queue directory (contains queue subdir)
         if [ ! -d "$harness_dir/queue" ]; then
             log_warn "No queue subdir found in $harness_dir (skipping)"
-            ((SKIPPED_COUNT++))
+            SKIPPED_COUNT=$((SKIPPED_COUNT+1))
             continue
         fi
 
@@ -84,7 +84,7 @@ migrate_session_dir() {
         # Check if already migrated
         if [ -d "$canonical_base" ]; then
             log_warn "Already migrated: ${session_id}/${harness} (skipping)"
-            ((SKIPPED_COUNT++))
+            SKIPPED_COUNT=$((SKIPPED_COUNT+1))
             continue
         fi
 
@@ -94,11 +94,11 @@ migrate_session_dir() {
         # Move entire harness directory to canonical location
         log_info "Migrating: artifacts/${session_id}/${harness}/ → ${session_id}/${harness}/"
         if mv "$harness_dir" "$canonical_base"; then
-            ((MIGRATION_COUNT++))
-            ((harness_count++))
+            MIGRATION_COUNT=$((MIGRATION_COUNT+1))
+            harness_count=$((harness_count+1))
         else
             log_error "Failed to migrate: $harness_dir"
-            ((ERROR_COUNT++))
+            ERROR_COUNT=$((ERROR_COUNT+1))
             return 1
         fi
     done
@@ -131,7 +131,7 @@ main() {
     local session_found=0
     for session_dir in "$ARTIFACTS_DIR"/*; do
         [ -d "$session_dir" ] || continue
-        ((session_found++))
+        session_found=$((session_found+1))
         migrate_session_dir "$session_dir"
     done
 
