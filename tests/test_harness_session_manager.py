@@ -219,13 +219,13 @@ class TestCanonicalPaths:
     def test_queue_root_path_format(self):
         """Queue root follows canonical format."""
         mgr = HarnessSessionManager("opencode", "test-session-001")
-        expected = Path.home() / ".agentic-engineers" / "artifacts" / "test-session-001" / "opencode" / "queue"
+        expected = Path.home() / ".agentic-engineers" / "test-session-001" / "opencode" / "queue"
         assert mgr.queue_root == expected
 
     def test_harness_root_path(self):
         """Harness root is parent of queue/."""
         mgr = HarnessSessionManager("opencode", "test-session-001")
-        expected = Path.home() / ".agentic-engineers" / "artifacts" / "test-session-001" / "opencode"
+        expected = Path.home() / ".agentic-engineers" / "test-session-001" / "opencode"
         assert mgr.harness_root == expected
 
     def test_metadata_path(self):

@@ -277,19 +277,19 @@ class TestQueuePathMigrationInitialization:
     def test_initialization_with_default_paths(self):
         """Initialize with default paths."""
         qm = QueuePathMigration()
-        
+
         assert qm.legacy_base == Path.home() / ".copilot" / "queue"
-        assert qm.new_base == Path.home() / ".agentic-engineers" / "artifacts"
+        assert qm.new_base == Path.home() / ".agentic-engineers"
     
     def test_initialization_with_partial_override(self, tmp_path):
         """Initialize with only legacy base override."""
         custom_legacy = tmp_path / "custom_legacy"
         custom_legacy.mkdir()
-        
+
         qm = QueuePathMigration(legacy_base=custom_legacy)
-        
+
         assert qm.legacy_base == custom_legacy
-        assert qm.new_base == Path.home() / ".agentic-engineers" / "artifacts"
+        assert qm.new_base == Path.home() / ".agentic-engineers"
 
 
 class TestQueuePathMigrationEdgeCases:

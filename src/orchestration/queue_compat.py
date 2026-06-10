@@ -53,10 +53,10 @@ class QueuePathMigration:
         
         Args:
             legacy_base: Base directory for legacy queue paths (default: ~/.copilot/queue/)
-            new_base: Base directory for new queue paths (default: ~/.agentic-engineers/artifacts/)
+            new_base: Base directory for new queue paths (default: ~/.agentic-engineers/)
         """
         self.legacy_base = legacy_base or Path.home() / ".copilot" / "queue"
-        self.new_base = new_base or Path.home() / ".agentic-engineers" / "artifacts"
+        self.new_base = new_base or Path.home() / ".agentic-engineers"
         
         logger.debug(
             f"QueuePathMigration initialized. "

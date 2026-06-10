@@ -156,7 +156,7 @@ class TestNewPathAsCanonical:
     
     def test_new_path_canonical_structure(self, tmp_path):
         """Verify new path follows canonical structure."""
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         session_id = "sid-123"
         harness = "copilot"
@@ -193,7 +193,7 @@ class TestOrchestratorWritesToNewLocation:
         """Verify Orchestrator would write to new path structure."""
         session_id = "orch-test-session"
         harness = "copilot"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         # Simul DELEGATE storage location
         delegates_dir = new_base / session_id / harness / "delegates"
@@ -220,7 +220,7 @@ class TestAgentsReadFromNewLocation:
         """Verify agent can read DELEGATE from new path."""
         session_id = "agent-test"
         harness = "claude"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         delegates_dir = new_base / session_id / harness / "delegates"
         delegates_dir.mkdir(parents=True)
@@ -250,7 +250,7 @@ class TestAgentsWriteToNewLocation:
         """Verify agent writes HANDBACK to new path."""
         session_id = "agent-write-test"
         harness = "claude"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         queue_path = new_base / session_id / harness / "queue"
         done_dir = queue_path / "done"
@@ -278,7 +278,7 @@ class TestOrchestratorPollsNewLocation:
         """Verify Orchestrator polls from new done directory."""
         session_id = "poll-test"
         harness = "copilot"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         done_dir = new_base / session_id / harness / "queue" / "done"
         done_dir.mkdir(parents=True)
@@ -304,7 +304,7 @@ class TestMultiHarnessIsolation:
     
     def test_copilot_and_claude_queues_isolated(self, tmp_path):
         """Verify copilot and claude queues don't interfere."""
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         session_id = "multi-harness-test"
         
         # Create isolated queues for two harnesses
@@ -333,7 +333,7 @@ class TestMultiHarnessIsolation:
     
     def test_three_harnesses_independent(self, tmp_path):
         """Verify three harnesses can coexist independently."""
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         session_id = "three-harness-test"
         
         harnesses = ["copilot", "claude", "local"]
@@ -362,7 +362,7 @@ class TestSessionDataPersistenceAcrossMigration:
         """Verify metadata.json is preserved during migration."""
         session_id = "metadata-test"
         harness = "copilot"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         # Create session with metadata
         session_dir = new_base / session_id / harness
@@ -388,7 +388,7 @@ class TestSessionDataPersistenceAcrossMigration:
         """Verify task files survive migration process."""
         session_id = "task-migration-test"
         harness = "local"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         queue_path = new_base / session_id / harness / "queue"
         
@@ -423,7 +423,7 @@ class TestHarnessConfigWipePreservesSessionData:
         """Verify session data survives config/setup changes."""
         session_id = "config-wipe-test"
         harness = "copilot"
-        new_base = tmp_path / ".agentic-engineers" / "artifacts"
+        new_base = tmp_path / ".agentic-engineers"
         
         # Create initial queue data
         queue_path = new_base / session_id / harness / "queue"

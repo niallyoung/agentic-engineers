@@ -109,14 +109,14 @@ class TestQueueIsolationTraversal:
     def test_get_queue_path_allows_canonical(self, tmp_path):
         qi = _load_queue_isolation()
         result = qi.get_queue_path("session-001", "claude", base_dir=tmp_path)
-        expected = tmp_path / "artifacts" / "session-001" / "claude" / "queue"
+        expected = tmp_path / "session-001" / "claude" / "queue"
         assert result == expected
-        # Resolved path must stay within the canonical artifacts root.
-        assert (tmp_path / "artifacts").resolve() in result.resolve().parents
+        # Resolved path must stay within the canonical queue root.
+        assert tmp_path.resolve() in result.resolve().parents
 
     def test_init_queue_structure_rejects_traversal(self, tmp_path):
         qi = _load_queue_isolation()
         with pytest.raises(ValueError):
             qi.init_queue_structure("../poison", "claude", base_dir=tmp_path)
-        # Nothing must have been created outside the artifacts root.
+        # Nothing must have been created outside the canonical queue root.
         assert not (tmp_path.parent / "poison").exists()

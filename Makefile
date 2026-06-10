@@ -1,10 +1,10 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
         install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        setup status \
-        verify validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
+        setup status migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
+        verify verify-harness-sync validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
-        lint test test-concurrent test-ci test-ci-force test-ci-shell quality-gate
+        lint test test-evals test-concurrent test-ci test-ci-force test-ci-shell quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -68,6 +68,11 @@ help:
 	@echo "  validate-specs      Verify dist/specs/ is deployed and valid"
 	@echo "  clean               Remove build artifacts"
 	@echo ""
+	@echo "Queue & Testing:"
+	@echo "  create-test-session Create test session + sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)"
+	@echo "  run-orchestrator    Start orchestrator polling loop (AGENTIC_SESSION_ID=X)"
+	@echo "  test-protocol-e2e   Run end-to-end protocol tests (DELEGATE → HANDBACK)"
+	@echo ""
 	@echo "Quality & Testing:"
 	@echo "  lint                Lint Python, Shell, and YAML files"
 	@echo "  test                Run pytest test suite with coverage"
@@ -103,6 +108,28 @@ setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo ""
 	@echo "📖 Hook documentation: .githooks/README.md"
 	@echo "🚀 Ready! Hooks will run automatically on commit/push"
+
+migrate-queue-paths: ## Migrate queue sessions from old paths (artifacts/) to canonical paths
+	@bash "$(REPO_ROOT)/setup/migrate-queue-paths.sh"
+
+create-test-session: ## Create test session with sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)
+	@bash "$(REPO_ROOT)/setup/create-test-session.sh"
+
+run-orchestrator: ## Start orchestrator polling loop (AGENTIC_SESSION_ID=X required)
+	@if [ -z "$(AGENTIC_SESSION_ID)" ]; then \
+		echo "ERROR: AGENTIC_SESSION_ID not set. Usage: make run-orchestrator AGENTIC_SESSION_ID=test-001"; \
+		exit 1; \
+	fi
+	@echo "🚀 Starting orchestrator for session: $(AGENTIC_SESSION_ID)"
+	@echo "TODO: Implement orchestrator-poll command (placeholder)"
+	@echo "Polling queue: ~/.agentic-engineers/$(AGENTIC_SESSION_ID)/$${AGENTIC_HARNESS:-local}/queue/incoming/"
+
+test-protocol-e2e: ## Run end-to-end protocol tests (DELEGATE → HANDBACK)
+	@echo "🧪 Running end-to-end protocol tests (Phase 4)..."
+	@echo "Testing: DELEGATE → processing → HANDBACK → done/failed/escalation"
+	@python3 -m pytest tests/test_e2e_protocol_full_cycle.py -v --tb=short
+	@echo ""
+	@echo "✅ All protocol E2E tests passed!"
 
 install: render-all ## Install to all 4 harnesses (auto-backup, non-interactive)
 	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" $(BACKUP_FLAG) --destdir "$(DESTDIR)" copilot claude pi opencode
@@ -258,6 +285,28 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 	@echo ""
 	@echo "✅ Framework structure verified"
 
+verify-harness-sync: ## Verify installed harness files match dist/ (warns on divergence)
+	@echo "🔐 Verifying harness synchronization between dist/ and installed..."
+	@echo ""
+	@DIST_FILE="$(REPO_ROOT)/dist/claude/CLAUDE.md"; \
+	INSTALLED_FILE="$(HOME)/.claude/CLAUDE.md"; \
+	if [ ! -f "$$DIST_FILE" ]; then \
+		echo "❌ Dist file not found: $$DIST_FILE"; exit 1; \
+	fi; \
+	if [ ! -f "$$INSTALLED_FILE" ]; then \
+		echo "⚠️  Installed file not found: $$INSTALLED_FILE (run 'make install-claude' first)"; exit 1; \
+	fi; \
+	if diff -q "$$DIST_FILE" "$$INSTALLED_FILE" > /dev/null 2>&1; then \
+		echo "✅ Claude CLAUDE.md is in sync with dist/"; \
+	else \
+		echo "⚠️  Divergence detected between dist/ and installed:"; \
+		diff -u "$$DIST_FILE" "$$INSTALLED_FILE" | head -40; \
+		echo ""; \
+		echo "To synchronize, run: make install-claude"; \
+		exit 1; \
+	fi
+	@echo "✅ Harness synchronization verified"
+
 validate-opencode: ## Validate OpenCode config generation (status + JSON schema check)
 	@echo "🔍 Validating OpenCode install at ~/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
@@ -313,6 +362,15 @@ test: ## Run pytest test suite with coverage
 		-v --tb=short
 	@echo ""
 	@echo "✅ Tests complete. HTML coverage report: htmlcov/index.html"
+
+test-evals: ## Run DELEGATE/HANDBACK quality evaluation tests
+	@echo "🧪 Running eval framework tests (20+ quality checks)..."
+	@echo "   Tests: DELEGATE required fields, plan quality, scope substance"
+	@echo "   Tests: HANDBACK metrics, status canonicity, output substance"
+	@echo "   Tests: Orchestrator routing correctness, model/effort alignment"
+	@cd "$(REPO_ROOT)" && python3 -m pytest tests/evals/ -v --tb=short
+	@echo ""
+	@echo "✅ All eval tests passed"
 
 test-concurrent: ## Run concurrent invocation tests (race condition guard)
 	@echo "🔀 Running concurrent invocation tests (race condition guard)..."

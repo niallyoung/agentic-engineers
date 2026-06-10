@@ -153,10 +153,10 @@ class TestGetQueuePath:
     """Tests for queue path construction."""
 
     def test_get_queue_path_structure(self, tmp_path):
-        """Path follows ~/.agentic-engineers/artifacts/{session}/{harness}/queue/."""
+        """Path follows ~/.agentic-engineers/{session}/{harness}/queue/."""
         base = _fresh_base(tmp_path)
         result = get_queue_path("sess-abc", "claude", base_dir=base)
-        expected = base / "artifacts" / "sess-abc" / "claude" / "queue"
+        expected = base / "sess-abc" / "claude" / "queue"
         assert result == expected
 
     def test_get_queue_path_is_path_object(self, tmp_path):
@@ -200,7 +200,7 @@ class TestInitQueueStructure:
         """init_queue_structure creates incoming/, processing/, done/, failed/."""
         base = _fresh_base(tmp_path)
         init_queue_structure("sess-001", "claude", base_dir=base)
-        queue_root = base / "artifacts" / "sess-001" / "claude" / "queue"
+        queue_root = base / "sess-001" / "claude" / "queue"
         for subdir in ("incoming", "processing", "done", "failed"):
             assert (queue_root / subdir).is_dir(), f"Missing subdir: {subdir}"
 
@@ -208,23 +208,23 @@ class TestInitQueueStructure:
         """init_queue_structure creates .keep.me files in each subdir."""
         base = _fresh_base(tmp_path)
         init_queue_structure("sess-002", "gpt", base_dir=base)
-        queue_root = base / "artifacts" / "sess-002" / "gpt" / "queue"
+        queue_root = base / "sess-002" / "gpt" / "queue"
         for subdir in ("incoming", "processing", "done", "failed"):
             keep = queue_root / subdir / ".keep.me"
             assert keep.exists(), f"Missing .keep.me in {subdir}"
 
     def test_init_creates_metadata_file(self, tmp_path):
-        """init_queue_structure creates metadata.json in artifacts/<session>/<harness>/."""
+        """init_queue_structure creates metadata.json in <session>/<harness>/."""
         base = _fresh_base(tmp_path)
         init_queue_structure("sess-003", "local", base_dir=base)
-        meta_path = base / "artifacts" / "sess-003" / "local" / "metadata.json"
+        meta_path = base / "sess-003" / "local" / "metadata.json"
         assert meta_path.exists()
 
     def test_metadata_contains_required_fields(self, tmp_path):
         """metadata.json has session_id, harness, created_at, last_accessed_at."""
         base = _fresh_base(tmp_path)
         init_queue_structure("sess-004", "claude", base_dir=base)
-        meta_path = base / "artifacts" / "sess-004" / "claude" / "metadata.json"
+        meta_path = base / "sess-004" / "claude" / "metadata.json"
         with meta_path.open() as fh:
             meta = json.load(fh)
         assert meta["session_id"] == "sess-004"
@@ -243,7 +243,7 @@ class TestInitQueueStructure:
         import time
         base = _fresh_base(tmp_path)
         init_queue_structure("sess-time", "claude", base_dir=base)
-        meta_path = base / "artifacts" / "sess-time" / "claude" / "metadata.json"
+        meta_path = base / "sess-time" / "claude" / "metadata.json"
         with meta_path.open() as fh:
             first = json.load(fh)
         time.sleep(0.01)
@@ -268,8 +268,8 @@ class TestIsolation:
         init_queue_structure("shared-session", "claude", base_dir=base)
         init_queue_structure("shared-session", "gpt", base_dir=base)
 
-        claude_queue = base / "artifacts" / "shared-session" / "claude" / "queue"
-        gpt_queue = base / "artifacts" / "shared-session" / "gpt" / "queue"
+        claude_queue = base / "shared-session" / "claude" / "queue"
+        gpt_queue = base / "shared-session" / "gpt" / "queue"
 
         assert claude_queue.exists()
         assert gpt_queue.exists()
@@ -285,8 +285,8 @@ class TestIsolation:
         init_queue_structure("session-A", "local", base_dir=base)
         init_queue_structure("session-B", "local", base_dir=base)
 
-        queue_a = base / "artifacts" / "session-A" / "local" / "queue"
-        queue_b = base / "artifacts" / "session-B" / "local" / "queue"
+        queue_a = base / "session-A" / "local" / "queue"
+        queue_b = base / "session-B" / "local" / "queue"
 
         assert queue_a.exists()
         assert queue_b.exists()
@@ -300,7 +300,7 @@ class TestIsolation:
         base = _fresh_base(tmp_path)
         assert not base.exists(), "Precondition: base dir must not exist yet"
         init_queue_structure("new-session", "claude", base_dir=base)
-        assert (base / "artifacts" / "new-session" / "claude" / "queue").exists()
+        assert (base / "new-session" / "claude" / "queue").exists()
 
 
 # ===========================================================================
@@ -321,7 +321,7 @@ class TestQueueIsolationClass:
         """QueueIsolation.queue_path returns correct path."""
         base = _fresh_base(tmp_path)
         qi = QueueIsolation(session_id="sess-cls2", harness="gpt", base_dir=base)
-        expected = base / "artifacts" / "sess-cls2" / "gpt" / "queue"
+        expected = base / "sess-cls2" / "gpt" / "queue"
         assert qi.queue_path == expected
 
     def test_class_initialise_creates_structure(self, tmp_path):
@@ -331,5 +331,5 @@ class TestQueueIsolationClass:
         qi.initialise()
         assert (qi.queue_path / "incoming").is_dir()
         assert (qi.queue_path / "done").is_dir()
-        meta = base / "artifacts" / "sess-init" / "local" / "metadata.json"
+        meta = base / "sess-init" / "local" / "metadata.json"
         assert meta.exists()
