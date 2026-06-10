@@ -625,38 +625,49 @@ class OrchestratorSkill:
         if handback_idx is None:
             raise HandbackParseError("No HANDBACK block found")
 
-        # Find the extent of the HANDBACK YAML object
-        # Since it's likely to be a single top-level object, collect all related lines
-        handback_start = 0
-        handback_end = len(lines)
+        # Get the indentation of the handoff_type line
+        handback_line = lines[handback_idx]
+        handback_indent = len(handback_line) - len(handback_line.lstrip())
 
-        # Go backwards to find where this object starts (find first line that's not continuation)
-        base_indent = None
-        for i in range(handback_idx, -1, -1):
+        # Go backwards to include any preceding top-level keys at the same indentation,
+        # but stop if we encounter a line that doesn't look like YAML (no ":" in it)
+        handback_start = handback_idx
+        for i in range(handback_idx - 1, -1, -1):
             line = lines[i]
             if line.strip() == "":
-                continue
+                continue  # Skip empty lines
             curr_indent = len(line) - len(line.lstrip())
-            if base_indent is None:
-                base_indent = curr_indent
-            if curr_indent <= base_indent:
+            if curr_indent == handback_indent and ":" in line:
+                # Same indentation and looks like YAML key - part of same object
                 handback_start = i
+            elif curr_indent > handback_indent:
+                # Greater indentation - skip (indented content from a previous key)
+                continue
             else:
+                # Lower indentation or non-YAML line - stop going back
                 break
 
-        # Go forwards to find where this object ends
+        # Extract all lines from HANDBACK onwards at the same or greater indentation
+        handback_lines = lines[handback_start:handback_idx]
+        handback_lines.append(handback_line)
+
         for i in range(handback_idx + 1, len(lines)):
             line = lines[i]
             if line.strip() == "":
+                # Empty line - skip
                 continue
             curr_indent = len(line) - len(line.lstrip())
-            if curr_indent < base_indent and ":" in line:
-                # Found a line at a lower indent that looks like a new key - stop
-                handback_end = i
+            if curr_indent >= handback_indent:
+                # Same or greater indentation - part of object
+                handback_lines.append(line)
+            elif curr_indent > 0:
+                # Indented content (nested) - part of object
+                handback_lines.append(line)
+            else:
+                # Lower indentation at non-empty line - end of object
                 break
-            handback_end = i + 1
 
-        handback_text = "\n".join(lines[handback_start:handback_end])
+        handback_text = "\n".join(handback_lines)
 
         try:
             import yaml
@@ -666,7 +677,7 @@ class OrchestratorSkill:
                 raise HandbackParseError("HANDBACK block is empty")
             return parsed
         except Exception as e:
-            # Fallback: just try to parse the entire text as YAML (it might be valid)
+            # Fallback: try parsing entire text
             try:
                 import yaml
                 parsed = yaml.safe_load(text)
