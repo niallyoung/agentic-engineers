@@ -1601,29 +1601,38 @@ This section documents the approved AI model names and their official sources. M
 
 **Source:** [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/docs/models-overview)
 
-All agentic-engineers agents use Anthropic Claude models in the following **HYPHEN format only**:
+Canonical (source) model IDs use a **dot** in the two-part version
+(`claude-<tier>-<major>.<minor>`). Each harness transforms this at render time
+(see the Harness-Specific Model Format table below):
 
-| Model | Model ID | Claude API Alias | Context Window | Max Output | Use Case |
-|-------|----------|------------------|-----------------|------------|----------|
-| **Claude Haiku 4.5** | `claude-haiku-4.5` | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
-| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | `claude-sonnet-4.6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
-| **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
-| **Claude Opus 4.7** | `claude-opus-4.7` | `claude-opus-4.7` | 1M | 128K | Highest capability; Principal Engineer |
-| **Claude Opus 4.8** | `claude-opus-4.8` | `claude-opus-4.8` | 1M | 128K | Latest, highest capability; Security Engineer |
-| **Claude Fable 5** | `claude-fable-5` | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer **defensive-only** alternative (effort <= medium). Single-part version: name is identical in every harness — no dot/hyphen transformation. |
+| Model | Canonical (source) ID | Context Window | Max Output | Use Case |
+|-------|-----------------------|-----------------|------------|----------|
+| **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
+| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
+| **Claude Opus 4.6** | `claude-opus-4.6` | 1M | 64K | High capability; Principal Engineer (when needed) |
+| **Claude Opus 4.7** | `claude-opus-4.7` | 1M | 128K | High capability; Principal Engineer |
+| **Claude Opus 4.8** | `claude-opus-4.8` | 1M | 128K | Latest, highest Opus; Security Engineer (pinned default) |
+| **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer **defensive-only** alternative (effort <= medium). Single-part version — identical in every harness, no transformation. |
 
-**CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
+**CRITICAL RULE — canonical IDs:** the two-part version uses a **dot**
+(`claude-opus-4.8`), never an underscore or uppercase. The fully-hyphenated form
+(`claude-opus-4-8`) is **not** a source ID — it is the OpenCode / Anthropic-API
+render target produced by the dot→hyphen transformation below. A single-part
+version (`claude-fable-5`) has no dot to transform and is byte-identical in every
+harness.
 
 ### Harness-Specific Model Format
 
-Each harness transforms the base model ID for its runtime:
+Each harness transforms the canonical ID for its runtime. Official sources: the
+[Anthropic Claude API](https://docs.anthropic.com/claude/docs/models-overview)
+and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models).
 
-| Harness | Source Model | Rendered Format | Official Docs |
-|---------|--------------|-----------------|---------------|
-| **Copilot CLI** | `claude-opus-4.7` | `claude-opus-4.7` | [Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models) |
-| **Claude (Direct API)** | `claude-opus-4.7` | `claude-opus-4.7` | [Claude API](https://docs.anthropic.com/claude/docs/models-overview) |
-| **OpenCode** | `claude-opus-4.7` | `github-copilot/claude-opus-4.7` | [OpenCode Docs](https://github.com/github/opencode) |
-| **Pi (pi.dev)** | `claude-opus-4.7` | `claude-opus-4.7` | [Pi.dev](https://pi.dev/) |
+| Harness | Canonical ID | Rendered Format | Transformation |
+|---------|--------------|-----------------|----------------|
+| **Claude (Claude Code)** | `claude-opus-4.8` | `opus` (tier alias) or full ID | Tier alias where the runtime accepts it; else dot→hyphen |
+| **Copilot CLI** | `claude-opus-4.8` | `claude-opus-4.8` | None (dotted form) |
+| **OpenCode** | `claude-opus-4.8` | `anthropic/claude-opus-4-8` | `anthropic/` prefix + dot→hyphen |
+| **Pi (pi.dev)** | `claude-opus-4.8` | `claude-opus-4-8` | dot→hyphen |
 
 ### Model Assignment by Agent Role
 
