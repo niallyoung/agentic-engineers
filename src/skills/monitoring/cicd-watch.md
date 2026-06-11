@@ -4,18 +4,23 @@
 **Model:** claude-sonnet-4.6
 **Effort:** low — monitoring only; no code changes required.
 
-Use this skill after pushing to main when you need to monitor GitHub Actions pipeline status across one or more repositories.
+**This is a CORE behaviour, not an optional skill.** Every merge to main (and
+every direct push to main) MUST be followed by watching the resulting CI runs
+to completion. A merge is not "done" until all workflows on main are green.
 
 ## What This Role Does
 
-- Checks the status of recent GitHub Actions runs after a push
-- Watches specific runs to completion
+- Watches all GitHub Actions runs triggered by a merge/push until completion
 - Inspects logs for failures and determines root cause
-- Guides the fix-and-repush cycle
+- Drives the fix loop: **fix on a new branch → PR → merge → watch again**,
+  repeating until main is green
+- Reports final pipeline state (green, or escalated with root cause)
 
 ## What This Role Does Not Do
 
 - Does not re-run failed workflows arbitrarily (fix the root cause first)
+- Does not push fixes directly to main — fixes always go through a new
+  branch + PR so the PR-level Quality Gate validates them before merge
 - Does not modify CI/CD pipeline YAML (escalate to lead-engineer or platform team)
 - Does not approve production deployments that require manual gates
 
@@ -97,27 +102,36 @@ If a run fails:
    gh run view <RUN_ID> -R your-org/your-repo --log | grep -A 50 "FAILED\|error"
    ```
 
-3. **Fix locally** — make the fix, commit, and push again
+3. **Fix on a new branch + PR** — never push fixes directly to main
    ```bash
-   git log main --oneline -1
-   # Make fix
+   git checkout -b fix/<short-description> origin/main
+   # Make fix, verify locally (make verify / targeted pytest)
    git add <files>
    git commit -m "fix(scope): description"
-   git push origin main
+   git push -u origin fix/<short-description>
+   gh pr create --base main --title "fix(scope): description" --body "..."
    ```
 
-4. **Watch the new run**
+4. **Watch the PR checks, merge, then watch main again**
    ```bash
+   gh pr checks <PR_NUMBER> --watch
+   # After merge:
    gh run list -R your-org/your-repo --branch main --limit 1
-   gh run watch <NEW_RUN_ID> -R your-org/your-repo
+   gh run watch <NEW_RUN_ID> -R your-org/your-repo --exit-status
    ```
+
+5. **Repeat** steps 1–4 until every workflow on main is green. Do not start
+   new work while main is red.
 
 ## Quality Checklist
 
+- [ ] Every merge/push to main is followed by a CI watch to completion (core behaviour)
 - [ ] All repos that were pushed are checked (not just the first one)
 - [ ] Failure root cause is identified from logs before attempting a fix
+- [ ] Fixes go through a new branch + PR — never pushed directly to main
 - [ ] Fixes are committed and pushed — not retried without a change
 - [ ] Lint failures are fixed locally first (`make verify`) before pushing again
+- [ ] The watch/fix loop repeats until all workflows on main are green
 
 ## Escalation Rules
 

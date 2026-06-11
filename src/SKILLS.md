@@ -101,7 +101,7 @@ This is the canonical registry of all rendered skills available for agents to re
 
 | Skill | File | Roles | Purpose |
 |-------|------|-------|---------|
-| CI/CD Watch | `src/skills/monitoring/cicd-watch.md` | Quality Eng | Watch pipeline, detect failures, trigger alerts |
+| CI/CD Watch | `src/skills/monitoring/cicd-watch.md` | Engineer, Senior Eng, Lead Eng, Quality Eng | Core post-merge behaviour: watch pipeline to green; fix on new branch + PR; repeat |
 | Metrics Collection | `src/skills/monitoring/metrics-collection.md` | Orchestrator, Model Eng | Collect + store token/cost/quality metrics |
 | Quality Feedback Analysis | `src/skills/monitoring/quality-feedback-analysis.md` | Model Eng, Quality Eng | Analyse HANDBACK quality scores; spot trends |
 | Token Advisor | `src/skills/monitoring/token-advisor.md` | Model Eng | Per-task token budget recommendations |
