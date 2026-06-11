@@ -202,6 +202,25 @@ subtask_fields:
     example: "all_complete"
 
 optional_fields:
+  # ─ Platform Safeguard Observability (passive — never probe) ──────────────────
+  # With model re-routing disabled, a platform safeguard activation surfaces as
+  # a pause/refusal (stop_reason: refusal, e.g. category: cyber). Agents record
+  # it here and stop that line of work. Expected value is 0 for all valid
+  # framework use; a non-zero value is feedback that a DELEGATE's scope brushed
+  # a restricted topic and should be re-scoped (defensive focus) — NEVER
+  # rephrased, fragmented, or retried to work around the safeguard, and NEVER
+  # deliberately triggered for testing.
+
+  safeguard_events:
+    type: integer
+    minimum: 0
+    description: "Count of platform safeguard pauses/refusals encountered during the task (expected: 0)"
+    validation:
+      - "If > 0: status must be partial or blocked for the affected scope; describe the pause neutrally in output"
+      - "If > 0: model_constraint and the affected scope fragment must be named so the Orchestrator can re-scope defensively"
+      - "Agents MUST NOT retry, rephrase, or fragment a request after a safeguard pause"
+    example: 0
+
   # ─ File Commitment Tracking (Background Agents) ───────────────────────────────
   # When background agents (skill-creator, agent-creator) create files,
   # they must explicitly stage and commit them. These fields track that commitment.

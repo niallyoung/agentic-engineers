@@ -1498,6 +1498,7 @@ This two-tier shape mirrors Anthropic's real-time cyber safeguards (prohibited v
 **Constraint enforcement:**
 - Orchestrator MUST NOT route fable5 for offensive/research tasks (see gate logic below)
 - Security Engineer receiving fable5 MUST validate scope is defensive before execution
+- Platform safeguard pauses are recorded passively in HANDBACK `safeguard_events` (expected: 0; non-zero = re-scope the DELEGATE defensively). Safeguards MUST NOT be probed, retried around, or deliberately triggered for verification
 - HANDBACK must include `model_constraint: defensive-only` field to confirm compliance
 - Violation (offensive work on fable5): escalate immediately to user with rationale
 

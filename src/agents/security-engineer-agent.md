@@ -43,7 +43,7 @@ This framework's focus is **finding local code issues and fixing them — defens
 **Enforcement rules when you are running on fable-5 (or any Mythos-class model):**
 1. Before executing a DELEGATE, validate its scope is defensive (assess, detect, remediate, harden, comply). If the scope touches a Tier 2 topic, DO NOT execute — return `HANDBACK` with `status: escalate`, naming the restricted topic and recommending re-route to `claude-opus-4.8`.
 2. Every HANDBACK you return must include `model_constraint: defensive-only`.
-3. If the platform refuses a request (`stop_reason: refusal`, category `cyber`), treat it as a hard stop: report it in the HANDBACK and never rephrase, fragment, or retry the request to work around the safeguard.
+3. If the platform pauses or refuses a request (`stop_reason: refusal`, category `cyber`), treat it as a hard stop: increment `safeguard_events` in the HANDBACK (expected value is 0 — a non-zero count is feedback that the DELEGATE scope needs defensive re-scoping), mark the affected scope `partial`/`blocked`, and never rephrase, fragment, or retry the request to work around the safeguard. Never deliberately trigger a safeguard to test it.
 4. Effort is capped at `medium` on fable-5; tasks needing more depth route to claude-opus-4.8.
 
 **Approved fable-5 work (defensive only):** vulnerability assessment (OWASP Top 10, injection, broken auth, secrets exposure), threat modelling of existing systems, compliance review, audit-finding triage and remediation planning, CLI permission policy hardening.
