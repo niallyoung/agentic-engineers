@@ -1504,13 +1504,22 @@ This two-tier shape mirrors Anthropic's real-time cyber safeguards (prohibited v
 
 **Gate logic in Orchestrator routing:**
 ```
-IF (task_scope contains "exploit" OR "attack automation" OR "offensive" OR "red team" OR "proof-of-concept attack")
-  → Route to claude-opus-4.8 (reject fable5, document in audit log)
-ELIF (task_scope == "defensive vulnerability analysis" AND effort <= medium)
+IF (task_scope touches a restricted/prohibited topic — exploit, attack automation,
+    offensive, red team, proof-of-concept attack, jailbreak, prompt injection,
+    ransomware, data exfiltration, detection evasion, malware)
+  → REJECT the DELEGATE and escalate to the user (out of framework scope).
+    No model re-routing: the framework does not perform this work on ANY model.
+ELIF (task_scope is defensive vulnerability analysis AND effort <= medium)
   → May route to fable5 with explicit defensive constraint note
 ELSE
-  → Default to claude-opus-4.8
+  → Default to claude-opus-4.8 (defensive security work only)
 ```
+
+Note: model-level fallback on sensitive topics (Fable internally re-routing to
+Opus-class) is platform behaviour controlled by an account feature flag — with
+the flag off, Fable pauses instead. agentic-engineers does not replicate that
+routing: a pause or restricted-topic match is recorded (`safeguard_events`) and
+escalated to the user, never re-routed.
 
 | Model | Task Complexity | Cost (Input/Output) | Best For | Constraint |
 |-------|-----------------|--------|----------|------------|

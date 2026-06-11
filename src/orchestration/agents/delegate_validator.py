@@ -387,8 +387,9 @@ class DelegateValidator:
         offensive_hits = [p for p in self.OFFENSIVE_SCOPE_PATTERNS if p in scope]
         if offensive_hits:
             failures.append(
-                'C5: offensive-scoped task must route to claude-opus-4.8, '
-                f'never fable-5 (matched: {", ".join(sorted(offensive_hits))})'
+                'C5: restricted-topic scope is out of framework scope — reject '
+                'and escalate to the user; never run on fable-5 and never '
+                f're-route to another model (matched: {", ".join(sorted(offensive_hits))})'
             )
 
         effort = delegate.get('effort', '')

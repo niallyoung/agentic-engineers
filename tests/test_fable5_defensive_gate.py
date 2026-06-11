@@ -56,7 +56,9 @@ class TestFable5DefensiveGate:
 
     def test_offensive_scope_rejected(self):
         failures = c5_failures(make_delegate(scope=OFFENSIVE_SCOPE))
-        assert any("offensive" in f for f in failures)
+        assert any("restricted-topic" in f and "escalate" in f for f in failures)
+        # The framework never re-routes restricted work to another model
+        assert not any("must route" in f for f in failures)
 
     @pytest.mark.parametrize(
         "keyword",

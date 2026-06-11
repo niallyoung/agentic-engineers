@@ -8,7 +8,7 @@ Threat modeling, vulnerability assessment, security architecture review. Final s
 
 ## Defensive-Only Model Constraint
 
-fable-5 (and any Mythos-class model) is approved **exclusively for defensive analysis** — assess, detect, remediate, harden, comply. Restricted topics (exploit development, offensive tooling, attack automation, red team, jailbreak/prompt-injection research) NEVER run on fable-5: the Orchestrator routes them to claude-opus-4.8 (DelegateValidator check C5), and the agent re-validates scope before executing. Prohibited activities (ransomware, mass exfiltration, malicious detection evasion) are refused on every model. Platform refusals (`stop_reason: refusal`, category `cyber`) are hard stops — never rephrase or retry around them. See docs/SPEC.md > Security Engineer: Multi-Model Strategy.
+fable-5 (and any Mythos-class model) is approved **exclusively for defensive analysis** — assess, detect, remediate, harden, comply. Restricted topics (exploit development, offensive tooling, attack automation, red team, jailbreak/prompt-injection research) are OUT OF SCOPE for this framework on every model: the Orchestrator rejects such DELEGATEs (DelegateValidator check C5) and escalates to the user — no model re-routing — and the agent re-validates scope before executing. Prohibited activities (ransomware, mass exfiltration, malicious detection evasion) are refused on every model. Platform refusals (`stop_reason: refusal`, category `cyber`) are hard stops — never rephrase or retry around them. See docs/SPEC.md > Security Engineer: Multi-Model Strategy.
 
 ## Primary Skills
 

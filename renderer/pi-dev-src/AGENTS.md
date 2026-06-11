@@ -83,7 +83,8 @@ This file defines the 8 canonical specialized agent roles available in the agent
 **Defensive-Only Model Constraint**: fable-5 (and any Mythos-class model) is approved
 exclusively for defensive analysis (assess, detect, remediate, harden, comply).
 Restricted topics — exploit development, offensive tooling, attack automation, red team,
-jailbreak/prompt-injection research — NEVER run on fable-5; route them to claude-opus-4-8.
+jailbreak/prompt-injection research — are OUT OF SCOPE on every model: reject and
+escalate to the user; the framework performs no model re-routing for these.
 Prohibited activities (ransomware, mass data exfiltration, malicious detection evasion)
 are refused on every model. Platform refusals (stop_reason: refusal, category: cyber)
 are hard stops — never rephrase or retry around them.
