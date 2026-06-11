@@ -33,7 +33,7 @@ def setup_isolated_queue(
         harness: Harness name (copilot, claude, gpt, local, etc.)
 
     Returns:
-        Path to the queue root: tmp_path/.agentic-engineers/artifacts/{session}/{harness}/queue/
+        Path to the queue root: tmp_path/.agentic-engineers/{session}/{harness}/queue/
     """
     qi = queue_isolation.QueueIsolation(
         session_id=session_id,
@@ -188,13 +188,17 @@ def queue_test_env(tmp_path: Path) -> Generator[dict, None, None]:
 
 def assert_queue_path_is_isolated(queue_path: Path, session_id: str, harness: str) -> None:
     """
-    Assert that a queue path follows the new isolation structure.
+    Assert that a queue path follows the canonical isolation structure.
 
-    Pattern: ~/.agentic-engineers/artifacts/{session}/{harness}/queue/
+    Pattern: ~/.agentic-engineers/{session}/{harness}/queue/
+    (the legacy artifacts/ segment is deprecated — see docs/SPEC.md
+    Queue Architecture & Paths (LOCKED SPEC))
     """
     path_str = str(queue_path)
     assert ".agentic-engineers" in path_str, f"Expected isolated path, got {queue_path}"
-    assert "artifacts" in path_str, f"Expected artifacts directory, got {queue_path}"
+    assert "artifacts" not in path_str, (
+        f"Expected canonical path without deprecated artifacts/ segment, got {queue_path}"
+    )
     assert session_id in path_str, f"Expected session_id {session_id} in path {queue_path}"
     assert harness in path_str, f"Expected harness {harness} in path {queue_path}"
     assert queue_path.name == "queue", f"Expected path to end with 'queue/', got {queue_path}"
