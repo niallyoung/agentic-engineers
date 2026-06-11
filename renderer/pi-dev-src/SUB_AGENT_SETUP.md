@@ -50,12 +50,12 @@ Substitute your actual home directory where `~` appears.
 |-------|-------|--------|----------|-------|
 | **Orchestrator** | claude-haiku-4.5 | low | Task routing, queue management | Routing only |
 | **Engineer** | claude-haiku-4.5 | high | Feature implementation, bug fixes | Single file/module |
-| **Senior Engineer** | claude-sonnet-4-20250514 | high | Complex design, debugging | Multi-service, logic |
-| **Lead Engineer** | claude-sonnet-4-20250514 | high | Code review, quality gates | Validation, review |
-| **Quality Engineer** | claude-sonnet-4-20250514 | medium | Post-impl quality gate | Quality verification |
-| **Security Engineer** | claude-opus-4-20250514 | max | Vulnerability analysis, compliance | Security only |
-| **Principal Engineer** | claude-opus-4-20250514 | high | Architecture, strategy | Organization-wide |
-| **Model Engineer** | claude-sonnet-4-20250514 | high | Token optimization, cost analysis | Performance, budget |
+| **Senior Engineer** | claude-sonnet-4-6 | high | Complex design, debugging | Multi-service, logic |
+| **Lead Engineer** | claude-sonnet-4-6 | high | Code review, quality gates | Validation, review |
+| **Quality Engineer** | claude-sonnet-4-6 | medium | Post-impl quality gate | Quality verification |
+| **Security Engineer** | claude-opus-4-8 (pinned) / claude-fable-5 (defensive-only) | max | Vulnerability analysis, compliance | Security only; fable-5 defensive analysis only |
+| **Principal Engineer** | claude-opus-4-8 | high | Architecture, strategy | Organization-wide |
+| **Model Engineer** | claude-sonnet-4-6 | high | Token optimization, cost analysis | Performance, budget |
 
 ---
 
@@ -165,7 +165,7 @@ head -5 ~/.pi/agent/SYSTEM.md
 ```
 
 Expected output for `settings.json`:
-- `defaultModel`: `"claude-sonnet-4-20250514"`
+- `defaultModel`: `"claude-sonnet-4-6"`
 - `defaultProvider`: `"anthropic"`
 - `compaction.enabled`: `true`
 
@@ -179,7 +179,14 @@ If pi.dev reports a model not found:
 1. Check `settings.json` `defaultModel` value
 2. Verify the model ID is supported by your pi.dev subscription
 3. Update `settings.json` `defaultModel` to a supported model
-4. Current model IDs: `claude-haiku-4.5`, `claude-sonnet-4-20250514`, `claude-opus-4-20250514`
+4. Current model IDs: `claude-haiku-4-5`, `claude-sonnet-4-6`, `claude-opus-4-8`, `claude-fable-5` (defensive-only for Security Engineer)
+
+**Harness limitation — fable-5 on pi:** pi.dev has a single `defaultModel` and no
+per-agent model selection, so the framework cannot route an individual DELEGATE
+to fable-5 here. fable-5 is usable on pi only by manually setting
+`settings.json` `defaultModel` for a dedicated defensive-analysis session; the
+Defensive-Only Model Constraint in AGENTS.md applies in full, and the
+Orchestrator's C5 gate still validates the DELEGATE regardless of harness.
 
 ### Sub-agent routing not working
 

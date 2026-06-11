@@ -31,9 +31,9 @@ providers:
     claude-sonnet-4.5:
       input: 0.003
       output: 0.015
-    claude-opus-4.7:
-      input: 0.015
-      output: 0.075
+    claude-opus-4.8:
+      input: 0.005
+      output: 0.025
   openai:
     gpt-4o-mini:
       input: 0.00015
@@ -58,7 +58,7 @@ model_selection:
       tier: sonnet
       base_quality: 0.82
       avg_latency_sec: 3.0
-    claude-opus-4.7:
+    claude-opus-4.8:
       provider: anthropic
       tier: opus
       base_quality: 0.95

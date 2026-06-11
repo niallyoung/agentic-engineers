@@ -211,8 +211,10 @@ class TestQueuePathCentralization:
         - SPEC.md explicitly lists all 4 harnesses (copilot, claude, opencode, pi)
         - SPEC.md marks legacy paths as DEPRECATED
         """
-        spec_file = repo_root / "SPEC.md"
-        assert spec_file.exists(), "SPEC.md must exist"
+        # docs/SPEC.md is the canonical specification (spec-management,
+        # spec-validator, git hooks, and the render pipeline all target it).
+        spec_file = repo_root / "docs" / "SPEC.md"
+        assert spec_file.exists(), "docs/SPEC.md must exist"
 
         content = spec_file.read_text()
 

@@ -19,7 +19,8 @@ Multipliers are relative to Sonnet (1.00x). Quality baselines are
 | `claude-haiku-4.5`  | 0.33x | 82      | Well-scoped edits; pure routing; metric reads     |
 | `claude-sonnet-4.6` | 1.00x | 93      | Review, QE, complex impl, cost analysis           |
 | `claude-opus-4.7`   | 3.00x | 97.5    | Architecture, security, escalation                |
-| `claude-opus-4.8`   | 3.00x | 98      | Security only — non-downgradable per policy       |
+| `claude-opus-4.8`   | 3.00x | 98      | Security default (pinned) — non-downgradable per policy |
+| `claude-fable-5`    | 6.00x | 99      | Security Engineer defensive-only alternative (effort <= medium); 2x opus per token — capability upgrade, never a cost saving |
 
 Source: `src/orchestration/cost/cost_aware_router.py` (constants).
 

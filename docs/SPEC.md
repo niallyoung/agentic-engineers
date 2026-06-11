@@ -1460,13 +1460,71 @@ The Orchestrator applies this decision tree when creating a DELEGATE for Princip
 3. Security-critical design (auth/crypto/compliance)? → `claude-opus-4.8`
 4. Default (unclear scope) → `claude-opus-4.6` (cheapest capable option)
 
-### Security Engineer: Non-Downgrade Rule
+### Security Engineer: Multi-Model Strategy
 
-Security Engineer **always** uses `claude-opus-4.8`. Security analysis is the highest-stakes task in the system. Downgrading for cost savings risks missed vulnerabilities, incomplete threat models, or incorrect compliance assessments.
+Security Engineer supports two approved models:
 
-- `claude-opus-4.7` permitted **only** as emergency fallback if 4.8 is unavailable (API outage)
-- Fallback must be documented in HANDBACK `model_assessment`
-- Never downgrade by choice; never use 4.6 for Security Engineer
+#### Default: `claude-opus-4.8` (Primary)
+
+Security analysis is the highest-stakes task in the system. Opus 4.8 is pinned as the default because downgrading for cost savings risks missed vulnerabilities, incomplete threat models, or incorrect compliance assessments.
+
+- Use for: threat modelling, vulnerability assessment, compliance review, secrets handling policy
+- Rationale: Highest capability; best for security-critical analysis
+- Fallback only: `claude-opus-4.7` (emergency-only if 4.8 unavailable due to API outage)
+  - Fallback must be documented in HANDBACK `model_assessment`
+  - Never downgrade by choice; never use 4.6 for Security Engineer
+
+#### Alternative: `claude-fable-5` with `output_config.effort: medium` (Defensive-Only)
+
+Fable-5 is approved **exclusively for defensive security analysis** — prevention, detection, and remediation of existing vulnerabilities. Fable-5 is the highest-capability tier (above Opus) and uses adaptive thinking for nuanced threat analysis. Note: Fable-5 is priced at $10/$50 per MTok — 2× Opus 4.8's $5/$25 — so this is a **capability upgrade, not a cost saving**; `effort: medium` bounds token spend per task but does not make it cheaper per token.
+
+**Approved use cases (defensive only):**
+- Vulnerability assessment (OWASP Top 10, injection, broken auth, secrets exposure)
+- Threat modelling for existing systems
+- Compliance review (OAuth 2.0, zero-trust, secrets handling, GDPR)
+- Security audit findings triage and remediation planning
+- CLI permission policy review and hardening
+
+**Prohibited use cases (never use fable5 or any Mythos-class model):**
+- Exploit development or proof-of-concept attacks
+- Offensive security research or attack automation
+- Adversarial model behavior (jailbreak techniques, prompt injection)
+- Red team scenarios designed to demonstrate attack capability
+- Ransomware/destructive-malware work, mass data exfiltration, malicious detection evasion (Tier-1: prohibited on EVERY model, not just fable-5)
+- Any task requiring offensive capability, even if framed as "defensive research"
+
+This two-tier shape mirrors Anthropic's real-time cyber safeguards (prohibited vs high-risk dual-use), which already route sensitive requests on Fable/Mythos-class models to Opus-class at the platform level. Platform refusals (`stop_reason: refusal`, `stop_details.category: cyber`) are hard stops — agents MUST NOT rephrase, fragment, or retry around them.
+
+**Constraint enforcement:**
+- Orchestrator MUST NOT route fable5 for offensive/research tasks (see gate logic below)
+- Security Engineer receiving fable5 MUST validate scope is defensive before execution
+- Platform safeguard pauses are recorded passively in HANDBACK `safeguard_events` (expected: 0; non-zero = re-scope the DELEGATE defensively). Safeguards MUST NOT be probed, retried around, or deliberately triggered for verification
+- HANDBACK must include `model_constraint: defensive-only` field to confirm compliance
+- Violation (offensive work on fable5): escalate immediately to user with rationale
+
+**Gate logic in Orchestrator routing:**
+```
+IF (task_scope touches a restricted/prohibited topic — exploit, attack automation,
+    offensive, red team, proof-of-concept attack, jailbreak, prompt injection,
+    ransomware, data exfiltration, detection evasion, malware)
+  → REJECT the DELEGATE and escalate to the user (out of framework scope).
+    No model re-routing: the framework does not perform this work on ANY model.
+ELIF (task_scope is defensive vulnerability analysis AND effort <= medium)
+  → May route to fable5 with explicit defensive constraint note
+ELSE
+  → Default to claude-opus-4.8 (defensive security work only)
+```
+
+Note: model-level fallback on sensitive topics (Fable internally re-routing to
+Opus-class) is platform behaviour controlled by an account feature flag — with
+the flag off, Fable pauses instead. agentic-engineers does not replicate that
+routing: a pause or restricted-topic match is recorded (`safeguard_events`) and
+escalated to the user, never re-routed.
+
+| Model | Task Complexity | Cost (Input/Output) | Best For | Constraint |
+|-------|-----------------|--------|----------|------------|
+| `claude-opus-4.8` | Any | $5/$25 per MTok | All security tasks (default) | None |
+| `claude-fable-5` | High-nuance defensive | $10/$50 per MTok | Deep defensive vulnerability analysis at medium effort | **Defensive-only** (no offensive use) |
 
 ### Quality Engineer: model_assessment for Tier 3
 
@@ -1502,13 +1560,25 @@ model_guidance: "Architecture decision drives implementation across auth-service
 task: "Design and specify OAuth2 refresh-token rotation across 3 services"
 ```
 
-**Security Engineer — always 4.8:**
+**Security Engineer — default (opus 4.8):**
 ```yaml
 handoff_type: DELEGATE
 role: Security Engineer
 model: claude-opus-4.8
-model_guidance: "Non-downgrade rule — security analysis always uses 4.8"
+model_guidance: "Default pinned model for all security analysis"
 task: "Threat model for the new payment processing flow"
+```
+
+**Security Engineer — defensive vulnerability analysis (fable5):**
+```yaml
+handoff_type: DELEGATE
+role: Security Engineer
+model: claude-fable-5
+output_config:
+  effort: medium
+model_guidance: "Fable-5 approved for defensive-only analysis: vulnerability assessment and remediation planning (no offensive capability)"
+model_constraint: "defensive-only"
+task: "Assess OWASP Top 10 vulnerabilities in user auth flow and recommend patches"
 ```
 
 ### Rollout Phases
@@ -1516,9 +1586,10 @@ task: "Threat model for the new payment processing flow"
 | Phase | Scope | Status |
 |-------|-------|--------|
 | Phase 1 | Principal Engineer variant selection (4.6/4.7/4.8) | Active |
-| Phase 2 | Security Engineer non-downgrade rule enforcement | Active |
+| Phase 2 | Security Engineer non-downgrade rule enforcement (opus 4.8 pinned default) | Active |
 | Phase 3 | Quality Engineer model_assessment feedback loop | Active |
 | Phase 4 | Model Engineer automated routing recommendations | Active |
+| Phase 5 | Security Engineer fable-5 option for defensive-only analysis (effort: medium) | Active |
 
 ---
 
@@ -1539,6 +1610,7 @@ All agentic-engineers agents use Anthropic Claude models in the following **HYPH
 | **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
 | **Claude Opus 4.7** | `claude-opus-4.7` | `claude-opus-4.7` | 1M | 128K | Highest capability; Principal Engineer |
 | **Claude Opus 4.8** | `claude-opus-4.8` | `claude-opus-4.8` | 1M | 128K | Latest, highest capability; Security Engineer |
+| **Claude Fable 5** | `claude-fable-5` | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer **defensive-only** alternative (effort <= medium). Single-part version: name is identical in every harness — no dot/hyphen transformation. |
 
 **CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
 

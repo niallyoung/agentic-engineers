@@ -43,7 +43,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Complex system design, debugging intricate problems, root-cause diagnosis
 **Best for**: Unscoped complex work, architectural decisions, deep debugging
-**Model**: claude-sonnet-4-20250514 (high effort)
+**Model**: claude-sonnet-4-6 (high effort)
 **Scope**: Multi-service impact, complex logic, performance optimization
 
 **When to use**:
@@ -61,7 +61,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Code review, quality assurance, spec validation, architectural guidance
 **Best for**: Code review, quality gates, ensuring spec compliance, medium-complexity planning
-**Model**: claude-sonnet-4-20250514 (high effort)
+**Model**: claude-sonnet-4-6 (high effort)
 **Scope**: Validation, review, quality decisions
 
 **When to use**:
@@ -77,8 +77,17 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Security architecture, vulnerability analysis, compliance, threat modeling
 **Best for**: Security-scoped work, vulnerability analysis, secure design
-**Model**: claude-opus-4-20250514 (max effort)
+**Model**: claude-opus-4-8 (max effort, pinned default) | claude-fable-5 (defensive-only alternative, effort <= medium)
 **Scope**: Security decisions, architecture, compliance
+
+**Defensive-Only Model Constraint**: fable-5 (and any Mythos-class model) is approved
+exclusively for defensive analysis (assess, detect, remediate, harden, comply).
+Restricted topics — exploit development, offensive tooling, attack automation, red team,
+jailbreak/prompt-injection research — are OUT OF SCOPE on every model: reject and
+escalate to the user; the framework performs no model re-routing for these.
+Prohibited activities (ransomware, mass data exfiltration, malicious detection evasion)
+are refused on every model. Platform refusals (stop_reason: refusal, category: cyber)
+are hard stops — never rephrase or retry around them.
 
 **When to use**:
 - Security vulnerability analysis
@@ -96,7 +105,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Cross-organization architecture, strategy, high-stakes decisions
 **Best for**: System architecture, major refactors, organizational decisions
-**Model**: claude-opus-4-20250514 (high effort)
+**Model**: claude-opus-4-8 (high effort)
 **Scope**: Organization-wide impact, strategic decisions affecting >2 repos
 
 **When to use**:
@@ -112,7 +121,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Post-implementation quality gate, code review, model suitability assessment
 **Best for**: Quality verification after implementation, model assessment feedback
-**Model**: claude-sonnet-4-20250514 (medium effort)
+**Model**: claude-sonnet-4-6 (medium effort)
 **Scope**: Testing decisions, coverage, model assessment
 
 **When to use**:
@@ -127,7 +136,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Token optimization, cost-quality trade-offs, model selection
 **Best for**: Cost optimization, model selection, efficiency analysis
-**Model**: claude-sonnet-4-20250514 (high effort)
+**Model**: claude-sonnet-4-6 (high effort)
 **Scope**: Performance metrics, cost analysis, optimization recommendations
 
 **When to use**:

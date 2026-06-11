@@ -141,21 +141,30 @@ agents:
       - grep
 
 # Model Assignments (Cost Optimization)
+# cost_per_1k_tokens = USD per 1K input tokens (output is ~5x input)
 model_assignments:
   claude-haiku-4.5:
-    cost_per_1k_tokens: 0.80
+    cost_per_1k_tokens: 0.001
     agents: [orchestrator, engineer]
     use_cases: [routing, simple-implementation, testing]
 
   claude-sonnet-4.5:
-    cost_per_1k_tokens: 3.00
+    cost_per_1k_tokens: 0.003
     agents: [senior-engineer, lead-engineer, quality-engineer, spec-engineer]
     use_cases: [architecture, code-review, complex-design]
 
   claude-opus-4.8:
-    cost_per_1k_tokens: 15.00
+    cost_per_1k_tokens: 0.005
     agents: [principal-engineer, security-engineer]
     use_cases: [strategic-review, security-audit, critical-decisions]
+
+  # Defensive-only alternative for security-engineer (see docs/SPEC.md >
+  # Security Engineer: Multi-Model Strategy). Never auto-assigned; the
+  # Orchestrator may route to it only for defensive security analysis.
+  claude-fable-5:
+    cost_per_1k_tokens: 0.010
+    agents: [security-engineer]
+    use_cases: [defensive-vulnerability-analysis, threat-modelling, compliance-review]
 
 # Default Skill Installations
 default_skills:
