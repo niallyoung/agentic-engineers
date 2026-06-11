@@ -1601,6 +1601,7 @@ All agentic-engineers agents use Anthropic Claude models in the following **HYPH
 | **Claude Opus 4.6** | `claude-opus-4-6` | `claude-opus-4-6` | 1M | 64K | High capability; Principal Engineer (when needed) |
 | **Claude Opus 4.7** | `claude-opus-4.7` | `claude-opus-4.7` | 1M | 128K | Highest capability; Principal Engineer |
 | **Claude Opus 4.8** | `claude-opus-4.8` | `claude-opus-4.8` | 1M | 128K | Latest, highest capability; Security Engineer |
+| **Claude Fable 5** | `claude-fable-5` | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer **defensive-only** alternative (effort <= medium). Single-part version: name is identical in every harness — no dot/hyphen transformation. |
 
 **CRITICAL RULE:** Model names use HYPHENS (e.g., `claude-opus-4.7`), NOT DOTS (e.g., ~~claude-opus-4.7~~).
 

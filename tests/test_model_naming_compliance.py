@@ -54,6 +54,9 @@ class TestModelNamingCompliance:
         "claude-opus-4.6",
         "claude-opus-4.7",
         "claude-opus-4.8",
+        # Single-part version: canonical name equals the API alias in every
+        # harness (no dot transformation). Defensive-only for security-engineer.
+        "claude-fable-5",
     }
 
     # Official approved model names (hyphens only)
@@ -66,6 +69,7 @@ class TestModelNamingCompliance:
         "claude-opus-4.6",
         "claude-opus-4.7",
         "claude-opus-4.8",
+        "claude-fable-5",
     }
 
     # Forbidden patterns (old hyphenated format, underscores, uppercase, etc.)

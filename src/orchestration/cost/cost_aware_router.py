@@ -39,6 +39,11 @@ MODEL_COST_MULTIPLIERS: Dict[str, float] = {
     "sonnet-4-6": 1.00,
     "opus-4-6":   3.00,
     "opus-4-7":   3.00,
+    "opus-4-8":   3.00,
+    # fable-5 is priced at 2x opus per token ($10/$50 vs $5/$25 per MTok) —
+    # a capability upgrade, never a cost saving. Security Engineer
+    # defensive-only alternative; never auto-routed (DelegateValidator C5).
+    "fable-5":    6.00,
 }
 
 MODEL_QUALITY_BASELINES: Dict[str, float] = {
@@ -46,6 +51,8 @@ MODEL_QUALITY_BASELINES: Dict[str, float] = {
     "sonnet-4-6": 93.0,
     "opus-4-6":   97.0,
     "opus-4-7":   97.5,
+    "opus-4-8":   98.0,
+    "fable-5":    99.0,
 }
 
 BASE_COST_PER_TOKEN: float = 0.0003  # Sonnet rate in USD

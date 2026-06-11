@@ -143,13 +143,22 @@ PY
 	if [ -z "${id:-}" ]; then
 		case "$provider" in
 			github-copilot)
-				# GitHub Copilot registry uses dotted version: claude-haiku-4.5
-				id="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')"
+				# GitHub Copilot registry uses dotted version: claude-haiku-4.5.
+				# Single-part-version families (fable-5) keep their hyphen — the
+				# dot transform applies only to {major}-{minor} version pairs.
+				case "$family" in
+					fable*) id="claude-$family" ;;
+					*) id="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
+				esac
 				;;
 			openrouter)
-				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash)
+				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash).
+				# Same single-part-version exemption as github-copilot above.
 				local dotted
-				dotted="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')"
+				case "$family" in
+					fable*) dotted="claude-$family" ;;
+					*) dotted="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
+				esac
 				id="anthropic/$dotted"
 				;;
 			*)

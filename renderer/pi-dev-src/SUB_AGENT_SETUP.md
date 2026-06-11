@@ -181,6 +181,13 @@ If pi.dev reports a model not found:
 3. Update `settings.json` `defaultModel` to a supported model
 4. Current model IDs: `claude-haiku-4-5`, `claude-sonnet-4-6`, `claude-opus-4-8`, `claude-fable-5` (defensive-only for Security Engineer)
 
+**Harness limitation — fable-5 on pi:** pi.dev has a single `defaultModel` and no
+per-agent model selection, so the framework cannot route an individual DELEGATE
+to fable-5 here. fable-5 is usable on pi only by manually setting
+`settings.json` `defaultModel` for a dedicated defensive-analysis session; the
+Defensive-Only Model Constraint in AGENTS.md applies in full, and the
+Orchestrator's C5 gate still validates the DELEGATE regardless of harness.
+
 ### Sub-agent routing not working
 
 The routing rules in `pi.yml` are speculative. If they don't work:

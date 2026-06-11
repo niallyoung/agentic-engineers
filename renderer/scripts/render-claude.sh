@@ -55,6 +55,7 @@ map_model() {
 		*haiku*)  echo "haiku"  ;;
 		*sonnet*) echo "sonnet" ;;
 		*opus*)   echo "opus"   ;;
+		*fable*)  echo "fable"  ;;
 		"")       echo ""       ;;
 		*)
 			# Unknown tier: normalise dots→hyphens and emit the full ID.

@@ -30,6 +30,11 @@ LOCKED_MODELS=(
     "claude-opus-4.6"
     "claude-opus-4.7"
     "claude-opus-4.8"
+    # fable-5: Security Engineer defensive-only alternative (effort <= medium).
+    # Single-part version — canonical name matches the API alias exactly
+    # (claude-fable-5) in every harness; no dot/hyphen transformation applies.
+    # See docs/SPEC.md > Security Engineer: Multi-Model Strategy.
+    "claude-fable-5"
 )
 
 # Note: If a locked model becomes unavailable, the harness will auto-select:
