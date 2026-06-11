@@ -20,6 +20,16 @@ from pathlib import Path
 from datetime import datetime
 
 
+def _backed_up(parent, name):
+    """Return the single timestamped backup dir for `name` under `parent`.
+
+    Backups are suffixed with a per-second YYYYMMDD-HHMMSS timestamp, so tests
+    match by prefix rather than an exact 8-digit date."""
+    today = datetime.now().strftime("%Y%m%d")
+    matches = sorted(parent.glob(f"{name}.{today}-*"))
+    return matches[0] if matches else None
+
+
 class TestBackupHarnesses:
     """Test backup-harnesses.sh functionality."""
 
@@ -74,16 +84,16 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify all harnesses were backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
-        assert (home / ".config" / f"opencode.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is not None
+        assert _backed_up(home, ".claude") is not None
+        assert _backed_up(home, ".pi") is not None
+        assert _backed_up(home / ".config", "opencode") is not None
         
         # Verify backup contents
-        assert (home / f".copilot.{timestamp}" / "copilot_config.json").exists()
-        assert (home / f".claude.{timestamp}" / "claude_config.json").exists()
-        assert (home / f".pi.{timestamp}" / "pi_config.json").exists()
-        assert (home / ".config" / f"opencode.{timestamp}" / "opencode_config.json").exists()
+        assert (_backed_up(home, ".copilot") / "copilot_config.json").exists()
+        assert (_backed_up(home, ".claude") / "claude_config.json").exists()
+        assert (_backed_up(home, ".pi") / "pi_config.json").exists()
+        assert (_backed_up(home / ".config", "opencode") / "opencode_config.json").exists()
         
         # Verify original dirs are gone (moved, not copied)
         assert not harnesses["copilot"].exists()
@@ -117,32 +127,32 @@ class TestBackupHarnesses:
         
         # Verify copilot was skipped
         timestamp = datetime.now().strftime("%Y%m%d")
-        assert not (home / f".copilot.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is None
         
         # Verify others were backed up
-        assert (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
-        assert (home / ".config" / f"opencode.{timestamp}").exists()
+        assert _backed_up(home, ".claude") is not None
+        assert _backed_up(home, ".pi") is not None
+        assert _backed_up(home / ".config", "opencode") is not None
         
         # Verify output mentions skipped harness
         assert "copilot" in result.stdout.lower()
         assert "skipped" in result.stdout.lower() or "no existing" in result.stdout.lower()
 
     def test_backup_handles_existing_backup(self, temp_home, backup_script):
-        """Test that backup skips if same-day backup already exists."""
+        """A pre-existing same-second backup is never clobbered or skipped.
+
+        With per-second YYYYMMDD-HHMMSS timestamps a collision is rare, but if
+        one occurs the script appends an incrementing counter and STILL takes a
+        backup — it must never skip (that would replace the harness dir with no
+        backup of the live config)."""
         home, harnesses, agentic_dir = temp_home
-        timestamp = datetime.now().strftime("%Y%m%d")
-        
-        # Create existing backup manually
-        existing_backup = home / f".copilot.{timestamp}"
+        full_ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        # Create an existing backup occupying the exact same-second suffix
+        existing_backup = home / f".copilot.{full_ts}"
         existing_backup.mkdir()
         (existing_backup / "existing_config.json").write_text('{"existing": true}')
-        
-        # Remove original to simulate previous backup
-        import shutil
-        shutil.rmtree(harnesses["copilot"])
-        
-        # Run backup script with --force (non-interactive)
+
         result = subprocess.run(
             ["bash", str(backup_script), "--force", "copilot"],
             cwd=str(home),
@@ -150,15 +160,17 @@ class TestBackupHarnesses:
             capture_output=True,
             text=True,
         )
-        
+
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
-        
-        # Verify existing backup was preserved
+        # The pre-existing backup is untouched
         assert existing_backup.exists()
         assert (existing_backup / "existing_config.json").exists()
-        
-        # Verify output mentions existing backup
-        assert "already exists" in result.stdout.lower() or "skipped" in result.stdout.lower()
+        # And a NEW distinct backup was still taken (never skipped)
+        all_backups = list(home.glob(".copilot.*"))
+        assert len(all_backups) >= 2, (
+            f"Expected the original plus a new distinct backup, found: "
+            f"{[b.name for b in all_backups]}"
+        )
 
     def test_backup_timestamp_format(self, temp_home, backup_script):
         """Test that backup uses correct YYYYMMDD timestamp format."""
@@ -181,14 +193,17 @@ class TestBackupHarnesses:
         
         backup_dir = backups[0]
         timestamp = backup_dir.name.split(".")[-1]
-        
-        # Verify timestamp format: YYYYMMDD (8 digits)
-        assert len(timestamp) == 8, f"Timestamp should be 8 digits, got: {timestamp}"
-        assert timestamp.isdigit(), f"Timestamp should be numeric, got: {timestamp}"
-        
-        # Verify timestamp is valid date
+
+        # Verify timestamp format: YYYYMMDD-HHMMSS (per-second, collision-free)
+        import re
+        assert re.fullmatch(r"\d{8}-\d{6}", timestamp), (
+            f"Timestamp should be YYYYMMDD-HHMMSS, got: {timestamp}"
+        )
+        # Verify the date portion is today
         today = datetime.now().strftime("%Y%m%d")
-        assert timestamp == today, f"Timestamp {timestamp} doesn't match today {today}"
+        assert timestamp.startswith(today), (
+            f"Timestamp {timestamp} doesn't start with today {today}"
+        )
 
     def test_backup_never_touches_agentic_engineers(self, temp_home, backup_script):
         """Test that ~/.agentic-engineers/ is NEVER modified during backup."""
@@ -252,10 +267,10 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify all four harnesses were backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
-        assert (home / ".config" / f"opencode.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is not None
+        assert _backed_up(home, ".claude") is not None
+        assert _backed_up(home, ".pi") is not None
+        assert _backed_up(home / ".config", "opencode") is not None
 
     def test_backup_single_harness(self, temp_home, backup_script):
         """Test backing up a single harness only."""
@@ -274,10 +289,10 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify only copilot was backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert not (home / f".claude.{timestamp}").exists()
-        assert not (home / f".pi.{timestamp}").exists()
-        assert not (home / ".config" / f"opencode.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is not None
+        assert _backed_up(home, ".claude") is None
+        assert _backed_up(home, ".pi") is None
+        assert _backed_up(home / ".config", "opencode") is None
         
         # Verify others still exist (not backed up)
         assert harnesses["claude"].exists()
@@ -321,7 +336,7 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify copilot was backed up
-        assert (home / f".copilot.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is not None
         assert not harnesses["copilot"].exists()
         
         # Verify interactive prompt was shown
@@ -348,7 +363,7 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify copilot was NOT backed up
-        assert not (home / f".copilot.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is None
         assert harnesses["copilot"].exists()
         
         # Verify skip message was shown
@@ -372,7 +387,7 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify claude was backed up
-        assert (home / f".claude.{timestamp}").exists()
+        assert _backed_up(home, ".claude") is not None
         assert not harnesses["claude"].exists()
 
     def test_backup_force_flag_skips_prompts(self, temp_home, backup_script):
@@ -392,8 +407,8 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify both harnesses were backed up
-        assert (home / f".copilot.{timestamp}").exists()
-        assert (home / f".claude.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is not None
+        assert _backed_up(home, ".claude") is not None
         
         # Verify no prompts were shown
         assert "Proceed with backup?" not in result.stdout
@@ -417,9 +432,9 @@ class TestBackupHarnesses:
         assert result.returncode == 0, f"Backup failed: {result.stderr}"
         
         # Verify copilot and pi were backed up, claude was not
-        assert (home / f".copilot.{timestamp}").exists()
-        assert not (home / f".claude.{timestamp}").exists()
-        assert (home / f".pi.{timestamp}").exists()
+        assert _backed_up(home, ".copilot") is not None
+        assert _backed_up(home, ".claude") is None
+        assert _backed_up(home, ".pi") is not None
         
         # Verify original states
         assert not harnesses["copilot"].exists()
