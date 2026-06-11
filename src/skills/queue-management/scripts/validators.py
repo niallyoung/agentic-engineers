@@ -5,6 +5,7 @@ Groups A/B/C validation, HANDBACK validation, and cycle detection.
 """
 
 import json
+import yaml
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -464,7 +465,7 @@ class CycleDetector:
         """
         # Check if parent exists in any state
         for state in ["incoming", "processing", "done"]:
-            task_file = self.queue_path / state / f"{parent_task_id}.json"
+            task_file = self.queue_path / state / f"{parent_task_id}.yaml"
             if task_file.exists():
                 return True, ""
 
@@ -484,10 +485,10 @@ class CycleDetector:
         for state in ["incoming", "processing", "done"]:
             state_path = self.queue_path / state
             if state_path.exists():
-                for task_file in state_path.glob("*.json"):
+                for task_file in state_path.glob("*.yaml"):
                     try:
                         with open(task_file) as f:
-                            task = json.load(f)
+                            task = yaml.safe_load(f)
                             if task.get("parent_task_id") == parent_task_id:
                                 child_count += 1
                     except (json.JSONDecodeError, IOError):
@@ -498,11 +499,11 @@ class CycleDetector:
     def _get_parent(self, task_id: str) -> Optional[str]:
         """Get parent_task_id of a task, if it exists."""
         for state in ["incoming", "processing", "done"]:
-            task_file = self.queue_path / state / f"{task_id}.json"
+            task_file = self.queue_path / state / f"{task_id}.yaml"
             if task_file.exists():
                 try:
                     with open(task_file) as f:
-                        task = json.load(f)
+                        task = yaml.safe_load(f)
                         return task.get("parent_task_id")
                 except (json.JSONDecodeError, IOError):
                     pass

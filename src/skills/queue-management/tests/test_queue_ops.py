@@ -5,6 +5,7 @@ Tests for QueueOperations class with proper validation strings.
 """
 
 import json
+import yaml
 import pytest
 import tempfile
 from pathlib import Path
@@ -259,7 +260,7 @@ class TestEnqueueCanonicalSchema:
         written = Path(result["queue_path"])
         assert written.exists(), "DELEGATE file must be written to incoming/"
         with open(written) as f:
-            on_disk = json.load(f)
+            on_disk = yaml.safe_load(f)
         assert on_disk["handoff_type"] == "DELEGATE"
         assert on_disk["agent"] == "engineer"
         assert on_disk["task_id"] == "enqueue-test-001"
@@ -322,14 +323,14 @@ class TestEnqueueCanonicalSchema:
         result = queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
         written = Path(result["queue_path"])
         assert written.exists()
-        assert written.suffix == ".json"
+        assert written.suffix == ".yaml"  # SPEC: queue files are YAML
         assert written.stem == "enqueue-test-001"
 
     def test_enqueue_file_contains_enqueued_at(self, queue_ops):
         """Written file includes enqueued_at timestamp added by enqueue()."""
         result = queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
         with open(result["queue_path"]) as f:
-            on_disk = json.load(f)
+            on_disk = yaml.safe_load(f)
         assert "enqueued_at" in on_disk
         assert "queue_state" in on_disk
         assert on_disk["queue_state"] == "incoming"

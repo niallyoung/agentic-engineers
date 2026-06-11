@@ -27,6 +27,7 @@ See docs/QUEUE-PROTOCOL.md for the full specification.
 
 import json
 import os
+import yaml  # DELEGATE/HANDBACK queue files are SPEC-compliant YAML
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -461,9 +462,9 @@ class QueueOperations:
 
         state_dir = self.session_queue_path / target_state
         state_dir.mkdir(parents=True, exist_ok=True)
-        file_path = state_dir / f"{task_id}.json"
+        file_path = state_dir / f"{task_id}.yaml"
         self.atomic_ops.write_atomic(
-            file_path, json.dumps(artifact_with_meta, indent=2, default=str)
+            file_path, yaml.safe_dump(artifact_with_meta, sort_keys=False, default_flow_style=False)
         )
 
         # Record rate limit for DELEGATEs
@@ -637,12 +638,12 @@ class QueueOperations:
             raise ValueError(f"Invalid state: must be one of {valid_states}")
 
         # Find task in from_state
-        from_path = self.session_queue_path / from_state / f"{task_id}.json"
+        from_path = self.session_queue_path / from_state / f"{task_id}.yaml"
         if not from_path.exists():
             raise FileNotFoundError(f"Task {task_id} not found in {from_state}")
 
         # Atomic move via consistency module
-        to_path = self.session_queue_path / to_state / f"{task_id}.json"
+        to_path = self.session_queue_path / to_state / f"{task_id}.yaml"
         self.atomic_ops.move_file(from_path, to_path)
 
         return {
@@ -684,10 +685,10 @@ class QueueOperations:
             return []
 
         tasks = []
-        for task_file in state_path.glob("*.json"):
+        for task_file in state_path.glob("*.yaml"):
             try:
                 with open(task_file) as f:
-                    task = json.load(f)
+                    task = yaml.safe_load(f)
 
                 # Apply filters
                 if parent_task_id and task.get("parent_task_id") != parent_task_id:
@@ -722,7 +723,7 @@ class QueueOperations:
     def _task_exists(self, task_id: str) -> bool:
         """Check if task exists in any queue state."""
         for state in ["incoming", "processing", "done", "failed"]:
-            task_path = self.session_queue_path / state / f"{task_id}.json"
+            task_path = self.session_queue_path / state / f"{task_id}.yaml"
             if task_path.exists():
                 return True
         return False
@@ -733,9 +734,9 @@ class QueueOperations:
         incoming_path = self.session_queue_path / "incoming"
 
         # Use atomic write via consistency module
-        task_path = incoming_path / f"{task_id}.json"
+        task_path = incoming_path / f"{task_id}.yaml"
         self.atomic_ops.write_atomic(
-            task_path, json.dumps(delegate, indent=2, default=str)
+            task_path, yaml.safe_dump(delegate, sort_keys=False, default_flow_style=False)
         )
 
         return task_path

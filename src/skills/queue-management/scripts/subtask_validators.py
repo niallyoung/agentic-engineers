@@ -9,6 +9,7 @@ Validates sub-task creation rules:
 """
 
 import json
+import yaml
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -52,7 +53,7 @@ class SubTaskValidator:
             return False, "parent_task_id must be a non-empty string"
 
         for state in ("incoming", "processing", "done"):
-            candidate = self.queue_path / state / f"{parent_task_id}.json"
+            candidate = self.queue_path / state / f"{parent_task_id}.yaml"
             if candidate.exists():
                 return True, ""
 
@@ -214,11 +215,11 @@ class SubTaskValidator:
     def _load_task(self, task_id: str) -> Optional[dict]:
         """Load a task dict from any queue state, or None if not found."""
         for state in ("incoming", "processing", "done", "failed"):
-            candidate = self.queue_path / state / f"{task_id}.json"
+            candidate = self.queue_path / state / f"{task_id}.yaml"
             if candidate.exists():
                 try:
                     with open(candidate) as fh:
-                        return json.load(fh)
+                        return yaml.safe_load(fh)
                 except (json.JSONDecodeError, IOError):
                     return None
         return None
@@ -230,10 +231,10 @@ class SubTaskValidator:
             state_path = self.queue_path / state
             if not state_path.exists():
                 continue
-            for task_file in state_path.glob("*.json"):
+            for task_file in state_path.glob("*.yaml"):
                 try:
                     with open(task_file) as fh:
-                        task = json.load(fh)
+                        task = yaml.safe_load(fh)
                     if task.get("parent_task_id") == parent_task_id:
                         count += 1
                 except (json.JSONDecodeError, IOError):

@@ -8,6 +8,7 @@ cycle detection, parent validation, and width limits.
 Target: >=90% branch coverage of validators.py
 """
 import json
+import yaml
 import sys
 import tempfile
 from pathlib import Path
@@ -93,14 +94,14 @@ def valid_handback():
 # ── Task file helper ────────────────────────────────────────────────────────
 
 def _create_task(queue_path: Path, task_id: str, parent_id: str = None, state: str = "incoming"):
-    """Create a task JSON file in the given state directory."""
+    """Create a task YAML file in the given state directory (SPEC: queue files are YAML)."""
     state_dir = queue_path / state
     state_dir.mkdir(parents=True, exist_ok=True)
     task = {"task_id": task_id}
     if parent_id is not None:
         task["parent_task_id"] = parent_id
-    task_file = state_dir / f"{task_id}.json"
-    task_file.write_text(json.dumps(task))
+    task_file = state_dir / f"{task_id}.yaml"
+    task_file.write_text(yaml.safe_dump(task))
     return task_file
 
 
