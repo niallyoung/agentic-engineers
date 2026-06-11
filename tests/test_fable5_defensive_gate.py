@@ -61,7 +61,8 @@ class TestFable5DefensiveGate:
     @pytest.mark.parametrize(
         "keyword",
         ["exploit", "attack automation", "offensive", "red team",
-         "proof-of-concept attack", "jailbreak", "prompt injection"],
+         "proof-of-concept attack", "jailbreak", "prompt injection",
+         "ransomware", "data exfiltration", "detection evasion", "malware"],
     )
     def test_each_offensive_keyword_rejected(self, keyword):
         scope = f"{DEFENSIVE_SCOPE} including {keyword} work"

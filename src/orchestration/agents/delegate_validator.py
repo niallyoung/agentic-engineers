@@ -118,6 +118,9 @@ class DelegateValidator:
     OFFENSIVE_SCOPE_PATTERNS = [
         'exploit', 'attack automation', 'offensive', 'red team',
         'proof-of-concept attack', 'jailbreak', 'prompt injection',
+        # Tier-1 prohibited activities (mirrors Anthropic real-time cyber
+        # safeguards) — these never run on fable-5/Mythos-class either:
+        'ransomware', 'data exfiltration', 'detection evasion', 'malware',
     ]
     
     @staticmethod

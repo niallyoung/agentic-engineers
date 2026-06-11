@@ -1485,12 +1485,15 @@ Fable-5 is approved **exclusively for defensive security analysis** — preventi
 - Security audit findings triage and remediation planning
 - CLI permission policy review and hardening
 
-**Prohibited use cases (never use fable5):**
+**Prohibited use cases (never use fable5 or any Mythos-class model):**
 - Exploit development or proof-of-concept attacks
 - Offensive security research or attack automation
 - Adversarial model behavior (jailbreak techniques, prompt injection)
 - Red team scenarios designed to demonstrate attack capability
+- Ransomware/destructive-malware work, mass data exfiltration, malicious detection evasion (Tier-1: prohibited on EVERY model, not just fable-5)
 - Any task requiring offensive capability, even if framed as "defensive research"
+
+This two-tier shape mirrors Anthropic's real-time cyber safeguards (prohibited vs high-risk dual-use), which already route sensitive requests on Fable/Mythos-class models to Opus-class at the platform level. Platform refusals (`stop_reason: refusal`, `stop_details.category: cyber`) are hard stops — agents MUST NOT rephrase, fragment, or retry around them.
 
 **Constraint enforcement:**
 - Orchestrator MUST NOT route fable5 for offensive/research tasks (see gate logic below)
