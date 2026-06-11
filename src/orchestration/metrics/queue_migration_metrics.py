@@ -101,7 +101,7 @@ class MigrationProgressMetrics:
     
     def count_new_tasks(self, session_id: str, harness: str) -> int:
         """Count tasks in new queue for session/harness."""
-        new_session = self.new_base / session_id / harness / "queue"
+        new_session = self.new_base / harness / session_id / "queue"
         if not new_session.exists():
             return 0
         

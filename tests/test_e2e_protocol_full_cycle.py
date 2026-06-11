@@ -582,7 +582,7 @@ def test_canonical_paths_throughout(test_session: Tuple[Path, str, str]):
     - Queue path follows canonical format
     - No artifacts/ segment in path
     - Session ID and harness in correct positions
-    - Path structure: ~/.agentic-engineers/{session}/{harness}/queue/
+    - Path structure: ~/.agentic-engineers/{harness}/{session}/queue/
     """
     queue_path, session_id, harness = test_session
 
@@ -594,13 +594,13 @@ def test_canonical_paths_throughout(test_session: Tuple[Path, str, str]):
     assert "queue" in str(queue_path), f"queue/ not in path: {queue_path}"
 
     # Verify path structure
-    # Expected: {base}/.agentic-engineers/{session}/{harness}/queue/
+    # Expected: {base}/.agentic-engineers/{harness}/{session}/queue/
     path_parts = queue_path.parts
     agentic_idx = next(i for i, p in enumerate(path_parts) if p == ".agentic-engineers")
 
     assert path_parts[agentic_idx] == ".agentic-engineers"
-    assert path_parts[agentic_idx + 1] == session_id
-    assert path_parts[agentic_idx + 2] == harness
+    assert path_parts[agentic_idx + 1] == harness
+    assert path_parts[agentic_idx + 2] == session_id
     assert path_parts[agentic_idx + 3] == "queue"
 
     # Verify subdirectories follow canonical structure

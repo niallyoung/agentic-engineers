@@ -33,7 +33,7 @@ def setup_isolated_queue(
         harness: Harness name (copilot, claude, gpt, local, etc.)
 
     Returns:
-        Path to the queue root: tmp_path/.agentic-engineers/{session}/{harness}/queue/
+        Path to the queue root: tmp_path/.agentic-engineers/{harness}/{session}/queue/
     """
     qi = queue_isolation.QueueIsolation(
         session_id=session_id,
@@ -190,7 +190,7 @@ def assert_queue_path_is_isolated(queue_path: Path, session_id: str, harness: st
     """
     Assert that a queue path follows the canonical isolation structure.
 
-    Pattern: ~/.agentic-engineers/{session}/{harness}/queue/
+    Pattern: ~/.agentic-engineers/{harness}/{session}/queue/
     (the legacy artifacts/ segment is deprecated — see docs/SPEC.md
     Queue Architecture & Paths (LOCKED SPEC))
     """

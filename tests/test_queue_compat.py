@@ -113,7 +113,7 @@ class TestQueuePathMigrationContents:
     def test_get_new_queue_contents(self, tmp_path):
         """Read contents of new queue path."""
         new_base = tmp_path / "new"
-        queue_dir = new_base / "test-session" / "claude" / "queue" / "incoming"
+        queue_dir = new_base / "claude" / "test-session" / "queue" / "incoming"
         queue_dir.mkdir(parents=True)
         
         (queue_dir / "new-task1.yaml").touch()
@@ -169,7 +169,7 @@ class TestQueuePathMigrationValidation:
         (legacy_dir / "legacy-task.yaml").touch()
         
         # Create new queue
-        new_dir = new_base / "test-session" / "copilot" / "queue" / "incoming"
+        new_dir = new_base / "copilot" / "test-session" / "queue" / "incoming"
         new_dir.mkdir(parents=True)
         (new_dir / "new-task.yaml").touch()
         
@@ -301,7 +301,7 @@ class TestQueuePathMigrationEdgeCases:
         
         # Create queues for multiple harnesses
         for harness in ["claude", "copilot", "gpt"]:
-            queue_dir = new_base / "test-session" / harness / "queue"
+            queue_dir = new_base / harness / "test-session" / "queue"
             (queue_dir / "incoming").mkdir(parents=True)
             (queue_dir / "incoming" / "task.yaml").touch()
         

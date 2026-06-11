@@ -105,7 +105,7 @@ class _FallbackQueueIsolation:
         base = Path(base_dir) if base_dir is not None else Path.home() / ".agentic-engineers"
         safe_session = self._validate_path_component(session_id, field="session_id")
         safe_harness = self._validate_path_component(harness, field="harness")
-        return base / safe_session / safe_harness / "queue"
+        return base / safe_harness / safe_session / "queue"
 
 
 def _import_queue_isolation():

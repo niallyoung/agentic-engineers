@@ -39,7 +39,7 @@ This script replaces the previous separate flows and provides:
 ### 3. Backup Strategy
 
 **Default behavior** (non-interactive):
-- If harness dir exists → auto-backup with timestamp suffix: `~/.copilot.YYYYMMDD_HHMMSS/`
+- If harness dir exists → auto-backup with per-second timestamp suffix: `~/.copilot.YYYYMMDD-HHMMSS/` (unique per run — same-day re-installs never collide)
 - The backup is a non-destructive **copy** (`cp -a`), NOT a move. The live dir is
   left in place so the install step (a marker-aware merge) can preserve files we
   do not manage — `config.json`, auth tokens, session/history state.
@@ -283,7 +283,7 @@ make install BACKUP=never DESTDIR=/tmp/test # Does install work (no backup)?
 ```bash
 ls -la ~/.copilot*                              # Find backups
 rm -rf ~/.copilot && \
-  mv ~/.copilot.YYYYMMDD_HHMMSS/ ~/.copilot/    # Restore specific backup
+  mv ~/.copilot.YYYYMMDD-HHMMSS/ ~/.copilot/    # Restore specific backup
 ```
 
 ### Verify marker files

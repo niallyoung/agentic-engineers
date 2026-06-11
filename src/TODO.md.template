@@ -72,8 +72,8 @@ Rules:
 Each `TASK-NNN` in TODO.md corresponds to a DELEGATE file:
 
 ```
-~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml  ← in-flight
-~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml  ← completed
+~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml  ← in-flight
+~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml  ← completed
 ```
 
 When a HANDBACK is received, update TODO.md immediately.

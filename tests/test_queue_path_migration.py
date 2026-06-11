@@ -113,7 +113,7 @@ class TestQueuePathMigration:
 
     def test_migration_moves_session_dirs(self, migration_setup):
         """
-        Test that migration moves artifacts/{session}/{harness}/ to canonical path.
+        Test that migration moves artifacts/{harness}/{session}/ to canonical path.
 
         Verifies:
         - Old path no longer exists
@@ -141,7 +141,7 @@ class TestQueuePathMigration:
 
         # Verify new canonical path exists
         canonical_path = (
-            temp_dir / ".agentic-engineers" / session_id / "local" / "queue"
+            temp_dir / ".agentic-engineers" / "local" / session_id / "queue"
         )
         assert canonical_path.exists(), f"Canonical path should exist: {canonical_path}"
 
@@ -179,7 +179,7 @@ class TestQueuePathMigration:
 
         # Verify path moved
         canonical_path = (
-            temp_dir / ".agentic-engineers" / session_id / "copilot" / "queue"
+            temp_dir / ".agentic-engineers" / "copilot" / session_id / "queue"
         )
         assert canonical_path.exists()
 
@@ -230,7 +230,7 @@ class TestQueuePathMigration:
 
         # Verify canonical path
         canonical_path = (
-            temp_dir / ".agentic-engineers" / session_id / "claude" / "queue"
+            temp_dir / ".agentic-engineers" / "claude" / session_id / "queue"
         )
 
         # Verify all subdirectories exist
@@ -275,7 +275,7 @@ class TestQueuePathMigration:
         # Verify all sessions migrated correctly
         for session_id, harness in sessions:
             canonical_path = (
-                temp_dir / ".agentic-engineers" / session_id / harness / "queue"
+                temp_dir / ".agentic-engineers" / harness / session_id / "queue"
             )
             assert canonical_path.exists(), f"Path not migrated: {canonical_path}"
 
@@ -407,7 +407,7 @@ class TestQueuePathMigration:
 
         # Verify valid session was migrated
         valid_canonical = (
-            temp_dir / ".agentic-engineers" / "valid-session" / "local" / "queue"
+            temp_dir / ".agentic-engineers" / "local" / "valid-session" / "queue"
         )
         assert valid_canonical.exists()
 
@@ -448,9 +448,9 @@ class TestQueuePathMigration:
         )
 
         # Create a file at the destination to cause move to fail
-        canonical_parent = temp_dir / ".agentic-engineers" / session_id
+        canonical_parent = temp_dir / ".agentic-engineers" / "local"
         canonical_parent.mkdir(parents=True, exist_ok=True)
-        (canonical_parent / "local").write_text("blocking_file")
+        (canonical_parent / session_id).write_text("blocking_file")
 
         # Run migration (should fail because local is a file, not dir)
         exit_code, stdout, stderr = self.run_migration(migration_script, temp_dir)
@@ -473,3 +473,57 @@ class TestQueuePathMigration:
 
         # Check if executable
         assert os.access(migration_script, os.X_OK), "Script should be executable"
+
+
+class TestQueuePathReversal:
+    """Pass 2: reverse legacy {session}/{harness}/ to {harness}/{session}/."""
+
+    MIGRATION_SCRIPT = Path(__file__).parent.parent / "setup" / "migrate-queue-paths.sh"
+
+    def _run(self, home):
+        import subprocess
+        return subprocess.run(
+            ["bash", str(self.MIGRATION_SCRIPT)],
+            env={**os.environ, "HOME": str(home)},
+            capture_output=True, text=True,
+        )
+
+    def _make_session_first(self, agentic_home, session_id, harness):
+        q = agentic_home / session_id / harness / "queue"
+        for sub in ("incoming", "processing", "done", "failed"):
+            (q / sub).mkdir(parents=True, exist_ok=True)
+        (q / "incoming" / "task.yaml").write_text("task: t\n")
+        return q
+
+    def test_reversal_moves_to_harness_first(self, tmp_path):
+        home = tmp_path
+        agentic = home / ".agentic-engineers"
+        self._make_session_first(agentic, "sess-rev-1", "local")
+
+        result = self._run(home)
+        assert result.returncode == 0, result.stderr
+
+        new_q = agentic / "local" / "sess-rev-1" / "queue"
+        assert new_q.exists(), f"reversed path missing: {new_q}"
+        assert (new_q / "incoming" / "task.yaml").read_text() == "task: t\n"
+        # old session-first dir removed
+        assert not (agentic / "sess-rev-1").exists()
+
+    def test_reversal_is_idempotent(self, tmp_path):
+        home = tmp_path
+        agentic = home / ".agentic-engineers"
+        self._make_session_first(agentic, "sess-rev-2", "claude")
+        assert self._run(home).returncode == 0
+        # second run: nothing left to reverse, still exits 0
+        assert self._run(home).returncode == 0
+        assert (agentic / "claude" / "sess-rev-2" / "queue").exists()
+
+    def test_reversal_leaves_harness_first_untouched(self, tmp_path):
+        home = tmp_path
+        agentic = home / ".agentic-engineers"
+        # already canonical: harness/session
+        q = agentic / "copilot" / "sess-rev-3" / "queue" / "incoming"
+        q.mkdir(parents=True)
+        (q / "keep.yaml").write_text("k: 1\n")
+        assert self._run(home).returncode == 0
+        assert (agentic / "copilot" / "sess-rev-3" / "queue" / "incoming" / "keep.yaml").exists()

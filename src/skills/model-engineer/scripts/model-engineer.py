@@ -20,10 +20,12 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Optional
 
 # Model assignments from config (should read from actual config file)
+# "cost" is per 1K input tokens, aligned to src/config/models.yaml
 MODEL_TIERS = {
-    "haiku-4-5": {"cost": 0.00008, "quality_baseline": 85, "effort_suitability": ["low", "medium"]},
-    "sonnet-4-6": {"cost": 0.0003, "quality_baseline": 93, "effort_suitability": ["medium", "high", "max"]},
-    "opus-4-8": {"cost": 0.00015, "quality_baseline": 96, "effort_suitability": ["high", "max"], "premium": True},
+    "haiku-4-5": {"cost": 0.001, "quality_baseline": 85, "effort_suitability": ["low", "medium"]},
+    "sonnet-4-6": {"cost": 0.003, "quality_baseline": 93, "effort_suitability": ["medium", "high", "max"]},
+    "opus-4-8": {"cost": 0.005, "quality_baseline": 96, "effort_suitability": ["high", "max"], "premium": True},
+    "fable-5": {"cost": 0.010, "quality_baseline": 99, "effort_suitability": ["low", "medium"], "premium": True},
 }
 
 ROLE_ASSIGNMENTS = {

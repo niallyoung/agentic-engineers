@@ -5,7 +5,7 @@
 This specification is LOCKED as of 2026-05-26. The canonical queue path is `~/.agentic-engineers/`.
 
 **Key Facts:**
-- All 4 harnesses (copilot, claude, opencode, pi) use the SAME base directory: `~/.agentic-engineers/{session-id}/{harness}/queue/`
+- All 4 harnesses (copilot, claude, opencode, pi) use the SAME base directory: `~/.agentic-engineers/{harness}/{session-id}/queue/`
 - Legacy paths (~.copilot/queue, ~/.claude/queue, artifacts/queue) are DEPRECATED and UNSUPPORTED
 - Queue-isolation skill REQUIRED (no fallback logic)
 - Changes to queue paths require approval via **spec-management skill**
@@ -18,7 +18,7 @@ See **docs/SPEC.md - Queue Architecture & Paths (LOCKED SPEC)** for full specifi
 
 Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
 
-**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
 
 All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure under `~/.agentic-engineers/`.
 
@@ -78,9 +78,9 @@ Queue-isolation skill provides mandatory isolation. No backward compatibility.
 
 ### 1. Incoming Queue
 
-**New task arrives as:** `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/{task_id}.yaml`
+**New task arrives as:** `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.yaml`
 
-Example path: `~/.agentic-engineers/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/incoming/2026-04-30-fix-token-timeout.yaml`
+Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/queue/incoming/2026-04-30-fix-token-timeout.yaml`
 
 ```yaml
 ---
@@ -101,9 +101,9 @@ priority: high
 
 ### 2. Processing Queue
 
-**Agent returns work as:** `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
+**Agent returns work as:** `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
 
-Example path: `~/.agentic-engineers/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
+Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/queue/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
 
 ```yaml
 ---
@@ -128,9 +128,9 @@ escalations: 0
 
 ### 3. Done Queue
 
-**Final decision stored as:** `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}-{decision}.yaml`
+**Final decision stored as:** `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}-{decision}.yaml`
 
-Example path: `~/.agentic-engineers/54744939-4acb-430c-b2c4-3b8322289d0b/claude/queue/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
+Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/queue/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
 
 ```yaml
 task_id: 2026-04-30-fix-token-timeout
@@ -194,7 +194,7 @@ escalation_chain: [engineer, senior-engineer]  # Track the escalation path
    - Context: includes original HANDBACK and metadata
    - Escalation chain: appends current role to track the path
 
-4. **Enqueue in incoming/**: Write escalation DELEGATE to `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/`
+4. **Enqueue in incoming/**: Write escalation DELEGATE to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
 
 5. **Move original to done/**: Archive original task with escalation metadata
 
@@ -292,7 +292,7 @@ Each harness's Orchestrator only polls and processes its own queue partition. No
 - `artifacts/queue/` → ❌ DEPRECATED
 
 **Current:** All harnesses now use the canonical path:
-- `~/.agentic-engineers/{session-id}/{harness}/queue/` ✅ REQUIRED
+- `~/.agentic-engineers/{harness}/{session-id}/queue/` ✅ REQUIRED
 
 If you encounter legacy path references, ensure the queue-isolation skill is properly initialized. See `src/skills/_meta/queue-isolation/SKILL.md` for configuration details.
 
@@ -302,7 +302,7 @@ If you encounter legacy path references, ensure the queue-isolation skill is pro
 
 **`QueueOperations.enqueue()` is the ONLY sanctioned way to create DELEGATE or HANDBACK files.**
 
-Queue files live at `~/.agentic-engineers/{session-id}/{harness}/queue/` — outside git control.  
+Queue files live at `~/.agentic-engineers/{harness}/{session-id}/queue/` — outside git control.  
 The pre-commit hook validates example files in the repo; `enqueue()` is the gate for runtime artifacts.
 
 ### Why enqueue() is mandatory
@@ -398,9 +398,9 @@ result = ops.enqueue({
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
-| DELEGATE | `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/{task_id}.json` | `enqueue()` only | Orchestrator (polls), Agent (receives) |
-| HANDBACK | `~/.agentic-engineers/{session-id}/{harness}/queue/processing/{task_id}.json` | `enqueue()` only | Orchestrator (routes), QE (verifies) |
-| Decision | `~/.agentic-engineers/{session-id}/{harness}/queue/done/{task_id}.json` | Orchestrator `move_task()` | Human / external system |
+| DELEGATE | `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.json` | `enqueue()` only | Orchestrator (polls), Agent (receives) |
+| HANDBACK | `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}.json` | `enqueue()` only | Orchestrator (routes), QE (verifies) |
+| Decision | `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}.json` | Orchestrator `move_task()` | Human / external system |
 
 ---
 

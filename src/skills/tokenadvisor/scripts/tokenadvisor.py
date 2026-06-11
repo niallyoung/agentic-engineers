@@ -29,11 +29,12 @@ ROLE_TARGETS = {
     "Quality Engineer": 0.01,
 }
 
-# Model costs (approximate, per token)
+# Model costs (per 1K input tokens, aligned to src/config/models.yaml)
 MODEL_COSTS = {
-    "haiku-4-5": 0.00008,
-    "sonnet-4-6": 0.0003,
-    "opus-4-8": 0.00015,
+    "haiku-4-5": 0.001,
+    "sonnet-4-6": 0.003,
+    "opus-4-8": 0.005,
+    "fable-5": 0.010,
 }
 
 

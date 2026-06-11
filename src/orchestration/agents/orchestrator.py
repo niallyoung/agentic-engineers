@@ -706,7 +706,7 @@ class QueueManager:
         
         if self._using_isolation and _QUEUE_ISOLATION is not None:
             # Canonical layout A (queue-isolation skill):
-            # ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue
+            # ~/.agentic-engineers/{harness}/{session_id}/queue
             return _QUEUE_ISOLATION.get_queue_path(_session_id, _harness)
         else:
             # Legacy path: queue base directory

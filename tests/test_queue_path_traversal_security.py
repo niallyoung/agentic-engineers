@@ -109,7 +109,7 @@ class TestQueueIsolationTraversal:
     def test_get_queue_path_allows_canonical(self, tmp_path):
         qi = _load_queue_isolation()
         result = qi.get_queue_path("session-001", "claude", base_dir=tmp_path)
-        expected = tmp_path / "session-001" / "claude" / "queue"
+        expected = tmp_path / "claude" / "session-001" / "queue"
         assert result == expected
         # Resolved path must stay within the canonical queue root.
         assert tmp_path.resolve() in result.resolve().parents

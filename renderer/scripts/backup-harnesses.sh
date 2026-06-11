@@ -8,11 +8,13 @@
 # Example (single harness): bash backup-harnesses.sh --harness copilot
 # Example (quiet): bash backup-harnesses.sh --quiet copilot claude
 #
-# Backs up existing harness directories with YYYYMMDD timestamp suffix:
-#   ~/.copilot/     → ~/.copilot.20260525/
-#   ~/.claude/      → ~/.claude.20260525/
-#   ~/.pi/          → ~/.pi.20260525/
-#   ~/.config/opencode/ → ~/.config/opencode.20260525/
+# Backs up existing harness directories with a YYYYMMDD-HHMMSS timestamp suffix
+# (per-second, so repeated same-day installs never collide and a backup is
+# never silently skipped):
+#   ~/.copilot/     → ~/.copilot.20260611-143022/
+#   ~/.claude/      → ~/.claude.20260611-143022/
+#   ~/.pi/          → ~/.pi.20260611-143022/
+#   ~/.config/opencode/ → ~/.config/opencode.20260611-143022/
 #
 # SCOPE: Only backs up harness config directories, never touches ~/.agentic-engineers/
 #
@@ -24,7 +26,7 @@
 
 set -euo pipefail
 
-TIMESTAMP=$(date +%Y%m%d)
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKED_UP=()
 SKIPPED=()
 ERRORS=()
@@ -99,13 +101,15 @@ backup_harness() {
         return 0
     fi
 
-    # Check if backup already exists (multiple runs same day)
+    # Per-second timestamps are effectively unique, but guard the rare case of
+    # two backups within the same second by appending an incrementing counter.
+    # We never skip — a backup must always be taken before the dir is replaced.
     if [ -d "$backup_dir" ]; then
-        if [ "$QUIET_MODE" != true ]; then
-            log_warn "$harness_name: Backup already exists at $backup_dir (skipped)"
-        fi
-        SKIPPED+=("$harness_name")
-        return 0
+        local n=1
+        while [ -d "${harness_dir}.${TIMESTAMP}-${n}" ]; do
+            n=$((n + 1))
+        done
+        backup_dir="${harness_dir}.${TIMESTAMP}-${n}"
     fi
 
     # Calculate directory size

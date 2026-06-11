@@ -10,7 +10,7 @@ This module PREVIOUSLY provided utilities for:
 3. Providing migration status and diagnostics
 
 Historical note: During Phase 1-4 of the migration (weeks 1-4), both old and new paths worked.
-As of May 26, 2026, only the new path (~/.agentic-engineers/{session-id}/{harness}/) is supported.
+As of May 26, 2026, only the new path (~/.agentic-engineers/{harness}/{session-id}/) is supported.
 
 DO NOT USE THIS MODULE IN NEW CODE.
 
@@ -20,7 +20,7 @@ Legacy paths NO LONGER SUPPORTED:
 - artifacts/queue/
 
 Canonical path for all harnesses:
-- ~/.agentic-engineers/{session-id}/{harness}/queue/
+- ~/.agentic-engineers/{harness}/{session-id}/queue/
 
 Usage (for historical reference only):
     from src.orchestration.queue_compat import QueuePathMigration
@@ -135,7 +135,7 @@ class QueuePathMigration:
         Returns:
             Dict with keys 'incoming', 'processing', 'done', 'failed' containing file names
         """
-        new_path = self.new_base / session_id / harness / "queue"
+        new_path = self.new_base / harness / session_id / "queue"
         
         if not new_path.exists():
             return {"incoming": [], "processing": [], "done": [], "failed": []}
@@ -210,7 +210,7 @@ class QueuePathMigration:
             result['warnings'].append(f"No legacy queue found for session {session_id}")
         
         # Check new queue
-        new_path = self.new_base / session_id / harness / "queue"
+        new_path = self.new_base / harness / session_id / "queue"
         if new_path.exists():
             result['new_path_exists'] = True
             try:

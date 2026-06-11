@@ -29,9 +29,9 @@ class TestValidateQueuePaths:
         """Create a mock queue manager with queue directories in canonical format."""
         mock = MagicMock()
         
-        # Create temporary directories with canonical format: .agentic-engineers/{session}/{harness}/queue
+        # Create temporary directories with canonical format: .agentic-engineers/{harness}/{session}/queue
         home_dir = Path.home()
-        base_dir = home_dir / ".agentic-engineers" / "test-session" / "opencode" / "queue"
+        base_dir = home_dir / ".agentic-engineers" / "opencode" / "test-session" / "queue"
         
         incoming_dir = base_dir / "incoming"
         processing_dir = base_dir / "processing"
@@ -230,7 +230,7 @@ class TestValidateQueuePathsIntegration:
     def temp_queue_structure(self):
         """Create a temporary queue structure."""
         temp_dir = tempfile.mkdtemp()
-        queue_path = Path(temp_dir) / ".agentic-engineers" / "session-test-001" / "opencode" / "queue"
+        queue_path = Path(temp_dir) / ".agentic-engineers" / "opencode" / "session-test-001" / "queue"
         
         (queue_path / "incoming").mkdir(parents=True, exist_ok=True)
         (queue_path / "processing").mkdir(parents=True, exist_ok=True)
@@ -286,9 +286,9 @@ class TestValidateQueuePathsErrorHandling:
         agent = MagicMock(spec=OrchestratorAgent)
         mock_manager = MagicMock()
         
-        # Set up canonical queue directories: ~/.agentic-engineers/{session}/{harness}/queue
+        # Set up canonical queue directories: ~/.agentic-engineers/{harness}/{session}/queue
         home_dir = Path.home()
-        base_dir = home_dir / ".agentic-engineers" / "test-session-errors" / "opencode" / "queue"
+        base_dir = home_dir / ".agentic-engineers" / "opencode" / "test-session-errors" / "queue"
         
         mock_manager.incoming_dir = base_dir / "incoming"
         mock_manager.processing_dir = base_dir / "processing"
@@ -522,7 +522,7 @@ class TestContainerSymlinkHandling:
         Test that queue path structure is correct for container.
         
         Queue paths should follow canonical structure:
-        ~/.agentic-engineers/{session}/{harness}/queue/{incoming,processing,done}
+        ~/.agentic-engineers/{harness}/{session}/queue/{incoming,processing,done}
         
         AC5: Path validation tests pass in container (both test-session and artifacts/)
         """

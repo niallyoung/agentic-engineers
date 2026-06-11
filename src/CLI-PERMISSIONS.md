@@ -251,7 +251,7 @@ OpenCode uses the `opencode.jsonc` config at `~/.config/opencode/`.
 
 ### OpenCode Queue Permissions
 
-The queue directory (`~/.agentic-engineers/{session-id}/{harness}/queue/`) operates under these rules:
+The queue directory (`~/.agentic-engineers/{harness}/{session-id}/queue/`) operates under these rules:
 
 | Operation | Orchestrator | All Other Roles |
 |-----------|:---:|:---:|
@@ -396,7 +396,7 @@ git config user.name
 git config user.email
 
 # Test OpenCode queue access
-ls ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/
+ls ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/
 ```
 
 ### Permission Verification Script
