@@ -5,6 +5,7 @@ Tests for validation modules.
 """
 
 import json
+import yaml
 import pytest
 import tempfile
 from pathlib import Path
@@ -188,8 +189,8 @@ class TestCycleDetection:
         """Helper to create task file."""
         (queue_path / "incoming").mkdir(exist_ok=True, parents=True)
         task = {"task_id": task_id, "parent_task_id": parent_id}
-        with open(queue_path / "incoming" / f"{task_id}.json", "w") as f:
-            json.dump(task, f)
+        with open(queue_path / "incoming" / f"{task_id}.yaml", "w") as f:
+            yaml.safe_dump(task, f)
 
     def test_no_cycle_linear(self, cycle_detector, temp_queue):
         """Test no cycle in linear chain."""
