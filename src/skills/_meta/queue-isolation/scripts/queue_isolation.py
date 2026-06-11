@@ -5,12 +5,12 @@ Provides session-scoped, harness-scoped queue path isolation for the
 agentic-engineers multi-harness workflow.
 
 Queue structure:
-    ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/
+    ~/.agentic-engineers/{harness}/{session_id}/queue/
         incoming/   – new DELEGATEs waiting for pickup
         processing/ – tasks currently being executed
         done/       – completed tasks (HANDBACKs)
         failed/     – tasks that errored out
-    ~/.agentic-engineers/artifacts/{session_id}/{harness}/metadata.json
+    ~/.agentic-engineers/{harness}/{session_id}/metadata.json
 
 Design decisions:
     - Base directory is ~/.agentic-engineers/ (never ~/.copilot/).
@@ -140,7 +140,7 @@ def get_queue_path(
     """
     Construct the queue directory path for a given session and harness.
 
-    Path: <base_dir>/<session_id>/<harness>/queue/
+    Path: <base_dir>/<harness>/<session_id>/queue/
 
     Args:
         session_id: Unique session identifier.
@@ -155,7 +155,7 @@ def get_queue_path(
     # resulting path cannot escape the canonical queue root.
     safe_session = _validate_path_component(session_id, field="session_id")
     safe_harness = _validate_path_component(harness, field="harness")
-    return base / safe_session / safe_harness / "queue"
+    return base / safe_harness / safe_session / "queue"
 
 
 def init_queue_structure(
@@ -168,11 +168,11 @@ def init_queue_structure(
     Create the full queue directory structure for a session/harness pair.
 
     Creates:
-        <base_dir>/artifacts/<session_id>/<harness>/queue/incoming/.keep.me
-        <base_dir>/artifacts/<session_id>/<harness>/queue/processing/.keep.me
-        <base_dir>/artifacts/<session_id>/<harness>/queue/done/.keep.me
-        <base_dir>/artifacts/<session_id>/<harness>/queue/failed/.keep.me
-        <base_dir>/artifacts/<session_id>/<harness>/metadata.json
+        <base_dir>/<harness>/<session_id>/queue/incoming/.keep.me
+        <base_dir>/<harness>/<session_id>/queue/processing/.keep.me
+        <base_dir>/<harness>/<session_id>/queue/done/.keep.me
+        <base_dir>/<harness>/<session_id>/queue/failed/.keep.me
+        <base_dir>/<harness>/<session_id>/metadata.json
 
     The metadata.json is created on first call; subsequent calls only update
     ``last_accessed_at`` (preserving ``created_at``).
@@ -186,7 +186,7 @@ def init_queue_structure(
         pathlib.Path – the queue root directory.
     """
     queue_root = get_queue_path(session_id, harness, base_dir=base_dir)
-    harness_root = queue_root.parent  # <base>/artifacts/<session>/<harness>/
+    session_root = queue_root.parent  # <base>/<harness>/<session>/
 
     # Create queue subdirectories and .keep.me stubs
     for subdir in _QUEUE_SUBDIRS:
@@ -197,7 +197,7 @@ def init_queue_structure(
             keep_me.touch()
 
     # Write / update metadata.json
-    meta_path = harness_root / "metadata.json"
+    meta_path = session_root / "metadata.json"
     now_iso = datetime.now(tz=timezone.utc).isoformat()
 
     if meta_path.exists():

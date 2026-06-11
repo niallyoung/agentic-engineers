@@ -8,7 +8,7 @@
 
 ## Philosophy
 
-- **Queue-first** — every task enters `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
+- **Queue-first** — every task enters `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
 - **enqueue() is mandatory** — ALL DELEGATEs and HANDBACKs MUST be created via `QueueOperations.enqueue()` (the `queue-management` skill). Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
 - **Reduced autonomy** — agents pause when the queue is empty; they do NOT invent work
 - **Start cheap, escalate deliberately** — route to the cheapest capable model; upgrade only when blocked
@@ -178,7 +178,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 - Parse incoming requests and create DELEGATE blocks **via `queue-management` skill (`enqueue()`)**
 - Route tasks to the correct role using routing rules above
 - Fan out parallel DELEGATEs when tasks are independent
-- Poll `~/.agentic-engineers/{session-id}/{harness}/queue/done/` for HANDBACKs and update `TODO.md`
+- Poll `~/.agentic-engineers/{harness}/{session-id}/queue/done/` for HANDBACKs and update `TODO.md`
 - Re-delegate ESCALATION packets at the higher tier
 - Summarise squad status as tables (not prose)
 
@@ -391,8 +391,8 @@ ops.enqueue({
 
 ## Handover Packet Protocol
 
-All work is delegated via a **DELEGATE block** written to `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml`.  
-On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml`.
+All work is delegated via a **DELEGATE block** written to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml`.  
+On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml`.
 
 ### DELEGATE Block Format
 
@@ -400,7 +400,7 @@ On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{sess
 > **Deprecated:** `type: DELEGATE` — use `handoff_type: DELEGATE` instead. Files using `type:` will pass with a deprecation warning; the field will become an error in the next major version.
 
 ```yaml
-# File: ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml
+# File: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
 ---
 task_id: my-task-identifier    # kebab-case, 3-50 chars (^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$)
 handoff_type: DELEGATE         # canonical discriminator (NOT type:)
@@ -452,7 +452,7 @@ Required core fields: `task_id`, `status`, `output`, `metrics` (with `quality`, 
 > **Deprecated:** `type: HANDBACK` — use `handoff_type: HANDBACK` instead (same migration as DELEGATE).
 
 ```yaml
-# File: ~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml
+# File: ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
 ---
 task_id: my-task-identifier    # must match the originating DELEGATE's task_id
 handoff_type: HANDBACK         # canonical discriminator (NOT type:)
@@ -562,7 +562,7 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 ### Full Flow
 
 ```
-1.  User drops DELEGATE into ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-NNN.yaml
+1.  User drops DELEGATE into ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
     (or Orchestrator generates DELEGATE from a user request)
 
 2.  Orchestrator polls queue → reads TASK-NNN.yaml → applies routing rules
@@ -573,7 +573,7 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
       a. ACKs the task (first output)
       b. Loads its skill file from skill_refs
       c. Performs work
-      d. Writes HANDBACK to ~/.agentic-engineers/{session-id}/{harness}/queue/done/TASK-NNN-handback.yaml
+      d. Writes HANDBACK to ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
 
 5.  Quality Engineer validates the HANDBACK:
       - Checks acceptance_criteria are met
@@ -595,7 +595,7 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 
 ### Pause Condition
 
-The Orchestrator **pauses** when `~/.agentic-engineers/{session-id}/{harness}/queue/incoming/` is empty.  
+The Orchestrator **pauses** when `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` is empty.  
 It does NOT invent new work. This is by design — reduced autonomy prevents runaway scope.
 
 To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
@@ -607,7 +607,7 @@ To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
 ### Example 1 — Simple File Edit (Engineer)
 
 ```yaml
-# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-101.yaml
+# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-101.yaml
 ---
 task_id: task-101-postal-validation
 handoff_type: DELEGATE
@@ -701,7 +701,7 @@ escalation:
 **Step 2: Orchestrator re-delegates to Senior Engineer**
 
 ```yaml
-# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-202-senior.yaml
+# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-202-senior.yaml
 ---
 task_id: task-202-senior-payment-arch
 handoff_type: DELEGATE
@@ -756,7 +756,7 @@ the updated `processor.py` call site.
 ### Example 3 — Security Audit (Security Engineer)
 
 ```yaml
-# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-303.yaml
+# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-303.yaml
 ---
 task_id: task-303-jwt-refresh-audit
 handoff_type: DELEGATE
@@ -822,7 +822,7 @@ MODEL_USED: claude-opus-4.8
 ### Example 4 — Post-Implementation Validation (Quality Engineer)
 
 ```yaml
-# ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/TASK-404-qe.yaml
+# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-404-qe.yaml
 ---
 task_id: task-404-qe-address-validation
 handoff_type: DELEGATE

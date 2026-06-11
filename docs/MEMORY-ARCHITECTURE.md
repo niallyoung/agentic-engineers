@@ -26,8 +26,8 @@ This document defines a comprehensive, centralized memory architecture for the a
 
 The agentic-engineers framework routes complex tasks to specialized agents (engineer, senior engineer, lead engineer, etc.) and collects results via DELEGATE/HANDBACK protocol. Current state is scattered:
 
-- DELEGATE/HANDBACK files live in `~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/`
-- Metadata in `~/.agentic-engineers/artifacts/{session_id}/{harness}/metadata.json`
+- DELEGATE/HANDBACK files live in `~/.agentic-engineers/artifacts/{harness}/{session_id}/queue/`
+- Metadata in `~/.agentic-engineers/artifacts/{harness}/{session_id}/metadata.json`
 - Span traces in `artifacts/{date}/SPAN-*.yaml` (repo-level, not session-organized)
 - Logs scattered across agent invocations
 - No persistent store for agent reasoning or thinking output

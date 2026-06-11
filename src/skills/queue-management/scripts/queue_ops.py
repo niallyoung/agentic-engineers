@@ -109,7 +109,7 @@ class QueueOperations:
 
         When the ``queue-isolation`` skill is available **and** no explicit
         ``queue_path`` override is provided, the queue is automatically scoped to
-        ``~/.agentic-engineers/{session_id}/{harness}/queue/``.
+        ``~/.agentic-engineers/{harness}/{session_id}/queue/``.
 
         Passing an explicit ``queue_path`` (e.g., a temporary directory in tests)
         bypasses queue-isolation and uses the legacy session-subdirectory layout

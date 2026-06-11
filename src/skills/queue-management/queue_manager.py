@@ -84,7 +84,7 @@ class QueueManager:
         so that existing deployments are not broken.
 
         Isolation path:
-            ~/.agentic-engineers/artifacts/{session_id}/{harness}/queue/incoming/
+            ~/.agentic-engineers/{harness}/{session_id}/queue/incoming/
 
         Legacy fallback path:
             ~/.agentic-engineers/{session_id}/incoming/

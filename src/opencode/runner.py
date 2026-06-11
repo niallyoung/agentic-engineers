@@ -236,7 +236,7 @@ class TaskRunner:
             base_dir = Path.home() / ".agentic-engineers"
 
         # Queue root follows canonical path
-        queue_root = base_dir / session_id / harness / "queue"
+        queue_root = base_dir / harness / session_id / "queue"
 
         return cls(queue_root, session_id, harness, **kwargs)
 

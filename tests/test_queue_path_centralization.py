@@ -414,13 +414,13 @@ class TestGetQueueRootBehavior:
     def test_get_queue_root_returns_canonical_layout_a(self, tmp_path, monkeypatch):
         qm = self._make_manager(tmp_path, monkeypatch)
         assert qm._using_isolation is True
-        expected = tmp_path / ".agentic-engineers" / "sess-grqr" / "copilot" / "queue"
+        expected = tmp_path / ".agentic-engineers" / "copilot" / "sess-grqr" / "queue"
         assert qm._get_queue_root() == expected
 
     def test_get_queue_root_honors_explicit_overrides(self, tmp_path, monkeypatch):
         qm = self._make_manager(tmp_path, monkeypatch)
         got = qm._get_queue_root(session_id="other-sess", harness="claude")
-        expected = tmp_path / ".agentic-engineers" / "other-sess" / "claude" / "queue"
+        expected = tmp_path / ".agentic-engineers" / "claude" / "other-sess" / "queue"
         assert got == expected
 
 

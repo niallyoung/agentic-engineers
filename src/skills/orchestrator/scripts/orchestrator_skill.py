@@ -179,7 +179,7 @@ class OrchestratorSkill:
 
         # Legacy fallback
         base = Path.home() / ".agentic-engineers"
-        return base / self.session_id / self.harness / "queue"
+        return base / self.harness / self.session_id / "queue"
 
     def _ensure_queue_structure(self) -> None:
         """Ensure queue directory structure exists."""

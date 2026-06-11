@@ -6,11 +6,14 @@
 # Migrates existing queue sessions from:
 #   OLD: ~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/
 # TO:
-#   NEW: ~/.agentic-engineers/{session-id}/{harness}/queue/
+#   NEW: ~/.agentic-engineers/{harness}/{session-id}/queue/
+#
+# Harness-first ordering: operators browse by harness name, not by opaque
+# session UUID, and session IDs cannot collide across harnesses.
 #
 # The script:
 # - Scans ~/.agentic-engineers/artifacts/ for session directories
-# - Moves artifacts/{session-id}/{harness}/ → ~/.agentic-engineers/{session-id}/{harness}/
+# - Moves artifacts/{session-id}/{harness}/ → ~/.agentic-engineers/{harness}/{session-id}/
 # - Preserves all queue subdirs (incoming/, processing/, done/, failed/)
 # - Prints a summary of what was moved
 # - Leaves artifacts/ dir empty (but with a README warning it's deprecated)
@@ -78,8 +81,8 @@ migrate_session_dir() {
             continue
         fi
 
-        # Build canonical paths
-        local canonical_base="${AGENTIC_HOME}/${session_id}/${harness}"
+        # Build canonical paths (harness-first: humans index by harness, not UUID)
+        local canonical_base="${AGENTIC_HOME}/${harness}/${session_id}"
 
         # Check if already migrated
         if [ -d "$canonical_base" ]; then
@@ -92,7 +95,7 @@ migrate_session_dir() {
         mkdir -p "$(dirname "$canonical_base")"
 
         # Move entire harness directory to canonical location
-        log_info "Migrating: artifacts/${session_id}/${harness}/ → ${session_id}/${harness}/"
+        log_info "Migrating: artifacts/${session_id}/${harness}/ → ${harness}/${session_id}/"
         if mv "$harness_dir" "$canonical_base"; then
             MIGRATION_COUNT=$((MIGRATION_COUNT+1))
             harness_count=$((harness_count+1))
@@ -112,6 +115,73 @@ migrate_session_dir() {
 }
 
 ################################################################################
+# Reversal pass: flip legacy {session-id}/{harness}/ to {harness}/{session-id}/
+#
+# Installs that already dropped the artifacts/ prefix sit at the top level as
+# ~/.agentic-engineers/{session-id}/{harness}/queue/. The canonical order is now
+# harness-first, so move each such session dir to {harness}/{session-id}/.
+################################################################################
+
+KNOWN_HARNESSES="copilot claude opencode pi local gpt"
+
+is_known_harness() {
+    local name="$1"
+    case " $KNOWN_HARNESSES " in
+        *" $name "*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+reverse_session_first_dirs() {
+    [ -d "$AGENTIC_HOME" ] || return 0
+
+    for candidate in "$AGENTIC_HOME"/*; do
+        [ -d "$candidate" ] || continue
+        local name
+        name=$(basename "$candidate")
+
+        # Skip harness-first dirs (already canonical), artifacts/, and non-session bookkeeping
+        is_known_harness "$name" && continue
+        [ "$name" = "artifacts" ] && continue
+        [ "$name" = "rate-limits" ] && continue
+        case "$name" in .*) continue ;; esac
+
+        # A session-first dir contains one or more harness subdirs holding queue/
+        local has_harness_child=0
+        for harness_dir in "$candidate"/*; do
+            [ -d "$harness_dir" ] || continue
+            local harness
+            harness=$(basename "$harness_dir")
+            is_known_harness "$harness" || continue
+            [ -d "$harness_dir/queue" ] || continue
+            has_harness_child=1
+
+            local canonical_base="${AGENTIC_HOME}/${harness}/${name}"
+            if [ -d "$canonical_base" ]; then
+                log_warn "Already reversed: ${harness}/${name} (skipping)"
+                SKIPPED_COUNT=$((SKIPPED_COUNT+1))
+                continue
+            fi
+            mkdir -p "$(dirname "$canonical_base")"
+            log_info "Reversing: ${name}/${harness}/ → ${harness}/${name}/"
+            if mv "$harness_dir" "$canonical_base"; then
+                MIGRATION_COUNT=$((MIGRATION_COUNT+1))
+            else
+                log_error "Failed to reverse: $harness_dir"
+                ERROR_COUNT=$((ERROR_COUNT+1))
+                return 1
+            fi
+        done
+
+        # Remove the now-empty session-first dir
+        if [ "$has_harness_child" -eq 1 ] && [ ! "$(ls -A "$candidate" 2>/dev/null)" ]; then
+            rmdir "$candidate" 2>/dev/null || true
+        fi
+    done
+    return 0
+}
+
+################################################################################
 # Main script
 ################################################################################
 
@@ -119,24 +189,24 @@ main() {
     log_info "Starting queue path migration..."
     echo ""
 
-    # Check if artifacts directory exists
-    if [ ! -d "$ARTIFACTS_DIR" ]; then
-        log_info "No artifacts directory found at $ARTIFACTS_DIR (nothing to migrate)"
-        echo ""
-        log_info "Migration complete (0 sessions migrated)"
-        exit 0
+    local session_found=0
+
+    # Pass 1 — migrate legacy artifacts/{session}/{harness}/ → {harness}/{session}/
+    if [ -d "$ARTIFACTS_DIR" ]; then
+        for session_dir in "$ARTIFACTS_DIR"/*; do
+            [ -d "$session_dir" ] || continue
+            session_found=$((session_found+1))
+            migrate_session_dir "$session_dir"
+        done
+    else
+        log_info "No artifacts directory at $ARTIFACTS_DIR (skipping artifacts pass)"
     fi
 
-    # Scan all session directories in artifacts/
-    local session_found=0
-    for session_dir in "$ARTIFACTS_DIR"/*; do
-        [ -d "$session_dir" ] || continue
-        session_found=$((session_found+1))
-        migrate_session_dir "$session_dir"
-    done
+    # Pass 2 — reverse top-level {session}/{harness}/ → {harness}/{session}/
+    reverse_session_first_dirs
 
     # Check if artifacts dir is now empty
-    if [ ! "$(ls -A "$ARTIFACTS_DIR")" ]; then
+    if [ -d "$ARTIFACTS_DIR" ] && [ ! "$(ls -A "$ARTIFACTS_DIR")" ]; then
         log_info "Artifacts directory is now empty (leaving in place as deprecated)"
 
         # Create deprecation notice
@@ -145,7 +215,7 @@ main() {
 
 This directory is no longer used. Queue paths have been migrated to:
 ```
-~/.agentic-engineers/{session-id}/{harness}/queue/
+~/.agentic-engineers/{harness}/{session-id}/queue/
 ```
 
 The old path structure (`artifacts/`) is kept for historical reference but is

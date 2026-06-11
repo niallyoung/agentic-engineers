@@ -4,7 +4,7 @@ Detects harness type and session ID from environment context, then routes work
 through canonical queue paths in the agentic-engineers framework.
 
 Canonical path format:
-    ~/.agentic-engineers/{session-id}/{harness}/queue/
+    ~/.agentic-engineers/{harness}/{session-id}/queue/
 
 This enables:
 - Session-scoped work isolation (concurrent sessions don't interfere)
@@ -240,23 +240,23 @@ class HarnessSessionManager:
         """
         Canonical queue root path.
 
-        Format: ~/.agentic-engineers/{session-id}/{harness}/queue/
+        Format: ~/.agentic-engineers/{harness}/{session-id}/queue/
         """
-        return self._base_dir / self.session_id / self.harness / "queue"
+        return self._base_dir / self.harness / self.session_id / "queue"
 
     @property
-    def harness_root(self) -> Path:
+    def session_root(self) -> Path:
         """
-        Harness root directory (parent of queue/).
+        Session root directory (parent of queue/).
 
-        Format: ~/.agentic-engineers/{session-id}/{harness}/
+        Format: ~/.agentic-engineers/{harness}/{session-id}/
         """
         return self.queue_root.parent
 
     @property
     def metadata_path(self) -> Path:
         """Path to metadata.json for this harness/session pair."""
-        return self.harness_root / "metadata.json"
+        return self.session_root / "metadata.json"
 
     @property
     def metadata(self) -> dict:
@@ -276,7 +276,7 @@ class HarnessSessionManager:
         Create canonical queue directory structure (idempotent).
 
         Creates:
-            ~/.agentic-engineers/{session-id}/{harness}/queue/
+            ~/.agentic-engineers/{harness}/{session-id}/queue/
             ├── incoming/
             ├── processing/
             ├── done/
@@ -410,7 +410,7 @@ class HarnessSessionManager:
             "session_id": self.session_id,
             "base_dir": str(self.base_dir),
             "queue_root": str(self.queue_root),
-            "harness_root": str(self.harness_root),
+            "session_root": str(self.session_root),
             "metadata_path": str(self.metadata_path),
             "metadata": self.metadata,
         }

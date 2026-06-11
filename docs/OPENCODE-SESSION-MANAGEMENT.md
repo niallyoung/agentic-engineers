@@ -14,7 +14,7 @@ OpenCode now supports **session-scoped work isolation** through the `HarnessSess
 All work routes through canonical queue paths:
 
 ```
-~/.agentic-engineers/{session-id}/{harness}/queue/
+~/.agentic-engineers/{harness}/{session-id}/queue/
 ├── incoming/    # New DELEGATEs waiting for pickup
 ├── processing/  # Tasks currently executing
 ├── done/        # Completed tasks (HANDBACKs)
@@ -176,7 +176,7 @@ def base_dir() -> Path
 
 @property
 def queue_root() -> Path
-    """Canonical queue root path (/.../session/{session-id}/{harness}/queue/)."""
+    """Canonical queue root path (/.../session/{harness}/{session-id}/queue/)."""
 
 @property
 def harness_root() -> Path

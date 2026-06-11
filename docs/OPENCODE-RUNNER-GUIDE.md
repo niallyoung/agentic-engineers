@@ -48,7 +48,7 @@ The TaskRunner implements a state machine with the following states:
 Tasks are organized in state-specific directories:
 
 ```
-~/.agentic-engineers/{session-id}/{harness}/queue/
+~/.agentic-engineers/{harness}/{session-id}/queue/
 ├── incoming/          # Newly submitted tasks
 ├── processing/        # Tasks being executed
 ├── done/             # Successfully completed tasks

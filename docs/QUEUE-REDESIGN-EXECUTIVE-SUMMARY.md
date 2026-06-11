@@ -41,7 +41,7 @@ Move session artifacts from `~/.copilot/queue/` → `~/.agentic-engineers/artifa
 ### What Changes?
 **File paths only**:
 - **Old**: `~/.copilot/queue/{session-id}/incoming/`
-- **New**: `~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/incoming/`
+- **New**: `~/.agentic-engineers/artifacts/{harness}/{session-id}/queue/incoming/`
 
 Users don't need to change anything—it's automatic.
 
