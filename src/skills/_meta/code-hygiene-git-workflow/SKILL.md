@@ -76,9 +76,12 @@ Establish disciplined queue→branch→PR→merge→rebase workflow to maximize 
 5. **Merge Discipline**: 
    - Watch for CI failures immediately after merge
    - Treat CI failures as PRIORITY (block new work until fixed)
+   - Watch CI to completion after every merge (see monitoring/cicd-watch.md —
+     core behaviour); a merge is not done until main is green
    - Root-cause analysis required (don't just re-run)
-   - Fix committed to same branch, squashed into atomic commit if needed
-   - Re-merge after fix verified
+   - Fix on a NEW branch + PR (the merged branch is gone; never push fixes
+     directly to main — the PR-level Quality Gate must validate them)
+   - Repeat the watch/fix cycle until all workflows on main are green
 
 6. **Rebase Discipline**:
    - After successful merge, rebase all active feature branches
