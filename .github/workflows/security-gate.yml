@@ -59,8 +59,9 @@ jobs:
           import json
           from pathlib import Path
           
-          # Check that SPEC.md exists and is not modified in ways that break requirements
-          spec_file = Path('SPEC.md')
+          # Check the canonical spec exists with its key sections.
+          # Canonical spec is docs/SPEC.md (root SPEC.md is a pointer since CU-5).
+          spec_file = Path('docs/SPEC.md')
           if not spec_file.exists():
               print("❌ Security: SPEC.md not found")
               exit(1)
@@ -68,14 +69,13 @@ jobs:
           # Verify key sections exist
           content = spec_file.read_text()
           required_sections = [
-              '# Specification',
-              'Core Requirements',
-              'Quality Gates',
+              '# Agentic Engineers Implementation Specification',
+              'ORCHESTRATOR-FIRST EXECUTION MODEL',
           ]
           
           missing = [s for s in required_sections if s not in content]
           if missing:
-              print(f"❌ Security: Missing SPEC.md sections: {missing}")
+              print(f"❌ Security: Missing docs/SPEC.md sections: {missing}")
               exit(1)
           
           print("✅ Security: SPEC.md compliance verified")

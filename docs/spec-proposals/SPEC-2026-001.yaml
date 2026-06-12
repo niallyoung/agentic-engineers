@@ -1,0 +1,24 @@
+change_id: SPEC-2026-001
+proposer: principal-engineer
+proposer_role: principal-engineer
+timestamp: 2026-06-12T00:00:00Z
+affected_sections:
+  - Model Naming & Harness Compatibility (LOCKED SPEC)
+proposed_changes:
+  Model Naming & Harness Compatibility (LOCKED SPEC): |
+    Migrate model-governance content (positive-enforcement philosophy,
+    LOCKED_MODELS.sh single source of truth, and the Model Switch Process)
+    from the deprecated root SPEC.md into this canonical section, then reduce
+    root SPEC.md to a thin pointer at docs/SPEC.md.
+rationale: |
+  CU-5 consolidation: the root-level SPEC.md and the canonical docs/SPEC.md
+  forked (~808 lines). All tooling (spec-validator, git hooks, render
+  pipeline) targets docs/SPEC.md, yet root SPEC.md still held unique,
+  still-relevant model-governance content (the Model Switch Process tied to
+  .githooks/LOCKED_MODELS.sh and the positive-enforcement philosophy). This
+  proposal migrates that governance into docs/SPEC.md and reduces root
+  SPEC.md to a pointer, eliminating the fork as a source of spec drift.
+compatibility_notes: |
+  Backward compatible. No queue paths, protocol fields, or model IDs change.
+  Only documentation is consolidated; root SPEC.md becomes a pointer.
+breaking_change: false
