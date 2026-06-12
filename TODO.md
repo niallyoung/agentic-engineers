@@ -614,3 +614,15 @@ Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merg
 - [ ] **SPEC editorial pass remainder (plan 4.3)** — root SPEC.md consolidation is in
   PR #54; once the queue-path order fix above lands, do a final consistency sweep of
   docs/SPEC.md examples and changelog.
+- [ ] **docs/SPEC.md:1421 references deleted AutomationController** — `AutomationController`
+  (src/orchestration/agents/automation.py) was removed in the 2026-05-17 daemon-removal
+  refactor (f9faf18); the harness now owns polling (OrchestratorSkill.run_idle_loop).
+  orchestrator.py's run_poll_cycle docstring is fixed; SPEC.md is owned elsewhere — route
+  via spec-management to replace the AutomationController mention with the harness/idle-loop
+  model. tests/test_dry_run.py:14 docstring has the same stale mention (comment-only).
+- [ ] **src/skills/orchestrator/SKILL.md escalation docs stale** — line 141 says
+  status=escalate "delegate to Model Engineer"; actual (now-canonical) behaviour is C2c
+  escalation chaining: synthesize `{task_id}-escalated-to-{role}` DELEGATE into incoming/
+  and archive the original to done/ with audit metadata (the old non-canonical escalation/
+  directory was removed from orchestrator_skill.py on 2026-06-13). Update SKILL.md
+  handle_handback + Integration Points sections to match.

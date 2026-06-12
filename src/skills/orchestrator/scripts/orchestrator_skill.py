@@ -963,32 +963,90 @@ class OrchestratorSkill:
         logger.info(f"Task {task_id} moved to retry-pending (retry #{metadata['retry_count']})")
 
     def _move_task_to_escalation(self, task_id: str, handback: Dict[str, Any]) -> None:
-        """Move task to escalation queue."""
+        """
+        Escalation chaining (C2c) — synthesize a follow-on DELEGATE into incoming/.
+
+        Canonical queue protocol (docs/QUEUE-PROTOCOL.md "Escalation Chaining"):
+        on HANDBACK status=escalate, create a new DELEGATE
+        ({task_id}-escalated-to-{role}) in incoming/ for the escalation target,
+        then archive the original task to done/ with escalation audit metadata.
+        There is NO escalation/ state directory in the queue protocol.
+
+        Mirrors OrchestratorAgent's C2c implementation
+        (src/orchestration/agents/orchestrator.py).
+        """
+        import yaml
+
         processing_dir = self.queue_root / "processing"
+        incoming_dir = self.queue_root / "incoming"
 
-        # Create escalation directory if needed
-        escalation_dir = self.queue_root.parent / "escalation"
-        escalation_dir.mkdir(parents=True, exist_ok=True)
+        # Extract escalation target: output.escalate_to → top-level → default
+        output = handback.get("output")
+        escalate_to = output.get("escalate_to") if isinstance(output, dict) else None
+        if not escalate_to:
+            escalate_to = handback.get("escalate_to", "lead-engineer")
 
-        # Move DELEGATE file
+        escalation_reason = (
+            output.get("escalation_reason")
+            if isinstance(output, dict)
+            else handback.get("escalation_reason")
+        )
+
+        # Original role comes from the claimed DELEGATE in processing/
+        original_role = "unknown"
         processing_file = processing_dir / f"{task_id}.yaml"
-        escalation_file = escalation_dir / f"{task_id}.yaml"
         if processing_file.exists():
-            processing_file.rename(escalation_file)
+            try:
+                with processing_file.open("r") as f:
+                    original_delegate = yaml.safe_load(f) or {}
+                original_role = original_delegate.get("agent", "unknown")
+            except Exception as e:
+                logger.warning(f"Could not read original DELEGATE for {task_id}: {e}")
 
-        # Write escalation context
-        escalation_data = {
-            "task_id": task_id,
-            "original_handback": handback,
-            "escalated_at": datetime.now(tz=timezone.utc).isoformat(),
+        # Synthesize follow-on DELEGATE (same shape as C2c, plus plan so it
+        # passes _validate_delegate when re-ingested by poll_queue)
+        escalation_task_id = f"{task_id}-escalated-to-{escalate_to}"
+        escalation_delegate = {
+            "handoff_type": "DELEGATE",
+            "task_id": escalation_task_id,
+            "agent": escalate_to,
+            "role": escalate_to,
+            "scope": (
+                f"Escalation from {original_role}: "
+                f"{escalation_reason or 'See original_handback'}"
+            ),
+            "context": {
+                "original_task_id": task_id,
+                "original_role": original_role,
+                "original_handback": handback,
+                "escalation_reason": escalation_reason,
+            },
+            "plan": [
+                "Review original work and HANDBACK in context.original_handback",
+                "Address the escalation reason",
+                "Return HANDBACK with assessment and next steps",
+            ],
+            "success_criteria": [
+                "Review original work and HANDBACK",
+                "Address escalation reason",
+                "Provide assessment and next steps",
+            ],
+            "escalation_chain": handback.get("escalation_chain", []) + [original_role],
         }
-        context_file = escalation_dir / f"{task_id}-context.json"
-        with context_file.open("w") as f:
-            json.dump(escalation_data, f, indent=2)
 
-        # Cleanup metadata
-        meta_file = processing_dir / f"{task_id}.meta.json"
-        if meta_file.exists():
-            meta_file.unlink()
+        escalation_filename = f"{escalation_task_id}.yaml"
+        escalation_file = incoming_dir / escalation_filename
+        with escalation_file.open("w") as f:
+            f.write(self._dict_to_yaml(escalation_delegate))
 
-        logger.info(f"Task {task_id} escalated (status=escalate)")
+        # Archive original to done/ with escalation audit metadata
+        # (writes done/{task_id}-HANDBACK.yaml and cleans up processing metadata)
+        self._move_task_to_done(
+            task_id,
+            {**handback, "escalation_delegate_created": escalation_filename},
+        )
+
+        logger.info(
+            f"Task {task_id} escalated to {escalate_to}: "
+            f"chained DELEGATE {escalation_filename} enqueued in incoming/"
+        )
