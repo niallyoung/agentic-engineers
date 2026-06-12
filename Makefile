@@ -1,7 +1,7 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode \
         install-copilot install-claude install-pi install-opencode \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode \
-        setup status migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
+        setup status harness-toggle migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
         verify verify-harness-sync validate-opencode validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-specs render-all \
         lint test test-evals test-concurrent test-ci test-ci-force test-ci-shell quality-gate
@@ -24,6 +24,14 @@ BACKUP_FLAG := --no-backup
 else
 BACKUP_FLAG :=
 endif
+
+# Supported harnesses (mirrors the 4 install/render targets).
+HARNESSES := claude copilot opencode pi
+
+# Active-harness symlink location. Defaults to the framework state dir under
+# $(HOME); override for hermetic testing, e.g.:
+#   make harness-toggle HARNESS=opencode ACTIVE_LINK=/tmp/ae-test/active-harness
+ACTIVE_LINK ?= $(HOME)/.agentic-engineers/active-harness
 
 help:
 	@echo "agentic-engineers — Multi-agent orchestration framework"
@@ -60,6 +68,8 @@ help:
 	@echo ""
 	@echo "Diagnostic:"
 	@echo "  status              Check installation status (all 4 harnesses)"
+	@echo "  harness-toggle      Symlink the active harness (HARNESS=claude|copilot|opencode|pi)"
+	@echo "                      (override link path: ACTIVE_LINK=/path/to/active-harness)"
 	@echo "  verify              Full verification (structure + agents + skills + protocols)"
 	@echo "  validate-opencode   Validate OpenCode config generation"
 	@echo "  validate-agents     Validate agent YAML frontmatter + AGENTS.md registration"
@@ -542,6 +552,24 @@ validate-specs: ## Verify dist/specs/ is deployed and all spec files are valid
 	@echo "🔍 Validating spec deployment at dist/specs/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-specs.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist" --validate || (echo "❌ Spec validation failed — run 'make render-specs' to regenerate" && exit 1)
 	@echo "✅ Spec validation complete"
+
+harness-toggle: ## Force-create active-harness symlink (HARNESS=claude|copilot|opencode|pi, ACTIVE_LINK=path)
+	@if [ -z "$(HARNESS)" ]; then \
+		echo "❌ HARNESS not set. Usage: make harness-toggle HARNESS=<$(subst $() ,|,$(HARNESSES))>"; \
+		exit 1; \
+	fi
+	@case " $(HARNESSES) " in \
+		*" $(HARNESS) "*) ;; \
+		*) echo "❌ Invalid HARNESS '$(HARNESS)'. Supported: $(HARNESSES)"; exit 1 ;; \
+	esac
+	@if [ ! -d "$(REPO_ROOT)/dist/$(HARNESS)" ]; then \
+		echo "❌ dist/$(HARNESS)/ not found. Run 'make render-$(HARNESS)' first."; \
+		exit 1; \
+	fi
+	@mkdir -p "$$(dirname "$(ACTIVE_LINK)")"
+	@ln -sfn "$(REPO_ROOT)/dist/$(HARNESS)" "$(ACTIVE_LINK)"
+	@echo "✅ Active harness: $(HARNESS)"
+	@echo "   $(ACTIVE_LINK) -> $(REPO_ROOT)/dist/$(HARNESS)"
 
 status: ## Check installation status (all 4 harnesses)
 	@echo "📋 Installation status for ~/.copilot/:"
