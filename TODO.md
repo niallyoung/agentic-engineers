@@ -1,6 +1,6 @@
 # TODO: agentic-engineers
 
-**Last Updated:** 2026-06-11  
+**Last Updated:** 2026-06-12  
 **Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged), **Phase 1.5 Security Hardening Complete (5 FIXes + 38+ tests)**
 
 ---
@@ -26,16 +26,16 @@ TDD throughout."
 - [x] CI gated on PRs; main CI failures fixed (PR #50)
 
 ### Outstanding — this branch
-- [ ] **CU-1 — Backup timestamp collision.** `backup-harnesses.sh` uses `date +%Y%m%d`; same-day re-installs collide. Switch to `%Y%m%d-%H%M%S` (design doc `UNIFIED-INSTALL-DESIGN.md` already specifies `_HHMMSS`). Update README warning + test.
-- [ ] **CU-2 — SPEC naming-rule self-contradiction.** docs/SPEC.md LOCKED naming table: "HYPHENS (e.g. `claude-opus-4.7`), NOT DOTS (e.g. ~~`claude-opus-4.7`~~)" — both examples identical; repo convention is dots for versions. Correct it.
-- [ ] **CU-3 — Per-skill price-constant drift.** `tokenadvisor.py` (and peers) hardcode stale $/token rates instead of reading `src/config/models.yaml`. Correct to canonical (opus-4.8 $5/$25, fable-5 $10/$50, haiku $1/$5); add fable-5.
-- [ ] **CU-4 — Reverse queue path order → `{harness}/{sessionID}`.** Master-prompt final step. Flip `~/.agentic-engineers/{session}/{harness}/queue` → `{harness}/{session}/queue` across queue_isolation, harness_session_manager, runner, queue_query, queue_migration_metrics, queue_compat; extend `migrate-queue-paths.sh` to move existing dirs; update SPEC locked section + QUEUE-PROTOCOL + ARCHITECTURE + AGENTS.md; TDD all path tests. **Largest/riskiest — touches the LOCKED SPEC.**
-- [~] **CU-5 — Consolidate root `SPEC.md` into `docs/SPEC.md`.** 808-line fork; merge root-only LOCKED sections then make root a thin pointer. **DEFERRED until PR #49 merges:** #49 already edits root SPEC.md (NON-CANONICAL banner) and repoints the docs/ consumers + tests; doing the consolidation here would conflict and risks dropping LOCKED governance content (Model Switch Process tied to `.githooks/LOCKED_MODELS.sh`). Do this via the `spec-management` skill after #49 lands, as #49's banner itself states.
+- [x] **CU-1 — Backup timestamp collision.** `backup-harnesses.sh` uses `date +%Y%m%d`; same-day re-installs collide. Switch to `%Y%m%d-%H%M%S` (design doc `UNIFIED-INSTALL-DESIGN.md` already specifies `_HHMMSS`). Update README warning + test. — Done in PR #53 (2026-06-11)
+- [x] **CU-2 — SPEC naming-rule self-contradiction.** docs/SPEC.md LOCKED naming table: "HYPHENS (e.g. `claude-opus-4.7`), NOT DOTS (e.g. ~~`claude-opus-4.7`~~)" — both examples identical; repo convention is dots for versions. Correct it. — Done in PR #53 (2026-06-11)
+- [x] **CU-3 — Per-skill price-constant drift.** `tokenadvisor.py` (and peers) hardcode stale $/token rates instead of reading `src/config/models.yaml`. Correct to canonical (opus-4.8 $5/$25, fable-5 $10/$50, haiku $1/$5); add fable-5. — Done in PR #53 (2026-06-11)
+- [x] **CU-4 — Reverse queue path order → `{harness}/{sessionID}`.** Master-prompt final step. Flip `~/.agentic-engineers/{session}/{harness}/queue` → `{harness}/{session}/queue` across queue_isolation, harness_session_manager, runner, queue_query, queue_migration_metrics, queue_compat; extend `migrate-queue-paths.sh` to move existing dirs; update SPEC locked section + QUEUE-PROTOCOL + ARCHITECTURE + AGENTS.md; TDD all path tests. — Done in PR #53 (2026-06-11)
+- [~] **CU-5 — Consolidate root `SPEC.md` into `docs/SPEC.md`.** Implemented via the `spec-management` skill on branch `spec/cu5-consolidate-root`, open as PR #54 (CI green, awaiting merge). Proposal SPEC-2026-001 migrated the model-governance LOCKED sections (Model Switch Process tied to `.githooks/LOCKED_MODELS.sh`) into docs/SPEC.md and reduced root SPEC.md to a thin pointer.
 
 ### Deferred / needs decision (not in this branch)
-- [ ] **HANDBACK-as-DELEGATE direct delegation** — master prompt asked "is HANDBACK actually a DELEGATE / can it be, for direct agent→agent handoff vs queue-and-poll?" Needs a design decision before code. Capture as a design note.
-- [ ] **`spawn_sub_agent` is mocked** — real Orchestrator→sub-agent invocation is a runtime "AGENTS-with-SKILLS" behaviour (Task tool), not a code daemon. Document the intended pattern.
-- [ ] **Symlink toggle for harness invocation** — `make` target to force-create a symlink to toggle active harness (master prompt item 5).
+- [x] **HANDBACK-as-DELEGATE direct delegation** — master prompt asked "is HANDBACK actually a DELEGATE / can it be, for direct agent→agent handoff vs queue-and-poll?" Design note captured at `docs/design/handback-as-delegate.md` (branch `chore/post-fixparty-followups`, PR pending). Implementation still needs a decision.
+- [x] **`spawn_sub_agent` is mocked** — pattern documented at `docs/design/spawn-sub-agent-pattern.md` (branch `chore/post-fixparty-followups`): real Orchestrator→sub-agent invocation is a runtime "AGENTS-with-SKILLS" behaviour (Task tool), not a code daemon. Real invocation remains harness-runtime behaviour.
+- [x] **Symlink toggle for harness invocation** — `make` target to force-create a symlink to toggle active harness (master prompt item 5). Done in this branch (chore/post-fixparty-followups).
 
 ---
 
