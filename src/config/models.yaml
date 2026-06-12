@@ -79,7 +79,7 @@ role_models:
   model_engineer:
     canonical: "claude-sonnet"
     thinking: true
-    effort: "medium"
+    effort: "high"
     providers:
       copilot: "claude-sonnet-4.5"
       claude: "claude-sonnet-4.5"

@@ -594,3 +594,23 @@ No new skills or agents may be added to the framework after this date. All API a
 
 **Owner:** Orchestrator Agent  
 **Next Review:** 2026-05-24 (weekly)
+
+---
+
+## Plan close-out (2026-06-13)
+
+Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merged as 80924f1):
+
+- [ ] **docs/SPEC.md queue-path order inconsistency** — glossary examples (~lines 403-404)
+  and the Legacy Paths migration table (lines 588-590, inside the LOCKED Queue
+  Architecture section) still use the old `~/.agentic-engineers/{session-id}/{harness}/queue/`
+  order; canonical per CU-4 (PR #53) is `{harness}/{session-id}`. Must be routed through
+  the spec-management skill (Principal/Security/Lead only) — do not edit directly.
+- [ ] **Pi.dev full-source rendering (plan 4.1)** — `renderer/scripts/render-pi-dev.py`
+  derives models dynamically, but `renderer/pi-dev-src/` templates (AGENTS.md, pi.yml,
+  SYSTEM.md) still hardcode structural content instead of rendering from `src/agents/*.md`.
+- [ ] **Verify pi.yml routing against pi.dev runtime (plan 4.2)** — `renderer/pi-dev-src/pi.yml`
+  still documents routing rules as speculative/unverified; blocked on pi.dev runtime access.
+- [ ] **SPEC editorial pass remainder (plan 4.3)** — root SPEC.md consolidation is in
+  PR #54; once the queue-path order fix above lands, do a final consistency sweep of
+  docs/SPEC.md examples and changelog.
