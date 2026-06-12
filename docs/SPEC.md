@@ -1656,6 +1656,37 @@ As of 2026-05-25:
 - **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4.7` (cross-service architecture)
 - **Security Engineer:** `claude-opus-4.8` (complex threat modeling, vulnerability analysis)
 
+### Model Governance: Locking & Switching
+
+*(Consolidated from the deprecated root `SPEC.md` via spec-management proposal SPEC-2026-001.)*
+
+**Philosophy — positive enforcement.** Models are locked by *explicit strategic
+choice*, not by forbidding patterns. We affirm "these are the approved models"
+rather than maintaining a rejection blocklist — simpler to maintain, and users
+*can* request changes through the process below, with every change auditable.
+
+**Single source of truth — `.githooks/LOCKED_MODELS.sh`.** Contains:
+- `LOCKED_MODELS` — the canonical list of approved models (only these pass validation)
+- `AGENT_MODEL_ASSIGNMENTS` — which agent uses which model (for documentation)
+- Helper functions for validation and display
+
+All hooks and validators source this file to stay consistent. The pre-commit
+hook, `tests/test_model_naming_compliance.py`, and CI all enforce that every
+agent uses a model from this locked set.
+
+**Model Switch Process.** To change an agent's locked model:
+
+1. **Request** — provide the agent name, requested model, reason, and expected
+   impact (cost delta, quality delta).
+2. **Evaluation** — review budget impact, task-profile fit, consistency with
+   other agents, and timeline.
+3. **Decision** — ✅ Approved → implement; ⏸️ Deferred → revisit (e.g. next budget
+   cycle); ❌ Denied → record the documented reason.
+4. **Implementation (if approved)** — update `.githooks/LOCKED_MODELS.sh`
+   (add to `LOCKED_MODELS` if new; update `AGENT_MODEL_ASSIGNMENTS`), open a PR
+   with the rationale and cost impact, and merge so the pre-commit hook enforces
+   the new lock. Keep `src/config/models.yaml` and this section in sync.
+
 ### Validation & Enforcement
 
 **Mandatory Checks** (all must pass):
@@ -1730,6 +1761,8 @@ If a model name with dots is committed:
 - **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section. Documents token tracking requirements, budget checking requirements, cost attribution, production deployment requirements, and implementation references.
 - **2026-05-25:** Added Model Naming & Harness Compatibility section. Documents approved model names per official Anthropic/GitHub/pi.dev sources, validates hyphen format across all harnesses, adds no-regression tests and enforcement procedures.
 - **2026-06-08:** Reconciled queue path contradictions throughout early sections. Canonical path is `~/.agentic-engineers/{harness}/{session-id}/queue/` per the locked section (Queue Architecture & Paths, lines ~495–541). All early references to `~/.copilot/queue/`, `~/.claude/queue/`, and `artifacts/queue/` as "current" paths updated to the canonical path. Locked section unchanged (it is the authoritative source).
+- **2026-06-11:** Reversed the canonical queue path order to `{harness}/{session-id}` (was `{session-id}/{harness}`) in the locked Queue Architecture section — operators browse by harness, not opaque UUID; session IDs cannot collide across harnesses. `setup/migrate-queue-paths.sh` migrates existing installs. Also fixed the self-contradicting model-naming CRITICAL RULE and corrected the stale harness-render table.
+- **2026-06-12:** [SPEC-2026-001 — principal-engineer, approved by security-engineer] Consolidated CU-5: migrated model-governance content (positive-enforcement philosophy, `.githooks/LOCKED_MODELS.sh` single source of truth, and the Model Switch Process) from the deprecated root `SPEC.md` into the Model Naming & Harness Compatibility section; root `SPEC.md` reduced to a pointer at `docs/SPEC.md`. No behavioural change.
 
 ---
 
