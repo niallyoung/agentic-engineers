@@ -40,7 +40,7 @@ class TaskMetrics:
     # Quality
     quality_score_validator: int  # authoritative validator score (0-100)
     quality_score_agent_self: int  # agent self-report for calibration (0-100)
-    status: str  # complete, failed, partial, blocked
+    status: str  # complete, failed, partial, blocked, escalate
     
     # Execution context
     retry_count: int = 0  # how many retries before success/final outcome

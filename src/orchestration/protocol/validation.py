@@ -91,7 +91,7 @@ HANDBACK_SCHEMA = {
         },
         "status": {
             "type": "string",
-            "enum": ["complete", "failed", "partial", "blocked"],
+            "enum": ["complete", "failed", "partial", "blocked", "escalate"],
             "description": "Task status"
         },
         "deliverables": {
@@ -202,7 +202,7 @@ def validate_handback(data: Dict) -> List[str]:
             errors.append("task_id must be a string with at least 5 characters")
     
     if "status" in data:
-        valid_statuses = ["complete", "failed", "partial", "blocked"]
+        valid_statuses = ["complete", "failed", "partial", "blocked", "escalate"]
         if data["status"] not in valid_statuses:
             errors.append(f"Invalid status: {data['status']}")
     

@@ -117,6 +117,25 @@ class TestExpandedHandback:
         assert any("status" in e for e in errors)
         assert any("quality_score" in e for e in errors)
     
+    def test_handback_escalate_status_valid(self):
+        """HANDBACK with status='escalate' is schema-compliant.
+
+        Canonical protocol declares: success | failure | partial | blocked | escalate.
+        Orchestrator C2c escalation chaining depends on 'escalate' validating.
+        """
+        handback = ExpandedHandback(
+            task_id="2026-05-17-test-task",
+            status="escalate",
+            deliverables=[],
+            tests={},
+            quality_score=50,
+        )
+
+        errors = handback.validate()
+        assert not any("status" in e for e in errors), (
+            f"status='escalate' should be valid, got errors: {errors}"
+        )
+
     def test_handback_to_dict(self):
         """Test HANDBACK serialization."""
         handback = ExpandedHandback(
@@ -347,6 +366,18 @@ class TestValidation:
         errors = validate_handback(data)
         assert len(errors) == 0
     
+    def test_validate_handback_escalate_status(self):
+        """validate_handback accepts status='escalate' (canonical protocol)."""
+        data = {
+            "task_id": "2026-05-17-test-task",
+            "status": "escalate",
+            "deliverables": [],
+            "tests": {},
+        }
+
+        errors = validate_handback(data)
+        assert len(errors) == 0, f"status='escalate' should validate, got: {errors}"
+
     def test_validate_handback_invalid(self):
         """Test validating an invalid HANDBACK."""
         data = {

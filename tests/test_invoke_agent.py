@@ -707,8 +707,8 @@ class TestHandbackValidation:
                 invoker.invoke_agent(delegate, ["echo"])
 
     def test_all_valid_statuses_accepted(self, tmp_dirs):
-        """All three valid statuses (complete, blocked, partial) are accepted."""
-        for status in ["complete", "blocked", "partial"]:
+        """All valid statuses (complete, blocked, partial, escalate) are accepted."""
+        for status in ["complete", "blocked", "partial", "escalate"]:
             invoker = make_invoker(tmp_dirs)
             task_id = f"2026-01-01-status-{status}"
             delegate = make_delegate(task_id=task_id)

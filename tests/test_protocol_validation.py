@@ -308,6 +308,25 @@ class TestHandbackValidation:
         """Status 'blocked' is valid."""
         assert 'blocked' in {'complete', 'failed', 'partial', 'blocked'}
 
+    def test_handback_schema_status_enum_includes_escalate(self):
+        """handback-schema.yaml status enum includes 'escalate'.
+
+        Canonical protocol (AGENTS.md/CLAUDE.md) declares:
+        status: success | failure | partial | blocked | escalate.
+        The Orchestrator's C2c escalation chaining depends on 'escalate'
+        being schema-compliant.
+        """
+        import yaml
+        schema_path = (
+            Path(__file__).resolve().parent.parent
+            / 'src' / 'orchestration' / 'handback-schema.yaml'
+        )
+        schema = yaml.safe_load(schema_path.read_text())
+        status_enum = schema['required_fields']['status']['enum']
+        assert 'escalate' in status_enum, (
+            f"'escalate' missing from handback-schema.yaml status enum: {status_enum}"
+        )
+
 
 class TestIntegration:
     """Integration tests."""
