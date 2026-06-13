@@ -410,6 +410,118 @@ This section defines canonical terms used throughout the agentic-engineers frame
 
 ---
 
+## Orchestrator Architecture (Option 1a: Dual-Layer Design)
+
+### Design Decision: Separate Agent & Skill
+
+The Orchestrator is implemented as a **two-layer system**: an **Agent** (business logic) and a **Skill** (protocol implementation). This architecture follows the framework pattern where agents define responsibilities and skills implement capabilities.
+
+### Why Separation?
+
+1. **Matches Framework Pattern** — Every agent in agentic-engineers has an associated skill. The pattern is:
+   - **Agent** (`.md` file) — Defines the role, responsibilities, and routing logic
+   - **Skill** (Python module) — Implements the protocol and mechanics
+
+2. **Clean Responsibility Boundaries** — This prevents conflation of concerns:
+   - **OrchestratorAgent** (`src/agents/orchestrator-agent.md`) — User-facing entry point; routing decisions; task flow management
+   - **OrchestratorSkill** (`src/skills/orchestrator/SKILL.md`) — Queue state machine; DELEGATE/HANDBACK lifecycle; polling; crash recovery
+
+3. **Reusability & Testing** — The skill can be tested independently of the agent, and the routing logic can be audited separately from the queue mechanics.
+
+### OrchestratorAgent Responsibilities
+
+The agent defines the **business logic** and **routing decisions**:
+
+1. **Entry Point** — All user requests flow through the Orchestrator as the default handler
+2. **Task Analysis** — Examine incoming DELEGATE blocks and extract scope, context, complexity
+3. **Routing Decision Tree** — Apply deterministic rules to select the correct agent:
+   - Security-scoped → Security Engineer
+   - Cross-service architecture → Principal Engineer
+   - Code review/validation → Lead Engineer or Quality Engineer
+   - Complex unscoped → Senior Engineer
+   - Well-scoped with plan → Engineer
+4. **Parallel Delegation** — For high-complexity tasks with ≥3 domains, decompose into sub-DELEGATEs with tier-0/tier-1 dependencies
+5. **Metrics & Model Selection** — Collect HANDBACK metrics and feed to Model Engineer for optimization recommendations
+6. **Decision Synthesis** — Interpret results and decide on next steps (escalation, retry, consolidation)
+
+**Location:** `src/agents/orchestrator-agent.md`
+
+### OrchestratorSkill Responsibilities
+
+The skill implements the **protocol mechanics** and **queue management**:
+
+1. **Queue Polling** — Continuously scan `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` for new DELEGATEs
+2. **Task Claiming** — Atomically move tasks from `incoming/` → `claimed/` → `processing/` with metadata (claimed_at, retry_count)
+3. **Sub-Agent Spawning** — Invoke the Agent tool with full DELEGATE context and capture HANDBACK
+4. **HANDBACK Correlation** — Parse HANDBACK text, extract task_id, status, metrics, and route to result handlers
+5. **Crash Recovery** — Detect orphaned tasks in `processing/` by timeout (600s), move to `crashed/`, and enqueue for retry
+6. **Quality Gating** — Invoke Quality Engineer validation before marking tasks `done`
+7. **Idle Detection** — Implement 3-cycle threshold and deep sleep (1 minute) when queue is empty
+8. **State Transitions** — 7-state queue machine with atomic file operations:
+   ```
+   incoming/ → processing/ → done/ (success)
+                           → failed/ (error)
+                           → crashed/ (timeout) → retry-pending/
+   ```
+
+**Location:** `src/skills/orchestrator/SKILL.md` and `src/skills/orchestrator/scripts/`
+
+### Integration Points
+
+**How Agent & Skill Communicate:**
+
+1. **Skill calls Agent logic** — The OrchestratorSkill is invoked as a Claude Code skill and runs in the Orchestrator agent context
+2. **Agent delegates to Skill** — When the Orchestrator agent needs to perform queue operations, it invokes the OrchestratorSkill directly
+3. **Unified Context** — Both layers share the same session-id, harness, and queue partition
+4. **DELEGATE Creation** — Agent creates DELEGATE blocks; Skill enqueues them via `queue-management` skill
+5. **HANDBACK Handling** — Skill receives HANDBACK; Agent interprets and routes result
+
+**Example Flow:**
+```
+Orchestrator Agent receives task
+  ↓
+Agent analyzes scope & applies routing decision tree
+  ↓
+Agent creates DELEGATE block with plan
+  ↓
+OrchestratorSkill.enqueue(delegate) — queues in incoming/
+  ↓
+OrchestratorSkill.poll_queue() — continuously monitors
+  ↓
+OrchestratorSkill spawns sub-agent via Agent tool
+  ↓
+Sub-agent returns HANDBACK
+  ↓
+OrchestratorSkill correlates HANDBACK → moves to done/
+  ↓
+Agent processes metrics → feeds to Model Engineer
+```
+
+### Configuration & Thresholds
+
+**Queue Configuration:**
+
+- **Poll Interval:** 30-60 seconds
+- **Idle Detection:** 3 clean polls → 1 minute sleep
+- **Crash Timeout:** 600 seconds (10 minutes) → orphaned task recovery
+- **Retry Limit:** 3 retries per task before escalation
+
+**Parallel Delegation Configuration:**
+
+- **Complexity Threshold:** ≥3 distinct domains detected
+- **Domain Keywords:** Defined in `src/orchestration/agents/decomposition_config.yaml`
+- **Tier-0 Tasks:** Run in parallel (architecture, implementation, security)
+- **Tier-1 Tasks:** Depend on tier-0 (testing, docs, review)
+- **Consolidation:** Lead Engineer integrates all results
+
+**Links:**
+- [OrchestratorAgent Definition](../src/agents/orchestrator-agent.md)
+- [OrchestratorSkill Definition](../src/skills/orchestrator/SKILL.md)
+- [Decomposition Config](../src/orchestration/agents/decomposition_config.yaml)
+- [Queue Architecture & Paths](SPEC.md#queue-architecture--paths-locked-spec)
+
+---
+
 ## Routing Decision Tree (Orchestrator)
 
 When Orchestrator polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` and finds a task:
