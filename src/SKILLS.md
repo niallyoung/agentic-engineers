@@ -6,7 +6,7 @@
 
 ---
 
-## Rendered Skills Inventory (24 Active)
+## Rendered Skills Inventory (41 Active)
 
 This is the canonical registry of all rendered skills available for agents to reference. Each skill has a corresponding `SKILL.md` frontmatter file with metadata (name, description, roles, model, effort, version).
 
@@ -15,25 +15,41 @@ This is the canonical registry of all rendered skills available for agents to re
 | Skill | Path | Description |
 |-------|------|-------------|
 | ab-testing | `src/skills/ab-testing/SKILL.md` | Experiment orchestration framework with traffic allocation, statistical analysis, and early stopping detection. |
+| add-feature-to-framework | `src/skills/_meta/add-feature-to-framework/SKILL.md` | Comprehensive checklist ensuring all new features are integrated into the framework correctly. |
 | agent-creator | `src/skills/agent-creator/SKILL.md` | Scaffolds new SPEC-compliant agentic-engineers agents with a single call. |
+| agent-definition-verifier | `src/skills/_meta/agent-definition-verifier/SKILL.md` | Validates agent definitions against framework specifications and detects configuration errors. |
+| code-hygiene-git-workflow | `src/skills/_meta/code-hygiene-git-workflow/SKILL.md` | Enforces code hygiene and git workflow standards across all commits and branches. |
 | consistency-checker | `src/skills/consistency-checker/SKILL.md` | Automated cross-validation of protocol queue integrity. |
 | cost-aggregation | `src/skills/cost-aggregation/SKILL.md` | Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. |
 | doc-quality-monitor | `src/skills/doc-quality-monitor/SKILL.md` | Automated documentation-quality monitoring (MONITORING-001). |
+| evaluation-framework | `src/skills/_meta/evaluation_framework/SKILL.md` | Framework for comprehensive agent and skill evaluation with metrics collection and analysis. |
+| file-cleanup | `src/skills/_meta/file-cleanup/SKILL.md` | Automated cleanup of unused, deprecated, or stale files in the codebase. |
 | file-sync | `src/skills/file-sync/SKILL.md` | Discovers and analyzes scripts in the repository, scoring them for utility and integration. |
+| gh-actions-monitor | `src/skills/_meta/gh-actions-monitor/SKILL.md` | Monitors GitHub Actions workflow status and alerts on failures or anomalies. |
+| git-operations | `src/skills/_meta/git-operations/SKILL.md` | Low-level git operation utilities for automation and workflow scripting. |
 | harness-integration-tracker | `src/skills/harness-integration-tracker/SKILL.md` | Continuously discover and document agent/sub-agent integration code/docs/info across all harnesses (OpenCode, Copilot, Claude, PI) to prevent drift and keep integrations fresh. |
 | harness-opencode-feature-sync | `src/skills/harness-opencode-feature-sync/SKILL.md` | Drift/feature sync between OpenCode's agent and sub-agent integration points and the agentic-engineers OpenCode renderer. |
 | local-model-runtime | `src/skills/local-model-runtime/SKILL.md` | Local Model Runtime support (COST-004) — detects a running local Ollama instance, lists locally-available models, and routes tasks to a zero-cost local model when a suitable one exists, falling back to a cloud provider otherwise. |
 | metrics-etl | `src/skills/metrics-etl/SKILL.md` | Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. |
 | model-engineer | `src/skills/model-engineer/SKILL.md` | Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. |
 | model-selection | `src/skills/model-selection/SKILL.md` | Model Selection Optimization (COST-003) — recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. |
+| orchestrator | `src/skills/orchestrator/SKILL.md` | In-harness queue orchestration system that implements the DELEGATE/HANDBACK protocol lifecycle. |
+| orchestrator-enforcer | `src/skills/_meta/orchestrator-enforcer/SKILL.md` | Enforces orchestrator routing rules and validates delegation protocol compliance. |
 | protocol-validator | `src/skills/protocol-validator/SKILL.md` | Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1. |
+| queue-isolation | `src/skills/_meta/queue-isolation/SKILL.md` | Ensures queue isolation and prevents cross-contamination between concurrent task executions. |
 | queue-management | `src/skills/queue-management/SKILL.md` | Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation. |
+| queue-path-validator | `src/skills/_meta/queue-path-validator/SKILL.md` | Validates queue file paths and detects filesystem consistency issues. |
 | queue-query | `src/skills/queue-query/SKILL.md` | Local-queue visibility skill — query and inspect the per-session, per-harness filesystem queue by state (incoming backlog, processing orphans to resume, done results/next-steps). |
 | queue-todo-sync | `src/skills/queue-todo-sync/SKILL.md` | Auto-sync queue DELEGATEs ↔ TODO. |
 | repo-init | `src/skills/repo-init/SKILL.md` | [DISABLED] Initializes new repositories with the agentic-engineers framework. |
+| security-field-validator | `src/skills/_meta/security-field-validator/SKILL.md` | Validates sensitive fields and enforces security constraints in configuration and data. |
+| session-analyzer | `src/skills/session-analyzer/SKILL.md` | Meta-skill for automated session transcript analysis and quality recommendations. |
 | skill-creator | `src/skills/skill-creator/SKILL.md` | Create new agentic-engineers skills following the agentskills. |
+| skill-template | `src/skills/_meta/skill-template/SKILL.md` | Template and checklist for creating new skills with proper structure and documentation. |
 | spec-management | `src/skills/spec-management/SKILL.md` | Exclusive SPEC. |
 | spec-validator | `src/skills/spec-validator/SKILL.md` | Validates implementation compliance with SPEC. |
+| spec-version-validator | `src/skills/_meta/spec-version-validator/SKILL.md` | Validates spec version compatibility and detects incompatible version changes. |
+| task-orchestration | `src/skills/_meta/task-orchestration/SKILL.md` | Encodes task execution framework principle for parallel task execution and decision points. |
 | test-sync-validator | `src/skills/testing/SKILL.md` | Validates test fixture synchronization with code changes. |
 | tokenadvisor | `src/skills/tokenadvisor/SKILL.md` | Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. |
 | usage-tracking | `src/skills/usage-tracking/SKILL.md` | Real-time and historical token usage capture, analysis, and forecasting skill for agents. |
