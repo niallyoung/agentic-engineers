@@ -165,6 +165,36 @@ Metadata:   {task_id}.meta.json (claimed_at, retry_count, last_error)
 
 ---
 
+### `wake_timer() -> Dict[str, Any]`
+
+**Purpose:** Wake-timer mechanism to detect and recover stalled tasks (no heartbeat for N seconds).
+
+**Behavior:**
+1. Detect tasks in processing/ without recent heartbeat (> heartbeat_interval seconds)
+2. For each stalled task:
+   - Increment retry_count
+   - If retry_count >= retry_max_attempts → escalate to manual review
+   - Else → move to retry-pending/ with exponential backoff
+3. Log detection and recovery metrics
+4. Capture span for observability
+
+**Thresholds (from SPEC queue SLA design):**
+- **Heartbeat interval:** config.heartbeat_interval (default 30 seconds, configurable)
+- **Stale (WARN):** config.stale_threshold_sec (300 seconds since last_heartbeat)
+- **Crash (ESCALATE):** config.crash_threshold_sec (600 seconds since claimed_at, LOCKED)
+
+**Returns:**
+```python
+{
+    'stalled_detected': int,    # Number of stalled tasks found
+    'recovered': int,           # Tasks moved to retry-pending
+    'escalated': int,           # Tasks escalated to manual review
+    'wake_reason': str          # 'heartbeat_timeout' or 'no_stalled_tasks'
+}
+```
+
+---
+
 ### `run_idle_loop() -> Dict[str, Any]`
 
 **Purpose:** Implement intelligent idle detection with 3-minute polling sleep and deep sleep after 3 consecutive clean polls.
@@ -281,11 +311,17 @@ Metadata:   {task_id}.meta.json (claimed_at, retry_count, last_error)
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `poll_interval_sec` | int | 180 | Sleep between polls (seconds) |
+| `poll_interval_fast` | int | 30 | Polling interval when tasks are processing (seconds) |
+| `poll_interval_idle` | int | 180 | Polling interval when queue is idle (seconds) |
+| `heartbeat_interval` | int | 30 | Expected interval between heartbeats (seconds, configurable) |
+| `heartbeat_timeout_sec` | int | 120 | Max time without task update before stalled (seconds) |
 | `task_deadline_sec` | int | 600 | Max claimed time before crash recovery (seconds) |
+| `stale_threshold_sec` | int | 300 | Threshold for WARN status (seconds since last_heartbeat) |
+| `crash_threshold_sec` | int | 600 | Threshold for ESCALATE (seconds since claimed_at, LOCKED) |
 | `idle_threshold_polls` | int | 3 | Clean polls before deep sleep |
 | `idle_sleep_sec` | int | 600 | Deep sleep duration (seconds) |
-| `retry_max_attempts` | int | 3 | Max retries for crashed tasks |
+| `retry_max_attempts` | int | 3 | Max retries for crashed/stalled tasks |
+| `retry_backoff_multiplier` | float | 1.5 | Exponential backoff multiplier for retries |
 
 ## Dependencies
 

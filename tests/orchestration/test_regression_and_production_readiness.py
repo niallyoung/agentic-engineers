@@ -57,7 +57,7 @@ class TestRegressionExistingOrchestrator:
         # Create HANDBACK
         handback = {
             "task_id": "2026-05-27-regression-no-eval",
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "test_coverage": 0.92,
             "cost_actual": 1.8,
@@ -125,7 +125,7 @@ class TestRegressionExistingOrchestrator:
         
         handback = {
             "task_id": "2026-05-27-regression-events",
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "test_coverage": 0.92,
             "cost_actual": 1.8,
@@ -172,7 +172,7 @@ class TestRegressionExistingOrchestrator:
         
         handback = {
             "task_id": "2026-05-27-regression-optional",
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "test_coverage": 0.92,
             "cost_actual": 1.8,
@@ -234,7 +234,7 @@ class TestQualityValidation:
             
             handback = {
                 "task_id": f"2026-05-27-quality-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": quality_score,
                 "test_coverage": quality_score / 100,
                 "cost_actual": 1.8,
@@ -282,7 +282,7 @@ class TestQualityValidation:
             
             handback = {
                 "task_id": f"2026-05-27-escalation-rate-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": quality_score,
                 "test_coverage": quality_score / 100,
                 "cost_actual": 1.8,
@@ -330,7 +330,7 @@ class TestQualityValidation:
             
             handback = {
                 "task_id": f"2026-05-27-no-regression-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": quality_score,
                 "test_coverage": quality_score / 100,
                 "cost_actual": 1.8,
@@ -409,7 +409,7 @@ class TestProductionReadiness:
         # Create invalid HANDBACK (missing required fields)
         invalid_handback = {
             "task_id": "2026-05-27-prod-error",
-            "status": "complete",
+            "status": "success",
             # Missing quality_score, test_coverage, etc.
         }
         
@@ -447,7 +447,7 @@ class TestProductionReadiness:
             
             handback = {
                 "task_id": f"2026-05-27-concurrent-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": 90 + i,
                 "test_coverage": 0.90,
                 "cost_actual": 1.8,
@@ -504,7 +504,7 @@ class TestProductionReadiness:
         
         handback = {
             "task_id": "2026-05-27-consistency",
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "test_coverage": 0.92,
             "cost_actual": 1.8,

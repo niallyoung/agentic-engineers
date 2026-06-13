@@ -59,6 +59,8 @@ class Category(str, Enum):
     STALE_DOC = "STALE_DOC"
     PLACEHOLDER = "PLACEHOLDER"
     STRUCTURE = "STRUCTURE"
+    PHANTOM_REFERENCE = "PHANTOM_REFERENCE"
+    STALE_DOCSTRING = "STALE_DOCSTRING"
 
 
 # Penalty weight (points off the 100-point health score) per severity.
@@ -81,6 +83,14 @@ DEFAULT_PLACEHOLDER_PATTERNS = [
     r"lorem ipsum",
     r"coming soon",
     r"PLACEHOLDER",
+]
+
+# Known-dead classes/paths that should no longer appear in any documentation.
+# Each entry is (pattern, human_label) where pattern is a regex.
+DEFAULT_PHANTOM_PATTERNS: List[tuple] = [
+    (r"\bAutomationController\b", "AutomationController (removed; use Orchestrator polling loop)"),
+    (r"automation_controller\.py\b", "automation_controller.py (file deleted)"),
+    (r"\bsrc/orchestration/agents/automation\b", "src/orchestration/agents/automation (removed path)"),
 ]
 
 
@@ -109,6 +119,16 @@ class MonitorConfig:
     check_staleness: bool = True
     check_placeholders: bool = True
     check_structure: bool = True
+    check_phantom_references: bool = False  # opt-in; requires phantom_patterns
+    check_stale_docstrings: bool = False  # opt-in; SKILL.md YAML headers
+
+    # Phantom reference patterns: list of (regex_pattern, label) tuples.
+    # Each match is reported as a PHANTOM_REFERENCE finding. Defaults to
+    # DEFAULT_PHANTOM_PATTERNS when check_phantom_references is True and
+    # phantom_patterns is not explicitly set.
+    phantom_patterns: List[tuple] = field(
+        default_factory=lambda: list(DEFAULT_PHANTOM_PATTERNS)
+    )
 
     # Glob patterns (relative to root) to exclude from discovery.
     exclude_globs: List[str] = field(default_factory=list)
@@ -279,6 +299,11 @@ class DocQualityMonitor:
         self._placeholder_res = [
             re.compile(p, re.IGNORECASE) for p in self.config.placeholder_patterns
         ]
+        # Compile phantom reference patterns: list of (compiled_re, label)
+        self._phantom_res = [
+            (re.compile(pat, re.IGNORECASE), label)
+            for pat, label in (self.config.phantom_patterns or [])
+        ]
 
     # ------------------------------------------------------------------ #
     # Discovery
@@ -448,6 +473,102 @@ class DocQualityMonitor:
             )
         return issues
 
+    def check_phantom_references(self, path: Path) -> List[Issue]:
+        """Detect references to known-dead classes, files, or modules.
+
+        A 'phantom reference' is any mention of a symbol that no longer exists
+        in the codebase but whose name still appears in documentation, creating
+        misleading guidance or broken import examples. Patterns are defined in
+        ``MonitorConfig.phantom_patterns`` and compiled to regexes.
+
+        The check is opt-in (``check_phantom_references=False`` by default).
+        """
+        path = Path(path)
+        if not self.config.check_phantom_references or not self._phantom_res:
+            return []
+        issues: List[Issue] = []
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            for rx, label in self._phantom_res:
+                if rx.search(line):
+                    issues.append(
+                        Issue(
+                            file=self._rel(path),
+                            line=lineno,
+                            category=Category.PHANTOM_REFERENCE,
+                            severity=Severity.WARNING,
+                            message=f"Phantom reference to removed symbol: {label}",
+                        )
+                    )
+                    break  # one finding per line per file is enough
+        return issues
+
+    def check_stale_docstrings(self, path: Path) -> List[Issue]:
+        """Detect stale SKILL.md YAML headers with version drift.
+
+        For SKILL.md files (skill metadata headers), check if the version
+        field in the frontmatter YAML has drifted from expected values.
+        A stale docstring occurs when the version is '0.1' (proposed/experimental)
+        but implementation is already complete, or vice versa.
+
+        This check is opt-in (``check_stale_docstrings=False`` by default).
+        """
+        path = Path(path)
+        if not self.config.check_stale_docstrings or not path.name == "SKILL.md":
+            return []
+        issues: List[Issue] = []
+        text = path.read_text(encoding="utf-8", errors="replace")
+
+        # Extract YAML frontmatter (between --- markers)
+        lines = text.splitlines()
+        if lines and lines[0].strip() == "---":
+            end_idx = None
+            for i in range(1, len(lines)):
+                if lines[i].strip() == "---":
+                    end_idx = i
+                    break
+            if end_idx:
+                yaml_block = "\n".join(lines[1:end_idx])
+                # Parse YAML to check version and tdd_phase
+                try:
+                    import yaml as yaml_parser
+                    metadata = yaml_parser.safe_load(yaml_block) or {}
+                    version = metadata.get("version", "")
+                    tdd_phase = metadata.get("tdd_phase", "")
+
+                    # Flag: version 0.1 but TDD phase is GREEN (fully implemented)
+                    if version == "0.1" and tdd_phase == "GREEN":
+                        issues.append(
+                            Issue(
+                                file=self._rel(path),
+                                line=0,
+                                category=Category.STALE_DOCSTRING,
+                                severity=Severity.WARNING,
+                                message=(
+                                    "Stale docstring: version='0.1' (proposed) but "
+                                    "tdd_phase='GREEN' (implemented) — update version to match"
+                                ),
+                            )
+                        )
+                    # Flag: version 1.0 or higher but TDD phase is RED (not implemented)
+                    elif version and version != "0.1" and tdd_phase == "RED":
+                        issues.append(
+                            Issue(
+                                file=self._rel(path),
+                                line=0,
+                                category=Category.STALE_DOCSTRING,
+                                severity=Severity.WARNING,
+                                message=(
+                                    f"Stale docstring: version='{version}' (released) but "
+                                    "tdd_phase='RED' (not implemented) — check implementation status"
+                                ),
+                            )
+                        )
+                except Exception:
+                    # YAML parse failure is not our concern; skip this check
+                    pass
+        return issues
+
     def analyze_file(self, path: Path) -> List[Issue]:
         """Run all enabled checks against a single file."""
         path = Path(path)
@@ -457,6 +578,8 @@ class DocQualityMonitor:
         issues += self.check_staleness(path)
         issues += self.check_placeholders(path)
         issues += self.check_structure(path)
+        issues += self.check_phantom_references(path)
+        issues += self.check_stale_docstrings(path)
         return issues
 
     # ------------------------------------------------------------------ #
@@ -515,6 +638,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         type=float,
         help="Minimum health score to pass (exit 0)",
     )
+    parser.add_argument(
+        "--check-phantom-references",
+        action="store_true",
+        dest="check_phantom_references",
+        help="Enable phantom-reference scan (known-dead classes/paths)",
+    )
     parser.add_argument("--quiet", action="store_true", help="Suppress stdout summary")
     args = parser.parse_args(argv)
 
@@ -528,6 +657,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         config.required_sections = args.required_sections
     if args.fail_under is not None:
         config.fail_under = args.fail_under
+    if args.check_phantom_references:
+        config.check_phantom_references = True
 
     root = Path(args.root)
     if not root.exists():

@@ -321,7 +321,7 @@ class TestEndToEndWorkflow:
 
         # Simulate sub-task completion
         fake_handbacks = [
-            {"task_id": sd.task_id, "quality_score": 90, "status": "complete"}
+            {"task_id": sd.task_id, "quality_score": 90, "status": "success"}
             for sd in plan.sub_delegates
         ]
 

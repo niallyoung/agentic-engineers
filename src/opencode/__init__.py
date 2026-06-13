@@ -7,7 +7,7 @@ Key modules:
    configuration errors.
 
 2. harness_session_manager: Detects harness type and manages session IDs, routing
-   work through canonical queue paths in ~/.agentic-engineers/{session-id}/{harness}/queue/
+   work through canonical queue paths in ~/.agentic-engineers/{harness}/{session-id}/queue/
 
 3. runner: Queue-based task execution engine with full lifecycle management,
    atomic state transitions, error handling, and retry logic.

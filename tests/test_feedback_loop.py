@@ -164,7 +164,7 @@ class TestFeedbackLoopRecord:
         handback = {
             "task_id": "hb-001",
             "quality_score": 88,
-            "status": "complete",
+            "status": "success",
             "tokens_in": 500,
             "tokens_out": 300,
             "effort_actual": 0.5,
@@ -181,7 +181,7 @@ class TestFeedbackLoopRecord:
         handback = {
             "task_id": "hb-002",
             "quality_score": 90,
-            "status": "complete",
+            "status": "success",
             "skills_used": ["testing", "quality"],
         }
         delegate = {"role": "quality_engineer", "model": "sonnet"}

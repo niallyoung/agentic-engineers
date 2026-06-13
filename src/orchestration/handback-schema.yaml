@@ -32,13 +32,13 @@ required_fields:
   status:
     type: string
     enum:
-      - complete      # Task fully completed, all criteria met
-      - failed        # Task failed, no deliverables produced
+      - success       # Task fully completed, all criteria met
+      - failure       # Task failed, no deliverables produced
       - partial       # Task partially completed, some criteria met
       - blocked       # Task blocked by external dependency/unclear requirement
       - escalate      # Task needs escalation to higher-tier agent (triggers C2c escalation chaining)
     description: "Final status of task execution"
-    example: "complete"
+    example: "success"
     
   deliverables:
     type: array
@@ -166,7 +166,7 @@ subtask_fields:
       properties:
         status:
           type: string
-          enum: [complete, failed, partial, blocked, escalate]
+          enum: [success, failure, partial, blocked, escalate]
         output:
           type: any
           description: "Child task output payload"
@@ -179,7 +179,7 @@ subtask_fields:
       - "Populated only when all children have completed (or timed out)"
     example:
       "2026-05-13-arch-service-a":
-        status: complete
+        status: success
         output: {bottlenecks: [], recommendations: []}
         quality: 92
 
@@ -188,7 +188,7 @@ subtask_fields:
     optional: true
     items:
       type: string
-    description: "Child task IDs that failed (status=failed or status=blocked)"
+    description: "Child task IDs that failed (status=failure or status=blocked)"
     example:
       - "2026-05-13-arch-service-b"
 
@@ -247,7 +247,7 @@ optional_fields:
     description: "Git commit SHA where files were committed (must exist in git history)"
     only_for: ["background agents creating files"]
     validation:
-      - "REQUIRED if status='complete' and committed_files is non-empty"
+      - "REQUIRED if status='success' and committed_files is non-empty"
       - "Must be valid SHA-1 hash (40 hex characters)"
       - "Must exist in git log: git cat-file -t <sha> must return 'commit'"
       - "Orchestrator MUST validate this SHA exists before accepting HANDBACK"
@@ -317,7 +317,7 @@ optional_fields:
     type: array
     items:
       type: string
-    description: "Issues that prevented completion (if status != complete)"
+    description: "Issues that prevented completion (if status != success)"
     example:
       - "Ambiguous requirement in B1 criteria interpretation"
       - "Missing reference to orchestrator.py line 520"
@@ -408,7 +408,7 @@ validation_layers:
         penalty: -25
         
       - field: "status"
-        requirement: "One of: complete, failed, partial, blocked, escalate"
+        requirement: "One of: success, failure, partial, blocked, escalate"
         severity: "ERROR"
         penalty: -15
         

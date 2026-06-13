@@ -114,7 +114,7 @@ class AgentInvoker:
 
     # Valid HANDBACK status values per HANDOFF.md
     # ("escalate" triggers Orchestrator C2c escalation chaining)
-    VALID_HANDBACK_STATUSES = {"complete", "blocked", "partial", "escalate"}
+    VALID_HANDBACK_STATUSES = {"success", "blocked", "partial", "escalate"}
 
     # Default polling interval (seconds)
     DEFAULT_POLL_INTERVAL: int = 30

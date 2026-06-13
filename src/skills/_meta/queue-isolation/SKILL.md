@@ -112,6 +112,177 @@ every time `init_queue_structure()` is called for an existing session.
 
 ---
 
+## Staleness Monitoring
+
+The queue-isolation skill includes **advisory staleness detection** for monitoring
+task health without modifying task state.
+
+### SLA Thresholds
+
+- **Stale (WARN)**: Tasks > 300 seconds (5 minutes) in processing state
+- **Crash (ESCALATE)**: Tasks > 600 seconds (10 minutes) since claimed_at
+- Both thresholds are configurable via function parameters
+
+### Task Timestamp Tracking
+
+Each task stores timestamps in a sidecar file: `<queue_state>/<task_id>.timestamps.json`
+
+```json
+{
+  "created_at": "2025-01-15T10:00:00+00:00",
+  "last_updated": "2025-01-15T10:05:00+00:00",
+  "claimed_at": "2025-01-15T10:00:05+00:00",
+  "last_heartbeat": "2025-01-15T10:04:30+00:00",
+  "state_changes": [
+    {
+      "timestamp": "2025-01-15T10:00:01+00:00",
+      "action": "created",
+      "state": "incoming"
+    },
+    {
+      "timestamp": "2025-01-15T10:00:05+00:00",
+      "action": "claimed",
+      "state": "processing"
+    },
+    {
+      "timestamp": "2025-01-15T10:04:30+00:00",
+      "action": "heartbeat",
+      "state": "processing"
+    }
+  ]
+}
+```
+
+**Timestamp Fields:**
+- `created_at` (immutable): When task was first created
+- `last_updated`: Most recent modification time
+- `claimed_at`: When task was claimed by an agent (moved to processing)
+- `last_heartbeat`: Most recent agent heartbeat (for staleness detection)
+- `state_changes`: Array of all state transitions with timestamps and actions
+
+### API Functions
+
+#### record_task_timestamp()
+
+```python
+from queue_isolation import record_task_timestamp
+
+record_task_timestamp(
+    task_id="my-task",
+    queue_root=Path("/home/user/.agentic-engineers/claude/session-id/queue"),
+    state="processing",
+    action="heartbeat"
+)
+```
+
+Creates or updates a task's timestamp sidecar with state changes.
+
+#### check_task_staleness()
+
+```python
+from queue_isolation import check_task_staleness
+
+result = check_task_staleness(
+    task_id="my-task",
+    queue_root=queue_root,
+    state="processing",
+    stale_threshold_sec=300.0,      # 5 minutes
+    escalation_threshold_sec=600.0  # 10 minutes
+)
+
+# Returns:
+# {
+#   "task_id": "my-task",
+#   "age_seconds": 350.5,
+#   "heartbeat_age_seconds": 10.2,  # seconds since last heartbeat
+#   "is_stale": True,
+#   "is_crashed": False,
+#   "status": "stale",      # ok | stale | crashed | unknown
+#   "action": "warn"        # none | warn | escalate
+# }
+```
+
+Checks if a single task is stale or crashed. **Uses last_heartbeat if available**,
+otherwise falls back to creation time. Returns status and recommended action.
+
+**Staleness Detection Logic:**
+1. If `last_heartbeat` exists: measure age from last heartbeat timestamp
+2. Else: measure age from `created_at` timestamp
+3. Compare against thresholds: stale (300s) then escalation (600s)
+
+#### scan_queue_for_staleness()
+
+```python
+from queue_isolation import scan_queue_for_staleness
+
+result = scan_queue_for_staleness(
+    queue_root=queue_root,
+    state="processing",
+    stale_threshold_sec=300.0,
+    escalation_threshold_sec=600.0
+)
+
+# Returns:
+# {
+#   "scanned_at": "2025-01-15T10:05:00+00:00",
+#   "state": "processing",
+#   "tasks_checked": 42,
+#   "stale_tasks": [...],    # Tasks 300-600s old
+#   "crashed_tasks": [...],  # Tasks > 600s old
+#   "ok_tasks": [...]        # Tasks < 300s old
+# }
+```
+
+Scans entire queue state directory, categorizing all tasks by health status.
+
+### QueueIsolation Class Methods
+
+```python
+from queue_isolation import QueueIsolation
+
+qi = QueueIsolation.from_env()
+qi.initialise()
+
+# Check a single task
+result = qi.check_staleness("my-task", state="processing")
+
+# Scan entire processing queue
+scan = qi.scan_staleness(state="processing")
+print(f"Found {len(scan['stale_tasks'])} stale tasks")
+print(f"Found {len(scan['crashed_tasks'])} crashed tasks")
+```
+
+### Staleness is Advisory (NOT State-Modifying)
+
+- Staleness **NEVER changes** task state or marks tasks as failed
+- Staleness is **informational only** — generates WARN logs and health metrics
+- Crashed tasks (> 600s) may **trigger automatic retry logic** (separate system)
+- Escalation to Quality Engineer occurs only after retry exhaustion (retry_count >= 3)
+
+### Integration with Orchestrator
+
+The Orchestrator uses staleness detection during queue polling:
+
+```python
+# In orchestrator_integration.py or equivalent
+qi = QueueIsolation.from_env()
+qi.initialise()
+
+# Scan processing queue for stale/crashed tasks
+staleness = qi.scan_staleness(state="processing")
+
+# Log warnings for stale tasks (300-600s)
+for task in staleness["stale_tasks"]:
+    log.warn(f"Task {task['task_id']} is stale (age={task['age_seconds']}s)")
+
+# Log alerts for crashed tasks (> 600s)
+for task in staleness["crashed_tasks"]:
+    log.error(f"Task {task['task_id']} has CRASHED (age={task['age_seconds']}s)")
+    # Trigger crash recovery / retry logic
+```
+
+---
+
 ## Programmatic Usage
 
 ### Functional API

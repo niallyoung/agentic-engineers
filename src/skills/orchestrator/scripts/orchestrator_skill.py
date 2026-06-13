@@ -44,6 +44,77 @@ def _try_import_queue_isolation():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Configuration & Schema Classes
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PollingConfig:
+    """Configuration schema for polling intervals and heartbeat detection."""
+
+    def __init__(
+        self,
+        poll_interval_fast: int = 30,
+        poll_interval_idle: int = 180,
+        heartbeat_interval: int = 30,
+        heartbeat_timeout_sec: int = 120,
+        task_deadline_sec: int = 600,
+        stale_threshold_sec: int = 300,
+        crash_threshold_sec: int = 600,
+        retry_max_attempts: int = 3,
+        retry_backoff_multiplier: float = 1.5,
+        idle_threshold_polls: int = 3,
+        deep_sleep_sec: int = 600,
+    ):
+        """
+        Initialize polling configuration.
+
+        Args:
+            poll_interval_fast: Polling interval when tasks are processing (seconds)
+            poll_interval_idle: Polling interval when queue is idle (seconds)
+            heartbeat_interval: Expected interval between heartbeats (seconds, default 30s)
+            heartbeat_timeout_sec: Max time without task update before stalled (seconds)
+            task_deadline_sec: Max time in processing before marked crashed (seconds)
+            stale_threshold_sec: Threshold for WARN status (300s since last_heartbeat)
+            crash_threshold_sec: Threshold for ESCALATE (600s since claimed_at, LOCKED)
+            retry_max_attempts: Max retries for crashed/stalled tasks
+            retry_backoff_multiplier: Exponential backoff multiplier for retries
+            idle_threshold_polls: Consecutive clean polls before deep sleep
+            deep_sleep_sec: Max duration of deep sleep (seconds)
+        """
+        self.poll_interval_fast = poll_interval_fast
+        self.poll_interval_idle = poll_interval_idle
+        self.heartbeat_interval = heartbeat_interval
+        self.heartbeat_timeout_sec = heartbeat_timeout_sec
+        self.task_deadline_sec = task_deadline_sec
+        self.stale_threshold_sec = stale_threshold_sec
+        self.crash_threshold_sec = crash_threshold_sec
+        self.retry_max_attempts = retry_max_attempts
+        self.retry_backoff_multiplier = retry_backoff_multiplier
+        self.idle_threshold_polls = idle_threshold_polls
+        self.deep_sleep_sec = deep_sleep_sec
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary."""
+        return {
+            "poll_interval_fast": self.poll_interval_fast,
+            "poll_interval_idle": self.poll_interval_idle,
+            "heartbeat_interval": self.heartbeat_interval,
+            "heartbeat_timeout_sec": self.heartbeat_timeout_sec,
+            "task_deadline_sec": self.task_deadline_sec,
+            "stale_threshold_sec": self.stale_threshold_sec,
+            "crash_threshold_sec": self.crash_threshold_sec,
+            "retry_max_attempts": self.retry_max_attempts,
+            "retry_backoff_multiplier": self.retry_backoff_multiplier,
+            "idle_threshold_polls": self.idle_threshold_polls,
+            "deep_sleep_sec": self.deep_sleep_sec,
+        }
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "PollingConfig":
+        """Create config from dictionary."""
+        return cls(**config_dict)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Custom Exceptions
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -93,26 +164,12 @@ class OrchestratorSkill:
     # Queue state subdirectories
     QUEUE_STATES = ("incoming", "processing", "done", "failed")
 
-    # Task deadline before marking as crashed (seconds)
-    TASK_DEADLINE_SEC = 600  # 10 minutes
-
-    # Poll interval between cycles
-    POLL_INTERVAL_SEC = 180  # 3 minutes
-
-    # Idle threshold (consecutive clean polls before deep sleep)
-    IDLE_THRESHOLD_POLLS = 3
-
-    # Deep sleep duration
-    DEEP_SLEEP_SEC = 600  # 10 minutes
-
-    # Max retries for crashed tasks
-    RETRY_MAX_ATTEMPTS = 3
-
     def __init__(
         self,
         session_id: Optional[str] = None,
         harness: Optional[str] = None,
         queue_root: Optional[str] = None,
+        polling_config: Optional[PollingConfig] = None,
     ):
         """
         Initialize OrchestratorSkill.
@@ -121,6 +178,7 @@ class OrchestratorSkill:
             session_id: Session ID (detected from env if None)
             harness: Harness name (detected from env if None)
             queue_root: Override queue root path (useful for testing)
+            polling_config: Custom polling configuration (uses defaults if None)
         """
         self.qi = _try_import_queue_isolation()
 
@@ -134,16 +192,25 @@ class OrchestratorSkill:
         else:
             self.queue_root = self._get_queue_root()
 
+        # Polling configuration
+        self.config = polling_config or PollingConfig()
+
         # Ensure queue structure exists
         self._ensure_queue_structure()
 
         # State tracking
         self.clean_poll_count = 0
 
+        # Heartbeat tracking: task_id -> last_update_timestamp
+        self.heartbeat_tracker: Dict[str, float] = {}
+
         logger.info(
             f"OrchestratorSkill initialized: "
             f"session={self.session_id}, harness={self.harness}, "
-            f"queue_root={self.queue_root}"
+            f"queue_root={self.queue_root}, "
+            f"poll_fast={self.config.poll_interval_fast}s, "
+            f"poll_idle={self.config.poll_interval_idle}s, "
+            f"heartbeat_timeout={self.config.heartbeat_timeout_sec}s"
         )
 
     def _detect_session_id(self) -> str:
@@ -204,11 +271,25 @@ class OrchestratorSkill:
         """
         Main polling loop - read incoming/, validate, claim, spawn.
 
+        Includes wake-timer mechanism to detect and recover stalled tasks
+        (tasks without heartbeat updates for > heartbeat_interval seconds).
+
         Returns:
             (processed_count, failed_count)
         """
         processed_count = 0
         failed_count = 0
+
+        # Run wake-timer to detect and recover stalled tasks
+        wake_timer_result = self.wake_timer()
+        if wake_timer_result['stalled_detected'] > 0:
+            logger.warning(
+                f"Wake-timer detected stalled tasks: "
+                f"recovered={wake_timer_result['recovered']}, "
+                f"escalated={wake_timer_result['escalated']}"
+            )
+            # Increment failed count for stalled tasks that were escalated
+            failed_count += wake_timer_result['escalated']
 
         incoming_dir = self.queue_root / "incoming"
 
@@ -217,10 +298,10 @@ class OrchestratorSkill:
             if not delegates:
                 self.clean_poll_count += 1
                 logger.debug(f"No delegates found (clean_poll_count={self.clean_poll_count})")
-                return (0, 0)
+                return (processed_count, failed_count)
         except Exception as e:
             logger.error(f"Failed to list incoming directory: {e}")
-            return (0, 1)
+            return (processed_count, failed_count + 1)
 
         logger.info(f"Found {len(delegates)} delegate(s) in incoming/")
 
@@ -238,8 +319,14 @@ class OrchestratorSkill:
                 # Claim the task (atomic move + metadata)
                 claimed_delegate = self.claim_task(task_id, delegate_file)
 
+                # Update heartbeat on successful claim
+                self.update_heartbeat(task_id)
+
                 # Spawn sub-agent
                 output_text = self.spawn_sub_agent(claimed_delegate)
+
+                # Update heartbeat after agent completes
+                self.update_heartbeat(task_id)
 
                 # Handle HANDBACK
                 handback_dict = self.handle_handback(task_id, output_text)
@@ -310,6 +397,212 @@ class OrchestratorSkill:
 
         except Exception as e:
             raise TaskClaimError(f"Failed to claim task {task_id}: {e}") from e
+
+    def update_heartbeat(self, task_id: str) -> None:
+        """
+        Update heartbeat for a task (marks it as alive and responsive).
+
+        Called after each successful task update (handback reception, claim, etc).
+        Resets the stall timer for the task.
+
+        Args:
+            task_id: Task identifier
+        """
+        now = time.time()
+        self.heartbeat_tracker[task_id] = now
+        logger.debug(f"Heartbeat updated for task {task_id}")
+
+    def detect_stalled_tasks(self) -> List[str]:
+        """
+        Detect tasks without recent heartbeat updates (stalled tasks).
+
+        Scans processing/ directory for tasks without heartbeat update
+        for > heartbeat_timeout_sec seconds. Returns list of stalled task IDs.
+
+        Returns:
+            List of stalled task IDs
+        """
+        now = time.time()
+        stalled_tasks = []
+
+        processing_dir = self.queue_root / "processing"
+
+        try:
+            meta_files = list(processing_dir.glob("*.meta.json"))
+        except Exception as e:
+            logger.error(f"Failed to list processing directory for stalled detection: {e}")
+            return stalled_tasks
+
+        for meta_file in meta_files:
+            try:
+                with meta_file.open("r") as f:
+                    metadata = json.load(f)
+
+                task_id = metadata.get("task_id", meta_file.stem)
+                claimed_at_str = metadata.get("claimed_at")
+
+                if not claimed_at_str:
+                    logger.warning(f"No claimed_at for task {task_id}")
+                    continue
+
+                claimed_at = datetime.fromisoformat(claimed_at_str)
+                elapsed = (now - claimed_at.timestamp())
+
+                # Check heartbeat tracker first
+                if task_id in self.heartbeat_tracker:
+                    last_heartbeat = self.heartbeat_tracker[task_id]
+                    heartbeat_elapsed = now - last_heartbeat
+
+                    if heartbeat_elapsed > self.config.heartbeat_timeout_sec:
+                        logger.warning(
+                            f"Task {task_id} is stalled: no heartbeat for {heartbeat_elapsed:.0f}s "
+                            f"(timeout={self.config.heartbeat_timeout_sec}s)"
+                        )
+                        stalled_tasks.append(task_id)
+                elif elapsed > self.config.heartbeat_timeout_sec:
+                    # No heartbeat at all since claimed_at
+                    logger.warning(
+                        f"Task {task_id} is stalled: no heartbeat since claim "
+                        f"({elapsed:.0f}s, timeout={self.config.heartbeat_timeout_sec}s)"
+                    )
+                    stalled_tasks.append(task_id)
+
+            except Exception as e:
+                logger.error(f"Error checking stalled status for {meta_file.name}: {e}")
+
+        return stalled_tasks
+
+    def recover_stalled_tasks(self) -> Tuple[int, int]:
+        """
+        Detect and recover stalled tasks (no heartbeat for N seconds).
+
+        Implements recovery loop:
+        1. Detect stalled tasks (no heartbeat update for heartbeat_timeout_sec)
+        2. For each stalled task:
+           - Increment retry count
+           - Move to retry-pending with exponential backoff
+           - Log escalation recommendation on max retries exceeded
+
+        Returns:
+            (recovered_count, escalated_count)
+        """
+        recovered_count = 0
+        escalated_count = 0
+
+        stalled_tasks = self.detect_stalled_tasks()
+
+        if not stalled_tasks:
+            return (0, 0)
+
+        logger.info(f"Detected {len(stalled_tasks)} stalled task(s)")
+
+        processing_dir = self.queue_root / "processing"
+
+        for task_id in stalled_tasks:
+            try:
+                meta_file = processing_dir / f"{task_id}.meta.json"
+                if not meta_file.exists():
+                    logger.warning(f"Metadata file missing for stalled task {task_id}")
+                    continue
+
+                with meta_file.open("r") as f:
+                    metadata = json.load(f)
+
+                retry_count = metadata.get("retry_count", 0)
+
+                if retry_count >= self.config.retry_max_attempts:
+                    # Max retries exceeded - escalate
+                    logger.warning(
+                        f"Task {task_id} stalled and exceeded max retries ({retry_count}). "
+                        f"Escalating to lead-engineer for manual review."
+                    )
+                    self._move_task_to_escalation_manual(
+                        task_id,
+                        f"Task stalled without heartbeat for {self.config.heartbeat_timeout_sec}s; "
+                        f"exhausted {retry_count} retries. Requires manual intervention."
+                    )
+                    escalated_count += 1
+                else:
+                    # Move to retry-pending with incremented retry count
+                    self._move_task_to_retry_pending(task_id, metadata)
+                    recovered_count += 1
+
+                # Remove from heartbeat tracker
+                self.heartbeat_tracker.pop(task_id, None)
+
+            except Exception as e:
+                logger.error(f"Error recovering stalled task {task_id}: {e}")
+
+        if recovered_count > 0 or escalated_count > 0:
+            logger.info(
+                f"Stalled task recovery: recovered={recovered_count}, escalated={escalated_count}"
+            )
+
+        return (recovered_count, escalated_count)
+
+    def wake_timer(self) -> Dict[str, Any]:
+        """
+        Wake-timer mechanism to detect and recover stalled tasks.
+
+        Implements configurable polling mechanism to detect when a task has stopped
+        making progress (no heartbeat for heartbeat_interval seconds) and trigger
+        recovery. This is called periodically from poll_queue().
+
+        Behavior:
+        1. Detect tasks without heartbeat update (> heartbeat_interval)
+        2. Mark stalled tasks with escalation flag
+        3. Move stalled tasks to retry-pending with automatic timeout recovery
+        4. Return metrics for observability
+
+        Thresholds (from SPEC queue SLA design):
+        - Heartbeat interval: config.heartbeat_interval (default 30s)
+        - Stale (WARN): config.stale_threshold_sec (300s since last_heartbeat)
+        - Crash (ESCALATE): config.crash_threshold_sec (600s since claimed_at, LOCKED)
+
+        Returns:
+            Dict with keys:
+            - 'stalled_detected': int — number of stalled tasks found
+            - 'recovered': int — tasks moved to retry-pending
+            - 'escalated': int — tasks escalated to manual review
+            - 'wake_reason': str — 'heartbeat_timeout' or 'no_tasks'
+        """
+        logger.info(
+            f"Wake-timer triggered: heartbeat_interval={self.config.heartbeat_interval}s, "
+            f"stale_threshold={self.config.stale_threshold_sec}s, "
+            f"crash_threshold={self.config.crash_threshold_sec}s"
+        )
+
+        # Detect stalled tasks
+        stalled_tasks = self.detect_stalled_tasks()
+
+        if not stalled_tasks:
+            logger.debug("No stalled tasks detected")
+            return {
+                'stalled_detected': 0,
+                'recovered': 0,
+                'escalated': 0,
+                'wake_reason': 'no_stalled_tasks',
+            }
+
+        logger.warning(f"Wake-timer detected {len(stalled_tasks)} stalled task(s)")
+
+        # Recover stalled tasks
+        recovered, escalated = self.recover_stalled_tasks()
+
+        # Capture span for observability
+        self.capture_span(
+            "wake_timer",
+            stalled_detected=len(stalled_tasks),
+            recovered_count=recovered,
+            escalated_count=escalated,
+        )
+
+        return {
+            'stalled_detected': len(stalled_tasks),
+            'recovered': recovered,
+            'escalated': escalated,
+            'wake_reason': 'heartbeat_timeout',
+        }
 
     def spawn_sub_agent(self, delegate: Dict[str, Any]) -> str:
         """
@@ -456,13 +749,13 @@ class OrchestratorSkill:
                 claimed_at = datetime.fromisoformat(claimed_at_str)
                 elapsed = (now - claimed_at).total_seconds()
 
-                if elapsed > self.TASK_DEADLINE_SEC:
+                if elapsed > self.config.task_deadline_sec:
                     logger.warning(
                         f"Task {task_id} crashed (elapsed={elapsed:.0f}s, "
-                        f"deadline={self.TASK_DEADLINE_SEC}s, retries={retry_count})"
+                        f"deadline={self.config.task_deadline_sec}s, retries={retry_count})"
                     )
 
-                    if retry_count >= self.RETRY_MAX_ATTEMPTS:
+                    if retry_count >= self.config.retry_max_attempts:
                         # Move to failed
                         self._move_task_to_failed(
                             task_id,
@@ -487,28 +780,33 @@ class OrchestratorSkill:
 
     def run_idle_loop(self) -> Dict[str, Any]:
         """
-        Implement 3-minute polling sleep with deep sleep after 3 consecutive clean polls.
+        Implement configurable polling sleep with deep sleep after N consecutive clean polls.
 
         Behavior:
-        - If clean_poll_count < 3: sleep POLL_INTERVAL_SEC (3 minutes), return 'normal'
-        - If clean_poll_count >= 3: enter deep sleep, block until file system event or signal
+        - If clean_poll_count < idle_threshold: sleep poll_interval_idle, return 'normal'
+        - If clean_poll_count >= idle_threshold: enter deep sleep, block until file system event or signal
         - On wake: reset clean_poll_count = 0 and return 'file_event' or 'signal'
+
+        Uses configuration from PollingConfig:
+        - poll_interval_idle: seconds to sleep during normal polling
+        - idle_threshold_polls: consecutive clean polls before deep sleep
+        - deep_sleep_sec: max time to sleep in deep sleep
 
         Returns:
             Dict with keys:
-            - 'work_processed': int (always 0 in idle loop, indicates if any tasks were processed during sleep)
+            - 'work_processed': int (always 0 in idle loop)
             - 'idle_entered': bool (True if deep sleep was entered)
             - 'wake_reason': str ('normal' | 'deep_sleep' | 'file_event' | 'signal')
         """
-        if self.clean_poll_count >= self.IDLE_THRESHOLD_POLLS:
+        if self.clean_poll_count >= self.config.idle_threshold_polls:
             logger.info(
-                f"Queue idle ({self.IDLE_THRESHOLD_POLLS} clean polls), "
-                f"entering deep sleep"
+                f"Queue idle ({self.config.idle_threshold_polls} clean polls), "
+                f"entering deep sleep ({self.config.deep_sleep_sec}s max)"
             )
             self.capture_span(
                 "idle_loop",
                 sleep_type="deep",
-                duration_sec=self.DEEP_SLEEP_SEC,
+                duration_sec=self.config.deep_sleep_sec,
                 idle_entered=True,
             )
 
@@ -525,16 +823,16 @@ class OrchestratorSkill:
             }
         else:
             logger.debug(
-                f"Queue polling sleep ({self.POLL_INTERVAL_SEC}s, "
-                f"clean_poll_count={self.clean_poll_count}/{self.IDLE_THRESHOLD_POLLS})"
+                f"Queue polling sleep ({self.config.poll_interval_idle}s, "
+                f"clean_poll_count={self.clean_poll_count}/{self.config.idle_threshold_polls})"
             )
             self.capture_span(
                 "idle_loop",
                 sleep_type="normal",
-                duration_sec=self.POLL_INTERVAL_SEC,
+                duration_sec=self.config.poll_interval_idle,
                 idle_entered=False,
             )
-            time.sleep(self.POLL_INTERVAL_SEC)
+            time.sleep(self.config.poll_interval_idle)
 
             return {
                 'work_processed': 0,
@@ -549,10 +847,12 @@ class OrchestratorSkill:
         Uses file system watching on the queue/incoming/ directory to detect
         new DELEGATE files. Falls back to signal handling (SIGUSR1) if available.
 
+        Respects config.deep_sleep_sec as the maximum sleep duration.
+
         Returns:
             'file_event' if woken by new file in incoming/
             'signal' if woken by SIGUSR1 signal
-            'timeout' if deep sleep timeout reached (DEEP_SLEEP_SEC)
+            'timeout' if deep sleep timeout reached (config.deep_sleep_sec)
         """
         import select
         import signal as sig
@@ -579,7 +879,7 @@ class OrchestratorSkill:
 
                 # Wait for file creation event with timeout
                 start = time.time()
-                timeout_remaining = self.DEEP_SLEEP_SEC
+                timeout_remaining = self.config.deep_sleep_sec
 
                 while timeout_remaining > 0:
                     try:
@@ -595,7 +895,7 @@ class OrchestratorSkill:
                         break
 
                     elapsed = time.time() - start
-                    timeout_remaining = self.DEEP_SLEEP_SEC - elapsed
+                    timeout_remaining = self.config.deep_sleep_sec - elapsed
 
                 return wake_reason
 
@@ -613,7 +913,7 @@ class OrchestratorSkill:
         Fallback deep sleep using polling and signal handling.
 
         Polls the incoming/ directory every 10 seconds for new files,
-        with overall timeout of DEEP_SLEEP_SEC.
+        with overall timeout of config.deep_sleep_sec.
 
         Returns:
             'file_event' if new file detected
@@ -646,11 +946,11 @@ class OrchestratorSkill:
 
                 # Check if timeout reached
                 elapsed = time.time() - start
-                if elapsed >= self.DEEP_SLEEP_SEC:
+                if elapsed >= self.config.deep_sleep_sec:
                     break
 
                 # Sleep for poll_interval or remaining time, whichever is smaller
-                remaining = self.DEEP_SLEEP_SEC - elapsed
+                remaining = self.config.deep_sleep_sec - elapsed
                 sleep_time = min(poll_interval, remaining)
 
                 if sleep_time > 0:
@@ -1048,5 +1348,64 @@ class OrchestratorSkill:
 
         logger.info(
             f"Task {task_id} escalated to {escalate_to}: "
+            f"chained DELEGATE {escalation_filename} enqueued in incoming/"
+        )
+
+    def _move_task_to_escalation_manual(self, task_id: str, reason: str) -> None:
+        """
+        Escalate task to lead-engineer for manual intervention.
+
+        Used when a task is stalled and has exhausted retries.
+        Creates a manual escalation DELEGATE and enqueues it in incoming/.
+
+        Args:
+            task_id: Task identifier
+            reason: Human-readable escalation reason
+        """
+        processing_dir = self.queue_root / "processing"
+        incoming_dir = self.queue_root / "incoming"
+
+        # Create manual escalation DELEGATE
+        escalation_task_id = f"{task_id}-escalated-to-lead-engineer"
+        escalation_delegate = {
+            "handoff_type": "DELEGATE",
+            "task_id": escalation_task_id,
+            "agent": "lead-engineer",
+            "scope": f"Manual escalation due to stalled task: {reason}",
+            "context": {
+                "original_task_id": task_id,
+                "escalation_reason": reason,
+                "escalation_type": "manual_stall_recovery",
+            },
+            "plan": [
+                "Investigate the stalled task in processing/",
+                "Determine root cause and recovery action",
+                "Either: restart the agent, manually patch work, or escalate further",
+            ],
+            "success_criteria": [
+                "Analyze the stalled task and root cause",
+                "Provide assessment and recovery action",
+            ],
+        }
+
+        escalation_filename = f"{escalation_task_id}.yaml"
+        escalation_file = incoming_dir / escalation_filename
+        with escalation_file.open("w") as f:
+            f.write(self._dict_to_yaml(escalation_delegate))
+
+        # Move original task to done/ with escalation audit metadata
+        self._move_task_to_done(
+            task_id,
+            {
+                "handoff_type": "HANDBACK",
+                "task_id": task_id,
+                "status": "escalate",
+                "output": f"Manual escalation: {reason}",
+                "escalation_delegate_created": escalation_filename,
+            }
+        )
+
+        logger.info(
+            f"Task {task_id} escalated to lead-engineer (manual): "
             f"chained DELEGATE {escalation_filename} enqueued in incoming/"
         )

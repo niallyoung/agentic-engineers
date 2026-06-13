@@ -319,9 +319,9 @@ class HarnessChecker:
         Checks:
           - Queue base path ~/.agentic-engineers/ exists or is creatable
           - Queue structure matches canonical format:
-            ~/.agentic-engineers/{session}/{harness}/queue/incoming/
-            ~/.agentic-engineers/{session}/{harness}/queue/processing/
-            ~/.agentic-engineers/{session}/{harness}/queue/done/
+            ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/
+            ~/.agentic-engineers/{harness}/{session-id}/queue/processing/
+            ~/.agentic-engineers/{harness}/{session-id}/queue/done/
 
         Returns:
             CheckResult indicating if queue paths are valid.

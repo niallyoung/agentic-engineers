@@ -53,7 +53,7 @@ class TestValidationWithSampleTasks:
         """Create a sample handback result."""
         return {
             "task_id": task_id,
-            "status": "complete",
+            "status": "success",
             "quality_score": quality_score,
             "test_coverage": quality_score / 100,
             "cost_actual": 1.8,
@@ -238,7 +238,7 @@ class TestValidationWithSampleTasks:
         # Create invalid handback (missing quality_score)
         invalid_handback = {
             "task_id": "2026-05-27-validation-error",
-            "status": "complete",
+            "status": "success",
             # Missing quality_score
         }
         

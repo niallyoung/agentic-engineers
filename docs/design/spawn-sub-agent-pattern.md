@@ -110,11 +110,9 @@ Trade-offs:
 - **Concurrency** — the daemon must own parallelism limits and crash recovery
   that the harness otherwise provides.
 
-Note: even the daemon-side *polling* host is partly aspirational —
-`Orchestrator.run_poll_cycle()` (`orchestrator.py:1800`) names an
-`AutomationController` that `docs/SPEC.md` (lines 1421–1431) places at
-`src/orchestration/agents/automation_controller.py`, which does not exist in
-`src/` today.
+Note: the daemon-side *polling* is implemented within the Orchestrator agent
+via its polling SKILL (iterative queue checking with backoff and signal handling),
+not as a separate standalone controller class.
 
 ## 5. The mock is intentional
 

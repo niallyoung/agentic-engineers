@@ -1,9 +1,11 @@
 # Usage Guide: Continuous Polling Loop Automation (Phase 1)
 
+⚠️ **DEPRECATED (2026-06-13)**: `AutomationController` class was removed on 2026-05-17. Continuous polling is now handled by the Orchestrator SKILL (`OrchestratorSkill.run_idle_loop()`), not a separate daemon. This document is archived for reference only. See `docs/design/spawn-sub-agent-pattern.md` for current architecture.
+
 **Document**: Phase 1 implementation of continuous polling loop automation  
 **Task ID**: `continuous-polling-automation-phase1`  
-**Status**: Complete  
-**Last Updated**: 2026-05-03  
+**Status**: DEPRECATED  
+**Last Updated**: 2026-05-03 (archived 2026-06-13)  
 
 ---
 

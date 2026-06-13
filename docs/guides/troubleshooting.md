@@ -26,8 +26,8 @@ df -h /opt/orchestrator  # Should have > 1GB free
 # 7. Verify Python path
 python3 -c "import sys; print(sys.path)"
 
-# 8. Test import
-python3 -c "from orchestration.agents.automation import AutomationController; print('OK')"
+# 8. Test basic import
+python3 -c "from orchestration.agents import orchestrator; print('OK')"
 ```
 
 ---
@@ -58,7 +58,7 @@ cd /opt/orchestrator
 ./bin/run-automation-controller.sh
 
 # Option 3: Verify installation
-python3 -c "import sys; sys.path.insert(0, '/opt/orchestrator'); from orchestration.agents.automation import AutomationController"
+python3 -c "import sys; sys.path.insert(0, '/opt/orchestrator'); from orchestration.agents import orchestrator; print('OK')"
 
 # Option 4: Check if files exist
 ls -la /opt/orchestrator/orchestration/agents/automation.py
@@ -393,10 +393,10 @@ grep -i "health\|endpoint\|server" /opt/orchestrator/logs/automation-*.log
 - Server becomes unresponsive
 
 **Causes:**
-- Memory leak in AutomationController
-- OrchestratorAgent holding references
+- OrchestratorAgent holding stale references
 - Queue not being cleaned up
 - Logs not being rotated
+- Task history accumulating in memory
 
 **Solutions:**
 
@@ -407,16 +407,13 @@ watch -n 5 'ps -o pid,vsz,rss,comm -p $(pgrep -f run-automation-controller)'
 # 2. Check memory over time
 ps aux | grep run-automation-controller
 
-# 3. Profile memory
-python3 -m tracemalloc << 'EOF'
-import sys
-sys.path.insert(0, '/opt/orchestrator')
-from orchestration.agents.automation import AutomationController
-import tracemalloc
+# 3. Check if queue cleanup is working
+find /opt/orchestrator/data/queue/done -type f | wc -l
+# Should be steadily increasing or being archived
 
-tracemalloc.start()
-controller = AutomationController(max_cycles=10)
-result = controller.run()
+# 4. Verify log rotation is enabled
+ls -lh /opt/orchestrator/logs/ | head -10
+# Should see multiple log files with dates, not one giant file
 current, peak = tracemalloc.get_traced_memory()
 print(f"Current: {current / 1024 / 1024:.1f} MB")
 print(f"Peak: {peak / 1024 / 1024:.1f} MB")

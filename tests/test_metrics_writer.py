@@ -51,7 +51,7 @@ def full_metrics():
         "duration_minutes": 30,
         "quality_score_validator": 92,
         "quality_score_agent_self": 90,
-        "status": "complete",
+        "status": "success",
         "retry_count": 0,
         "test_coverage": 95.0,
         "deliverables_count": 3,
@@ -296,7 +296,7 @@ class TestAggregateMetrics:
                 "task_id": f"task-{i:03d}",
                 "timestamp": "2025-02-01T10:00:00",
                 "quality_score_validator": score,
-                "status": "complete",
+                "status": "success",
                 "retry_count": 0,
             })
         result = metrics_writer.aggregate_metrics(date_str="2025-02-01")
@@ -325,7 +325,7 @@ class TestAggregateMetrics:
                 "task_id": f"retry-task-{i}",
                 "timestamp": "2025-04-01T10:00:00",
                 "quality_score_validator": 85,
-                "status": "complete",
+                "status": "success",
                 "retry_count": retries,
             })
         result = metrics_writer.aggregate_metrics(date_str="2025-04-01")
@@ -338,7 +338,7 @@ class TestAggregateMetrics:
                 "task_id": f"token-task-{i}",
                 "timestamp": "2025-05-01T10:00:00",
                 "quality_score_validator": 85,
-                "status": "complete",
+                "status": "success",
                 "retry_count": 0,
                 "total_tokens": 1000,
             })

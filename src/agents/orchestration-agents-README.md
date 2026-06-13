@@ -98,7 +98,7 @@ artifacts_list = artifacts.list_artifacts("2026-04-29")
 json_str = artifacts.export_json(task_id)
 ```
 
-Artifacts are stored in `~/.agentic-engineers/artifacts/{session-id}/{harness}/YYYY-MM-DD/` directory for date-keyed archival.
+Artifacts are stored in `~/.agentic-engineers/artifacts/{harness}/{session-id}/YYYY-MM-DD/` directory for date-keyed archival.
 
 ### 4. Workflow Orchestrator (`workflow.py`)
 
@@ -299,7 +299,7 @@ All 5 sub-agents run in **parallel** (~20-30ms each):
 
 5. **View artifacts**
    ```bash
-   ls ~/.agentic-engineers/artifacts/{session-id}/{harness}/2026-04-29/  # DELEGATE-*.yaml, HANDBACK-*.yaml, FEEDBACK-*.yaml
+   ls ~/.agentic-engineers/artifacts/{harness}/{session-id}/2026-04-29/  # DELEGATE-*.yaml, HANDBACK-*.yaml, FEEDBACK-*.yaml
    ```
 
 ## Phase 6 Implementation Timeline

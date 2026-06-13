@@ -5,7 +5,7 @@ Guarantees that `make render-all` produces a complete, well-formed distribution
 for every harness:
 
   - all 8 specialist agents are rendered per harness (claude/copilot/opencode)
-  - all 25 user-facing skills are rendered per harness
+  - all 26 user-facing skills are rendered per harness
   - generated framework docs (CLAUDE.md, AGENTS.md, opencode.jsonc, pi SYSTEM.md)
     are present in dist/ after render
   - every rendered agent carries a non-empty model and description (never "—")
@@ -78,10 +78,10 @@ def _render_all():
     yield
 
 
-def test_source_has_exactly_25_user_skills():
+def test_source_has_exactly_26_user_skills():
     names = _source_skill_names()
-    assert len(names) == 25, (
-        f"Expected 25 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 26, (
+        f"Expected 26 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 

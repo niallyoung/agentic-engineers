@@ -47,7 +47,7 @@ class TestEndToEndWorkflow:
         # 2. Engineer executes task and returns HANDBACK
         handback = {
             "task_id": "2026-05-24-e2e-high-quality",
-            "status": "complete",
+            "status": "success",
             "quality_score": 94,
             "test_coverage": 0.94,
             "cost_actual": 1.8,
@@ -118,7 +118,7 @@ class TestEndToEndWorkflow:
         # 2. Engineer executes task and returns HANDBACK with low quality
         handback = {
             "task_id": "2026-05-24-e2e-low-quality",
-            "status": "complete",
+            "status": "success",
             "quality_score": 55,
             "test_coverage": 0.65,
             "cost_actual": 2.5,
@@ -187,7 +187,7 @@ class TestEndToEndWorkflow:
         # 2. Engineer executes task and returns HANDBACK with medium quality
         handback = {
             "task_id": "2026-05-24-e2e-medium-quality",
-            "status": "complete",
+            "status": "success",
             "quality_score": 75,
             "test_coverage": 0.78,
             "cost_actual": 1.9,
@@ -262,7 +262,7 @@ class TestEndToEndWorkflow:
             # 2. Create HANDBACK
             handback = {
                 "task_id": task_id,
-                "status": "complete",
+                "status": "success",
                 "quality_score": quality_score,
                 "test_coverage": quality_score / 100,
                 "cost_actual": 1.8,
@@ -328,7 +328,7 @@ class TestEndToEndWorkflow:
                 # 2. Create HANDBACK
                 handback = {
                     "task_id": task_id,
-                    "status": "complete",
+                    "status": "success",
                     "quality_score": quality_score,
                     "test_coverage": quality_score / 100,
                     "cost_actual": 1.8,
@@ -395,7 +395,7 @@ class TestEndToEndWorkflow:
             # 2. Create HANDBACK
             handback = {
                 "task_id": task_id,
-                "status": "complete",
+                "status": "success",
                 "quality_score": quality_score,
                 "test_coverage": quality_score / 100,
                 "cost_actual": 1.8,
@@ -491,7 +491,7 @@ class TestPerformanceCharacteristics:
             
             handback = {
                 "task_id": f"2026-05-24-perf-eval-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": 85 + (i % 10),
                 "test_coverage": 0.85,
                 "cost_actual": 1.8,
@@ -542,7 +542,7 @@ class TestPerformanceCharacteristics:
             
             handback = {
                 "task_id": f"2026-05-24-perf-metrics-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": 85 + (i % 10),
                 "test_coverage": 0.85,
                 "cost_actual": 1.8,
@@ -594,7 +594,7 @@ class TestPerformanceCharacteristics:
                 
                 handback = {
                     "task_id": f"2026-05-24-perf-dashboard-{role}-{i}",
-                    "status": "complete",
+                    "status": "success",
                     "quality_score": 85 + (i % 10),
                     "test_coverage": 0.85,
                     "cost_actual": 1.8,

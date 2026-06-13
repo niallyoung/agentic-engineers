@@ -85,7 +85,7 @@ def valid_handback():
     """Return a fully-valid HANDBACK dict."""
     return {
         "task_id": "test-task",
-        "status": "complete",
+        "status": "success",
         "quality_score": 85,
         "deliverables": ["deliverable1"],
     }
@@ -614,14 +614,14 @@ class TestHandbackValidation:
 
     def test_handback_children_results_missing_quality(self, handback_validator, valid_handback):
         """children_results entry missing 'quality' is rejected."""
-        valid_handback["children_results"] = {"child-01": {"status": "complete"}}
+        valid_handback["children_results"] = {"child-01": {"status": "success"}}
         valid, errors = handback_validator.validate(valid_handback)
         assert not valid
 
     def test_handback_children_results_valid(self, handback_validator, valid_handback):
         """Valid children_results passes."""
         valid_handback["children_results"] = {
-            "child-01": {"status": "complete", "quality": 0.9}
+            "child-01": {"status": "success", "quality": 0.9}
         }
         valid, errors = handback_validator.validate(valid_handback)
         cr_errors = [e for e in errors if "children_results" in e]
@@ -659,7 +659,7 @@ class TestHandbackValidation:
     def test_handback_children_results_quality_not_number(self, handback_validator, valid_handback):
         """children_results quality that is not a number is rejected."""
         valid_handback["children_results"] = {
-            "child-01": {"status": "complete", "quality": "perfect"}
+            "child-01": {"status": "success", "quality": "perfect"}
         }
         valid, errors = handback_validator.validate(valid_handback)
         assert not valid

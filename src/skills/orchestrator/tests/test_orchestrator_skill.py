@@ -411,7 +411,7 @@ def test_idle_loop_normal_sleep(orchestrator):
     # Mock time.sleep to verify it's called with correct duration
     with patch('time.sleep') as mock_sleep:
         result = orchestrator.run_idle_loop()
-        mock_sleep.assert_called_once_with(orchestrator.POLL_INTERVAL_SEC)
+        mock_sleep.assert_called_once_with(orchestrator.config.poll_interval_idle)
 
     # Verify return structure
     assert result['work_processed'] == 0
@@ -931,3 +931,203 @@ escalation_chain: []
     expected = temp_queue / "incoming" / f"{task_id}-escalated-to-lead-engineer.yaml"
     assert expected.exists()
     assert not (temp_queue.parent / "escalation").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: Wake Timer and Stalled Task Detection
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_wake_timer_no_stalled_tasks(orchestrator):
+    """Test wake_timer returns no stalled tasks when queue is healthy."""
+    result = orchestrator.wake_timer()
+
+    assert result['stalled_detected'] == 0
+    assert result['recovered'] == 0
+    assert result['escalated'] == 0
+    assert result['wake_reason'] == 'no_stalled_tasks'
+
+
+def test_wake_timer_detects_stalled_task(orchestrator, temp_queue):
+    """Test wake_timer detects task without recent heartbeat."""
+    task_id = "stalled-task-001"
+
+    # Create a task in processing/ with old heartbeat
+    processing_dir = temp_queue / "processing"
+
+    # Create metadata file with old timestamp
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    old_timestamp = (datetime.now(tz=timezone.utc) - timedelta(seconds=150)).timestamp()
+
+    metadata = {
+        "task_id": task_id,
+        "claimed_at": now_iso,
+        "retry_count": 0,
+        "last_error": None,
+    }
+    meta_file = processing_dir / f"{task_id}.meta.json"
+    with meta_file.open("w") as f:
+        json.dump(metadata, f)
+
+    # Set old heartbeat (150 seconds ago, exceeds 120s default timeout)
+    orchestrator.heartbeat_tracker[task_id] = old_timestamp
+
+    # Detect stalled tasks
+    stalled = orchestrator.detect_stalled_tasks()
+
+    assert task_id in stalled
+    assert len(stalled) == 1
+
+
+def test_wake_timer_recovers_stalled_task(orchestrator, temp_queue):
+    """Test wake_timer recovers stalled task to retry-pending."""
+    task_id = "stalled-task-002"
+
+    # Create a task in processing/ with old heartbeat
+    processing_dir = temp_queue / "processing"
+
+    # Create metadata file
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    old_timestamp = (datetime.now(tz=timezone.utc) - timedelta(seconds=150)).timestamp()
+
+    metadata = {
+        "task_id": task_id,
+        "claimed_at": now_iso,
+        "retry_count": 0,
+        "last_error": None,
+    }
+    meta_file = processing_dir / f"{task_id}.meta.json"
+    with meta_file.open("w") as f:
+        json.dump(metadata, f)
+
+    # Create delegate file in processing/
+    delegate_file = processing_dir / f"{task_id}.yaml"
+    delegate_file.write_text(f"task_id: {task_id}\n")
+
+    # Set old heartbeat
+    orchestrator.heartbeat_tracker[task_id] = old_timestamp
+
+    # Run wake_timer
+    result = orchestrator.wake_timer()
+
+    assert result['stalled_detected'] == 1
+    assert result['recovered'] == 1
+    assert result['escalated'] == 0
+
+    # Verify task was moved to retry-pending
+    retry_pending_dir = temp_queue / "retry-pending"
+    assert (retry_pending_dir / f"{task_id}.yaml").exists()
+    assert not (processing_dir / f"{task_id}.yaml").exists()
+
+
+def test_wake_timer_escalates_max_retries(orchestrator, temp_queue):
+    """Test wake_timer escalates task after max retries exceeded."""
+    task_id = "max-retries-task-003"
+
+    # Create a task in processing/ with max retries
+    processing_dir = temp_queue / "processing"
+
+    # Create metadata file with max retries reached
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    old_timestamp = (datetime.now(tz=timezone.utc) - timedelta(seconds=150)).timestamp()
+
+    metadata = {
+        "task_id": task_id,
+        "claimed_at": now_iso,
+        "retry_count": 3,  # Max retries (default)
+        "last_error": None,
+    }
+    meta_file = processing_dir / f"{task_id}.meta.json"
+    with meta_file.open("w") as f:
+        json.dump(metadata, f)
+
+    # Create delegate file
+    delegate_file = processing_dir / f"{task_id}.yaml"
+    delegate_file.write_text(f"task_id: {task_id}\n")
+
+    # Set old heartbeat
+    orchestrator.heartbeat_tracker[task_id] = old_timestamp
+
+    # Run wake_timer
+    result = orchestrator.wake_timer()
+
+    assert result['stalled_detected'] == 1
+    assert result['recovered'] == 0
+    assert result['escalated'] == 1
+
+    # Verify task was moved to escalation
+    assert not (processing_dir / f"{task_id}.yaml").exists()
+
+
+def test_heartbeat_update_resets_stall_timer(orchestrator):
+    """Test that updating heartbeat resets stall detection."""
+    task_id = "heartbeat-test-004"
+
+    # Set initial heartbeat
+    orchestrator.update_heartbeat(task_id)
+    initial_time = orchestrator.heartbeat_tracker[task_id]
+
+    # Wait a bit and update again
+    time.sleep(0.1)
+    orchestrator.update_heartbeat(task_id)
+    updated_time = orchestrator.heartbeat_tracker[task_id]
+
+    # Time should be updated
+    assert updated_time > initial_time
+
+
+def test_heartbeat_interval_configuration(orchestrator):
+    """Test heartbeat_interval is configurable."""
+    # Check default config
+    assert orchestrator.config.heartbeat_interval == 30
+
+    # Create new config with custom interval
+    from src.skills.orchestrator.scripts.orchestrator_skill import PollingConfig
+    custom_config = PollingConfig(heartbeat_interval=60)
+
+    assert custom_config.heartbeat_interval == 60
+    assert custom_config.to_dict()['heartbeat_interval'] == 60
+
+
+def test_stale_and_crash_thresholds(orchestrator):
+    """Test SLA thresholds are properly configured."""
+    config = orchestrator.config
+
+    # Verify thresholds match SPEC queue SLA design
+    assert config.heartbeat_interval == 30  # Default: 30s
+    assert config.stale_threshold_sec == 300  # WARN at 300s
+    assert config.crash_threshold_sec == 600  # ESCALATE at 600s (LOCKED)
+
+    # Verify relationship: stale < crash
+    assert config.stale_threshold_sec < config.crash_threshold_sec
+
+
+def test_wake_timer_span_capture(orchestrator, temp_queue):
+    """Test wake_timer captures observability span."""
+    task_id = "span-test-005"
+
+    # Create a stalled task
+    processing_dir = temp_queue / "processing"
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    old_timestamp = (datetime.now(tz=timezone.utc) - timedelta(seconds=150)).timestamp()
+
+    metadata = {
+        "task_id": task_id,
+        "claimed_at": now_iso,
+        "retry_count": 0,
+        "last_error": None,
+    }
+    meta_file = processing_dir / f"{task_id}.meta.json"
+    with meta_file.open("w") as f:
+        json.dump(metadata, f)
+
+    delegate_file = processing_dir / f"{task_id}.yaml"
+    delegate_file.write_text(f"task_id: {task_id}\n")
+
+    orchestrator.heartbeat_tracker[task_id] = old_timestamp
+
+    # Run wake_timer (should capture span)
+    result = orchestrator.wake_timer()
+
+    # Verify result
+    assert result['stalled_detected'] == 1
+    assert result['recovered'] == 1

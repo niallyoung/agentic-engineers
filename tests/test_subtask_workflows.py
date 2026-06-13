@@ -759,13 +759,13 @@ class TestHandbackChildrenResultsValidation:
         validator = HandbackValidator()
         handback = {
             "task_id": "parent-task",
-            "status": "complete",
+            "status": "success",
             "quality_score": 88,
             "deliverables": ["output/parent.py"],
             "children_created": ["child-a", "child-b"],
             "children_results": {
-                "child-a": {"status": "complete", "output": {"data": 1}, "quality": 90},
-                "child-b": {"status": "complete", "output": {"data": 2}, "quality": 85},
+                "child-a": {"status": "success", "output": {"data": 1}, "quality": 90},
+                "child-b": {"status": "success", "output": {"data": 2}, "quality": 85},
             },
             "children_failed": [],
             "result_aggregation_status": "all_complete",
@@ -778,7 +778,7 @@ class TestHandbackChildrenResultsValidation:
         validator = HandbackValidator()
         handback = {
             "task_id": "bad-task",
-            "status": "complete",
+            "status": "success",
             "quality_score": 80,
             "deliverables": ["f.py"],
             "children_results": "should-be-a-dict",
@@ -792,7 +792,7 @@ class TestHandbackChildrenResultsValidation:
         validator = HandbackValidator()
         handback = {
             "task_id": "missing-status",
-            "status": "complete",
+            "status": "success",
             "quality_score": 80,
             "deliverables": ["f.py"],
             "children_results": {
@@ -815,7 +815,7 @@ class TestResultAggregationStatusEnum:
         validator = HandbackValidator()
         handback = {
             "task_id": "enum-test",
-            "status": "complete",
+            "status": "success",
             "quality_score": 80,
             "deliverables": ["f.py"],
             "result_aggregation_status": status,
@@ -828,7 +828,7 @@ class TestResultAggregationStatusEnum:
         validator = HandbackValidator()
         handback = {
             "task_id": "bad-status",
-            "status": "complete",
+            "status": "success",
             "quality_score": 80,
             "deliverables": ["f.py"],
             "result_aggregation_status": "not_a_valid_status",

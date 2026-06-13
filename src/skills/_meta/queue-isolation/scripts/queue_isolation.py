@@ -218,12 +218,299 @@ def init_queue_structure(
     with meta_path.open("w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
 
+    # Create staleness tracking metadata
+    staleness_path = session_root / "staleness.json"
+    if not staleness_path.exists():
+        staleness_meta = {
+            "session_id": session_id,
+            "harness": harness,
+            "queue_created_at": now_iso,
+            "alert_threshold_sec": 300,  # 5 minutes
+            "escalation_threshold_sec": 600,  # 10 minutes
+            "last_staleness_check": now_iso,
+        }
+        with staleness_path.open("w", encoding="utf-8") as fh:
+            json.dump(staleness_meta, fh, indent=2)
+
     return queue_root
 
 
 # ---------------------------------------------------------------------------
 # QueueIsolation class — high-level interface
 # ---------------------------------------------------------------------------
+
+def record_task_timestamp(
+    task_id: str,
+    queue_root: Path,
+    state: str = "incoming",
+    action: str = "created",
+) -> None:
+    """
+    Record a task timestamp event in a task metadata sidecar file.
+
+    Creates/updates <queue_root>/<state>/<task_id>.timestamps.json with:
+    - 'created_at': When the task was first created (immutable)
+    - 'last_updated': When the task was last modified
+    - 'last_heartbeat': When the task last reported a heartbeat (for staleness detection)
+    - 'claimed_at': When the task was claimed by an agent
+    - 'state_changes': Array of {timestamp, action, state} transitions
+
+    Args:
+        task_id: Task identifier
+        queue_root: Path to the queue root directory
+        state: Queue state (incoming, processing, done, failed)
+        action: Action description (created, claimed, heartbeat, completed, failed, etc.)
+    """
+    state_dir = queue_root / state
+    state_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamps_path = state_dir / f"{task_id}.timestamps.json"
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+
+    if timestamps_path.exists():
+        try:
+            with timestamps_path.open("r", encoding="utf-8") as fh:
+                ts_data = json.load(fh)
+        except json.JSONDecodeError:
+            ts_data = {"created_at": now_iso}
+    else:
+        ts_data = {"created_at": now_iso}
+
+    ts_data["last_updated"] = now_iso
+
+    # Track heartbeat updates for staleness detection
+    if action == "heartbeat":
+        ts_data["last_heartbeat"] = now_iso
+
+    # Track when task was claimed (moved to processing)
+    if action == "claimed" and "claimed_at" not in ts_data:
+        ts_data["claimed_at"] = now_iso
+
+    if "state_changes" not in ts_data:
+        ts_data["state_changes"] = []
+
+    ts_data["state_changes"].append({
+        "timestamp": now_iso,
+        "action": action,
+        "state": state,
+    })
+
+    with timestamps_path.open("w", encoding="utf-8") as fh:
+        json.dump(ts_data, fh, indent=2)
+
+
+def get_task_age_seconds(
+    task_id: str,
+    queue_root: Path,
+    state: str = "incoming",
+) -> Optional[float]:
+    """
+    Get the age (in seconds) of a task since creation.
+
+    Args:
+        task_id: Task identifier
+        queue_root: Path to the queue root directory
+        state: Queue state where task currently resides
+
+    Returns:
+        Age in seconds (as float), or None if timestamps file not found
+    """
+    timestamps_path = queue_root / state / f"{task_id}.timestamps.json"
+
+    if not timestamps_path.exists():
+        return None
+
+    try:
+        with timestamps_path.open("r", encoding="utf-8") as fh:
+            ts_data = json.load(fh)
+    except (json.JSONDecodeError, IOError):
+        return None
+
+    created_at_str = ts_data.get("created_at")
+    if not created_at_str:
+        return None
+
+    try:
+        created_at = datetime.fromisoformat(created_at_str)
+        now = datetime.now(tz=timezone.utc)
+        return (now - created_at).total_seconds()
+    except (ValueError, TypeError):
+        return None
+
+
+def check_task_staleness(
+    task_id: str,
+    queue_root: Path,
+    state: str = "processing",
+    stale_threshold_sec: float = 300.0,
+    escalation_threshold_sec: float = 600.0,
+) -> dict:
+    """
+    Check if a task is stale or requires escalation based on age thresholds.
+
+    Staleness is ADVISORY — it never changes task state, only generates alerts.
+    Uses last_heartbeat if available, otherwise falls back to created_at.
+
+    Args:
+        task_id: Task identifier
+        queue_root: Path to the queue root directory
+        state: Queue state (typically 'processing')
+        stale_threshold_sec: Warn threshold in seconds (default 300s = 5 min)
+        escalation_threshold_sec: Escalation threshold in seconds (default 600s = 10 min)
+
+    Returns:
+        dict with keys:
+        - 'task_id': The task ID
+        - 'age_seconds': Age in seconds (float), or None if not found
+        - 'heartbeat_age_seconds': Age since last_heartbeat (if available)
+        - 'is_stale': bool (True if age > stale_threshold)
+        - 'is_crashed': bool (True if age > escalation_threshold)
+        - 'status': 'ok' | 'stale' | 'crashed' | 'unknown'
+        - 'action': Recommended action ('none', 'warn', 'escalate')
+    """
+    timestamps_path = queue_root / state / f"{task_id}.timestamps.json"
+
+    result = {
+        "task_id": task_id,
+        "age_seconds": None,
+        "heartbeat_age_seconds": None,
+        "is_stale": False,
+        "is_crashed": False,
+        "status": "ok",
+        "action": "none",
+    }
+
+    if not timestamps_path.exists():
+        result["status"] = "unknown"
+        result["action"] = "none"
+        return result
+
+    try:
+        with timestamps_path.open("r", encoding="utf-8") as fh:
+            ts_data = json.load(fh)
+    except (json.JSONDecodeError, IOError):
+        result["status"] = "unknown"
+        result["action"] = "none"
+        return result
+
+    now = datetime.now(tz=timezone.utc)
+
+    # Calculate heartbeat age (if available)
+    heartbeat_str = ts_data.get("last_heartbeat")
+    if heartbeat_str:
+        try:
+            heartbeat = datetime.fromisoformat(heartbeat_str)
+            result["heartbeat_age_seconds"] = (now - heartbeat).total_seconds()
+        except (ValueError, TypeError):
+            pass
+
+    # Calculate creation age (fallback)
+    created_at_str = ts_data.get("created_at")
+    if created_at_str:
+        try:
+            created_at = datetime.fromisoformat(created_at_str)
+            result["age_seconds"] = (now - created_at).total_seconds()
+        except (ValueError, TypeError):
+            pass
+
+    # Use heartbeat age if available, otherwise use creation age
+    age_to_check = result["heartbeat_age_seconds"] or result["age_seconds"]
+
+    if age_to_check is None:
+        result["status"] = "unknown"
+        result["action"] = "none"
+        return result
+
+    # Check escalation threshold first (crash)
+    if age_to_check > escalation_threshold_sec:
+        result["is_crashed"] = True
+        result["status"] = "crashed"
+        result["action"] = "escalate"
+        return result
+
+    # Check stale threshold (warn)
+    if age_to_check > stale_threshold_sec:
+        result["is_stale"] = True
+        result["status"] = "stale"
+        result["action"] = "warn"
+        return result
+
+    return result
+
+
+def scan_queue_for_staleness(
+    queue_root: Path,
+    state: str = "processing",
+    stale_threshold_sec: float = 300.0,
+    escalation_threshold_sec: float = 600.0,
+) -> dict:
+    """
+    Scan a queue state directory for stale and crashed tasks.
+
+    Returns a summary with lists of stale and crashed tasks.
+
+    Args:
+        queue_root: Path to the queue root directory
+        state: Queue state to scan (default 'processing')
+        stale_threshold_sec: Warn threshold in seconds
+        escalation_threshold_sec: Escalation threshold in seconds
+
+    Returns:
+        dict with keys:
+        - 'scanned_at': ISO8601 timestamp of when scan occurred
+        - 'state': The state directory scanned
+        - 'tasks_checked': Total tasks found
+        - 'stale_tasks': List of stale tasks (age > stale_threshold)
+        - 'crashed_tasks': List of crashed tasks (age > escalation_threshold)
+        - 'ok_tasks': List of healthy tasks
+    """
+    state_dir = queue_root / state
+    scanned_at = datetime.now(tz=timezone.utc).isoformat()
+
+    stale_list = []
+    crashed_list = []
+    ok_list = []
+
+    if not state_dir.exists():
+        return {
+            "scanned_at": scanned_at,
+            "state": state,
+            "tasks_checked": 0,
+            "stale_tasks": [],
+            "crashed_tasks": [],
+            "ok_tasks": [],
+        }
+
+    # Find all task timestamps files
+    for ts_file in state_dir.glob("*.timestamps.json"):
+        # Extract task_id from filename
+        task_id = ts_file.stem.replace(".timestamps", "")
+
+        # Check staleness
+        result = check_task_staleness(
+            task_id,
+            queue_root,
+            state,
+            stale_threshold_sec,
+            escalation_threshold_sec,
+        )
+
+        if result["status"] == "crashed":
+            crashed_list.append(result)
+        elif result["status"] == "stale":
+            stale_list.append(result)
+        elif result["status"] == "ok":
+            ok_list.append(result)
+
+    return {
+        "scanned_at": scanned_at,
+        "state": state,
+        "tasks_checked": len(stale_list) + len(crashed_list) + len(ok_list),
+        "stale_tasks": stale_list,
+        "crashed_tasks": crashed_list,
+        "ok_tasks": ok_list,
+    }
+
 
 class QueueIsolation:
     """
@@ -322,6 +609,61 @@ class QueueIsolation:
             )
         with self.metadata_path.open("r", encoding="utf-8") as fh:
             return json.load(fh)
+
+    def check_staleness(
+        self,
+        task_id: str,
+        state: str = "processing",
+        stale_threshold_sec: float = 300.0,
+        escalation_threshold_sec: float = 600.0,
+    ) -> dict:
+        """
+        Check if a task in this session is stale or crashed.
+
+        Wrapper around check_task_staleness() using this instance's queue_path.
+
+        Args:
+            task_id: Task identifier
+            state: Queue state (default 'processing')
+            stale_threshold_sec: Warn threshold in seconds (default 300s)
+            escalation_threshold_sec: Escalation threshold in seconds (default 600s)
+
+        Returns:
+            dict with staleness status, age, and recommended action
+        """
+        return check_task_staleness(
+            task_id,
+            self.queue_path,
+            state,
+            stale_threshold_sec,
+            escalation_threshold_sec,
+        )
+
+    def scan_staleness(
+        self,
+        state: str = "processing",
+        stale_threshold_sec: float = 300.0,
+        escalation_threshold_sec: float = 600.0,
+    ) -> dict:
+        """
+        Scan this session's queue state for stale and crashed tasks.
+
+        Wrapper around scan_queue_for_staleness() using this instance's queue_path.
+
+        Args:
+            state: Queue state to scan (default 'processing')
+            stale_threshold_sec: Warn threshold in seconds
+            escalation_threshold_sec: Escalation threshold in seconds
+
+        Returns:
+            dict with scan results, lists of stale/crashed/ok tasks
+        """
+        return scan_queue_for_staleness(
+            self.queue_path,
+            state,
+            stale_threshold_sec,
+            escalation_threshold_sec,
+        )
 
     def __repr__(self) -> str:
         return (

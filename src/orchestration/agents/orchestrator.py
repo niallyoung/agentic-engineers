@@ -2,7 +2,7 @@
 Orchestrator Agent - Continuous Queue Polling & Task Routing
 
 Implements the canonical ORCHESTRATOR-FIRST EXECUTION MODEL:
-1. Poll ~/.agentic-engineers/{session-id}/{harness}/queue/incoming/ for new DELEGATE blocks
+1. Poll ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/ for new DELEGATE blocks
 2. Route each task to appropriate agent per AGENTS.md
 3. Process HANDBACK results
 4. Move tasks through queue states: incoming → processing → done
@@ -11,7 +11,7 @@ Implements the canonical ORCHESTRATOR-FIRST EXECUTION MODEL:
 This is the ONLY way work flows through agentic-engineers.
 
 CANONICAL QUEUE PATH (all harnesses):
-  ~/.agentic-engineers/{session-id}/{harness}/queue/
+  ~/.agentic-engineers/{harness}/{session-id}/queue/
   - Harnesses: claude, copilot, gpt, local
   - Supported by queue-isolation skill (mandatory)
   - Legacy paths (~/.copilot/queue/, ~/.claude/queue/, artifacts/queue/) NO LONGER SUPPORTED
@@ -48,6 +48,7 @@ from ..monitoring.token_tracker import TokenTracker
 from ..monitoring.orchestrator_cli import OrchestratorCLI
 from ..monitoring.budget_checker import BudgetStatus, BudgetResult
 from ..decorators import SecurityError
+from ..model_config_loader import load_model_config
 
 logger = logging.getLogger(__name__)
 
@@ -544,12 +545,12 @@ class QueueManager:
     def __init__(self, queue_dir: Optional[str] = None, agent_context: Optional[str] = None):
         """
         Initialize QueueManager with mandatory queue-isolation support.
-        
-        CANONICAL PATH (required): ~/.agentic-engineers/{session-id}/{harness}/queue/
-        
+
+        CANONICAL PATH (required): ~/.agentic-engineers/{harness}/{session-id}/queue/
+
         This path is provided and validated by the queue-isolation skill.
         If queue-isolation is unavailable, initialization will fail with a clear error message.
-        
+
         Legacy path fallback is NO LONGER SUPPORTED.
         All harnesses (Claude, Copilot, GPT, Local) use the same centralized path structure.
         """
@@ -1111,6 +1112,10 @@ class OrchestratorAgent(Agent):
             no_color=_no_color,
             on_budget_exceeded=self._handle_budget_exceeded,
         )
+
+        # Initialize model configuration loader for runtime model selection
+        self.model_config = load_model_config()
+        logger.info(f"Model config loaded: default={self.model_config.global_default}, agents={len(self.model_config.agents)}, tasks={len(self.model_config.tasks)}")
     
     # ========================================================================
     # Properties exposing queue_manager attributes

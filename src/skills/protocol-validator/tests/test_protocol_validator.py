@@ -18,7 +18,16 @@ import yaml
 # Import validator
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from protocol_validator import ProtocolValidator, ValidationResult
+from protocol_validator import (
+    ProtocolValidator,
+    ValidationResult,
+    VALID_STATUSES,
+    LEGACY_STATUS_ALIASES,
+    EnumDriftFinding,
+    EnumDriftReport,
+    scan_status_enum_drift,
+    _extract_status_set,
+)
 
 
 @pytest.fixture
@@ -543,6 +552,118 @@ class TestProtocolValidator:
         
         validator = ProtocolValidator(spec_path=str(spec_file))
         assert validator.version == '1.1'
+
+
+class TestEnumDriftDetection:
+    """Tests for scan_status_enum_drift — HANDBACK status enum cross-file consistency."""
+
+    def test_canonical_valid_statuses_constants(self):
+        """VALID_STATUSES must include the five canonical values and nothing else."""
+        assert VALID_STATUSES == {"success", "failure", "partial", "blocked", "escalate"}
+
+    def test_legacy_aliases_map_to_canonical(self):
+        """Legacy aliases must all map to values in VALID_STATUSES."""
+        for legacy, canonical in LEGACY_STATUS_ALIASES.items():
+            assert canonical in VALID_STATUSES, (
+                f"Legacy alias '{legacy}' maps to '{canonical}' which is not in VALID_STATUSES"
+            )
+
+    def test_enum_drift_report_dataclass(self):
+        """EnumDriftReport.has_drift reflects presence of findings."""
+        report_clean = EnumDriftReport(
+            canonical=VALID_STATUSES,
+            legacy_aliases=set(LEGACY_STATUS_ALIASES.keys()),
+            findings=[],
+        )
+        assert report_clean.has_drift is False
+
+        finding = EnumDriftFinding(
+            path="some/file.py",
+            name="MY_STATUSES",
+            found={"complete", "failed"},
+            expected=VALID_STATUSES,
+            missing={"success", "failure", "partial", "blocked", "escalate"},
+            extra=set(),
+        )
+        report_dirty = EnumDriftReport(
+            canonical=VALID_STATUSES,
+            legacy_aliases=set(LEGACY_STATUS_ALIASES.keys()),
+            findings=[finding],
+        )
+        assert report_dirty.has_drift is True
+
+    def test_enum_drift_report_to_text_clean(self):
+        """Clean report renders without listing drift locations."""
+        report = EnumDriftReport(
+            canonical=VALID_STATUSES,
+            legacy_aliases=set(),
+            findings=[],
+        )
+        text = report.to_text()
+        assert "No" in text or "drift" in text.lower()
+
+    def test_enum_drift_report_to_text_dirty(self):
+        """Dirty report names the drifted file and missing values."""
+        finding = EnumDriftFinding(
+            path="src/orchestration/agents/quality_validator.py",
+            name="VALID_HANDBACK_STATUSES",
+            found={"complete", "failed", "partial", "blocked", "escalate"},
+            expected=VALID_STATUSES,
+            missing={"success", "failure"},
+            extra=set(),
+        )
+        report = EnumDriftReport(
+            canonical=VALID_STATUSES,
+            legacy_aliases=set(),
+            findings=[finding],
+        )
+        text = report.to_text()
+        assert "quality_validator" in text
+        assert "success" in text or "failure" in text
+
+    def test_extract_status_set_simple_set_literal(self):
+        """_extract_status_set parses a Python set literal."""
+        source = 'VALID_STATUSES = {"success", "failure", "partial", "blocked", "escalate"}\n'
+        result = _extract_status_set(source, "VALID_STATUSES")
+        assert result == {"success", "failure", "partial", "blocked", "escalate"}
+
+    def test_extract_status_set_list_literal(self):
+        """_extract_status_set parses a Python list literal."""
+        source = 'VALID_STATUSES = ["success", "failure", "partial"]\n'
+        result = _extract_status_set(source, "VALID_STATUSES")
+        assert result == {"success", "failure", "partial"}
+
+    def test_extract_status_set_returns_none_when_not_found(self):
+        """_extract_status_set returns None when variable is absent."""
+        source = '# No statuses here\nFOO = 42\n'
+        result = _extract_status_set(source, "MISSING_VAR")
+        assert result is None
+
+    def test_scan_status_enum_drift_live_repo(self):
+        """Scan the actual repo; report known-drifted files as findings.
+
+        This test documents the actual drift state found on 2026-06-13.
+        It will FAIL if the drift is fixed (which is the desired outcome —
+        update the assertion to assert not report.has_drift after fixing).
+        """
+        report = scan_status_enum_drift()
+        # Known drifted files as of 2026-06-13 session audit:
+        #   quality_validator.py — uses "complete"/"failed" instead of "success"/"failure"
+        #   invoke_agent.py     — uses "complete" instead of "success"/"failure"
+        #   protocol/validation.py — uses "complete"/"failed" instead of canonical
+        drifted_paths = {f.path for f in report.findings}
+        # At minimum, one of the known-bad files should be detected
+        known_bad = {
+            "src/orchestration/agents/quality_validator.py",
+            "src/orchestration/agents/invoke_agent.py",
+            "src/orchestration/protocol/validation.py",
+        }
+        # This assertion documents the gap; flip to `assert not report.has_drift`
+        # once the drift is remediated.
+        assert drifted_paths & known_bad, (
+            "Expected to detect drift in at least one known-bad file, but none found. "
+            "Either the drift was fixed (update this test) or detection is broken."
+        )
 
 
 if __name__ == '__main__':

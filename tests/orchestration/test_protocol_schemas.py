@@ -91,14 +91,14 @@ class TestExpandedHandback:
         """Test creating a HANDBACK."""
         handback = ExpandedHandback(
             task_id="2026-05-17-test-task",
-            status="complete",
+            status="success",
             deliverables=["file1.py", "file2.py"],
             tests={"test_1": True, "test_2": True},
             quality_score=92,
         )
-        
+
         assert handback.task_id == "2026-05-17-test-task"
-        assert handback.status == "complete"
+        assert handback.status == "success"
         assert handback.quality_score == 92
     
     def test_handback_validation(self):
@@ -140,7 +140,7 @@ class TestExpandedHandback:
         """Test HANDBACK serialization."""
         handback = ExpandedHandback(
             task_id="2026-05-17-test-task",
-            status="complete",
+            status="success",
             deliverables=["file1.py"],
             tests={"test_1": True},
             quality_score=90,
@@ -148,7 +148,7 @@ class TestExpandedHandback:
         
         data = handback.to_dict()
         assert data["task_id"] == "2026-05-17-test-task"
-        assert data["status"] == "complete"
+        assert data["status"] == "success"
         assert len(data) >= 25  # Should have 25+ fields
 
 
@@ -358,11 +358,11 @@ class TestValidation:
         """Test validating a valid HANDBACK."""
         data = {
             "task_id": "2026-05-17-test-task",
-            "status": "complete",
+            "status": "success",
             "deliverables": ["file1.py"],
             "tests": {"test_1": True},
         }
-        
+
         errors = validate_handback(data)
         assert len(errors) == 0
     

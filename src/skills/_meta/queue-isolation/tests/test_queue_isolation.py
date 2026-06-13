@@ -16,6 +16,7 @@ import json
 import os
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -25,10 +26,14 @@ import pytest
 # conftest.py adds <skill>/scripts/ to sys.path, so we import directly.
 from queue_isolation import (
     QueueIsolation,
+    check_task_staleness,
     detect_harness,
     get_session_id,
     get_queue_path,
+    get_task_age_seconds,
     init_queue_structure,
+    record_task_timestamp,
+    scan_queue_for_staleness,
 )
 
 
@@ -333,3 +338,277 @@ class TestQueueIsolationClass:
         assert (qi.queue_path / "done").is_dir()
         meta = base / "local" / "sess-init" / "metadata.json"
         assert meta.exists()
+
+
+# ===========================================================================
+# 7. Staleness Detection and Monitoring
+# ===========================================================================
+
+class TestTaskTimestampRecording:
+    """Tests for task timestamp recording."""
+
+    def test_record_task_timestamp_creates_file(self, tmp_path):
+        """record_task_timestamp() creates a timestamps.json sidecar file."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-ts", "local", base_dir=base)
+
+        record_task_timestamp("task-001", queue_root, state="processing", action="claimed")
+
+        ts_file = queue_root / "processing" / "task-001.timestamps.json"
+        assert ts_file.exists()
+
+        with ts_file.open("r") as f:
+            ts_data = json.load(f)
+
+        assert "created_at" in ts_data
+        assert "last_updated" in ts_data
+        assert "state_changes" in ts_data
+        assert len(ts_data["state_changes"]) > 0
+
+    def test_record_task_timestamp_appends_state_changes(self, tmp_path):
+        """Multiple calls append to state_changes array."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-ts2", "local", base_dir=base)
+
+        record_task_timestamp("task-002", queue_root, state="processing", action="claimed")
+        record_task_timestamp("task-002", queue_root, state="processing", action="heartbeat")
+
+        ts_file = queue_root / "processing" / "task-002.timestamps.json"
+        with ts_file.open("r") as f:
+            ts_data = json.load(f)
+
+        assert len(ts_data["state_changes"]) == 2
+        assert ts_data["state_changes"][0]["action"] == "claimed"
+        assert ts_data["state_changes"][1]["action"] == "heartbeat"
+
+    def test_get_task_age_seconds_returns_age(self, tmp_path):
+        """get_task_age_seconds() calculates age correctly."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-age", "local", base_dir=base)
+
+        record_task_timestamp("task-003", queue_root, state="processing", action="claimed")
+
+        # Mock the current time to simulate aging
+        age = get_task_age_seconds("task-003", queue_root, state="processing")
+        assert age is not None
+        assert age >= 0  # Should be close to 0 since we just created it
+
+    def test_get_task_age_seconds_returns_none_if_missing(self, tmp_path):
+        """get_task_age_seconds() returns None if timestamps file doesn't exist."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-age2", "local", base_dir=base)
+
+        age = get_task_age_seconds("nonexistent-task", queue_root, state="processing")
+        assert age is None
+
+
+class TestStalenessDetection:
+    """Tests for staleness detection logic."""
+
+    def test_check_task_staleness_ok_status_for_new_task(self, tmp_path):
+        """New task (age < 300s) has status 'ok'."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-stale1", "local", base_dir=base)
+
+        record_task_timestamp("task-new", queue_root, state="processing", action="claimed")
+
+        result = check_task_staleness(
+            "task-new",
+            queue_root,
+            state="processing",
+            stale_threshold_sec=300.0,
+            escalation_threshold_sec=600.0,
+        )
+
+        assert result["task_id"] == "task-new"
+        assert result["status"] == "ok"
+        assert result["action"] == "none"
+        assert result["is_stale"] is False
+        assert result["is_crashed"] is False
+
+    def test_check_task_staleness_unknown_for_missing_task(self, tmp_path):
+        """Missing task has status 'unknown'."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-stale2", "local", base_dir=base)
+
+        result = check_task_staleness(
+            "nonexistent",
+            queue_root,
+            state="processing",
+            stale_threshold_sec=300.0,
+            escalation_threshold_sec=600.0,
+        )
+
+        assert result["status"] == "unknown"
+        assert result["action"] == "none"
+
+    def test_check_task_staleness_manual_aging_for_stale_status(self, tmp_path):
+        """Manually aged task (age > 300s) has status 'stale'."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-stale3", "local", base_dir=base)
+
+        # Manually create a stale timestamp file (300+ seconds old)
+        ts_file = queue_root / "processing" / "task-stale.timestamps.json"
+        stale_time = datetime.now(tz=timezone.utc).isoformat()
+
+        # Create an old timestamp (350 seconds in the past)
+        import time as time_module
+        old_time_obj = datetime.now(tz=timezone.utc)
+        old_timestamp = (old_time_obj.timestamp() - 350)
+        old_iso = datetime.fromtimestamp(old_timestamp, tz=timezone.utc).isoformat()
+
+        ts_data = {
+            "created_at": old_iso,
+            "last_updated": stale_time,
+            "state_changes": [{"timestamp": stale_time, "action": "claimed", "state": "processing"}],
+        }
+
+        ts_file.parent.mkdir(parents=True, exist_ok=True)
+        with ts_file.open("w") as f:
+            json.dump(ts_data, f)
+
+        result = check_task_staleness(
+            "task-stale",
+            queue_root,
+            state="processing",
+            stale_threshold_sec=300.0,
+            escalation_threshold_sec=600.0,
+        )
+
+        assert result["status"] == "stale"
+        assert result["action"] == "warn"
+        assert result["is_stale"] is True
+        assert result["is_crashed"] is False
+        assert result["age_seconds"] > 300
+
+    def test_check_task_staleness_escalation_for_crashed_status(self, tmp_path):
+        """Very old task (age > 600s) has status 'crashed'."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-stale4", "local", base_dir=base)
+
+        # Create a crashed timestamp file (600+ seconds old)
+        ts_file = queue_root / "processing" / "task-crashed.timestamps.json"
+        now = datetime.now(tz=timezone.utc)
+
+        # Create a very old timestamp (650 seconds in the past)
+        old_timestamp = (now.timestamp() - 650)
+        old_iso = datetime.fromtimestamp(old_timestamp, tz=timezone.utc).isoformat()
+
+        ts_data = {
+            "created_at": old_iso,
+            "last_updated": now.isoformat(),
+            "state_changes": [{"timestamp": now.isoformat(), "action": "claimed", "state": "processing"}],
+        }
+
+        ts_file.parent.mkdir(parents=True, exist_ok=True)
+        with ts_file.open("w") as f:
+            json.dump(ts_data, f)
+
+        result = check_task_staleness(
+            "task-crashed",
+            queue_root,
+            state="processing",
+            stale_threshold_sec=300.0,
+            escalation_threshold_sec=600.0,
+        )
+
+        assert result["status"] == "crashed"
+        assert result["action"] == "escalate"
+        assert result["is_crashed"] is True
+        assert result["age_seconds"] > 600
+
+
+class TestStalenessScanning:
+    """Tests for queue-wide staleness scanning."""
+
+    def test_scan_queue_for_staleness_empty_queue(self, tmp_path):
+        """scan_queue_for_staleness() handles empty queue correctly."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-scan1", "local", base_dir=base)
+
+        result = scan_queue_for_staleness(
+            queue_root,
+            state="processing",
+            stale_threshold_sec=300.0,
+            escalation_threshold_sec=600.0,
+        )
+
+        assert result["state"] == "processing"
+        assert result["tasks_checked"] == 0
+        assert result["stale_tasks"] == []
+        assert result["crashed_tasks"] == []
+        assert result["ok_tasks"] == []
+        assert "scanned_at" in result
+
+    def test_scan_queue_for_staleness_detects_all_states(self, tmp_path):
+        """scan_queue_for_staleness() correctly categorizes tasks."""
+        base = _fresh_base(tmp_path)
+        queue_root = init_queue_structure("sess-scan2", "local", base_dir=base)
+
+        # Create an OK task (new)
+        record_task_timestamp("task-ok", queue_root, state="processing", action="claimed")
+
+        # Create a stale task (350s old)
+        now = datetime.now(tz=timezone.utc)
+        stale_old = datetime.fromtimestamp(now.timestamp() - 350, tz=timezone.utc).isoformat()
+        ts_file_stale = queue_root / "processing" / "task-stale.timestamps.json"
+        ts_file_stale.parent.mkdir(parents=True, exist_ok=True)
+        with ts_file_stale.open("w") as f:
+            json.dump({
+                "created_at": stale_old,
+                "last_updated": now.isoformat(),
+                "state_changes": []
+            }, f)
+
+        # Create a crashed task (650s old)
+        crashed_old = datetime.fromtimestamp(now.timestamp() - 650, tz=timezone.utc).isoformat()
+        ts_file_crashed = queue_root / "processing" / "task-crashed.timestamps.json"
+        with ts_file_crashed.open("w") as f:
+            json.dump({
+                "created_at": crashed_old,
+                "last_updated": now.isoformat(),
+                "state_changes": []
+            }, f)
+
+        result = scan_queue_for_staleness(
+            queue_root,
+            state="processing",
+            stale_threshold_sec=300.0,
+            escalation_threshold_sec=600.0,
+        )
+
+        assert result["tasks_checked"] == 3
+        assert len(result["ok_tasks"]) == 1
+        assert len(result["stale_tasks"]) == 1
+        assert len(result["crashed_tasks"]) == 1
+
+
+class TestQueueIsolationStalenessIntegration:
+    """Tests for staleness methods on QueueIsolation class."""
+
+    def test_qi_check_staleness_delegates_correctly(self, tmp_path):
+        """QueueIsolation.check_staleness() delegates to check_task_staleness()."""
+        base = _fresh_base(tmp_path)
+        qi = QueueIsolation(session_id="sess-qi1", harness="local", base_dir=base)
+        qi.initialise()
+
+        record_task_timestamp("task-qi", qi.queue_path, state="processing", action="claimed")
+
+        result = qi.check_staleness("task-qi", state="processing")
+
+        assert result["task_id"] == "task-qi"
+        assert result["status"] == "ok"
+
+    def test_qi_scan_staleness_delegates_correctly(self, tmp_path):
+        """QueueIsolation.scan_staleness() delegates to scan_queue_for_staleness()."""
+        base = _fresh_base(tmp_path)
+        qi = QueueIsolation(session_id="sess-qi2", harness="local", base_dir=base)
+        qi.initialise()
+
+        record_task_timestamp("task-qi2", qi.queue_path, state="processing", action="claimed")
+
+        result = qi.scan_staleness(state="processing")
+
+        assert result["state"] == "processing"
+        assert result["tasks_checked"] == 1
+        assert len(result["ok_tasks"]) == 1

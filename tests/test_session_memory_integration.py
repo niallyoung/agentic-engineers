@@ -134,7 +134,7 @@ class TestSessionMemoryAggregator:
             "handoff_type": "HANDBACK",
             "task_id": "test-task-002",
             "timestamp": datetime.utcnow().isoformat(),
-            "status": "complete",
+            "status": "success",
             "quality_score": 95,
             "tokens": {"used": 1000},
             "deliverables": ["code", "tests"],

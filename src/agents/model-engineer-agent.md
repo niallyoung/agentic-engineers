@@ -92,7 +92,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
      reasoning: reasoning
    }
    
-   APPEND to ~/.agentic-engineers/{session-id}/{harness}/feedback/model-recommendations.jsonl
+   APPEND to ~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl
 
 6. WRITE HANDBACK (for orchestrator):
    HANDBACK = {
@@ -119,7 +119,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
      confidence += 0.1 if PASS, confidence -= 0.2 if FAIL
      Re-store updated recommendation
 
-8. WRITE SPAN to ~/.agentic-engineers/{session-id}/{harness}/SPAN-{timestamp}-agent-model-engineer.yaml
+8. WRITE SPAN to ~/.agentic-engineers/{harness}/{session-id}/SPAN-{timestamp}-agent-model-engineer.yaml
 ```
 
 ## Example DELEGATE Block
@@ -145,7 +145,7 @@ plan:
   - "Apply thresholds: <0.5 → suggest downgrade, 0.5-0.8 → keep, >0.8 → consider upgrade"
   - "Assess decision quality (PROCEED = 1.0, ESCALATE = 0.85 baseline)"
   - "Build recommendation struct with model, confidence, reasoning per agent"
-  - "Append to ~/.agentic-engineers/{session-id}/{harness}/feedback/model-recommendations.jsonl"
+  - "Append to ~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl"
 success_criteria:
   - Efficiency ratio calculated for all 5 agents
   - Recommendation produced for each agent with confidence >= 0.70

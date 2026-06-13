@@ -626,3 +626,25 @@ Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merg
   and archive the original to done/ with audit metadata (the old non-canonical escalation/
   directory was removed from orchestrator_skill.py on 2026-06-13). Update SKILL.md
   handle_handback + Integration Points sections to match.
+
+---
+
+## Next: Skill Improvements & Self-Improvement Architecture (2026-06-13)
+
+**Ref:** PLAN_skill-improvements.md (repo root)
+
+Three DELEGATEs queued for next session execution via Orchestrator:
+
+- [ ] **DELEGATE-2026-06-13-001** — Skill Audit & Enhancement (lead-engineer)
+  - Enhance doc-quality-monitor, protocol-validator
+  - Propose session-analyzer meta-skill
+  
+- [ ] **DELEGATE-2026-06-13-002** — Model Adaptability Config Design (principal-engineer)
+  - Design runtime model-selection system
+  - Create model-config.yaml schema
+  
+- [ ] **DELEGATE-2026-06-13-003** — Meta-Skill Session Analysis (model-engineer)
+  - Design skill to read transcripts, flag automation candidates
+  - Output to ~/.agentic-engineers/sessions/{id}/analysis.yaml
+
+**Principle:** All work via DELEGATE. Never manual file writes to queue. Centralize data in ~/.agentic-engineers/ (not harness dirs).

@@ -42,9 +42,207 @@ VALID_AGENTS = {
     'principal-engineer', 'security-engineer', 'quality-engineer', 'model-engineer'
 }
 
+# CANONICAL HANDBACK status enum — single source of truth.
+# All other files in the repo that define their own status sets should
+# match this exactly (or be registered as deliberate legacy aliases).
 VALID_STATUSES = {'success', 'failure', 'partial', 'blocked', 'escalate'}
 
+# Legacy aliases accepted during transition (map legacy -> canonical).
+# Files that accept *only* these without the canonical equivalents are drifted.
+LEGACY_STATUS_ALIASES = {'complete': 'success', 'failed': 'failure', 'escalated': 'escalate'}
+
 VALID_EFFORTS = {'low', 'medium', 'high'}
+
+# ---------------------------------------------------------------------------
+# Enum drift detection
+# ---------------------------------------------------------------------------
+
+# Registry of known status-enum definitions across the codebase.
+# Each entry: (module_path, set_name, status_set, is_deliberate_superset)
+# is_deliberate_superset=True means the set intentionally includes legacy
+# aliases for back-compat and is not considered drifted.
+_STATUS_REGISTRY: List[Dict[str, Any]] = [
+    {
+        "path": "src/skills/protocol-validator/scripts/protocol_validator.py",
+        "name": "VALID_STATUSES",
+        "expected": VALID_STATUSES,
+        "allows_legacy": False,
+    },
+    {
+        "path": "src/skills/queue-management/scripts/queue_ops.py",
+        "name": "VALID_STATUSES",
+        "expected": VALID_STATUSES,
+        "allows_legacy": False,
+    },
+    {
+        "path": "src/skills/queue-management/scripts/validators.py",
+        "name": "CANONICAL_HANDBACK_STATUSES",
+        "expected": VALID_STATUSES,
+        "allows_legacy": True,  # deliberately adds legacy aliases
+    },
+    {
+        "path": "src/orchestration/protocol/validation.py",
+        "name": "valid_statuses (inline list)",
+        "expected": VALID_STATUSES,
+        "allows_legacy": False,
+    },
+    {
+        "path": "src/orchestration/agents/quality_validator.py",
+        "name": "VALID_HANDBACK_STATUSES",
+        "expected": VALID_STATUSES,
+        "allows_legacy": False,
+    },
+    {
+        "path": "src/orchestration/agents/invoke_agent.py",
+        "name": "VALID_HANDBACK_STATUSES",
+        "expected": VALID_STATUSES,
+        "allows_legacy": False,
+    },
+]
+
+
+@dataclass
+class EnumDriftFinding:
+    """A single enum drift finding."""
+    path: str
+    name: str
+    found: set
+    expected: set
+    missing: set   # in expected but not in found (canonical values absent)
+    extra: set     # in found but not in expected or legacy aliases
+
+
+@dataclass
+class EnumDriftReport:
+    """Result of scanning the codebase for HANDBACK status enum drift."""
+    canonical: set
+    legacy_aliases: set
+    findings: List[EnumDriftFinding]
+
+    @property
+    def has_drift(self) -> bool:
+        return bool(self.findings)
+
+    def to_text(self) -> str:
+        if not self.has_drift:
+            return "No HANDBACK status enum drift detected."
+        lines = [f"HANDBACK status enum drift detected ({len(self.findings)} location(s)):"]
+        for f in self.findings:
+            lines.append(f"  [{f.path}] {f.name}")
+            if f.missing:
+                lines.append(f"    MISSING canonical: {sorted(f.missing)}")
+            if f.extra:
+                lines.append(f"    EXTRA (non-canonical, non-legacy): {sorted(f.extra)}")
+        return "\n".join(lines)
+
+
+def scan_status_enum_drift(repo_root: Optional[Path] = None) -> EnumDriftReport:
+    """Scan Python source files for HANDBACK status enum drift.
+
+    Reads each registered file, extracts its status set by grepping for the
+    known variable name, and compares against VALID_STATUSES. Files that
+    intentionally include legacy aliases (``allows_legacy=True``) are only
+    flagged if they are missing canonical values.
+
+    Returns an :class:`EnumDriftReport` listing all drifted locations.
+    """
+    if repo_root is None:
+        repo_root = _repo_root()
+
+    findings: List[EnumDriftFinding] = []
+
+    for entry in _STATUS_REGISTRY:
+        full_path = repo_root / entry["path"]
+        if not full_path.exists():
+            logger.warning("Status registry entry not found on disk: %s", full_path)
+            continue
+
+        source = full_path.read_text(encoding="utf-8", errors="replace")
+        found_statuses = _extract_status_set(source, entry["name"])
+
+        if found_statuses is None:
+            # Could not parse — skip rather than false-positive
+            logger.debug("Could not extract status set from %s (%s)", entry["path"], entry["name"])
+            continue
+
+        canonical = VALID_STATUSES
+        all_allowed = canonical | set(LEGACY_STATUS_ALIASES.keys()) if entry["allows_legacy"] else canonical
+
+        missing = canonical - found_statuses
+        extra = found_statuses - all_allowed
+
+        if missing or extra:
+            findings.append(EnumDriftFinding(
+                path=entry["path"],
+                name=entry["name"],
+                found=found_statuses,
+                expected=canonical,
+                missing=missing,
+                extra=extra,
+            ))
+
+    return EnumDriftReport(
+        canonical=VALID_STATUSES,
+        legacy_aliases=set(LEGACY_STATUS_ALIASES.keys()),
+        findings=findings,
+    )
+
+
+def _extract_status_set(source: str, var_name: str) -> Optional[set]:
+    """Extract a Python set/list literal assigned to ``var_name`` from source text.
+
+    Handles common patterns on a *single logical line*:
+      VAR = {"a", "b", ...}
+      VAR = ["a", "b", ...]
+      VAR = {"a", "b"} | {"c"}
+
+    Strategy: find lines containing ``var_name =`` or ``var_name:`` and then
+    extract balanced bracket content from that line (plus continuation if the
+    bracket is not closed on the same line). This avoids greedy DOTALL matches
+    that pull in unrelated code.
+
+    Returns the set of string values, or None if the variable cannot be found.
+    """
+    var_key = var_name.split(' ')[0]
+    # Find the line containing the assignment
+    line_pattern = re.compile(
+        r'^[ \t]*' + re.escape(var_key) + r'\s*(?:=|:)',
+        re.MULTILINE,
+    )
+    m = line_pattern.search(source)
+    if not m:
+        return None
+
+    # Extract from the assignment position; collect until the bracket closes
+    start = m.start()
+    chunk = source[start:start + 2000]  # cap at 2 KB to avoid runaway
+
+    # Find the opening bracket
+    bracket_m = re.search(r'[\[\{]', chunk)
+    if not bracket_m:
+        return None
+
+    opener = bracket_m.group(0)
+    closer = ']' if opener == '[' else '}'
+    depth = 0
+    end_pos = 0
+    for i, ch in enumerate(chunk[bracket_m.start():], start=bracket_m.start()):
+        if ch == opener:
+            depth += 1
+        elif ch == closer:
+            depth -= 1
+            if depth == 0:
+                end_pos = i + 1
+                break
+
+    if end_pos == 0:
+        # Unclosed bracket — take the whole 2KB chunk
+        end_pos = len(chunk)
+
+    bracket_content = chunk[bracket_m.start():end_pos]
+    # Extract only short lowercase-underscore strings (status tokens are <=15 chars)
+    string_values = re.findall(r'["\']([a-z_]{1,15})["\']', bracket_content)
+    return set(string_values) if string_values else None
 
 # task_id: kebab-case, 3-50 chars total
 TASK_ID_PATTERN = re.compile(r'^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$')
@@ -56,6 +254,103 @@ TASK_ID_PATTERN = re.compile(r'^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$')
 
 def _count_words(text: str) -> int:
     return len(text.split())
+
+
+# ---------------------------------------------------------------------------
+# Protocol-divergence detection
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ProtocolDivergence:
+    """A single protocol-divergence finding."""
+    location: str
+    description: str
+    severity: str  # error | warning
+
+
+@dataclass
+class ProtocolDivergenceReport:
+    """Result of scanning for protocol-divergence issues."""
+    findings: List[ProtocolDivergence]
+
+    @property
+    def has_issues(self) -> bool:
+        return bool(self.findings)
+
+    def to_text(self) -> str:
+        if not self.has_issues:
+            return "No protocol divergence detected."
+        lines = [f"Protocol divergence detected ({len(self.findings)} issue(s)):"]
+        for f in self.findings:
+            lines.append(f"  [{f.severity.upper()}] {f.location}: {f.description}")
+        return "\n".join(lines)
+
+
+def scan_protocol_divergence(repo_root: Optional[Path] = None) -> ProtocolDivergenceReport:
+    """Scan codebase for protocol-divergence issues.
+
+    Detects multiple independent implementations of escalation/validation logic
+    that should be unified. For example:
+    - Multiple separate escalation handlers when one central handler should be used
+    - Custom HANDBACK validators that duplicate the canonical protocol-validator
+    - Conflicting queue-state enums across different modules
+
+    Returns a :class:`ProtocolDivergenceReport` listing all divergence issues.
+    """
+    if repo_root is None:
+        repo_root = _repo_root()
+
+    findings: List[ProtocolDivergence] = []
+
+    # Check 1: Look for custom escalation handlers (should use orchestrator polling)
+    escalation_patterns = [
+        (r"def.*escalate.*\(", "Custom escalation handler (should use orchestrator polling loop)"),
+        (r"def.*handle_escalation.*\(", "Custom escalation handler (should use orchestrator)"),
+        (r"class.*EscalationHandler", "Custom escalation handler class (should use orchestrator)"),
+    ]
+
+    orchestrator_paths = [
+        repo_root / "src/orchestration",
+        repo_root / "src/agents",
+    ]
+
+    for search_dir in orchestrator_paths:
+        if not search_dir.exists():
+            continue
+        for py_file in search_dir.rglob("*.py"):
+            if "test" in str(py_file):
+                continue
+            source = py_file.read_text(encoding="utf-8", errors="replace")
+            for pattern, desc in escalation_patterns:
+                if re.search(pattern, source):
+                    findings.append(ProtocolDivergence(
+                        location=str(py_file.relative_to(repo_root)),
+                        description=desc,
+                        severity="warning",
+                    ))
+
+    # Check 2: Look for custom HANDBACK validators (should use protocol-validator skill)
+    handback_validator_patterns = [
+        (r"def.*validate.*handback", "Custom HANDBACK validator (should use protocol-validator skill)"),
+        (r"class.*HandbackValidator", "Custom HANDBACK validator class (should use protocol-validator)"),
+    ]
+
+    for search_dir in orchestrator_paths:
+        if not search_dir.exists():
+            continue
+        for py_file in search_dir.rglob("*.py"):
+            if "test" in str(py_file) or "protocol_validator" in str(py_file):
+                continue
+            source = py_file.read_text(encoding="utf-8", errors="replace")
+            for pattern, desc in handback_validator_patterns:
+                if re.search(pattern, source, re.IGNORECASE):
+                    findings.append(ProtocolDivergence(
+                        location=str(py_file.relative_to(repo_root)),
+                        description=desc,
+                        severity="warning",
+                    ))
+
+    return ProtocolDivergenceReport(findings=findings)
 
 
 def _repo_root() -> Path:
@@ -490,11 +785,46 @@ def main():
         action='store_true',
         help='Output validation result as JSON'
     )
-    
+    parser.add_argument(
+        '--check-enum-drift',
+        action='store_true',
+        dest='check_enum_drift',
+        help='Scan repo for HANDBACK status enum drift across all known locations',
+    )
+    parser.add_argument(
+        '--repo-root',
+        default=None,
+        help='Repo root for enum drift scan (default: auto-detected)',
+    )
+
     args = parser.parse_args()
-    
+
+    if args.check_enum_drift:
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        report = scan_status_enum_drift(repo_root=repo_root)
+        if args.json:
+            import json as _json
+            print(_json.dumps({
+                "has_drift": report.has_drift,
+                "canonical": sorted(report.canonical),
+                "legacy_aliases": sorted(report.legacy_aliases),
+                "findings": [
+                    {
+                        "path": f.path,
+                        "name": f.name,
+                        "found": sorted(f.found),
+                        "missing": sorted(f.missing),
+                        "extra": sorted(f.extra),
+                    }
+                    for f in report.findings
+                ],
+            }, indent=2))
+        else:
+            print(report.to_text())
+        return 1 if report.has_drift else 0
+
     if not args.delegate and not args.handback:
-        parser.error("Must specify either --delegate or --handback")
+        parser.error("Must specify --delegate, --handback, or --check-enum-drift")
     
     # Initialize validator
     try:

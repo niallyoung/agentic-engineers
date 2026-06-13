@@ -330,7 +330,7 @@ class TestQueueStateTransitions:
             task_id="test-task-001",
             from_state="processing",
             to_state="done",
-            metadata={"decision": "PROCEED", "status": "complete"}
+            metadata={"decision": "PROCEED", "status": "success"}
         )
         
         # Verify
@@ -437,7 +437,7 @@ class TestQueueStateTransitions:
         
         # Execute with metadata
         metadata = {
-            "status": "complete",
+            "status": "success",
             "decision": "PROCEED",
             "tokens_used": 2500
         }
@@ -450,7 +450,7 @@ class TestQueueStateTransitions:
         
         # Verify metadata in processing state
         processed_task = queue_manager.read_task("test-task-001.yaml", "processing")
-        assert processed_task["status"] == "complete"
+        assert processed_task["status"] == "success"
         assert processed_task["decision"] == "PROCEED"
         assert processed_task["tokens_used"] == 2500
     
@@ -575,7 +575,7 @@ class TestQueueStateTransitions:
         # Prepare HANDBACK metadata
         handback_metadata = {
             "decision": "PROCEED",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 1000,
             "tokens_out": 500,
             "duration_minutes": 5.5,

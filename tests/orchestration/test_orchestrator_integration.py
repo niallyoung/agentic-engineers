@@ -111,18 +111,18 @@ class TestExpandedHandbackHandler:
         """Test creating a minimal HANDBACK."""
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-test-task",
-            status="complete",
+            status="success",
         )
         
         assert handback.task_id == "2026-05-20-test-task"
-        assert handback.status == "complete"
+        assert handback.status == "success"
         assert handback.quality_score == 0
     
     def test_create_handback_full(self):
         """Test creating a HANDBACK with all metrics."""
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-full-task",
-            status="complete",
+            status="success",
             deliverables=["src/feature.py", "tests/test_feature.py", "docs/FEATURE.md"],
             tests={"unit_tests": True, "integration_tests": True, "e2e_tests": True},
             tokens_in=25000,
@@ -145,7 +145,7 @@ class TestExpandedHandbackHandler:
         )
         
         assert handback.task_id == "2026-05-20-full-task"
-        assert handback.status == "complete"
+        assert handback.status == "success"
         assert handback.quality_score == 92
         assert handback.test_coverage == 0.92
         assert len(handback.deliverables) == 3
@@ -154,7 +154,7 @@ class TestExpandedHandbackHandler:
         """Test HANDBACK serialization to/from dict."""
         original = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-serialize-test",
-            status="complete",
+            status="success",
             quality_score=90,
             test_coverage=0.85,
         )
@@ -188,7 +188,7 @@ class TestQualityEvaluationEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-quality-test",
-            status="complete",
+            status="success",
             quality_score=95,
             test_coverage=0.95,
             regressions_detected=0,
@@ -218,7 +218,7 @@ class TestQualityEvaluationEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-meets-test",
-            status="complete",
+            status="success",
             quality_score=88,
             test_coverage=0.88,
             regressions_detected=0,
@@ -246,7 +246,7 @@ class TestQualityEvaluationEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-below-test",
-            status="complete",
+            status="success",
             quality_score=75,
             test_coverage=0.75,
             regressions_detected=2,
@@ -280,7 +280,7 @@ class TestFeedbackLoopEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-feedback-test",
-            status="complete",
+            status="success",
             quality_score=92,
             cost_actual=0.85,
         )
@@ -308,7 +308,7 @@ class TestFeedbackLoopEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-partial-test",
-            status="complete",
+            status="success",
             quality_score=75,
             cost_actual=1.2,
         )
@@ -335,7 +335,7 @@ class TestFeedbackLoopEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-trend-test",
-            status="complete",
+            status="success",
             quality_score=92,
             cost_actual=0.85,
         )
@@ -386,7 +386,7 @@ class TestOptimizationEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-cost-opt-test",
-            status="complete",
+            status="success",
             quality_score=92,
             cost_actual=3.5,
         )
@@ -414,7 +414,7 @@ class TestOptimizationEngine:
         
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-quality-opt-test",
-            status="complete",
+            status="success",
             quality_score=78,
             test_coverage=0.75,
             cost_actual=0.3,
@@ -515,7 +515,7 @@ class TestEndToEndWorkflow:
         # Step 2: Create HANDBACK
         handback = ExpandedHandbackHandler.create_handback(
             task_id="2026-05-20-e2e-test",
-            status="complete",
+            status="success",
             quality_score=92,
             test_coverage=0.92,
             cost_actual=0.85,

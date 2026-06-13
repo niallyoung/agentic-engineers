@@ -61,7 +61,7 @@ def make_handback(task_id="task-prod-001", tokens_in=1000, tokens_out=500, cost_
     return {
         "handoff_type": "HANDBACK",
         "task_id": task_id,
-        "status": "complete",
+        "status": "success",
         "deliverables": ["Modified: test.py"],
         "tests": [{"command": "pytest", "result": "PASS"}],
         "tokens_in": tokens_in,
@@ -346,7 +346,7 @@ class TestOrchestratorCLIErrorsDontCrashOrchestrator:
         handback = {
             "handoff_type": "HANDBACK",
             "task_id": "task-err-001",
-            "status": "complete",
+            "status": "success",
         }
 
         # Should not raise — uses defaults

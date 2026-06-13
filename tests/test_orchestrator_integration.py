@@ -193,7 +193,7 @@ class TestProcessTaskTokenTracking:
         return {
             "handoff_type": "HANDBACK",
             "task_id": task_id,
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "tokens_in": 1000,
             "tokens_out": 500,
@@ -310,7 +310,7 @@ class TestRunPollCycleTokenMetrics:
         handback = {
             "handoff_type": "HANDBACK",
             "task_id": "task-tok-001",
-            "status": "complete",
+            "status": "success",
             "quality_score": 90,
             "tokens_in": 2000,
             "tokens_out": 800,
@@ -419,7 +419,7 @@ class TestIntegrationEndToEnd:
         handback = {
             "handoff_type": "HANDBACK",
             "task_id": "e2e-task-001",
-            "status": "complete",
+            "status": "success",
             "quality_score": 95,
             "tokens_in": 3000,
             "tokens_out": 1200,
@@ -471,7 +471,7 @@ class TestIntegrationEndToEnd:
             return {
                 "handoff_type": "HANDBACK",
                 "task_id": task_id,
-                "status": "complete",
+                "status": "success",
                 "quality_score": 90,
                 "tokens_in": 1000,
                 "tokens_out": 400,

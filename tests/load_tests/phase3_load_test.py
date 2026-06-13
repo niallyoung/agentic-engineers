@@ -65,7 +65,7 @@ def _make_handback(task_id: str, cost_usd: float = 0.05) -> dict:
     return {
         "handoff_type": "HANDBACK",
         "task_id": task_id,
-        "status": "complete",
+        "status": "success",
         "tokens": {"input": 1000, "output": 500, "cached": 0, "cost_usd": cost_usd},
         "agent": "engineer",
         "model": "claude-sonnet-4.6",
