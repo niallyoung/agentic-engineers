@@ -52,8 +52,8 @@ VALID_ROLES = {
 
 VALID_EFFORT_VALUES = {"low", "medium", "high", "max", "epic"}
 
-# Per handback-schema.yaml: complete | failed | partial | blocked | escalate
-VALID_HANDBACK_STATUSES = {"complete", "failed", "partial", "blocked", "escalate"}
+# Per handback-schema.yaml: success | failure | partial | blocked | escalate
+VALID_HANDBACK_STATUSES = {"success", "failure", "partial", "blocked", "escalate"}
 
 TASK_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9\-]{0,62}[a-z0-9]$")
 
@@ -683,14 +683,14 @@ class QualityValidator:
             deductions += 8
 
         # 3.6 failed without explanation
-        if status == "failed":
+        if status == "failure":
             notes_text = str(notes).strip()
             if len(notes_text.split()) < 5:
                 findings.append(ValidationFinding(
                     layer=3, check="failed_without_reason",
                     severity=Severity.ERROR,
                     message=(
-                        "HANDBACK status is 'failed' but 'notes' contains no explanation. "
+                        "HANDBACK status is 'failure' but 'notes' contains no explanation. "
                         "Describe what went wrong so the task can be retried."
                     ),
                     field="notes", score_deduction=15,

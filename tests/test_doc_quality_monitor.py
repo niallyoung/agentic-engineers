@@ -412,3 +412,105 @@ class TestEndToEnd:
         report = mon.run()
         assert report.total_docs == 0
         assert report.health_score == 100.0
+
+
+# ===========================================================================
+# 11. Phantom references (PHANTOM_REFERENCE category)
+# ===========================================================================
+class TestPhantomReferences:
+    """Tests for check_phantom_references — known-dead class/path detection."""
+
+    def test_phantom_category_exists(self):
+        """Category enum must include PHANTOM_REFERENCE."""
+        assert hasattr(Category, "PHANTOM_REFERENCE")
+        assert Category.PHANTOM_REFERENCE.value == "PHANTOM_REFERENCE"
+
+    def test_detects_automation_controller_ref(self, tmp_path: Path):
+        """AutomationController mention in docs is flagged as phantom reference."""
+        d = tmp_path / "guide.md"
+        d.write_text(
+            "# Guide\n\n"
+            "Use AutomationController to run the polling loop.\n"
+        )
+        cfg = MonitorConfig(check_phantom_references=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_phantom_references(d)
+        assert any(i.category == Category.PHANTOM_REFERENCE for i in issues)
+        assert any("AutomationController" in i.message for i in issues)
+
+    def test_detects_dead_import_path(self, tmp_path: Path):
+        """automation_controller.py path mention flagged as phantom."""
+        d = tmp_path / "troubleshooting.md"
+        d.write_text(
+            "# Troubleshoot\n\n"
+            "```\npython3 -c 'from orchestration.agents.automation import AutomationController'\n```\n"
+        )
+        cfg = MonitorConfig(check_phantom_references=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_phantom_references(d)
+        # Either AutomationController or automation_controller.py pattern triggers
+        assert any(i.category == Category.PHANTOM_REFERENCE for i in issues)
+
+    def test_phantom_check_disabled_by_default(self, tmp_path: Path):
+        """Default MonitorConfig does NOT run phantom scan."""
+        d = tmp_path / "r.md"
+        d.write_text("# R\n\nUse AutomationController here.\n")
+        cfg = MonitorConfig()  # check_phantom_references=False
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_phantom_references(d)
+        assert not issues
+
+    def test_phantom_check_opt_in(self, tmp_path: Path):
+        """Phantom check only fires when explicitly enabled."""
+        d = tmp_path / "r.md"
+        d.write_text("# R\n\nUse AutomationController here.\n")
+        cfg = MonitorConfig(check_phantom_references=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_phantom_references(d)
+        assert any(i.category == Category.PHANTOM_REFERENCE for i in issues)
+
+    def test_custom_phantom_patterns(self, tmp_path: Path):
+        """User can supply their own phantom patterns."""
+        d = tmp_path / "r.md"
+        d.write_text("# R\n\nSee OldWidget for details.\n")
+        cfg = MonitorConfig(
+            check_phantom_references=True,
+            phantom_patterns=[("OldWidget", "OldWidget (replaced by NewWidget)")],
+        )
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_phantom_references(d)
+        assert any("OldWidget" in i.message for i in issues)
+
+    def test_phantom_no_false_positives_on_clean_doc(self, tmp_path: Path):
+        """Clean doc with no dead symbols passes phantom check."""
+        d = tmp_path / "clean.md"
+        d.write_text(
+            "# Orchestrator\n\nThe Orchestrator polls for tasks via queue-management.\n"
+        )
+        cfg = MonitorConfig(check_phantom_references=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_phantom_references(d)
+        assert not issues
+
+    def test_phantom_reports_correct_line(self, tmp_path: Path):
+        """Phantom finding is attributed to the correct line number."""
+        d = tmp_path / "r.md"
+        d.write_text(
+            "# Guide\n\nLine two.\nSee AutomationController usage.\nLine five.\n"
+        )
+        cfg = MonitorConfig(check_phantom_references=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = [i for i in mon.check_phantom_references(d) if i.category == Category.PHANTOM_REFERENCE]
+        assert issues
+        assert issues[0].line == 4
+
+    def test_phantom_run_integrates_into_report(self, tmp_path: Path):
+        """Full .run() with phantom check enabled includes PHANTOM_REFERENCE in by_category."""
+        d = tmp_path / "bad.md"
+        d.write_text(
+            "# Bad\n\n## Overview\n\nWe use AutomationController here for polling.\n"
+        )
+        cfg = MonitorConfig(check_phantom_references=True, staleness_days=9999)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        report = mon.run()
+        assert report.by_category.get("PHANTOM_REFERENCE", 0) >= 1

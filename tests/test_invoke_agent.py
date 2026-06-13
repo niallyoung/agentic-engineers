@@ -89,7 +89,7 @@ def make_valid_handback(task_id="2026-01-01-test-task", role="Engineer") -> Dict
     return {
         "handoff_type": "HANDBACK",
         "task_id": task_id,
-        "status": "complete",
+        "status": "success",
         "deliverables": ["Modified: test.py"],
         "tests": [{"command": "make verify", "result": "PASS"}],
         "tokens_in": 1000,
@@ -181,7 +181,7 @@ class TestSuccessfulInvocation:
 
         assert isinstance(result, dict)
         assert result["task_id"] == delegate["task_id"]
-        assert result["status"] == "complete"
+        assert result["status"] == "success"
 
     def test_returns_original_handback_fields(self, tmp_dirs):
         """All fields from HANDBACK file are returned."""
@@ -285,7 +285,7 @@ class TestSuccessfulInvocation:
             mock_popen.return_value = mock_process(poll_return=None)
             result = invoker.invoke_agent(delegate, ["echo"])
 
-        assert result["status"] == "complete"
+        assert result["status"] == "success"
 
     def test_process_exit_zero_with_handback(self, tmp_dirs):
         """Process exits 0 and HANDBACK file exists → success."""
@@ -304,7 +304,7 @@ class TestSuccessfulInvocation:
             mock_popen.return_value = proc
             result = invoker.invoke_agent(delegate, ["echo"])
 
-        assert result["status"] == "complete"
+        assert result["status"] == "success"
         assert result.get("_synthetic") is not True
 
 
@@ -581,13 +581,13 @@ class TestHandbackValidation:
         assert "tokens_out" in exc_info.value.missing_fields
 
     def test_invalid_status_raises_validation_error(self, tmp_dirs):
-        """HANDBACK with invalid status (not complete/blocked/partial) raises error."""
+        """HANDBACK with invalid status (not success/blocked/partial) raises error."""
         from src.orchestration.agents.invoke_agent import HandbackValidationError
         invoker = make_invoker(tmp_dirs)
         delegate = make_delegate(task_id="2026-01-01-bad-status")
 
         bad_handback = make_valid_handback(task_id="2026-01-01-bad-status")
-        bad_handback["status"] = "completed"  # Invalid! (should be "complete")
+        bad_handback["status"] = "completed"  # Invalid! (should be "success")
 
         hb_path = (
             tmp_dirs["processing"]
@@ -707,8 +707,8 @@ class TestHandbackValidation:
                 invoker.invoke_agent(delegate, ["echo"])
 
     def test_all_valid_statuses_accepted(self, tmp_dirs):
-        """All valid statuses (complete, blocked, partial, escalate) are accepted."""
-        for status in ["complete", "blocked", "partial", "escalate"]:
+        """All valid statuses (success, blocked, partial, escalate) are accepted."""
+        for status in ["success", "blocked", "partial", "escalate"]:
             invoker = make_invoker(tmp_dirs)
             task_id = f"2026-01-01-status-{status}"
             delegate = make_delegate(task_id=task_id)
@@ -980,7 +980,7 @@ class TestPollingMechanics:
             mock_popen.return_value = mock_process(poll_return=None)
             result = invoker.invoke_agent(delegate, ["echo"])
 
-        assert result["status"] == "complete"
+        assert result["status"] == "success"
 
     def test_handback_found_before_process_exits(self, tmp_dirs):
         """HANDBACK can be found while process is still running."""
@@ -1001,7 +1001,7 @@ class TestPollingMechanics:
             mock_popen.return_value = mock_process(poll_return=None)
             result = invoker.invoke_agent(delegate, ["echo"])
 
-        assert result["status"] == "complete"
+        assert result["status"] == "success"
         assert not result.get("_synthetic")
 
 

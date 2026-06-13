@@ -479,14 +479,14 @@ class TestLayer3Notes:
 
 class TestLayer3FailedWithoutReason:
     def test_failed_without_explanation_is_error(self, validator):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "failed",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "failure",
               "notes": "Oops"}
         result = validator.validate_handback(hb)
         checks = [f.check for f in result.error_findings]
         assert "failed_without_reason" in checks
 
     def test_failed_with_explanation_no_error(self, validator):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "failed",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "failure",
               "notes": "Failed because the external API returned 503 after 3 retries."}
         result = validator.validate_handback(hb)
         checks = [f.check for f in result.error_findings]

@@ -1421,7 +1421,7 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 
 ### Production Deployment Requirements
 
-1. **AutomationController** — continuous polling loop with signal handling
+1. **Continuous polling loop** with signal handling (via Orchestrator SKILL)
 2. **4 deployment scenarios** — standalone, systemd, Docker, Kubernetes
 3. **Health monitoring** — queue state visibility, stuck task detection
 4. **Metrics export** — Prometheus-compatible metrics for Grafana dashboards
@@ -1431,8 +1431,7 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 - `opencode-tokens` CLI: `src/tools/opencode_tokens.py`
 - `opencode-budget` CLI: `src/tools/opencode_budget.py`
 - `opencode-subagents` CLI: `src/tools/opencode_subagents.py`
-- AutomationController: `src/orchestration/agents/automation_controller.py`
-- Production entrypoint: `bin/run-automation-controller.sh`
+- Polling loop: Implemented in Orchestrator agent polling SKILL
 
 ### Documentation
 

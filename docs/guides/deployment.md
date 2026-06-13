@@ -5,8 +5,7 @@
 This guide provides complete instructions for deploying the **Continuous Polling Loop Automation** system to production. The system continuously polls a task queue, reads DELEGATE files, spawns agents, and collects metrics.
 
 **Key Components:**
-- `AutomationController`: Core polling loop
-- `OrchestratorAgent`: Task orchestration and delegation
+- `Orchestrator`: Task orchestration and delegation with polling loop
 - `QueueManager`: Queue state management
 - Entrypoint script: Production-ready startup wrapper
 

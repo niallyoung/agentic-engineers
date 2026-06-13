@@ -91,7 +91,7 @@ class TestExpandedHandback:
         """Test creating a HANDBACK."""
         handback = ExpandedHandback(
             task_id="2026-05-17-test-task",
-            status="complete",
+            status="success",
             deliverables=["file1.py", "file2.py"],
             tests={"test_1": True, "test_2": True},
             quality_score=92,
@@ -140,7 +140,7 @@ class TestExpandedHandback:
         """Test HANDBACK serialization."""
         handback = ExpandedHandback(
             task_id="2026-05-17-test-task",
-            status="complete",
+            status="success",
             deliverables=["file1.py"],
             tests={"test_1": True},
             quality_score=90,
