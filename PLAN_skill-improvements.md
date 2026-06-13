@@ -174,3 +174,141 @@ fix strategy with priority ranking by impact.
 
 **Follow-up:** Once principal-engineer HANDBACK is received, queue engineer DELEGATEs
 to implement fixes (high priority: user-facing docs first, then tests, then comments).
+
+---
+
+## Queue Management Audit & Improvements (2026-06-13, continued)
+
+### CRITICAL DISCOVERY: Harness Context Dependency
+During Orchestrator queue responsibility review, discovered that queue discovery is
+**harness-context-dependent**:
+
+1. **Root cause**: queue-isolation.detect_harness() defaults to 'local' unless:
+   - AGENTIC_HARNESS env var is set, OR
+   - CLAUDE_SESSION_ID is set, OR
+   - COPILOT_SESSION_ID is set, etc.
+
+2. **Impact**: DELEGATEs queued at `~/.agentic-engineers/claude/{session}/queue/` won't
+   be discovered when Orchestrator runs in 'local' harness context (the default)
+
+3. **Immediate fix**: Moved DELEGATEs to `~/.agentic-engineers/local/2026-06-13-session/queue/`
+   for discovery in default context
+
+### Queue Management Gaps Identified
+
+#### Critical Gaps (Impact: DELEGATEs may not be processed)
+- ❌ No harness context awareness: Orchestrator runs in one context, queues exist per harness
+- ❌ No queue staleness detection: Tasks can sit in incoming/ indefinitely
+- ❌ No stalled task detection: Processing tasks without heartbeat don't timeout
+- ❌ No automatic recovery: Failed/stalled tasks don't retry or escalate
+
+#### Missing Features (Impact: Operational reliability)
+- ❌ No SLA enforcement: No timeout policies defined (max age per state)
+- ❌ No heartbeat mechanism: Long-running tasks don't signal liveness
+- ❌ No multi-harness support: Orchestrator can't scan all harness queues
+- ❌ No monitoring: No metrics for queue health, staleness, aging
+
+#### SPEC Gaps (Impact: Framework governance)
+- ❌ SPEC.md missing queue management section
+- ❌ No defined SLA thresholds (when is a task "stale"?)
+- ❌ No recovery procedures documented
+- ❌ No Orchestrator responsibilities codified
+
+### DELEGATEs QUEUED FOR FIXES
+
+#### Priority 1: Orchestrator Audit (Principal Engineer)
+- **Task**: 2026-06-13-orchestrator-queue-audit-complete
+- **Scope**: Full audit of queue state, harness context detection, gaps vs SPEC
+- **Deliverable**: Recommendations for critical fixes
+
+#### Priority 2: Skill Improvements (Original 3 DELEGATEs)
+1. 2026-06-13-skill-audit-enhancement (lead-engineer)
+2. 2026-06-13-model-adaptability-config (principal-engineer)
+3. 2026-06-13-meta-skill-session-analyzer (model-engineer)
+
+#### Priority 3: Queue Improvements (New 3 DELEGATEs)
+1. **2026-06-13-queue-staleness-detection** (engineer)
+   - Implement timestamp tracking and staleness monitoring
+   - Alert on aged tasks, escalate very old ones
+   
+2. **2026-06-13-queue-wake-timers** (engineer)
+   - Implement configurable polling intervals
+   - Add stalled task heartbeat detection
+   - Automatic timeout and recovery
+   
+3. **2026-06-13-spec-queue-sla-design** (principal-engineer)
+   - Design queue SLA requirements
+   - Define timeout thresholds and recovery procedures
+   - Propose SPEC.md updates
+
+### Location of Queued Work
+**All DELEGATEs**: `~/.agentic-engineers/local/2026-06-13-session/queue/incoming/`
+
+**Status**: Ready for Orchestrator discovery (local harness context)
+
+### Next Steps
+1. Orchestrator picks up and routes DELEGATEs to appropriate agents
+2. Principal engineers investigate gaps and design solutions
+3. Engineers implement queue staleness/timer/SPEC improvements
+4. Quality engineer validates implementations
+5. Integration: Updated Orchestrator with improved queue management
+
+---
+
+## PARALLEL AGENT DELIVERY COMPLETE (2026-06-13 afternoon)
+
+Three principal/lead engineers completed parallel audits in ~11 minutes (268K tokens):
+
+### ORCHESTRATOR QUEUE AUDIT ✅
+**Critical P0 findings** (confidence 0.9–0.95):
+- Two divergent orchestrators (OrchestratorAgent vs OrchestratorSkill) — must choose one
+- Harness-context fragmentation: 17 orphan session UUIDs in 1 second
+- Dead crash-recovery code (exists but never called)
+- Zero staleness detection, zero heartbeat, hardcoded timeouts
+- SPEC completely silent on queue policy (no staleness/timeout definitions)
+
+**Blocking decision**: Which orchestrator is canonical? Gates all queue fixes.
+
+### SKILL AUDIT & ENHANCEMENT ✅  
+**Delivered** (101/101 tests passing):
+- Enhanced doc-quality-monitor: phantom reference detection (9 new tests)
+- Enhanced protocol-validator: enum drift detection (found 3 LIVE BUGS)
+- Proposed session-analyzer: complete SKILL.md + TDD spec ready
+
+**Bugs found**:
+- 3 files using legacy status enum (complete/failed instead of success/failure)
+- 10 phantom AutomationController references in docs
+
+**Queued for fixes**:
+- enum-drift-fix (trivial: 3-file search-replace)
+- phantom-ref-cleanup (trivial: 10 doc refs removal)
+- session-analyzer-implementation (medium effort)
+
+### MODEL ADAPTABILITY CONFIG ✅
+**Design delivered** (confidence 0.82):
+- Capability-based runtime selection (quality bands, not floors)
+- Provider discovery + auto-mapper + fallback chains
+- Integration checklist (7 components to update)
+- Framework already has 80% of this — integration layer only
+
+**Key insight**: Role requirements + available providers → auto-select best model
+- Preserves governance locks (.githooks/LOCKED_MODELS.sh)
+- Example config with Anthropic + OpenAI + Ollama
+- Ready for engineer implementation after risk closure
+
+### QUEUED: 11 DELEGATEs TOTAL
+1. 2026-06-13-orchestrator-architecture-decision (P0 decision)
+2. 2026-06-13-enum-drift-fix (P0 bug fix)
+3. 2026-06-13-phantom-ref-cleanup (P0 bug fix)
+4. 2026-06-13-queue-staleness-detection (P1)
+5. 2026-06-13-queue-wake-timers (P1)
+6. 2026-06-13-spec-queue-sla-design (P1)
+7. 2026-06-13-session-analyzer-implementation (P1)
+8. 2026-06-13-skill-audit-enhancement (delivered — original)
+9. 2026-06-13-model-adaptability-config (delivered — original)
+10. 2026-06-13-meta-skill-session-analyzer (original)
+11. 2026-06-13-orchestrator-queue-audit-complete (audit HANDBACK)
+
+**Location**: ~/.agentic-engineers/local/2026-06-13-session/queue/incoming/
+
+**Next**: Operator reviews P0 architectural decision; bug fixes execute immediately.
