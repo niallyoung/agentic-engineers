@@ -1,7 +1,7 @@
 """
 Queue Path Validator — Runtime enforcement of canonical queue paths.
 
-Enforces canonical path format: ~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/
+Enforces canonical path format: ~/.agentic-engineers/{harness}/{session-id}/queue/
 
 Rejects:
 - Legacy paths: artifacts/queue/, ~/.copilot/queue/
@@ -11,7 +11,7 @@ Rejects:
 
 Usage:
     validator = QueuePathValidator()
-    result = validator.validate("~/.agentic-engineers/artifacts/session-123/opencode/queue/")
+    result = validator.validate("~/.agentic-engineers/opencode/session-123/queue/")
     if result.is_valid:
         print("Path is canonical")
     else:
@@ -35,15 +35,15 @@ class QueuePathValidator(object):
     """Validator for queue paths enforcing canonical format."""
     
     # Canonical path patterns:
-    # 1. With tilde: ~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/[incoming/]
-    # 2. Expanded home: /Users/{user}/.agentic-engineers/artifacts/{session}/{harness}/queue/[incoming/]
+    # 1. With tilde: ~/.agentic-engineers/{harness}/{session-id}/queue/[incoming/]
+    # 2. Expanded home: /Users/{user}/.agentic-engineers/{harness}/{session-id}/queue/[incoming/]
     # session-id: alphanumeric, hyphens, underscores
     # harness: alphanumeric, hyphens, underscores
-    CANONICAL_TILDE_PATTERN = r'^~\/\.agentic-engineers\/artifacts\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/queue\/?(?:\/incoming)?/?$'
-    
-    # Expanded home pattern: starts with / and contains .agentic-engineers/artifacts in right place
-    # Pattern matches: /path/to/home/.agentic-engineers/artifacts/{session-id}/{harness}/queue/...
-    CANONICAL_EXPANDED_PATTERN = r'^/.+/\.agentic-engineers\/artifacts\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/queue\/?(?:\/incoming)?/?$'
+    CANONICAL_TILDE_PATTERN = r'^~\/\.agentic-engineers\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/queue\/?(?:\/incoming)?/?$'
+
+    # Expanded home pattern: starts with / and contains .agentic-engineers in right place
+    # Pattern matches: /path/to/home/.agentic-engineers/{harness}/{session-id}/queue/...
+    CANONICAL_EXPANDED_PATTERN = r'^/.+/\.agentic-engineers\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/queue\/?(?:\/incoming)?/?$'
     
     # Legacy paths to detect (patterns only, do not include in source) — DEPRECATED
     LEGACY_PATTERNS = [
@@ -86,7 +86,7 @@ class QueuePathValidator(object):
         # Check for legacy paths first
         for legacy_pattern in self.LEGACY_PATTERNS:
             if re.search(legacy_pattern, normalized):
-                errors.append('Legacy queue path detected. Must use canonical path: ~/.agentic-engineers/artifacts/{session-id}/{harness}/queue/')
+                errors.append('Legacy queue path detected. Must use canonical path: ~/.agentic-engineers/{harness}/{session-id}/queue/')
                 return ValidationResult(False, errors)
         
         # Check for injection attempts

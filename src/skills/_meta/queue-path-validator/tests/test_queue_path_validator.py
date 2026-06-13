@@ -1,7 +1,7 @@
 """
 Test suite for Queue Path Validator.
 
-Tests enforce canonical queue path (~/.agentic-engineers/{session-id}/{harness}/queue/)
+Tests enforce canonical queue path (~/.agentic-engineers/{harness}/{session-id}/queue/)
 and reject legacy/injected paths.
 
 Requirements:
@@ -46,22 +46,22 @@ class TestQueuePathValidator(unittest.TestCase):
     # ─────────────────────────────────────────────────────────────────────────────
 
     def test_accepts_canonical_path_with_session_and_harness(self):
-        """AC1: Validator accepts canonical path: ~/.agentic-engineers/{session-id}/{harness}/queue/"""
-        path = "~/.agentic-engineers/test-session-123/opencode/queue/"
+        """AC1: Validator accepts canonical path: ~/.agentic-engineers/{harness}/{session-id}/queue/"""
+        path = "~/.agentic-engineers/opencode/test-session-123/queue/"
         result = self.validator.validate(path)
         self.assertTrue(result.is_valid, "Canonical path should be accepted")
         self.assertEqual(result.errors, [])
 
     def test_accepts_canonical_path_with_incoming_subdir(self):
         """AC1: Validator accepts canonical path with /incoming/ subdirectory."""
-        path = "~/.agentic-engineers/test-session-123/opencode/queue/incoming/"
+        path = "~/.agentic-engineers/opencode/test-session-123/queue/incoming/"
         result = self.validator.validate(path)
         self.assertTrue(result.is_valid, "Canonical path with /incoming/ should be accepted")
 
     def test_accepts_canonical_path_expanded_home(self):
         """AC1: Validator accepts expanded home directory path."""
         home = os.path.expanduser("~")
-        path = "{home}/.agentic-engineers/test-session-123/opencode/queue/".format(home=home)
+        path = "{home}/.agentic-engineers/opencode/test-session-123/queue/".format(home=home)
         result = self.validator.validate(path)
         self.assertTrue(result.is_valid, "Expanded home path should be accepted")
 
@@ -98,9 +98,9 @@ class TestQueuePathValidator(unittest.TestCase):
     def test_blocks_shell_metacharacter_injection(self):
         """AC3: Validator blocks shell metacharacters: ;, |, &, $(...)"""
         injection_attempts = [
-            "~/.agentic-engineers/test-session-123/opencode/queue/; rm -rf /",
-            "~/.agentic-engineers/test-session-123/opencode/queue/ | cat /etc/passwd",
-            "~/.agentic-engineers/test-session-123/opencode/queue/ & malicious_command",
+            "~/.agentic-engineers/opencode/test-session-123/queue/; rm -rf /",
+            "~/.agentic-engineers/opencode/test-session-123/queue/ | cat /etc/passwd",
+            "~/.agentic-engineers/opencode/test-session-123/queue/ & malicious_command",
             "~/.agentic-engineers/test-session-123/$(whoami)/queue/",
         ]
         for path in injection_attempts:
@@ -147,19 +147,19 @@ class TestQueuePathValidator(unittest.TestCase):
 
     def test_rejects_relative_path(self):
         """Edge case: Relative path without ~ should be rejected."""
-        path = ".agentic-engineers/test-session-123/opencode/queue/"
+        path = ".agentic-engineers/opencode/test-session-123/queue/"
         result = self.validator.validate(path)
         self.assertFalse(result.is_valid, "Relative paths without ~ should be rejected")
 
     def test_accepts_path_with_trailing_slash(self):
         """Edge case: Canonical path with trailing slash should be accepted."""
-        path = "~/.agentic-engineers/test-session-123/opencode/queue/"
+        path = "~/.agentic-engineers/opencode/test-session-123/queue/"
         result = self.validator.validate(path)
         self.assertTrue(result.is_valid, "Path with trailing slash should be accepted")
 
     def test_accepts_path_without_trailing_slash(self):
         """Edge case: Canonical path without trailing slash should be accepted."""
-        path = "~/.agentic-engineers/test-session-123/opencode/queue"
+        path = "~/.agentic-engineers/opencode/test-session-123/queue"
         result = self.validator.validate(path)
         self.assertTrue(result.is_valid, "Path without trailing slash should be accepted")
 
@@ -181,7 +181,7 @@ class TestQueuePathValidator(unittest.TestCase):
 
     def test_validation_result_has_required_fields(self):
         """Test that validation result has required structure."""
-        path = "~/.agentic-engineers/test-session-123/opencode/queue/"
+        path = "~/.agentic-engineers/opencode/test-session-123/queue/"
         result = self.validator.validate(path)
         
         # Must have is_valid field
@@ -225,7 +225,7 @@ class TestQueuePathValidatorIntegration(unittest.TestCase):
 task_id: TASK-PHASE-1.5-FIX-1
 type: DELEGATE
 role: quality-engineer
-queue_path: ~/.agentic-engineers/test-session-123/opencode/queue/incoming/
+queue_path: ~/.agentic-engineers/opencode/test-session-123/queue/incoming/
 """
         result = self.validator.find_invalid_paths_in_text(delegate_content)
         self.assertEqual(len(result), 0, "Canonical paths in YAML should pass")

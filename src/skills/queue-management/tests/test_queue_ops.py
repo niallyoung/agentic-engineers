@@ -25,7 +25,7 @@ VALID_ENQUEUE_SCOPE = (
 )  # >= 15 words
 
 VALID_ENQUEUE_CONTEXT = (
-    "The queue directory lives at ~/.agentic-engineers/{session-id}/{harness}/queue/. "
+    "The queue directory lives at ~/.agentic-engineers/{harness}/{session-id}/queue/. "
     "Agents may not write directly to queue subdirectories. All DELEGATEs and HANDBACKs "
     "must pass through enqueue() for schema validation before being written atomically."
 )  # >= 20 words

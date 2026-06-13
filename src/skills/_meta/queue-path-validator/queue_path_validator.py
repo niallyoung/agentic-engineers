@@ -1,7 +1,7 @@
 """Queue path validation logic for canonical queue directory enforcement.
 
 Security Model:
-- Canonical format: ~/.agentic-engineers/{session-id}/{harness}/queue/{subdir}
+- Canonical format: ~/.agentic-engineers/{harness}/{session-id}/queue/{subdir}
 - Rejects legacy paths (e.g., ~/.copilot-legacy/queue, ~/.claude-legacy/queue)
 - Prevents path traversal (../, //, symlinks)
 - Validates subdirectory names (incoming, processing, done)
@@ -46,7 +46,7 @@ def validate_queue_path(path: Union[Path, str]) -> Dict[str, Any]:
     
     For file paths, it extracts and validates the queue directory.
     
-    Canonical format: ~/.agentic-engineers/{session-id}/{harness}/queue/[{subdir}/][{file}]
+    Canonical format: ~/.agentic-engineers/{harness}/{session-id}/queue/[{subdir}/][{file}]
     
     Security checks:
     - Rejects legacy paths (old ~/.copilot and ~/.claude directories)
@@ -261,7 +261,7 @@ def validate_queue_subdir(path: Union[Path, str]) -> Dict[str, Any]:
     """
     Validate queue path with subdirectory.
     
-    Validates: ~/.agentic-engineers/{session-id}/{harness}/queue/{subdir}
+    Validates: ~/.agentic-engineers/{harness}/{session-id}/queue/{subdir}
     
     Valid subdirs: incoming, processing, done, failed
     

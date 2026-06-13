@@ -8,7 +8,7 @@ category: orchestration/security
 description: |
   Runtime enforcement of canonical queue paths for DELEGATE/HANDBACK files.
   
-  Enforces canonical path: ~/.agentic-engineers/{session-id}/{harness}/queue/
+  Enforces canonical path: ~/.agentic-engineers/{harness}/{session-id}/queue/
   Rejects legacy paths and injection attacks.
   
   Integrates with git hooks to prevent non-canonical paths in commits.
@@ -33,7 +33,7 @@ Enforces canonical queue path format to prevent injection/poisoning attacks and 
 SPEC.md contains contradictory queue paths:
 - `artifacts/queue/` (legacy)
 - `~/.copilot/queue/{session-id}/incoming/` (legacy)
-- `~/.agentic-engineers/{session-id}/{harness}/queue/` (canonical)
+- `~/.agentic-engineers/{harness}/{session-id}/queue/` (canonical)
 
 Without runtime validation, these inconsistencies enable queue injection/poisoning attacks.
 
@@ -69,7 +69,7 @@ src/skills/_meta/queue-path-validator/
 ### Canonical Path Format
 
 ```
-~/.agentic-engineers/{session-id}/{harness}/queue/[incoming/]
+~/.agentic-engineers/{harness}/{session-id}/queue/[incoming/]
 ```
 
 Where:
@@ -109,7 +109,7 @@ The `.githooks/pre-push` hook will:
 20 test cases covering:
 
 ### AC1: Canonical Path Acceptance
-- ✅ Basic canonical path: `~/.agentic-engineers/{session-id}/{harness}/queue/`
+- ✅ Basic canonical path: `~/.agentic-engineers/{harness}/{session-id}/queue/`
 - ✅ With `/incoming/` subdirectory
 - ✅ Expanded home path: `/Users/{user}/.agentic-engineers/...`
 - ✅ With/without trailing slash

@@ -120,3 +120,57 @@ Then:
 - **Core agent responsibility**: Every Agent consults docs/SPEC.md and existing SKILLS before inventing work. Framework alignment is a first-class skill; all agents remain in sync on core responsibilities and expectations.
 
 See TODO.md "## Next: Skill Improvements" for tracking.
+
+---
+
+## Discovery During Orchestrator Integration
+
+### Issue: DELEGATEs Not Picked Up on Fresh Install
+**Session 2026-06-13 (afternoon)**
+
+While testing if queued DELEGATEs were discovered on fresh `make install`, found that
+Orchestrator was not picking up the initial three DELEGATEs. Diagnosis revealed:
+
+1. **Root cause**: Path structure mismatch
+   - Documented (incorrectly): `~/.agentic-engineers/{session-id}/{harness}/queue/`
+   - Actual (correct): `~/.agentic-engineers/{harness}/{session-id}/queue/`
+   - Initial placement: `~/.agentic-engineers/queue/2026-06-13/incoming/` ❌
+
+2. **Why this happened**: 
+   - Orchestrator.py docstrings (lines 5, 548) had backwards path documentation
+   - Queue-isolation.py (line 143-158) implements correct path but documentation wasn't consistent
+   - Systematic drift: 16+ files incorrectly document path format
+
+### Fixes Applied
+1. ✅ Corrected Orchestrator.py docstrings (lines 5, 548)
+2. ✅ Moved initial 3 DELEGATEs to correct path: `~/.agentic-engineers/claude/2026-06-13/queue/incoming/`
+3. ✅ Queued new DELEGATE: **2026-06-13-queue-path-audit-fix** (principal-engineer)
+
+### New DELEGATE: Queue Path Documentation Audit
+
+**Role:** principal-engineer  
+**Task ID:** 2026-06-13-queue-path-audit-fix  
+**Scope:**
+Audit and fix systematic queue path documentation drift (16+ files with incorrect
+`{session-id}/{harness}` instead of `{harness}/{session-id}`). Provide comprehensive
+fix strategy with priority ranking by impact.
+
+**Deliverables:**
+- Complete audit report with grep results (file:line format)
+- Root cause analysis (when/why drift occurred)
+- Impact assessment (user-facing docs vs tests vs comments)
+- Prioritized fix list with git-ready patches
+- Risk assessment: any code logic depends on incorrect ordering?
+
+**Files to audit:**
+- src/agents/orchestrator-agent.md
+- src/skills/queue-management/tests/test_queue_ops.py
+- src/skills/_meta/queue-path-validator/SKILL.md (multiple refs)
+- src/skills/_meta/queue-path-validator/scripts/queue_path_validator.py (multiple refs)
+- src/skills/_meta/queue-path-validator/tests/test_queue_path_validator.py
+- src/skills/_meta/queue-path-validator/queue_path_validator.py
+- src/opencode/__init__.py
+- Plus ~9 more files detected via grep
+
+**Follow-up:** Once principal-engineer HANDBACK is received, queue engineer DELEGATEs
+to implement fixes (high priority: user-facing docs first, then tests, then comments).
