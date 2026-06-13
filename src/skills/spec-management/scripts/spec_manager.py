@@ -536,17 +536,22 @@ class SpecManager:
         if position not in ["before", "after"]:
             raise ValueError(f"Invalid position: {position}. Must be 'before' or 'after'")
 
-        # Find anchor line in spec_content
+        # Find anchor line(s) in spec_content. An anchor MUST resolve to exactly
+        # one line: zero matches is unresolvable, and more than one match is
+        # ambiguous (silently picking the first match risks inserting content at
+        # the wrong position). Both conditions are hard errors.
         lines = spec_content.split("\n")
-        anchor_idx = None
+        matching_indices = [i for i, line in enumerate(lines) if anchor in line]
 
-        for i, line in enumerate(lines):
-            if anchor in line:
-                anchor_idx = i
-                break
-
-        if anchor_idx is None:
+        if not matching_indices:
             raise ValueError(f"Anchor line not found in SPEC.md: {anchor}")
+        if len(matching_indices) > 1:
+            raise ValueError(
+                f"Ambiguous anchor (matched {len(matching_indices)} lines: "
+                f"{matching_indices}): {anchor}. Provide a unique anchor."
+            )
+
+        anchor_idx = matching_indices[0]
 
         # Prepare new content to insert
         new_text_parts = []

@@ -169,6 +169,36 @@ class TestPositionalInsertion:
         with pytest.raises(ValueError, match="Anchor line not found"):
             spec_manager._apply_positional_insertion(original_content, proposal)
 
+    def test_insertion_point_ambiguous_anchor_raises(self, spec_manager):
+        """Test error when anchor matches more than one line (ambiguous).
+
+        Silently picking the first match risks inserting content at the wrong
+        position, so an anchor that resolves to multiple lines must be rejected.
+        """
+        content = (
+            "# Doc\n"
+            "## Repeated Heading\n"
+            "Body A.\n"
+            "## Repeated Heading\n"
+            "Body B.\n"
+        )
+
+        proposal_dict = {
+            "change_id": "SPEC-2026-003",
+            "proposer": "principal-engineer",
+            "proposer_role": "principal-engineer",
+            "timestamp": "2026-06-13T10:00:00Z",
+            "affected_sections": ["Queue SLA"],
+            "proposed_changes": {"Queue SLA": "## Queue SLA\nNew content"},
+            "rationale": "Add Queue SLA section to improve queue management and monitoring capabilities",
+            "insertion_point": "before:## Repeated Heading",
+        }
+
+        proposal = spec_manager.parse_proposal(proposal_dict)
+
+        with pytest.raises(ValueError, match="Ambiguous anchor"):
+            spec_manager._apply_positional_insertion(content, proposal)
+
     def test_insertion_point_invalid_format(self, spec_manager):
         """Test error with invalid insertion_point format."""
         proposal_dict = {
