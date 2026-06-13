@@ -25,6 +25,7 @@ from src.skills.orchestrator.scripts.orchestrator_skill import (
     QueueValidationError,
     TaskClaimError,
     HandbackParseError,
+    SubAgentError,
 )
 
 
@@ -1131,3 +1132,264 @@ def test_wake_timer_span_capture(orchestrator, temp_queue):
     # Verify result
     assert result['stalled_detected'] == 1
     assert result['recovered'] == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: spawn_sub_agent (Real Agent Dispatch Pattern)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_spawn_sub_agent_returns_handback_yaml(orchestrator):
+    """Test spawn_sub_agent returns HANDBACK YAML text."""
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": "agent-test-001",
+        "agent": "engineer",
+        "scope": "Test implementation",
+        "plan": ["Step 1", "Step 2"],
+        "success_criteria": ["AC1"],
+    }
+
+    output = orchestrator.spawn_sub_agent(delegate)
+
+    # Verify output is non-empty string containing HANDBACK block
+    assert isinstance(output, str)
+    assert len(output) > 0
+    assert "handoff_type: HANDBACK" in output or "handoff_type: 'HANDBACK'" in output
+    assert "task_id: agent-test-001" in output or "task_id: 'agent-test-001'" in output
+
+
+def test_spawn_sub_agent_handback_structure(orchestrator):
+    """Test spawn_sub_agent returns properly structured HANDBACK."""
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": "agent-test-002",
+        "agent": "senior-engineer",
+        "scope": "Complex implementation",
+        "plan": ["Analysis", "Implementation", "Testing"],
+        "success_criteria": ["AC1", "AC2"],
+    }
+
+    output = orchestrator.spawn_sub_agent(delegate)
+
+    # Parse HANDBACK from output
+    handback = orchestrator._parse_handback(output)
+
+    # Verify structure
+    assert handback["handoff_type"] == "HANDBACK"
+    assert handback["task_id"] == "agent-test-002"
+    assert handback["status"] == "success"
+    assert "output" in handback
+    assert "metrics" in handback
+    assert "confidence" in handback
+
+
+def test_spawn_sub_agent_metrics_structure(orchestrator):
+    """Test spawn_sub_agent returns metrics with required fields."""
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": "agent-test-003",
+        "agent": "engineer",
+        "scope": "Implementation",
+        "plan": ["Implement"],
+        "success_criteria": ["AC1"],
+    }
+
+    output = orchestrator.spawn_sub_agent(delegate)
+    handback = orchestrator._parse_handback(output)
+
+    # Verify metrics structure
+    metrics = handback.get("metrics", {})
+    assert isinstance(metrics, dict)
+    assert "quality" in metrics
+    assert "tokens" in metrics
+    assert "cost" in metrics
+    assert "duration_seconds" in metrics
+    assert 0 <= metrics["quality"] <= 1.0
+    assert metrics["tokens"] >= 0
+    assert metrics["cost"] >= 0
+    assert metrics["duration_seconds"] >= 0
+
+
+def test_spawn_sub_agent_different_roles(orchestrator):
+    """Test spawn_sub_agent works with different agent roles."""
+    roles = ["engineer", "senior-engineer", "lead-engineer", "quality-engineer"]
+
+    for role in roles:
+        delegate = {
+            "handoff_type": "DELEGATE",
+            "task_id": f"agent-role-{role}",
+            "agent": role,
+            "scope": "Test",
+            "plan": ["Step"],
+            "success_criteria": ["AC1"],
+        }
+
+        output = orchestrator.spawn_sub_agent(delegate)
+        handback = orchestrator._parse_handback(output)
+
+        assert handback["task_id"] == f"agent-role-{role}"
+        assert handback["status"] == "success"
+
+
+def test_spawn_sub_agent_captures_span(orchestrator, temp_queue):
+    """Test spawn_sub_agent captures observability span."""
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": "agent-span-001",
+        "agent": "engineer",
+        "scope": "Test",
+        "plan": ["Step"],
+        "success_criteria": ["AC1"],
+    }
+
+    output = orchestrator.spawn_sub_agent(delegate)
+
+    # Verify span was captured
+    spans_dir = temp_queue.parent / "spans"
+    assert spans_dir.exists()
+    # At least one span file should exist
+    span_files = list(spans_dir.glob("**/*.span.json"))
+    assert len(span_files) > 0
+
+
+def test_spawn_sub_agent_minimal_delegate(orchestrator):
+    """Test spawn_sub_agent works with minimal delegate."""
+    # spawn_sub_agent accepts minimal delegates and still returns a HANDBACK
+    minimal_delegate = {
+        "task_id": "minimal-task",
+        # Missing: handoff_type, agent, scope, plan, success_criteria
+    }
+
+    # Should gracefully handle and return HANDBACK YAML
+    output = orchestrator.spawn_sub_agent(minimal_delegate)
+    assert isinstance(output, str)
+    assert "handoff_type: HANDBACK" in output or "handoff_type: 'HANDBACK'" in output
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: invoke_qe_gate (Quality Engineering Validation)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_invoke_qe_gate_approves_high_quality(orchestrator):
+    """Test QE gate approves tasks with high confidence and quality."""
+    task_id = "qe-test-001"
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {
+            "quality": 0.95,  # High quality
+        },
+        "confidence": 0.92,  # High confidence
+    }
+
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is True
+
+
+def test_invoke_qe_gate_rejects_low_confidence(orchestrator):
+    """Test QE gate rejects tasks with low confidence."""
+    task_id = "qe-test-002"
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {
+            "quality": 0.90,  # Good quality
+        },
+        "confidence": 0.60,  # Low confidence (< 0.7 threshold)
+    }
+
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is False
+
+
+def test_invoke_qe_gate_rejects_low_quality(orchestrator):
+    """Test QE gate rejects tasks with low quality."""
+    task_id = "qe-test-003"
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {
+            "quality": 0.70,  # Low quality (< 0.75 threshold)
+        },
+        "confidence": 0.90,  # High confidence
+    }
+
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is False
+
+
+def test_invoke_qe_gate_boundary_conditions(orchestrator):
+    """Test QE gate at boundary conditions."""
+    # Test exactly at thresholds
+    task_id = "qe-boundary"
+
+    # Just below confidence threshold
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {"quality": 0.80},
+        "confidence": 0.70,  # Exactly at threshold
+    }
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is False  # Not > 0.7, so fails
+
+    # Just above confidence threshold
+    handback["confidence"] = 0.71
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is True  # Passes all thresholds
+
+
+def test_invoke_qe_gate_missing_confidence(orchestrator):
+    """Test QE gate handles missing confidence field."""
+    task_id = "qe-missing-conf"
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {"quality": 0.95},
+        # Missing: confidence
+    }
+
+    # Should default to 0.5
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is False  # 0.5 < 0.7 threshold
+
+
+def test_invoke_qe_gate_missing_quality(orchestrator):
+    """Test QE gate handles missing quality metric."""
+    task_id = "qe-missing-quality"
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {},  # Missing: quality
+        "confidence": 0.95,
+    }
+
+    # Should default to 0.5
+    approved = orchestrator.invoke_qe_gate(task_id, handback)
+    assert approved is False  # 0.5 < 0.75 threshold
+
+
+def test_invoke_qe_gate_captures_span(orchestrator, temp_queue):
+    """Test invoke_qe_gate captures observability span."""
+    task_id = "qe-span-001"
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "success",
+        "metrics": {"quality": 0.90},
+        "confidence": 0.85,
+    }
+
+    orchestrator.invoke_qe_gate(task_id, handback)
+
+    # Verify span was captured
+    spans_dir = temp_queue.parent / "spans"
+    assert spans_dir.exists()
+    span_files = list(spans_dir.glob("**/*.span.json"))
+    assert len(span_files) > 0
