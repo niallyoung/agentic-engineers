@@ -25,10 +25,14 @@ import pytest
 # conftest.py adds <skill>/scripts/ to sys.path, so we import directly.
 from queue_isolation import (
     QueueIsolation,
+    check_task_staleness,
     detect_harness,
     get_session_id,
     get_queue_path,
+    get_task_age_seconds,
     init_queue_structure,
+    record_task_timestamp,
+    scan_queue_for_staleness,
 )
 
 

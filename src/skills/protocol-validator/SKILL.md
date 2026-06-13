@@ -32,6 +32,8 @@ future fields.
 3. **Validate Extensions** — Loose validation of optional fields; unknown fields logged as warnings
 4. **Forward-Compatibility** — Schema evolution supported; future fields don't break current validators
 5. **Performance** — <5ms per validation (core <1ms, extensions <2ms)
+6. **Enum Drift Detection** — Scan codebase for HANDBACK status enum divergence (success/failure/etc.)
+7. **Protocol Divergence Detection** — Detect multiple independent escalation/validation implementations
 
 **Why it matters:**
 

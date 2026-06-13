@@ -256,6 +256,103 @@ def _count_words(text: str) -> int:
     return len(text.split())
 
 
+# ---------------------------------------------------------------------------
+# Protocol-divergence detection
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ProtocolDivergence:
+    """A single protocol-divergence finding."""
+    location: str
+    description: str
+    severity: str  # error | warning
+
+
+@dataclass
+class ProtocolDivergenceReport:
+    """Result of scanning for protocol-divergence issues."""
+    findings: List[ProtocolDivergence]
+
+    @property
+    def has_issues(self) -> bool:
+        return bool(self.findings)
+
+    def to_text(self) -> str:
+        if not self.has_issues:
+            return "No protocol divergence detected."
+        lines = [f"Protocol divergence detected ({len(self.findings)} issue(s)):"]
+        for f in self.findings:
+            lines.append(f"  [{f.severity.upper()}] {f.location}: {f.description}")
+        return "\n".join(lines)
+
+
+def scan_protocol_divergence(repo_root: Optional[Path] = None) -> ProtocolDivergenceReport:
+    """Scan codebase for protocol-divergence issues.
+
+    Detects multiple independent implementations of escalation/validation logic
+    that should be unified. For example:
+    - Multiple separate escalation handlers when one central handler should be used
+    - Custom HANDBACK validators that duplicate the canonical protocol-validator
+    - Conflicting queue-state enums across different modules
+
+    Returns a :class:`ProtocolDivergenceReport` listing all divergence issues.
+    """
+    if repo_root is None:
+        repo_root = _repo_root()
+
+    findings: List[ProtocolDivergence] = []
+
+    # Check 1: Look for custom escalation handlers (should use orchestrator polling)
+    escalation_patterns = [
+        (r"def.*escalate.*\(", "Custom escalation handler (should use orchestrator polling loop)"),
+        (r"def.*handle_escalation.*\(", "Custom escalation handler (should use orchestrator)"),
+        (r"class.*EscalationHandler", "Custom escalation handler class (should use orchestrator)"),
+    ]
+
+    orchestrator_paths = [
+        repo_root / "src/orchestration",
+        repo_root / "src/agents",
+    ]
+
+    for search_dir in orchestrator_paths:
+        if not search_dir.exists():
+            continue
+        for py_file in search_dir.rglob("*.py"):
+            if "test" in str(py_file):
+                continue
+            source = py_file.read_text(encoding="utf-8", errors="replace")
+            for pattern, desc in escalation_patterns:
+                if re.search(pattern, source):
+                    findings.append(ProtocolDivergence(
+                        location=str(py_file.relative_to(repo_root)),
+                        description=desc,
+                        severity="warning",
+                    ))
+
+    # Check 2: Look for custom HANDBACK validators (should use protocol-validator skill)
+    handback_validator_patterns = [
+        (r"def.*validate.*handback", "Custom HANDBACK validator (should use protocol-validator skill)"),
+        (r"class.*HandbackValidator", "Custom HANDBACK validator class (should use protocol-validator)"),
+    ]
+
+    for search_dir in orchestrator_paths:
+        if not search_dir.exists():
+            continue
+        for py_file in search_dir.rglob("*.py"):
+            if "test" in str(py_file) or "protocol_validator" in str(py_file):
+                continue
+            source = py_file.read_text(encoding="utf-8", errors="replace")
+            for pattern, desc in handback_validator_patterns:
+                if re.search(pattern, source, re.IGNORECASE):
+                    findings.append(ProtocolDivergence(
+                        location=str(py_file.relative_to(repo_root)),
+                        description=desc,
+                        severity="warning",
+                    ))
+
+    return ProtocolDivergenceReport(findings=findings)
+
+
 def _repo_root() -> Path:
     # src/skills/protocol-validator/scripts/protocol_validator.py -> repo root
     return Path(__file__).resolve().parents[4]

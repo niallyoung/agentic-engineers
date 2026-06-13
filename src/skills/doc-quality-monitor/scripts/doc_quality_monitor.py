@@ -60,6 +60,7 @@ class Category(str, Enum):
     PLACEHOLDER = "PLACEHOLDER"
     STRUCTURE = "STRUCTURE"
     PHANTOM_REFERENCE = "PHANTOM_REFERENCE"
+    STALE_DOCSTRING = "STALE_DOCSTRING"
 
 
 # Penalty weight (points off the 100-point health score) per severity.
@@ -119,6 +120,7 @@ class MonitorConfig:
     check_placeholders: bool = True
     check_structure: bool = True
     check_phantom_references: bool = False  # opt-in; requires phantom_patterns
+    check_stale_docstrings: bool = False  # opt-in; SKILL.md YAML headers
 
     # Phantom reference patterns: list of (regex_pattern, label) tuples.
     # Each match is reported as a PHANTOM_REFERENCE finding. Defaults to
@@ -501,6 +503,72 @@ class DocQualityMonitor:
                     break  # one finding per line per file is enough
         return issues
 
+    def check_stale_docstrings(self, path: Path) -> List[Issue]:
+        """Detect stale SKILL.md YAML headers with version drift.
+
+        For SKILL.md files (skill metadata headers), check if the version
+        field in the frontmatter YAML has drifted from expected values.
+        A stale docstring occurs when the version is '0.1' (proposed/experimental)
+        but implementation is already complete, or vice versa.
+
+        This check is opt-in (``check_stale_docstrings=False`` by default).
+        """
+        path = Path(path)
+        if not self.config.check_stale_docstrings or not path.name == "SKILL.md":
+            return []
+        issues: List[Issue] = []
+        text = path.read_text(encoding="utf-8", errors="replace")
+
+        # Extract YAML frontmatter (between --- markers)
+        lines = text.splitlines()
+        if lines and lines[0].strip() == "---":
+            end_idx = None
+            for i in range(1, len(lines)):
+                if lines[i].strip() == "---":
+                    end_idx = i
+                    break
+            if end_idx:
+                yaml_block = "\n".join(lines[1:end_idx])
+                # Parse YAML to check version and tdd_phase
+                try:
+                    import yaml as yaml_parser
+                    metadata = yaml_parser.safe_load(yaml_block) or {}
+                    version = metadata.get("version", "")
+                    tdd_phase = metadata.get("tdd_phase", "")
+
+                    # Flag: version 0.1 but TDD phase is GREEN (fully implemented)
+                    if version == "0.1" and tdd_phase == "GREEN":
+                        issues.append(
+                            Issue(
+                                file=self._rel(path),
+                                line=0,
+                                category=Category.STALE_DOCSTRING,
+                                severity=Severity.WARNING,
+                                message=(
+                                    "Stale docstring: version='0.1' (proposed) but "
+                                    "tdd_phase='GREEN' (implemented) — update version to match"
+                                ),
+                            )
+                        )
+                    # Flag: version 1.0 or higher but TDD phase is RED (not implemented)
+                    elif version and version != "0.1" and tdd_phase == "RED":
+                        issues.append(
+                            Issue(
+                                file=self._rel(path),
+                                line=0,
+                                category=Category.STALE_DOCSTRING,
+                                severity=Severity.WARNING,
+                                message=(
+                                    f"Stale docstring: version='{version}' (released) but "
+                                    "tdd_phase='RED' (not implemented) — check implementation status"
+                                ),
+                            )
+                        )
+                except Exception:
+                    # YAML parse failure is not our concern; skip this check
+                    pass
+        return issues
+
     def analyze_file(self, path: Path) -> List[Issue]:
         """Run all enabled checks against a single file."""
         path = Path(path)
@@ -511,6 +579,7 @@ class DocQualityMonitor:
         issues += self.check_placeholders(path)
         issues += self.check_structure(path)
         issues += self.check_phantom_references(path)
+        issues += self.check_stale_docstrings(path)
         return issues
 
     # ------------------------------------------------------------------ #

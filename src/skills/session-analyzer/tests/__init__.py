@@ -1,1 +1,1 @@
-"""session-analyzer tests."""
+"""Session analyzer tests."""

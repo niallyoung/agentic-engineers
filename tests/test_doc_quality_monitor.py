@@ -514,3 +514,111 @@ class TestPhantomReferences:
         mon = DocQualityMonitor(root=tmp_path, config=cfg)
         report = mon.run()
         assert report.by_category.get("PHANTOM_REFERENCE", 0) >= 1
+
+
+# ===========================================================================
+# 12. Stale docstrings (STALE_DOCSTRING category)
+# ===========================================================================
+class TestStaleDocstrings:
+    """Tests for check_stale_docstrings — SKILL.md version/tdd_phase drift detection."""
+
+    def test_stale_docstring_category_exists(self):
+        """Category enum must include STALE_DOCSTRING."""
+        assert hasattr(Category, "STALE_DOCSTRING")
+        assert Category.STALE_DOCSTRING.value == "STALE_DOCSTRING"
+
+    def test_version_0_1_with_green_tdd_flagged(self, tmp_path: Path):
+        """SKILL.md with version 0.1 (proposed) but tdd_phase GREEN (implemented) is stale."""
+        skill_file = tmp_path / "SKILL.md"
+        skill_file.write_text(
+            "---\n"
+            "name: test-skill\n"
+            "version: \"0.1\"\n"
+            "tdd_phase: GREEN\n"
+            "---\n\n"
+            "# Test Skill\n\nContent here.\n"
+        )
+        cfg = MonitorConfig(check_stale_docstrings=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_stale_docstrings(skill_file)
+        assert any(i.category == Category.STALE_DOCSTRING for i in issues)
+
+    def test_version_1_0_with_red_tdd_flagged(self, tmp_path: Path):
+        """SKILL.md with version 1.0 (released) but tdd_phase RED (not implemented) is stale."""
+        skill_file = tmp_path / "SKILL.md"
+        skill_file.write_text(
+            "---\n"
+            "name: test-skill\n"
+            "version: \"1.0\"\n"
+            "tdd_phase: RED\n"
+            "---\n\n"
+            "# Test Skill\n\nContent here.\n"
+        )
+        cfg = MonitorConfig(check_stale_docstrings=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_stale_docstrings(skill_file)
+        assert any(i.category == Category.STALE_DOCSTRING for i in issues)
+
+    def test_consistent_version_tdd_not_flagged(self, tmp_path: Path):
+        """SKILL.md with consistent version/tdd_phase is not flagged."""
+        skill_file = tmp_path / "SKILL.md"
+        skill_file.write_text(
+            "---\n"
+            "name: test-skill\n"
+            "version: \"1.0\"\n"
+            "tdd_phase: GREEN\n"
+            "---\n\n"
+            "# Test Skill\n\nFully implemented and released.\n"
+        )
+        cfg = MonitorConfig(check_stale_docstrings=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_stale_docstrings(skill_file)
+        stale_issues = [i for i in issues if i.category == Category.STALE_DOCSTRING]
+        assert not stale_issues
+
+    def test_stale_docstring_check_disabled_by_default(self, tmp_path: Path):
+        """Stale docstring check is NOT run by default."""
+        skill_file = tmp_path / "SKILL.md"
+        skill_file.write_text(
+            "---\n"
+            "name: test-skill\n"
+            "version: \"0.1\"\n"
+            "tdd_phase: GREEN\n"
+            "---\n\n"
+            "# Test Skill\n\nContent.\n"
+        )
+        cfg = MonitorConfig()  # check_stale_docstrings=False by default
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_stale_docstrings(skill_file)
+        assert not issues
+
+    def test_non_skill_md_not_checked(self, tmp_path: Path):
+        """Non-SKILL.md files are not checked for stale docstrings."""
+        md_file = tmp_path / "guide.md"
+        md_file.write_text(
+            "---\n"
+            "version: \"0.1\"\n"
+            "tdd_phase: GREEN\n"
+            "---\n\n"
+            "# Guide\n\nContent.\n"
+        )
+        cfg = MonitorConfig(check_stale_docstrings=True)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        issues = mon.check_stale_docstrings(md_file)
+        assert not issues
+
+    def test_stale_docstring_in_report(self, tmp_path: Path):
+        """Full .run() with stale_docstring check included in by_category."""
+        skill_file = tmp_path / "SKILL.md"
+        skill_file.write_text(
+            "---\n"
+            "name: test-skill\n"
+            "version: \"0.1\"\n"
+            "tdd_phase: GREEN\n"
+            "---\n\n"
+            "# Test Skill\n\nContent.\n"
+        )
+        cfg = MonitorConfig(check_stale_docstrings=True, staleness_days=9999)
+        mon = DocQualityMonitor(root=tmp_path, config=cfg)
+        report = mon.run()
+        assert report.by_category.get("STALE_DOCSTRING", 0) >= 1

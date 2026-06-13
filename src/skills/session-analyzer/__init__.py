@@ -1,1 +1,1 @@
-"""session-analyzer skill — proposed, not yet implemented."""
+# session-analyzer skill package

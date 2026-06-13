@@ -48,6 +48,7 @@ from ..monitoring.token_tracker import TokenTracker
 from ..monitoring.orchestrator_cli import OrchestratorCLI
 from ..monitoring.budget_checker import BudgetStatus, BudgetResult
 from ..decorators import SecurityError
+from ..model_config_loader import load_model_config
 
 logger = logging.getLogger(__name__)
 
@@ -1111,6 +1112,10 @@ class OrchestratorAgent(Agent):
             no_color=_no_color,
             on_budget_exceeded=self._handle_budget_exceeded,
         )
+
+        # Initialize model configuration loader for runtime model selection
+        self.model_config = load_model_config()
+        logger.info(f"Model config loaded: default={self.model_config.global_default}, agents={len(self.model_config.agents)}, tasks={len(self.model_config.tasks)}")
     
     # ========================================================================
     # Properties exposing queue_manager attributes

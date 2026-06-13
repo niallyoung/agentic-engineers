@@ -39,6 +39,8 @@ single, configurable health score so it can be wired into CI as a quality gate.
 | Staleness — `mtime` older than `staleness_days` (default 30) | `STALE_DOC` | info |
 | Placeholder / leakage markers (TODO, FIXME, TBD, XXX, WIP, lorem ipsum, …) | `PLACEHOLDER` | warning |
 | Structure / readability — missing H1 title, below `min_word_count` | `STRUCTURE` | warning / info |
+| Phantom references — references to removed classes/paths (AutomationController, etc.) | `PHANTOM_REFERENCE` | warning |
+| Stale docstrings — SKILL.md YAML headers with version drift | `STALE_DOCSTRING` | warning |
 
 External links (`http://`, `https://`, `mailto:`, `tel:`, protocol-relative)
 are intentionally **not** fetched — the monitor is fully offline and
