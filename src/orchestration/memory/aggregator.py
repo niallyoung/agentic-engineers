@@ -383,9 +383,9 @@ class SessionMemoryAggregator:
             if handback.get("tokens_used"):
                 metrics["total_tokens"] += handback["tokens_used"]
             
-            if handback.get("status") == "complete":
+            if handback.get("status") == "success":
                 metrics["completed_tasks"] += 1
-            elif handback.get("status") == "failed":
+            elif handback.get("status") == "failure":
                 metrics["failed_tasks"] += 1
         
         if quality_scores:

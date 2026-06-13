@@ -350,9 +350,9 @@ class FeedbackLoopEngine:
             FeedbackOutcome with assessments and recommendations
         """
         # Determine outcome
-        if handback.status == "complete" and quality_evaluation.quality_score >= 80:
+        if handback.status == "success" and quality_evaluation.quality_score >= 80:
             outcome = "success"
-        elif handback.status == "complete" and quality_evaluation.quality_score >= 70:
+        elif handback.status == "success" and quality_evaluation.quality_score >= 70:
             outcome = "partial"
         else:
             outcome = "failed"
