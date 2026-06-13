@@ -251,13 +251,15 @@ def record_task_timestamp(
     Creates/updates <queue_root>/<state>/<task_id>.timestamps.json with:
     - 'created_at': When the task was first created (immutable)
     - 'last_updated': When the task was last modified
+    - 'last_heartbeat': When the task last reported a heartbeat (for staleness detection)
+    - 'claimed_at': When the task was claimed by an agent
     - 'state_changes': Array of {timestamp, action, state} transitions
 
     Args:
         task_id: Task identifier
         queue_root: Path to the queue root directory
         state: Queue state (incoming, processing, done, failed)
-        action: Action description (created, claimed, completed, failed)
+        action: Action description (created, claimed, heartbeat, completed, failed, etc.)
     """
     state_dir = queue_root / state
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -275,6 +277,14 @@ def record_task_timestamp(
         ts_data = {"created_at": now_iso}
 
     ts_data["last_updated"] = now_iso
+
+    # Track heartbeat updates for staleness detection
+    if action == "heartbeat":
+        ts_data["last_heartbeat"] = now_iso
+
+    # Track when task was claimed (moved to processing)
+    if action == "claimed" and "claimed_at" not in ts_data:
+        ts_data["claimed_at"] = now_iso
 
     if "state_changes" not in ts_data:
         ts_data["state_changes"] = []
@@ -339,7 +349,7 @@ def check_task_staleness(
     Check if a task is stale or requires escalation based on age thresholds.
 
     Staleness is ADVISORY — it never changes task state, only generates alerts.
-    Returns a dict with status, age, and recommended action.
+    Uses last_heartbeat if available, otherwise falls back to created_at.
 
     Args:
         task_id: Task identifier
@@ -352,36 +362,74 @@ def check_task_staleness(
         dict with keys:
         - 'task_id': The task ID
         - 'age_seconds': Age in seconds (float), or None if not found
+        - 'heartbeat_age_seconds': Age since last_heartbeat (if available)
         - 'is_stale': bool (True if age > stale_threshold)
         - 'is_crashed': bool (True if age > escalation_threshold)
-        - 'status': 'ok' | 'stale' | 'crashed'
+        - 'status': 'ok' | 'stale' | 'crashed' | 'unknown'
         - 'action': Recommended action ('none', 'warn', 'escalate')
     """
-    age = get_task_age_seconds(task_id, queue_root, state)
+    timestamps_path = queue_root / state / f"{task_id}.timestamps.json"
 
     result = {
         "task_id": task_id,
-        "age_seconds": age,
+        "age_seconds": None,
+        "heartbeat_age_seconds": None,
         "is_stale": False,
         "is_crashed": False,
         "status": "ok",
         "action": "none",
     }
 
-    if age is None:
+    if not timestamps_path.exists():
+        result["status"] = "unknown"
+        result["action"] = "none"
+        return result
+
+    try:
+        with timestamps_path.open("r", encoding="utf-8") as fh:
+            ts_data = json.load(fh)
+    except (json.JSONDecodeError, IOError):
+        result["status"] = "unknown"
+        result["action"] = "none"
+        return result
+
+    now = datetime.now(tz=timezone.utc)
+
+    # Calculate heartbeat age (if available)
+    heartbeat_str = ts_data.get("last_heartbeat")
+    if heartbeat_str:
+        try:
+            heartbeat = datetime.fromisoformat(heartbeat_str)
+            result["heartbeat_age_seconds"] = (now - heartbeat).total_seconds()
+        except (ValueError, TypeError):
+            pass
+
+    # Calculate creation age (fallback)
+    created_at_str = ts_data.get("created_at")
+    if created_at_str:
+        try:
+            created_at = datetime.fromisoformat(created_at_str)
+            result["age_seconds"] = (now - created_at).total_seconds()
+        except (ValueError, TypeError):
+            pass
+
+    # Use heartbeat age if available, otherwise use creation age
+    age_to_check = result["heartbeat_age_seconds"] or result["age_seconds"]
+
+    if age_to_check is None:
         result["status"] = "unknown"
         result["action"] = "none"
         return result
 
     # Check escalation threshold first (crash)
-    if age > escalation_threshold_sec:
+    if age_to_check > escalation_threshold_sec:
         result["is_crashed"] = True
         result["status"] = "crashed"
         result["action"] = "escalate"
         return result
 
     # Check stale threshold (warn)
-    if age > stale_threshold_sec:
+    if age_to_check > stale_threshold_sec:
         result["is_stale"] = True
         result["status"] = "stale"
         result["action"] = "warn"

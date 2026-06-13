@@ -2,19 +2,22 @@
 
 import pytest
 import yaml
+import importlib
 from pathlib import Path
 import tempfile
 
 
 def test_session_analyzer_imports():
     """Test that SessionAnalyzer can be imported."""
-    from session_analyzer.scripts.session_analyzer import SessionAnalyzer
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalyzer = getattr(mod, 'SessionAnalyzer')
     assert SessionAnalyzer is not None
 
 
 def test_session_analysis_dataclass():
     """Test that SessionAnalysis dataclass works."""
-    from session_analyzer.scripts.session_analyzer import SessionAnalysis
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalysis = getattr(mod, 'SessionAnalysis')
 
     analysis = SessionAnalysis(
         session_id="test-session",
@@ -36,7 +39,8 @@ def test_session_analysis_dataclass():
 
 def test_repetitive_pattern_dataclass():
     """Test that RepetitivePattern dataclass works."""
-    from session_analyzer.scripts.session_analyzer import RepetitivePattern
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    RepetitivePattern = getattr(mod, 'RepetitivePattern')
 
     pattern = RepetitivePattern(
         pattern_id="enum-drift",
@@ -54,7 +58,8 @@ def test_repetitive_pattern_dataclass():
 
 def test_quality_anomaly_dataclass():
     """Test that QualityAnomaly dataclass works."""
-    from session_analyzer.scripts.session_analyzer import QualityAnomaly
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    QualityAnomaly = getattr(mod, 'QualityAnomaly')
 
     anomaly = QualityAnomaly(
         anomaly_id="low-confidence",
@@ -70,7 +75,8 @@ def test_quality_anomaly_dataclass():
 
 def test_recommendation_dataclass():
     """Test that Recommendation dataclass works."""
-    from session_analyzer.scripts.session_analyzer import Recommendation
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    Recommendation = getattr(mod, 'Recommendation')
 
     rec = Recommendation(
         title="Create skill",
@@ -86,7 +92,8 @@ def test_recommendation_dataclass():
 
 def test_session_analysis_to_dict():
     """Test SessionAnalysis.to_dict() converts to dict."""
-    from session_analyzer.scripts.session_analyzer import SessionAnalysis
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalysis = getattr(mod, 'SessionAnalysis')
 
     analysis = SessionAnalysis(
         session_id="test",
@@ -109,7 +116,8 @@ def test_session_analysis_to_dict():
 
 def test_session_analysis_save_to_yaml():
     """Test SessionAnalysis.save() creates valid YAML."""
-    from session_analyzer.scripts.session_analyzer import SessionAnalysis
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalysis = getattr(mod, 'SessionAnalysis')
 
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir) / "analysis.yaml"

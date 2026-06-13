@@ -501,10 +501,16 @@ class TestIntegration:
         processing_file = processing_dir / f"{task_id}.yaml"
         delegate_file.rename(processing_file)
 
-        now_iso = datetime.now(tz=timezone.utc).isoformat()
+        # Create metadata with old timestamp to trigger stall
+        old_time = datetime.now(tz=timezone.utc)
+        old_time = old_time.replace(microsecond=0)
+        old_time_iso = (old_time.timestamp() - 10) * 1  # 10 seconds ago
+        old_dt = datetime.fromtimestamp(old_time_iso, tz=timezone.utc)
+        old_iso = old_dt.isoformat()
+
         metadata = {
             "task_id": task_id,
-            "claimed_at": now_iso,
+            "claimed_at": old_iso,
             "retry_count": 0,
         }
         meta_file = processing_dir / f"{task_id}.meta.json"
@@ -512,7 +518,6 @@ class TestIntegration:
             json.dump(metadata, f)
 
         # Step 2: Don't update heartbeat - let it stall
-        time.sleep(0.1)
 
         # Step 3: Detect stalled
         stalled = orchestrator_with_config.detect_stalled_tasks()

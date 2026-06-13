@@ -54,8 +54,11 @@ class PollingConfig:
         self,
         poll_interval_fast: int = 30,
         poll_interval_idle: int = 180,
+        heartbeat_interval: int = 30,
         heartbeat_timeout_sec: int = 120,
         task_deadline_sec: int = 600,
+        stale_threshold_sec: int = 300,
+        crash_threshold_sec: int = 600,
         retry_max_attempts: int = 3,
         retry_backoff_multiplier: float = 1.5,
         idle_threshold_polls: int = 3,
@@ -67,8 +70,11 @@ class PollingConfig:
         Args:
             poll_interval_fast: Polling interval when tasks are processing (seconds)
             poll_interval_idle: Polling interval when queue is idle (seconds)
+            heartbeat_interval: Expected interval between heartbeats (seconds, default 30s)
             heartbeat_timeout_sec: Max time without task update before stalled (seconds)
             task_deadline_sec: Max time in processing before marked crashed (seconds)
+            stale_threshold_sec: Threshold for WARN status (300s since last_heartbeat)
+            crash_threshold_sec: Threshold for ESCALATE (600s since claimed_at, LOCKED)
             retry_max_attempts: Max retries for crashed/stalled tasks
             retry_backoff_multiplier: Exponential backoff multiplier for retries
             idle_threshold_polls: Consecutive clean polls before deep sleep
@@ -76,8 +82,11 @@ class PollingConfig:
         """
         self.poll_interval_fast = poll_interval_fast
         self.poll_interval_idle = poll_interval_idle
+        self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout_sec = heartbeat_timeout_sec
         self.task_deadline_sec = task_deadline_sec
+        self.stale_threshold_sec = stale_threshold_sec
+        self.crash_threshold_sec = crash_threshold_sec
         self.retry_max_attempts = retry_max_attempts
         self.retry_backoff_multiplier = retry_backoff_multiplier
         self.idle_threshold_polls = idle_threshold_polls
@@ -88,8 +97,11 @@ class PollingConfig:
         return {
             "poll_interval_fast": self.poll_interval_fast,
             "poll_interval_idle": self.poll_interval_idle,
+            "heartbeat_interval": self.heartbeat_interval,
             "heartbeat_timeout_sec": self.heartbeat_timeout_sec,
             "task_deadline_sec": self.task_deadline_sec,
+            "stale_threshold_sec": self.stale_threshold_sec,
+            "crash_threshold_sec": self.crash_threshold_sec,
             "retry_max_attempts": self.retry_max_attempts,
             "retry_backoff_multiplier": self.retry_backoff_multiplier,
             "idle_threshold_polls": self.idle_threshold_polls,
@@ -259,11 +271,25 @@ class OrchestratorSkill:
         """
         Main polling loop - read incoming/, validate, claim, spawn.
 
+        Includes wake-timer mechanism to detect and recover stalled tasks
+        (tasks without heartbeat updates for > heartbeat_interval seconds).
+
         Returns:
             (processed_count, failed_count)
         """
         processed_count = 0
         failed_count = 0
+
+        # Run wake-timer to detect and recover stalled tasks
+        wake_timer_result = self.wake_timer()
+        if wake_timer_result['stalled_detected'] > 0:
+            logger.warning(
+                f"Wake-timer detected stalled tasks: "
+                f"recovered={wake_timer_result['recovered']}, "
+                f"escalated={wake_timer_result['escalated']}"
+            )
+            # Increment failed count for stalled tasks that were escalated
+            failed_count += wake_timer_result['escalated']
 
         incoming_dir = self.queue_root / "incoming"
 
@@ -272,10 +298,10 @@ class OrchestratorSkill:
             if not delegates:
                 self.clean_poll_count += 1
                 logger.debug(f"No delegates found (clean_poll_count={self.clean_poll_count})")
-                return (0, 0)
+                return (processed_count, failed_count)
         except Exception as e:
             logger.error(f"Failed to list incoming directory: {e}")
-            return (0, 1)
+            return (processed_count, failed_count + 1)
 
         logger.info(f"Found {len(delegates)} delegate(s) in incoming/")
 
@@ -513,6 +539,70 @@ class OrchestratorSkill:
             )
 
         return (recovered_count, escalated_count)
+
+    def wake_timer(self) -> Dict[str, Any]:
+        """
+        Wake-timer mechanism to detect and recover stalled tasks.
+
+        Implements configurable polling mechanism to detect when a task has stopped
+        making progress (no heartbeat for heartbeat_interval seconds) and trigger
+        recovery. This is called periodically from poll_queue().
+
+        Behavior:
+        1. Detect tasks without heartbeat update (> heartbeat_interval)
+        2. Mark stalled tasks with escalation flag
+        3. Move stalled tasks to retry-pending with automatic timeout recovery
+        4. Return metrics for observability
+
+        Thresholds (from SPEC queue SLA design):
+        - Heartbeat interval: config.heartbeat_interval (default 30s)
+        - Stale (WARN): config.stale_threshold_sec (300s since last_heartbeat)
+        - Crash (ESCALATE): config.crash_threshold_sec (600s since claimed_at, LOCKED)
+
+        Returns:
+            Dict with keys:
+            - 'stalled_detected': int — number of stalled tasks found
+            - 'recovered': int — tasks moved to retry-pending
+            - 'escalated': int — tasks escalated to manual review
+            - 'wake_reason': str — 'heartbeat_timeout' or 'no_tasks'
+        """
+        logger.info(
+            f"Wake-timer triggered: heartbeat_interval={self.config.heartbeat_interval}s, "
+            f"stale_threshold={self.config.stale_threshold_sec}s, "
+            f"crash_threshold={self.config.crash_threshold_sec}s"
+        )
+
+        # Detect stalled tasks
+        stalled_tasks = self.detect_stalled_tasks()
+
+        if not stalled_tasks:
+            logger.debug("No stalled tasks detected")
+            return {
+                'stalled_detected': 0,
+                'recovered': 0,
+                'escalated': 0,
+                'wake_reason': 'no_stalled_tasks',
+            }
+
+        logger.warning(f"Wake-timer detected {len(stalled_tasks)} stalled task(s)")
+
+        # Recover stalled tasks
+        recovered, escalated = self.recover_stalled_tasks()
+
+        # Capture span for observability
+        self.capture_span(
+            "wake_timer",
+            stalled_detected=len(stalled_tasks),
+            recovered_count=recovered,
+            escalated_count=escalated,
+        )
+
+        return {
+            'stalled_detected': len(stalled_tasks),
+            'recovered': recovered,
+            'escalated': escalated,
+            'wake_reason': 'heartbeat_timeout',
+        }
 
     def spawn_sub_agent(self, delegate: Dict[str, Any]) -> str:
         """
