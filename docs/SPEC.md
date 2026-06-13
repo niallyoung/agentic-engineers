@@ -781,6 +781,50 @@ The following paths are **DEPRECATED and MUST NOT be used**:
 
 ---
 
+## Queue SLA & Governance
+
+Queue health is enforced inside the Orchestrator polling loop (no daemon, no cron).
+Detection resolution is bounded below by `poll_interval_sec` (default 180s); SLA
+targets shorter than one poll are aspirational, not precisely enforceable.
+
+### SLA Thresholds
+
+| Transition | Target | Warn | Breach | On breach |
+|------------|--------|------|--------|-----------|
+| incoming -> processing (claim) | 30s | 180s | 600s | Escalate to operator (Orchestrator down/overloaded) |
+| processing -> done/failed (normal) | - | 300s | 600s | Orphan -> crash recovery |
+| processing -> done/failed (effort: high\|max) | - | 600s | 900s | Orphan -> crash recovery |
+| failed -> retry (per attempt) | - | - | backoff curve | Re-enqueue to retry-pending/ |
+| retry attempts exhausted | - | - | 3 attempts | Move to failed/, escalate to Lead Engineer |
+
+### Retry & Backoff
+- `retry_max_attempts = 3` (existing).
+- Delay before attempt *n*: `min(retry_base_sec * 2^(n-1), retry_max_delay_sec)` with
+  +/-20% jitter. Defaults: base 60s, cap 600s -> ~60s, 120s, 240s.
+- A task whose `retry_count >= retry_max_attempts` is terminal-failed and escalated.
+
+### Orphan / Stall Detection
+- A `processing/` task is stalled when `now - claimed_at > deadline_for(effort)`,
+  where `claimed_at` is read from `{task_id}.meta.json`.
+- No mid-task heartbeat exists in this harness; `claimed_at + deadline` is the
+  canonical liveness proxy. Stalled tasks enter crash recovery (existing
+  `recover_crashed_tasks()` behaviour: increment retry_count, route to
+  retry-pending/ or failed/).
+
+### Escalation Routing
+| Condition | Escalate to |
+|-----------|-------------|
+| Incoming starvation (no claim within breach) | Operator / human |
+| Task stalled, retries remain | (auto) retry-pending/, same agent |
+| Retries exhausted | Lead Engineer (unblock) |
+| HANDBACK status: escalate | Model Engineer -> role promotion |
+
+### Source of Truth
+All thresholds live in `config/queue-sla.yaml`. The `queue-staleness-detection`
+and `queue-wake-timers` skills and the Orchestrator SKILL MUST read values from
+that file; they MUST NOT hardcode SLA constants. Changes to SLA thresholds are
+governed by the `spec-management` skill.
+
 ## DELEGATE/HANDBACK Protocol
 
 ### DELEGATE Format (Orchestrator → Agent)

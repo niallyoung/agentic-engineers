@@ -620,12 +620,11 @@ Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merg
   orchestrator.py's run_poll_cycle docstring is fixed; SPEC.md is owned elsewhere — route
   via spec-management to replace the AutomationController mention with the harness/idle-loop
   model. tests/test_dry_run.py:14 docstring has the same stale mention (comment-only).
-- [ ] **src/skills/orchestrator/SKILL.md escalation docs stale** — line 141 says
-  status=escalate "delegate to Model Engineer"; actual (now-canonical) behaviour is C2c
-  escalation chaining: synthesize `{task_id}-escalated-to-{role}` DELEGATE into incoming/
-  and archive the original to done/ with audit metadata (the old non-canonical escalation/
-  directory was removed from orchestrator_skill.py on 2026-06-13). Update SKILL.md
-  handle_handback + Integration Points sections to match.
+- [x] **src/skills/orchestrator/SKILL.md escalation docs stale** — line 141 said
+  status=escalate "delegate to Model Engineer"; corrected to canonical C2c escalation
+  chaining: synthesize `{task_id}-escalated-to-{role}` DELEGATE into incoming/ and archive
+  the original to done/ with audit metadata (the old non-canonical escalation/ directory was
+  removed from orchestrator_skill.py on 2026-06-13). Fixed in P1 consolidation (2026-06-13).
 
 ---
 
@@ -633,18 +632,27 @@ Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merg
 
 **Ref:** PLAN_skill-improvements.md (repo root)
 
-Three DELEGATEs queued for next session execution via Orchestrator:
+Three DELEGATEs queued for next session execution via Orchestrator — **all delivered
+via the P1 self-improvement round (PR #57, merged to main 2026-06-13):**
 
-- [ ] **DELEGATE-2026-06-13-001** — Skill Audit & Enhancement (lead-engineer)
-  - Enhance doc-quality-monitor, protocol-validator
-  - Propose session-analyzer meta-skill
-  
-- [ ] **DELEGATE-2026-06-13-002** — Model Adaptability Config Design (principal-engineer)
-  - Design runtime model-selection system
-  - Create model-config.yaml schema
-  
-- [ ] **DELEGATE-2026-06-13-003** — Meta-Skill Session Analysis (model-engineer)
-  - Design skill to read transcripts, flag automation candidates
-  - Output to ~/.agentic-engineers/sessions/{id}/analysis.yaml
+- [x] **DELEGATE-2026-06-13-001** — Skill Audit & Enhancement (lead-engineer)
+  - Enhanced doc-quality-monitor, protocol-validator; session-analyzer meta-skill landed
+    (`src/skills/session-analyzer/`).
+- [x] **DELEGATE-2026-06-13-002** — Model Adaptability Config Design (principal-engineer)
+  - Runtime model-selection system delivered (`src/skills/model-selection/`,
+    `src/config/model-config.yaml`).
+- [x] **DELEGATE-2026-06-13-003** — Meta-Skill Session Analysis (model-engineer)
+  - session-analyzer skill delivered; reads transcripts and flags automation candidates.
 
 **Principle:** All work via DELEGATE. Never manual file writes to queue. Centralize data in ~/.agentic-engineers/ (not harness dirs).
+
+### Outstanding queue work (all complete)
+
+- [x] **2026-06-13-orchestrator-architecture-decision** (principal-engineer) — Complete.
+  Documented the in-harness Agent dispatch architecture. `spawn_sub_agent()` and 
+  `invoke_qe_gate()` now have comprehensive documentation explaining how real agent 
+  dispatch happens at the harness level via the Agent tool. Added 13 unit tests covering
+  both methods. Commit: d25f56f (2026-06-13, feat(orchestrator)). No breaking changes.
+  The two sibling DELEGATEs (queue-staleness-detection, spec-queue-sla-design) were 
+  superseded by #57's staleness monitoring modules and archived to `queue/done/` with 
+  audit metadata on 2026-06-13.

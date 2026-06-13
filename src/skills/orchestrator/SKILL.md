@@ -138,7 +138,11 @@ Metadata:   {task_id}.meta.json (claimed_at, retry_count, last_error)
 4. Apply routing decision:
    - If `status == 'success'` → invoke `invoke_qe_gate(task_id, handback)`
    - If `status == 'failure'` → move to `failed/{task_id}-HANDBACK.yaml`
-   - If `status == 'escalate'` → delegate to Model Engineer
+   - If `status == 'escalate'` → escalation chaining (C2c): synthesize a follow-on
+     `{task_id}-escalated-to-{role}` DELEGATE into `incoming/` for the escalation
+     target (`output.escalate_to`, default `lead-engineer`) and archive the original
+     task to `done/` with escalation audit metadata. There is no `escalation/` state
+     directory in the queue protocol.
 5. Write `done/{task_id}-HANDBACK.yaml` (or `failed/`)
 6. Increment metrics (tokens, cost, duration)
 7. Return parsed HANDBACK dict

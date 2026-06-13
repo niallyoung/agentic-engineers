@@ -1,0 +1,57 @@
+---
+proposal_type: SPEC
+change_id: SPEC-2026-003
+proposer: principal-engineer
+proposer_role: principal-engineer
+timestamp: "2026-06-13T10:00:00Z"
+title: "Fix stale AutomationController reference in SPEC.md"
+
+affected_sections:
+  - "Integration & Polling Architecture"
+
+rationale: |
+  AutomationController (src/orchestration/agents/automation.py) was removed in the 2026-05-17
+  daemon-removal refactor. The harness now owns polling via OrchestratorSkill.run_idle_loop.
+  This proposal updates SPEC.md to replace the stale AutomationController mention with the
+  current harness/idle-loop architecture model. The reference at docs/SPEC.md:1421 should be
+  updated to correctly document the actual polling mechanism.
+
+proposed_changes:
+  "Integration & Polling Architecture": |
+    ### Integration & Polling Architecture
+
+    The Orchestrator operates in two modes:
+
+    1. **Harness-Initiated Polling** (default)
+       - Each harness (OpenCode, Copilot, Claude, PI) owns its own idle-loop via OrchestratorSkill.run_idle_loop()
+       - Harness wakes up on a schedule (typically every 5 minutes) and calls the orchestrator
+       - Orchestrator checks the queue for pending work and dispatches tasks
+       - This model avoids long-running daemons and integrates cleanly with harness lifecycle
+
+    2. **Direct Queue Polling** (test/debug mode)
+       - Direct calls to orchestrator_skill.execute() for testing
+       - Useful for development and CI/CD workflows
+       - Requires explicit harness integration
+
+    See AGENTS.md for the complete routing decision tree and integration points per harness.
+
+compatibility_notes: |
+  No breaking changes. This is a documentation update only.
+  The actual polling behavior (harness-initiated) has been live since the 2026-05-17 refactor.
+  This proposal corrects the documentation to match the implementation.
+
+breaking_change: false
+migration_path: null
+
+# Positional insertion: insert before the "Full Reference" section
+insertion_point: "before:### Full Reference"
+
+approval_chain:
+  - approver: "security-engineer"
+    approver_role: "security-engineer"
+    required: true
+    sequence: 1
+  - approver: "principal-engineer"
+    approver_role: "principal-engineer"
+    required: true
+    sequence: 2

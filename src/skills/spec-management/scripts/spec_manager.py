@@ -13,6 +13,8 @@ from typing import Optional, List, Dict
 from datetime import datetime
 import re
 from pathlib import Path
+import yaml
+import json
 
 from .change_validator import ChangeValidator, ValidationResult
 from .authorizer import Authorizer
@@ -35,6 +37,7 @@ class ChangeProposal:
     compatibility_notes: Optional[str] = None
     breaking_change: bool = False
     migration_path: Optional[str] = None
+    insertion_point: Optional[str] = None  # "before:anchor_line" or "after:anchor_line"
 
 
 @dataclass
@@ -81,9 +84,22 @@ class SpecManager:
         self.audit_logger = AuditLogger()
         self.changelog_generator = ChangelogGenerator()
         self.rollback_manager = RollbackManager()
-        
+
         # Proposals in-flight
         self._proposals = {}
+
+        # Persistence paths
+        import os
+        data_dir = Path(os.path.expanduser("~/.agentic-engineers/spec-management"))
+        self.audit_dir = data_dir / "audit"
+        self.proposals_dir = data_dir / "proposals"
+
+        # Create directories if they don't exist
+        self.audit_dir.mkdir(parents=True, exist_ok=True)
+        self.proposals_dir.mkdir(parents=True, exist_ok=True)
+
+        # Load persisted proposals from disk
+        self._load_persisted_proposals()
     
     # ========================================================================
     # PROPOSAL SUBMISSION & VALIDATION
@@ -101,7 +117,8 @@ class SpecManager:
             rationale=proposal_dict.get("rationale", ""),
             compatibility_notes=proposal_dict.get("compatibility_notes"),
             breaking_change=proposal_dict.get("breaking_change", False),
-            migration_path=proposal_dict.get("migration_path")
+            migration_path=proposal_dict.get("migration_path"),
+            insertion_point=proposal_dict.get("insertion_point")
         )
     
     def validate_proposal(self, proposal: ChangeProposal) -> ValidationResult:
@@ -207,10 +224,14 @@ class SpecManager:
             actor_role=proposal.proposer_role,
             details={"proposal": proposal.__dict__, "approval_chain": approval_chain}
         )
-        
-        # Store proposal
+
+        # Store proposal in memory and persist to disk
         self._proposals[proposal.change_id] = proposal
-        
+        self._save_proposal(proposal)
+
+        # Persist initial audit trail
+        self._persist_audit_trail(proposal.change_id)
+
         return SubmissionResult(
             status="pending_approval",
             change_id=proposal.change_id,
@@ -261,17 +282,20 @@ class SpecManager:
             status="approved",
             comments=comments
         )
-        
+
         self.audit_logger.log_approval(approval)
-        
+
+        # Persist audit trail after approval
+        self._persist_audit_trail(change_id)
+
         # Check if this is final approval
         approval_entries = self.audit_logger.get_entries_for_change(change_id)
         final_approval = approver_role == "principal-engineer"
-        
+
         if final_approval:
             # Apply change immediately
             return self._apply_change(change_id)
-        
+
         return SubmissionResult(
             status="pending_approval",
             change_id=change_id,
@@ -281,13 +305,13 @@ class SpecManager:
     def reject_change(self, change_id: str, rejector: str, rejector_role: str,
                      comments: str) -> SubmissionResult:
         """Reject a change proposal.
-        
+
         Args:
             change_id: ID of change to reject
             rejector: Name of person rejecting
             rejector_role: Role of rejector
             comments: Required reason for rejection
-            
+
         Returns:
             SubmissionResult with rejection status
         """
@@ -300,9 +324,12 @@ class SpecManager:
             status="rejected",
             comments=comments
         )
-        
+
         self.audit_logger.log_approval(rejection)
-        
+
+        # Persist audit trail after rejection
+        self._persist_audit_trail(change_id)
+
         return SubmissionResult(
             status="rejected",
             change_id=change_id,
@@ -315,10 +342,14 @@ class SpecManager:
     
     def _apply_change(self, change_id: str) -> SubmissionResult:
         """Apply approved change to SPEC.md.
-        
+
+        Supports both simple replacement and positional insertion:
+        - If insertion_point is specified, inserts new section at correct position
+        - Otherwise, applies simple replacement logic
+
         Args:
             change_id: ID of change to apply
-            
+
         Returns:
             SubmissionResult with application status
         """
@@ -328,24 +359,29 @@ class SpecManager:
                 change_id=change_id,
                 reason="Change not found in proposals"
             )
-        
+
         proposal = self._proposals[change_id]
-        
+
         try:
             # Compute hash of current SPEC.md
             previous_hash = self.compute_spec_hash()
-            
+
             # Read current SPEC.md
             spec_content = self.spec_path.read_text()
-            
-            # Apply changes
-            for section, new_text in proposal.proposed_changes.items():
-                # Simple replacement (in production, would be more sophisticated)
-                spec_content = spec_content.replace(
-                    f"## {section}",
-                    f"## {section}\n{new_text}"
+
+            # Apply changes based on insertion strategy
+            if getattr(proposal, "insertion_point", None):
+                spec_content = self._apply_positional_insertion(
+                    spec_content, proposal
                 )
-            
+            else:
+                # Simple replacement
+                for section, new_text in proposal.proposed_changes.items():
+                    spec_content = spec_content.replace(
+                        f"## {section}",
+                        f"## {section}\n{new_text}"
+                    )
+
             # Write updated SPEC.md
             self.spec_path.write_text(spec_content)
             
@@ -372,7 +408,10 @@ class SpecManager:
                     "sections_changed": list(proposal.proposed_changes.keys())
                 }
             )
-            
+
+            # Persist final audit trail
+            self._persist_audit_trail(proposal.change_id)
+
             # Create version entry
             self.rollback_manager.create_version(
                 change_id=proposal.change_id,
@@ -380,7 +419,7 @@ class SpecManager:
                 new_hash=new_hash,
                 changes=proposal.proposed_changes
             )
-            
+
             return SubmissionResult(
                 status="approved",
                 change_id=proposal.change_id,
@@ -454,7 +493,7 @@ class SpecManager:
             Dict with success status and details
         """
         result = self.rollback_manager.rollback_to_version(version_id)
-        
+
         if result.get("success"):
             self.audit_logger.log_action(
                 action="reverted",
@@ -463,5 +502,181 @@ class SpecManager:
                 actor_role="principal-engineer",
                 details=result
             )
-        
+
         return result
+
+    # ========================================================================
+    # POSITIONAL INSERTION
+    # ========================================================================
+
+    def _apply_positional_insertion(self, spec_content: str, proposal: ChangeProposal) -> str:
+        """Apply change by inserting at specific position relative to anchor line.
+
+        Insertion point format: "before:anchor_text" or "after:anchor_text"
+
+        Args:
+            spec_content: Current SPEC.md content
+            proposal: Change proposal with insertion_point
+
+        Returns:
+            Updated spec_content with insertion applied
+
+        Raises:
+            ValueError: If insertion_point format is invalid or anchor not found
+        """
+        if not proposal.insertion_point:
+            return spec_content
+
+        # Parse insertion point
+        parts = proposal.insertion_point.split(":", 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid insertion_point format: {proposal.insertion_point}")
+
+        position, anchor = parts
+        if position not in ["before", "after"]:
+            raise ValueError(f"Invalid position: {position}. Must be 'before' or 'after'")
+
+        # Find anchor line(s) in spec_content. An anchor MUST resolve to exactly
+        # one line: zero matches is unresolvable, and more than one match is
+        # ambiguous (silently picking the first match risks inserting content at
+        # the wrong position). Both conditions are hard errors.
+        lines = spec_content.split("\n")
+        matching_indices = [i for i, line in enumerate(lines) if anchor in line]
+
+        if not matching_indices:
+            raise ValueError(f"Anchor line not found in SPEC.md: {anchor}")
+        if len(matching_indices) > 1:
+            raise ValueError(
+                f"Ambiguous anchor (matched {len(matching_indices)} lines: "
+                f"{matching_indices}): {anchor}. Provide a unique anchor."
+            )
+
+        anchor_idx = matching_indices[0]
+
+        # Prepare new content to insert
+        new_text_parts = []
+        for section, new_text in proposal.proposed_changes.items():
+            new_text_parts.append(new_text)
+
+        new_content = "\n".join(new_text_parts)
+
+        # Insert at correct position
+        if position == "before":
+            # Insert before anchor line
+            lines.insert(anchor_idx, new_content)
+        else:  # "after"
+            # Insert after anchor line
+            lines.insert(anchor_idx + 1, new_content)
+
+        return "\n".join(lines)
+
+    # ========================================================================
+    # PROPOSAL PERSISTENCE
+    # ========================================================================
+
+    def _save_proposal(self, proposal: ChangeProposal) -> None:
+        """Persist proposal to disk.
+
+        Args:
+            proposal: ChangeProposal to save
+        """
+        proposal_file = self.proposals_dir / f"{proposal.change_id}.yaml"
+
+        proposal_dict = {
+            "change_id": proposal.change_id,
+            "proposer": proposal.proposer,
+            "proposer_role": proposal.proposer_role,
+            "timestamp": proposal.timestamp,
+            "affected_sections": proposal.affected_sections,
+            "proposed_changes": proposal.proposed_changes,
+            "rationale": proposal.rationale,
+            "compatibility_notes": proposal.compatibility_notes,
+            "breaking_change": proposal.breaking_change,
+            "migration_path": proposal.migration_path,
+            "insertion_point": getattr(proposal, "insertion_point", None),
+        }
+
+        with open(proposal_file, "w") as f:
+            yaml.dump(proposal_dict, f, default_flow_style=False)
+
+    def _load_persisted_proposals(self) -> None:
+        """Load all persisted proposals from disk into _proposals dict."""
+        if not self.proposals_dir.exists():
+            return
+
+        for proposal_file in self.proposals_dir.glob("*.yaml"):
+            try:
+                with open(proposal_file, "r") as f:
+                    proposal_dict = yaml.safe_load(f)
+                    proposal = self.parse_proposal(proposal_dict)
+                    self._proposals[proposal.change_id] = proposal
+            except Exception as e:
+                # Log error but continue loading other proposals
+                import sys
+                print(f"Warning: Failed to load proposal {proposal_file}: {e}", file=sys.stderr)
+
+    # ========================================================================
+    # AUDIT PERSISTENCE
+    # ========================================================================
+
+    def _persist_audit_trail(self, proposal_id: str) -> None:
+        """Persist audit trail entries for a change to disk.
+
+        Args:
+            proposal_id: ID of proposal for which to persist audit entries
+        """
+        entries = self.audit_logger.get_entries_for_change(proposal_id)
+
+        audit_file = self.audit_dir / f"{proposal_id}.yaml"
+
+        # Serialize audit entries
+        entries_data = []
+        for entry in entries:
+            entry_data = {
+                "entry_id": entry.entry_id,
+                "change_id": entry.change_id,
+                "action": entry.action,
+                "actor": entry.actor,
+                "actor_role": entry.actor_role,
+                "timestamp": entry.timestamp,
+                "details": entry.details,
+                "previous_hash": entry.previous_hash,
+                "approval_chain": [
+                    {
+                        "change_id": a.change_id,
+                        "approver": a.approver,
+                        "approver_role": a.approver_role,
+                        "approval_timestamp": a.approval_timestamp,
+                        "status": a.status,
+                        "comments": a.comments,
+                    }
+                    for a in entry.approval_chain
+                ],
+            }
+            entries_data.append(entry_data)
+
+        with open(audit_file, "w") as f:
+            yaml.dump(entries_data, f, default_flow_style=False)
+
+    def _load_persisted_audit_trail(self, proposal_id: str) -> List[Dict]:
+        """Load persisted audit trail for a specific proposal.
+
+        Args:
+            proposal_id: ID of proposal
+
+        Returns:
+            List of audit entry dicts
+        """
+        audit_file = self.audit_dir / f"{proposal_id}.yaml"
+
+        if not audit_file.exists():
+            return []
+
+        try:
+            with open(audit_file, "r") as f:
+                entries_data = yaml.safe_load(f) or []
+                return entries_data
+        except Exception as e:
+            import sys
+            print(f"Warning: Failed to load audit trail {audit_file}: {e}", file=sys.stderr)
+            return []
