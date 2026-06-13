@@ -333,9 +333,9 @@ class TestSessionMemoryManagerGetHandbacks:
             {"status": "failure", "task_id": "t-002"},
             {"status": "success", "task_id": "t-003"},
         ]
-        result = mgr.get_handbacks(status="complete")
+        result = mgr.get_handbacks(status="success")
         assert len(result) == 2
-        assert all(h["status"] == "complete" for h in result)
+        assert all(h["status"] == "success" for h in result)
 
 
 class TestSessionMemoryManagerGetMetrics:

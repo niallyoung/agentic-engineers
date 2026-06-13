@@ -411,7 +411,7 @@ def test_idle_loop_normal_sleep(orchestrator):
     # Mock time.sleep to verify it's called with correct duration
     with patch('time.sleep') as mock_sleep:
         result = orchestrator.run_idle_loop()
-        mock_sleep.assert_called_once_with(orchestrator.POLL_INTERVAL_SEC)
+        mock_sleep.assert_called_once_with(orchestrator.config.poll_interval_idle)
 
     # Verify return structure
     assert result['work_processed'] == 0

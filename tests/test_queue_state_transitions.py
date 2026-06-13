@@ -450,7 +450,7 @@ class TestQueueStateTransitions:
         
         # Verify metadata in processing state
         processed_task = queue_manager.read_task("test-task-001.yaml", "processing")
-        assert processed_task["status"] == "complete"
+        assert processed_task["status"] == "success"
         assert processed_task["decision"] == "PROCEED"
         assert processed_task["tokens_used"] == 2500
     

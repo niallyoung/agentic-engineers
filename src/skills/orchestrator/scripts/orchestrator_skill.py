@@ -749,13 +749,13 @@ class OrchestratorSkill:
                 claimed_at = datetime.fromisoformat(claimed_at_str)
                 elapsed = (now - claimed_at).total_seconds()
 
-                if elapsed > self.TASK_DEADLINE_SEC:
+                if elapsed > self.config.task_deadline_sec:
                     logger.warning(
                         f"Task {task_id} crashed (elapsed={elapsed:.0f}s, "
-                        f"deadline={self.TASK_DEADLINE_SEC}s, retries={retry_count})"
+                        f"deadline={self.config.task_deadline_sec}s, retries={retry_count})"
                     )
 
-                    if retry_count >= self.RETRY_MAX_ATTEMPTS:
+                    if retry_count >= self.config.retry_max_attempts:
                         # Move to failed
                         self._move_task_to_failed(
                             task_id,
