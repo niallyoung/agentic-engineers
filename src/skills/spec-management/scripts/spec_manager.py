@@ -370,7 +370,7 @@ class SpecManager:
             spec_content = self.spec_path.read_text()
 
             # Apply changes based on insertion strategy
-            if proposal.insertion_point:
+            if getattr(proposal, "insertion_point", None):
                 spec_content = self._apply_positional_insertion(
                     spec_content, proposal
                 )
@@ -588,7 +588,7 @@ class SpecManager:
             "compatibility_notes": proposal.compatibility_notes,
             "breaking_change": proposal.breaking_change,
             "migration_path": proposal.migration_path,
-            "insertion_point": proposal.insertion_point,
+            "insertion_point": getattr(proposal, "insertion_point", None),
         }
 
         with open(proposal_file, "w") as f:
