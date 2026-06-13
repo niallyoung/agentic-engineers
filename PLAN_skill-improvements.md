@@ -1,0 +1,122 @@
+# PLAN: Skill Improvements & Self-Improvement Architecture (2026-06-13)
+
+Three DELEGATEs to execute in order. Each produces a HANDBACK with deliverables; subsequent rounds implement those deliverables.
+
+---
+
+## DELEGATE-2026-06-13-001: Skill Audit & Enhancement
+
+**Role:** lead-engineer  
+**Model:** claude-sonnet-4.6  
+**Effort:** high  
+**Task ID:** 2026-06-13-skill-audit-enhancement
+
+**Scope:**
+Review this session's manual work. Identify what should move into existing skills or trigger new skill proposals. Session revealed:
+- Manual artifacts/ pruning (105→86 files) — no cleanup skill
+- Manual HANDBACK enum drift detection — protocol-validator didn't catch
+- Manual SPEC residual detection (glossary, tree, erratum) — doc-quality-monitor didn't scan for phantom references
+- Manual escalation-path consolidation — queue-management didn't flag divergence
+
+**Success Criteria:**
+1. Enhanced `doc-quality-monitor` (src/skills/doc-quality-monitor/): add scans for phantom references (grep known-dead classes: AutomationController, deprecated paths), stale docstrings (match against SPEC versions)
+2. Enhanced `protocol-validator` (src/skills/protocol-validator/): add enum drift detection (handback-schema status enum vs code acceptors), protocol divergence detection (multiple escalation implementations)
+3. Propose new `session-analyzer` meta-skill or enhancement to existing skill to detect repetitive patterns in session transcripts
+4. Document each enhancement with tests
+
+**Output (HANDBACK):**
+- List of enhanced/new skills with file paths
+- Tests added (cite test file:line ranges)
+- Proposal for session-analyzer (if new skill)
+
+---
+
+## DELEGATE-2026-06-13-002: Model Adaptability Config Design
+
+**Role:** principal-engineer  
+**Model:** claude-opus-4.8  
+**Effort:** high  
+**Task ID:** 2026-06-13-model-adaptability-config
+
+**Scope:**
+Design runtime model-selection system. Framework should adapt to available providers (Anthropic, OpenAI, Ollama, etc.) without code changes.
+
+**Core Design:**
+- **Role requirements** (not model names): "needs reasoning", "needs cost-aware", "needs defensive-only", etc.
+- **Model registry**: Loaded from provider APIs or `~/.agentic-engineers/model-config.yaml`
+- **Auto-mapper**: Given role + available models, pick best fit; fallback chain
+- **Config centralization**: `~/.agentic-engineers/model-config.yaml` (analyzable, versioned in repo)
+
+**Success Criteria:**
+1. Architecture proposal document (300–500 words): role requirements spec, model registry schema, mapper logic, integration points
+2. Example `model-config.yaml` showing Anthropic + OpenAI + Ollama with fallback chains
+3. Outline changes to `src/AGENTS.md` (role requirements vs hardcoded models)
+4. Integration point checklist: which skills/code read this config? (cost-aware-router, Orchestrator, Model Engineer)
+5. One proof-of-concept: Orchestrator reads config at startup
+
+**Output (HANDBACK):**
+- Proposal document (docs/design/model-adaptability-config.md or similar)
+- Example config file
+- Integration checklist with file:line references
+- Confidence score on feasibility
+
+---
+
+## DELEGATE-2026-06-13-003: Meta-Skill Proposal — Session Analysis
+
+**Role:** model-engineer  
+**Model:** claude-sonnet-4.5  
+**Effort:** high  
+**Task ID:** 2026-06-13-meta-skill-session-analyzer
+
+**Scope:**
+Design skill that reads session transcripts and identifies automation candidates. This session showed patterns (plan review, doc audit, protocol checking) that should be skills, not manual prompts.
+
+**Analysis inputs:**
+- Session DELEGATE specs (what work was requested)
+- HANDBACK results (what was delivered, quality scores)
+- Conversation history (manual steps, repetitive prompts)
+- Execution metrics (time, tokens, cost per task)
+
+**Analysis outputs:**
+- Repetitive patterns (this step happened 3+ times → skill candidate)
+- Quality anomalies (this type of task always scores low → routing issue?)
+- Drift detection (this config/doc drifted during session → monitoring candidate?)
+- Effort mismatch (claimed low effort, took high effort → estimation issue?)
+
+**Success Criteria:**
+1. Skill definition (SKILL.md with integration points, CLI interface)
+2. Analysis schema (YAML structure for analysis.yaml output files)
+3. Example run on this session: manual audit → what session-analyzer should flag
+4. Integration with existing skills (queue-query, usage-tracking, metrics-etl)
+5. Output location: `~/.agentic-engineers/sessions/{session-id}/analysis.yaml` (centralized, not harness dirs)
+
+**Output (HANDBACK):**
+- SKILL.md file (ready to integrate into src/skills/)
+- Analysis schema (YAML example + documentation)
+- Example analysis report for 2026-06-13 session
+- Integration points (which existing skills read this data?)
+
+---
+
+## Execution Order
+
+1. **DELEGATE-001 (Skill Audit)** — Lead Engineer review of this session
+2. **DELEGATE-002 (Model Config Design)** — Principal Architect designs adaptability system
+3. **DELEGATE-003 (Meta-Skill)** — Model Engineer proposes session analysis
+
+Then:
+- **Round 2**: Implement the three outputs (engineer work, with QE review)
+- **Round 3**: SPEC-2026-003 (AutomationController reference fix via spec-management), small doc/docstring fixes (lead-engineer)
+
+---
+
+## Storage & Automation Notes
+
+- **All DELEGATEs routed via Orchestrator** — enqueue via `queue-management` skill, never manual file writes
+- **Data centralization**: Analysis outputs, model configs, session reports → `~/.agentic-engineers/` (owned by framework, analyzable, not harness-specific)
+- **Next session**: Invoke Orchestrator with these three specs; it routes to appropriate agents
+- **Skills enhancement principle**: Avoid hardcoding in code; move logic to skills that can be versioned, tested, and invoked via DELEGATE
+- **Core agent responsibility**: Every Agent consults docs/SPEC.md and existing SKILLS before inventing work. Framework alignment is a first-class skill; all agents remain in sync on core responsibilities and expectations.
+
+See TODO.md "## Next: Skill Improvements" for tracking.
