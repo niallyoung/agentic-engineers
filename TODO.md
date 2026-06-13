@@ -594,3 +594,35 @@ No new skills or agents may be added to the framework after this date. All API a
 
 **Owner:** Orchestrator Agent  
 **Next Review:** 2026-05-24 (weekly)
+
+---
+
+## Plan close-out (2026-06-13)
+
+Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merged as 80924f1):
+
+- [ ] **docs/SPEC.md queue-path order inconsistency** — glossary examples (~lines 403-404)
+  and the Legacy Paths migration table (lines 588-590, inside the LOCKED Queue
+  Architecture section) still use the old `~/.agentic-engineers/{session-id}/{harness}/queue/`
+  order; canonical per CU-4 (PR #53) is `{harness}/{session-id}`. Must be routed through
+  the spec-management skill (Principal/Security/Lead only) — do not edit directly.
+- [ ] **Pi.dev full-source rendering (plan 4.1)** — `renderer/scripts/render-pi-dev.py`
+  derives models dynamically, but `renderer/pi-dev-src/` templates (AGENTS.md, pi.yml,
+  SYSTEM.md) still hardcode structural content instead of rendering from `src/agents/*.md`.
+- [ ] **Verify pi.yml routing against pi.dev runtime (plan 4.2)** — `renderer/pi-dev-src/pi.yml`
+  still documents routing rules as speculative/unverified; blocked on pi.dev runtime access.
+- [ ] **SPEC editorial pass remainder (plan 4.3)** — root SPEC.md consolidation is in
+  PR #54; once the queue-path order fix above lands, do a final consistency sweep of
+  docs/SPEC.md examples and changelog.
+- [ ] **docs/SPEC.md:1421 references deleted AutomationController** — `AutomationController`
+  (src/orchestration/agents/automation.py) was removed in the 2026-05-17 daemon-removal
+  refactor (f9faf18); the harness now owns polling (OrchestratorSkill.run_idle_loop).
+  orchestrator.py's run_poll_cycle docstring is fixed; SPEC.md is owned elsewhere — route
+  via spec-management to replace the AutomationController mention with the harness/idle-loop
+  model. tests/test_dry_run.py:14 docstring has the same stale mention (comment-only).
+- [ ] **src/skills/orchestrator/SKILL.md escalation docs stale** — line 141 says
+  status=escalate "delegate to Model Engineer"; actual (now-canonical) behaviour is C2c
+  escalation chaining: synthesize `{task_id}-escalated-to-{role}` DELEGATE into incoming/
+  and archive the original to done/ with audit metadata (the old non-canonical escalation/
+  directory was removed from orchestrator_skill.py on 2026-06-13). Update SKILL.md
+  handle_handback + Integration Points sections to match.

@@ -3,7 +3,7 @@ Expanded HANDBACK schema with 25+ fields for cross-lifecycle reuse.
 
 Core fields (4):
 - task_id: Task identifier (matches DELEGATE)
-- status: Task status (complete, failed, partial, blocked)
+- status: Task status (complete, failed, partial, blocked, escalate)
 - deliverables: List of deliverables
 - tests: Dict of test results
 
@@ -53,7 +53,7 @@ class ExpandedHandback:
     
     # Core fields (4)
     task_id: str
-    status: str  # complete, failed, partial, blocked
+    status: str  # complete, failed, partial, blocked, escalate
     deliverables: List[str] = field(default_factory=list)
     tests: Dict[str, bool] = field(default_factory=dict)
     
@@ -176,7 +176,7 @@ class ExpandedHandback:
         # Core fields
         if not self.task_id:
             errors.append("task_id is required")
-        if self.status not in ["complete", "failed", "partial", "blocked"]:
+        if self.status not in ["complete", "failed", "partial", "blocked", "escalate"]:
             errors.append(f"Invalid status: {self.status}")
         
         # Quality metrics

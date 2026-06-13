@@ -439,6 +439,19 @@ class TestLayer3Status:
         checks = [f.check for f in result.error_findings]
         assert "handback_status_invalid" in checks
 
+    @pytest.mark.parametrize("status", ["blocked", "escalate"])
+    def test_schema_statuses_accepted(self, validator, status):
+        """'blocked' and 'escalate' are schema-valid HANDBACK statuses.
+
+        handback-schema.yaml Layer 1 declares:
+        One of: complete, failed, partial, blocked, escalate.
+        """
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": status,
+              "notes": "Escalating for review."}
+        result = validator.validate_handback(hb)
+        checks = [f.check for f in result.error_findings]
+        assert "handback_status_invalid" not in checks
+
     @pytest.mark.parametrize("status", sorted(VALID_HANDBACK_STATUSES))
     def test_valid_status_no_error(self, validator, status):
         hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": status,

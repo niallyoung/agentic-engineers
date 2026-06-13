@@ -161,7 +161,7 @@ class ExpandedHandbackHandler:
         
         Args:
             task_id: Task identifier (matches DELEGATE)
-            status: Task status (complete, failed, partial, blocked)
+            status: Task status (complete, failed, partial, blocked, escalate)
             deliverables: List of deliverables
             tests: Dict of test results
             tokens_in: Input tokens used

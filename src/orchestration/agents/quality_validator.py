@@ -52,7 +52,8 @@ VALID_ROLES = {
 
 VALID_EFFORT_VALUES = {"low", "medium", "high", "max", "epic"}
 
-VALID_HANDBACK_STATUSES = {"complete", "failed", "partial"}
+# Per handback-schema.yaml: complete | failed | partial | blocked | escalate
+VALID_HANDBACK_STATUSES = {"complete", "failed", "partial", "blocked", "escalate"}
 
 TASK_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9\-]{0,62}[a-z0-9]$")
 

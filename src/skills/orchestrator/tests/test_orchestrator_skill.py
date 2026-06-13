@@ -491,7 +491,10 @@ def test_deep_sleep_polling_detects_new_file(orchestrator, temp_queue):
 
     def mock_glob(self, pattern):
         call_count[0] += 1
-        if call_count[0] > 2:  # After 2 polls, return a new file
+        # Call 1 is the initial snapshot; call 2 is the first in-loop poll.
+        # With DEEP_SLEEP_SEC=0.5 and poll_interval=10s, only one in-loop
+        # poll happens before timeout, so the new file must appear on call 2.
+        if call_count[0] > 1:
             return [incoming_dir / "new-task.yaml"]
         return []
 
@@ -738,3 +741,193 @@ output: Low quality result
 
     # QE should reject → moved to failed
     assert (temp_queue / "failed" / f"{task_id}.yaml").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: Escalation Chaining (C2c parity — QUEUE-PROTOCOL.md "Escalation Chaining")
+#
+# Canonical behaviour: on HANDBACK status=escalate, the Orchestrator synthesizes
+# a follow-on DELEGATE ({task_id}-escalated-to-{role}) into incoming/ and moves
+# the original task to done/ with audit metadata. There is NO escalation/ state
+# directory in the queue protocol.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _stage_processing_delegate(temp_queue, task_id, agent="engineer"):
+    """Stage a claimed DELEGATE in processing/ (as claim_task would)."""
+    import yaml
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": task_id,
+        "agent": agent,
+        "scope": "Escalation test scope",
+        "plan": ["Step 1"],
+        "success_criteria": ["AC1"],
+    }
+    processing_file = temp_queue / "processing" / f"{task_id}.yaml"
+    with processing_file.open("w") as f:
+        yaml.dump(delegate, f)
+    meta_file = temp_queue / "processing" / f"{task_id}.meta.json"
+    with meta_file.open("w") as f:
+        json.dump({"task_id": task_id, "retry_count": 0}, f)
+    return delegate
+
+
+def _escalate_handback(task_id, escalate_to="senior-engineer", chain=None):
+    """Build a HANDBACK with status=escalate."""
+    return {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "escalate",
+        "output": {
+            "escalate_to": escalate_to,
+            "escalation_reason": "Complex architecture requires senior review",
+        },
+        "escalation_chain": chain or [],
+    }
+
+
+def test_escalation_enqueues_follow_on_delegate_in_incoming(orchestrator, temp_queue):
+    """Escalation must synthesize a new DELEGATE into incoming/ (canonical C2c)."""
+    task_id = "escalate-task-001"
+    _stage_processing_delegate(temp_queue, task_id)
+
+    orchestrator._move_task_to_escalation(task_id, _escalate_handback(task_id))
+
+    expected = temp_queue / "incoming" / f"{task_id}-escalated-to-senior-engineer.yaml"
+    assert expected.exists(), (
+        "Escalation must enqueue follow-on DELEGATE in incoming/, "
+        "not a separate escalation/ directory"
+    )
+
+
+def test_escalation_does_not_create_escalation_dir(orchestrator, temp_queue):
+    """escalation/ is not a recognized queue state dir — must not be created."""
+    task_id = "escalate-task-002"
+    _stage_processing_delegate(temp_queue, task_id)
+
+    orchestrator._move_task_to_escalation(task_id, _escalate_handback(task_id))
+
+    assert not (temp_queue / "escalation").exists()
+    assert not (temp_queue.parent / "escalation").exists()
+
+
+def test_escalation_delegate_shape_matches_c2c(orchestrator, temp_queue):
+    """Synthesized DELEGATE must carry agent, context, and escalation_chain."""
+    import yaml
+    task_id = "escalate-task-003"
+    _stage_processing_delegate(temp_queue, task_id, agent="engineer")
+    handback = _escalate_handback(task_id, chain=[])
+
+    orchestrator._move_task_to_escalation(task_id, handback)
+
+    delegate_file = temp_queue / "incoming" / f"{task_id}-escalated-to-senior-engineer.yaml"
+    with delegate_file.open("r") as f:
+        delegate = yaml.safe_load(f)
+
+    assert delegate["handoff_type"] == "DELEGATE"
+    assert delegate["agent"] == "senior-engineer"
+    assert delegate["task_id"] == f"{task_id}-escalated-to-senior-engineer"
+    assert delegate["context"]["original_task_id"] == task_id
+    assert delegate["context"]["original_handback"] == handback
+    assert delegate["context"]["escalation_reason"] == (
+        "Complex architecture requires senior review"
+    )
+    assert delegate["escalation_chain"] == ["engineer"]
+
+
+def test_escalation_chain_appends_original_role(orchestrator, temp_queue):
+    """escalation_chain must append the role that just escalated."""
+    import yaml
+    task_id = "escalate-task-004"
+    _stage_processing_delegate(temp_queue, task_id, agent="senior-engineer")
+    handback = _escalate_handback(
+        task_id, escalate_to="principal-engineer", chain=["engineer"]
+    )
+
+    orchestrator._move_task_to_escalation(task_id, handback)
+
+    delegate_file = (
+        temp_queue / "incoming" / f"{task_id}-escalated-to-principal-engineer.yaml"
+    )
+    with delegate_file.open("r") as f:
+        delegate = yaml.safe_load(f)
+
+    assert delegate["escalation_chain"] == ["engineer", "senior-engineer"]
+
+
+def test_escalation_delegate_is_reingestable(orchestrator, temp_queue):
+    """Synthesized DELEGATE must pass the skill's own DELEGATE validation."""
+    import yaml
+    task_id = "escalate-task-005"
+    _stage_processing_delegate(temp_queue, task_id)
+
+    orchestrator._move_task_to_escalation(task_id, _escalate_handback(task_id))
+
+    delegate_file = temp_queue / "incoming" / f"{task_id}-escalated-to-senior-engineer.yaml"
+    with delegate_file.open("r") as f:
+        delegate = yaml.safe_load(f)
+
+    # Must not raise — otherwise poll_queue would route it straight to failed/
+    orchestrator._validate_delegate(delegate)
+
+
+def test_escalation_default_target_lead_engineer(orchestrator, temp_queue):
+    """Missing escalate_to falls back to lead-engineer (C2c default)."""
+    task_id = "escalate-task-006"
+    _stage_processing_delegate(temp_queue, task_id)
+    handback = {
+        "handoff_type": "HANDBACK",
+        "task_id": task_id,
+        "status": "escalate",
+        "output": "Needs review but no explicit target",
+    }
+
+    orchestrator._move_task_to_escalation(task_id, handback)
+
+    expected = temp_queue / "incoming" / f"{task_id}-escalated-to-lead-engineer.yaml"
+    assert expected.exists()
+
+
+def test_escalation_moves_original_to_done_with_audit(orchestrator, temp_queue):
+    """Original task archives to done/ with HANDBACK audit metadata."""
+    import yaml
+    task_id = "escalate-task-007"
+    _stage_processing_delegate(temp_queue, task_id)
+
+    orchestrator._move_task_to_escalation(task_id, _escalate_handback(task_id))
+
+    # Original DELEGATE archived to done/
+    assert (temp_queue / "done" / f"{task_id}.yaml").exists()
+    assert not (temp_queue / "processing" / f"{task_id}.yaml").exists()
+    # Metadata cleaned up
+    assert not (temp_queue / "processing" / f"{task_id}.meta.json").exists()
+    # HANDBACK audit file records the chained DELEGATE
+    handback_file = temp_queue / "done" / f"{task_id}-HANDBACK.yaml"
+    assert handback_file.exists()
+    with handback_file.open("r") as f:
+        audit = yaml.safe_load(f)
+    assert audit["escalation_delegate_created"] == (
+        f"{task_id}-escalated-to-senior-engineer.yaml"
+    )
+
+
+def test_handle_handback_escalate_routes_to_incoming(orchestrator, temp_queue):
+    """End-to-end: handle_handback with status=escalate chains into incoming/."""
+    task_id = "escalate-task-008"
+    _stage_processing_delegate(temp_queue, task_id)
+    handback_text = f"""
+handoff_type: HANDBACK
+task_id: {task_id}
+status: escalate
+output:
+  escalate_to: lead-engineer
+  escalation_reason: Quality concerns
+escalation_chain: []
+"""
+
+    result = orchestrator.handle_handback(task_id, handback_text)
+
+    assert result["status"] == "escalate"
+    expected = temp_queue / "incoming" / f"{task_id}-escalated-to-lead-engineer.yaml"
+    assert expected.exists()
+    assert not (temp_queue.parent / "escalation").exists()

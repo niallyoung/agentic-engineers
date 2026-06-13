@@ -1801,9 +1801,17 @@ class OrchestratorAgent(Agent):
         """
         Execute a single polling cycle — list all incoming tasks and process each.
 
-        This is the interface used by AutomationController. Unlike poll_and_process
-        (which loops until idle), run_poll_cycle processes one batch and returns
-        immediately with a metrics dict.
+        Single-batch polling entry point for harness-driven hosts. Unlike
+        poll_and_process (which loops until idle), run_poll_cycle processes one
+        batch and returns immediately with a metrics dict.
+
+        Note: the former AutomationController polling daemon
+        (src/orchestration/agents/automation.py) was removed in the
+        2026-05-17 daemon-removal refactor — the harness now owns the polling
+        loop (see OrchestratorSkill.run_idle_loop in
+        src/skills/orchestrator/scripts/orchestrator_skill.py). This method
+        remains the per-cycle interface for harness integrations
+        (see invoke_agent.py) and integration tests.
 
         Returns:
             Dict with keys:
@@ -1981,6 +1989,13 @@ class OrchestratorAgent(Agent):
                     "role": escalate_to_role,
                     "scope": f"Escalation from {role}: {escalation_context.get('escalation_reason', 'See original_handback')}",
                     "context": escalation_context,
+                    # plan included so the synthesized DELEGATE passes skill-side
+                    # _validate_delegate when re-ingested from incoming/
+                    "plan": [
+                        "Review original work and HANDBACK in context.original_handback",
+                        "Address the escalation reason",
+                        "Return HANDBACK with assessment and next steps",
+                    ],
                     "success_criteria": [
                         "Review original work and HANDBACK",
                         "Address escalation reason",

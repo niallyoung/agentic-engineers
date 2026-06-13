@@ -36,6 +36,7 @@ required_fields:
       - failed        # Task failed, no deliverables produced
       - partial       # Task partially completed, some criteria met
       - blocked       # Task blocked by external dependency/unclear requirement
+      - escalate      # Task needs escalation to higher-tier agent (triggers C2c escalation chaining)
     description: "Final status of task execution"
     example: "complete"
     
@@ -165,7 +166,7 @@ subtask_fields:
       properties:
         status:
           type: string
-          enum: [complete, failed, partial, blocked]
+          enum: [complete, failed, partial, blocked, escalate]
         output:
           type: any
           description: "Child task output payload"
@@ -407,7 +408,7 @@ validation_layers:
         penalty: -25
         
       - field: "status"
-        requirement: "One of: complete, failed, partial, blocked"
+        requirement: "One of: complete, failed, partial, blocked, escalate"
         severity: "ERROR"
         penalty: -15
         
