@@ -113,7 +113,7 @@ def test_move_task_integration_processing_to_done():
         # Move task from processing to done with HANDBACK metadata
         handback_metadata = {
             "decision": "PROCEED",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 1000,
             "tokens_out": 500,
             "duration_minutes": 5.5,
@@ -341,7 +341,7 @@ def test_move_task_delegate_prefixed_filename():
             from_state="processing",
             to_state="done",
             filename=processing_filename,
-            metadata={"decision": "PROCEED", "status": "complete"}
+            metadata={"decision": "PROCEED", "status": "success"}
         )
         assert result2["success"] is True
         

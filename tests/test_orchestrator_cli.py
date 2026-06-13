@@ -65,7 +65,7 @@ def sample_handback():
     """Create a sample HANDBACK block."""
     return {
         "task_id": "task-001",
-        "status": "complete",
+        "status": "success",
         "tokens_in": 1000,
         "tokens_out": 500,
         "cached_tokens": 100,
@@ -170,7 +170,7 @@ class TestOnTaskComplete:
         # Create handback that uses 75% of budget ($3.75)
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cached_tokens": 0,
@@ -193,7 +193,7 @@ class TestOnTaskComplete:
         # Create handback that uses 95% of budget ($4.75)
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cached_tokens": 0,
@@ -216,7 +216,7 @@ class TestOnTaskComplete:
         # Create handback that uses 110% of budget ($5.50)
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cached_tokens": 0,
@@ -236,7 +236,7 @@ class TestOnTaskComplete:
         # Create handback that uses 95% of budget
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cached_tokens": 0,
@@ -254,7 +254,7 @@ class TestOnTaskComplete:
     def test_on_task_complete_missing_task_id_raises_error(self, orchestrator_cli, sample_delegate):
         """Test that missing task_id in handback raises ValueError."""
         handback = {
-            "status": "complete",
+            "status": "success",
             "tokens_in": 1000,
             "tokens_out": 500,
             "cost_usd": 0.05,
@@ -268,7 +268,7 @@ class TestOnTaskComplete:
         delegate = {"task_id": "task-001"}  # No role
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 100,
             "tokens_out": 50,
             "cost_usd": 0.01,
@@ -308,7 +308,7 @@ class TestPrintSessionSummary:
         # Record multiple tasks from different agents
         handback1 = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 1000,
             "tokens_out": 500,
             "cost_usd": 0.05,
@@ -317,7 +317,7 @@ class TestPrintSessionSummary:
         
         handback2 = {
             "task_id": "task-002",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 500,
             "tokens_out": 250,
             "cost_usd": 0.025,
@@ -410,7 +410,7 @@ class TestShouldBlockNewTasks:
         
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cost_usd": 3.75,  # 75% of budget
@@ -427,7 +427,7 @@ class TestShouldBlockNewTasks:
         
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cost_usd": 4.75,  # 95% of budget
@@ -444,7 +444,7 @@ class TestShouldBlockNewTasks:
         
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 5000,
             "tokens_out": 2500,
             "cost_usd": 5.50,  # 110% of budget
@@ -542,7 +542,7 @@ class TestIntegration:
         delegate1 = {"task_id": "task-001", "role": "engineer"}
         handback1 = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 1000,
             "tokens_out": 500,
             "cost_usd": 0.05,
@@ -551,7 +551,7 @@ class TestIntegration:
         delegate2 = {"task_id": "task-002", "role": "orchestrator"}
         handback2 = {
             "task_id": "task-002",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 500,
             "tokens_out": 250,
             "cost_usd": 0.025,
@@ -593,7 +593,7 @@ class TestIntegration:
         with patch('builtins.print'):
             cli.on_task_complete(delegate, {
                 "task_id": "task-001",
-                "status": "complete",
+                "status": "success",
                 "tokens_in": 1000,
                 "tokens_out": 500,
                 "cost_usd": 0.05,
@@ -604,7 +604,7 @@ class TestIntegration:
         with patch('builtins.print'):
             cli.on_task_complete({**delegate, "task_id": "task-002"}, {
                 "task_id": "task-002",
-                "status": "complete",
+                "status": "success",
                 "tokens_in": 5000,
                 "tokens_out": 2500,
                 "cost_usd": 3.70,
@@ -619,7 +619,7 @@ class TestIntegration:
         with patch('builtins.print'):
             cli.on_task_complete({**delegate, "task_id": "task-003"}, {
                 "task_id": "task-003",
-                "status": "complete",
+                "status": "success",
                 "tokens_in": 1000,
                 "tokens_out": 500,
                 "cost_usd": 0.95,  # Adjusted to reach 95% total
@@ -637,7 +637,7 @@ class TestIntegration:
         delegate = {"task_id": "task-001", "role": "engineer"}
         handback = {
             "task_id": "task-001",
-            "status": "complete",
+            "status": "success",
             "tokens_in": 1000,
             "tokens_out": 500,
             "cost_usd": 0.05,
@@ -671,7 +671,7 @@ budget:
             delegate = {"task_id": "task-001", "role": "engineer"}
             handback = {
                 "task_id": "task-001",
-                "status": "complete",
+                "status": "success",
                 "tokens_in": 5000,
                 "tokens_out": 2500,
                 "cost_usd": 6.0,

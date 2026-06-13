@@ -187,7 +187,7 @@ class TestQueueContinuityPostInstall:
         handback_data = {
             "handoff_type": "HANDBACK",
             "task_id": "2025-01-01-task-1",
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
         }
         handback_file.write_text(json.dumps(handback_data))

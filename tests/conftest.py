@@ -169,7 +169,7 @@ def make_delegate(
 
 def make_handback(
     task_id: str = "2026-01-01-test-task",
-    status: str = "complete",
+    status: str = "success",
     quality_score: int = 90,
     tokens_in: int = 1000,
     tokens_out: int = 500,
@@ -185,7 +185,7 @@ def make_handback(
 
     Example::
 
-        make_handback(quality_score=75, status="complete")
+        make_handback(quality_score=75, status="success")
         make_handback(task_id="my-task", tokens_in=2000, tokens_out=800)
     """
     block = {

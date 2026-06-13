@@ -62,7 +62,7 @@ def _make_handback(task_id: str = "bench-task-001", cost_usd: float = 0.05) -> d
     return {
         "handoff_type": "HANDBACK",
         "task_id": task_id,
-        "status": "complete",
+        "status": "success",
         "tokens": {
             "input": 1000,
             "output": 500,

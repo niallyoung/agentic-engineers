@@ -48,6 +48,5 @@ compatibility_notes: |
   protocol fields, or model IDs change behaviour — the canonical order was
   already {harness}/{session-id} per CU-4; this only removes stale
   presentations of the old order. Out of scope and deliberately untouched:
-  root SPEC.md (being consolidated in PR #54) and the AutomationController
-  reference (~line 1421, under separate investigation).
+  root SPEC.md (being consolidated in PR #54).
 breaking_change: false

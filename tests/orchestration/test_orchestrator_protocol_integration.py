@@ -60,7 +60,7 @@ class TestOrchestratorProtocolIntegration:
         # Create HANDBACK
         handback_dict = {
             "task_id": "2026-05-20-proceed-test",
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "test_coverage": 0.92,
             "cost_actual": 1.2,
@@ -159,7 +159,7 @@ class TestOrchestratorProtocolIntegration:
         
         handback_dict = {
             "task_id": "2026-05-20-review-test",
-            "status": "complete",
+            "status": "success",
             "quality_score": 75,  # Gray zone
             "test_coverage": 0.75,
             "cost_actual": 1.2,
@@ -219,7 +219,7 @@ class TestOrchestratorProtocolIntegration:
         
         handback_dict = {
             "task_id": "2026-05-20-escalate-test",
-            "status": "complete",
+            "status": "success",
             "quality_score": 55,  # Below threshold
             "test_coverage": 0.55,
             "cost_actual": 2.0,
@@ -280,7 +280,7 @@ class TestOrchestratorProtocolIntegration:
             
             handback_dict = {
                 "task_id": f"2026-05-20-history-test-{i}",
-                "status": "complete",
+                "status": "success",
                 "quality_score": 90 + i,  # 90, 91, 92
                 "test_coverage": 0.90 + (i * 0.01),
                 "cost_actual": 1.2,
@@ -357,7 +357,7 @@ class TestOrchestratorProtocolIntegration:
         
         handback_dict = {
             "task_id": task_id,
-            "status": "complete",
+            "status": "success",
             "quality_score": 92,
             "test_coverage": 0.92,
             "cost_actual": 1.2,

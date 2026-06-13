@@ -51,7 +51,7 @@ class TestQualityEngineerProtocolIntegration:
         """Helper to create handback dict."""
         return {
             "task_id": task_id,
-            "status": "complete",
+            "status": "success",
             "quality_score": quality_score,
             "test_coverage": quality_score / 100,
             "cost_actual": 1.2,

@@ -380,8 +380,8 @@ class TestCreateConsolidationDelegate:
     def test_enriched_with_handbacks(self, complex_delegate):
         plan = decompose_task(complex_delegate)
         handbacks = [
-            {"task_id": "t1", "quality_score": 90, "status": "complete"},
-            {"task_id": "t2", "quality_score": 85, "status": "complete"},
+            {"task_id": "t1", "quality_score": 90, "status": "success"},
+            {"task_id": "t2", "quality_score": 85, "status": "success"},
         ]
         consolidation = create_consolidation_delegate(plan, handbacks)
         assert "sub_handbacks" in consolidation.context

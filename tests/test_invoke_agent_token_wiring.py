@@ -104,7 +104,7 @@ def make_valid_handback(
     return {
         "handoff_type": "HANDBACK",
         "task_id": task_id,
-        "status": "complete",
+        "status": "success",
         "deliverables": ["Modified: test.py"],
         "tests": [{"command": "make verify", "result": "PASS"}],
         "tokens_in": tokens_in,
@@ -272,7 +272,7 @@ class TestTokenDefaults:
         handback = {
             "handoff_type": "HANDBACK",
             "task_id": "task-009",
-            "status": "complete",
+            "status": "success",
             "deliverables": [],
             "tests": [],
             "model": "claude-haiku-4.5",

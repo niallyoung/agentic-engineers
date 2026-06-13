@@ -88,7 +88,7 @@ def perfect_handback(perfect_delegate):
     return {
         "handoff_type": "HANDBACK",
         "task_id": perfect_delegate["task_id"],
-        "status": "complete",
+        "status": "success",
         "tests_passed": "47/47",
         "notes": "Implemented JWT authentication service with all required endpoints. All 47 tests passing.",
     }
@@ -386,13 +386,13 @@ class TestLayer2SuccessCriteria:
 
 class TestLayer3HandoffType:
     def test_missing_handoff_type_is_error(self, validator):
-        hb = {"task_id": "t-1", "status": "complete", "notes": "Done successfully."}
+        hb = {"task_id": "t-1", "status": "success", "notes": "Done successfully."}
         result = validator.validate_handback(hb)
         checks = [f.check for f in result.findings]
         assert "handback_type_missing" in checks
 
     def test_wrong_handoff_type_is_error(self, validator):
-        hb = {"handoff_type": "DELEGATE", "task_id": "t-1", "status": "complete",
+        hb = {"handoff_type": "DELEGATE", "task_id": "t-1", "status": "success",
               "notes": "Done successfully."}
         result = validator.validate_handback(hb)
         checks = [f.check for f in result.findings]
@@ -407,7 +407,7 @@ class TestLayer3HandoffType:
 
 class TestLayer3TaskId:
     def test_missing_task_id_is_critical(self, validator):
-        hb = {"handoff_type": "HANDBACK", "status": "complete", "notes": "Done."}
+        hb = {"handoff_type": "HANDBACK", "status": "success", "notes": "Done."}
         result = validator.validate_handback(hb)
         critical_checks = [f.check for f in result.critical_findings]
         assert "handback_task_id_missing" in critical_checks
@@ -464,13 +464,13 @@ class TestLayer3Status:
 
 class TestLayer3Notes:
     def test_missing_notes_is_warning(self, validator):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "complete"}
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "success"}
         result = validator.validate_handback(hb)
         checks = [f.check for f in result.warning_findings]
         assert "handback_notes_missing" in checks
 
     def test_empty_notes_is_warning(self, validator):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "complete",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "success",
               "notes": ""}
         result = validator.validate_handback(hb)
         checks = [f.check for f in result.warning_findings]
@@ -496,7 +496,7 @@ class TestLayer3FailedWithoutReason:
 class TestLayer3TestsPassed:
     def test_engineering_handback_without_tests_is_warning(self, validator, perfect_delegate):
         hb = {"handoff_type": "HANDBACK", "task_id": perfect_delegate["task_id"],
-              "status": "complete",
+              "status": "success",
               "notes": "Implemented feature completely and thoroughly."}
         # No tests_passed field
         result = validator.validate_handback(hb, original_delegate=perfect_delegate)
@@ -513,7 +513,7 @@ class TestLayer3TestsPassed:
         delegate = {"handoff_type": "DELEGATE", "task_id": "t-1",
                     "role": "model_engineer", "scope": "Analyse model performance.",
                     "effort": "low"}
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "complete",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "success",
               "notes": "Analysed model performance across 5 dimensions."}
         result = validator.validate_handback(hb, original_delegate=delegate)
         checks = [f.check for f in result.findings]
@@ -544,7 +544,7 @@ class TestCompositeScoring:
         assert result.quality_score <= 100
 
     def test_l1_only_handback_uses_l3_weight(self, validator):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "complete",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "success",
               "notes": "Completed all tasks successfully."}
         result = validator.validate_handback(hb)
         # When only L3 runs, score should be entirely from L3
@@ -652,7 +652,7 @@ class TestMetricsEmitter:
         assert mock_emitter.called
 
     def test_emitter_called_on_validate_handback(self, validator_with_emitter, mock_emitter):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "complete",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "success",
               "notes": "Done."}
         validator_with_emitter.validate_handback(hb)
         assert mock_emitter.called
@@ -794,7 +794,7 @@ class TestEdgeCases:
         assert result is not None
 
     def test_handback_with_no_original_delegate(self, validator):
-        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "complete",
+        hb = {"handoff_type": "HANDBACK", "task_id": "t-1", "status": "success",
               "notes": "Completed successfully."}
         result = validator.validate_handback(hb, original_delegate=None)
         assert result is not None

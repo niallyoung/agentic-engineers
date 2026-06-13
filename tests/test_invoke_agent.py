@@ -1108,4 +1108,4 @@ class TestConcurrentInvocations:
         assert len(errors) == 0, f"Concurrent invocations raised errors: {errors}"
         assert len(results) == 3
         for r in results:
-            assert r["status"] == "complete"
+            assert r["status"] == "success"

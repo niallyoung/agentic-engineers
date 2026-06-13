@@ -11,7 +11,7 @@ Tests cover:
 7. JSON serialization
 8. Context manager behavior
 9. Global context management
-10. Integration with AutomationController
+10. Integration with Orchestrator polling (OrchestratorSkill.run_idle_loop)
 """
 
 import pytest
@@ -209,7 +209,7 @@ class TestAPIOperations:
     
     def test_log_api_call(self, dry_run_context):
         """Test API call logging."""
-        payload = {"task_id": "123", "status": "complete"}
+        payload = {"task_id": "123", "status": "success"}
         op = dry_run_context.log_api_call("POST", "/tasks/123/complete", payload=payload)
         
         assert op.operation_type == OperationType.API_CALL
