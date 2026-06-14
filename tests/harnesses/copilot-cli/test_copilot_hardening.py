@@ -35,13 +35,12 @@ SRC_SKILLS = REPO_ROOT / "src" / "skills"
 PROVIDERS_YAML = REPO_ROOT / "src" / "config" / "providers.yaml"
 MODELS_YAML = REPO_ROOT / "src" / "config" / "models.yaml"
 
-# Insert skill path so copilot_provider imports work
+# Insert skill path so cost_aggregator imports work
 COST_AGG_ROOT = SRC_SKILLS / "cost-aggregation"
-COST_AGG_SCRIPTS = COST_AGG_ROOT / "scripts"
-sys.path.insert(0, str(COST_AGG_SCRIPTS))
+sys.path.insert(0, str(COST_AGG_ROOT))
 
-from providers.copilot_provider import CopilotProvider  # noqa: E402
-from cost_aggregator import CostAggregator              # noqa: E402
+from scripts.cost_aggregator import CostAggregator              # noqa: E402
+from scripts.providers.copilot_provider import CopilotProvider  # noqa: E402
 from src.harnesses.copilot_cli.streaming import (               # noqa: E402
     StreamEvent,
     StreamingRenderer,
