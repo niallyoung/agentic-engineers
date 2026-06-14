@@ -199,6 +199,7 @@ class TestPositionalInsertion:
         with pytest.raises(ValueError, match="Ambiguous anchor"):
             spec_manager._apply_positional_insertion(content, proposal)
 
+
     def test_insertion_point_invalid_format(self, spec_manager):
         """Test error with invalid insertion_point format."""
         proposal_dict = {

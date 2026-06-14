@@ -544,7 +544,6 @@ No new skills or agents may be added to the framework after this date. All API a
   - Effort: 2-3 hours | Owner: Engineer
   - ✅ Done: Gas City column added to Quick Comparison Table + dedicated "🌆 Gas City" analysis subsection. NOTE: repo had no factual details beyond version/lineage, so feature cells are marked **TBD** pending user-supplied specifics (architecture, protocol, runtime support, community metrics).
 - [ ] **MONITORING-001:** Automated document quality monitoring
->>>>>>> 22ab2b1 (docs: add Gas City to README comparison table (COMPARISON-002))
   - Continuous link validation, staleness detection (30+ days)
   - ✅ Done: `src/skills/doc-quality-monitor` — broken-link, missing-section,
     staleness, placeholder-leakage & structure checks; JSON + Markdown report
