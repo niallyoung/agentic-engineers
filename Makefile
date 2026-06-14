@@ -527,11 +527,11 @@ install-codex: ## Install Codex agents/config → ~/.codex/ and skills → ~/.ag
 	@echo "✅ Installation to $(DESTDIR)/.codex/ complete"
 	@echo ""
 	@echo "ℹ️  To use the Codex harness:"
-	@echo "  codex --sandbox workspace-write --ask-for-approval on-request"
-	@echo "  Then ask: use the agentic-engineers orchestrator for this task."
+	@echo "  codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request"
+	@echo "  Then ask: delegate: task one; task two"
 	@echo ""
 	@echo "  For disposable self-tests only:"
-	@echo "  codex exec --sandbox workspace-write --ask-for-approval never 'Summarize active agentic-engineers instructions'"
+	@echo "  codex exec --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval never 'delegate: summarize active agentic-engineers instructions; list custom agents'"
 
 uninstall-all: uninstall-copilot uninstall-claude uninstall-pi uninstall-opencode uninstall-codex ## Remove from all supported locations
 	@echo "✅ Uninstall complete"

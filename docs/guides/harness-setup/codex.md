@@ -9,6 +9,7 @@
 The renderer installs user-scoped Codex configuration by default:
 
 - `~/.codex/config.toml` - Codex defaults when no foreign user config exists
+- `~/.codex/agentic-engineers-orchestrator.config.toml` - startup profile for Orchestrator mode
 - `~/.codex/agents/*.toml` - Codex custom agent definitions
 - `~/.agents/skills/*` - Codex-discoverable agent skills
 
@@ -45,24 +46,44 @@ Use the least-privileged mode that fits the task:
 
 ## Usage
 
-Start Codex with the permission mode that matches the task:
+Start Codex in agentic-engineers Orchestrator mode:
 
 ```bash
-codex --sandbox workspace-write --ask-for-approval on-request
+codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
 ```
 
-Then ask Codex to use the rendered orchestration layer:
+Codex does not currently expose a native `--agent orchestrator` startup flag.
+The supported equivalent is the rendered profile above, which injects
+Orchestrator startup instructions through Codex's native `--profile` mechanism.
+
+Then use the delegate prefix for terse fan-out:
 
 ```text
-Use the agentic-engineers orchestrator. Create DELEGATEs for this work, spawn
-specialist agents where independent, wait for HANDBACKs, then summarize status.
+delegate: inspect the renderer for missing Codex startup integration; review
+the generated custom-agent HANDBACK contract; update docs for the new launch flow
 ```
+
+The Orchestrator profile treats `delegate:` or `DELEGATE:` as an explicit
+request to use Codex subagents. It parses semicolon-separated tasks, routes each
+task to the narrowest rendered custom agent, spawns independent work in
+parallel, waits for HANDBACK-style results, and synthesizes the final response.
+
+Role routing:
+
+- `engineer` - bounded implementation with a clear plan
+- `senior-engineer` - complex implementation or diagnosis
+- `lead-engineer` - planning, integration review, architecture guidance
+- `quality-engineer` - quality gates, test gaps, regression review
+- `security-engineer` - defensive security review
+- `principal-engineer` - cross-system architecture
+- `model-engineer` - model/cost/routing analysis
 
 For disposable self-tests:
 
 ```bash
-codex exec --sandbox workspace-write --ask-for-approval never \
-  "Summarize active agentic-engineers instructions and custom agents"
+codex exec --profile agentic-engineers-orchestrator \
+  --sandbox workspace-write --ask-for-approval never \
+  "delegate: summarize active agentic-engineers instructions; list custom agents"
 ```
 
 ## Next Steps

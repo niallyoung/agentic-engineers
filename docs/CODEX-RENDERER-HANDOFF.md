@@ -16,6 +16,17 @@ Initial Codex harness support is implemented behind explicit targets:
 the existing default harness set only (`claude`, `copilot`, `pi`, `opencode`) so
 we do not unexpectedly write to a user's `~/.codex` during the first rollout.
 
+The second pass adds a native Codex startup profile:
+
+```bash
+codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
+```
+
+Codex does not currently expose `--agent orchestrator`. The profile is the
+supported CLI startup equivalent: it layers Orchestrator `developer_instructions`
+over the base config and keeps custom specialist agents available for spawned
+subagent work.
+
 ## Rendered Layout
 
 Render output:
@@ -34,6 +45,7 @@ Install output:
 ~/.codex/
   AGENTS.md
   config.toml or agentic-engineers.config.toml
+  agentic-engineers-orchestrator.config.toml
   agents/*.toml
 ~/.agents/skills/
   */SKILL.md
@@ -51,7 +63,7 @@ The renderer is marker-aware:
 Recommended default:
 
 ```bash
-codex --sandbox workspace-write --ask-for-approval on-request
+codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
 ```
 
 Autopilot-style disposable self-test:
@@ -98,19 +110,23 @@ Notes:
    make install-codex
    ```
 
-2. Start Codex with the safe default:
+2. Start Codex with the Orchestrator profile and safe permissions:
 
    ```bash
-   codex --sandbox workspace-write --ask-for-approval on-request
+   codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
    ```
 
-3. Smoke-test orchestration prompt:
+3. Smoke-test terse delegation:
 
    ```text
-   Use the agentic-engineers orchestrator. Create DELEGATEs for this work,
-   spawn specialist agents where independent, wait for HANDBACKs, then
-   summarize status.
+   delegate: inspect the renderer for missing Codex startup integration; review
+   the generated custom-agent HANDBACK contract; update docs for the launch flow
    ```
+
+   Expected behavior: the root Codex session parses each semicolon-separated
+   task as a DELEGATE, routes it to the narrowest rendered custom agent, spawns
+   independent work in parallel, waits for HANDBACK-style results, then
+   synthesizes a final status.
 
 4. Decide whether Codex should join default `make install` after a real-user
    install pass validates that foreign config preservation is comfortable.
@@ -119,4 +135,3 @@ Notes:
    all-harness contract. Tests currently hard-code the four default harnesses in
    places such as install correctness, backup harnesses, and workflow matrix
    sizing.
-

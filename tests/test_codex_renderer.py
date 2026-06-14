@@ -80,6 +80,7 @@ def test_render_codex_outputs_custom_agent_toml(rendered_codex):
         assert toml_scalar(text, "model") in {"gpt-5.4-mini", "gpt-5.5"}
         assert toml_scalar(text, "model_reasoning_effort") in {"low", "medium", "high"}
         assert "nickname_candidates = []" not in text
+        assert "handoff_type: HANDBACK" in text
         assert "gpt-5.2" not in text
         assert "gpt-5.3-codex" not in text
 
@@ -87,13 +88,27 @@ def test_render_codex_outputs_custom_agent_toml(rendered_codex):
 def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert (rendered_codex / "AGENTS.md").is_file()
     assert (rendered_codex / "config.toml").is_file()
+    assert (rendered_codex / "agentic-engineers-orchestrator.config.toml").is_file()
     skills = [path for path in (rendered_codex / "skills").iterdir() if (path / "SKILL.md").exists()]
     assert len(skills) == source_skill_count()
+
+    agents_doc = (rendered_codex / "AGENTS.md").read_text(encoding="utf-8")
+    assert "codex --profile agentic-engineers-orchestrator" in agents_doc
+    assert "delegate:" in agents_doc
+    assert "handoff_type: HANDBACK" in agents_doc
 
     config = (rendered_codex / "config.toml").read_text(encoding="utf-8")
     assert 'sandbox_mode = "workspace-write"' in config
     assert 'approval_policy = "on-request"' in config
+    assert "multi_agent = true" in config
     assert "network_access = false" in config
+
+    profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(encoding="utf-8")
+    assert 'model = "gpt-5.4-mini"' in profile
+    assert 'model_reasoning_effort = "low"' in profile
+    assert "developer_instructions = " in profile
+    assert "Delegate Prefix" in profile
+    assert "multi_agent = true" in profile
 
 
 def test_install_codex_honors_destdir_and_skill_root(tmp_path):
@@ -104,6 +119,7 @@ def test_install_codex_honors_destdir_and_skill_root(tmp_path):
     skills_root = tmp_path / ".agents" / "skills"
     assert codex_home.is_dir()
     assert skills_root.is_dir()
+    assert (codex_home / "agentic-engineers-orchestrator.config.toml").is_file()
     assert {path.stem for path in (codex_home / "agents").glob("*.toml")} == EXPECTED_AGENTS
     assert (codex_home / "agents" / ".agentic-engine-codex").is_file()
     assert len([path for path in skills_root.iterdir() if (path / "SKILL.md").exists()]) == source_skill_count()
@@ -148,7 +164,33 @@ def test_reinstall_preserves_foreign_codex_files(tmp_path):
     assert foreign_agent.read_text(encoding="utf-8").startswith('name = "user-agent"')
     assert foreign_config.read_text(encoding="utf-8") == 'model = "user-choice"\n'
     assert (codex_home / "agentic-engineers.config.toml").is_file()
+    assert (codex_home / "agentic-engineers-orchestrator.config.toml").is_file()
     assert (foreign_skill / "SKILL.md").is_file()
+
+
+def test_foreign_orchestrator_profile_is_preserved_and_fails_validation(tmp_path):
+    codex_home = tmp_path / ".codex"
+    codex_home.mkdir(parents=True)
+    foreign_profile = codex_home / "agentic-engineers-orchestrator.config.toml"
+    foreign_profile.write_text('model = "user-choice"\n', encoding="utf-8")
+
+    install = run("make", "install-codex", f"DESTDIR={tmp_path}", "BACKUP=never", timeout=240)
+    assert install.returncode == 0, install.stdout + install.stderr
+    assert foreign_profile.read_text(encoding="utf-8") == 'model = "user-choice"\n'
+
+    validate = run(
+        sys.executable,
+        str(RENDERER),
+        str(REPO_ROOT),
+        str(codex_home),
+        "--skills-root",
+        str(tmp_path / ".agents" / "skills"),
+        "--validate",
+    )
+    assert validate.returncode == 1
+    assert "agentic-engineers-orchestrator.config.toml is foreign or unmanaged" in (
+        validate.stdout + validate.stderr
+    )
 
 
 def test_uninstall_codex_removes_managed_only(tmp_path):
@@ -168,3 +210,4 @@ def test_uninstall_codex_removes_managed_only(tmp_path):
     assert foreign_agent.is_file()
     assert not (codex_home / "agents" / "engineer.toml").exists()
     assert not (codex_home / "AGENTS.md").exists()
+    assert not (codex_home / "agentic-engineers-orchestrator.config.toml").exists()

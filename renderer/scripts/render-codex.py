@@ -4,6 +4,7 @@
 Codex-native surfaces used by this renderer:
   - ~/.codex/AGENTS.md
   - ~/.codex/config.toml
+  - ~/.codex/agentic-engineers-orchestrator.config.toml
   - ~/.codex/agents/*.toml
   - ~/.agents/skills/<skill>/SKILL.md
 
@@ -28,9 +29,57 @@ DOC_SENTINEL = "# managed by agentic-engineers render-codex.py; do not edit dire
 CONFIG_SENTINEL = "# managed by agentic-engineers render-codex.py"
 SKILL_MARKER = ".agentic-engine-codex"
 AGENT_MANIFEST = ".agentic-engine-codex"
+ORCHESTRATOR_PROFILE = "agentic-engineers-orchestrator"
 
 CHEAP_CODEX_MODEL = "gpt-5.4-mini"
 STRONG_CODEX_MODEL = "gpt-5.5"
+
+
+ROLE_ROUTING_TABLE = """- orchestrator: intake, routing, task management, synthesis, metrics.
+- engineer: bounded implementation with a clear plan and low/medium complexity.
+- senior-engineer: complex implementation, diagnosis, or work needing judgment.
+- lead-engineer: planning review, integration review, and medium architectural guidance.
+- quality-engineer: post-change quality gates, test gaps, regression review.
+- security-engineer: defensive security review and vulnerability analysis.
+- principal-engineer: cross-system architecture and high-impact design choices.
+- model-engineer: model/cost/routing analysis and A/B experiment design."""
+
+
+DELEGATE_GRAMMAR = """When the user starts a message with `delegate:` or `DELEGATE:`, treat it as an explicit request to use Codex subagents.
+
+Parse the text after the prefix as semicolon-separated tasks; also accept newline bullets or numbered lists as task separators. For each task:
+1. Assign a stable task_id such as `codex-001`, `codex-002`, preserving user wording in `scope`.
+2. Choose the narrowest appropriate custom agent using the routing table.
+3. Build a DELEGATE YAML block with `handoff_type: DELEGATE`, `task_id`, `agent`, `scope`, `context`, `success_criteria`, and `expected_handback`.
+4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict.
+5. Keep dependent tasks sequential, and keep same-file edits coordinated in the root thread.
+6. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
+
+If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If the queue is empty, do not invent work."""
+
+
+HANDBACK_CONTRACT = """Return results in this shape whenever you were spawned with a DELEGATE:
+
+```yaml
+handoff_type: HANDBACK
+task_id: <same task_id>
+agent: <your agent name>
+status: success | partial | failed | blocked
+summary: <short outcome>
+deliverables:
+  - <files changed, findings, or artifacts>
+verification:
+  - <commands run or checks performed>
+risks:
+  - <remaining risks, conflicts, or unknowns>
+next_steps:
+  - <follow-up work, if any>
+metrics:
+  model: <model if known>
+  effort: <reasoning effort if known>
+```
+
+Keep the result concise, include file paths for code changes, and explicitly say when verification was not run."""
 
 
 AGENT_NAME_TO_REGISTRY_ROLE = {
@@ -222,7 +271,7 @@ You are a Codex custom subagent rendered from agentic-engineers.
 
 - Follow the repository's AGENTS.md and the agentic-engineers DELEGATE/HANDBACK protocol.
 - Prefer Orchestrator-first routing. Do not bypass the Orchestrator unless the user explicitly asks for direct specialist work.
-- Return concise HANDBACK-style results with status, deliverables, verification, residual risks, and metrics when available.
+- When spawned with a DELEGATE, execute only that scope and return the HANDBACK YAML shape below.
 - Do not invent queue work when the queue is empty.
 - When independent work can be parallelized, summarize what can safely fan out and what must remain sequential.
 - You are not alone in the codebase. Preserve user changes and other agents' changes; never revert work you did not make.
@@ -234,6 +283,10 @@ You are a Codex custom subagent rendered from agentic-engineers.
 - returns: {returns_text}
 - intended_model: {meta["model"]}
 - reasoning_effort: {meta["reasoning"]}
+
+## HANDBACK Contract
+
+{HANDBACK_CONTRACT}
 
 ## Source Role Definition
 
@@ -279,9 +332,15 @@ This Codex installation is managed by agentic-engineers. The framework renders
 specialist Codex custom agents under `agents/` and reusable skills under
 `~/.agents/skills/`.
 
+For the intended startup path, launch Codex with:
+
+```bash
+codex --profile {ORCHESTRATOR_PROFILE} --sandbox workspace-write --ask-for-approval on-request
+```
+
 ## Operating Model
 
-- Orchestrator-first: route broad user work through the `orchestrator` custom agent.
+- Orchestrator-first: the root Codex session acts as the agentic-engineers Orchestrator.
 - Structured protocol: use DELEGATE YAML for assigned work and HANDBACK YAML for results.
 - Cheap-first routing: Orchestrator and Engineer use `{CHEAP_CODEX_MODEL}`; planning,
   review, security, quality, and model optimization use `{STRONG_CODEX_MODEL}`.
@@ -293,15 +352,86 @@ specialist Codex custom agents under `agents/` and reusable skills under
 Codex custom agents are spawned only when explicitly requested. For example:
 
 ```text
-Use the agentic-engineers orchestrator. Create DELEGATEs for this work, spawn
-specialist agents where independent, wait for HANDBACKs, then summarize status.
+delegate: inspect the renderer for missing Codex startup integration; review
+the generated custom-agent HANDBACK contract; update docs for the new launch flow
 ```
+
+## Delegate Prefix
+
+{DELEGATE_GRAMMAR}
+
+## Role Routing
+
+{ROLE_ROUTING_TABLE}
+
+## HANDBACK Contract
+
+{HANDBACK_CONTRACT}
 
 ## Queue Convention
 
 Use `~/.agentic-engineers/{{session-id}}/codex/queue/` for Codex queue partitions
 with `incoming/`, `processing/`, `done/`, and `failed/` states. Queue writes must
 go through the queue-management skill when available.
+""",
+            encoding="utf-8",
+        )
+
+    def orchestrator_profile_instructions(self) -> str:
+        return f"""# Agentic Engineers Orchestrator Startup Profile
+
+You are operating as the agentic-engineers Orchestrator for this Codex session.
+
+## Startup Behavior
+
+- Treat broad engineering work as Orchestrator-owned intake, routing, coordination, and synthesis.
+- Use Codex subagents when the user explicitly asks for delegation, parallel agents, specialist agents, or uses the `delegate:` prefix.
+- Prefer the rendered custom agents in `~/.codex/agents/` over built-in generic agents when a role matches.
+- Keep the root thread responsible for git coordination, integration decisions, final verification, and final user-facing synthesis.
+- Do not spawn recursive subagents unless the user explicitly requests nested delegation.
+
+## Delegate Prefix
+
+{DELEGATE_GRAMMAR}
+
+## Role Routing
+
+{ROLE_ROUTING_TABLE}
+
+## HANDBACK Contract
+
+{HANDBACK_CONTRACT}
+"""
+
+    def write_orchestrator_profile(self) -> None:
+        dst = self.codex_home / f"{ORCHESTRATOR_PROFILE}.config.toml"
+        if dst.exists() and not dst.read_text(encoding="utf-8", errors="ignore").startswith(CONFIG_SENTINEL):
+            print(f"  {_yellow('WARNING')} skipping {dst.name} - foreign at {dst}")
+            return
+
+        dst.write_text(
+            f"""{CONFIG_SENTINEL}
+# Startup profile for agentic-engineers Orchestrator mode.
+# Select with:
+#   codex --profile {ORCHESTRATOR_PROFILE}
+
+model = "{CHEAP_CODEX_MODEL}"
+model_reasoning_effort = "low"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+developer_instructions = {toml_multiline(self.orchestrator_profile_instructions())}
+
+[features]
+multi_agent = true
+
+[sandbox_workspace_write]
+network_access = false
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 1800
 """,
             encoding="utf-8",
         )
@@ -322,6 +452,9 @@ model_reasoning_effort = "medium"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "cached"
+
+[features]
+multi_agent = true
 
 [sandbox_workspace_write]
 network_access = false
@@ -349,6 +482,7 @@ job_max_runtime_seconds = 1800
         print(f"Writing Codex config -> {self.codex_home}")
         self.write_agents_doc()
         self.write_config()
+        self.write_orchestrator_profile()
 
         print(f"Rendering Codex custom agents -> {self.agents_dir}")
         managed_before = self.managed_names()
@@ -396,6 +530,7 @@ job_max_runtime_seconds = 1800
             self.codex_home / "AGENTS.md",
             self.codex_home / "config.toml",
             self.codex_home / "agentic-engineers.config.toml",
+            self.codex_home / f"{ORCHESTRATOR_PROFILE}.config.toml",
         ]:
             if path.is_file() and path.read_text(encoding="utf-8", errors="ignore").startswith(
                 (DOC_SENTINEL, CONFIG_SENTINEL)
@@ -411,6 +546,7 @@ job_max_runtime_seconds = 1800
         for path, label in [
             (self.codex_home / "AGENTS.md", "AGENTS.md"),
             (self.codex_home / "config.toml", "config.toml"),
+            (self.codex_home / f"{ORCHESTRATOR_PROFILE}.config.toml", f"{ORCHESTRATOR_PROFILE}.config.toml"),
         ]:
             if not path.exists():
                 print(f"  {_red('MISSING')} {label}")
@@ -460,6 +596,21 @@ job_max_runtime_seconds = 1800
                 errors.append(f"{path.name} uses deprecated Codex model")
         if not (self.codex_home / "AGENTS.md").is_file():
             errors.append("missing AGENTS.md")
+        profile_path = self.codex_home / f"{ORCHESTRATOR_PROFILE}.config.toml"
+        if not profile_path.is_file():
+            errors.append(f"missing {ORCHESTRATOR_PROFILE}.config.toml")
+        else:
+            profile_text = profile_path.read_text(encoding="utf-8")
+            if not profile_text.startswith(CONFIG_SENTINEL):
+                errors.append(f"{ORCHESTRATOR_PROFILE}.config.toml is foreign or unmanaged")
+            for required in (
+                "developer_instructions =",
+                "Agentic Engineers Orchestrator Startup Profile",
+                "Delegate Prefix",
+                "multi_agent = true",
+            ):
+                if required not in profile_text:
+                    errors.append(f"{ORCHESTRATOR_PROFILE}.config.toml missing {required}")
         if not (self.codex_home / "config.toml").is_file() and not (
             self.codex_home / "agentic-engineers.config.toml"
         ).is_file():
