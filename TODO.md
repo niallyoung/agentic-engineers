@@ -28,6 +28,18 @@ Queue path: `~/.agentic-engineers/claude/2026-06-14-111501/queue/incoming/`
 
 ---
 
+## Wave 3: Final Harness Validation & Release (2026-06-14)
+
+- [ ] Finalize m2 harness stability (95%+ target for opencode, claude, copilot)
+- [ ] Merge consolidation changes from chore/m3-skills-inventory-audit
+- [ ] Final regression validation (`python scripts/check_test_regression.py`)
+- [ ] Merge feature/codex-renderer to main
+- [ ] Tag v0.43.0 release
+
+See WAVE-3-PLAN.md for full context.
+
+---
+
 ## Milestone 3 — Skills Consolidation Plan (m3-skills-consolidation-plan HANDBACK, 2026-06-14)
 
 **Lead Engineer review complete. Plan ready for Wave 3 execution (m3-skills-deprecation).**
