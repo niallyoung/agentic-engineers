@@ -40,7 +40,12 @@ BASELINES = {
 }
 
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Script lives at <repo>/renderer/scripts/check_test_regression.py, so the repo
+# root is three levels up (scripts/ -> renderer/ -> repo). Test paths below are
+# resolved relative to REPO_ROOT and pytest runs with cwd=REPO_ROOT.
+REPO_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 
 def count_collected(test_path: str) -> int:
