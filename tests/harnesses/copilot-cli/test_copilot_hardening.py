@@ -10,9 +10,6 @@ Regression tests verifying:
 
 These tests complement the existing streaming/integration suites and focus on
 Copilot-specific constraints: model assignments, pricing, and harness durability.
-
-NOTE: Skipped during PR #62 Wave 2 consolidation — requires cost-aggregation
-skill imports that are under development. Will be enabled in Wave 3.
 """
 
 from __future__ import annotations
@@ -29,8 +26,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-pytestmark = pytest.mark.skip(reason="Wave 2 harness test - enable in Wave 3")
-
 # ---------------------------------------------------------------------------
 # Path setup — allow imports from src/ without installation
 # ---------------------------------------------------------------------------
@@ -40,23 +35,16 @@ SRC_SKILLS = REPO_ROOT / "src" / "skills"
 PROVIDERS_YAML = REPO_ROOT / "src" / "config" / "providers.yaml"
 MODELS_YAML = REPO_ROOT / "src" / "config" / "models.yaml"
 
-# Insert skill path so cost_aggregator imports work
+# Insert skill path so copilot_provider imports work
 COST_AGG_ROOT = SRC_SKILLS / "cost-aggregation"
 sys.path.insert(0, str(COST_AGG_ROOT))
 
-try:
-    from scripts.cost_aggregator import CostAggregator              # noqa: E402
-    from scripts.providers.copilot_provider import CopilotProvider  # noqa: E402
-    from src.harnesses.copilot_cli.streaming import (               # noqa: E402
-        StreamEvent,
-        StreamingRenderer,
-    )
-except ImportError:
-    # Graceful degradation — these tests are skipped during PR #62
-    CostAggregator = None
-    CopilotProvider = None
-    StreamEvent = None
-    StreamingRenderer = None
+from scripts.providers.copilot_provider import CopilotProvider  # noqa: E402
+from scripts.cost_aggregator import CostAggregator              # noqa: E402
+from src.harnesses.copilot_cli.streaming import (               # noqa: E402
+    StreamEvent,
+    StreamingRenderer,
+)
 
 
 # ---------------------------------------------------------------------------

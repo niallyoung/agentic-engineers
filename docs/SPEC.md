@@ -106,21 +106,24 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 - ❌ Do NOT add Makefile targets for Orchestrator operations (exception: `render-*` and `install*` targets that invoke renderer scripts)
 - ❌ Do NOT create shell scripts for queue automation, task processing, or external invocation (exception: `renderer/scripts/` for build-time rendering only)
 - ❌ Do NOT set up cron jobs for any system operations (all scheduling via agent SKILLs)
-- ❌ Do NOT invoke subprocess, os.system(), or exec() in agent code (exception: `src/skills/_meta/evaluation_framework/` for real harness invocation in functional tests only)
+- ❌ Do NOT invoke external scripts or spawn processes from **agent/harness code** to manage orchestration (queues, timers, wakeups) — use SKILLs and the Orchestrator instead. Exception: `src/skills/_meta/evaluation_framework/` for functional test harness invocation, and `src/harnesses/*/` rendering infrastructure can use subprocess for build-time operations (rsync, etc.)
+- ❌ Do NOT create external daemons or cron jobs for queue management, task scheduling, or orchestration — all scheduling goes through agent SKILLs and the Orchestrator's timer system
 - ❌ Do NOT invoke agents directly without going through Orchestrator queue
 - ❌ Do NOT create manual DELEGATE blocks and send them to agents
 - ❌ Do NOT skip quality checks or escalation rules
 - ❌ Do NOT implement observability outside of agent SKILLS
 - ❌ Do NOT use "trivial fixes" or other undefined escape clauses to bypass queue
-- ❌ Do NOT allow CI/CD or external systems to invoke scripts directly
+- ❌ Do NOT allow CI/CD or external systems to invoke scripts directly for orchestration work
 - ❌ Do NOT allow any automated external system to write files directly to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` — all queue entries originate from humans or the Orchestrator
 - ❌ Do NOT create automated cron job installers or pre-configured cron jobs
 
 **Why This Constraint Exists:**
-The queue-first model ensures all work is tracked, routable, optimizable, and auditable. External scripts and manual invocations create gaps in observability, break routing logic, and prevent the system from improving itself through the feedback loop. By making Orchestrator the single point of control, we guarantee:
+The queue-first model ensures all work is tracked, routable, optimizable, and auditable. External **orchestration** scripts and daemons create gaps in observability, break routing logic, and prevent the system from improving itself through the feedback loop. By making Orchestrator the single point of control, we guarantee:
 - ✅ Complete audit trail of all work
 - ✅ Correct routing via decision tree
 - ✅ Accurate cost tracking via span capture
+
+Note: **Rendering infrastructure** (harness distribution, build-time skill rendering) can use subprocess for deterministic build operations. The constraint applies to orchestration and agent code, not infrastructure.
 
 ---
 
