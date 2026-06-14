@@ -109,6 +109,16 @@ jobs:
       - name: Test
         run: make test
 
+      - name: "Gate 5: Harness regression check (Wave 2 baselines)"
+        # Enforces minimum test counts per harness and overall.
+        # Fails the build if any harness loses tests vs Wave 2 baselines:
+        #   OpenCode harness:    ≥94 tests   (tests/harnesses/opencode/)
+        #   Claude Code harness: ≥103 tests  (tests/harnesses/claude_code/)
+        #   Copilot CLI harness: ≥71 tests   (tests/harnesses/copilot-cli/)
+        #   Full test suite:     ≥4925 tests  (total collected)
+        # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
+        run: python scripts/check_test_regression.py
+
       - name: Verify
         run: make verify
 
