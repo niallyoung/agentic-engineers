@@ -17,6 +17,7 @@ HARNESS_PROVIDER_MAPPING = {
     "claude": "claude",
     "pi": "claude",
     "opencode": "claude",
+    "codex": "codex",
 }
 
 OPENCODE_PROVIDER_PREFIX = "github-copilot"

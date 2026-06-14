@@ -22,8 +22,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Harnesses the toggle must accept (mirrors the 4 install targets).
-SUPPORTED_HARNESSES = ("claude", "copilot", "opencode", "pi")
+# Harnesses the toggle must accept (mirrors the install/render targets).
+SUPPORTED_HARNESSES = ("claude", "copilot", "opencode", "pi", "codex")
 
 
 def _make_toggle(active_link, harness=None, extra_args=()):

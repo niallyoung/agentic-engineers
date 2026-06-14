@@ -6,6 +6,7 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
+| [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Stable |
 | [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | [GitHub Copilot](copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
@@ -35,6 +36,9 @@ make install-claude
 
 # π.dev
 make install-pi-dev
+
+# Codex
+make install-codex
 ```
 
 ## Version Compatibility
@@ -50,6 +54,7 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 | Copilot CLI | `claude-opus-4.8` | `claude-opus-4.8` (pass-through) | Anthropic API format |
 | Claude Code | `claude-opus-4.8` | `opus` (short alias) | Web UI simplification |
 | π.dev | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | Anthropic API format |
+| Codex | `claude-opus-4.8` role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
 
 ### Renderer Scripts
 
@@ -58,8 +63,9 @@ Each harness uses a dedicated renderer script to handle these transformations:
 - `renderer/scripts/render-copilot.sh` — Copilot CLI configuration
 - `renderer/scripts/render-claude.sh` — Claude Code configuration
 - `renderer/scripts/render-pi-dev.py` — π.dev configuration
+- `renderer/scripts/render-codex.py` — Codex custom agents, config, and skills
 
-Run `make install` to execute all renderers, or use individual `make install-{harness}` targets.
+Run `make install` for the default harness set, or use individual `make install-{harness}` targets.
 
 ## Troubleshooting
 
@@ -122,6 +128,7 @@ Harness and model compatibility is continuously tested via the **EVALS-001 frame
 
 Choose your harness and follow its detailed setup guide:
 - [OpenCode Setup](opencode.md)
+- [Codex Setup](codex.md)
 - [GitHub Copilot Setup](copilot.md)
 - [Claude Code Setup](claude.md)
 - [π.dev Setup](pi-dev.md)

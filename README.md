@@ -1,6 +1,6 @@
 # Agentic Engineers
 
-A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **Claude**, **Copilot**, **OpenCode**, **Pi**.
+A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **Claude**, **Copilot**, **OpenCode**, **Pi**, **Codex**.
 
 ## What It Is
 
@@ -180,10 +180,10 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ### Installation (Choose Your Harness)
 
-All harnesses are configured by default to use Anthropic Claude models. Install to any or all:
+Core harnesses are configured by default to use Anthropic Claude models. Install the default set or choose a specific harness:
 
 ```bash
-# All harnesses (recommended)
+# Default harness set
 make install
 
 # Or install individual harnesses:
@@ -191,12 +191,14 @@ make install-opencode      # OpenCode CLI (recommended for production)
 make install-copilot       # Copilot CLI
 make install-claude        # Claude Code (IDE)
 make install-pi            # π.dev (experimental)
+make install-codex         # Codex CLI/App custom agents + skills
 ```
 
 By default the framework installs under your home directory (`$HOME`). To install into an alternate root — for sandboxed or end-to-end testing without touching your real config — pass `DESTDIR`:
 
 ```bash
 DESTDIR=/tmp/test-install make install-opencode
+DESTDIR=/tmp/test-install make install-codex BACKUP=never
 ```
 
 ### Using the Orchestrator
@@ -253,7 +255,7 @@ See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/gui
 - **✅ Quality Gates (3 Layers)** — DELEGATE structure, task routing, HANDBACK validation
 - **📊 Real-Time Metrics** — Token tracking, quality scores, cost per task
 - **🔄 Self-Improving Feedback Loops** — Model Engineer optimizes routing based on metrics
-- **🌐 Multi-Harness Support** — OpenCode, Copilot, Claude, π.dev
+- **🌐 Multi-Harness Support** — OpenCode, Copilot, Claude, π.dev, Codex
 - **🔐 Security by Default** — Opus-tier Security Engineer for threat modeling
 - **📚 Comprehensive Documentation** — Protocol specs, guides, troubleshooting
 
