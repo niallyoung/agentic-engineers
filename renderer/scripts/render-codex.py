@@ -258,7 +258,6 @@ You are a Codex custom subagent rendered from agentic-engineers.
                 f"description = {toml_string(meta['description'])}",
                 f"model = {toml_string(meta['model'])}",
                 f"model_reasoning_effort = {toml_string(meta['reasoning'])}",
-                "nickname_candidates = []",
                 f"developer_instructions = {toml_multiline(instructions)}",
                 "",
             ]

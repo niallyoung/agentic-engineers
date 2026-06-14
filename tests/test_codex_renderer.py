@@ -79,6 +79,7 @@ def test_render_codex_outputs_custom_agent_toml(rendered_codex):
         assert "developer_instructions = " in text
         assert toml_scalar(text, "model") in {"gpt-5.4-mini", "gpt-5.5"}
         assert toml_scalar(text, "model_reasoning_effort") in {"low", "medium", "high"}
+        assert "nickname_candidates = []" not in text
         assert "gpt-5.2" not in text
         assert "gpt-5.3-codex" not in text
 
