@@ -518,7 +518,7 @@ class TestHappyPathSyncDecideCleanup:
         (tmp_repo / "PHASE_old.md").write_text("# Phase\n")
 
         with patch(
-            "scripts.file_cleanup.FileCleanupAnalyzer._is_git_tracked",
+            "file_cleanup.FileCleanupAnalyzer._is_git_tracked",
             return_value=False,
         ):
             result = run_cleanup(root=tmp_repo, dry_run=True)
