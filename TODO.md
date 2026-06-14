@@ -1,7 +1,30 @@
 # TODO: agentic-engineers
 
-**Last Updated:** 2026-06-12  
-**Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged), **Phase 1.5 Security Hardening Complete (5 FIXes + 38+ tests)**
+**Last Updated:** 2026-06-14  
+**Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged), **Phase 1.5 Security Hardening Complete (5 FIXes + 38+ tests)**, **Milestone 2/3 DELEGATEs queued (2026-06-14)**
+
+---
+
+## Milestone 2 — Harness Stability (Wave 1-3, 2026-06-14)
+
+Queue path: `~/.agentic-engineers/claude/2026-06-14-111501/queue/incoming/`  
+10 DELEGATEs staged; Orchestrator to process in 3 waves.
+
+### Wave 1 (parallel, no dependencies)
+- [ ] `m2-harness-eval-baseline` — quality-engineer: run eval suite, capture harness x model x feature matrix
+- [ ] `m3-skills-inventory-audit` — lead-engineer: run skills_auditor, produce 6-dimension scorecard + CORE/UTILITY/EXPERIMENTAL
+- [ ] `queue-monitor-dashboard` — engineer: live queue dashboard (curses TUI, polling, metrics)
+
+### Wave 2 (depends on baseline)
+- [ ] `m2-opencode-stability` — senior-engineer: harden OpenCode harness to 95% target
+- [ ] `m2-claude-stability` — senior-engineer: harden Claude Code harness to 95% target
+- [ ] `m2-copilot-stability` — senior-engineer: harden Copilot CLI harness to 95% target
+- [ ] `m3-skills-consolidation-plan` — lead-engineer: consolidation plan for redundancy clusters
+
+### Wave 3 (depends on Wave 2)
+- [ ] `m2-harness-regression-gate` — quality-engineer: lock in regression gate, CI-enforced
+- [ ] `m3-skills-deprecation` — engineer: execute deprecations per consolidation plan
+- [ ] `m3-skills-standardization` — engineer: standardize remaining skills to SPEC
 
 ---
 
