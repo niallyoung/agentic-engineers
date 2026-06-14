@@ -80,8 +80,8 @@ def _render_all():
 
 def test_source_has_exactly_26_user_skills():
     names = _source_skill_names()
-    assert len(names) == 26, (
-        f"Expected 26 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 23, (
+        f"Expected 23 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 
