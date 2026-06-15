@@ -167,8 +167,8 @@ USER_SKILL_FILES = sorted(SRC_SKILLS.glob("*/SKILL.md"))
 
 
 def test_26_user_skill_files_present():
-    assert len(USER_SKILL_FILES) == 23, (
-        f"Expected 23 user-facing src/skills/*/SKILL.md, found "
+    assert len(USER_SKILL_FILES) == 24, (
+        f"Expected 24 user-facing src/skills/*/SKILL.md, found "
         f"{len(USER_SKILL_FILES)}: {[p.parent.name for p in USER_SKILL_FILES]}"
     )
 
