@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: Create new agentic-engineers skills following the agentskills.io specification. Use when designing new automation agents, task handlers, or operational tools for the agentic-engineers platform. Handles directory structure, SKILL.md frontmatter, script templates, and documentation scaffolding.
+description: DEPRECATED — merged into agent-creator (Wave 3, m3-skills-deprecation, 2026-06-14). Use agent-creator --type skill instead. Create new agentic-engineers skills following the agentskills.io specification.
 license: Proprietary
 compatibility: Designed for agentic-engineers framework
 metadata:
@@ -10,7 +10,15 @@ metadata:
   role: orchestrator
   model: sonnet-4-6
   effort: medium
+  status: DEPRECATED
+  deprecated_by: agent-creator
+  deprecated_at: "2026-06-14"
+  migration: "Use: agent-creator --type skill --name <name> --description <desc>"
 ---
+
+> **DEPRECATED**: This skill has been merged into `agent-creator` as part of Wave 3 consolidation.
+> Use `agent-creator --type skill` instead. See `src/skills/agent-creator/SKILL.md`.
+
 
 ## Overview
 

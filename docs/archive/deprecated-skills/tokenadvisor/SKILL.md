@@ -1,6 +1,6 @@
 ---
 name: tokenadvisor
-description: Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. Use for continuous monitoring of token spend, cost distribution, and role-based performance.
+description: DEPRECATED — merged into usage-tracking as role-analysis sub-command (Wave 3, m3-skills-deprecation, 2026-06-14). Use usage-tracking/scripts/role_analysis.py instead.
 license: Proprietary
 compatibility: Designed for agentic-engineers framework
 metadata:
@@ -10,7 +10,15 @@ metadata:
   role: orchestrator
   model: haiku-4-5
   schedule: "0 17 * * *"
+  status: DEPRECATED
+  deprecated_by: usage-tracking
+  deprecated_at: "2026-06-14"
+  migration: "Use: src/skills/usage-tracking/scripts/role_analysis.py"
 ---
+
+> **DEPRECATED**: Merged into `usage-tracking` as `scripts/role_analysis.py`.
+> Use `usage-tracking` skill directly for role-based cost analysis.
+
 
 ## Overview
 

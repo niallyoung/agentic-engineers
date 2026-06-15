@@ -117,15 +117,24 @@ class StreamingRenderer:
         ]
 
         start_ms = int(time.time() * 1000)
-        
+
         # Try with progress first
-        proc = subprocess.Popen(
-            cmd_with_progress,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,  # line-buffered
-        )
+        try:
+            proc = subprocess.Popen(
+                cmd_with_progress,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,  # line-buffered
+            )
+        except (FileNotFoundError, OSError) as exc:
+            yield StreamEvent(
+                type="error",
+                skill=name,
+                timestamp=self._now(),
+                data={"message": f"rsync not available: {exc}"},
+            )
+            return
 
         files_done = 0
         bytes_transferred = 0

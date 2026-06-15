@@ -1,12 +1,8 @@
 ---
 name: harness-opencode-feature-sync
 description: >
-  Drift/feature sync between OpenCode's agent and sub-agent integration points
-  and the agentic-engineers OpenCode renderer. Re-performs the analysis of
-  OpenCode's recognized frontmatter schema (KNOWN_KEYS), permission patterns,
-  and reasoning/variant mapping, flags renderer drift (no-op keys, uniform
-  permissions, missing-but-supported keys), discovers new integration points,
-  and self-updates its own machine-readable registry.
+  DEPRECATED — merged into harness-integration-tracker as scripts/opencode_sync.py
+  (Wave 3, m3-skills-deprecation, 2026-06-14). Use harness-integration-tracker instead.
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+
 metadata:
@@ -17,8 +13,15 @@ metadata:
   model: sonnet-4-6
   effort: high
   trigger: on-demand | post-opencode-upgrade | pre-render
-  tdd_phase: GREEN  # 19 tests passing
+  tdd_phase: GREEN  # 19 tests ported to harness-integration-tracker
+  status: DEPRECATED
+  deprecated_by: harness-integration-tracker
+  deprecated_at: "2026-06-14"
+  migration: "Use: harness-integration-tracker (scripts/opencode_sync.py sub-module)"
 ---
+
+> **DEPRECATED**: Merged into `harness-integration-tracker` as `scripts/opencode_sync.py`.
+
 
 ## Overview
 

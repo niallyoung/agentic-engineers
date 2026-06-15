@@ -135,8 +135,8 @@ def test_all_24_skills_installed(installed, harness):
     installed_skills = [
         p for p in skills_dir.iterdir() if p.is_dir() and (p / "SKILL.md").exists()
     ]
-    assert len(installed_skills) >= 24, (
-        f"{harness}: expected >= 24 installed skills, found "
+    assert len(installed_skills) >= 23, (
+        f"{harness}: expected >= 23 installed skills, found "
         f"{len(installed_skills)}"
     )
 

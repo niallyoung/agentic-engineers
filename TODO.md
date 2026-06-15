@@ -28,6 +28,279 @@ Queue path: `~/.agentic-engineers/claude/2026-06-14-111501/queue/incoming/`
 
 ---
 
+## Wave 3: Final Harness Validation & Release (2026-06-14)
+
+- [ ] Finalize m2 harness stability (95%+ target for opencode, claude, copilot)
+- [ ] Merge consolidation changes from chore/m3-skills-inventory-audit
+- [ ] Final regression validation (`python scripts/check_test_regression.py`)
+- [ ] Merge feature/codex-renderer to main
+- [ ] Tag v0.43.0 release
+
+See WAVE-3-PLAN.md for full context.
+
+---
+
+## Milestone 3 — Skills Consolidation Plan (m3-skills-consolidation-plan HANDBACK, 2026-06-14)
+
+**Lead Engineer review complete. Plan ready for Wave 3 execution (m3-skills-deprecation).**
+
+Wave 1 audit (m3-skills-inventory-audit) was not yet in queue/done/ at review time.
+This plan is derived from direct inspection of all 27 skill directories in src/skills/,
+SKILL.md frontmatter, test counts, LOC, and harness rendering state.
+
+### Current Inventory (27 total items in src/skills/)
+
+| Skill | Tests | LOC | SKILL.md | In Harness | Category |
+|---|---|---|---|---|---|
+| ab-testing | 0 | 581 | Y | Y | EXPERIMENTAL |
+| agent-creator | 3 | 1139 | Y | Y | CORE |
+| consistency-checker | 21 | 1391 | Y | Y | CORE |
+| cost-aggregation | 116 | 2465 | Y | Y | CORE |
+| cost-budgeting | 83 | 1659 | N | N | CORE |
+| doc-quality-monitor | 0 | 835 | Y | Y | UTILITY |
+| file-sync | 41 | 1472 | Y | Y | UTILITY |
+| harness-integration-tracker | 74 | 1636 | Y | Y | UTILITY |
+| harness-opencode-feature-sync | 19 | 870 | Y | Y | UTILITY |
+| local-model-runtime | 30 | 840 | Y | Y | UTILITY |
+| metrics-etl | 0 | 293 | Y | Y | UTILITY |
+| model-engineer | 3 | 493 | Y | Y | CORE |
+| model-selection | 123 | 1749 | Y | Y | CORE |
+| monitoring | 0 | ~200 | N | N | DEPRECATED |
+| orchestrator | 81 | 4157 | Y | Y | CORE |
+| protocol-validator | 55 | 1921 | Y | Y | CORE |
+| queue-management | 131 | 6123 | Y | Y | CORE |
+| queue-query | 30 | 765 | Y | Y | CORE |
+| queue-todo-sync | 20 | 1529 | Y | Y | UTILITY |
+| repo-init | 76 | 5660 | Y | Y | DISABLED |
+| session-analyzer | 7 | 1138 | Y | Y | UTILITY |
+| skill-creator | 3 | 207 | Y | Y | UTILITY |
+| spec-management | 23 | 4447 | Y | Y | CORE |
+| spec-validator | 3 | 1758 | Y | Y | CORE |
+| testing | 0 | 1020 | Y | Y | UTILITY |
+| tokenadvisor | 0 | 584 | Y | Y | UTILITY |
+| usage-tracking | 3 | 1465 | Y | Y | UTILITY |
+| workflow-review | 3 | 718 | Y | Y | UTILITY |
+
+**Note:** `spec-extract` directory exists in src/skills/ (1 file: scanner.sh) but is NOT rendered
+to any harness. It is a dead fragment — immediate deletion candidate.
+
+---
+
+### Redundancy Clusters Identified
+
+#### Cluster A — Cost/Token Analytics (4 skills with overlapping purposes)
+
+Skills: `tokenadvisor`, `usage-tracking`, `cost-aggregation`, `metrics-etl`
+
+**Overlap analysis:**
+- `tokenadvisor` (584 LOC, 0 tests): role-based daily cost analysis and optimization recommendations. Read-only analytics, scheduled daily. Documented in `monitoring/token-advisor.md` as well — duplicated concept.
+- `usage-tracking` (1465 LOC, 3 tests): real-time token capture + forecasting. Session-scoped shell scripts. Bash-based, light test coverage.
+- `cost-aggregation` (2465 LOC, 116 tests): multi-provider cost consolidation. Well-tested, Python, COST-002.
+- `metrics-etl` (293 LOC, 0 tests): Prometheus/Grafana metrics pipeline. Zero tests, scheduled background job.
+
+**Verdict:** Two distinct concerns exist — (1) cost/token *analysis* for decision-making (tokenadvisor + usage-tracking) and (2) cost *aggregation* across providers (cost-aggregation). `metrics-etl` is infrastructure plumbing.
+
+**Recommendation:**
+- MERGE `tokenadvisor` → `usage-tracking`: Both are read-only session/daily analytics. Absorb tokenadvisor's role-analysis logic into usage-tracking as a sub-command. usage-tracking becomes the unified token analytics skill. `tokenadvisor` deprecated.
+- RETAIN `cost-aggregation`: Distinct responsibility (multi-provider cost normalization), well-tested.
+- RETAIN `metrics-etl`: Distinct responsibility (Prometheus export pipeline), but flag for test addition.
+- DELETE `monitoring/`: Doc-only directory of `.md` files that duplicate content in the above skills' own SKILL.md. No code, never rendered. Archive to `docs/archive/deprecated-skills/monitoring-docs/`.
+
+#### Cluster B — Cost Enforcement (2 skills with overlapping purposes)
+
+Skills: `cost-budgeting`, `model-selection`
+
+**Overlap analysis:**
+- `cost-budgeting` (1659 LOC, 83 tests, NO SKILL.md, NOT in harness): COST-001. Enforces per-session/hour/day budgets. Well-tested Python but missing SKILL.md and excluded from harness rendering.
+- `model-selection` (1749 LOC, 123 tests): COST-003. Recommends optimal model given cost/quality/latency constraints. Depends on cost-budgeting.
+
+**Verdict:** Not duplicates — cost-budgeting enforces limits, model-selection optimizes within limits. However, cost-budgeting's absence from the harness is a defect, not intentional. It needs a SKILL.md and harness registration.
+
+**Recommendation:**
+- FIX `cost-budgeting`: Add SKILL.md (copy pattern from model-selection), register in harness. Not a consolidation — this is a defect.
+- RETAIN both skills as distinct: enforcement vs. optimization are separate concerns.
+
+#### Cluster C — Scaffolding/Creator Tools (2 skills with near-identical purpose)
+
+Skills: `agent-creator`, `skill-creator`
+
+**Overlap analysis:**
+- `agent-creator` (1139 LOC, 3 tests): Scaffolds new agents — SKILL.md frontmatter, TDD test scaffold, __init__.py, scripts/, DELEGATE/HANDBACK templates. Validates naming, role, model, circular deps.
+- `skill-creator` (207 LOC, 3 tests): Scaffolds new skills following agentskills.io spec. Directory structure, SKILL.md, script templates, documentation.
+
+**Verdict:** Near-identical purpose with same user-facing goal: "create a new thing that follows SPEC." The split appears arbitrary — agents are just skills with role assignments in this framework. skill-creator is underpowered (207 LOC) vs agent-creator (1139 LOC with real validation logic).
+
+**Recommendation:**
+- MERGE `skill-creator` → `agent-creator`: Absorb skill-creator's agentskills.io scaffolding into agent-creator as a `--type skill` flag. agent-creator already does the harder work. skill-creator is the weaker duplicate. After merge, agent-creator handles `--type agent` (default) and `--type skill`.
+- Add 3 tests for the new `--type skill` path in agent-creator before deprecating skill-creator.
+
+#### Cluster D — Protocol/Spec Validation (3 skills with overlapping gates)
+
+Skills: `protocol-validator`, `spec-validator`, `consistency-checker`
+
+**Overlap analysis:**
+- `protocol-validator` (1921 LOC, 55 tests): Runtime DELEGATE/HANDBACK schema validation against protocol-core-v1.0.yaml. <5ms. Single-message validation.
+- `spec-validator` (1758 LOC, 3 tests): SPEC.md compliance for code changes. Detects violations in git diffs. Pre-merge gate.
+- `consistency-checker` (1391 LOC, 21 tests): Cross-validates the entire queue — scans all states, detects cycles, orphans, rate-limit breaches. Depends on protocol-validator.
+
+**Verdict:** These serve different scopes: protocol-validator (per-message), spec-validator (per-diff), consistency-checker (whole-queue). They are NOT redundant — they are layered validation at different granularities. However, spec-validator's 3 tests is a quality gap.
+
+**Recommendation:**
+- RETAIN all three: Each has a distinct validation scope.
+- Flag spec-validator for test coverage improvement (3 tests for 1758 LOC is unacceptably low — should be ≥85% coverage target per framework standards).
+
+#### Cluster E — Harness Tracking (2 narrowly-scoped skills)
+
+Skills: `harness-integration-tracker`, `harness-opencode-feature-sync`
+
+**Overlap analysis:**
+- `harness-integration-tracker` (1636 LOC, 74 tests): Cross-harness drift detection — all 4 harnesses (OpenCode, Copilot, Claude, PI). Generates integration-summary.yaml per harness.
+- `harness-opencode-feature-sync` (870 LOC, 19 tests): OpenCode-specific renderer drift — KNOWN_KEYS schema, permission patterns, reasoning variants. Feeds into harness-integration-tracker registry.
+
+**Verdict:** `harness-opencode-feature-sync` is a *source* for harness-integration-tracker. It handles OpenCode-specific parsing that would bloat the tracker. Architecturally sound as separate skill, but narrow scope and manually triggered only.
+
+**Recommendation:**
+- MERGE `harness-opencode-feature-sync` → `harness-integration-tracker` as a sub-module: The OpenCode-specific sync logic becomes `scripts/opencode_sync.py` inside harness-integration-tracker. Reduces the number of harness-scoped skills from 2 to 1 without losing functionality.
+- Migration: harness-integration-tracker calls opencode_sync internally; external callers use harness-integration-tracker directly.
+
+#### Cluster F — Docs & Pattern References (doc-only directories, not real skills)
+
+Items: `monitoring/`, `spec-extract/`, `src/skills/architecture/`, `src/skills/optimization/`, `src/skills/orchestration/`, `src/skills/patterns/`, `src/skills/roles/`, `src/skills/security/`, `src/skills/shared/`
+
+**Analysis:** These directories exist in src/skills/ but are reference/doc directories or shared libraries, not rendered skills. They are not in ~/.claude/skills/ (not harness-rendered). Some contain markdown guidance docs, others contain Python shared modules.
+
+**Recommendation:**
+- `monitoring/` — DELETE (doc-only, content duplicated in tokenadvisor/usage-tracking SKILL.md)
+- `spec-extract/` — DELETE (single shell script, not integrated, not rendered)
+- `architecture/`, `optimization/`, `orchestration/`, `patterns/`, `roles/`, `security/`, `shared/` — AUDIT in Wave 3: determine which are shared Python modules (should move to `src/lib/` or `src/shared/`) vs. stale reference docs (archive or delete). Do NOT render as skills.
+
+#### Cluster G — Disabled Skill
+
+Skill: `repo-init` (5660 LOC, 76 tests, DISABLED in SKILL.md)
+
+**Verdict:** Explicitly disabled by user policy concern. High LOC and tests but zero production utility.
+
+**Recommendation:**
+- ARCHIVE `repo-init` → `docs/archive/deprecated-skills/repo-init/`: Move entire directory out of src/skills/. Preserve in archive with restoration instructions per framework convention. Remove from harness rendering.
+- Re-enable only via explicit user decision (follow spec-management approval flow for un-deprecating).
+
+---
+
+### Before/After Skill Matrix
+
+| Before | After | Action | Phase |
+|---|---|---|---|
+| tokenadvisor | merged → usage-tracking | DEPRECATE | Wave 3 |
+| usage-tracking | usage-tracking (absorbs tokenadvisor) | ENHANCE | Wave 3 |
+| skill-creator | merged → agent-creator | DEPRECATE | Wave 3 |
+| agent-creator | agent-creator (--type skill added) | ENHANCE | Wave 3 |
+| harness-opencode-feature-sync | merged → harness-integration-tracker | DEPRECATE | Wave 3 |
+| harness-integration-tracker | harness-integration-tracker (opencode sub-module) | ENHANCE | Wave 3 |
+| monitoring/ | deleted | DELETE | Wave 3 |
+| spec-extract/ | deleted | DELETE | Wave 3 |
+| repo-init | archived to docs/archive/ | ARCHIVE | Wave 3 |
+| cost-budgeting | SKILL.md added + harness registered | FIX | Wave 3 |
+| spec-validator | test coverage improved (3 → ≥85%) | FIX | Wave 3 |
+| cost-aggregation | retained | RETAIN | — |
+| metrics-etl | retained (tests needed) | RETAIN+FIX | Wave 3 |
+| model-selection | retained | RETAIN | — |
+| model-engineer | retained | RETAIN | — |
+| consistency-checker | retained | RETAIN | — |
+| protocol-validator | retained | RETAIN | — |
+| spec-management | retained | RETAIN | — |
+| orchestrator | retained | RETAIN | — |
+| queue-management | retained | RETAIN | — |
+| queue-query | retained | RETAIN | — |
+| queue-todo-sync | retained | RETAIN | — |
+| doc-quality-monitor | retained (tests needed: 0 currently) | RETAIN+FIX | Wave 3 |
+| session-analyzer | retained | RETAIN | — |
+| file-sync | retained | RETAIN | — |
+| testing | retained (tests needed: 0 currently) | RETAIN+FIX | Wave 3 |
+| local-model-runtime | retained | RETAIN | — |
+| ab-testing | retained (tests needed: 0 currently) | RETAIN+FIX | Wave 3 |
+| workflow-review | retained | RETAIN | — |
+
+**Expected footprint after consolidation:**
+- Before: 27 items in src/skills/ (3 deprecated, 1 doc-only fragment, 1 disabled)
+- After: 22 active skills (5 fewer = 18.5% reduction)
+- LOC reduction: ~3,700 LOC removed (tokenadvisor 584 + skill-creator 207 + harness-opencode-feature-sync 870 + monitoring ~200 + spec-extract ~50 + repo-init 5660 migrated out) = net active codebase reduction.
+- Exceeds 10-15% footprint target.
+
+---
+
+### Prioritized Wave 3 Execution Order
+
+**Phase W3-A — Deletions (zero risk, immediate wins):**
+1. DELETE `src/skills/monitoring/` — doc-only, zero code, no harness rendering
+2. DELETE `src/skills/spec-extract/` — single dead shell script, zero integration
+3. ARCHIVE `src/skills/repo-init/` → `docs/archive/deprecated-skills/repo-init/` — disabled by policy
+
+**Phase W3-B — Defect Fixes (unblock cost-budgeting and spec-validator):**
+4. FIX `cost-budgeting`: Add SKILL.md, register in harness renderer
+5. FIX `spec-validator`: Add test coverage to ≥85% (currently 3 tests / 1758 LOC)
+
+**Phase W3-C — Merges (moderate complexity, each needs test verification):**
+6. MERGE `skill-creator` → `agent-creator` (add --type skill flag, 3 new tests, then deprecate)
+7. MERGE `tokenadvisor` → `usage-tracking` (absorb role-analysis sub-command, verify 0→≥10 tests)
+8. MERGE `harness-opencode-feature-sync` → `harness-integration-tracker` (sub-module pattern)
+
+**Phase W3-D — Coverage fixes (quality gate compliance):**
+9. FIX `doc-quality-monitor`: Add tests (0 → ≥85% coverage)
+10. FIX `testing`: Add tests (0 → ≥85% coverage)
+11. FIX `ab-testing`: Add tests (0 → ≥85% coverage)
+12. FIX `metrics-etl`: Add tests (0 → minimal smoke tests)
+
+---
+
+### Rollback Strategy Per Consolidation
+
+**W3-A deletions:**
+- Git history is the rollback. All deleted files recoverable via `git checkout <commit> -- src/skills/<name>/`.
+- Archive `repo-init/` with a `RESTORE.md` per framework convention.
+
+**W3-B defect fixes:**
+- Additive-only (new SKILL.md, new tests). Rollback = revert the commit. Zero risk.
+
+**W3-C merges:**
+- Each merge executes in a separate branch (`fix/consolidate-<name>`).
+- Deprecation tag added to source skill SKILL.md before deletion commit.
+- Source skill directory kept in `docs/archive/deprecated-skills/<name>/` with merge commit SHA recorded.
+- Rollback: restore from archive directory + re-register in renderer.
+- No merge executes until all tests pass on the target skill post-absorption.
+
+**W3-D coverage fixes:**
+- TDD-first: tests written against existing code. Purely additive. Rollback = revert.
+
+---
+
+### Testing Requirements for Wave 3
+
+Each consolidation must pass this gate before the source skill is deleted:
+
+| Consolidation | Gate |
+|---|---|
+| skill-creator → agent-creator | agent-creator tests pass + 3 new `--type skill` tests green |
+| tokenadvisor → usage-tracking | usage-tracking tests pass + role-analysis sub-command has ≥10 tests |
+| harness-opencode-feature-sync → harness-integration-tracker | harness-integration-tracker tests pass + existing 19 tests ported as internal tests |
+| cost-budgeting SKILL.md fix | Harness renders cost-budgeting; existing 83 tests still pass |
+| spec-validator coverage | ≥85% coverage on spec_validator.py (currently ~0%) |
+
+---
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Merge breaks dependent skill | Low | Medium | Test all dependents in CI before deleting source |
+| Harness rendering broken post-fix | Low | High | Render dry-run in CI; check ~/.claude/skills/ post-render |
+| repo-init archive loses test history | None | None | git log preserves all history |
+| cost-budgeting SKILL.md conflicts with model-selection dependency | Low | Low | model-selection depends on cost-budgeting Python API, not SKILL.md |
+| Coverage fixes reveal bugs | Medium | Low | Treat as wins — fix bugs found during W3-D |
+
+**Overall risk: LOW.** All merges are absorb-and-deprecate patterns with git-backed rollback. No breaking API changes to framework consumers.
+
+---
+
 ## 🎉 CATCH-UP FIX PARTY (branch `feature/catch-up-fixparty-wooooo`, 2026-06-11)
 
 Recovered from the 2026-06-10 master prompt (full DELEGATE/HANDBACK audit
