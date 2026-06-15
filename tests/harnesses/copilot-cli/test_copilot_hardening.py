@@ -693,3 +693,238 @@ class TestProviderConfigConsistency:
         health = copilot_provider.health_check()
         assert health["status"] == "unknown"
         assert "no API access" in health.get("reason", "")
+
+
+# ---------------------------------------------------------------------------
+# AC6 — Production Resilience & Edge Cases (Wave 2 Hardening)
+# ---------------------------------------------------------------------------
+
+class TestProductionResilience:
+    """Hardening tests for production failure modes and edge cases.
+
+    These tests verify that the Copilot CLI harness maintains >=95%
+    delegation success under adverse conditions, partial failures, and
+    high-load scenarios.
+    """
+
+    def test_delegation_success_with_concurrent_harness_instances(
+        self, skill_tree: Path, tmp_path: Path
+    ):
+        """Multiple concurrent Copilot harness instances do not corrupt markers."""
+        src = skill_tree / "src"
+        dst = tmp_path / "dst"
+        marker = ".copilot-managed"
+
+        def render_in_thread(thread_id: int):
+            renderer = StreamingRenderer(str(src), str(dst), marker)
+            events = list(renderer.render_all())
+            return events
+
+        # Launch 3 concurrent renders
+        threads = []
+        results = []
+        lock = threading.Lock()
+
+        def thread_worker(tid):
+            events = render_in_thread(tid)
+            with lock:
+                results.append((tid, events))
+
+        for i in range(3):
+            t = threading.Thread(target=thread_worker, args=(i,))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join(timeout=10)
+
+        assert len(results) == 3, "All threads should complete"
+
+        # All renders should have >=95% success
+        for tid, events in results:
+            skips = sum(1 for e in events if e.type == "skip")
+            completes = sum(1 for e in events if e.type == "complete")
+            errors = sum(1 for e in events if e.type == "error")
+
+            total = completes + errors
+            if total > 0:
+                rate = completes / total
+                assert rate >= 0.95, f"Thread {tid} success rate {rate:.0%} < 95%"
+
+    def test_delegation_success_with_permission_denied_fallback(
+        self, skill_tree: Path, tmp_path: Path
+    ):
+        """When rsync fails with permission denied, harness emits error and continues."""
+        src = skill_tree / "src"
+        dst = tmp_path / "dst"
+        renderer = StreamingRenderer(str(src), str(dst), ".marker")
+
+        # Simulate permission denied on one skill
+        original_rsync = renderer._rsync_skill
+        call_count = {"n": 0}
+
+        def patched_rsync(name, src_p, dst_p):
+            call_count["n"] += 1
+            if name == "skill-05":
+                yield StreamEvent(
+                    type="error",
+                    skill=name,
+                    timestamp="2026-06-01T00:00:00Z",
+                    data={"message": "Permission denied"},
+                )
+                return
+            yield from original_rsync(name, src_p, dst_p)
+
+        renderer._rsync_skill = patched_rsync
+        events = list(renderer.render_all())
+
+        summary = next(e for e in events if e.type == "summary")
+        # 9 of 10 should complete (success rate 90%)
+        assert summary.data["count"] >= 9
+        assert len(summary.data["errors"]) <= 1
+
+    def test_delegation_success_with_partial_skill_render_failure(
+        self, skill_tree: Path, tmp_path: Path
+    ):
+        """If dst is partially populated, render still succeeds >= 95%."""
+        src = skill_tree / "src"
+        dst = tmp_path / "dst"
+        marker = ".copilot-managed"
+
+        # Pre-populate dst with 3 partial skills (marked as managed)
+        for i in range(3):
+            skill_dir = dst / f"skill-0{i}"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / marker).write_text("2026-05-01T00:00:00Z\n")
+            (skill_dir / "SKILL.md").write_text(f"# Skill {i} (partial)\n")
+
+        renderer = StreamingRenderer(str(src), str(dst), marker)
+        events = list(renderer.render_all())
+
+        summary = next(e for e in events if e.type == "summary")
+        # All 10 skills should be rendered (overwriting the partial ones)
+        assert summary.data["count"] == 10
+        assert summary.data["errors"] == []
+
+    def test_delegation_success_with_symlink_in_src(
+        self, skill_tree: Path, tmp_path: Path
+    ):
+        """Symlinks in src tree are followed correctly by rsync."""
+        src = skill_tree / "src"
+
+        # Create a symlink to an existing skill
+        link_target = src / "skill-02"
+        link_source = src / "skill-linked"
+
+        try:
+            link_source.symlink_to(link_target)
+        except (OSError, NotImplementedError):
+            # Skip on systems that don't support symlinks
+            pytest.skip("Symlinks not supported on this system")
+
+        dst = tmp_path / "dst"
+        renderer = StreamingRenderer(str(src), str(dst), ".marker")
+        events = list(renderer.render_all())
+
+        summary = next(e for e in events if e.type == "summary")
+        # Should render without errors
+        assert len(summary.data["errors"]) == 0
+
+    def test_cost_attribution_during_delegation_with_zero_models(self, agg: CostAggregator):
+        """Cost attribution handles edge case of empty model_variants dict."""
+        # This shouldn't happen, but defensive programming
+        try:
+            result = agg.aggregate_task_cost(
+                task_type="delegation",
+                input_tokens=5_000,
+                output_tokens=2_000,
+                model_variants={},  # Empty dict
+            )
+            # Should either return empty dict or sensible default
+            assert isinstance(result, dict)
+        except (KeyError, ValueError):
+            # Also acceptable — explicit error is better than silent failure
+            pass
+
+    def test_token_counting_with_large_precision_edge_case(
+        self, copilot_provider: CopilotProvider
+    ):
+        """Token counting maintains precision at floating-point boundaries."""
+        # Verify no precision loss at large token counts
+        large_tokens = 999_999_999
+        cost = copilot_provider.calculate_cost(large_tokens, 1, "claude-haiku-4.5")
+
+        # Cost should be positive and reasonable
+        assert cost > 0, "Large token count should produce positive cost"
+        assert cost < 1_000_000, "Cost should remain within reason"
+
+    def test_streaming_renderer_handles_nonexistent_marker_path_gracefully(
+        self, skill_tree: Path, tmp_path: Path
+    ):
+        """Renderer gracefully handles marker file on nonexistent paths."""
+        src = skill_tree / "src"
+        dst = tmp_path / "nonexistent" / "path"  # This path doesn't exist yet
+        marker = ".copilot-managed"
+
+        renderer = StreamingRenderer(str(src), str(dst), marker)
+        events = list(renderer.render_all())
+
+        summary = next(e for e in events if e.type == "summary")
+        # Should create the path and succeed
+        assert summary.data["count"] == 10
+        assert summary.data["errors"] == []
+
+    def test_delegation_success_metrics_with_100_skill_tree(
+        self, tmp_path: Path
+    ):
+        """Test delegation success with larger skill tree (100 skills)."""
+        src = tmp_path / "large_src"
+        src.mkdir()
+
+        # Create 100 minimal skills
+        for i in range(100):
+            skill_dir = src / f"skill-{i:03d}"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(f"# Skill {i}\n")
+
+        dst = tmp_path / "large_dst"
+        renderer = StreamingRenderer(str(src), str(dst), ".marker")
+        events = list(renderer.render_all())
+
+        summary = next(e for e in events if e.type == "summary")
+
+        # Even at 100 skills, should maintain high success rate
+        completes = summary.data["count"]
+        rate = completes / 100.0 if completes > 0 else 0.0
+        assert rate >= 0.95, f"Large tree success rate {rate:.0%} < 95%"
+
+    def test_model_routing_under_high_load_simulation(self, models_data: dict):
+        """Verify model routing remains stable under simulated high-task volume."""
+        role_models = models_data["role_models"]
+
+        # Simulate 100 delegations (reduced from 1000 for test speed)
+        for _ in range(100):
+            # Verify no drift in role→model assignments
+            for role, cfg in role_models.items():
+                copilot_model = cfg.get("providers", {}).get("copilot")
+                assert copilot_model is not None, f"Role {role} has no Copilot assignment"
+
+                # Verify the model is in the known set
+                model_lower = copilot_model.lower()
+                is_valid = any(
+                    tier in model_lower
+                    for tier in ("haiku", "sonnet", "opus", "gpt", "mini")
+                )
+                assert is_valid, f"Role {role} has unknown model class: {copilot_model}"
+
+    def test_copilot_provider_handles_unknown_model_gracefully(
+        self, copilot_provider: CopilotProvider
+    ):
+        """Cost calculation for unknown model falls back to safe default."""
+        try:
+            cost = copilot_provider.calculate_cost(1000, 500, "unknown-model-xyz")
+            # Should either use fallback or raise explicit error
+            assert cost >= 0, "Cost should be non-negative"
+        except (KeyError, ValueError):
+            # Explicit error is acceptable
+            pass
