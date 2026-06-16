@@ -96,6 +96,8 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "codex --profile agentic-engineers-orchestrator" in agents_doc
     assert "delegate:" in agents_doc
     assert "handoff_type: HANDBACK" in agents_doc
+    assert "Orchestrator-only" in agents_doc
+    assert "does not implement user tasks itself" in agents_doc
 
     config = (rendered_codex / "config.toml").read_text(encoding="utf-8")
     assert 'sandbox_mode = "workspace-write"' in config
@@ -109,6 +111,7 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "developer_instructions = " in profile
     assert "Delegate Prefix" in profile
     assert "multi_agent = true" in profile
+    assert "does not implement user tasks itself" in profile
 
 
 def test_install_codex_honors_destdir_and_skill_root(tmp_path):
