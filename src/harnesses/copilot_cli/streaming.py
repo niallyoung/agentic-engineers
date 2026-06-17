@@ -15,11 +15,13 @@ Output (JSON-lines to stdout):
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
@@ -46,6 +48,10 @@ class StreamingRenderer:
     consume the generator and emit events to stdout, a log sink, or
     a monitoring system.
 
+    Thread-safe: Uses per-skill lock files to prevent concurrent rsync
+    operations on the same skill directory, and atomic marker writes
+    to prevent data races.
+
     Example:
         renderer = StreamingRenderer(src_dir, dst_dir, marker)
         for event in renderer.render_all():
@@ -57,6 +63,8 @@ class StreamingRenderer:
         self.dst_dir = Path(dst_dir)
         self.marker = marker
         self._cancelled = False
+        self._lock_dir = Path(tempfile.gettempdir()) / "copilot-renderer-locks"
+        self._lock_dir.mkdir(exist_ok=True, parents=True)
 
     def cancel(self) -> None:
         """Request graceful cancellation after the current skill completes."""
@@ -65,6 +73,67 @@ class StreamingRenderer:
     def _now(self) -> str:
         """Return current UTC timestamp in ISO 8601 format."""
         return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    def _get_skill_lock_path(self, skill_name: str) -> Path:
+        """Return path to lock file for a skill (prevents concurrent rsync on same skill)."""
+        # Use sanitized skill name as lock file name
+        safe_name = skill_name.replace("/", "_").replace("\\", "_")
+        return self._lock_dir / f"{safe_name}.lock"
+
+    def _acquire_skill_lock(self, skill_name: str) -> object:
+        """
+        Acquire an exclusive lock for a skill to prevent concurrent rsync operations.
+
+        Returns a file object that must be closed to release the lock.
+        This uses fcntl.flock on Unix systems (macOS, Linux, etc.).
+        """
+        lock_path = self._get_skill_lock_path(skill_name)
+        lock_file = open(lock_path, "w")
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            return lock_file
+        except Exception:
+            lock_file.close()
+            raise
+
+    def _release_skill_lock(self, lock_file: object) -> None:
+        """Release a skill lock."""
+        if lock_file:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            except Exception:
+                pass
+            finally:
+                lock_file.close()
+
+    def _write_marker_atomic(self, marker_path: Path) -> None:
+        """
+        Write marker file atomically (write to temp file then rename).
+
+        This prevents partial writes and ensures the marker is either
+        fully present or fully absent—no in-between states that could
+        cause another thread to see a corrupted marker.
+        """
+        content = time.strftime("%Y-%m-%dT%H:%M:%SZ\n", time.gmtime())
+
+        # Ensure parent directory exists
+        marker_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write to a temporary file in the same directory
+        # (ensures same filesystem for atomic rename)
+        fd, temp_path = tempfile.mkstemp(dir=str(marker_path.parent), text=True)
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(content)
+            # Atomic rename (on POSIX systems)
+            os.replace(temp_path, str(marker_path))
+        except Exception:
+            # Clean up temp file if something goes wrong
+            try:
+                os.unlink(temp_path)
+            except Exception:
+                pass
+            raise
 
     def _list_source_skills(self) -> list[str]:
         """Return sorted list of skill names (dirs containing SKILL.md)."""
@@ -216,6 +285,9 @@ class StreamingRenderer:
 
         Handles foreign skill detection (marker-based safety) and
         delegates to _rsync_skill for the actual transfer.
+
+        Thread-safe: Uses per-skill locks to prevent concurrent rsync
+        operations on the same skill directory.
         """
         src = self.src_dir / name
         dst = self.dst_dir / name
@@ -223,27 +295,35 @@ class StreamingRenderer:
 
         yield StreamEvent(type="start", skill=name, timestamp=self._now(), data={})
 
-        # Foreign skill protection: skip if exists but not managed by us
-        if dst.is_dir() and not marker_path.exists():
-            yield StreamEvent(
-                type="skip",
-                skill=name,
-                timestamp=self._now(),
-                data={"reason": "exists but not managed (no marker file)"},
-            )
-            return
+        # Acquire exclusive lock for this skill to prevent concurrent rsync
+        lock_file = None
+        try:
+            lock_file = self._acquire_skill_lock(name)
 
-        # Ensure destination parent exists
-        self.dst_dir.mkdir(parents=True, exist_ok=True)
+            # Foreign skill protection: skip if exists but not managed by us
+            if dst.is_dir() and not marker_path.exists():
+                yield StreamEvent(
+                    type="skip",
+                    skill=name,
+                    timestamp=self._now(),
+                    data={"reason": "exists but not managed (no marker file)"},
+                )
+                return
 
-        # Run rsync with streaming progress
-        yield from self._rsync_skill(name, src, dst)
+            # Ensure destination parent exists
+            self.dst_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write marker only after successful rsync
-        if (dst / self.marker).parent.exists():
-            marker_path.write_text(
-                time.strftime("%Y-%m-%dT%H:%M:%SZ\n", time.gmtime())
-            )
+            # Run rsync with streaming progress
+            yield from self._rsync_skill(name, src, dst)
+
+            # Write marker atomically after successful rsync
+            if (dst / self.marker).parent.exists():
+                self._write_marker_atomic(marker_path)
+
+        finally:
+            # Always release the lock
+            if lock_file:
+                self._release_skill_lock(lock_file)
 
     def render_all(self) -> Generator[StreamEvent, None, None]:
         """

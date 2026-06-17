@@ -41,15 +41,16 @@ import pytest
 _TESTS_DIR = Path(__file__).parent
 _REPO_ROOT = _TESTS_DIR.parent
 _CLEANUP_SKILL_ROOT = _REPO_ROOT / "src" / "skills" / "_meta" / "file-cleanup"
-sys.path.insert(0, str(_CLEANUP_SKILL_ROOT))
+_CLEANUP_SCRIPTS = _CLEANUP_SKILL_ROOT / "scripts"
+sys.path.insert(0, str(_CLEANUP_SCRIPTS))
 
-from scripts.file_cleanup import (  # noqa: E402
+from file_cleanup import (  # noqa: E402
     CleanupConfig,
     FileCleanupAnalyzer,
     RiskLevel,
     run_cleanup,
 )
-from scripts.pre_gate_validator import PreGateValidator  # noqa: E402
+from pre_gate_validator import PreGateValidator  # noqa: E402
 
 
 # ===========================================================================
@@ -517,7 +518,7 @@ class TestHappyPathSyncDecideCleanup:
         (tmp_repo / "PHASE_old.md").write_text("# Phase\n")
 
         with patch(
-            "scripts.file_cleanup.FileCleanupAnalyzer._is_git_tracked",
+            "file_cleanup.FileCleanupAnalyzer._is_git_tracked",
             return_value=False,
         ):
             result = run_cleanup(root=tmp_repo, dry_run=True)

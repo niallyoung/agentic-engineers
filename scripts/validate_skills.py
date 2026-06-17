@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""validate_skills.py — SKILL.md frontmatter compliance gate (Phase 5.1+).
+from __future__ import annotations
+
+"""validate_skills.py - SKILL.md frontmatter compliance gate (Phase 5.1+).
 
 Validates every active skill in src/skills/ against the canonical template
 defined in src/skills/_meta/skill-template/SKILL.md.
 
 Exit codes:
-    0 — All active skills pass validation
-    1 — One or more active skills have compliance failures
-    2 — Configuration / invocation error
+    0 -- All active skills pass validation
+    1 -- One or more active skills have compliance failures
+    2 -- Configuration / invocation error
 
 Usage:
     python scripts/validate_skills.py
@@ -15,7 +17,6 @@ Usage:
     python scripts/validate_skills.py --json          # machine-readable output
     python scripts/validate_skills.py --skill queue-management  # single skill
 """
-from __future__ import annotations
 
 import argparse
 import json
@@ -37,7 +38,6 @@ SKILLS_DIR = REPO_ROOT / "src" / "skills"
 # Update this list whenever a skill is added or deprecated.
 ACTIVE_SKILLS: List[str] = [
     "harness-integration-tracker",
-    "harness-opencode-feature-sync",
     "consistency-checker",
     "protocol-validator",
     "spec-validator",
@@ -48,7 +48,6 @@ ACTIVE_SKILLS: List[str] = [
     "queue-query",
     "usage-tracking",
     "file-sync",
-    "skill-creator",
     "queue-todo-sync",
     "model-engineer",
 ]
@@ -75,7 +74,7 @@ REQUIRED_METADATA: List[str] = [
 REQUIRED_DIRS: List[str] = ["scripts", "tests"]
 REQUIRED_FILES: List[str] = ["SKILL.md", "__init__.py"]
 
-# Allowed enum values — warn (not error) on mismatch for forward-compatibility
+# Allowed enum values -- warn (not error) on mismatch for forward-compatibility
 ALLOWED_ROLES = {
     "engineer", "senior-engineer", "lead-engineer", "principal-engineer",
     "security-engineer", "quality-engineer", "orchestrator",
@@ -235,7 +234,7 @@ def _print_table(results: Dict[str, SkillAuditResult], *, strict: bool) -> None:
         if strict and r.warnings:
             status = "FAIL"
         issues = r.errors + (r.warnings if strict else [])
-        first_issue = issues[0] if issues else "—"
+        first_issue = issues[0] if issues else "--"
         print(f"  {name:<{width}} {status:<6}  {first_issue}")
         for issue in issues[1:]:
             print(f"  {'':<{width}} {'':6}  {issue}")

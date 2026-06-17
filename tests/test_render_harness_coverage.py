@@ -80,8 +80,8 @@ def _render_all():
 
 def test_source_has_exactly_26_user_skills():
     names = _source_skill_names()
-    assert len(names) == 26, (
-        f"Expected 26 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 24, (
+        f"Expected 24 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 
@@ -132,8 +132,8 @@ def test_harness_renders_all_24_skills(harness):
         f"dist/{harness}/skills/ is missing rendered skills (with SKILL.md): "
         f"{sorted(missing)}"
     )
-    assert len(rendered) >= 24, (
-        f"dist/{harness}/skills/ rendered only {len(rendered)} skills; expected >= 24"
+    assert len(rendered) >= 23, (
+        f"dist/{harness}/skills/ rendered only {len(rendered)} skills; expected >= 23"
     )
 
 

@@ -47,7 +47,6 @@ def test_skills_list() -> list:
         "model-selection",
         "protocol-validator",
         "queue-management",
-        "skill-creator",
         "spec-management",
         "spec-validator",
         "usage-tracking",
