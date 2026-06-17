@@ -338,8 +338,9 @@ class TestBudgetColor:
 class TestColorize:
     """Test _colorize() method."""
     
-    def test_colorize_with_color(self):
+    def test_colorize_with_color(self, monkeypatch):
         """Test that _colorize applies ANSI codes."""
+        monkeypatch.delenv("NO_COLOR", raising=False)
         formatter = CLIFormatter()
         text = "test"
         colored = formatter._colorize(text, CLIFormatter.ANSI_GREEN)

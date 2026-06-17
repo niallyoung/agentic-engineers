@@ -100,7 +100,7 @@ class TestValidateRenders:
             src_skill.mkdir(parents=True)
             (src_skill / "SKILL.md").write_text(f"---\ntitle: {skill_name}\n---\n")
 
-            for harness in ["claude", "copilot", "opencode"]:
+            for harness in ["claude", "copilot", "opencode", "codex"]:
                 dist_skill = tmp_path / "dist" / harness / "skills" / skill_name
                 dist_skill.mkdir(parents=True)
                 (dist_skill / "SKILL.md").write_text(f"---\ntitle: {skill_name}\n---\n")
@@ -130,7 +130,7 @@ class TestValidateRenders:
         src_skill.mkdir(parents=True)
         (src_skill / "SKILL.md").write_text("---\ntitle: real-skill\n---\n")
 
-        for harness in ["claude", "copilot", "opencode"]:
+        for harness in ["claude", "copilot", "opencode", "codex"]:
             dist_skill = tmp_path / "dist" / harness / "skills" / "real-skill"
             dist_skill.mkdir(parents=True)
             (dist_skill / "SKILL.md").write_text("---\ntitle: real-skill\n---\n")
