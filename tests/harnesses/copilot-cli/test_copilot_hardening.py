@@ -48,6 +48,10 @@ sys.path = [
     ],
 ]
 
+for module_name in list(sys.modules):
+    if module_name == "scripts" or module_name.startswith("scripts."):
+        sys.modules.pop(module_name, None)
+
 CopilotProvider = importlib.import_module("scripts.providers.copilot_provider").CopilotProvider  # noqa: E402
 CostAggregator = importlib.import_module("scripts.cost_aggregator").CostAggregator              # noqa: E402
 from src.harnesses.copilot_cli.streaming import (               # noqa: E402
