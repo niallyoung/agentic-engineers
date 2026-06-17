@@ -11,9 +11,10 @@ Wave 2 baselines (from harness-compatibility-baseline.md, 2026-06-14):
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
 
-import subprocess
 import sys
 import os
+
+import pytest
 
 # Wave 2 baselines — update only via SPEC change + QE sign-off
 BASELINES = {
@@ -46,27 +47,16 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def count_collected(test_path: str) -> int:
     """Return number of tests collected by pytest for a given path."""
     abs_path = os.path.join(REPO_ROOT, test_path)
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", abs_path, "--collect-only", "-q", "--tb=no"],
-        capture_output=True,
-        text=True,
-        cwd=REPO_ROOT,
-    )
-    # Parse "N tests collected" or "N test collected" from stdout or stderr
-    # Example line: "94 tests collected in 0.09s"
-    output = result.stdout + result.stderr
-    for line in reversed(output.splitlines()):
-        line = line.strip()
-        if "collected" in line:
-            parts = line.split()
-            for i, part in enumerate(parts):
-                if part in ("collected", "test", "tests") and i > 0:
-                    try:
-                        count = int(parts[0])
-                        return count
-                    except (ValueError, IndexError):
-                        pass
-    return 0
+    collected = []
+
+    class _CollectorPlugin:
+        def pytest_collection_finish(self, session):  # type: ignore[no-untyped-def]
+            collected.extend(session.items)
+
+    rc = pytest.main([abs_path, "--collect-only", "-q", "--tb=no"], plugins=[_CollectorPlugin()])
+    if rc not in (0, 5):
+        return 0
+    return len(collected)
 
 
 def main() -> int:
