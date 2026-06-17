@@ -3,7 +3,7 @@
 # Part of agentic-engineers install system
 #
 # Usage: bash unified-install.sh [OPTIONS] [harness1 harness2 ...]
-# Example: bash unified-install.sh copilot claude pi opencode           (non-interactive, auto-backup)
+# Example: bash unified-install.sh copilot claude pi opencode codex     (non-interactive, auto-backup)
 # Example: bash unified-install.sh --interactive copilot claude         (interactive, ask per harness)
 # Example: bash unified-install.sh --no-backup copilot                  (skip backup)
 # Example: bash unified-install.sh --force copilot                      (skip all prompts)
@@ -161,6 +161,9 @@ get_harness_dir() {
         opencode)
             echo "$DEST_ROOT/.config/opencode"
             ;;
+        codex)
+            echo "$DEST_ROOT/.codex"
+            ;;
         *)
             return 1
             ;;
@@ -171,7 +174,7 @@ get_harness_dir() {
 validate_harness() {
     local harness="$1"
     case "$harness" in
-        copilot|claude|pi|opencode)
+        copilot|claude|pi|opencode|codex)
             return 0
             ;;
         *)

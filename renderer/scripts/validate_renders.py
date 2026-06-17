@@ -31,7 +31,7 @@ from pathlib import Path
 
 
 # Harnesses whose dist/<harness>/skills/ dirs must mirror src/skills/
-HARNESSES = ["claude", "copilot", "opencode"]
+HARNESSES = ["claude", "copilot", "opencode", "codex"]
 
 # Skill directories in src/skills/ that are framework-internal and intentionally
 # NOT rendered to dist/ (e.g., _meta contains implementation helpers, not user-facing skills)

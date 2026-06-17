@@ -14,6 +14,7 @@ Copilot-specific constraints: model assignments, pricing, and harness durability
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import sys
@@ -35,12 +36,24 @@ SRC_SKILLS = REPO_ROOT / "src" / "skills"
 PROVIDERS_YAML = REPO_ROOT / "src" / "config" / "providers.yaml"
 MODELS_YAML = REPO_ROOT / "src" / "config" / "models.yaml"
 
-# Insert skill path so copilot_provider imports work
+# Insert the cost-aggregation package root so `scripts.*` resolves to the
+# cost-aggregation skill package rather than any repo-root `scripts/` path.
 COST_AGG_ROOT = SRC_SKILLS / "cost-aggregation"
-sys.path.insert(0, str(COST_AGG_ROOT))
+sys.path = [
+    str(COST_AGG_ROOT),
+    *[
+        entry
+        for entry in sys.path
+        if Path(entry or ".").resolve() != REPO_ROOT / "scripts"
+    ],
+]
 
-from scripts.providers.copilot_provider import CopilotProvider  # noqa: E402
-from scripts.cost_aggregator import CostAggregator              # noqa: E402
+for module_name in list(sys.modules):
+    if module_name == "scripts" or module_name.startswith("scripts."):
+        sys.modules.pop(module_name, None)
+
+CopilotProvider = importlib.import_module("scripts.providers.copilot_provider").CopilotProvider  # noqa: E402
+CostAggregator = importlib.import_module("scripts.cost_aggregator").CostAggregator              # noqa: E402
 from src.harnesses.copilot_cli.streaming import (               # noqa: E402
     StreamEvent,
     StreamingRenderer,
@@ -693,8 +706,6 @@ class TestProviderConfigConsistency:
         health = copilot_provider.health_check()
         assert health["status"] == "unknown"
         assert "no API access" in health.get("reason", "")
-
-
 # ---------------------------------------------------------------------------
 # AC6 — Production Resilience & Edge Cases (Wave 2 Hardening)
 # ---------------------------------------------------------------------------

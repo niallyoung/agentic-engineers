@@ -221,8 +221,9 @@ class TestCLIFormattingParity:
         line = formatter.format_task_line(history[0], session_cost=0.045)
         assert "\033[" not in line
 
-    def test_format_task_line_contains_ansi_when_color_enabled(self, tracker):
+    def test_format_task_line_contains_ansi_when_color_enabled(self, tracker, monkeypatch):
         """format_task_line output contains ANSI codes when color enabled."""
+        monkeypatch.delenv("NO_COLOR", raising=False)
         tracker.record_task_tokens("t1", "engineer", 1000, 500, 100, 0.045)
         history = tracker.get_all_metrics()
         formatter = CLIFormatter(no_color=False)

@@ -3,6 +3,7 @@
 Renders agentic-engineers configurations for different tools:
 - **Copilot CLI** (`~/.copilot/agents/`)
 - **π.dev Harness** (`~/.pi/agent/`)
+- **Codex** (`~/.codex/agents/`, `~/.agents/skills/`)
 
 ## Quick Start
 
@@ -41,6 +42,7 @@ renderer/
 │
 ├── scripts/
 │   ├── render-pi-dev.py             — π.dev renderer (NEW)
+│   ├── render-codex.py              — Codex renderer
 │   └── render-copilot-agents.py     — Copilot CLI renderer
 │
 ├── PI-DEV-RENDERER.md               — π.dev integration guide
@@ -74,6 +76,16 @@ renderer/
 **What**: Renders agentic-engineers agents for Copilot CLI
 **How**: `python3 renderer/scripts/render-copilot-agents.py`
 **Docs**: See script documentation
+
+### Codex Renderer
+
+**What**: Renders agentic-engineers custom agents, skills, and config for Codex
+**How**: `make render-codex` or `make install-codex`
+**Where**: `src/agents/` → `~/.codex/agents/`; `src/skills/` → `~/.agents/skills/`
+
+Codex custom agents are TOML files and are spawned only when explicitly
+requested by the user/session. The renderer installs a concise `AGENTS.md`
+that preserves the Orchestrator-first DELEGATE/HANDBACK workflow.
 
 ## Maintenance
 
