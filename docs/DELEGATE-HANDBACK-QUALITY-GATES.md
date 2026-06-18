@@ -144,13 +144,13 @@ Validated automatically by `quality_validator.py` before any human review:
 | Field | Requirement | Failure Severity |
 |-------|------------|-----------------|
 | `handoff_type` | Must equal `"HANDBACK"` | CRITICAL (−25) |
+| `spec_version` | Must match the originating DELEGATE | CRITICAL (−25) |
 | `task_id` | Must exactly match the DELEGATE `task_id` | CRITICAL (−25) |
 | `status` | Must be one of: `complete`, `failed`, `partial` | ERROR (−15) |
 | `deliverables` | Required for `effort: high/max/epic` | ERROR (−10) |
 | `tests` | Required for engineer-tier roles | ERROR (−10) |
 | `notes` | ≥5 words; must explain outcome | ERROR (−10) |
-| `tokens_in` | Present and positive integer | WARNING (−5) |
-| `tokens_out` | Present and positive integer | WARNING (−5) |
+| `token_usage` | Present or derivable from legacy fields | WARNING (−5) |
 | `duration_minutes` | Present and positive | WARNING (−5) |
 
 **Format Gate Pass threshold:** Layer 1 score ≥ 60 (Layer 2/3 are skipped below 50).

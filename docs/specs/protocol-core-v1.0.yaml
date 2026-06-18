@@ -104,6 +104,53 @@ definitions:
         type: number
         minimum: 0
 
+  token_quota:
+    description: Budget/ceiling for a DELEGATE, used for orchestration and routing.
+    type: object
+    required: [total]
+    additionalProperties: false
+    properties:
+      total:
+        type: integer
+        minimum: 0
+      input:
+        type: integer
+        minimum: 0
+      output:
+        type: integer
+        minimum: 0
+      enforcement:
+        type: string
+        enum: [advisory, warn, hard]
+      source:
+        type: string
+        enum: [orchestrator, model-router, human]
+
+  token_usage:
+    description: Actual token consumption reported by a HANDBACK.
+    type: object
+    required: [input, output, total]
+    additionalProperties: false
+    properties:
+      input:
+        type: integer
+        minimum: 0
+      output:
+        type: integer
+        minimum: 0
+      cached:
+        type: integer
+        minimum: 0
+      total:
+        type: integer
+        minimum: 0
+      billable_total:
+        type: integer
+        minimum: 0
+      source:
+        type: string
+        enum: [api_usage, cli_report, estimate]
+
 # -----------------------------------------------------------------------------
 # DELEGATE message schema
 # -----------------------------------------------------------------------------
@@ -118,6 +165,8 @@ delegate:
     - success_criteria
     - plan
     - context
+    - spec_version
+    - handoff_type
 
   # --- Required core fields (strictly enforced) ---------------------------
   core_fields:
@@ -125,6 +174,15 @@ delegate:
     task_id:
       $ref: "#/definitions/task_id"
       description: Unique kebab-case task identifier.
+
+    spec_version:
+      type: string
+      description: Protocol spec version authorizing this task.
+
+    handoff_type:
+      type: string
+      enum: [DELEGATE]
+      description: Protocol identifier.
 
     skill:
       type: string
@@ -230,6 +288,10 @@ delegate:
       type: object
       description: Diagnostic context carried over from a prior failed attempt.
 
+    token_quota:
+      $ref: "#/definitions/token_quota"
+      description: Optional token budget/ceiling for this task.
+
 # -----------------------------------------------------------------------------
 # HANDBACK message schema
 # -----------------------------------------------------------------------------
@@ -241,6 +303,8 @@ handback:
     - status
     - output
     - metrics
+    - spec_version
+    - handoff_type
 
   # --- Required core fields (strictly enforced) ---------------------------
   core_fields:
@@ -248,6 +312,15 @@ handback:
     task_id:
       $ref: "#/definitions/task_id"
       description: Must match the originating DELEGATE's task_id.
+
+    spec_version:
+      type: string
+      description: Protocol spec version used when the task executed.
+
+    handoff_type:
+      type: string
+      enum: [HANDBACK]
+      description: Protocol identifier.
 
     status:
       $ref: "#/definitions/status"
@@ -262,6 +335,10 @@ handback:
     metrics:
       $ref: "#/definitions/metrics"
       description: Required quantitative outcome (quality, tokens, cost, duration_seconds).
+
+    token_usage:
+      $ref: "#/definitions/token_usage"
+      description: Optional structured token usage report for migration from flat token fields.
 
   # --- Optional extension fields (loosely validated, forward-compatible) ---
   extensions:
@@ -311,6 +388,10 @@ handback:
       items:
         type: string
       description: Free-form advisory flags raised during execution.
+
+    criteria_results:
+      type: array
+      description: Per-success-criterion completion map with evidence and gaps.
 
     error:
       type: string
