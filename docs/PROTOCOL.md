@@ -84,7 +84,9 @@ to a specialist agent.
 | Field | Default | Purpose |
 |-------|---------|---------|
 | `handoff_type` | `DELEGATE` | Protocol identifier |
+| `spec_version` | string | Protocol version for audit trail and compatibility |
 | `budget_context` | null | Token budget hint for metrics baseline |
+| `token_quota` | object | Optional token budget/ceiling for this task |
 | `out_of_scope` | null | Required for `effort: high/max/epic` |
 | `retry_context` | null | Present on re-work DELEGATEs (see Section 6) |
 | `dependencies` | [] | Upstream task IDs that must complete first |
@@ -184,6 +186,7 @@ A HANDBACK is a structured YAML block the agent returns after completing (or fai
 |-------|------|------|
 | `task_id` | string | Must exactly match the DELEGATE `task_id` |
 | `handoff_type` | string | Must be `"HANDBACK"` |
+| `spec_version` | string | Protocol version used during execution |
 | `status` | enum | `complete \| failed \| partial \| blocked` |
 | `deliverables` | array | File paths created/modified (min 1 for high/max effort) |
 | `tests` | object | `{passed, failed, coverage, framework, notes}` |
@@ -191,6 +194,7 @@ A HANDBACK is a structured YAML block the agent returns after completing (or fai
 | `effort_actual` | enum | Actual effort band consumed |
 | `tokens_in` | integer | Tokens consumed reading context |
 | `tokens_out` | integer | Tokens produced in response |
+| `token_usage` | object | Structured token usage report for migration |
 | `duration_minutes` | integer | Wall-clock minutes from start to HANDBACK |
 | `notes` | string | ≥5 words explaining outcome, decisions, and deviations |
 | `agent` | string | Role that executed the task |
@@ -277,6 +281,13 @@ quality_score: 87
 effort_actual: medium
 tokens_in: 3200
 tokens_out: 1100
+token_usage:
+  input: 3200
+  output: 1100
+  cached: 400
+  total: 4300
+  billable_total: 3900
+  source: api_usage
 duration_minutes: 24
 notes: |
   Implemented validate_jwt() with configurable GRACE_PERIOD_SECS=30 constant.

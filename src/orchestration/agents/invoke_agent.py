@@ -105,8 +105,6 @@ class AgentInvoker:
         "status",
         "deliverables",
         "tests",
-        "tokens_in",
-        "tokens_out",
         "model",
         "effort",
         "duration_minutes",
@@ -436,6 +434,10 @@ class AgentInvoker:
 
         # Check mandatory fields
         missing = [f for f in self.HANDBACK_REQUIRED_FIELDS if f not in data]
+        token_legacy_present = "tokens_in" in data and "tokens_out" in data
+        token_usage_present = "token_usage" in data
+        if not token_legacy_present and not token_usage_present:
+            missing.extend(["tokens_in", "tokens_out"])
         if missing:
             raise HandbackValidationError(
                 f"HANDBACK missing required fields: {missing}",
@@ -463,18 +465,69 @@ class AgentInvoker:
                 f"Must be one of: {sorted(self.VALID_HANDBACK_STATUSES)}"
             )
 
-        # Validate and coerce token counts to integers
-        for field in ("tokens_in", "tokens_out"):
-            value = data.get(field)
-            if not isinstance(value, int):
-                try:
-                    data[field] = int(value)
-                except (TypeError, ValueError):
-                    raise HandbackValidationError(
-                        f"HANDBACK field '{field}' must be an integer, got: {value!r}"
-                    )
+        token_usage = data.get("token_usage") if token_usage_present else None
+        if token_usage_present:
+            if not isinstance(token_usage, dict):
+                raise HandbackValidationError(
+                    "HANDBACK field 'token_usage' must be an object"
+                )
+
+        token_values = self._extract_token_values(data)
+
+        for field in ("tokens_in", "tokens_out", "tokens_cached"):
+            if field in data:
+                value = data.get(field)
+                if not isinstance(value, int):
+                    try:
+                        data[field] = int(value)
+                    except (TypeError, ValueError):
+                        raise HandbackValidationError(
+                            f"HANDBACK field '{field}' must be an integer, got: {value!r}"
+                        )
+
+        # Normalize legacy and new token fields so downstream accounting sees
+        # stable counters even while HANDBACK writers migrate to token_usage.
+        data["tokens_in"] = token_values["tokens_in"]
+        data["tokens_out"] = token_values["tokens_out"]
+        if "tokens_cached" in token_values:
+            data["tokens_cached"] = token_values["tokens_cached"]
+        if token_usage_present:
+            data.setdefault("token_usage", token_usage)
 
         return data
+
+    def _extract_token_values(self, handback: Dict) -> Dict[str, int]:
+        """Return normalized token counters from legacy or structured fields."""
+        token_usage = handback.get("token_usage")
+        if isinstance(token_usage, dict):
+            input_tokens = token_usage.get("input_tokens", token_usage.get("input", 0))
+            output_tokens = token_usage.get("output_tokens", token_usage.get("output", 0))
+            cached_tokens = token_usage.get("cached_tokens", token_usage.get("cached", 0))
+            try:
+                return {
+                    "tokens_in": int(input_tokens or 0),
+                    "tokens_out": int(output_tokens or 0),
+                    "tokens_cached": int(cached_tokens or 0),
+                }
+            except (TypeError, ValueError) as exc:
+                raise HandbackValidationError(
+                    f"HANDBACK field 'token_usage' contains non-integer values: {exc}"
+                )
+
+        try:
+            tokens_in = int(handback.get("tokens_in", 0) or 0)
+            tokens_out = int(handback.get("tokens_out", 0) or 0)
+            tokens_cached = int(handback.get("tokens_cached", 0) or 0)
+        except (TypeError, ValueError) as exc:
+            raise HandbackValidationError(
+                f"HANDBACK token fields must be integers: {exc}"
+            )
+
+        return {
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "tokens_cached": tokens_cached,
+        }
 
     def _make_synthetic_handback(
         self,
@@ -501,6 +554,14 @@ class AgentInvoker:
             "tests": [],
             "tokens_in": 0,
             "tokens_out": 0,
+            "token_usage": {
+                "input": 0,
+                "output": 0,
+                "cached": 0,
+                "total": 0,
+                "billable_total": 0,
+                "source": "api_usage",
+            },
             "model": "unknown",
             "effort": effort,
             "duration_minutes": round(duration_s / 60, 4),
@@ -570,8 +631,10 @@ class AgentInvoker:
             effort = delegate.get("effort", "unknown")
 
             duration_ms = int((span_end - span_start).total_seconds() * 1000)
-            tokens_in = handback.get("tokens_in", 0)
-            tokens_out = handback.get("tokens_out", 0)
+            token_values = self._extract_token_values(handback)
+            tokens_in = token_values["tokens_in"]
+            tokens_out = token_values["tokens_out"]
+            tokens_cached = token_values.get("tokens_cached", 0)
 
             span = {
                 "trace_id": uuid.uuid4().hex,
@@ -590,6 +653,7 @@ class AgentInvoker:
                     "effort": effort,
                     "tokens_in": tokens_in,
                     "tokens_out": tokens_out,
+                    "tokens_cached": tokens_cached,
                     "total_tokens": tokens_in + tokens_out,
                     "handback_status": handback.get("status", "unknown"),
                     "service_name": "agentic-engineers",
@@ -634,9 +698,10 @@ class AgentInvoker:
             agent = role.lower().replace(" ", "-")
             
             # Extract token counts (defaults to 0 if missing)
-            tokens_in = handback.get("tokens_in", 0)
-            tokens_out = handback.get("tokens_out", 0)
-            tokens_cached = handback.get("tokens_cached", 0)
+            token_values = self._extract_token_values(handback)
+            tokens_in = token_values["tokens_in"]
+            tokens_out = token_values["tokens_out"]
+            tokens_cached = token_values.get("tokens_cached", 0)
             cost_usd = handback.get("cost_usd", 0.0)
             
             # Record the metrics

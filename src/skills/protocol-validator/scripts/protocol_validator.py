@@ -53,6 +53,11 @@ LEGACY_STATUS_ALIASES = {'complete': 'success', 'failed': 'failure', 'escalated'
 
 VALID_EFFORTS = {'low', 'medium', 'high'}
 
+# Forward-compatible additions accepted at runtime before the canonical spec
+# update lands elsewhere in the repo.
+KNOWN_DELEGATE_RUNTIME_FIELDS = {'token_quota'}
+KNOWN_HANDBACK_RUNTIME_FIELDS = {'token_usage'}
+
 # ---------------------------------------------------------------------------
 # Enum drift detection
 # ---------------------------------------------------------------------------
@@ -681,6 +686,7 @@ class ProtocolValidator:
         
         # 3. Check for unknown fields (forward-compatibility)
         known_fields = set(self.spec.get('delegate', {}).get('core_fields', {}).keys()) | self._known_delegate_extensions
+        known_fields |= KNOWN_DELEGATE_RUNTIME_FIELDS
         for key in delegate.keys():
             if key not in known_fields:
                 warnings.append(f"Unknown field '{key}' in DELEGATE (will be ignored in current validator)")
@@ -725,9 +731,21 @@ class ProtocolValidator:
         # 2. Validate extension fields
         ext_valid, ext_errors = self._extension_validator.validate_handback_extensions(handback)
         errors.extend(ext_errors)
-        
+
+        token_usage = handback.get('token_usage')
+        if token_usage is not None:
+            if not isinstance(token_usage, dict):
+                errors.append("token_usage: must be an object")
+            else:
+                for key in ('input', 'output', 'cached', 'total', 'billable_total'):
+                    if key in token_usage:
+                        value = token_usage[key]
+                        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                            errors.append(f"token_usage.{key}: must be a non-negative integer (got {value})")
+
         # 3. Check for unknown fields
         known_fields = set(self.spec.get('handback', {}).get('core_fields', {}).keys()) | self._known_handback_extensions
+        known_fields |= KNOWN_HANDBACK_RUNTIME_FIELDS
         for key in handback.keys():
             if key not in known_fields:
                 warnings.append(f"Unknown field '{key}' in HANDBACK (will be ignored)")
