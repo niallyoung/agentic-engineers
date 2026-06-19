@@ -109,7 +109,7 @@ Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/
 ---
 handoff_type: HANDBACK
 task_id: 2026-04-30-fix-token-timeout
-status: complete | blocked | partial
+status: success | failure | partial | blocked | escalate
 deliverables: [...]
 tests: [...]
 tokens_in: 1200

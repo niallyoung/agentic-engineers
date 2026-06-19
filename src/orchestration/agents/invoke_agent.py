@@ -110,9 +110,15 @@ class AgentInvoker:
         "duration_minutes",
     ]
 
-    # Valid HANDBACK status values per HANDOFF.md
-    # ("escalate" triggers Orchestrator C2c escalation chaining)
-    VALID_HANDBACK_STATUSES = {"success", "blocked", "partial", "escalate"}
+    # Canonical HANDBACK status values.
+    # Legacy aliases are accepted and normalized to canonical values so older
+    # agents can still interoperate during the migration window.
+    VALID_HANDBACK_STATUSES = {"success", "failure", "partial", "blocked", "escalate"}
+    LEGACY_HANDBACK_STATUS_ALIASES = {
+        "complete": "success",
+        "failed": "failure",
+        "escalated": "escalate",
+    }
 
     # Default polling interval (seconds)
     DEFAULT_POLL_INTERVAL: int = 30
@@ -457,12 +463,16 @@ class AgentInvoker:
                 f"expected '{expected_task_id}' (cross-task contamination guard)"
             )
 
-        # Validate status is one of the canonical values
+        # Validate status and normalize accepted legacy aliases.
         status = data.get("status")
-        if status not in self.VALID_HANDBACK_STATUSES:
+        status = self.LEGACY_HANDBACK_STATUS_ALIASES.get(status, status)
+        if status in self.VALID_HANDBACK_STATUSES:
+            data["status"] = status
+        else:
             raise HandbackValidationError(
                 f"Invalid HANDBACK status '{status}'. "
-                f"Must be one of: {sorted(self.VALID_HANDBACK_STATUSES)}"
+                f"Must be one of: {sorted(self.VALID_HANDBACK_STATUSES)} "
+                f"or legacy aliases {sorted(self.LEGACY_HANDBACK_STATUS_ALIASES)}"
             )
 
         token_usage = data.get("token_usage") if token_usage_present else None

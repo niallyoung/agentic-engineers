@@ -4,25 +4,27 @@
 
 **Agentic Engineers** is a production-ready multi-agent orchestration framework. Here's how it stacks up against the industry:
 
-**Note:** This comparison now includes resource-aware frameworks like Gastown (and its April 2026 refinement, **Gas City**), reflecting an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
+**Note:** This comparison now includes resource-aware frameworks like Gastown. Gas City appears in repo-local material as a potential Gastown refinement, but a public canonical source was not located during this update, so it is treated as unverified below. This reflects an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
+
+**Codex support note:** Agentic Engineers now renders a Codex harness (`make install-codex`) and routes Codex models through the same canonical role map used by the other providers. Current OpenAI docs describe Codex access across Free, Go, Plus, Pro, Business, Edu, and Enterprise plans, with API-key mode limited to CLI/SDK/IDE workflows and token-billed usage. See the [Codex overview](https://developers.openai.com/codex/overview.md) and [Codex pricing](https://developers.openai.com/codex/pricing.md).
 
 #### Quick Comparison Table
 
 | Aspect | Agentic Engineers | CrewAI | LangGraph | AutoGen | OpenAI Agents SDK | Gastown | Gas City |
 |--------|-------------------|--------|-----------|---------|-------------------|---------|----------|
-| **Architecture** | Queue-based orchestrator-first | Distributed (Crews + Flows) | Low-level graph | Layered/monolithic | Lightweight primitives | Resource-aware (Mayor + Polecats) | TBD (refinement of Gastown) |
-| **Protocol** | DELEGATE/HANDBACK (mandatory) | Flexible (optional structure) | State graphs | Event-driven | Handoff-based | Git hooks + Beads (issue tracking) | TBD |
-| **Quality Gates** | 3-layer validation (40/35/25) | Integrated | Comprehensive | Minimal | Integrated | Resource-focused (gas budgets) | TBD |
-| **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning | Built-in resource budgeting | TBD |
-| **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination | Resource-aware scheduling | TBD |
-| **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low | Medium (Mayor + Hooks) | TBD |
-| **Production Ready** | ✅ Yes (4,584+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) | ✅ Yes (v1.0.0, Apr 2026) |
-| **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium | Growing (emerging) | TBD (new release) |
-| **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based | TBD |
-| **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation | TBD |
-| **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing | Built-in (gas tracking) | TBD |
-| **Harness Support** | 3+ (OpenCode, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) | TBD |
-| **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited | Federated (Wasteland network) | TBD |
+| **Architecture** | Queue-based orchestrator-first | Distributed (Crews + Flows) | Low-level graph | Layered/monolithic | Lightweight primitives | Resource-aware (Mayor + Polecats) | Not publicly verified |
+| **Protocol** | DELEGATE/HANDBACK (mandatory) | Flexible (optional structure) | State graphs | Event-driven | Handoff-based | Git hooks + Beads (issue tracking) | Not publicly verified |
+| **Quality Gates** | 3-layer validation (40/35/25) | Integrated | Comprehensive | Minimal | Integrated | Resource-focused (gas budgets) | Not publicly verified |
+| **Cost Optimization** | Autonomous Model Engineer feedback | Manual tuning | Manual tuning | Manual tuning | Manual tuning | Built-in resource budgeting | Not publicly verified |
+| **Parallel Execution** | 60-70% Orchestrator reduction | Standard parallelization | Standard parallelization | Conversation-based | Lightweight coordination | Resource-aware scheduling | Not publicly verified |
+| **Learning Curve** | Steep (protocol-heavy) | Low-Medium | Medium-High | Steep | Very Low | Medium (Mayor + Hooks) | Not publicly verified |
+| **Production Ready** | ✅ Yes (4,584+ tests) | ✅ Yes (51.6K⭐) | ✅ Yes (32.2K⭐) | ✅ Yes (58.1K⭐, maintenance) | ✅ Yes (26.4K⭐) | ✅ Yes (15.4K⭐, active) | Not publicly verified |
+| **Community Size** | Small (internal) | Medium-Large | Large | Large | Medium | Growing (emerging) | Not publicly verified |
+| **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based | Not publicly verified |
+| **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation | Not publicly verified |
+| **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing | Built-in (gas tracking) | Not publicly verified |
+| **Harness Support** | 3+ (OpenCode, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) | Not publicly verified |
+| **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited | Federated (Wasteland network) | Not publicly verified |
 
 ### Detailed Framework Analysis
 
@@ -210,41 +212,24 @@ Unlike traditional frameworks that treat resources as unlimited, Gastown explici
 
 ---
 
-#### 🌆 Gas City (v1.0.0, April 2026)
+#### 🌆 Gas City (public-source caveat)
 
-**Overview:**
-Gas City is a resource-aware multi-agent orchestration system released as v1.0.0 in late April 2026. It is a refinement of [Gastown](#-gastown-154--active-development), also created by Steve Yegge (Google, Amazon, Grab engineer), and continues Gastown's "gas" metaphor for treating computational resources (tokens, API calls, time) as first-class, budgeted constraints.
-
-> ⚠️ **TBD — needs user-supplied details.** Beyond the facts above (name, version, release window, lineage as a refinement of Gastown by Steve Yegge), this repo currently has **no verified information** about Gas City's specific architecture, protocol, quality gates, runtime support, or community metrics. The cells below and in the Quick Comparison Table are intentionally marked **TBD** rather than fabricated. Please supply Gas City specifics (or a canonical docs/source link) so this section can be completed accurately.
-
-**What we know (verified):**
-- ✅ Released as **v1.0.0** in late April 2026
-- ✅ A **refinement of Gastown** (resource-aware orchestration lineage)
-- ✅ Authored by **Steve Yegge**
-
-**To be determined (do not assume inherited from Gastown without confirmation):**
-- ❓ Architecture changes vs. Gastown (Mayor/Polecats/Hooks/Convoys/Beads model?)
-- ❓ Protocol / workflow definition format
-- ❓ Quality-gate or validation model
-- ❓ Cost-optimization mechanism
-- ❓ Runtime/harness support
-- ❓ Community size, stars, and adoption metrics
-- ❓ Durable execution and persistence model
-- ❓ Enterprise / federation features
+**Caveat:**
+A public-source search did not locate canonical Gas City docs, release notes, or a repository we can cite confidently. The repo-local note that labels Gas City as a refinement of Gastown by Steve Yegge is therefore treated here as unverified, and the table below avoids inventing details.
 
 **Comparison vs. Agentic Engineers:**
 
 | Dimension | Agentic Engineers | Gas City |
 |-----------|-------------------|----------|
-| **Resource Model** | Token tracking + Model Engineer optimization | TBD (resource-aware lineage) |
-| **Primary Validation** | Quality gates (3-layer scoring) | TBD |
-| **Persistence** | File-based queue (YAML) | TBD |
-| **Coordination** | Orchestrator-first routing | TBD |
-| **Scaling Pattern** | Orchestrator bottleneck mitigation | TBD |
-| **Runtime Support** | 3+ (OpenCode, Claude, Copilot) | TBD |
-| **Learning Curve** | Steep (protocol-heavy) | TBD |
-| **Community** | Small (internal) | TBD (v1.0.0, new) |
-| **Best For** | Quality + audit trail | TBD |
+| **Resource Model** | Token tracking + Model Engineer optimization | Not publicly verified |
+| **Primary Validation** | Quality gates (3-layer scoring) | Not publicly verified |
+| **Persistence** | File-based queue (YAML) | Not publicly verified |
+| **Coordination** | Orchestrator-first routing | Not publicly verified |
+| **Scaling Pattern** | Orchestrator bottleneck mitigation | Not publicly verified |
+| **Runtime Support** | 3+ (OpenCode, Claude, Copilot) | Not publicly verified |
+| **Learning Curve** | Steep (protocol-heavy) | Not publicly verified |
+| **Community** | Small (internal) | Not publicly verified |
+| **Best For** | Quality + audit trail | Not publicly verified |
 
 ---
 

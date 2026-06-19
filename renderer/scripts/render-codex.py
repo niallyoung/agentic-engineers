@@ -71,7 +71,7 @@ HANDBACK_CONTRACT = """Return results in this shape whenever you were spawned wi
 handoff_type: HANDBACK
 task_id: <same task_id>
 agent: <your agent name>
-status: success | partial | failed | blocked
+status: success | failure | partial | blocked | escalate
 summary: <short outcome>
 deliverables:
   - <files changed, findings, or artifacts>
@@ -187,6 +187,25 @@ def list_source_agents(src_agents: Path) -> list[AgentSource]:
 
 def list_source_skills(src_skills: Path) -> list[Path]:
     return sorted(path for path in src_skills.iterdir() if (path / "SKILL.md").is_file())
+
+
+def warn_on_local_only_codex_skills(repo_root: Path, skills_root: Path) -> list[str]:
+    """Return warnings for local Codex skills missing from the repo source tree."""
+    warnings: list[str] = []
+    src_skills_dir = repo_root / "src" / "skills"
+    if not skills_root.exists() or not src_skills_dir.exists():
+        return warnings
+
+    source_names = {path.name for path in list_source_skills(src_skills_dir)}
+    for skill_dir in sorted(p for p in skills_root.iterdir() if p.is_dir()):
+        if skill_dir.name.startswith("."):
+            continue
+        if skill_dir.name not in source_names:
+            warnings.append(
+                f"Local-only Codex skill '{skill_dir.name}' exists in {skills_root} "
+                f"but not in {src_skills_dir}"
+            )
+    return warnings
 
 
 def parse_agents_table(agents_md: Path) -> dict[str, dict[str, str]]:
@@ -661,7 +680,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
     repo_root = Path(args.repo_root_flag or args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
     codex_home = Path(args.codex_home_flag or args.codex_home or Path.home() / ".codex").expanduser().resolve()
-    skills_root = Path(args.skills_root).expanduser().resolve() if args.skills_root else codex_home / "skills"
+    skills_root = (
+        Path(args.skills_root).expanduser().resolve()
+        if args.skills_root
+        else codex_home.parent / ".agents" / "skills"
+    )
+
+    for warning in warn_on_local_only_codex_skills(repo_root, skills_root):
+        print(_yellow(f"⚠️  {warning}"))
 
     renderer = CodexRenderer(repo_root, codex_home, skills_root)
     if args.uninstall:

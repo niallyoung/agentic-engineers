@@ -2,7 +2,7 @@
 
 ## Overview
 
-The render pipeline transforms source entity definitions into deployable artifacts across multiple targets (Copilot, Claude, OpenCode).
+The render pipeline transforms source entity definitions into deployable artifacts across multiple targets (Copilot, Claude, OpenCode, Codex).
 
 ```
 SOURCE → BUILD → DEPLOY → RUNTIME
@@ -10,6 +10,7 @@ SOURCE → BUILD → DEPLOY → RUNTIME
 src/   dist/    ~/.copilot/ Copilot CLI
        agents    ~/.claude/  Claude CLI
        skills    ~/.opencode OpenCode
+                ~/.codex/   Codex
 ```
 
 ## Source Layer (Canonical)
@@ -29,6 +30,7 @@ All entity definitions originate here. These are the authoritative versions trac
 - **Fields**: name, description, type, tools, required_by
 - **Metadata**: Frontmatter YAML in SKILL.md
 - **Example**: `src/skills/queue-management/SKILL.md`
+- **Codex source-of-truth rule**: create new Codex skills here first, then render them into `dist/codex/` and install with `make install-codex`.
 
 ### Specs
 - **Convention**: `*.yaml` in `src/orchestration/`
@@ -37,7 +39,7 @@ All entity definitions originate here. These are the authoritative versions trac
 
 ## Build Layer
 
-**Location**: `dist/{copilot|claude|opencode}/`
+**Location**: `dist/{copilot|claude|opencode|codex}/`
 
 Build process generates deployment-ready artifacts from source:
 
@@ -58,6 +60,7 @@ renderer/scripts/render-hooks.sh
 |--------|--------|------|-----------|
 | `src/agents/engineer-agent.md` | `dist/copilot/agents/engineer-agent.agent.md` | `render-copilot-agents.py` | Add `.agent` to filename |
 | `src/skills/queue-management/SKILL.md` | `dist/copilot/skills/queue-management/SKILL.md` | `render-copilot.sh` | Copy with marker |
+| `src/skills/codex-agent-cleanup/SKILL.md` | `dist/codex/skills/codex-agent-cleanup/SKILL.md` | `render-codex.py` | Copy with Codex marker |
 
 ## Deploy Layer
 
@@ -66,6 +69,8 @@ renderer/scripts/render-hooks.sh
 - `~/.copilot/skills/` — Copilot CLI skills
 - `~/.claude/agents/` — Claude CLI agents
 - `~/.claude/skills/` — Claude CLI skills
+- `~/.codex/agents/` — Codex CLI agents
+- `~/.agents/skills/` — Codex CLI-discoverable skills
 
 Deployment copies build artifacts to user environments. Installation via `make install`.
 
@@ -127,7 +132,7 @@ done
 
 1. **No Orphaned Agents** — All `src/agents/*-agent.md` listed in docs/AGENTS.md
 2. **No Archived Deployed** — Stale agents never in user environments
-3. **Skills Have Markers** — All skills have SKILL.md, no orphaned .md files
+3. **Skills Have Markers** — All skills have SKILL.md, no orphaned .md files, and Codex-specific skills exist under `src/skills/`
 4. **Naming Consistency** — Source: `-agent.md`, Rendered: `.agent.md`
 5. **Manifest Valid** — FRAMEWORK-MANIFEST.yaml structure and completeness
 6. **No Duplicates** — No stale or duplicate files in deployments
@@ -203,6 +208,13 @@ Result: 13 agents deployed instead of 8 (5 duplicates = 5 archived agents)
 6. **Commit & push** (CI gates re-validate)
 7. **Install** (`make install`)
 8. **Verify runtime** (agents load without errors)
+
+### Codex Skill Creation Rule
+
+For Codex support, the source of truth is always `src/skills/<skill-name>/SKILL.md`.
+Do not treat `~/.codex/skills/` as canonical. Local-only Codex skill copies are
+temporary install artifacts and should be regenerated from `src/skills/` via the
+renderer and `make install-codex` / `make install`.
 
 ## Testing the Render Pipeline
 
