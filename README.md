@@ -372,16 +372,18 @@ Every role has a **canonical model tier** (the primary recommendation) plus **pr
 
 ### Role → Model Mapping (All Providers)
 
-| Role | Canonical | Claude (Anthropic) | GitHub Copilot | OpenAI | Codex | Google | Meta / Llama |
-|------|-----------|-------------------|----------------|--------|-------|--------|--------------|
-| **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-4o-mini` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-4o-mini` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4-turbo` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `claude-sonnet-4.5` | `gpt-4-turbo` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4-turbo` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Principal Engineer** | Opus | `claude-opus-4.6` | `claude-opus-4.6` | `gpt-4o` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
-| **Security Engineer** | Opus | `claude-opus-4.8` | `claude-opus-4.8` | `gpt-4o` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+| Role | Canonical | Claude (Anthropic) | GitHub Copilot | Codex | Google* | Meta / Llama* |
+|------|-----------|-------------------|----------------|-------|---------|---------------|
+| **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `claude-sonnet-4.5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Principal Engineer** | Opus | `claude-opus-4.6` | `claude-opus-4.6` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+| **Security Engineer** | Opus | `claude-opus-4.8` | `claude-opus-4.8` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+
+* Untested in this repo.
 
 **Why these model choices:**
 - **Haiku / gpt-4o-mini / gpt-5.4-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution
