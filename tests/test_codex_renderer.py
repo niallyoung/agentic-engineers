@@ -98,6 +98,7 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "handoff_type: HANDBACK" in agents_doc
     assert "Orchestrator-only" in agents_doc
     assert "does not implement user tasks itself" in agents_doc
+    assert "~/.agentic-engineers/codex/{session-id}/queue/" in agents_doc
 
     config = (rendered_codex / "config.toml").read_text(encoding="utf-8")
     assert 'sandbox_mode = "workspace-write"' in config

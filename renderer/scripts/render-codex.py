@@ -399,7 +399,7 @@ the generated custom-agent HANDBACK contract; update docs for the new launch flo
 
 ## Queue Convention
 
-Use `~/.agentic-engineers/{{session-id}}/codex/queue/` for Codex queue partitions
+Use `~/.agentic-engineers/codex/{{session-id}}/queue/` for Codex queue partitions
 with `incoming/`, `processing/`, `done/`, and `failed/` states. Queue writes must
 go through the queue-management skill when available.
 """,
