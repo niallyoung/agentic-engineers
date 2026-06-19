@@ -27,7 +27,7 @@ source.
 
 | Path | Created / Modified | Purpose |
 |------|--------------------|---------|
-| `~/.claude/`, `~/.copilot/`, `~/.pi/`, `~/.config/opencode/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
+| `~/.claude/`, `~/.copilot/`, `~/.codex/`, `~/.pi/`, `~/.config/opencode/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
 | `~/.agentic-engineers/{session-id}/{harness}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
 | `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
 
@@ -81,16 +81,16 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
                           │  (per harness)   │
                           └──────────────────┘
                   /           │           │           \
-              ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-              │ Claude  │ │ Copilot │ │ OpenCode│ │   Pi    │
-              │ Config  │ │ Config  │ │ Config  │ │ Config  │
-              └─────────┘ └─────────┘ └─────────┘ └─────────┘
+              ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+              │ Claude  │ │ Copilot │ │ Codex   │ │ OpenCode│ │   Pi    │
+              │ Config  │ │ Config  │ │ Config  │ │ Config  │ │ Config  │
+              └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
                   │           │           │           │
-                  └───────────┼───────────┼───────────┘
+                  └───────────┼───────────┼───────────┼───────────┘
                               ▼
                      ┌────────────────────┐
                      │ Invoke your harness│
-                     │ claude|copilot|    │
+                     │ claude|copilot|codex│
                      │ opencode|pi        │
                      └────────────────────┘
 ```
@@ -107,16 +107,17 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
             ▼
    ┌──────────────────────────┐
    │   ORCHESTRATOR Agent     │
-   │  (Haiku 4.5 • Routing)   │
+   │ (Haiku 4.5 / gpt-4o-mini │
+   │        • Routing)        │
    └────────┬─────────────────┘
             │ DELEGATE
             ▼
    ┌──────────────────────────────────┐
    │  Specialist Agents (Parallel)    │
-   │  • Engineer (Haiku, impl)        │
-   │  • Lead Eng (Sonnet, review)     │
-   │  • Security Eng (Opus, audit)    │
-   │  • Model Eng (optimize routing)  │
+   │  • Engineer (Haiku / gpt-4o-mini)│
+   │  • Lead Eng (Sonnet / gpt-5.5)   │
+   │  • Security Eng (Opus / gpt-5.5) │
+   │  • Model Eng (Sonnet / gpt-5.5)  │
    └────────┬─────────────────────────┘
             │ HANDBACK (results + metrics)
             ▼
@@ -150,16 +151,16 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ## 8 Specialized Roles
 
-| Role | Model | Effort | Purpose |
-|------|-------|--------|---------|
-| **Orchestrator** | claude-haiku-4.5 | Low | Routes all work via decision tree; never does work itself |
-| **Engineer** | claude-haiku-4.5 | High | Executes well-scoped, pre-planned tasks |
-| **Model Engineer** | claude-sonnet-4.5 | Medium | Analyzes metrics; optimizes routing and model selection |
-| **Quality Engineer** | claude-sonnet-4.6 | Medium | Post-implementation validation; model suitability assessment |
-| **Lead Engineer** | claude-sonnet-4.6 | High | Code review (8-point checklist); architectural guidance |
-| **Senior Engineer** | claude-sonnet-4.6 | High | Analyzes unscoped work; produces detailed plans |
-| **Principal Engineer** | claude-opus-4.6 | High | Cross-service architecture; major refactors |
-| **Security Engineer** | claude-opus-4.8 | Max | Threat modeling; vulnerability assessment |
+| Role | Claude / Copilot | OpenAI / Codex | Effort | Purpose |
+|------|------------------|----------------|--------|---------|
+| **Orchestrator** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | Low | Routes all work via decision tree; never does work itself |
+| **Engineer** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | High | Executes well-scoped, pre-planned tasks |
+| **Model Engineer** | `claude-sonnet-4.5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Analyzes metrics; optimizes routing and model selection |
+| **Quality Engineer** | `claude-sonnet-4.6` | `gpt-4-turbo` / `gpt-5.5` | Medium | Post-implementation validation; model suitability assessment |
+| **Lead Engineer** | `claude-sonnet-4.6` | `gpt-4` / `gpt-5.5` | High | Code review (8-point checklist); architectural guidance |
+| **Senior Engineer** | `claude-sonnet-4.6` | `gpt-4-turbo` / `gpt-5.5` | High | Analyzes unscoped work; produces detailed plans |
+| **Principal Engineer** | `claude-opus-4.6` | `gpt-4o` / `gpt-5.5` | High | Cross-service architecture; major refactors |
+| **Security Engineer** | `claude-opus-4.8` | `gpt-4o` / `gpt-5.5` | Max | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
 - **Haiku:** $0.03–$0.05 per task — Routing, well-scoped implementation
@@ -180,7 +181,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ### Installation (Choose Your Harness)
 
-Core harnesses are configured by default to use Anthropic Claude models. Codex is available through the initial renderer support path for workspace-managed runs. Install the default set or choose a specific harness:
+Core harnesses are configured by default to use Anthropic Claude models. Codex is available through the renderer-managed install path for workspace-managed runs. Install the default set or choose a specific harness:
 
 ```bash
 # Default harness set
@@ -440,7 +441,7 @@ See [docs/market-comparison.md](docs/market-comparison.md) for detailed comparis
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
-| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ⚠️ Initial renderer support |
+| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Renderer-supported |
 | [OpenCode](docs/guides/harness-setup/opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | [GitHub Copilot](docs/guides/harness-setup/copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](docs/guides/harness-setup/claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
