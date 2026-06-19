@@ -72,7 +72,7 @@ renderer/scripts/render-hooks.sh
 - `~/.codex/agents/` — Codex CLI agents
 - `~/.agents/skills/` — Codex CLI-discoverable skills
 
-Deployment copies build artifacts to user environments. Installation via `make install`.
+Deployment copies build artifacts to user environments. Installation is via `make install` or the matching `make install-<harness>` target.
 
 ### Backward Compatibility
 
@@ -214,7 +214,7 @@ Result: 13 agents deployed instead of 8 (5 duplicates = 5 archived agents)
 For Codex support, the source of truth is always `src/skills/<skill-name>/SKILL.md`.
 Do not treat `~/.codex/skills/` as canonical. Local-only Codex skill copies are
 temporary install artifacts and should be regenerated from `src/skills/` via the
-renderer and `make install-codex` / `make install`.
+renderer and `make install-codex`.
 
 ## Testing the Render Pipeline
 

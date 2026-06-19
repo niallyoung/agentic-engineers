@@ -2,7 +2,7 @@
 
 **Description:** Codex setup for agentic-engineers custom agents, skills, and permission profiles.
 
-**Status:** Stable local capture.
+**Status:** Supported, opt-in install.
 
 **Captured From:** `codex-cli 0.141.0` on 2026-06-19.
 
@@ -18,12 +18,13 @@
 
 ## Configuration
 
-The renderer installs user-scoped Codex configuration by default:
+When you run `make install-codex`, the renderer installs user-scoped Codex configuration by default:
 
 - `~/.codex/config.toml` - Codex defaults when no foreign user config exists
 - `~/.codex/agentic-engineers-orchestrator.config.toml` - startup profile for Orchestrator mode
 - `~/.codex/agents/*.toml` - Codex custom agent definitions
 - `~/.agents/skills/*` - Codex-discoverable agent skills
+- `~/.agentic-engineers/codex/{session-id}/queue/` - Codex queue workspace for DELEGATE/HANDBACK handoffs
 
 Repository-scoped `.codex/config.toml`, `.codex/agents/*.toml`, and
 `.agents/skills` remain valid Codex locations, but the first agentic-engineers
@@ -66,8 +67,8 @@ Start Codex in agentic-engineers Orchestrator mode:
 codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
 ```
 
-Codex does not currently expose a native `--agent orchestrator` startup flag.
-The supported equivalent is the rendered profile above, which injects
+In the current CLI capture, Codex does not expose a native `--agent orchestrator` startup flag.
+The repo-supported equivalent is the rendered profile above, which injects
 Orchestrator startup instructions through Codex's native `--profile` mechanism.
 
 Then use the delegate prefix for terse fan-out:

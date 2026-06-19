@@ -181,7 +181,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ### Installation (Choose Your Harness)
 
-Core harnesses are configured by default to use Anthropic Claude models. Codex is available through the renderer-managed install path for workspace-managed runs. Install the default set or choose a specific harness:
+The default `make install` target covers Claude, Copilot, OpenCode, and π.dev. Install Codex separately with `make install-codex` for workspace-managed runs:
 
 ```bash
 # Default harness set
@@ -405,7 +405,7 @@ See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed harnes
 
 ### Codex Support & Pricing Snapshot
 
-Current OpenAI docs describe Codex as available on Free, Go, Plus, Pro, Business, Edu, and Enterprise plans. For this repo, the Codex renderer is initial support for workspace-managed runs, with the current role map following the canonical `gpt-5.4-mini` / `gpt-5.5` split.
+Current OpenAI docs describe Codex as available on Free, Go, Plus, Pro, Business, Edu, and Enterprise plans. In this repo, Codex is wired through the renderer-managed `make install-codex` path for workspace-managed runs, and the current role map uses the repo's `gpt-5.4-mini` / `gpt-5.5` split.
 
 | Codex plan | Price | Current support snapshot |
 |------------|-------|-------------------------|
@@ -441,7 +441,7 @@ See [docs/market-comparison.md](docs/market-comparison.md) for detailed comparis
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
-| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Renderer-supported |
+| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Supported, opt-in install |
 | [OpenCode](docs/guides/harness-setup/opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | [GitHub Copilot](docs/guides/harness-setup/copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](docs/guides/harness-setup/claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |

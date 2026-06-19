@@ -6,7 +6,7 @@
 
 **Note:** This comparison now includes resource-aware frameworks like Gastown. Gas City appears in repo-local material as a potential Gastown refinement, but a public canonical source was not located during this update, so it is treated as unverified below. This reflects an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
 
-**Codex support note:** Agentic Engineers now renders a Codex harness (`make install-codex`) and routes Codex models through the same canonical role map used by the other providers. Current OpenAI docs describe Codex access across Free, Go, Plus, Pro, Business, Edu, and Enterprise plans, with API-key mode limited to CLI/SDK/IDE workflows and token-billed usage. See the [Codex overview](https://developers.openai.com/codex/overview.md) and [Codex pricing](https://developers.openai.com/codex/pricing.md).
+**Codex support note:** Agentic Engineers includes a Codex renderer and a separate `make install-codex` path for workspace-managed runs. The current Codex role map uses the repo's `gpt-5.4-mini` / `gpt-5.5` split. Current OpenAI docs describe Codex access across Free, Go, Plus, Pro, Business, Edu, and Enterprise plans, with API-key mode limited to CLI/SDK/IDE workflows and token-billed usage. See the [Codex overview](https://developers.openai.com/codex/overview) and [Codex pricing](https://developers.openai.com/codex/pricing).
 
 #### Quick Comparison Table
 

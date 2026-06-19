@@ -6,7 +6,7 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
-| [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Stable |
+| [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Supported, opt-in install |
 | [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | [GitHub Copilot](copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
@@ -14,13 +14,13 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 
 ## Quick Start
 
-### Install All Harnesses (Recommended)
+### Install Default Harnesses (Recommended)
 
 ```bash
 make install
 ```
 
-This runs all harness-specific renderers and sets up the framework for each provider.
+This runs the default harness renderers (Claude, Copilot, OpenCode, and π.dev). Use `make install-codex` separately for Codex.
 
 ### Install Specific Harness
 
@@ -35,7 +35,7 @@ make install-copilot
 make install-claude
 
 # π.dev
-make install-pi-dev
+make install-pi
 
 # Codex
 make install-codex
@@ -65,7 +65,7 @@ Each harness uses a dedicated renderer script to handle these transformations:
 - `renderer/scripts/render-pi-dev.py` — π.dev configuration
 - `renderer/scripts/render-codex.py` — Codex custom agents, config, and skills
 
-Run `make install` for the default harness set, or use individual `make install-{harness}` targets.
+Run `make install` for the default harness set, or use individual `make install-{harness}` targets when you need a specific harness, including `make install-codex`.
 
 ## Troubleshooting
 
