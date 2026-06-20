@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +45,11 @@ def toml_scalar(text: str, key: str) -> str:
             value = line.split("=", 1)[1].strip()
             return value.strip('"')
     raise AssertionError(f"missing TOML key {key!r}")
+
+
+def load_model_registry() -> dict:
+    models_path = REPO_ROOT / "src" / "config" / "models.yaml"
+    return yaml.safe_load(models_path.read_text(encoding="utf-8"))
 
 
 def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
@@ -113,6 +119,23 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "Delegate Prefix" in profile
     assert "multi_agent = true" in profile
     assert "does not implement user tasks itself" in profile
+
+
+def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
+    registry = load_model_registry()
+    role_models = registry["role_models"]
+
+    orchestrator_profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(
+        encoding="utf-8"
+    )
+    engineer_agent = (rendered_codex / "agents" / "engineer.toml").read_text(encoding="utf-8")
+    security_agent = (rendered_codex / "agents" / "security-engineer.toml").read_text(
+        encoding="utf-8"
+    )
+
+    assert f'model = "{role_models["general_orchestrator"]["providers"]["codex"]}"' in orchestrator_profile
+    assert f'model = "{role_models["engineer"]["providers"]["codex"]}"' in engineer_agent
+    assert f'model = "{role_models["security_engineer"]["providers"]["codex"]}"' in security_agent
 
 
 def test_install_codex_honors_destdir_and_skill_root(tmp_path):
