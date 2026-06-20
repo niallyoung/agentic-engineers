@@ -1,6 +1,6 @@
 # Agentic Engineers
 
-A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **Claude**, **Copilot**, **OpenCode**, **Pi**, **Codex**.
+A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **OpenCode**, **Codex**, **Claude**, **Copilot**, **Pi**.
 
 ## What It Is
 
@@ -27,8 +27,8 @@ source.
 
 | Path | Created / Modified | Purpose |
 |------|--------------------|---------|
-| `~/.claude/`, `~/.copilot/`, `~/.codex/`, `~/.pi/`, `~/.config/opencode/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
-| `~/.agentic-engineers/{session-id}/{harness}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
+| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
+| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
 | `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
 
 ### ⚠️ Backups & Conflicts (read before installing)
@@ -82,7 +82,7 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
                           └──────────────────┘
                   /           │           │           \
               ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-              │ Claude  │ │ Copilot │ │ Codex   │ │ OpenCode│ │   Pi    │
+              │ OpenCode│ │ Codex   │ │ Claude  │ │ Copilot │ │   Pi    │
               │ Config  │ │ Config  │ │ Config  │ │ Config  │ │ Config  │
               └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
                   │           │           │           │
@@ -107,14 +107,14 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
             ▼
    ┌──────────────────────────┐
    │   ORCHESTRATOR Agent     │
-   │ (Haiku 4.5 / gpt-4o-mini │
-   │        • Routing)        │
+   │ (Haiku 4.5 / gpt-5.4-mini │
+   │        • Routing)         │
    └────────┬─────────────────┘
             │ DELEGATE
             ▼
    ┌──────────────────────────────────┐
    │  Specialist Agents (Parallel)    │
-   │  • Engineer (Haiku / gpt-4o-mini)│
+   │  • Engineer (Haiku 4.5 / gpt-5.4-mini)│
    │  • Lead Eng (Sonnet / gpt-5.5)   │
    │  • Security Eng (Opus / gpt-5.5) │
    │  • Model Eng (Sonnet / gpt-5.5)  │
@@ -144,7 +144,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
   → Engineer executes, measures quality + cost
   → Returns: HANDBACK {status, quality_score, cost, changes}
   → Quality gate validates (≥92/100 required)
-  → Results in ~/.agentic-engineers/queue/done/ ✅
+  → Results in ~/.agentic-engineers/<harness>/<session-id>/queue/done/ ✅
 ```
 
 ---
@@ -181,7 +181,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ### Installation (Choose Your Harness)
 
-The default `make install` target covers Claude, Copilot, OpenCode, and π.dev. Install Codex separately with `make install-codex` for workspace-managed runs:
+The default `make install` target covers OpenCode, Claude, Copilot, and π.dev. Codex remains an explicit `make install-codex` path for workspace-managed runs:
 
 ```bash
 # Default harness set
@@ -189,10 +189,10 @@ make install
 
 # Or install individual harnesses:
 make install-opencode      # OpenCode CLI (recommended for production)
-make install-copilot       # Copilot CLI
-make install-claude        # Claude Code (IDE)
-make install-pi            # π.dev (experimental)
 make install-codex         # Codex CLI/IDE custom agents + skills
+make install-claude        # Claude Code (IDE)
+make install-copilot       # Copilot CLI
+make install-pi            # π.dev (experimental)
 ```
 
 By default the framework installs under your home directory (`$HOME`). To install into an alternate root — for sandboxed or end-to-end testing without touching your real config — pass `DESTDIR`:
@@ -210,15 +210,15 @@ The **Orchestrator** is the single entry point for all work. It routes tasks to 
 # OpenCode (recommended)
 opencode --agent orchestrator "Your task description"
 
-# Copilot CLI
-copilot --agent orchestrator "Your task description"
-
 # Codex
 codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request "Your task description"
 
 # Claude Code
 # Paste the orchestrator system prompt into Claude's settings, then:
 # "Your task description"
+
+# Copilot CLI
+copilot --agent orchestrator "Your task description"
 ```
 
 **Example Tasks:**
@@ -354,10 +354,10 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 make test
 
 # 2. All harness installation status
-ls ~/.agentic-engineers/queue/      # Should show: incoming/ processing/ done/
+ls ~/.agentic-engineers/<harness>/<session-id>/queue/      # Should show: incoming/ processing/ done/
 
 # 3. Protocol docs installed (OpenCode example)
-cat ~/.opencode/agents/orchestrator/SYSTEM.md  # Should show orchestrator system prompt
+cat ~/.config/opencode/agents/orchestrator/SYSTEM.md  # Should show orchestrator system prompt
 
 # 4. Smoke tests
 opencode --agent orchestrator --version        # Should show version
@@ -443,8 +443,8 @@ See [docs/market-comparison.md](docs/market-comparison.md) for detailed comparis
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
-| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Supported, opt-in install |
 | [OpenCode](docs/guides/harness-setup/opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
+| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Supported, opt-in install |
 | [GitHub Copilot](docs/guides/harness-setup/copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](docs/guides/harness-setup/claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
 | [π.dev](docs/guides/harness-setup/pi-dev.md) | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
