@@ -354,6 +354,19 @@ class TestHandbackValidation:
             result = validator.validate_handback(valid_handback)
             assert result.valid is True, f"Expected valid status: {status}"
 
+    def test_validate_handback_children_results_dict(self, validator, valid_handback):
+        """children_results should be a dict keyed by child task_id."""
+        valid_handback['children_results'] = {
+            'child-task-001': {
+                'status': 'success',
+                'output': {'notes': 'done'},
+                'quality': 0.9,
+            }
+        }
+        result = validator.validate_handback(valid_handback)
+        assert result.valid is True
+        assert validator.get_spec()['handback']['extensions']['children_results']['type'] == 'object'
+
     def test_validate_handback_missing_output(self, validator, valid_handback):
         """Missing output => error"""
         del valid_handback['output']
@@ -640,30 +653,9 @@ class TestEnumDriftDetection:
         assert result is None
 
     def test_scan_status_enum_drift_live_repo(self):
-        """Scan the actual repo; report known-drifted files as findings.
-
-        This test documents the actual drift state found on 2026-06-13.
-        It will FAIL if the drift is fixed (which is the desired outcome —
-        update the assertion to assert not report.has_drift after fixing).
-        """
+        """Scan the actual repo; the canonical HANDBACK enum should be clean."""
         report = scan_status_enum_drift()
-        # Known drifted files as of 2026-06-13 session audit:
-        #   quality_validator.py — uses "complete"/"failed" instead of "success"/"failure"
-        #   invoke_agent.py     — uses "complete" instead of "success"/"failure"
-        #   protocol/validation.py — uses "complete"/"failed" instead of canonical
-        drifted_paths = {f.path for f in report.findings}
-        # At minimum, one of the known-bad files should be detected
-        known_bad = {
-            "src/orchestration/agents/quality_validator.py",
-            "src/orchestration/agents/invoke_agent.py",
-            "src/orchestration/protocol/validation.py",
-        }
-        # This assertion documents the gap; flip to `assert not report.has_drift`
-        # once the drift is remediated.
-        assert drifted_paths & known_bad, (
-            "Expected to detect drift in at least one known-bad file, but none found. "
-            "Either the drift was fixed (update this test) or detection is broken."
-        )
+        assert not report.has_drift, report.to_text()
 
 
 if __name__ == '__main__':

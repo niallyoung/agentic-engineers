@@ -6,21 +6,23 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
-| [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Stable |
 | [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
-| [GitHub Copilot](copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
-| [Claude Code](claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
-| [π.dev](pi-dev.md) | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
+| GitHub Copilot | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
+| Claude Code | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
+| [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Supported, opt-in install |
+| π.dev | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
 
 ## Quick Start
 
-### Install All Harnesses (Recommended)
+### Install Default Harnesses (Recommended)
 
 ```bash
 make install
 ```
 
-This runs all harness-specific renderers and sets up the framework for each provider.
+This runs the default harness renderers (OpenCode, Copilot, Claude, and π.dev). Use `make install-codex` separately for Codex.
+
+Each installer writes only to its own harness config root: `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.pi/`, or `~/.codex/` via `make install-codex`.
 
 ### Install Specific Harness
 
@@ -34,11 +36,11 @@ make install-copilot
 # Claude Code
 make install-claude
 
-# π.dev
-make install-pi-dev
-
 # Codex
 make install-codex
+
+# π.dev
+make install-pi
 ```
 
 ## Version Compatibility
@@ -53,8 +55,8 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 | OpenCode | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | CLI requirement |
 | Copilot CLI | `claude-opus-4.8` | `claude-opus-4.8` (pass-through) | Anthropic API format |
 | Claude Code | `claude-opus-4.8` | `opus` (short alias) | Web UI simplification |
-| π.dev | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | Anthropic API format |
 | Codex | `claude-opus-4.8` role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
+| π.dev | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | Anthropic API format |
 
 ### Renderer Scripts
 
@@ -65,7 +67,7 @@ Each harness uses a dedicated renderer script to handle these transformations:
 - `renderer/scripts/render-pi-dev.py` — π.dev configuration
 - `renderer/scripts/render-codex.py` — Codex custom agents, config, and skills
 
-Run `make install` for the default harness set, or use individual `make install-{harness}` targets.
+Run `make install` for the default harness set, or use individual `make install-{harness}` targets when you need a specific harness, including `make install-codex`.
 
 ## Troubleshooting
 
@@ -75,7 +77,7 @@ See the [Troubleshooting Guide](../troubleshooting.md) for common issues and fix
 
 | Issue | Harness | Fix |
 |-------|---------|-----|
-| Queue directories not found | OpenCode | `mkdir -p ~/.agentic-engineers/queue/{incoming,processing,done}` |
+| Queue directories not found | OpenCode | `mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}` |
 | Model not recognized | Copilot CLI | Verify `copilot --version` is ≥2.0.0 |
 | System prompt not loaded | Claude Code | Run `make install-claude` |
 | Events not firing | π.dev | Check `~/.pi/agent/extensions/` for handler files |
@@ -126,9 +128,7 @@ Harness and model compatibility is continuously tested via the **EVALS-001 frame
 
 ## Next Steps
 
-Choose your harness and follow its detailed setup guide:
+Choose your harness and follow the detailed setup guide:
 - [OpenCode Setup](opencode.md)
 - [Codex Setup](codex.md)
-- [GitHub Copilot Setup](copilot.md)
-- [Claude Code Setup](claude.md)
-- [π.dev Setup](pi-dev.md)
+- GitHub Copilot, Claude Code, and π.dev are summarized in the top-level [README](../../README.md#supported-harnesses).

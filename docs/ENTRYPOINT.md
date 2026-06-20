@@ -3,12 +3,13 @@
 **Canonical workflow for running agentic-engineers**
 
 The system works across multiple agent contexts with per-session queue partitioning:
-- **Copilot agents** queue work in `~/.copilot/queue/{session-id}/` (each session has isolated queue)
-- **Claude agents** queue work in `~/.claude/queue/{session-id}/` (each session has isolated queue)
-- Both use identical DELEGATE/HANDBACK protocol
-- Orchestrator auto-detects session-id and uses session-specific queue partition
-- Multiple simultaneous Copilot/Claude instances don't interfere with each other
-- Legacy queue structure automatically migrated on first run
+- **Copilot agents** queue work in `~/.agentic-engineers/copilot/{session-id}/queue/`
+- **Claude agents** queue work in `~/.agentic-engineers/claude/{session-id}/queue/`
+- **OpenCode agents** queue work in `~/.agentic-engineers/opencode/{session-id}/queue/`
+- **Codex agents** queue work in `~/.agentic-engineers/codex/{session-id}/queue/`
+- All use identical DELEGATE/HANDBACK protocol
+- Orchestrator auto-detects the harness/session partition
+- Multiple simultaneous harness instances don't interfere with each other
 
 ---
 
@@ -19,7 +20,7 @@ When you have work to do:
 ### 1. Queue the work (create a DELEGATE block)
 
 ```bash
-cd ~/.copilot/session-state/YOUR-SESSION/files/agentic-engineers
+cd ~/.agentic-engineers/<harness>/<session-id>/queue
 # OR
 cd /home/user/agentic-engineers
 ```
@@ -28,12 +29,8 @@ Create a DELEGATE YAML in the appropriate session-specific queue:
 
 **For Copilot agents:**
 ```bash
-# Queue paths are now partitioned by session-id
-# Get your session-id from COPILOT_SESSION_ID env var or ~/.copilot/session-state/
-COPILOT_SESSION_ID=$(echo $COPILOT_SESSION_ID)  # Or discover from session-state
-
-mkdir -p ~/.copilot/queue/$COPILOT_SESSION_ID/incoming
-cat > ~/.copilot/queue/$COPILOT_SESSION_ID/incoming/{task_id}.yaml <<'EOF'
+mkdir -p ~/.agentic-engineers/copilot/<session-id>/queue/incoming
+cat > ~/.agentic-engineers/copilot/<session-id>/queue/incoming/{task_id}.yaml <<'EOF'
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
 role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer | Quality Engineer | Model Engineer | Orchestrator
@@ -56,10 +53,8 @@ EOF
 **For Claude agents:**
 ```bash
 # Queue paths are now partitioned by session-id
-CLAUDE_SESSION_ID=$(echo $CLAUDE_SESSION_ID)  # Or discover from session-state
-
-mkdir -p ~/.claude/queue/$CLAUDE_SESSION_ID/incoming
-cat > ~/.claude/queue/$CLAUDE_SESSION_ID/incoming/{task_id}.yaml <<'EOF'
+mkdir -p ~/.agentic-engineers/claude/<session-id>/queue/incoming
+cat > ~/.agentic-engineers/claude/<session-id>/queue/incoming/{task_id}.yaml <<'EOF'
 # Same YAML structure as above
 EOF
 ```
@@ -69,9 +64,9 @@ See `orchestration/HANDOFF.md` for complete DELEGATE format.
 ### 2. Start the Orchestrator Agent
 
 The **Orchestrator** is a special agent defined in `orchestration/AGENTS.md` that:
-- Auto-detects whether running in Claude or Copilot context
-- Polls the correct queue (`~/.claude/queue/` or `~/.copilot/queue/`)
-- Routes tasks to appropriate agents using AGENTS.md decision tree
+- Auto-detects the harness/session partition
+- Polls the correct queue under `~/.agentic-engineers/{harness}/{session-id}/queue/`
+- Routes tasks to appropriate agents using the AGENTS.md decision tree
 - Delegates work via DELEGATE/HANDBACK protocol
 - Processes results and moves tasks through queue states
 - Captures observability (span data, indexing)
@@ -94,8 +89,8 @@ scope: |
 context: |
   Tasks in queue awaiting delegation (Orchestrator auto-detects correct queue).
 plan:
-  - Auto-detect agent context (Claude vs Copilot)
-  - Poll correct queue (~/.claude/queue or ~/.copilot/queue)
+  - Auto-detect agent context (Claude, Copilot, OpenCode, or Codex)
+  - Poll correct queue partition under ~/.agentic-engineers/{harness}/{session-id}/queue/
   - Route each task per AGENTS.md
   - Delegate with proper context
   - Wait for HANDBACK
@@ -109,12 +104,12 @@ success_criteria:
 ---
 ```
 
-Then the Copilot CLI harness will invoke the Orchestrator agent which implements the SKILLs defined in `orchestration/SKILLS.md`.
+Then the harness will invoke the Orchestrator agent which implements the SKILLs defined in `orchestration/SKILLS.md`.
 
 ### 3. Orchestrator handles everything
 
 Once running, the Orchestrator:
-1. ✅ Polls `artifacts/queue/incoming/` 
+1. ✅ Polls the harness-specific queue partition
 2. ✅ Routes tasks to appropriate agents (per AGENTS.md)
 3. ✅ Delegates via DELEGATE blocks
 4. ✅ Waits for agents to complete
@@ -127,12 +122,12 @@ Once running, the Orchestrator:
 ### 4. Check results
 
 **While Orchestrator is running:**
-- Watch `artifacts/queue/processing/` for active tasks
-- Watch `artifacts/queue/done/` for completed tasks
+- Watch `~/.agentic-engineers/<harness>/<session-id>/queue/processing/` for active tasks
+- Watch `~/.agentic-engineers/<harness>/<session-id>/queue/done/` for completed tasks
 - Check `artifacts/` for generated files (SPAN files, index.json, reports)
 
 **After Orchestrator completes:**
-- Review `artifacts/queue/done/{task_id}-HANDBACK-{role}.yaml`
+- Review `~/.agentic-engineers/<harness>/<session-id>/queue/done/{task_id}-HANDBACK-{role}.yaml`
 - Check generated artifacts (updated specs, reports, code changes)
 - Review `artifacts/index.json` for metrics
 - Commit results: `git add artifacts/ && git commit -m "..."`
@@ -145,7 +140,7 @@ Once running, the Orchestrator:
 
 ```bash
 # 1. Create DELEGATE for spec extraction
-cat > artifacts/queue/incoming/2026-05-02-update-spec.yaml << 'EOF'
+cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-update-spec.yaml << 'EOF'
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-02-update-spec
@@ -172,7 +167,7 @@ EOF
 # Senior Engineer updates docs/SPEC.md and commits
 
 # 3. Check results
-cat artifacts/queue/done/2026-05-02-update-spec-HANDBACK-Senior\ Engineer.yaml
+cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-update-spec-HANDBACK-Senior\ Engineer.yaml
 git log --oneline | head -1
 ```
 
@@ -180,7 +175,7 @@ git log --oneline | head -1
 
 ```bash
 # 1. Create DELEGATE for code review
-cat > artifacts/queue/incoming/2026-05-02-validate-impl.yaml << 'EOF'
+cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-validate-impl.yaml << 'EOF'
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-02-validate-impl
@@ -214,7 +209,7 @@ cat artifacts/spec-validation-report.md
 
 ```bash
 # 1. Create DELEGATE for bug fix
-cat > artifacts/queue/incoming/2026-05-02-fix-bug.yaml << 'EOF'
+cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-fix-bug.yaml << 'EOF'
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-02-fix-orchestrator-bug
@@ -241,7 +236,7 @@ EOF
 # Routes to Engineer, Engineer runs TDD (RED-GREEN-REFACTOR), returns HANDBACK
 
 # 3. Check results
-cat artifacts/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
+cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
 ```
 
 ---
@@ -249,7 +244,7 @@ cat artifacts/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
 ## 🏗️ Queue Structure
 
 ```
-artifacts/queue/
+~/.agentic-engineers/<harness>/<session-id>/queue/
 ├── incoming/                          # New tasks, ready for Orchestrator
 │   ├── 2026-05-02-my-task.yaml
 │   └── 2026-05-02-another-task.yaml
@@ -339,7 +334,7 @@ When multiple Copilot or Claude instances run concurrently, each session has its
 ### Queue Paths by Session
 
 ```
-~/.copilot/queue/
+~/.agentic-engineers/copilot/{session-id}/queue/
 ├── 54744939-4acb-430c-b2c4-3b8322289d0b/
 │   ├── incoming/     # Tasks for this session only
 │   ├── processing/
@@ -380,8 +375,8 @@ ls ~/.copilot/session-state/
 
 If you see "queue not found" errors:
 1. Verify your session-id: `echo $COPILOT_SESSION_ID`
-2. Check queue exists: `ls ~/.copilot/queue/$COPILOT_SESSION_ID/incoming/`
-3. Check migration log: `cat ~/.copilot/queue/.migration-log`
+2. Check queue exists: `ls ~/.agentic-engineers/copilot/$COPILOT_SESSION_ID/queue/incoming/`
+3. Check migration log: `cat ~/.agentic-engineers/copilot/.migration-log`
 4. Verify session-state dir: `ls ~/.copilot/session-state/`
 
 ---
@@ -410,11 +405,11 @@ See `docs/SPEC.md` for full architectural constraints.
 
 ## 🚀 TL;DR
 
-1. **Queue a task** → Create DELEGATE YAML in `~/.copilot/queue/{session-id}/incoming/`
+1. **Queue a task** → Create DELEGATE YAML in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
    - Session-id auto-detected from environment or filesystem
 2. **Start Orchestrator** → It polls your session's queue and delegates work
    - Multi-session support: Each session has isolated queue
-3. **Check results** → Review `~/.copilot/queue/{session-id}/done/` and generated files
+3. **Check results** → Review `~/.agentic-engineers/{harness}/{session-id}/queue/done/` and generated files
 4. **Commit** → Add artifacts to git
 
 That's it. Orchestrator handles routing, execution, observability, session isolation, and queue management. Everything is agent-based, auditable, and framework-native.

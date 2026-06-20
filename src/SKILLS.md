@@ -20,6 +20,7 @@ This is the canonical registry of all rendered skills available for agents to re
 | agent-definition-verifier | `src/skills/_meta/agent-definition-verifier/SKILL.md` | Validates agent definitions against framework specifications and detects configuration errors. |
 | code-hygiene-git-workflow | `src/skills/_meta/code-hygiene-git-workflow/SKILL.md` | Enforces code hygiene and git workflow standards across all commits and branches. |
 | consistency-checker | `src/skills/consistency-checker/SKILL.md` | Automated cross-validation of protocol queue integrity. |
+| codex-agent-cleanup | `src/skills/codex-agent-cleanup/SKILL.md` | Codex session hygiene: close completed sub-agents, resume active work, and keep queue capacity available. |
 | cost-aggregation | `src/skills/cost-aggregation/SKILL.md` | Consolidates provider-specific AI costs into unified metrics across Anthropic, OpenAI, Google Gemini, GitHub Copilot, and Ollama. |
 | doc-quality-monitor | `src/skills/doc-quality-monitor/SKILL.md` | Automated documentation-quality monitoring (MONITORING-001). |
 | evaluation-framework | `src/skills/_meta/evaluation_framework/SKILL.md` | Framework for comprehensive agent and skill evaluation with metrics collection and analysis. |

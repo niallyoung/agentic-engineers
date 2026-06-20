@@ -1,7 +1,7 @@
 """Codex renderer integration tests.
 
 These tests exercise the Codex harness without touching the user's real
-~/.codex or ~/.agents directories.
+~/.codex directory.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +45,11 @@ def toml_scalar(text: str, key: str) -> str:
             value = line.split("=", 1)[1].strip()
             return value.strip('"')
     raise AssertionError(f"missing TOML key {key!r}")
+
+
+def load_model_registry() -> dict:
+    models_path = REPO_ROOT / "src" / "config" / "models.yaml"
+    return yaml.safe_load(models_path.read_text(encoding="utf-8"))
 
 
 def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
@@ -98,6 +104,11 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "handoff_type: HANDBACK" in agents_doc
     assert "Orchestrator-only" in agents_doc
     assert "does not implement user tasks itself" in agents_doc
+    assert "~/.agentic-engineers/codex/{session-id}/queue/" in agents_doc
+    assert "expected_handback" not in agents_doc
+    assert "semicolon-separated tasks" in agents_doc
+    assert "spawn independent tasks in parallel" in agents_doc.lower()
+    assert "same-file edits coordinated" in agents_doc
 
     config = (rendered_codex / "config.toml").read_text(encoding="utf-8")
     assert 'sandbox_mode = "workspace-write"' in config
@@ -112,6 +123,40 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "Delegate Prefix" in profile
     assert "multi_agent = true" in profile
     assert "does not implement user tasks itself" in profile
+    assert "expected_handback" not in profile
+    assert "semicolon-separated tasks" in profile
+    assert "spawn independent tasks in parallel" in profile.lower()
+    assert "same-file edits coordinated" in profile
+
+
+def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
+    registry = load_model_registry()
+    role_models = registry["role_models"]
+
+    orchestrator_profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(
+        encoding="utf-8"
+    )
+    engineer_agent = (rendered_codex / "agents" / "engineer.toml").read_text(encoding="utf-8")
+    security_agent = (rendered_codex / "agents" / "security-engineer.toml").read_text(
+        encoding="utf-8"
+    )
+
+    assert f'model = "{role_models["general_orchestrator"]["providers"]["codex"]}"' in orchestrator_profile
+    assert f'model = "{role_models["engineer"]["providers"]["codex"]}"' in engineer_agent
+    assert f'model = "{role_models["security_engineer"]["providers"]["codex"]}"' in security_agent
+
+
+def test_render_codex_validate_checks_agents_contract(rendered_codex):
+    validate = run(
+        sys.executable,
+        str(RENDERER),
+        str(REPO_ROOT),
+        str(rendered_codex),
+        "--skills-root",
+        str(rendered_codex / "skills"),
+        "--validate",
+    )
+    assert validate.returncode == 0, validate.stdout + validate.stderr
 
 
 def test_install_codex_honors_destdir_and_skill_root(tmp_path):
@@ -119,7 +164,7 @@ def test_install_codex_honors_destdir_and_skill_root(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
 
     codex_home = tmp_path / ".codex"
-    skills_root = tmp_path / ".agents" / "skills"
+    skills_root = tmp_path / ".codex" / "skills"
     assert codex_home.is_dir()
     assert skills_root.is_dir()
     assert (codex_home / "agentic-engineers-orchestrator.config.toml").is_file()
@@ -144,7 +189,7 @@ def test_reinstall_preserves_foreign_codex_files(tmp_path):
     assert first.returncode == 0, first.stdout + first.stderr
 
     codex_home = tmp_path / ".codex"
-    skills_root = tmp_path / ".agents" / "skills"
+    skills_root = tmp_path / ".codex" / "skills"
     foreign_agent = codex_home / "agents" / "user-agent.toml"
     foreign_agent.write_text(
         'name = "user-agent"\ndescription = "foreign"\ndeveloper_instructions = "stay"\n',
@@ -187,7 +232,7 @@ def test_foreign_orchestrator_profile_is_preserved_and_fails_validation(tmp_path
         str(REPO_ROOT),
         str(codex_home),
         "--skills-root",
-        str(tmp_path / ".agents" / "skills"),
+        str(tmp_path / ".codex" / "skills"),
         "--validate",
     )
     assert validate.returncode == 1
@@ -201,9 +246,16 @@ def test_uninstall_codex_removes_managed_only(tmp_path):
     assert install.returncode == 0, install.stdout + install.stderr
 
     codex_home = tmp_path / ".codex"
+    skills_root = tmp_path / ".codex" / "skills"
     foreign_agent = codex_home / "agents" / "user-agent.toml"
     foreign_agent.write_text(
         'name = "user-agent"\ndescription = "foreign"\ndeveloper_instructions = "stay"\n',
+        encoding="utf-8",
+    )
+    foreign_skill = skills_root / "user-skill"
+    foreign_skill.mkdir()
+    (foreign_skill / "SKILL.md").write_text(
+        "---\nname: user-skill\ndescription: foreign skill\n---\n",
         encoding="utf-8",
     )
 
@@ -211,6 +263,7 @@ def test_uninstall_codex_removes_managed_only(tmp_path):
     assert uninstall.returncode == 0, uninstall.stdout + uninstall.stderr
 
     assert foreign_agent.is_file()
+    assert (foreign_skill / "SKILL.md").is_file()
     assert not (codex_home / "agents" / "engineer.toml").exists()
     assert not (codex_home / "AGENTS.md").exists()
     assert not (codex_home / "agentic-engineers-orchestrator.config.toml").exists()

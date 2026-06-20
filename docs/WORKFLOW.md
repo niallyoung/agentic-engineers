@@ -115,7 +115,7 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 │    70-79:  LEAD REVIEW (manual verification)                               │
 │    60-69:  REWORK (max 2 retries, then escalate)                           │
 │    <60:   ESCALATE (to Principal Engineer)                                 │
-│  Output: HANDBACK stored in ~/.agentic-engineers/artifacts/queue/processing/                    │
+│  Output: HANDBACK stored in ~/.agentic-engineers/{harness}/{session-id}/queue/processing/      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -205,7 +205,7 @@ Is scope clear and bounded?
 
 **Output:**
 - Task ID: `YYYY-MM-DD-kebab-case`
-- Queue entry in `~/.agentic-engineers/artifacts/queue/incoming/{task_id}.yaml`
+- Queue entry in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.yaml`
 
 ---
 
@@ -298,7 +298,7 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
 
 **Output:**
 - DELEGATE stored in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
-- Task moved to `~/.agentic-engineers/artifacts/queue/processing/`
+- Task moved to `~/.agentic-engineers/{harness}/{session-id}/queue/processing/`
 
 ---
 
@@ -418,9 +418,9 @@ notes: |                             # ✓ Required, summary
 - If escalation needed → Route to Principal Engineer
 
 **Output:**
-- HANDBACK stored in `~/.agentic-engineers/artifacts/queue/processing/{task_id}-HANDBACK.yaml`
+- HANDBACK stored in `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}-HANDBACK.yaml`
 - Metrics recorded for Model Engineer
-- Task moved to `~/.agentic-engineers/artifacts/queue/done/` after QE review
+- Task moved to `~/.agentic-engineers/{harness}/{session-id}/queue/done/` after QE review
 
 ---
 

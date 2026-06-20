@@ -6,7 +6,7 @@ Codex-native surfaces used by this renderer:
   - ~/.codex/config.toml
   - ~/.codex/agentic-engineers-orchestrator.config.toml
   - ~/.codex/agents/*.toml
-  - ~/.agents/skills/<skill>/SKILL.md
+  - ~/.codex/skills/<skill>/SKILL.md
 
 The renderer is marker-aware and refuses to overwrite foreign user files.
 """
@@ -57,10 +57,9 @@ DELEGATE_GRAMMAR = """When the user starts a message with `delegate:` or `DELEGA
 Parse the text after the prefix as semicolon-separated tasks; also accept newline bullets or numbered lists as task separators. For each task:
 1. Assign a stable task_id such as `codex-001`, `codex-002`, preserving user wording in `scope`.
 2. Choose the narrowest appropriate custom agent using the routing table.
-3. Build a DELEGATE YAML block with `handoff_type: DELEGATE`, `task_id`, `agent`, `scope`, `context`, `success_criteria`, and `expected_handback`.
-4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict.
-5. Keep dependent tasks sequential, and keep same-file edits coordinated in the root thread.
-6. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
+3. Build a canonical DELEGATE payload with the queue-management fields needed for validation: `handoff_type: DELEGATE`, `task_id`, `agent`, `skill`, `model`, `effort`, `scope`, `context`, `plan`, and `success_criteria`.
+4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict; keep same-file edits coordinated.
+5. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
 
 If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If the queue is empty, do not invent work."""
 
@@ -71,7 +70,7 @@ HANDBACK_CONTRACT = """Return results in this shape whenever you were spawned wi
 handoff_type: HANDBACK
 task_id: <same task_id>
 agent: <your agent name>
-status: success | partial | failed | blocked
+status: success | failure | partial | blocked | escalate
 summary: <short outcome>
 deliverables:
   - <files changed, findings, or artifacts>
@@ -189,6 +188,25 @@ def list_source_skills(src_skills: Path) -> list[Path]:
     return sorted(path for path in src_skills.iterdir() if (path / "SKILL.md").is_file())
 
 
+def warn_on_local_only_codex_skills(repo_root: Path, skills_root: Path) -> list[str]:
+    """Return warnings for local Codex skills missing from the repo source tree."""
+    warnings: list[str] = []
+    src_skills_dir = repo_root / "src" / "skills"
+    if not skills_root.exists() or not src_skills_dir.exists():
+        return warnings
+
+    source_names = {path.name for path in list_source_skills(src_skills_dir)}
+    for skill_dir in sorted(p for p in skills_root.iterdir() if p.is_dir()):
+        if skill_dir.name.startswith("."):
+            continue
+        if skill_dir.name not in source_names:
+            warnings.append(
+                f"Local-only Codex skill '{skill_dir.name}' exists in {skills_root} "
+                f"but not in {src_skills_dir}"
+            )
+    return warnings
+
+
 def parse_agents_table(agents_md: Path) -> dict[str, dict[str, str]]:
     if not agents_md.is_file():
         return {}
@@ -225,7 +243,8 @@ def copy_skill(src: Path, dst: Path) -> None:
         shutil.rmtree(dst)
 
     def ignore(_dir: str, names: list[str]) -> set[str]:
-        return {name for name in names if name in {".git", ".DS_Store", "__pycache__"}}
+        ignored = {".git", ".DS_Store", "__pycache__", ".coverage", ".pytest_cache"}
+        return {name for name in names if name in ignored or name.endswith(".pyc")}
 
     shutil.copytree(src, dst, ignore=ignore)
     (dst / SKILL_MARKER).write_text("managed by agentic-engineers render-codex.py\n", encoding="utf-8")
@@ -339,7 +358,7 @@ You are a Codex custom subagent rendered from agentic-engineers.
 
 This Codex installation is managed by agentic-engineers. The framework renders
 specialist Codex custom agents under `agents/` and reusable skills under
-`~/.agents/skills/`.
+`~/.codex/skills/`.
 
 For the intended startup path, launch Codex with:
 
@@ -380,7 +399,7 @@ the generated custom-agent HANDBACK contract; update docs for the new launch flo
 
 ## Queue Convention
 
-Use `~/.agentic-engineers/{{session-id}}/codex/queue/` for Codex queue partitions
+Use `~/.agentic-engineers/codex/{{session-id}}/queue/` for Codex queue partitions
 with `incoming/`, `processing/`, `done/`, and `failed/` states. Queue writes must
 go through the queue-management skill when available.
 """,
@@ -612,6 +631,16 @@ job_max_runtime_seconds = 1800
                 errors.append(f"{path.name} uses deprecated Codex model")
         if not (self.codex_home / "AGENTS.md").is_file():
             errors.append("missing AGENTS.md")
+        else:
+            agents_doc = (self.codex_home / "AGENTS.md").read_text(encoding="utf-8")
+            for required in (
+                "Agentic Engineers Framework - Codex Integration",
+                "Orchestrator-only",
+                "Delegate Prefix",
+                "~/.agentic-engineers/codex/{session-id}/queue/",
+            ):
+                if required not in agents_doc:
+                    errors.append(f"AGENTS.md missing {required}")
         profile_path = self.codex_home / f"{ORCHESTRATOR_PROFILE}.config.toml"
         if not profile_path.is_file():
             errors.append(f"missing {ORCHESTRATOR_PROFILE}.config.toml")
@@ -661,7 +690,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
     repo_root = Path(args.repo_root_flag or args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
     codex_home = Path(args.codex_home_flag or args.codex_home or Path.home() / ".codex").expanduser().resolve()
-    skills_root = Path(args.skills_root).expanduser().resolve() if args.skills_root else codex_home / "skills"
+    skills_root = (
+        Path(args.skills_root).expanduser().resolve()
+        if args.skills_root
+        else codex_home / "skills"
+    )
+
+    for warning in warn_on_local_only_codex_skills(repo_root, skills_root):
+        print(_yellow(f"⚠️  {warning}"))
 
     renderer = CodexRenderer(repo_root, codex_home, skills_root)
     if args.uninstall:

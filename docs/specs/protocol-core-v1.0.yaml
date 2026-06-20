@@ -380,8 +380,8 @@ handback:
       description: task_ids of sub-DELEGATEs created while executing this task.
 
     children_results:
-      type: array
-      description: HANDBACK summaries from spawned sub-tasks.
+      type: object
+      description: HANDBACK summaries from spawned sub-tasks, keyed by child task_id.
 
     flags:
       type: array

@@ -26,13 +26,13 @@ All work routes through canonical queue paths:
 
 ```
 # OpenCode session #1
-~/.agentic-engineers/a1b2c3d4-e5f6-4g7h-8i9j-0k1l2m3n4o5p/opencode/queue/
+~/.agentic-engineers/opencode/a1b2c3d4-e5f6-4g7h-8i9j-0k1l2m3n4o5p/queue/
 
 # Copilot session #2
-~/.agentic-engineers/z9y8x7w6-v5u4-3t2s-1r0q-p9o8n7m6l5k/copilot/queue/
+~/.agentic-engineers/copilot/z9y8x7w6-v5u4-3t2s-1r0q-p9o8n7m6l5k/queue/
 
 # Claude Code session #3
-~/.agentic-engineers/f1e2d3c4-b5a6-7z8y-9x0w-v1u2t3s4r5q/claude-code/queue/
+~/.agentic-engineers/claude-code/f1e2d3c4-b5a6-7z8y-9x0w-v1u2t3s4r5q/queue/
 ```
 
 ## Quick Start
@@ -176,7 +176,7 @@ def base_dir() -> Path
 
 @property
 def queue_root() -> Path
-    """Canonical queue root path (/.../session/{harness}/{session-id}/queue/)."""
+    """Canonical queue root path (~/.agentic-engineers/{harness}/{session-id}/queue/)."""
 
 @property
 def harness_root() -> Path

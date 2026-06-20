@@ -21,6 +21,17 @@ import sys
 from pathlib import Path
 
 
+def _load_protocol_validator():
+    repo_root = Path(__file__).resolve().parents[1]
+    validator_scripts = repo_root / "src" / "skills" / "protocol-validator" / "scripts"
+    if str(validator_scripts) not in sys.path:
+        sys.path.insert(0, str(validator_scripts))
+
+    from protocol_validator import validate_delegate, validate_handback  # type: ignore[import]
+
+    return validate_delegate, validate_handback
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -52,20 +63,24 @@ def main() -> int:
     # Delegate to protocol-validator skill if available
     try:
         import yaml
-        from src.skills.protocol_validator.scripts.protocol_validator import ProtocolValidator  # type: ignore[import]
-        
-        validator = ProtocolValidator()
+        validate_delegate, validate_handback = _load_protocol_validator()
         errors = []
         for f in yaml_files:
             with open(f) as fh:
                 data = yaml.safe_load(fh)
             if not data:
                 continue
-            # Validate as DELEGATE or HANDBACK based on structure
-            if "task_id" in data:
-                valid, errs = validator.validate_delegate(data)
-            elif "handback_id" in data:
-                valid, errs = validator.validate_handback(data)
+
+            # Validate as DELEGATE or HANDBACK based on the protocol shape.
+            handoff_type = data.get("handoff_type") if isinstance(data, dict) else None
+            if handoff_type == "DELEGATE":
+                valid, errs = validate_delegate(data)
+            elif handoff_type == "HANDBACK":
+                valid, errs = validate_handback(data)
+            elif isinstance(data, dict) and "status" in data:
+                valid, errs = validate_handback(data)
+            elif isinstance(data, dict) and {"scope", "plan", "success_criteria"}.issubset(data):
+                valid, errs = validate_delegate(data)
             else:
                 continue
             if not valid:

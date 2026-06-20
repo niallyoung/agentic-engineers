@@ -1,6 +1,6 @@
 # Agentic Engineers
 
-A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **Claude**, **Copilot**, **OpenCode**, **Pi**, **Codex**.
+A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **OpenCode**, **Copilot**, **Claude**, **Codex**, **Pi**.
 
 ## What It Is
 
@@ -27,8 +27,8 @@ source.
 
 | Path | Created / Modified | Purpose |
 |------|--------------------|---------|
-| `~/.claude/`, `~/.copilot/`, `~/.pi/`, `~/.config/opencode/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
-| `~/.agentic-engineers/{session-id}/{harness}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
+| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
+| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
 | `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
 
 ### ⚠️ Backups & Conflicts (read before installing)
@@ -69,72 +69,13 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
 
 ## Architecture at a Glance
 
-```
-       ┌─────────────────────────────────────────────────────────────┐
-       │                    AGENTIC-ENGINEERS                         │
-       │              Framework & Multi-Harness System                │
-       └─────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-                          ┌──────────────────┐
-                          │  make install    │
-                          │  (per harness)   │
-                          └──────────────────┘
-                  /           │           │           \
-              ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-              │ Claude  │ │ Copilot │ │ OpenCode│ │   Pi    │
-              │ Config  │ │ Config  │ │ Config  │ │ Config  │
-              └─────────┘ └─────────┘ └─────────┘ └─────────┘
-                  │           │           │           │
-                  └───────────┼───────────┼───────────┘
-                              ▼
-                     ┌────────────────────┐
-                     │ Invoke your harness│
-                     │ claude|copilot|    │
-                     │ opencode|pi        │
-                     └────────────────────┘
-```
+![Architecture at a Glance](docs/assets/readme-architecture-at-a-glance.png)
 
 **Framework → Configure → Deploy → Invoke.** Each harness installs customized agents, skills, and routing logic for its provider.
 
 ### How It Works
 
-```
-   ┌─────────────────┐
-   │  YOUR TASK      │
-   └────────┬────────┘
-            │
-            ▼
-   ┌──────────────────────────┐
-   │   ORCHESTRATOR Agent     │
-   │  (Haiku 4.5 • Routing)   │
-   └────────┬─────────────────┘
-            │ DELEGATE
-            ▼
-   ┌──────────────────────────────────┐
-   │  Specialist Agents (Parallel)    │
-   │  • Engineer (Haiku, impl)        │
-   │  • Lead Eng (Sonnet, review)     │
-   │  • Security Eng (Opus, audit)    │
-   │  • Model Eng (optimize routing)  │
-   └────────┬─────────────────────────┘
-            │ HANDBACK (results + metrics)
-            ▼
-   ┌──────────────────────────────────┐
-   │  Quality Gates & Feedback        │
-   │  → Pass/Fail/Escalate            │
-   │  → Cost tracking                 │
-   │  → Model optimization            │
-   └────────┬─────────────────────────┘
-            │
-            ▼
-   ┌─────────────────┐
-   │  RESULTS        │
-   │  Quality: 94/100│
-   │  Cost: $0.18    │
-   │  Time: 4.2s     │
-   └─────────────────┘
-```
+![How It Works](docs/assets/readme-how-it-works.png)
 
 **Example:**
 ```bash
@@ -143,23 +84,23 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
   → Engineer executes, measures quality + cost
   → Returns: HANDBACK {status, quality_score, cost, changes}
   → Quality gate validates (≥92/100 required)
-  → Results in ~/.agentic-engineers/queue/done/ ✅
+  → Results in ~/.agentic-engineers/<harness>/<session-id>/queue/done/ ✅
 ```
 
 ---
 
 ## 8 Specialized Roles
 
-| Role | Model | Effort | Purpose |
-|------|-------|--------|---------|
-| **Orchestrator** | claude-haiku-4.5 | Low | Routes all work via decision tree; never does work itself |
-| **Engineer** | claude-haiku-4.5 | High | Executes well-scoped, pre-planned tasks |
-| **Model Engineer** | claude-sonnet-4.5 | Medium | Analyzes metrics; optimizes routing and model selection |
-| **Quality Engineer** | claude-sonnet-4.6 | Medium | Post-implementation validation; model suitability assessment |
-| **Lead Engineer** | claude-sonnet-4.6 | High | Code review (8-point checklist); architectural guidance |
-| **Senior Engineer** | claude-sonnet-4.6 | High | Analyzes unscoped work; produces detailed plans |
-| **Principal Engineer** | claude-opus-4.7 | High | Cross-service architecture; major refactors |
-| **Security Engineer** | claude-opus-4.8 | Max | Threat modeling; vulnerability assessment |
+| Role | Claude / Copilot | OpenAI / Codex | Effort | Purpose |
+|------|------------------|----------------|--------|---------|
+| **Orchestrator** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | Low | Routes all work via decision tree; never does work itself |
+| **Engineer** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | High | Executes well-scoped, pre-planned tasks |
+| **Model Engineer** | `claude-sonnet-4.5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Analyzes metrics; optimizes routing and model selection |
+| **Quality Engineer** | `claude-sonnet-4.6` | `gpt-4-turbo` / `gpt-5.5` | Medium | Post-implementation validation; model suitability assessment |
+| **Lead Engineer** | `claude-sonnet-4.6` | `gpt-4` / `gpt-5.5` | High | Code review (8-point checklist); architectural guidance |
+| **Senior Engineer** | `claude-sonnet-4.6` | `gpt-4-turbo` / `gpt-5.5` | High | Analyzes unscoped work; produces detailed plans |
+| **Principal Engineer** | `claude-opus-4.6` | `gpt-4o` / `gpt-5.5` | High | Cross-service architecture; major refactors |
+| **Security Engineer** | `claude-opus-4.8` | `gpt-4o` / `gpt-5.5` | Max | Threat modeling; vulnerability assessment |
 
 **Cost Breakdown:**
 - **Haiku:** $0.03–$0.05 per task — Routing, well-scoped implementation
@@ -172,7 +113,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 - **High:** Deep reasoning, multiple approaches considered (Engineers, Leads, Architects)
 - **Max:** Unconstrained reasoning, full exploration (Security analysis, threat modeling)
 
-> 💡 **Model Selection:** Each role maps to provider-specific equivalents (GPT-4o, Gemini, Llama) — see [Multi-Model Support](#multi-model-support--provider-routing) below. For thinking mode details, see [docs/guides/thinking-modes-and-cost-quality-trade-offs.md](docs/guides/thinking-modes-and-cost-quality-trade-offs.md).
+> 💡 **Model Selection:** Each role maps to provider-specific equivalents (GPT-4o, GPT-5.5/GPT-5.4 mini, Gemini, Llama) — see [Multi-Model Support](#multi-model-support--provider-routing) below. For thinking mode details, see [docs/guides/thinking-modes-and-cost-quality-trade-offs.md](docs/guides/thinking-modes-and-cost-quality-trade-offs.md).
 
 ---
 
@@ -180,7 +121,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ### Installation (Choose Your Harness)
 
-Core harnesses are configured by default to use Anthropic Claude models. Install the default set or choose a specific harness:
+The default `make install` target covers OpenCode, Copilot, Claude, and π.dev. Codex remains an explicit `make install-codex` path for workspace-managed runs:
 
 ```bash
 # Default harness set
@@ -190,8 +131,8 @@ make install
 make install-opencode      # OpenCode CLI (recommended for production)
 make install-copilot       # Copilot CLI
 make install-claude        # Claude Code (IDE)
+make install-codex         # Codex CLI/IDE custom agents + skills
 make install-pi            # π.dev (experimental)
-make install-codex         # Codex CLI/App custom agents + skills
 ```
 
 By default the framework installs under your home directory (`$HOME`). To install into an alternate root — for sandboxed or end-to-end testing without touching your real config — pass `DESTDIR`:
@@ -215,6 +156,9 @@ copilot --agent orchestrator "Your task description"
 # Claude Code
 # Paste the orchestrator system prompt into Claude's settings, then:
 # "Your task description"
+
+# Codex
+codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request "Your task description"
 ```
 
 **Example Tasks:**
@@ -350,10 +294,10 @@ Every satoshi helps. Thank you for believing in open-source multi-agent systems.
 make test
 
 # 2. All harness installation status
-ls ~/.agentic-engineers/queue/      # Should show: incoming/ processing/ done/
+find ~/.agentic-engineers -path '*/queue' -type d | sort      # Should show harness/session queue roots
 
 # 3. Protocol docs installed (OpenCode example)
-cat ~/.opencode/agents/orchestrator/SYSTEM.md  # Should show orchestrator system prompt
+cat ~/.config/opencode/AGENTS.md  # Should show orchestrator system prompt
 
 # 4. Smoke tests
 opencode --agent orchestrator --version        # Should show version
@@ -368,20 +312,22 @@ Every role has a **canonical model tier** (the primary recommendation) plus **pr
 
 ### Role → Model Mapping (All Providers)
 
-| Role | Canonical | Claude (Anthropic) | GitHub Copilot | OpenAI | Google | Meta / Llama |
-|------|-----------|-------------------|----------------|--------|--------|--------------|
-| **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-4o-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `claude-sonnet-4.5` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-4-turbo` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Principal Engineer** | Opus | `claude-opus-4.7` | `claude-opus-4.7` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
-| **Security Engineer** | Opus | `claude-opus-4.8` | `claude-opus-4.8` | `gpt-4o` | `gemini-2-pro` | `llama-3-405b` |
+| Role | Canonical | Claude (Anthropic) | GitHub Copilot | Codex | Google* | Meta / Llama* |
+|------|-----------|-------------------|----------------|-------|---------|---------------|
+| **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
+| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `claude-sonnet-4.5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Principal Engineer** | Opus | `claude-opus-4.6` | `claude-opus-4.6` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+| **Security Engineer** | Opus | `claude-opus-4.8` | `claude-opus-4.8` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+
+* Untested in this repo.
 
 **Why these model choices:**
-- **Haiku / gpt-4o-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution
-- **Sonnet / gpt-4-turbo / gemini-1-5-pro / llama-3-70b** — mid-tier, balances cost and capability for planning, review, and validation
+- **Haiku / gpt-4o-mini / gpt-5.4-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution
+- **Sonnet / gpt-4-turbo / gpt-5.5 / gemini-1-5-pro / llama-3-70b** — mid-tier, balances cost and capability for planning, review, and validation
 - **Opus / gpt-4o / gemini-2-pro / llama-3-405b** — highest capability tier, required for architecture and security decisions
 
 ### Provider Feature Deltas
@@ -398,6 +344,18 @@ Not all providers support every feature. The framework degrades gracefully:
 > ⚠️ **Thinking mode on non-Claude providers:** When deploying to OpenAI, Google, or Meta, `thinking: true` roles fall back to the best available reasoning of the target model.
 
 See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed harness configuration.
+
+### Codex Support & Pricing Snapshot
+
+Current OpenAI docs describe Codex as available on Free, Go, Plus, Pro, Business, Edu, and Enterprise plans. In this repo, Codex is wired through the renderer-managed `make install-codex` path for workspace-managed runs, and the current role map uses the repo's `gpt-5.4-mini` / `gpt-5.5` split.
+
+| Codex plan | Price | Current support snapshot |
+|------------|-------|-------------------------|
+| Free | `$0/month` | Quick coding tasks |
+| Go | `$8/month` | Lightweight coding tasks |
+| Plus | `$20/month` | Codex on the web, CLI, IDE extension, and iOS; latest models include GPT-5.5, GPT-5.4, and GPT-5.4 mini |
+| Pro | `from $100/month` | 5x or 20x higher Codex rate limits; GPT-5.3-Codex-Spark research preview |
+| API key | Token-based | CLI, SDK, or IDE extension only; no cloud features; usage billed by API pricing |
 
 ---
 
@@ -428,6 +386,7 @@ See [docs/market-comparison.md](docs/market-comparison.md) for detailed comparis
 | [OpenCode](docs/guides/harness-setup/opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | [GitHub Copilot](docs/guides/harness-setup/copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](docs/guides/harness-setup/claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
+| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Supported, opt-in install |
 | [π.dev](docs/guides/harness-setup/pi-dev.md) | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
 
 See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed setup guides per harness.

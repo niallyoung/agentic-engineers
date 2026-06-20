@@ -3,7 +3,7 @@
 Renders agentic-engineers configurations for different tools:
 - **Copilot CLI** (`~/.copilot/agents/`)
 - **π.dev Harness** (`~/.pi/agent/`)
-- **Codex** (`~/.codex/agents/`, `~/.agents/skills/`)
+- **Codex** (`~/.codex/agents/`, `~/.codex/skills/`)
 
 ## Quick Start
 
@@ -80,8 +80,8 @@ renderer/
 ### Codex Renderer
 
 **What**: Renders agentic-engineers custom agents, skills, and config for Codex
-**How**: `make render-codex` or `make install-codex`
-**Where**: `src/agents/` → `~/.codex/agents/`; `src/skills/` → `~/.agents/skills/`
+**How**: `make render-codex` for `dist/codex/`, or `make install-codex` for the explicit Codex install path
+**Where**: `src/agents/` → `~/.codex/agents/`; `src/skills/` → `~/.codex/skills/`
 
 Codex custom agents are TOML files and are spawned only when explicitly
 requested by the user/session. The renderer installs a concise `AGENTS.md`

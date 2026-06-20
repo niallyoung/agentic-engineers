@@ -10,7 +10,7 @@ This module PREVIOUSLY provided utilities for:
 3. Providing migration status and diagnostics
 
 Historical note: During Phase 1-4 of the migration (weeks 1-4), both old and new paths worked.
-As of May 26, 2026, only the new path (~/.agentic-engineers/{harness}/{session-id}/) is supported.
+As of May 26, 2026, only the new path (~/.agentic-engineers/{harness}/{session-id}/queue/) is supported.
 
 DO NOT USE THIS MODULE IN NEW CODE.
 
@@ -44,7 +44,7 @@ class QueuePathMigration:
     Manage legacy queue detection and migration validation.
     
     This class helps track the migration from old paths (~/.copilot/queue/)
-    to new paths (~/.agentic-engineers/artifacts/) during Phase 1-4.
+    to the canonical per-harness queue paths (~/.agentic-engineers/{harness}/{session-id}/queue/).
     """
     
     def __init__(self, legacy_base: Optional[Path] = None, new_base: Optional[Path] = None):

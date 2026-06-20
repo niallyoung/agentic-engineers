@@ -249,6 +249,33 @@ backup_harness_dir() {
     return 0
 }
 
+# Backup an arbitrary directory using the same safety and timestamp rules.
+backup_dir() {
+    local label="$1"
+    local source_dir="$2"
+    local backup_dir="$3"
+
+    if [ ! -d "$source_dir" ]; then
+        return 0
+    fi
+    if [ -d "$backup_dir" ]; then
+        log_warn "$label: Backup already exists at $backup_dir (skipping backup)"
+        return 0
+    fi
+
+    local size
+    size=$(du -sh "$source_dir" 2>/dev/null | cut -f1 || echo "unknown")
+    log_info "Backing up $label: $source_dir → $backup_dir ($size)"
+    log_warn "$label: Backup may contain credentials/session tokens — remove old backups when no longer needed: $backup_dir"
+    if ! cp -a "$source_dir" "$backup_dir"; then
+        log_error "$label: Backup failed"
+        rm -rf "$backup_dir" 2>/dev/null || true
+        return 1
+    fi
+    log_success "$label: Backed up to $backup_dir"
+    return 0
+}
+
 # Install a single harness
 # Restore a harness directory from its backup snapshot (used on install failure
 # so a partially-applied install does not leave the user with a corrupted config).
@@ -267,6 +294,19 @@ rollback_harness_dir() {
     fi
 }
 
+rollback_dir() {
+    local target_dir="$1"
+    local backup_dir="$2"
+    [ -n "$backup_dir" ] || return 0
+    [ -d "$backup_dir" ] || return 0
+    rm -rf "$target_dir" 2>/dev/null || true
+    if mv "$backup_dir" "$target_dir"; then
+        log_warn "Rolled back: restored $target_dir from backup snapshot"
+    else
+        log_error "Rollback failed — original config remains at $backup_dir"
+    fi
+}
+
 install_harness() {
     local harness="$1"
     local harness_dir
@@ -274,6 +314,7 @@ install_harness() {
     # Per-harness backup tracker; reset for each harness so rollback only ever
     # touches the backup created in this iteration.
     LAST_BACKUP_DIR=""
+    LAST_SKILLS_BACKUP_DIR=""
 
     # Step 1: Ask if user wants to install (interactive mode only)
     if [ "$INTERACTIVE" = true ] && [ "$FORCE" != true ]; then
@@ -296,6 +337,15 @@ install_harness() {
                     if ! backup_harness_dir "$harness"; then
                         return 1
                     fi
+                    if [ "$harness" = "codex" ]; then
+                        local skills_dir="${DEST_ROOT}/.codex/skills"
+                        local skills_backup="${skills_dir}.${TIMESTAMP}"
+                        if ! backup_dir "codex skills" "$skills_dir" "$skills_backup"; then
+                            rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
+                            return 1
+                        fi
+                        LAST_SKILLS_BACKUP_DIR="$skills_backup"
+                    fi
                 else
                     log_warn "$harness: Proceeding without backup (old files may remain)"
                 fi
@@ -303,6 +353,15 @@ install_harness() {
                 # Non-interactive: auto-backup (safe default)
                 if ! backup_harness_dir "$harness"; then
                     return 1
+                fi
+                if [ "$harness" = "codex" ]; then
+                    local skills_dir="${DEST_ROOT}/.codex/skills"
+                    local skills_backup="${skills_dir}.${TIMESTAMP}"
+                    if ! backup_dir "codex skills" "$skills_dir" "$skills_backup"; then
+                        rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
+                        return 1
+                    fi
+                    LAST_SKILLS_BACKUP_DIR="$skills_backup"
                 fi
             fi
         fi
@@ -332,6 +391,9 @@ install_harness() {
         # Restore the original config that the backup step moved aside, so a
         # failed install does not leave the user with no harness config.
         rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
+        if [ "$harness" = "codex" ]; then
+            rollback_dir "${DEST_ROOT}/.codex/skills" "$LAST_SKILLS_BACKUP_DIR"
+        fi
         return 1
     fi
     
