@@ -24,6 +24,7 @@ Usage::
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -112,24 +115,35 @@ class SkillRenderer:
     # Public API
     # ------------------------------------------------------------------
 
-    def render(self, skill_name: str, use_cache: bool = True) -> SkillRenderOutput:
+    def render(self, skill_name: str, use_cache: bool = True, max_age_sec: int = 3600) -> SkillRenderOutput:
         """Render a single skill and return the result.
 
         Args:
             skill_name: Directory name of the skill under ``skills_root``.
             use_cache: Return the cached result if available.
+            max_age_sec: Maximum age of cached result in seconds (default 3600).
 
         Returns:
             :class:`SkillRenderOutput` describing success or failure.
         """
         if use_cache and skill_name in self._cache:
-            return self._cache[skill_name]
+            cached_result = self._cache[skill_name]
+            if hasattr(cached_result, '_cache_time'):
+                age = time.monotonic() - cached_result._cache_time
+                if age < max_age_sec:
+                    return cached_result
+            else:
+                return cached_result
 
         t_start = time.monotonic()
         result = self._render_skill(skill_name)
         result.render_time_ms = (time.monotonic() - t_start) * 1000
+        result._cache_time = time.monotonic()
 
         self._cache[skill_name] = result
+        logger.info(
+            f"render() skill={skill_name} success={result.success} duration_ms={result.render_time_ms:.2f}"
+        )
         return result
 
     def render_all(
@@ -181,6 +195,64 @@ class SkillRenderer:
                 if (item / "SKILL.md").exists():
                     skills.append(item.name)
         return skills
+
+    def validate_skill_dependencies(self, skill_name: str) -> Dict[str, Any]:
+        """Validate skill dependencies by checking 'depends_on' in metadata.
+
+        Args:
+            skill_name: Skill to validate.
+
+        Returns:
+            Dictionary with ``skill_name``, ``valid``, ``dependencies``,
+            and ``missing_dependencies`` keys.
+        """
+        render_result = self.render(skill_name, use_cache=False)
+        if not render_result.success or not render_result.metadata:
+            return {
+                "skill_name": skill_name,
+                "valid": False,
+                "dependencies": [],
+                "missing_dependencies": [],
+                "error": "Skill failed to render or has no metadata",
+            }
+
+        metadata = render_result.metadata
+        depends_on = metadata.get("depends_on", [])
+        if isinstance(depends_on, str):
+            depends_on = [depends_on]
+
+        available_skills = self.discover_available_skills()
+        missing = [dep for dep in depends_on if dep not in available_skills]
+
+        return {
+            "skill_name": skill_name,
+            "valid": len(missing) == 0,
+            "dependencies": depends_on,
+            "missing_dependencies": missing,
+        }
+
+    def render_skill_minimal(self, skill_name: str) -> Optional[Dict[str, Any]]:
+        """Render a skill with only essential fields (name, description, role, model, category).
+
+        Args:
+            skill_name: Skill to render.
+
+        Returns:
+            Dictionary with minimal metadata fields or None if render failed.
+        """
+        render_result = self.render(skill_name)
+        if not render_result.success or not render_result.metadata:
+            return None
+
+        metadata = render_result.metadata
+        minimal = {
+            "name": metadata.get("name"),
+            "description": metadata.get("description"),
+            "role": metadata.get("role"),
+            "model": metadata.get("model"),
+            "category": metadata.get("category"),
+        }
+        return minimal
 
     def verify_core_catalogue(self) -> Dict[str, Any]:
         """Verify that all :data:`CORE_SKILLS` are renderable.
@@ -251,6 +323,14 @@ class SkillRenderer:
                 metadata=metadata,
                 error=f"Missing required metadata fields: {', '.join(missing)}",
             )
+
+        # Warn if optional metadata fields are missing (warnings only, not errors)
+        optional_fields = ["role", "model", "category"]
+        for field in optional_fields:
+            if not metadata.get(field):
+                logger.warning(
+                    f"Skill '{skill_name}' missing optional metadata field: {field}"
+                )
 
         return SkillRenderOutput(
             skill_name=skill_name,
