@@ -225,9 +225,16 @@ def test_uninstall_codex_removes_managed_only(tmp_path):
     assert install.returncode == 0, install.stdout + install.stderr
 
     codex_home = tmp_path / ".codex"
+    skills_root = tmp_path / ".agents" / "skills"
     foreign_agent = codex_home / "agents" / "user-agent.toml"
     foreign_agent.write_text(
         'name = "user-agent"\ndescription = "foreign"\ndeveloper_instructions = "stay"\n',
+        encoding="utf-8",
+    )
+    foreign_skill = skills_root / "user-skill"
+    foreign_skill.mkdir()
+    (foreign_skill / "SKILL.md").write_text(
+        "---\nname: user-skill\ndescription: foreign skill\n---\n",
         encoding="utf-8",
     )
 
@@ -235,6 +242,7 @@ def test_uninstall_codex_removes_managed_only(tmp_path):
     assert uninstall.returncode == 0, uninstall.stdout + uninstall.stderr
 
     assert foreign_agent.is_file()
+    assert (foreign_skill / "SKILL.md").is_file()
     assert not (codex_home / "agents" / "engineer.toml").exists()
     assert not (codex_home / "AGENTS.md").exists()
     assert not (codex_home / "agentic-engineers-orchestrator.config.toml").exists()
