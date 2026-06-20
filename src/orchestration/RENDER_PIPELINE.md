@@ -70,7 +70,7 @@ renderer/scripts/render-hooks.sh
 - `~/.claude/agents/` — Claude CLI agents
 - `~/.claude/skills/` — Claude CLI skills
 - `~/.codex/agents/` — Codex CLI agents
-- `~/.agents/skills/` — Codex CLI-discoverable skills
+- `~/.codex/skills/` — Codex CLI-discoverable skills
 
 Deployment copies build artifacts to user environments. Installation is via `make install` or the matching `make install-<harness>` target.
 
