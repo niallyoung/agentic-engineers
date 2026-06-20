@@ -359,7 +359,7 @@ You are a Codex custom subagent rendered from agentic-engineers.
 
 This Codex installation is managed by agentic-engineers. The framework renders
 specialist Codex custom agents under `agents/` and reusable skills under
-`~/.agents/skills/`.
+`~/.codex/skills/`.
 
 For the intended startup path, launch Codex with:
 
