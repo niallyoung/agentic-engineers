@@ -63,6 +63,7 @@ class PollingConfig:
         retry_backoff_multiplier: float = 1.5,
         idle_threshold_polls: int = 3,
         deep_sleep_sec: int = 600,
+        skill_improvement_threshold: int = 3,
     ):
         """
         Initialize polling configuration.
@@ -79,6 +80,7 @@ class PollingConfig:
             retry_backoff_multiplier: Exponential backoff multiplier for retries
             idle_threshold_polls: Consecutive clean polls before deep sleep
             deep_sleep_sec: Max duration of deep sleep (seconds)
+            skill_improvement_threshold: Min feedback count to trigger skill improvement task (default 3)
         """
         self.poll_interval_fast = poll_interval_fast
         self.poll_interval_idle = poll_interval_idle
@@ -91,6 +93,7 @@ class PollingConfig:
         self.retry_backoff_multiplier = retry_backoff_multiplier
         self.idle_threshold_polls = idle_threshold_polls
         self.deep_sleep_sec = deep_sleep_sec
+        self.skill_improvement_threshold = skill_improvement_threshold
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary."""
@@ -106,6 +109,7 @@ class PollingConfig:
             "retry_backoff_multiplier": self.retry_backoff_multiplier,
             "idle_threshold_polls": self.idle_threshold_polls,
             "deep_sleep_sec": self.deep_sleep_sec,
+            "skill_improvement_threshold": self.skill_improvement_threshold,
         }
 
     @classmethod
@@ -203,6 +207,12 @@ class OrchestratorSkill:
 
         # Heartbeat tracking: task_id -> last_update_timestamp
         self.heartbeat_tracker: Dict[str, float] = {}
+
+        # Skill improvement tracking: set of skill names with pending improvement tasks
+        self._pending_improvement_tasks: set[str] = set()
+
+        # Feedback loop (imported on first use to avoid circular dependencies)
+        self.feedback_loop = None
 
         logger.info(
             f"OrchestratorSkill initialized: "
@@ -716,6 +726,11 @@ class OrchestratorSkill:
             else:
                 self._move_task_to_failed(task_id, f"Unknown status: {status}")
 
+            # Extract and route skill_feedback if present
+            skill_feedback = handback_dict.get("skill_feedback", [])
+            if skill_feedback:
+                self._route_skill_feedback(task_id, skill_feedback)
+
             # Capture span
             self.capture_span(
                 "handle_handback",
@@ -1027,6 +1042,163 @@ class OrchestratorSkill:
         )
 
         return approved
+
+    def _route_skill_feedback(self, task_id: str, feedback_items: List[Dict]) -> None:
+        """
+        Route skill feedback through the improvement pipeline.
+
+        Groups feedback by skill_name, records it via feedback_loop, and spawns
+        improvement DELEGATEs for skills that reach the threshold.
+
+        Args:
+            task_id: Task that generated the feedback
+            feedback_items: List of skill_feedback dictionaries
+        """
+        if not feedback_items:
+            return
+
+        # Lazily initialize feedback_loop
+        if self.feedback_loop is None:
+            try:
+                from src.orchestration.feedback.feedback_loop import FeedbackLoop
+                self.feedback_loop = FeedbackLoop()
+            except ImportError:
+                logger.warning("Could not import FeedbackLoop, skipping skill feedback routing")
+                return
+
+        # Group feedback by skill_name
+        feedback_by_skill: Dict[str, List[Dict]] = {}
+        for item in feedback_items:
+            skill_name = item.get("skill_name")
+            if skill_name:
+                feedback_by_skill.setdefault(skill_name, []).append(item)
+
+        # Record each skill's feedback
+        for skill_name, items in feedback_by_skill.items():
+            self.feedback_loop.record_skill_feedback(skill_name, items)
+
+        # Check for skills that meet the improvement threshold
+        candidates = self.feedback_loop.get_top_feedback_candidates(
+            threshold=self.config.skill_improvement_threshold
+        )
+
+        for skill_name, accumulated_items in candidates:
+            # Skip if already have pending improvement task for this skill
+            if skill_name in self._pending_improvement_tasks:
+                logger.debug(
+                    f"Skill {skill_name} already has pending improvement task, skipping"
+                )
+                continue
+
+            # Check if improvement task already in queue
+            if self._has_pending_improvement_task_in_queue(skill_name):
+                logger.debug(
+                    f"Improvement task for {skill_name} already in queue, skipping"
+                )
+                continue
+
+            # Spawn improvement DELEGATE
+            self._spawn_skill_improvement_delegate(skill_name, accumulated_items)
+            self._pending_improvement_tasks.add(skill_name)
+
+    def _has_pending_improvement_task_in_queue(self, skill_name: str) -> bool:
+        """
+        Check if an improvement task for this skill is already in incoming/ or processing/.
+
+        Args:
+            skill_name: Kebab-case skill name
+
+        Returns:
+            True if found, False otherwise
+        """
+        pattern = f"*improve-skill-{skill_name}*"
+
+        try:
+            incoming_dir = self.queue_root / "incoming"
+            if list(incoming_dir.glob(pattern)):
+                return True
+
+            processing_dir = self.queue_root / "processing"
+            if list(processing_dir.glob(pattern)):
+                return True
+        except Exception as e:
+            logger.error(f"Error checking for pending improvement task: {e}")
+
+        return False
+
+    def _spawn_skill_improvement_delegate(
+        self, skill_name: str, accumulated_items: List[Dict]
+    ) -> None:
+        """
+        Spawn a DELEGATE to improve a skill based on accumulated feedback.
+
+        Args:
+            skill_name: Kebab-case skill name
+            accumulated_items: All accumulated feedback items for this skill
+        """
+        from datetime import datetime
+
+        # Serialize feedback items for context
+        feedback_context = json.dumps(accumulated_items, indent=2)
+
+        # Build DELEGATE
+        today = datetime.now().strftime("%Y-%m-%d")
+        task_id = f"{today}-improve-skill-{skill_name}"
+
+        delegate = {
+            "handoff_type": "DELEGATE",
+            "task_id": task_id,
+            "agent": "senior-engineer",
+            "role": "senior-engineer",
+            "model": "claude-sonnet-4.6",
+            "effort": "low",
+            "estimated_hours": 2,
+            "scope": (
+                f"Review and improve the {skill_name} skill based on {len(accumulated_items)} accumulated "
+                f"feedback items from agents. Address coverage gaps and improvement suggestions. "
+                f"Aim for guiding-principle language over rule enforcement."
+            ),
+            "context": {
+                "accumulated_feedback": accumulated_items,
+                "feedback_count": len(accumulated_items),
+                "skill_name": skill_name,
+                "reference": f"src/skills/{skill_name}/SKILL.md",
+                "pattern": "src/skills/skill-improvement-feedback/SKILL.md",
+            },
+            "success_criteria": [
+                "## Self-Improvement section present in updated SKILL.md",
+                "At least one coverage gap from feedback addressed",
+                "No new MUST/MUST NOT language added; existing MUST replaced where safe",
+            ],
+            "plan": [
+                {"step": 1, "action": "Read SKILL.md and all accumulated feedback items", "duration_minutes": 15},
+                {"step": 2, "action": "Update SKILL.md to address gaps and suggestions", "duration_minutes": 30},
+                {"step": 3, "action": "Verify ## Self-Improvement section present and skill renders", "duration_minutes": 15},
+            ],
+        }
+
+        # Write to incoming/
+        incoming_dir = self.queue_root / "incoming"
+        delegate_file = incoming_dir / f"{task_id}.yaml"
+
+        try:
+            with delegate_file.open("w") as f:
+                f.write(self._dict_to_yaml(delegate))
+
+            logger.info(
+                f"Spawned skill improvement DELEGATE: {task_id} "
+                f"({len(accumulated_items)} feedback items)"
+            )
+
+            self.capture_span(
+                "spawn_skill_improvement_delegate",
+                skill_name=skill_name,
+                feedback_count=len(accumulated_items),
+                task_id=task_id,
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to spawn skill improvement DELEGATE for {skill_name}: {e}")
 
     def capture_span(self, method_name: str, **attrs) -> None:
         """

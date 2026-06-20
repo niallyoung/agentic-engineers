@@ -150,6 +150,10 @@ class FeedbackLoop:
     def __init__(self, store: Optional[FeedbackStore] = None):
         self.store = store or FeedbackStore()
         self._cache: Optional[List[TaskOutcome]] = None
+        self._skill_raw_feedback: Dict[str, List[Dict]] = {}
+
+        # Load persisted skill feedback from disk to resume across sessions
+        self._load_skill_feedback_from_disk()
 
     # ------------------------------------------------------------------
     # Recording
@@ -197,6 +201,21 @@ class FeedbackLoop:
             feedback_notes=str(notes),
         )
         self.record(outcome)
+
+        # Extract and route skill_feedback if present
+        skill_feedback = handback.get("skill_feedback", [])
+        if skill_feedback:
+            # Group items by skill_name
+            feedback_by_skill: Dict[str, List[Dict]] = {}
+            for item in skill_feedback:
+                skill_name = item.get("skill_name")
+                if skill_name:
+                    feedback_by_skill.setdefault(skill_name, []).append(item)
+
+            # Record each skill's feedback
+            for skill_name, items in feedback_by_skill.items():
+                self.record_skill_feedback(skill_name, items)
+
         return outcome
 
     # ------------------------------------------------------------------
@@ -285,3 +304,88 @@ class FeedbackLoop:
             "avg_quality": round(avg_quality, 1),
             "avg_tokens": round(avg_tokens, 0),
         }
+
+    # ------------------------------------------------------------------
+    # Skill Feedback Recording
+    # ------------------------------------------------------------------
+
+    def _load_skill_feedback_from_disk(self) -> None:
+        """Load persisted skill feedback from artifacts/metrics/skill-feedback/."""
+        feedback_dir = Path("artifacts/metrics/skill-feedback")
+        if not feedback_dir.exists():
+            logger.debug(f"Skill feedback directory not found: {feedback_dir}")
+            return
+
+        try:
+            for jsonl_file in feedback_dir.glob("*.jsonl"):
+                skill_name = jsonl_file.stem
+                with jsonl_file.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            item = json.loads(line)
+                            self._skill_raw_feedback.setdefault(skill_name, []).append(item)
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Skipping malformed skill feedback line in {jsonl_file}: {e}")
+            logger.debug(f"Loaded skill feedback from disk: {len(self._skill_raw_feedback)} skills")
+        except Exception as e:
+            logger.warning(f"Error loading skill feedback from disk: {e}")
+
+    def record_skill_feedback(self, skill_name: str, items: List[Dict]) -> None:
+        """
+        Record skill feedback items and persist to disk.
+
+        Args:
+            skill_name: Kebab-case skill name
+            items: List of feedback dictionaries
+        """
+        if not items:
+            return
+
+        # Append to in-memory accumulator
+        self._skill_raw_feedback.setdefault(skill_name, []).extend(items)
+
+        # Persist to JSONL file
+        feedback_dir = Path("artifacts/metrics/skill-feedback")
+        feedback_dir.mkdir(parents=True, exist_ok=True)
+
+        feedback_file = feedback_dir / f"{skill_name}.jsonl"
+        try:
+            with feedback_file.open("a", encoding="utf-8") as f:
+                for item in items:
+                    f.write(json.dumps(item) + "\n")
+            logger.debug(
+                f"Recorded {len(items)} skill feedback item(s) for {skill_name}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to persist skill feedback for {skill_name}: {e}")
+
+    def get_accumulated_count(self, skill_name: str) -> int:
+        """
+        Get the accumulated count of feedback items for a skill.
+
+        Args:
+            skill_name: Kebab-case skill name
+
+        Returns:
+            Number of accumulated feedback items
+        """
+        return len(self._skill_raw_feedback.get(skill_name, []))
+
+    def get_top_feedback_candidates(self, threshold: int = 3) -> List[Tuple[str, List[Dict]]]:
+        """
+        Get all skills with accumulated feedback count >= threshold.
+
+        Args:
+            threshold: Minimum feedback count to return (default 3)
+
+        Returns:
+            List of (skill_name, feedback_items) tuples for skills meeting threshold
+        """
+        candidates = []
+        for skill_name, items in self._skill_raw_feedback.items():
+            if len(items) >= threshold:
+                candidates.append((skill_name, items))
+        return candidates
