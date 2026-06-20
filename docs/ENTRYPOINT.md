@@ -140,7 +140,7 @@ Once running, the Orchestrator:
 
 ```bash
 # 1. Create DELEGATE for spec extraction
-cat > artifacts/queue/incoming/2026-05-02-update-spec.yaml << 'EOF'
+cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-update-spec.yaml << 'EOF'
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-02-update-spec
@@ -167,7 +167,7 @@ EOF
 # Senior Engineer updates docs/SPEC.md and commits
 
 # 3. Check results
-cat artifacts/queue/done/2026-05-02-update-spec-HANDBACK-Senior\ Engineer.yaml
+cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-update-spec-HANDBACK-Senior\ Engineer.yaml
 git log --oneline | head -1
 ```
 
@@ -175,7 +175,7 @@ git log --oneline | head -1
 
 ```bash
 # 1. Create DELEGATE for code review
-cat > artifacts/queue/incoming/2026-05-02-validate-impl.yaml << 'EOF'
+cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-validate-impl.yaml << 'EOF'
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-02-validate-impl
@@ -209,7 +209,7 @@ cat artifacts/spec-validation-report.md
 
 ```bash
 # 1. Create DELEGATE for bug fix
-cat > artifacts/queue/incoming/2026-05-02-fix-bug.yaml << 'EOF'
+cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-fix-bug.yaml << 'EOF'
 ---
 handoff_type: DELEGATE
 task_id: 2026-05-02-fix-orchestrator-bug
@@ -236,7 +236,7 @@ EOF
 # Routes to Engineer, Engineer runs TDD (RED-GREEN-REFACTOR), returns HANDBACK
 
 # 3. Check results
-cat artifacts/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
+cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
 ```
 
 ---
@@ -244,7 +244,7 @@ cat artifacts/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
 ## 🏗️ Queue Structure
 
 ```
-artifacts/queue/
+~/.agentic-engineers/<harness>/<session-id>/queue/
 ├── incoming/                          # New tasks, ready for Orchestrator
 │   ├── 2026-05-02-my-task.yaml
 │   └── 2026-05-02-another-task.yaml
@@ -334,7 +334,7 @@ When multiple Copilot or Claude instances run concurrently, each session has its
 ### Queue Paths by Session
 
 ```
-~/.copilot/queue/
+~/.agentic-engineers/copilot/{session-id}/queue/
 ├── 54744939-4acb-430c-b2c4-3b8322289d0b/
 │   ├── incoming/     # Tasks for this session only
 │   ├── processing/
@@ -375,8 +375,8 @@ ls ~/.copilot/session-state/
 
 If you see "queue not found" errors:
 1. Verify your session-id: `echo $COPILOT_SESSION_ID`
-2. Check queue exists: `ls ~/.copilot/queue/$COPILOT_SESSION_ID/incoming/`
-3. Check migration log: `cat ~/.copilot/queue/.migration-log`
+2. Check queue exists: `ls ~/.agentic-engineers/copilot/$COPILOT_SESSION_ID/queue/incoming/`
+3. Check migration log: `cat ~/.agentic-engineers/copilot/.migration-log`
 4. Verify session-state dir: `ls ~/.copilot/session-state/`
 
 ---
