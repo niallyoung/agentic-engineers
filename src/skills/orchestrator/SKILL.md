@@ -17,9 +17,9 @@ metadata:
 
 ## Overview
 
-The Orchestrator skill is the **in-harness queue management system** that orchestrates all DELEGATE/HANDBACK protocol flow. It is responsible for:
+The Orchestrator skill is the **in-harness queue management system** that coordinates all DELEGATE/HANDBACK protocol flow. It aims to:
 
-1. **Queue polling** — continuously scan `incoming/` for new DELEGATE blocks
+1. **Queue polling** — continuously monitor `incoming/` for new DELEGATE blocks
 2. **Task claiming** — atomically move tasks from `incoming/` → `processing/` with timestamps
 3. **Sub-agent spawning** — invoke the Agent tool with full DELEGATE context
 4. **HANDBACK correlation** — parse HANDBACK text, extract task_id, apply routing decisions
@@ -440,3 +440,28 @@ All operations write OpenTelemetry SPAN files to the queue's `spans/` directory 
 - Error tracking
 - Cost aggregation
 - Task dependency visualization
+
+## Self-Improvement
+
+We aim for **orchestrator** to feel like a knowledgeable colleague rather than a rulebook. If any section felt prescriptive rather than guiding, a `tone_note` in your feedback helps us improve it.
+
+This skill participates in the framework's continuous improvement cycle
+(see [`skill-improvement-feedback`](../skill-improvement-feedback/SKILL.md)).
+
+When you use **orchestrator** during a task, include a `skill_feedback` entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: orchestrator
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

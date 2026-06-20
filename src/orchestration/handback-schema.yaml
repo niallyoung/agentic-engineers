@@ -388,6 +388,60 @@ optional_fields:
         - "B3: Pre-commit hook not executable"
       improvement_guidance: "Add missing test cases for Groups B/C. Ensure all new files are executable. Verify hook runs successfully in CI/CD."
 
+  skill_feedback:
+    type: array
+    optional: true
+    description: >
+      Structured feedback on skills used during this task. Include one object
+      per skill that materially affected the outcome. Accumulated by the
+      orchestrator; triggers an improvement DELEGATE at ≥3 items per skill.
+    items:
+      type: object
+      required: [skill_name, effectiveness_score]
+      properties:
+        skill_name:
+          type: string
+          description: "Kebab-case name matching the skill's SKILL.md `name` field"
+          example: "queue-management"
+        effectiveness_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: "How useful was this skill for the task? (0=not useful, 1=perfect)"
+        clarity_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          optional: true
+          description: "How clear were the skill's instructions?"
+        coverage_gaps:
+          type: array
+          items: {type: string}
+          optional: true
+          description: "Specific scenarios the skill did not cover"
+        improvement_suggestions:
+          type: array
+          items: {type: string}
+          optional: true
+          description: "Concrete, actionable improvements"
+        usage_context:
+          type: string
+          optional: true
+          description: "One sentence: how you used this skill"
+        tone_note:
+          type: string
+          optional: true
+          description: "Note if any language felt prescriptive rather than guiding"
+    example:
+      - skill_name: queue-management
+        effectiveness_score: 0.80
+        clarity_score: 0.90
+        coverage_gaps:
+          - "No guidance for partial-failure rollback on multi-task enqueue"
+        improvement_suggestions:
+          - "Add rollback_on_partial_failure parameter and describe its behaviour"
+        usage_context: "Enqueued 3 parallel child tasks from a lead-engineer session"
+
 # Validation Layers (enforced by quality_validator.py)
 validation_layers:
   

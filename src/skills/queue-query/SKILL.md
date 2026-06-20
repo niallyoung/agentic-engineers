@@ -88,3 +88,26 @@ Global flags: `--session-id`, `--harness`, `--base-dir` (testing), `--json`.
 local equivalents of future API endpoints. Swapping the filesystem backend for
 the central queue API later requires changing only the data-access layer, not
 the orchestrator call sites that consume these methods.
+
+## Self-Improvement
+
+This skill participates in the framework's continuous improvement cycle
+(see [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md)).
+
+When you use **queue-query** during a task, include a skill_feedback entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: queue-query
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

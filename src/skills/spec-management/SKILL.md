@@ -18,16 +18,16 @@ metadata:
 
 ## Overview
 
-**CRITICAL SECURITY SKILL**: This skill is the **exclusive gateway** for all SPEC.md modifications. No SPEC.md changes are permitted outside this skill. Only Principal Engineer, Security Engineer, and Lead Engineer roles can invoke it.
+**CRITICAL SECURITY SKILL**: This skill is the **exclusive gateway** for all SPEC.md modifications. Our goal is to ensure that all SPEC.md changes follow a clear proposal → analysis → approval → audit → changelog workflow. Only Principal Engineer, Security Engineer, and Lead Engineer roles can invoke it.
 
 ### What It Does
 
 1. **Change Proposal Interface** — Parses and validates structured change proposals with required fields (change_id, sections, rationale, impact assessment)
 2. **Impact Analysis** — Computes affected sections, identifies breaking changes, maps downstream dependencies, flags compatibility risks
-3. **Multi-Level Authorization** — Enforces Principal/Security/Lead-only access; routes proposals through role-based approval chains
+3. **Multi-Level Authorization** — Routes proposals through role-based approval chains for Principal/Security/Lead review
 4. **Immutable Audit Trail** — Records every action (proposed, analyzed, approved, rejected, applied, reverted) with cryptographic linking to prevent tampering
 5. **Changelog Generation** — Auto-updates SPEC.md CHANGELOG section on approval; includes change_id, author, timestamp
-6. **Enforcement** — Rejects unauthorized proposals, enforces proposal format, prevents direct SPEC.md edits
+6. **Governance** — Enforces structured proposal format and requires approval before changes take effect
 7. **Rollback Capability** — Tracks SPEC.md versions with SHA-256 hashes, enables reverting changes with full audit trail
 
 ## Architecture
@@ -463,3 +463,28 @@ This skill will be maintained by:
 - **Lead Engineer** — Operational impact assessment
 
 Updates to this skill require approval through the same proposal workflow, ensuring consistency and trustworthiness.
+
+## Self-Improvement
+
+We aim for **spec-management** to feel like a knowledgeable colleague rather than a rulebook. If any section felt prescriptive rather than guiding, a `tone_note` in your feedback helps us improve it.
+
+This skill participates in the framework's continuous improvement cycle
+(see [`skill-improvement-feedback`](../skill-improvement-feedback/SKILL.md)).
+
+When you use **spec-management** during a task, include a `skill_feedback` entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: spec-management
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

@@ -467,3 +467,26 @@ result = qm.process_task(spec)
 - `scripts/add-to-queue` — CLI entry point
 - `queue_manager.py` — Core QueueManager class with TODO.md integration
 - `cli.py` — CLI argument parsing and dispatch
+
+## Self-Improvement
+
+This skill participates in the framework's continuous improvement cycle
+(see [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md)).
+
+When you use **queue-management** during a task, include a skill_feedback entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: queue-management
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

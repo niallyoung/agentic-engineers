@@ -19,13 +19,13 @@ metadata:
 
 Automates creation of new agent templates that are immediately SPEC-compliant and ready for TDD-driven development.
 
-**What it does:**
-1. Validates config (name pattern, role enum, model enum, effort enum)
-2. Checks dependency graph — detects circular dependencies before writing any files
-3. Verifies integration — naming conflicts, role/model compatibility warnings
-4. Generates: `SKILL.md`, `__init__.py`, `scripts/__init__.py`, `tests/test_<agent>.py`
-5. Embeds DELEGATE/HANDBACK protocol templates directly in `SKILL.md`
-6. Returns `CreationResult` with SPAN metadata (timing, file count)
+**What it aims to do:**
+1. Validate config (name pattern, role enum, model enum, effort enum)
+2. Check dependency graph — detect circular dependencies before writing any files
+3. Verify integration — naming conflicts, role/model compatibility warnings
+4. Generate: `SKILL.md`, `__init__.py`, `scripts/__init__.py`, `tests/test_<agent>.py`
+5. Embed DELEGATE/HANDBACK protocol templates directly in `SKILL.md`
+6. Return `CreationResult` with SPAN metadata (timing, file count)
 
 ## Usage
 
@@ -169,3 +169,28 @@ python3 -m pytest tests/test_agent_creator.py -v
 
 - `agent_creator.py` — Core implementation (ConfigValidator, TemplateGenerator,
   DependencyValidator, IntegrationChecker, AgentCreator)
+
+## Self-Improvement
+
+We aim for **agent-creator** to feel like a knowledgeable colleague rather than a rulebook. If any section felt prescriptive rather than guiding, a `tone_note` in your feedback helps us improve it.
+
+This skill participates in the framework's continuous improvement cycle
+(see [`skill-improvement-feedback`](../skill-improvement-feedback/SKILL.md)).
+
+When you use **agent-creator** during a task, include a `skill_feedback` entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: agent-creator
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.
