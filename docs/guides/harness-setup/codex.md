@@ -20,11 +20,13 @@
 
 When you run `make install-codex`, the renderer installs user-scoped Codex configuration by default:
 
+- `~/.codex/AGENTS.md` - Orchestrator rules and role roster
 - `~/.codex/config.toml` - Codex defaults when no foreign user config exists
 - `~/.codex/agentic-engineers-orchestrator.config.toml` - startup profile for Orchestrator mode
+- `~/.codex/agentic-engineers.config.toml` - mergeable reference when `config.toml` is user-managed
 - `~/.codex/agents/*.toml` - Codex custom agent definitions
 - `~/.codex/skills/*` - Codex-discoverable agent skills
-- `~/.agentic-engineers/codex/{session-id}/queue/` - Codex queue workspace for DELEGATE/HANDBACK handoffs
+- `~/.agentic-engineers/{harness}/{session-id}/queue/` - Canonical queue workspace for DELEGATE/HANDBACK handoffs (`harness=codex`)
 
 Repository-scoped `.codex/config.toml`, `.codex/agents/*.toml`, and
 `.codex/skills` remain valid Codex locations, but the first agentic-engineers
@@ -81,7 +83,8 @@ the generated custom-agent HANDBACK contract; update docs for the new launch flo
 The Orchestrator profile treats `delegate:` or `DELEGATE:` as an explicit
 request to use Codex subagents. It parses semicolon-separated tasks, routes each
 task to the narrowest rendered custom agent, spawns independent work in
-parallel, waits for HANDBACK-style results, and synthesizes the final response.
+parallel, keeps same-file edits coordinated, waits for HANDBACK-style results,
+and synthesizes the final response.
 
 Role routing:
 

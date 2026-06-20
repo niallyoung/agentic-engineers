@@ -23,7 +23,7 @@ make install-opencode
 
 This will:
 1. Create queue directories at `~/.agentic-engineers/opencode/{session-id}/queue/`
-2. Render agent configurations with OpenCode-specific model names
+2. Render agent configurations into `~/.config/opencode/` with OpenCode-specific model names
 3. Install protocol documents and skills
 4. Set up the renderer pipeline
 
@@ -34,10 +34,12 @@ This will:
 OpenCode requires queue directories for task routing:
 
 ```bash
-mkdir -p ~/.agentic-engineers/opencode/<session-id>/queue/{incoming,processing,done}
+mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}
 ```
 
 These directories are created automatically by `make install-opencode`.
+
+OpenCode's rendered config lives in `~/.config/opencode/` and includes `AGENTS.md`, `opencode.jsonc`, `agents/`, and `skills/`.
 
 ### Model Names
 
@@ -76,7 +78,7 @@ opencode --agent orchestrator --voice "Task completed with 95/100 quality"
 
 ## Known Limitations
 
-- Requires queue directories to be created at `~/.agentic-engineers/opencode/<session-id>/queue/`
+- Requires queue directories to be created at `~/.agentic-engineers/opencode/{session-id}/queue/`
 - Model names use hyphenated format (e.g., `claude-opus-4-8`)
 - Session-based queue isolation for concurrent operation
 
@@ -90,11 +92,11 @@ opencode --agent orchestrator --voice "Task completed with 95/100 quality"
 
 ### Queue directories not found
 
-**Symptom:** `Error: Queue directory ~/.agentic-engineers/opencode/<session-id>/queue/incoming not found`
+**Symptom:** `Error: Queue directory ~/.agentic-engineers/opencode/{session-id}/queue/incoming not found`
 
 **Fix:**
 ```bash
-mkdir -p ~/.agentic-engineers/opencode/<session-id>/queue/{incoming,processing,done}
+mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}
 ```
 
 Or re-run:
@@ -115,9 +117,9 @@ make install-opencode
 **Symptom:** Tasks not appearing in queue or agents not picking up work.
 
 **Fix:**
-1. Check queue permissions: `ls -la ~/.agentic-engineers/opencode/<session-id>/queue/`
+1. Check queue permissions: `ls -la ~/.agentic-engineers/opencode/{session-id}/queue/`
 2. Verify orchestrator is polling: `opencode --agent orchestrator --debug`
-3. Check logs: `tail -f ~/.agentic-engineers/logs/orchestrator.log`
+3. Check logs: `tail -f ~/.agentic-engineers/{session-id}/memory/logs/*.log`
 
 ## Advanced Configuration
 

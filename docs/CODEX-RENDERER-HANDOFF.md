@@ -5,8 +5,8 @@ Branch: `feature/codex-renderer`
 
 ## Status
 
-Codex harness support is implemented behind explicit targets and remains an
-opt-in install path:
+Codex harness support is implemented and exposed through explicit targets;
+install remains opt-in:
 
 - `make render-codex`
 - `make install-codex`
@@ -14,7 +14,7 @@ opt-in install path:
 - `make validate-codex`
 
 `make render-all` now includes Codex render output. `make install` still installs
-the existing default harness set only (`claude`, `copilot`, `pi`, `opencode`),
+the existing default harness set only (`opencode`, `copilot`, `claude`, `pi`),
 while `make install-codex` keeps Codex explicit and workspace-managed.
 
 The second pass adds a native Codex startup profile:
@@ -51,6 +51,8 @@ Install output:
   skills/
   */SKILL.md
 ```
+
+Queue workspace: `~/.agentic-engineers/{harness}/{session-id}/queue/` (`harness=codex`).
 
 The renderer is marker-aware:
 
@@ -125,9 +127,9 @@ Notes:
    ```
 
    Expected behavior: the root Codex session parses each semicolon-separated
-   task as a DELEGATE, routes it to the narrowest rendered custom agent, spawns
-   independent work in parallel, waits for HANDBACK-style results, then
-   synthesizes a final status.
+   task as a DELEGATE, routes it to the narrowest rendered custom agent, fans
+   out independent work in parallel, keeps same-file edits coordinated, waits
+   for HANDBACK-style results, then synthesizes a final status.
 
 4. Broaden legacy matrix tests only if Codex becomes part of the default
    all-harness contract. Tests currently hard-code the four default harnesses in

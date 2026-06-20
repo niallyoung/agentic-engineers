@@ -57,10 +57,9 @@ DELEGATE_GRAMMAR = """When the user starts a message with `delegate:` or `DELEGA
 Parse the text after the prefix as semicolon-separated tasks; also accept newline bullets or numbered lists as task separators. For each task:
 1. Assign a stable task_id such as `codex-001`, `codex-002`, preserving user wording in `scope`.
 2. Choose the narrowest appropriate custom agent using the routing table.
-3. Build a DELEGATE YAML block with `handoff_type: DELEGATE`, `task_id`, `agent`, `scope`, `context`, `success_criteria`, and `expected_handback`.
-4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict.
-5. Keep dependent tasks sequential, and keep same-file edits coordinated in the root thread.
-6. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
+3. Build a canonical DELEGATE payload with the queue-management fields needed for validation: `handoff_type: DELEGATE`, `task_id`, `agent`, `skill`, `model`, `effort`, `scope`, `context`, `plan`, and `success_criteria`.
+4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict; keep same-file edits coordinated.
+5. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
 
 If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If the queue is empty, do not invent work."""
 

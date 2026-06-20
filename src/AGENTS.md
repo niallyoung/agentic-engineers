@@ -15,6 +15,7 @@
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
 - **Cold-context agents** — every DELEGATE is self-contained; the receiving agent cannot rely on session state
 - **Parallel by default** — the Orchestrator fans out multiple DELEGATEs simultaneously when tasks are independent
+- **Delegate fan-out** — Codex `delegate:` / `DELEGATE:` requests may contain semicolon-separated tasks; split them into separate DELEGATEs, parallelize the independent ones, and keep same-file edits coordinated
 - **Token-conscious** — cite line numbers, suppress verbose output, trust tool confirmations; measure with Model Engineer
 
 ---

@@ -6,7 +6,7 @@
 
 **Note:** This comparison now includes resource-aware frameworks like Gastown. Gas City appears in repo-local material as a potential Gastown refinement, but a public canonical source was not located during this update, so it is treated as unverified below. This reflects an emerging paradigm where agent orchestration systems track and budget computational resources (tokens, API calls, time) as first-class constraints.
 
-**Codex support note:** Agentic Engineers includes a Codex renderer and a separate `make install-codex` path for workspace-managed runs. The current Codex role map uses the repo's `gpt-5.4-mini` / `gpt-5.5` split. Current OpenAI docs describe Codex access across Free, Go, Plus, Pro, Business, Edu, and Enterprise plans, with API-key mode limited to CLI/SDK/IDE workflows and token-billed usage. See the [Codex overview](https://developers.openai.com/codex/overview) and [Codex pricing](https://developers.openai.com/codex/pricing).
+**Codex support note:** Agentic Engineers includes a Codex renderer and an explicit `make install-codex` path for `~/.codex/` workspace-managed runs. The current Codex role map uses the repo's `gpt-5.4-mini` / `gpt-5.5` split. Current OpenAI docs describe Codex access across Free, Go, Plus, Pro, Business, Edu, and Enterprise plans, with API-key mode limited to CLI/SDK/IDE workflows and token-billed usage. See the [Codex overview](https://developers.openai.com/codex/overview) and [Codex pricing](https://developers.openai.com/codex/pricing).
 
 #### Quick Comparison Table
 
@@ -23,7 +23,7 @@
 | **Durable Execution** | File-based queue | Limited | Yes (Postgres/Redis) | No | Yes | Git worktree-based | Not publicly verified |
 | **Human-in-the-Loop** | Gray-zone review (70-79) | Built-in (optional) | Built-in | Manual | Built-in | Resource-aware escalation | Not publicly verified |
 | **Token Visibility** | Session-level (27% + 73% subagents) | Limited | LangSmith | Basic | Built-in tracing | Built-in (gas tracking) | Not publicly verified |
-| **Harness Support** | 4+ (OpenCode, Codex, Claude, Copilot) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) | Not publicly verified |
+| **Harness Support** | 4+ (OpenCode, Copilot, Claude, Codex) | Python-only | Python-only | Python/.NET | Python-only | Multi-runtime (Claude, Copilot, Codex, Gemini) | Not publicly verified |
 | **Enterprise Features** | Full (escalation, audit trail) | CrewAI AMP | LangSmith Platform | Deprecated | Limited | Federated (Wasteland network) | Not publicly verified |
 
 ### Detailed Framework Analysis
@@ -205,7 +205,7 @@ Unlike traditional frameworks that treat resources as unlimited, Gastown explici
 | **Persistence** | File-based queue (YAML) | Git worktrees (git-backed) |
 | **Coordination** | Orchestrator-first routing | Mayor + Convoys (distributed) |
 | **Scaling Pattern** | Orchestrator bottleneck mitigation | Federated (Wasteland network) |
-| **Runtime Support** | 3+ (OpenCode, Claude, Copilot) | 4+ (Claude, Copilot, Codex, Gemini) |
+| **Runtime Support** | 4+ (OpenCode, Copilot, Claude, Codex) | 4+ (Claude, Copilot, Codex, Gemini) |
 | **Learning Curve** | Steep (protocol-heavy) | Medium (Mayor + Hooks + Beads) |
 | **Community** | Small (internal) | Growing (15.4K stars, active) |
 | **Best For** | Quality + audit trail | Cost control + multi-runtime |
@@ -226,7 +226,7 @@ A public-source search did not locate canonical Gas City docs, release notes, or
 | **Persistence** | File-based queue (YAML) | Not publicly verified |
 | **Coordination** | Orchestrator-first routing | Not publicly verified |
 | **Scaling Pattern** | Orchestrator bottleneck mitigation | Not publicly verified |
-| **Runtime Support** | 3+ (OpenCode, Claude, Copilot) | Not publicly verified |
+| **Runtime Support** | 4+ (OpenCode, Copilot, Claude, Codex) | Not publicly verified |
 | **Learning Curve** | Steep (protocol-heavy) | Not publicly verified |
 | **Community** | Small (internal) | Not publicly verified |
 | **Best For** | Quality + audit trail | Not publicly verified |

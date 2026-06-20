@@ -105,6 +105,10 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "Orchestrator-only" in agents_doc
     assert "does not implement user tasks itself" in agents_doc
     assert "~/.agentic-engineers/codex/{session-id}/queue/" in agents_doc
+    assert "expected_handback" not in agents_doc
+    assert "semicolon-separated tasks" in agents_doc
+    assert "spawn independent tasks in parallel" in agents_doc.lower()
+    assert "same-file edits coordinated" in agents_doc
 
     config = (rendered_codex / "config.toml").read_text(encoding="utf-8")
     assert 'sandbox_mode = "workspace-write"' in config
@@ -119,6 +123,10 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "Delegate Prefix" in profile
     assert "multi_agent = true" in profile
     assert "does not implement user tasks itself" in profile
+    assert "expected_handback" not in profile
+    assert "semicolon-separated tasks" in profile
+    assert "spawn independent tasks in parallel" in profile.lower()
+    assert "same-file edits coordinated" in profile
 
 
 def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
