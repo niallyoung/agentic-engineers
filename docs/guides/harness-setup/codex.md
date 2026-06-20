@@ -23,11 +23,11 @@ When you run `make install-codex`, the renderer installs user-scoped Codex confi
 - `~/.codex/config.toml` - Codex defaults when no foreign user config exists
 - `~/.codex/agentic-engineers-orchestrator.config.toml` - startup profile for Orchestrator mode
 - `~/.codex/agents/*.toml` - Codex custom agent definitions
-- `~/.agents/skills/*` - Codex-discoverable agent skills
+- `~/.codex/skills/*` - Codex-discoverable agent skills
 - `~/.agentic-engineers/codex/{session-id}/queue/` - Codex queue workspace for DELEGATE/HANDBACK handoffs
 
 Repository-scoped `.codex/config.toml`, `.codex/agents/*.toml`, and
-`.agents/skills` remain valid Codex locations, but the first agentic-engineers
+`.codex/skills` remain valid Codex locations, but the first agentic-engineers
 renderer path is user-scoped to match the existing global harness installers.
 
 ## Installation

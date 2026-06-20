@@ -6,7 +6,7 @@ Codex-native surfaces used by this renderer:
   - ~/.codex/config.toml
   - ~/.codex/agentic-engineers-orchestrator.config.toml
   - ~/.codex/agents/*.toml
-  - ~/.agents/skills/<skill>/SKILL.md
+  - ~/.codex/skills/<skill>/SKILL.md
 
 The renderer is marker-aware and refuses to overwrite foreign user files.
 """
@@ -244,7 +244,8 @@ def copy_skill(src: Path, dst: Path) -> None:
         shutil.rmtree(dst)
 
     def ignore(_dir: str, names: list[str]) -> set[str]:
-        return {name for name in names if name in {".git", ".DS_Store", "__pycache__"}}
+        ignored = {".git", ".DS_Store", "__pycache__", ".coverage", ".pytest_cache"}
+        return {name for name in names if name in ignored or name.endswith(".pyc")}
 
     shutil.copytree(src, dst, ignore=ignore)
     (dst / SKILL_MARKER).write_text("managed by agentic-engineers render-codex.py\n", encoding="utf-8")
@@ -693,7 +694,7 @@ def main(argv: list[str] | None = None) -> int:
     skills_root = (
         Path(args.skills_root).expanduser().resolve()
         if args.skills_root
-        else codex_home.parent / ".agents" / "skills"
+        else codex_home / "skills"
     )
 
     for warning in warn_on_local_only_codex_skills(repo_root, skills_root):

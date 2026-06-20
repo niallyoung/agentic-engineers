@@ -48,14 +48,14 @@ Install output:
   config.toml or agentic-engineers.config.toml
   agentic-engineers-orchestrator.config.toml
   agents/*.toml
-~/.agents/skills/
+  skills/
   */SKILL.md
 ```
 
 The renderer is marker-aware:
 
 - agent manifest: `.codex/agents/.agentic-engine-codex`
-- skill marker: `.agents/skills/<skill>/.agentic-engine-codex`
+- skill marker: `.codex/skills/<skill>/.agentic-engine-codex`
 - foreign `config.toml` is preserved; a managed `agentic-engineers.config.toml`
   reference is written instead.
 

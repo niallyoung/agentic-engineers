@@ -52,7 +52,7 @@ help:
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-pi          Install π.dev harness → ~/.pi/"
 	@echo "  install-opencode    Install agents & skills → ~/.config/opencode/ (OpenCode-compatible)"
-	@echo "  install-codex       Install Codex agents/config → ~/.codex/ and skills → ~/.agents/skills/"
+	@echo "  install-codex       Install Codex agents/config → ~/.codex/ and skills → ~/.codex/skills/"
 	@echo ""
 	@echo "Uninstall targets:"
 	@echo "  uninstall-claude    Remove from ~/.claude/  (managed only)"
@@ -520,10 +520,10 @@ install-opencode: ## Install agents & skills → ~/.config/opencode/ (marker-awa
 	@echo "  Skills are automatically discovered via skill tool."
 	@echo "  Global rules in ~/.config/opencode/AGENTS.md"
 
-install-codex: ## Install Codex agents/config → ~/.codex/ and skills → ~/.agents/skills/ (marker-aware)
-	@echo "📦 Installing Codex agents + config → $(DESTDIR)/.codex/ and skills → $(DESTDIR)/.agents/skills/ (marker-aware)..."
-	@mkdir -p "$(DESTDIR)/.codex" "$(DESTDIR)/.agents/skills"
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(DESTDIR)/.codex" --skills-root "$(DESTDIR)/.agents/skills"
+install-codex: ## Install Codex agents/config → ~/.codex/ and skills → ~/.codex/skills/ (marker-aware)
+	@echo "📦 Installing Codex agents + config → $(DESTDIR)/.codex/ and skills → $(DESTDIR)/.codex/skills/ (marker-aware)..."
+	@mkdir -p "$(DESTDIR)/.codex" "$(DESTDIR)/.codex/skills"
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(DESTDIR)/.codex" --skills-root "$(DESTDIR)/.codex/skills"
 	@echo "✅ Installation to $(DESTDIR)/.codex/ complete"
 	@echo ""
 	@echo "ℹ️  To use the Codex harness:"
@@ -544,9 +544,9 @@ uninstall-opencode: ## Remove agentic-engineers from ~/.config/opencode/ (manage
 	@echo "🧹 Uninstalling from $(DESTDIR)/.config/opencode/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(DESTDIR)/.config/opencode" --uninstall
 
-uninstall-codex: ## Remove agentic-engineers from ~/.codex/ and ~/.agents/skills/ (managed only; honors DESTDIR)
-	@echo "🧹 Uninstalling from $(DESTDIR)/.codex/ and $(DESTDIR)/.agents/skills/..."
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(DESTDIR)/.codex" --skills-root "$(DESTDIR)/.agents/skills" --uninstall
+uninstall-codex: ## Remove agentic-engineers from ~/.codex/ (managed only; honors DESTDIR)
+	@echo "🧹 Uninstalling from $(DESTDIR)/.codex/..."
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(DESTDIR)/.codex" --skills-root "$(DESTDIR)/.codex/skills" --uninstall
 
 render-pi: ## Generate dist/pi/ config (π.dev harness)
 	@echo "🔨 Rendering π.dev harness configuration → dist/pi/..."
@@ -627,5 +627,5 @@ status: ## Check installation status (all supported harnesses)
 	@echo "📋 Installation status for ~/.config/opencode/:"
 	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
 	@echo ""
-	@echo "📋 Installation status for ~/.codex/ and ~/.agents/skills/:"
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(HOME)/.codex" --skills-root "$(HOME)/.agents/skills" --status
+	@echo "📋 Installation status for ~/.codex/:"
+	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(HOME)/.codex" --skills-root "$(HOME)/.codex/skills" --status

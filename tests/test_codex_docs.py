@@ -20,13 +20,15 @@ def test_codex_docs_use_explicit_install_language():
         assert "initial rollout" not in text
         assert "join default `make install`" not in text
         assert "make install-codex" in text
+    for path in DOC_FILES[0:2]:
+        text = path.read_text(encoding="utf-8")
+        assert "~/.agents/skills" not in text
 
 
 def test_codex_docs_keep_opt_in_language():
     codex_setup = (REPO_ROOT / "docs" / "guides" / "harness-setup" / "codex.md").read_text(
         encoding="utf-8"
     )
-    handoff = (REPO_ROOT / "docs" / "CODEX-RENDERER-HANDOFF.md").read_text(encoding="utf-8")
 
     assert "Supported, opt-in install" in codex_setup
-    assert "opt-in install path" in handoff
+    assert "~/.codex/skills" in codex_setup

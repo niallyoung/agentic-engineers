@@ -145,7 +145,7 @@ renderer/
 | Claude Code | `agents/<name>.md` | `skills/<name>/SKILL.md` | – |
 | OpenCode | `agents/<name>.md` (mode/model/temp) | `skills/<name>/SKILL.md` | `opencode.jsonc`, `AGENTS.md` |
 | π.dev | `agent/SYSTEM.md` | – | `agent/settings.json`, `pi.yml` |
-| Codex | `agents/<name>.toml` | `~/.agents/skills/<name>/SKILL.md` | `config.toml`, `AGENTS.md` |
+| Codex | `agents/<name>.toml` | `~/.codex/skills/<name>/SKILL.md` | `config.toml`, `AGENTS.md` |
 
 ---
 
@@ -213,7 +213,7 @@ User invokes skill tool
 | `make install-claude` | Claude Code agents + skills | `~/.claude/` |
 | `make install-opencode` | OpenCode agents + skills | `~/.config/opencode/` |
 | `make install-pi` | π.dev config | `~/.pi/` |
-| `make install-codex` | Codex agents/config + skills | `~/.codex/` and `~/.agents/skills/` |
+| `make install-codex` | Codex agents/config + skills | `~/.codex/` and `~/.codex/skills/` |
 | `make install` | Default harness set | default harness homes |
 
 ### Validation targets

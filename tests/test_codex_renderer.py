@@ -1,7 +1,7 @@
 """Codex renderer integration tests.
 
 These tests exercise the Codex harness without touching the user's real
-~/.codex or ~/.agents directories.
+~/.codex directory.
 """
 
 from __future__ import annotations
@@ -156,7 +156,7 @@ def test_install_codex_honors_destdir_and_skill_root(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
 
     codex_home = tmp_path / ".codex"
-    skills_root = tmp_path / ".agents" / "skills"
+    skills_root = tmp_path / ".codex" / "skills"
     assert codex_home.is_dir()
     assert skills_root.is_dir()
     assert (codex_home / "agentic-engineers-orchestrator.config.toml").is_file()
@@ -181,7 +181,7 @@ def test_reinstall_preserves_foreign_codex_files(tmp_path):
     assert first.returncode == 0, first.stdout + first.stderr
 
     codex_home = tmp_path / ".codex"
-    skills_root = tmp_path / ".agents" / "skills"
+    skills_root = tmp_path / ".codex" / "skills"
     foreign_agent = codex_home / "agents" / "user-agent.toml"
     foreign_agent.write_text(
         'name = "user-agent"\ndescription = "foreign"\ndeveloper_instructions = "stay"\n',
@@ -224,7 +224,7 @@ def test_foreign_orchestrator_profile_is_preserved_and_fails_validation(tmp_path
         str(REPO_ROOT),
         str(codex_home),
         "--skills-root",
-        str(tmp_path / ".agents" / "skills"),
+        str(tmp_path / ".codex" / "skills"),
         "--validate",
     )
     assert validate.returncode == 1
@@ -238,7 +238,7 @@ def test_uninstall_codex_removes_managed_only(tmp_path):
     assert install.returncode == 0, install.stdout + install.stderr
 
     codex_home = tmp_path / ".codex"
-    skills_root = tmp_path / ".agents" / "skills"
+    skills_root = tmp_path / ".codex" / "skills"
     foreign_agent = codex_home / "agents" / "user-agent.toml"
     foreign_agent.write_text(
         'name = "user-agent"\ndescription = "foreign"\ndeveloper_instructions = "stay"\n',

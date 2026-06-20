@@ -338,7 +338,7 @@ install_harness() {
                         return 1
                     fi
                     if [ "$harness" = "codex" ]; then
-                        local skills_dir="${DEST_ROOT}/.agents/skills"
+                        local skills_dir="${DEST_ROOT}/.codex/skills"
                         local skills_backup="${skills_dir}.${TIMESTAMP}"
                         if ! backup_dir "codex skills" "$skills_dir" "$skills_backup"; then
                             rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
@@ -355,7 +355,7 @@ install_harness() {
                     return 1
                 fi
                 if [ "$harness" = "codex" ]; then
-                    local skills_dir="${DEST_ROOT}/.agents/skills"
+                    local skills_dir="${DEST_ROOT}/.codex/skills"
                     local skills_backup="${skills_dir}.${TIMESTAMP}"
                     if ! backup_dir "codex skills" "$skills_dir" "$skills_backup"; then
                         rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
@@ -392,7 +392,7 @@ install_harness() {
         # failed install does not leave the user with no harness config.
         rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
         if [ "$harness" = "codex" ]; then
-            rollback_dir "${DEST_ROOT}/.agents/skills" "$LAST_SKILLS_BACKUP_DIR"
+            rollback_dir "${DEST_ROOT}/.codex/skills" "$LAST_SKILLS_BACKUP_DIR"
         fi
         return 1
     fi
