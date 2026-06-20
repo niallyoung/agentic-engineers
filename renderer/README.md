@@ -80,7 +80,7 @@ renderer/
 ### Codex Renderer
 
 **What**: Renders agentic-engineers custom agents, skills, and config for Codex
-**How**: `make render-codex` or `make install-codex`
+**How**: `make render-codex` for `dist/codex/`, or `make install-codex` for the explicit Codex install path
 **Where**: `src/agents/` → `~/.codex/agents/`; `src/skills/` → `~/.agents/skills/`
 
 Codex custom agents are TOML files and are spawned only when explicitly

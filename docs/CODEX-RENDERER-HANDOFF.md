@@ -5,7 +5,8 @@ Branch: `feature/codex-renderer`
 
 ## Status
 
-Initial Codex harness support is implemented behind explicit targets:
+Codex harness support is implemented behind explicit targets and remains an
+opt-in install path:
 
 - `make render-codex`
 - `make install-codex`
@@ -13,8 +14,8 @@ Initial Codex harness support is implemented behind explicit targets:
 - `make validate-codex`
 
 `make render-all` now includes Codex render output. `make install` still installs
-the existing default harness set only (`claude`, `copilot`, `pi`, `opencode`) so
-we do not unexpectedly write to a user's `~/.codex` during the first rollout.
+the existing default harness set only (`claude`, `copilot`, `pi`, `opencode`),
+while `make install-codex` keeps Codex explicit and workspace-managed.
 
 The second pass adds a native Codex startup profile:
 
@@ -128,10 +129,7 @@ Notes:
    independent work in parallel, waits for HANDBACK-style results, then
    synthesizes a final status.
 
-4. Decide whether Codex should join default `make install` after a real-user
-   install pass validates that foreign config preservation is comfortable.
-
-5. Broaden legacy matrix tests only after making Codex part of the default
+4. Broaden legacy matrix tests only if Codex becomes part of the default
    all-harness contract. Tests currently hard-code the four default harnesses in
    places such as install correctness, backup harnesses, and workflow matrix
    sizing.
