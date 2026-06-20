@@ -69,73 +69,13 @@ See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
 
 ## Architecture at a Glance
 
-```
-       ┌─────────────────────────────────────────────────────────────┐
-       │                    AGENTIC-ENGINEERS                         │
-       │              Framework & Multi-Harness System                │
-       └─────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-                          ┌──────────────────┐
-                          │  make install    │
-                          │  (per harness)   │
-                          └──────────────────┘
-                  /           │           │           \
-              ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-              │ OpenCode│ │ Copilot │ │ Claude  │ │ Codex   │ │   Pi    │
-              │ Config  │ │ Config  │ │ Config  │ │ Config  │ │ Config  │
-              └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
-                  │           │           │           │
-                  └───────────┼───────────┼───────────┼───────────┘
-                              ▼
-                     ┌────────────────────┐
-                     │ Invoke your harness│
-                     │ claude|copilot|codex│
-                     │ opencode|pi        │
-                     └────────────────────┘
-```
+![Architecture at a Glance](docs/assets/readme-architecture-at-a-glance.png)
 
 **Framework → Configure → Deploy → Invoke.** Each harness installs customized agents, skills, and routing logic for its provider.
 
 ### How It Works
 
-```
-   ┌─────────────────┐
-   │  YOUR TASK      │
-   └────────┬────────┘
-            │
-            ▼
-   ┌──────────────────────────┐
-   │   ORCHESTRATOR Agent     │
-   │ (Haiku 4.5 / gpt-5.4-mini │
-   │        • Routing)         │
-   └────────┬─────────────────┘
-            │ DELEGATE
-            ▼
-   ┌──────────────────────────────────┐
-   │  Specialist Agents (Parallel)    │
-   │  • Engineer (Haiku 4.5 / gpt-5.4-mini)│
-   │  • Lead Eng (Sonnet / gpt-5.5)   │
-   │  • Security Eng (Opus / gpt-5.5) │
-   │  • Model Eng (Sonnet / gpt-5.5)  │
-   └────────┬─────────────────────────┘
-            │ HANDBACK (results + metrics)
-            ▼
-   ┌──────────────────────────────────┐
-   │  Quality Gates & Feedback        │
-   │  → Pass/Fail/Escalate            │
-   │  → Cost tracking                 │
-   │  → Model optimization            │
-   └────────┬─────────────────────────┘
-            │
-            ▼
-   ┌─────────────────┐
-   │  RESULTS        │
-   │  Quality: 94/100│
-   │  Cost: $0.18    │
-   │  Time: 4.2s     │
-   └─────────────────┘
-```
+![How It Works](docs/assets/readme-how-it-works.png)
 
 **Example:**
 ```bash
