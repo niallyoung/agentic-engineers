@@ -64,9 +64,9 @@ See `orchestration/HANDOFF.md` for complete DELEGATE format.
 ### 2. Start the Orchestrator Agent
 
 The **Orchestrator** is a special agent defined in `orchestration/AGENTS.md` that:
-- Auto-detects whether running in Claude or Copilot context
-- Polls the correct queue (`~/.claude/queue/` or `~/.copilot/queue/`)
-- Routes tasks to appropriate agents using AGENTS.md decision tree
+- Auto-detects the harness/session partition
+- Polls the correct queue under `~/.agentic-engineers/{harness}/{session-id}/queue/`
+- Routes tasks to appropriate agents using the AGENTS.md decision tree
 - Delegates work via DELEGATE/HANDBACK protocol
 - Processes results and moves tasks through queue states
 - Captures observability (span data, indexing)
@@ -122,12 +122,12 @@ Once running, the Orchestrator:
 ### 4. Check results
 
 **While Orchestrator is running:**
-- Watch `artifacts/queue/processing/` for active tasks
-- Watch `artifacts/queue/done/` for completed tasks
+- Watch `~/.agentic-engineers/<harness>/<session-id>/queue/processing/` for active tasks
+- Watch `~/.agentic-engineers/<harness>/<session-id>/queue/done/` for completed tasks
 - Check `artifacts/` for generated files (SPAN files, index.json, reports)
 
 **After Orchestrator completes:**
-- Review `artifacts/queue/done/{task_id}-HANDBACK-{role}.yaml`
+- Review `~/.agentic-engineers/<harness>/<session-id>/queue/done/{task_id}-HANDBACK-{role}.yaml`
 - Check generated artifacts (updated specs, reports, code changes)
 - Review `artifacts/index.json` for metrics
 - Commit results: `git add artifacts/ && git commit -m "..."`
@@ -405,11 +405,11 @@ See `docs/SPEC.md` for full architectural constraints.
 
 ## 🚀 TL;DR
 
-1. **Queue a task** → Create DELEGATE YAML in `~/.copilot/queue/{session-id}/incoming/`
+1. **Queue a task** → Create DELEGATE YAML in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
    - Session-id auto-detected from environment or filesystem
 2. **Start Orchestrator** → It polls your session's queue and delegates work
    - Multi-session support: Each session has isolated queue
-3. **Check results** → Review `~/.copilot/queue/{session-id}/done/` and generated files
+3. **Check results** → Review `~/.agentic-engineers/{harness}/{session-id}/queue/done/` and generated files
 4. **Commit** → Add artifacts to git
 
 That's it. Orchestrator handles routing, execution, observability, session isolation, and queue management. Everything is agent-based, auditable, and framework-native.
