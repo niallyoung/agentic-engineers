@@ -144,3 +144,144 @@ def test_session_analysis_save_to_yaml():
 
         assert loaded["session_id"] == "test"
         assert loaded["task_count"] == 5
+
+
+def test_harvest_skill_feedback_empty():
+    """HANDBACKs without skill_feedback -> empty dict."""
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalyzer = getattr(mod, 'SessionAnalyzer')
+
+    analyzer = SessionAnalyzer(session_id="test-session")
+    # Manually set handbacks without skill_feedback
+    analyzer.handbacks = {
+        'task-1': {
+            'task_id': 'task-1',
+            'status': 'success',
+            'output': 'Done',
+            'metrics': {'quality': 0.9, 'tokens': 1000, 'cost': 0.05, 'duration_seconds': 60},
+        },
+        'task-2': {
+            'task_id': 'task-2',
+            'status': 'success',
+            'output': 'Done',
+            'metrics': {'quality': 0.85, 'tokens': 1500, 'cost': 0.07, 'duration_seconds': 90},
+        }
+    }
+
+    feedback_map = analyzer._harvest_skill_feedback()
+    assert isinstance(feedback_map, dict)
+    assert len(feedback_map) == 0
+
+
+def test_harvest_skill_feedback_aggregates_across_tasks():
+    """3 HANDBACKs each with one item -> 3 items under one skill."""
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalyzer = getattr(mod, 'SessionAnalyzer')
+
+    analyzer = SessionAnalyzer(session_id="test-session")
+    analyzer.handbacks = {
+        'task-1': {
+            'task_id': 'task-1',
+            'status': 'success',
+            'output': 'Done',
+            'metrics': {'quality': 0.9, 'tokens': 1000, 'cost': 0.05, 'duration_seconds': 60},
+            'skill_feedback': [
+                {
+                    'skill_name': 'queue-management',
+                    'effectiveness_score': 0.85,
+                }
+            ]
+        },
+        'task-2': {
+            'task_id': 'task-2',
+            'status': 'success',
+            'output': 'Done',
+            'metrics': {'quality': 0.85, 'tokens': 1500, 'cost': 0.07, 'duration_seconds': 90},
+            'skill_feedback': [
+                {
+                    'skill_name': 'queue-management',
+                    'effectiveness_score': 0.80,
+                }
+            ]
+        },
+        'task-3': {
+            'task_id': 'task-3',
+            'status': 'success',
+            'output': 'Done',
+            'metrics': {'quality': 0.88, 'tokens': 2000, 'cost': 0.10, 'duration_seconds': 120},
+            'skill_feedback': [
+                {
+                    'skill_name': 'queue-management',
+                    'effectiveness_score': 0.90,
+                }
+            ]
+        }
+    }
+
+    feedback_map = analyzer._harvest_skill_feedback()
+    assert 'queue-management' in feedback_map
+    assert len(feedback_map['queue-management']) == 3
+    # Items should include task_id
+    for item in feedback_map['queue-management']:
+        assert 'task_id' in item
+
+
+def test_skill_improvement_recommendations_threshold():
+    """3+ items -> P0 recommendation; 2 items -> P1."""
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalyzer = getattr(mod, 'SessionAnalyzer')
+
+    analyzer = SessionAnalyzer(session_id="test-session")
+
+    # Create feedback map: one skill with 3 items (P0), one with 2 items (P1)
+    feedback_map = {
+        'queue-management': [
+            {'skill_name': 'queue-management', 'effectiveness_score': 0.85, 'task_id': 'task-1'},
+            {'skill_name': 'queue-management', 'effectiveness_score': 0.80, 'task_id': 'task-2'},
+            {'skill_name': 'queue-management', 'effectiveness_score': 0.90, 'task_id': 'task-3'},
+        ],
+        'protocol-validator': [
+            {'skill_name': 'protocol-validator', 'effectiveness_score': 0.75, 'task_id': 'task-1'},
+            {'skill_name': 'protocol-validator', 'effectiveness_score': 0.85, 'task_id': 'task-2'},
+        ]
+    }
+
+    recommendations = analyzer._generate_skill_improvement_recommendations(feedback_map)
+
+    # Should have at least 2 recommendations (P0 for queue-management, P1 for protocol-validator)
+    assert len(recommendations) >= 2
+
+    # Find P0 recommendations
+    p0_recs = [r for r in recommendations if r.priority == 'P0']
+
+    # queue-management (3 items) should be P0
+    queue_p0 = [r for r in p0_recs if 'queue-management' in r.title.lower()]
+    assert len(queue_p0) > 0
+
+
+def test_skill_feedback_in_session_analysis_output():
+    """analyze_session() with seeded HANDBACKs includes skill_feedback_summary."""
+    mod = importlib.import_module('session-analyzer.scripts.session_analyzer')
+    SessionAnalyzer = getattr(mod, 'SessionAnalyzer')
+
+    analyzer = SessionAnalyzer(session_id="test-session")
+    analyzer.handbacks = {
+        'task-1': {
+            'task_id': 'task-1',
+            'status': 'success',
+            'output': 'Done',
+            'metrics': {'quality': 0.9, 'tokens': 1000, 'cost': 0.05, 'duration_seconds': 60},
+            'skill_feedback': [
+                {
+                    'skill_name': 'queue-management',
+                    'effectiveness_score': 0.85,
+                }
+            ]
+        }
+    }
+
+    result = analyzer.analyze_session()
+
+    # result should include skill_feedback_summary
+    assert hasattr(result, 'skill_feedback_summary')
+    assert isinstance(result.skill_feedback_summary, dict)

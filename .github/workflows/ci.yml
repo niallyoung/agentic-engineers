@@ -75,6 +75,7 @@ jobs:
 
       - name: "Gate 1: SKILL.md frontmatter compliance"
         # Validates every active skill has the required SKILL.md structure.
+        # Now also validates that ## Self-Improvement section is present.
         # Warnings are reported but do not fail CI; only errors fail the build.
         # Phase 5.2 will enforce --strict once non-conforming skills are fixed.
         run: |

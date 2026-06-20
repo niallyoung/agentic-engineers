@@ -17,6 +17,7 @@ import os
 import pytest
 
 # Wave 2 baselines — update only via SPEC change + QE sign-off
+# Updated for Stream 4 skill-feedback tests (~16 new tests)
 BASELINES = {
     "opencode_harness": {
         "path": "tests/harnesses/opencode/",
@@ -35,7 +36,7 @@ BASELINES = {
     },
     "full_suite": {
         "path": "tests/",
-        "minimum": 4925,
+        "minimum": 5254,
         "label": "Full test suite",
     },
 }
