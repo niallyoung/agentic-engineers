@@ -138,6 +138,19 @@ def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
     assert f'model = "{role_models["security_engineer"]["providers"]["codex"]}"' in security_agent
 
 
+def test_render_codex_validate_checks_agents_contract(rendered_codex):
+    validate = run(
+        sys.executable,
+        str(RENDERER),
+        str(REPO_ROOT),
+        str(rendered_codex),
+        "--skills-root",
+        str(rendered_codex / "skills"),
+        "--validate",
+    )
+    assert validate.returncode == 0, validate.stdout + validate.stderr
+
+
 def test_install_codex_honors_destdir_and_skill_root(tmp_path):
     result = run("make", "install-codex", f"DESTDIR={tmp_path}", "BACKUP=never", timeout=240)
     assert result.returncode == 0, result.stdout + result.stderr

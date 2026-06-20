@@ -631,6 +631,16 @@ job_max_runtime_seconds = 1800
                 errors.append(f"{path.name} uses deprecated Codex model")
         if not (self.codex_home / "AGENTS.md").is_file():
             errors.append("missing AGENTS.md")
+        else:
+            agents_doc = (self.codex_home / "AGENTS.md").read_text(encoding="utf-8")
+            for required in (
+                "Agentic Engineers Framework - Codex Integration",
+                "Orchestrator-only",
+                "Delegate Prefix",
+                "~/.agentic-engineers/codex/{session-id}/queue/",
+            ):
+                if required not in agents_doc:
+                    errors.append(f"AGENTS.md missing {required}")
         profile_path = self.codex_home / f"{ORCHESTRATOR_PROFILE}.config.toml"
         if not profile_path.is_file():
             errors.append(f"missing {ORCHESTRATOR_PROFILE}.config.toml")
