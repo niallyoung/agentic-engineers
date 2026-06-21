@@ -90,6 +90,19 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ---
 
+## Key Features
+
+- **🎯 Queue-Based Orchestration** — Centralized task routing via DELEGATE/HANDBACK protocol
+- **⚖️ Multi-Tier Model Selection** — Haiku for execution, Sonnet for planning, Opus for architecture
+- **✅ Quality Gates (3 Layers)** — DELEGATE structure, task routing, HANDBACK validation
+- **📊 Real-Time Metrics** — Token tracking, quality scores, cost per task
+- **🔄 Self-Improving Feedback Loops** — Model Engineer optimizes routing based on metrics
+- **🌐 Multi-Harness Support** — OpenCode, Copilot, Claude, π.dev, Codex
+- **🔐 Security by Default** — Opus-tier Security Engineer for threat modeling
+- **📚 Comprehensive Documentation** — Protocol specs, guides, troubleshooting
+
+---
+
 ## Quick Start
 
 ### Installation (Choose Your Harness)
@@ -163,30 +176,15 @@ The orchestrator will:
 
 ### Extend the Framework
 
-Add new agents or skills to customize the framework for your needs:
+Customize the framework by delegating agent and skill creation:
 
 ```bash
-# Create a new agent role
-python3 scripts/agent-creator.py --role "data-engineer" --model "claude-sonnet-4.6" --effort high
+delegate: create me a new 'data engineer' role with model claude-sonnet-4.6, effort level high, and skills for data processing, SQL optimization, and warehouse management
 
-# Create a new skill
-python3 scripts/skill-creator.py --name "database-migration" --category "infrastructure"
+delegate: create a new skill called 'database-migration' in the infrastructure category with functionality for schema versioning, migration state tracking, and rollback support
 ```
 
-See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/guides/skill-creation.md](docs/guides/skill-creation.md) for detailed guides.
-
----
-
-## Key Features
-
-- **🎯 Queue-Based Orchestration** — Centralized task routing via DELEGATE/HANDBACK protocol
-- **⚖️ Multi-Tier Model Selection** — Haiku for execution, Sonnet for planning, Opus for architecture
-- **✅ Quality Gates (3 Layers)** — DELEGATE structure, task routing, HANDBACK validation
-- **📊 Real-Time Metrics** — Token tracking, quality scores, cost per task
-- **🔄 Self-Improving Feedback Loops** — Model Engineer optimizes routing based on metrics
-- **🌐 Multi-Harness Support** — OpenCode, Copilot, Claude, π.dev, Codex
-- **🔐 Security by Default** — Opus-tier Security Engineer for threat modeling
-- **📚 Comprehensive Documentation** — Protocol specs, guides, troubleshooting
+See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/guides/skill-creation.md](docs/guides/skill-creation.md) for detailed specifications.
 
 ---
 
