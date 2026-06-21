@@ -166,9 +166,9 @@ def test_agents_md_table_effort_never_blank():
 USER_SKILL_FILES = sorted(SRC_SKILLS.glob("*/SKILL.md"))
 
 
-def test_26_user_skill_files_present():
-    assert len(USER_SKILL_FILES) == 26, (
-        f"Expected 26 user-facing src/skills/*/SKILL.md, found "
+def test_27_user_skill_files_present():
+    assert len(USER_SKILL_FILES) == 27, (
+        f"Expected 27 user-facing src/skills/*/SKILL.md, found "
         f"{len(USER_SKILL_FILES)}: {[p.parent.name for p in USER_SKILL_FILES]}"
     )
 

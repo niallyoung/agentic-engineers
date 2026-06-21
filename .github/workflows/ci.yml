@@ -2,13 +2,9 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -132,7 +128,7 @@ jobs:
   auto-tag:
     name: Auto-Tag (Semantic Versioning)
     needs: quality-gate
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write

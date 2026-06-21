@@ -215,6 +215,10 @@ before writing the new one. Two important caveats:
 To preview without writing to your home dir, render to `dist/` instead:
 `make render-claude` (and friends) produce the exact files under `dist/<harness>/`.
 
+### Git Hooks for Enforcement
+
+This framework uses git hooks (`.githooks/`) to enforce protocol compliance and quality standards at commit time. The hooks validate DELEGATE/HANDBACK structure, check for secret leaks, and verify SPEC changes before they're committed. During CI, the quality gate re-installs hooks to ensure the same checks run in the pipeline. Future work (Phase 5.3) will enable transferring core, reusable hooks (credential checks, secret scanning) to other repositories.
+
 ---
 
 ## Key Benefits & Discoveries

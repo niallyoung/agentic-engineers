@@ -951,3 +951,41 @@ via the P1 self-improvement round (PR #57, merged to main 2026-06-13):**
   The two sibling DELEGATEs (queue-staleness-detection, spec-queue-sla-design) were 
   superseded by #57's staleness monitoring modules and archived to `queue/done/` with 
   audit metadata on 2026-06-13.
+
+---
+
+## Phase 5.3: Git Hooks Reuse Strategy (Future Work)
+
+**Status:** Planning  
+**Ticket:** GH-68 (implied from CI/workflow fixes)  
+**Rationale:** Framework uses git hooks (.githooks/) for enforcement (pre-commit, commit-msg, post-merge, pre-push) to validate protocol compliance and prevent credential leaks. These hooks are framework-specific, but some core capabilities could be extracted and transferred to user application repos.
+
+### Categorized Hook Reuse Strategy
+
+**1. Core Hooks (Transferable to Any Repo)**
+- [ ] **credential-check** — Detects embedded tokens/secrets in commits
+- [ ] **secret-scanning** — GPG-based pre-push validation
+- [ ] **basic-linting** — Common style/formatting checks (optional, best-effort)
+- **Rationale:** These are generic security/quality tools that add value to any project
+- **Installation:** CLI tool `agentic-engineers export-hooks --category core --dest <repo>`
+
+**2. Agentic-Engineers Meta Hooks (Framework-Only)**
+- [ ] **protocol-validator** — Validates DELEGATE/HANDBACK YAML structure
+- [ ] **skill-compliance** — Checks SKILL.md frontmatter + standards
+- [ ] **queue-checks** — Verifies queue state machine transitions
+- [ ] **spec-protection** — Enforces spec-management access control
+- **Rationale:** These enforce framework-specific rules and should not be installed outside this repo
+- **Installation:** No export; stays internal to framework
+
+**3. Implementation Strategy**
+- [ ] **Audit Phase:** Identify which pre-commit, post-merge, pre-push rules are general-purpose vs. meta-only
+- [ ] **CLI Design:** Add `agentic-engineers export-hooks --category <core|meta|all> --dest <path>`
+- [ ] **Testing:** Verify hook portability and integration with existing CI (GitHub Actions, GitLab CI, etc.)
+- [ ] **Documentation:** Create docs/guides/git-hooks-reuse.md with:
+  - What each hook does
+  - How to install in application repos
+  - Hook dependency graph
+  - Troubleshooting guide
+- [ ] **Phase Timeline:** Post-Phase I (Standards Compliance); coordinate with harness feature releases
+
+**Target Docs Location:** `docs/guides/git-hooks-reuse.md` (placeholder for Phase 5.3)
