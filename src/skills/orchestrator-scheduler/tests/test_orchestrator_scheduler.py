@@ -5,11 +5,16 @@ import pytest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
-# Import after path setup
+# Import after path setup — use importlib to handle the hyphenated directory name.
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+import importlib.util
 
-from skills.orchestrator_scheduler.scripts.orchestrator_scheduler import OrchestratorScheduler
+_skill_root = Path(__file__).parent.parent
+_script_path = _skill_root / "scripts" / "orchestrator_scheduler.py"
+_spec = importlib.util.spec_from_file_location("orchestrator_scheduler", _script_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+OrchestratorScheduler = _mod.OrchestratorScheduler
 
 
 class TestSessionDetection:
@@ -71,25 +76,21 @@ class TestSchedulerInitialization:
 class TestSchedulerRun:
     """Test queue polling execution."""
 
-    @patch('sys.path.insert')
-    def test_run_loads_orchestrator_skill(self, mock_insert):
+    def test_run_loads_orchestrator_skill(self):
         """Should lazy-load OrchestratorSkill on first run."""
         with patch.dict(os.environ, {'CLAUDE_SESSION_ID': 'test-session'}):
             scheduler = OrchestratorScheduler()
 
-            # Mock the OrchestratorSkill
+            # Mock the OrchestratorSkill pre-injected (bypasses lazy-import machinery)
             mock_orch = MagicMock()
             mock_orch.poll_queue.return_value = (2, 0)
+            scheduler.orchestrator = mock_orch
 
-            with patch('builtins.__import__') as mock_import:
-                # Don't actually import, just mock it
-                scheduler.orchestrator = mock_orch
+            processed, failed = scheduler.run()
 
-                processed, failed = scheduler.run()
-
-                assert processed == 2
-                assert failed == 0
-                mock_orch.poll_queue.assert_called_once()
+            assert processed == 2
+            assert failed == 0
+            mock_orch.poll_queue.assert_called_once()
 
     def test_run_handles_tuple_return(self):
         """Should handle tuple return from poll_queue."""

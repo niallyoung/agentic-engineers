@@ -1,7 +1,7 @@
 """
 Span Capture for the Claude Code harness.
 
-Captures OpenTelemetry-style spans from harness operations (dispatch, render,
+Captures structured span records from harness operations (dispatch, render,
 validation) and writes them as newline-delimited JSON for observability.
 
 Usage::

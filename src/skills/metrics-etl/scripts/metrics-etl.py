@@ -1,12 +1,11 @@
 """
-Metrics ETL Pipeline — Aggregate token metrics for dashboard visualization
+Metrics ETL Pipeline — Aggregate token metrics for analysis
 
-Reads metrics from ~/.claude/metrics/ and aggregates into Prometheus-format
-metrics suitable for Grafana dashboards.
+Reads metrics from ~/.claude/metrics/ and aggregates into JSON format
+for local analysis and reporting.
 
 Usage:
     ./metrics-etl.py --aggregate [--days 7]
-    ./metrics-etl.py --export prometheus [--output metrics.txt]
     ./metrics-etl.py --export json [--output metrics.json]
 """
 
@@ -17,11 +16,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Any, Dict, List
-
-PROMETHEUS_FORMAT = """# HELP {name} {help}
-# TYPE {name} gauge
-{metric_lines}
-"""
 
 
 class MetricsETL:
@@ -96,68 +90,9 @@ class MetricsETL:
 
         return dict(self.aggregated)
 
-    def export_prometheus_format(self) -> str:
-        """Export aggregated metrics in Prometheus format."""
-        lines = []
-        timestamp_ms = int(datetime.now().timestamp() * 1000)
-
-        for date, data in sorted(self.aggregated.items()):
-            unix_ts = int(
-                datetime.strptime(date, "%Y-%m-%d").timestamp()
-            )  # Prometheus timestamp
-
-            # Total tokens
-            lines.append(
-                f'tokens_total{{date="{date}"}} {data["total_tokens"]} {unix_ts * 1000}'
-            )
-
-            # Total cost
-            lines.append(
-                f'cost_total{{date="{date}"}} {data["total_cost"]:.4f} {unix_ts * 1000}'
-            )
-
-            # Average quality
-            lines.append(
-                f'quality_avg{{date="{date}"}} {data["avg_quality"]:.2f} {unix_ts * 1000}'
-            )
-
-            # Role breakdown
-            for role, role_data in data.get("role_breakdown", {}).items():
-                lines.append(
-                    f'tokens_by_role{{date="{date}",role="{role}"}} '
-                    f'{role_data["tokens"]} {unix_ts * 1000}'
-                )
-                lines.append(
-                    f'cost_by_role{{date="{date}",role="{role}"}} '
-                    f'{role_data["cost"]:.4f} {unix_ts * 1000}'
-                )
-
-            # Model breakdown
-            for model, model_data in data.get("model_breakdown", {}).items():
-                lines.append(
-                    f'tokens_by_model{{date="{date}",model="{model}"}} '
-                    f'{model_data["tokens"]} {unix_ts * 1000}'
-                )
-
-        return "\n".join(lines)
-
     def export_json_format(self) -> str:
         """Export aggregated metrics as JSON."""
         return json.dumps(self.aggregated, indent=2, default=str)
-
-    def export_grafana_datasource(self) -> Dict[str, Any]:
-        """Generate Grafana datasource configuration."""
-        return {
-            "name": "Agentic Engineers Metrics",
-            "type": "prometheus",
-            "url": "http://prometheus:9090",
-            "access": "proxy",
-            "isDefault": True,
-            "jsonData": {
-                "keepCookies": [],
-                "timeInterval": "1m",
-            },
-        }
 
 
 def main():
@@ -180,7 +115,7 @@ def main():
     )
     parser.add_argument(
         "--export",
-        choices=["prometheus", "json"],
+        choices=["json"],
         help="Export format",
     )
     parser.add_argument(
@@ -200,9 +135,7 @@ def main():
     etl.aggregate_metrics(args.days)
 
     # Export
-    if args.export == "prometheus":
-        output = etl.export_prometheus_format()
-    elif args.export == "json":
+    if args.export == "json":
         output = etl.export_json_format()
     else:
         # Default: show aggregated data summary

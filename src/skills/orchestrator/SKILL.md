@@ -289,10 +289,10 @@ Metadata:   {task_id}.meta.json (claimed_at, retry_count, last_error)
 
 ### `capture_span(method_name: str, **attrs) -> None`
 
-**Purpose:** Write OpenTelemetry SPAN file for observability.
+**Purpose:** Write structured SPAN file for observability.
 
 **Behavior:**
-1. Create SPAN dict:
+1. Create structured span dict:
    ```json
    {
      "span_name": "orchestrator-{method_name}",
@@ -435,7 +435,7 @@ pytest src/skills/orchestrator/tests/
 
 ## Observability
 
-All operations write OpenTelemetry SPAN files to the queue's `spans/` directory for:
+All operations write structured SPAN files to the queue's `spans/` directory for:
 - Latency measurement
 - Error tracking
 - Cost aggregation

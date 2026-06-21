@@ -29,38 +29,46 @@ class AuditReporter:
         """
         summary = self.auditor.get_summary_statistics()
         lines = []
-        
+
         # Header
         lines.append("# Skills Audit Report")
         lines.append("")
         lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         lines.append(f"**Total Skills Audited:** {summary.get('total_skills', 0)}")
         lines.append("")
-        
+
         # Executive Summary
         lines.extend(self._generate_executive_summary(summary))
         lines.append("")
-        
+
         # Category Breakdown
         lines.extend(self._generate_category_breakdown(summary))
         lines.append("")
-        
+
         # Dimension Analysis
         lines.extend(self._generate_dimension_analysis(summary))
         lines.append("")
-        
+
         # Skills Needing Improvement
         lines.extend(self._generate_improvement_needed(summary))
         lines.append("")
-        
+
         # Individual Skill Scorecards
         lines.extend(self._generate_scorecards())
         lines.append("")
-        
+
+        # Redundancy Clusters (cross-skill overlap analysis)
+        lines.extend(self._generate_redundancy_clusters())
+        lines.append("")
+
+        # _Meta Skills Audit
+        lines.extend(self._generate_meta_skills_audit(output_path))
+        lines.append("")
+
         # Recommendations
         lines.extend(self._generate_recommendations())
         lines.append("")
-        
+
         # Audit Methodology
         lines.extend(self._generate_methodology())
         
@@ -338,6 +346,160 @@ class AuditReporter:
             lines.append("---")
             lines.append("")
         
+        return lines
+
+    def _generate_redundancy_clusters(self) -> List[str]:
+        """Identify skill clusters with overlapping responsibilities.
+
+        Returns:
+            List of markdown lines
+        """
+        lines = []
+        lines.append("## Redundancy Clusters")
+        lines.append("")
+        lines.append(
+            "Skills with overlapping purposes that are candidates for "
+            "consolidation, deprecation, or clearer separation of concerns."
+        )
+        lines.append("")
+
+        # Static cluster definitions derived from framework inventory analysis.
+        # These reflect known overlap areas; update as the skill roster evolves.
+        clusters = [
+            {
+                "name": "Cost / Token Analytics",
+                "skills": ["tokenadvisor", "usage-tracking", "cost-aggregation", "metrics-etl"],
+                "overlap": (
+                    "All four skills deal with token/cost measurement. "
+                    "`cost-aggregation` is the best-tested and most complete; "
+                    "`tokenadvisor` and `metrics-etl` have zero tests and limited scope."
+                ),
+                "recommendation": (
+                    "Consolidate `tokenadvisor` and `metrics-etl` into "
+                    "`cost-aggregation`. Retain `usage-tracking` for real-time "
+                    "session-scoped shell-based capture."
+                ),
+            },
+            {
+                "name": "Queue Operations",
+                "skills": ["queue-management", "queue-query", "queue-monitor", "queue-todo-sync"],
+                "overlap": (
+                    "`queue-management` (131 tests) covers atomic operations and full "
+                    "lifecycle. `queue-query`, `queue-monitor`, and `queue-todo-sync` "
+                    "each address a narrow slice already reachable via `queue-management`."
+                ),
+                "recommendation": (
+                    "Evaluate whether `queue-query` and `queue-monitor` can be "
+                    "thin wrappers or sub-commands of `queue-management` rather "
+                    "than independent skills."
+                ),
+            },
+            {
+                "name": "Protocol / Spec Validation",
+                "skills": ["protocol-validator", "spec-validator", "consistency-checker"],
+                "overlap": (
+                    "All three validate aspects of the DELEGATE/HANDBACK protocol and "
+                    "SPEC.md compliance. `consistency-checker` (21 tests) performs "
+                    "cross-queue validation; `protocol-validator` (55 tests) validates "
+                    "individual messages; `spec-validator` (3 tests) validates SPEC.md "
+                    "structure."
+                ),
+                "recommendation": (
+                    "Boundaries are reasonably distinct. Improve `spec-validator` "
+                    "test coverage to ≥20 tests. Document the layered validation "
+                    "model to prevent future duplication."
+                ),
+            },
+        ]
+
+        for cluster in clusters:
+            present = [s for s in cluster["skills"] if s in self.scorecards]
+            lines.append(f"### Cluster: {cluster['name']}")
+            lines.append("")
+            lines.append(f"**Skills:** {', '.join(cluster['skills'])}")
+            lines.append(f"**Present in inventory:** {', '.join(present) if present else 'none'}")
+            lines.append("")
+            lines.append(f"**Overlap:** {cluster['overlap']}")
+            lines.append("")
+            lines.append(f"**Recommendation:** {cluster['recommendation']}")
+            lines.append("")
+
+        return lines
+
+    def _generate_meta_skills_audit(self, output_path: Path) -> List[str]:
+        """Audit _meta (governance / infrastructure) skills.
+
+        Args:
+            output_path: Used to derive the repo root.
+
+        Returns:
+            List of markdown lines
+        """
+        lines = []
+        lines.append("## _Meta Skills Audit")
+        lines.append("")
+        lines.append(
+            "Governance and infrastructure skills live under `src/skills/_meta/`. "
+            "They are not user-facing and are excluded from the main skills roster, "
+            "but require their own health assessment."
+        )
+        lines.append("")
+
+        # Derive _meta directory relative to the report output path.
+        # output_path is typically docs/archive/audits/SKILLS-AUDIT.md so
+        # repo_root is 3 levels up.
+        try:
+            repo_root = output_path.resolve().parents[3]
+            meta_dir = repo_root / "src" / "skills" / "_meta"
+        except IndexError:
+            meta_dir = Path("/nonexistent")
+
+        if not meta_dir.is_dir():
+            lines.append("_Meta skills directory not found. Skipping.")
+            return lines
+
+        # Enumerate _meta skills (directories containing SKILL.md).
+        meta_skills = sorted(
+            d.name for d in meta_dir.iterdir()
+            if d.is_dir() and (d / "SKILL.md").exists()
+        )
+
+        if not meta_skills:
+            lines.append("No SKILL.md files found in `_meta/`. Nothing to report.")
+            return lines
+
+        lines.append(f"**Total _Meta Skills:** {len(meta_skills)}")
+        lines.append("")
+
+        # Per-skill summary: name, tests present?, scripts present?
+        lines.append("| Skill | Scripts | Tests | SKILL.md |")
+        lines.append("|-------|---------|-------|----------|")
+        for name in meta_skills:
+            skill_path = meta_dir / name
+            has_scripts = (skill_path / "scripts").is_dir()
+            has_tests = (skill_path / "tests").is_dir()
+            lines.append(
+                f"| {name} "
+                f"| {'Yes' if has_scripts else 'No'} "
+                f"| {'Yes' if has_tests else 'No'} "
+                f"| Yes |"
+            )
+        lines.append("")
+
+        # Summary counts
+        with_tests = sum(
+            1 for n in meta_skills
+            if (meta_dir / n / "tests").is_dir()
+        )
+        lines.append(f"**Skills with test directories:** {with_tests}/{len(meta_skills)}")
+        lines.append("")
+        lines.append(
+            "**Recommendation:** Each _meta skill should have at least one test "
+            "covering its primary behaviour. Skills lacking a `tests/` directory "
+            "are audit gaps."
+        )
+        lines.append("")
+
         return lines
 
     def _generate_recommendations(self) -> List[str]:

@@ -249,7 +249,7 @@ Load all session tasks and their DELEGATE/HANDBACK artifacts.
 Get cost and token metrics for each task.
 
 ### With metrics-etl
-Get OpenTelemetry spans for duration and performance analysis.
+Get structured span records for duration and performance analysis.
 
 ---
 
@@ -289,7 +289,7 @@ Coverage target: ≥85% line coverage
 - `docs/DELEGATE-HANDBACK-protocol.md` — DELEGATE/HANDBACK schema
 - `skills/queue-query/` — Load session tasks
 - `skills/usage-tracking/` — Token and cost metrics
-- `skills/metrics-etl/` — OpenTelemetry spans
+- `skills/metrics-etl/` — Structured span records
 - `docs/AGENTS.md` — Agent routing
 
 ---

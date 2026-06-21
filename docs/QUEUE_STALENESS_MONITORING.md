@@ -149,7 +149,7 @@ STALE TASK ESCALATED: task-001 in processing/ (age=610s, threshold=600s)
 
 ## Observability
 
-Staleness events are emitted as OpenTelemetry spans:
+Staleness events are emitted as structured span records:
 
 ### Alert Span
 

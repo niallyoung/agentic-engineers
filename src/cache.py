@@ -27,12 +27,12 @@ class CacheBackendError(Exception):
 
 
 # ---------------------------------------------------------------------------
-# Metrics stub (replaced by real Prometheus counters in production)
+# Metrics stub (local metrics tracking only)
 # ---------------------------------------------------------------------------
 
 
 class _Counter:
-    """Minimal counter compatible with the prometheus_client Counter API."""
+    """In-memory counter for local metrics tracking."""
 
     def __init__(self) -> None:
         self._value: float = 0.0
@@ -47,7 +47,7 @@ class _Counter:
 
 @dataclass
 class CacheMetrics:
-    """Prometheus-compatible counters for cache observability."""
+    """In-process counters for cache observability."""
 
     hits: _Counter = field(default_factory=_Counter)
     misses: _Counter = field(default_factory=_Counter)
@@ -267,7 +267,7 @@ class RedisBackend(_CacheBackend):
 class CacheManager:
     """
     High-level caching facade with namespace isolation, JSON serialisation,
-    automatic fallback to LRU, and Prometheus-compatible metrics.
+    automatic fallback to LRU, and in-process metrics.
 
     Parameters
     ----------

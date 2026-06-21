@@ -422,7 +422,7 @@ Apply the routing decision tree in order, stopping at first match:
 
 ---
 
-### SKILL: Span Capture (OpenTelemetry Observability)
+### SKILL: Span Capture (Custom span format Observability)
 
 **Trigger:** When Orchestrator receives and processes HANDBACK from any agent.
 
@@ -442,7 +442,7 @@ Apply the routing decision tree in order, stopping at first match:
    - decision = inferred from status and next routing (complete → QE, blocked → escalate, etc.)
    - severity = inferred from status (complete → none, partial → medium, blocked → high)
 
-3. **Create SPAN** with OpenTelemetry schema:
+3. **Create SPAN** with custom span schema:
    - trace_id: unique identifier for this task's execution chain (reuse same trace_id if same task spawns multiple agents)
    - span_id: unique identifier for this agent's work (generated UUID or hash)
    - parent_span_id: trace_id of DELEGATE (if exists)
@@ -466,13 +466,13 @@ Apply the routing decision tree in order, stopping at first match:
    - Path: `artifacts/YYYY-MM-DD/SPAN-{timestamp}-{agent_role}.yaml`
    - Use date from task_id (e.g., 2026-05-02 from task_id 2026-05-02-fix-auth-timeout)
    - Use timestamp = current time (ISO 8601, seconds precision) in filename
-   - Format: YAML with OpenTelemetry schema (human-readable for debugging)
+   - Format: YAML with custom span schema (human-readable for debugging)
 
 5. **Optional (async, low priority):** Request Model Engineer to regenerate `artifacts/index.json`
    - This enables cost tracking and trend analysis
 
 **Success Criteria:**
-- Every completed task has a corresponding SPAN file (100% capture rate)
+- Every completed task has a corresponding structured span record file (100% capture rate)
 - SPAN attributes are accurate (cost calculation verified, tokens match HANDBACK)
 - SPAN files are archived and queryable (Model Engineer can read and analyze)
 - No performance impact on Orchestrator (span capture is <1ms overhead)
@@ -585,7 +585,7 @@ Orchestrator executes this cycle every 30-60 seconds:
 2. Poll processing/ → for each HANDBACK:
    ├─ Validate format
    ├─ Extract metadata
-   ├─ Capture SPAN (OpenTelemetry)
+   ├─ Capture structured span record
    └─ Route to QE or escalation path
 
 3. Poll done/ → for each decision:
@@ -674,7 +674,7 @@ Each cycle is independent; tasks progress through queues asynchronously. No bloc
      - decision: PROCEED / REWORK / ESCALATE
      - confidence (0.0–1.0)
    - Extract metadata: cost, token count, severity
-   - Capture SPAN (OpenTelemetry format) for observability
+   - Capture structured span record for observability
    - Route to next step based on decision
 
 **Error Handling:**

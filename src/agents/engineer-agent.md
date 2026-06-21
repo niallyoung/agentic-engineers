@@ -86,7 +86,7 @@ PROCESS:
      ---
      ```
 
-  7. WRITE OpenTelemetry span
+  7. WRITE structured span
      - span_name: "engineer-execution"
      - attributes: tokens, quality_score, task_type, duration
 ```
