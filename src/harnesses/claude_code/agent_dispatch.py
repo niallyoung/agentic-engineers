@@ -27,9 +27,12 @@ Usage::
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +200,7 @@ class AgentDispatch:
                 f"Agent '{agent}' has a pinned model ({pinned_model}); "
                 "effort-level routing bypassed."
             )
-            return DispatchResult(
+            result = DispatchResult(
                 agent=agent,
                 model=pinned_model,
                 tier=tier,
@@ -206,6 +209,10 @@ class AgentDispatch:
                 explanation=explanation,
                 metadata=metadata or {},
             )
+            logger.info(
+                f"route() -> agent={agent} effort={effort} model={pinned_model} tier={tier.value} pinned=True"
+            )
+            return result
 
         # Complexity-based routing.
         effort_key = (effort or "low").lower()
@@ -218,7 +225,7 @@ class AgentDispatch:
         if task_description:
             explanation += f" Task: {task_description[:80]}"
 
-        return DispatchResult(
+        result = DispatchResult(
             agent=agent,
             model=model,
             tier=tier,
@@ -227,6 +234,10 @@ class AgentDispatch:
             explanation=explanation,
             metadata=metadata or {},
         )
+        logger.info(
+            f"route() -> agent={agent} effort={effort_key} model={model} tier={tier.value} pinned=False"
+        )
+        return result
 
     def route_batch(
         self, tasks: List[Dict[str, Any]]
@@ -248,6 +259,7 @@ class AgentDispatch:
                 metadata=task.get("metadata"),
             )
             results.append(result)
+        logger.info(f"route_batch() processed {len(results)} tasks")
         return results
 
     def available_agents(self) -> List[str]:
@@ -307,11 +319,14 @@ class AgentDispatch:
                 result = self.route(agent=agent, effort=effort)
                 if result.success and result.model:
                     passed += 1
+                    logger.debug(f"measure_delegation_success: PASS {agent}/{effort}")
                 else:
                     failed += 1
+                    logger.debug(f"measure_delegation_success: FAIL {agent}/{effort} - no model resolved")
                     failures.append(f"{agent}/{effort}: no model resolved")
             except Exception as exc:
                 failed += 1
+                logger.debug(f"measure_delegation_success: FAIL {agent}/{effort} - {exc}")
                 failures.append(f"{agent}/{effort}: {exc}")
 
         total = passed + failed

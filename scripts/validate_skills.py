@@ -50,6 +50,7 @@ ACTIVE_SKILLS: List[str] = [
     "file-sync",
     "queue-todo-sync",
     "model-engineer",
+    "skill-improvement-feedback",
 ]
 
 # Required top-level frontmatter keys
@@ -83,7 +84,7 @@ ALLOWED_EFFORTS = {"low", "medium", "high"}
 ALLOWED_CATEGORIES = {
     "orchestration", "validation", "monitoring", "optimization", "observability",
     "scaffolding", "integration", "queue", "metrics", "maintenance",
-    "hygiene", "management", "security", "task-management",
+    "hygiene", "management", "security", "task-management", "meta-skill",
 }
 
 
@@ -137,6 +138,27 @@ def _get_value(frontmatter: str, key: str, *, indent: int = 0) -> Optional[str]:
         rf"{prefix}{re.escape(key)}:\s*(.+)$", frontmatter, re.MULTILINE
     )
     return m.group(1).strip() if m else None
+
+
+def _check_self_improvement_section(skill_dir: Path) -> Optional[str]:
+    """Check if skill's SKILL.md has ## Self-Improvement section.
+
+    Returns a warning string if the section is missing, None if present or
+    if SKILL.md doesn't exist.
+    """
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.exists():
+        return None
+
+    try:
+        content = skill_md.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    if "## Self-Improvement" not in content:
+        return "SKILL.md missing ## Self-Improvement section"
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +238,11 @@ def audit_skill(skill_name: str) -> SkillAuditResult:
         result.warnings.append(
             f"metadata.category {category_val!r} not in allowed set {sorted(ALLOWED_CATEGORIES)}"
         )
+
+    # 6. Check for ## Self-Improvement section
+    self_improvement_warning = _check_self_improvement_section(skill_dir)
+    if self_improvement_warning:
+        result.warnings.append(self_improvement_warning)
 
     return result
 

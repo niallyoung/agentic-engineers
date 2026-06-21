@@ -334,54 +334,47 @@ grep -i "metrics\|write\|permission" /opt/orchestrator/logs/automation-*.log
 
 ---
 
-### Issue 7: "Health check endpoint not responding"
+### Issue 7: "Service appears unresponsive"
 
 **Symptoms:**
 ```
-curl: (7) Failed to connect to localhost port 9090
-Health check endpoint not found
+No new tasks being processed
+Logs seem stale
 ```
 
 **Causes:**
-- Health check disabled (`HEALTH_CHECK_PORT=0`)
-- Port blocked by firewall
 - Process crashed
-- Port already in use
+- Polling loop stuck
+- Queue directory permissions
+- Polling interval too long
 
 **Solutions:**
 
 ```bash
-# 1. Check health check configuration
-grep HEALTH_CHECK_PORT /opt/orchestrator/.env
+# 1. Check process is running
+ps aux | grep run-automation-controller.sh
 
-# 2. Enable health check if disabled
-echo "HEALTH_CHECK_PORT=9090" >> /opt/orchestrator/.env
+# 2. Check if logs are current
+ls -lt /opt/orchestrator/logs/automation-*.log | head -1
+date && tail -5 /opt/orchestrator/logs/automation-*.log
 
-# 3. Check if port is listening
-netstat -tuln | grep 9090
-# or
-lsof -i :9090
+# 3. Check queue directory permissions
+ls -la /opt/orchestrator/data/queue/
 
-# 4. Check if port is in use by something else
-ps aux | grep 9090
+# 4. Check for recent errors in logs
+grep -i "error\|exception\|traceback" /opt/orchestrator/logs/automation-*.log | tail -10
 
-# 5. Try different port
-HEALTH_CHECK_PORT=9091 ./bin/run-automation-controller.sh
+# 5. Restart the service
+sudo systemctl restart orchestrator-automation.service
 
-# 6. Check firewall rules
-sudo ufw allow 9090/tcp
-
-# 7. Test from localhost
-curl -v http://127.0.0.1:9090/health
-
-# 8. Check for errors in logs
-grep -i "health\|endpoint\|server" /opt/orchestrator/logs/automation-*.log
+# 6. Check systemd journal for startup issues
+sudo journalctl -u orchestrator-automation.service -n 50
 ```
 
 **Prevention:**
-- Verify port 9090 is available before deployment
-- Configure firewall to allow monitoring traffic
-- Document port requirements
+- Monitor log file timestamps regularly
+- Set up systemd auto-restart on failure
+- Configure appropriate polling intervals
 
 ---
 

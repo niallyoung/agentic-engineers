@@ -922,7 +922,6 @@ See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness chec
 
 **Deferred Phases:**
 - **Phase 5:** External memory-API infrastructure (REST/GraphQL backend)
-- **Phase 6:** Metrics aggregation & observability (Prometheus + Grafana)
 
 ---
 

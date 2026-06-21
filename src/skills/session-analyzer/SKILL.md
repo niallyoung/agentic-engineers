@@ -28,7 +28,7 @@ metadata:
 ## Overview
 
 **session-analyzer** reads session transcripts and queue artifacts to identify
-automation candidates, quality issues, and process patterns. It analyzes:
+automation candidates, quality issues, and process patterns. It examines:
 
 - **Session DELEGATEs** — What work was requested (scope, effort, success criteria)
 - **Session HANDBACKs** — What was delivered (status, quality scores, metrics)
@@ -40,8 +40,8 @@ automation candidates, quality issues, and process patterns. It analyzes:
 
 **Why it matters:**
 
-- **Automation discovery** — Flagging repetitive manual work prevents process drift
-- **Quality monitoring** — Identifying low-confidence tasks drives agent routing improvements
+- **Automation discovery** — Flagging repetitive manual work helps prevent process drift
+- **Quality monitoring** — Identifying low-confidence tasks improves agent routing
 - **Cost visibility** — Session-level cost analysis enables budget management
 - **Process self-improvement** — Framework learns what should become skills
 
@@ -249,7 +249,7 @@ Load all session tasks and their DELEGATE/HANDBACK artifacts.
 Get cost and token metrics for each task.
 
 ### With metrics-etl
-Get OpenTelemetry spans for duration and performance analysis.
+Get structured span records for duration and performance analysis.
 
 ---
 
@@ -289,7 +289,7 @@ Coverage target: ≥85% line coverage
 - `docs/DELEGATE-HANDBACK-protocol.md` — DELEGATE/HANDBACK schema
 - `skills/queue-query/` — Load session tasks
 - `skills/usage-tracking/` — Token and cost metrics
-- `skills/metrics-etl/` — OpenTelemetry spans
+- `skills/metrics-etl/` — Structured span records
 - `docs/AGENTS.md` — Agent routing
 
 ---
@@ -301,3 +301,28 @@ Coverage target: ≥85% line coverage
 - Integration with queue-query, usage-tracking, metrics-etl
 - Session-level cost analysis and recommendations
 - Effort mismatch detection
+
+## Self-Improvement
+
+We aim for **session-analyzer** to feel like a knowledgeable colleague rather than a rulebook. If any section felt prescriptive rather than guiding, a `tone_note` in your feedback helps us improve it.
+
+This skill participates in the framework's continuous improvement cycle
+(see [`skill-improvement-feedback`](../skill-improvement-feedback/SKILL.md)).
+
+When you use **session-analyzer** during a task, include a `skill_feedback` entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: session-analyzer
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

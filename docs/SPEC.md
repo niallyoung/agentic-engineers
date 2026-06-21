@@ -86,7 +86,7 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
    - Structured format is machine-readable for metrics and span capture
 
 4. **Implement SPAN CAPTURE**
-   - When Orchestrator receives HANDBACK from any agent, capture OpenTelemetry span
+   - When Orchestrator receives HANDBACK from any agent, capture structured span record
    - Extract: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
    - Write SPAN to `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
    - This is the ONLY observability mechanism; no external logging or monitoring
@@ -350,7 +350,7 @@ This constraint is non-negotiable. No legacy scripts, cron jobs, or autonomous p
 ### What Changed in Phase 5.10
 
 **Span Capture (Observability):**
-- Orchestrator captures OpenTelemetry spans when receiving HANDBACKs from agents
+- Orchestrator captures structured span records when receiving HANDBACKs from agents
 - Extracts: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
 - Writes SPAN files to: `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
 - SPAN includes: trace_id, span_id, duration_ms, cost_usd, status, decision, confidence
@@ -1156,7 +1156,7 @@ Runs continuously in harness. Polls queues every 30-60 seconds.
 1. Extract: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
 2. Calculate: duration_ms = end_time - start_time
 3. Calculate: cost_usd = tokens × model pricing
-4. Create SPAN with OpenTelemetry attributes:
+4. Create SPAN with structured span record attributes:
    - trace_id, span_id, parent_span_id
    - span_name (e.g., "agent.engineer.execution")
    - start_time, end_time, duration_ms
@@ -1254,7 +1254,7 @@ Span capture is **built into agent SKILLS**, not external utilities:
 2. **Model Engineer SKILL:** Generates `artifacts/index.json` as part of feedback analysis
 3. **Agents:** Continue normal workflow (receive DELEGATE → execute → return HANDBACK with token counts)
 
-### Span Attributes (OpenTelemetry Schema)
+### Span Attributes (Structured span record schema)
 
 ```yaml
 handoff_type: SPAN
@@ -1383,7 +1383,7 @@ All agents are defined with detailed workflows:
 ## Observability & Monitoring (Phase 5.10)
 
 ### Span Capture
-- Orchestrator captures OpenTelemetry spans for every agent execution
+- Orchestrator captures structured span records for every agent execution
 - Spans stored in `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
 - Includes: duration, cost, tokens, status, decision, severity, confidence
 
@@ -1484,7 +1484,7 @@ See `docs/SDLC-HOOKS.md` for comprehensive hook documentation including:
 | DELEGATE Creation | Orchestrator | Per HANDOFF.md format | ✅ Active |
 | Agent Execution | All Agents | Per SKILLS.md workflows | ✅ Active |
 | HANDBACK Processing | Orchestrator | Metric collection + QE routing | ✅ Active |
-| Span Capture | Orchestrator SKILL | OpenTelemetry format to SPAN files | ✅ Phase 5.10 |
+| Span Capture | Orchestrator SKILL | Custom span format to SPAN files | ✅ Phase 5.10 |
 | Artifact Indexing | Model Engineer SKILL | Generate artifacts/index.json | ✅ Phase 5.10 |
 | Cost Optimization | Model Engineer | Feedback analysis + ranking | ✅ Active |
 | Escalation Handling | Orchestrator + Lead Engineer | Per decision tree + unblock | ✅ Active |
@@ -1583,7 +1583,6 @@ For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITO
 1. **Continuous polling loop** with signal handling (via Orchestrator SKILL)
 2. **4 deployment scenarios** — standalone, systemd, Docker, Kubernetes
 3. **Health monitoring** — queue state visibility, stuck task detection
-4. **Metrics export** — Prometheus-compatible metrics for Grafana dashboards
 
 ### Implementation
 

@@ -41,7 +41,7 @@
 | [ENTRYPOINT.md](ENTRYPOINT.md) | Standard execution model |
 | [DELEGATE-HANDBACK-QUALITY-GATES.md](DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gate implementation |
 | [SELF-REFERENTIAL-WORKFLOW.md](SELF-REFERENTIAL-WORKFLOW.md) | Self-improvement patterns |
-| [SPAN-CAPTURE-INTEGRATION.md](SPAN-CAPTURE-INTEGRATION.md) | OpenTelemetry integration |
+| [SPAN-CAPTURE-INTEGRATION.md](SPAN-CAPTURE-INTEGRATION.md) | Structured span record integration |
 
 ---
 

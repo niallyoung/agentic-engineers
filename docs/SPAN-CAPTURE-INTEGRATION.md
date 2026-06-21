@@ -1,6 +1,6 @@
 ---
 name: Span Capture Integration (AGENTS + SKILLS)
-description: How OpenTelemetry spans are captured via SKILLS, not external scripts
+description: How structured span records are captured via SKILLS, not external scripts
 created: 2026-05-02
 type: specification
 ---
@@ -40,7 +40,7 @@ Orchestrator receives HANDBACK
   │  ├─ total_tokens = tokens_in + tokens_out
   │  └─ trace_id (generated at start, reused across parallel agents)
   │
-  ├─ Create SPAN YAML with OpenTelemetry schema:
+  ├─ Create SPAN YAML with custom span schema:
   │  ├─ trace_id, span_id, parent_span_id
   │  ├─ span_name (e.g., "agent.engineer.execution")
   │  ├─ start_time, end_time, duration_ms
@@ -101,13 +101,13 @@ Model Engineer (agent) runs periodically (as part of feedback loop)
 
 ---
 
-## Span Format (OpenTelemetry Compliant)
+## Span Format (Custom span schema)
 
 Orchestrator writes spans in `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`:
 
 ```yaml
 ---
-# OpenTelemetry Span (written by Orchestrator)
+# Structured span record (written by Orchestrator)
 trace_id: "abc123def456ghi789jkl"
   # Unique per quality-gate workflow; reused for parallel agents
 span_id: "engineer-2026-05-02-fix-timeout"
@@ -152,12 +152,10 @@ attributes:
   decision: "PASS"
   recommended_action: "proceed"
   
-  # OpenTelemetry Standard
-  otel.status_code: 0  # 0=Ok, 1=Error, 2=Deadline_Exceeded
-  otel.status_description: ""
+  # Structured span record status
+  status_code: 0  # 0=Ok, 1=Error, 2=Deadline_Exceeded
+  status_description: ""
 ```
-
-See `orchestration/telemetry/otel-schema.md` for full specification.
 
 ---
 
@@ -236,7 +234,7 @@ When calculating cost in span attributes, use model-specific pricing:
   - [ ] Extract task_id, agent_role, agent_model from HANDBACK
   - [ ] Record start_time (when DELEGATE sent) and end_time (when HANDBACK received)
   - [ ] Calculate duration_ms, cost_usd
-  - [ ] Create SPAN YAML with OpenTelemetry attributes
+  - [ ] Create SPAN YAML with custom span record attributes
   - [ ] Write to artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml
   
 - [ ] Model Engineer code: Generate index.json
@@ -255,7 +253,7 @@ When calculating cost in span attributes, use model-specific pricing:
 2. **DELEGATE/HANDBACK untouched** — agents don't need to know about spans
 3. **Orchestrator writes spans** — observability is harness responsibility
 4. **Model Engineer owns index** — cost analysis is feedback loop responsibility
-5. **OpenTelemetry compliant** — enables future Bedrock migration
+5. **Custom span format** — structured records for consistent observability
 
 ---
 
@@ -263,6 +261,5 @@ When calculating cost in span attributes, use model-specific pricing:
 
 - `orchestration/AGENTS.md` — Role definitions (unchanged)
 - `orchestration/SKILLS.md` — Agent workflows (Orchestrator + Model Engineer updated)
-- `orchestration/telemetry/otel-schema.md` — Span format specification
 - `QUEUE-PROTOCOL.md` — Queue mechanics (unchanged)
 

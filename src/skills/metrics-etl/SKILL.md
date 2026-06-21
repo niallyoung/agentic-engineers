@@ -1,6 +1,6 @@
 ---
 name: metrics-etl
-description: Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. Use for continuous metrics collection and visualization across all automation agents.
+description: DEPRECATED — This skill is no longer maintained. Prometheus and Grafana infrastructure was never implemented. Use local JSON metrics analysis instead.
 license: Proprietary
 compatibility: Designed for agentic-engineers framework
 metadata:
@@ -8,53 +8,52 @@ metadata:
   version: "1.0"
   category: monitoring
   role: orchestrator
+  status: deprecated
   schedule: "0 * * * *"
 ---
 
-## Overview
+## DEPRECATED
 
-Metrics ETL aggregates metrics from daily logs and transforms them to Prometheus format for Grafana visualization. Silent background job (no voice notifications).
+This skill is no longer maintained. External infrastructure (Prometheus + Grafana) described here was never built and has been removed.
 
-**What it does:**
-1. Aggregates metrics from daily logs
-2. Transforms to Prometheus format
-3. Exports for dashboard visualization
-4. Maintains time-series data for trends
-5. Compresses old data (30-day retention)
+**Use instead:**
+- Local JSON metrics in `~/.claude/metrics/`
+- Direct analysis via scripts in `operations/`
 
-## Invocation
+## Deprecation Notice
 
-### Manual Run
-```bash
-python scripts/metrics-etl.py --aggregate --days 7
-python scripts/metrics-etl.py --export prometheus --output metrics.txt
-python scripts/metrics-etl.py --export json --output metrics.json
-```
+**This skill is no longer maintained.**
 
-### Automated (Cron)
-Hourly (every hour on the hour) via `orchestration/config/metrics-etl.cron`
+The infrastructure it was designed to support (Prometheus + Grafana dashboards) was never implemented. 
 
-```bash
-0 * * * * cd <project-root> && python agentic-engineers/skills/metrics-etl/scripts/metrics-etl.py --aggregate --days 7
-```
-
-## Voice Notifications
-
-**None** — Silent background job, no voice alerts.
-
-## Configuration
-
-- **Metrics source:** `agentic-engineers/data/metrics/`
-- **Prometheus output:** `agentic-engineers/data/prometheus/metrics.txt`
-- **JSON output:** `agentic-engineers/data/metrics-daily.json`
-- **Retention:** 30 days (auto-cleanup)
-
-## Integration
-
-**Input:** Daily task metrics  
-**Output:** Prometheus format for Grafana scraping  
-**Dashboards:** Token Burn, Model Performance, Quality Gates, Cost Optimization, A/B Testing
+For metrics analysis, use:
+- Local JSON files in `~/.claude/metrics/`
+- Direct Python analysis scripts
+- Manual reporting via scripts in `operations/`
 
 ## Scripts
 
 - `metrics-etl.py` — Main ETL pipeline (pure data transformation, no AI model)
+
+## Self-Improvement
+
+This skill participates in the framework's continuous improvement cycle
+(see [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md)).
+
+When you use **metrics-etl** during a task, include a skill_feedback entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: metrics-etl
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

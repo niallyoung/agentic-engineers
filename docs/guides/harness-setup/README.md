@@ -8,7 +8,7 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 |---------|-------------|----------|--------|
 | [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | GitHub Copilot | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
-| Claude Code | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
+| [Claude Code](claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
 | [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Supported, opt-in install |
 | π.dev | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
 
@@ -23,6 +23,16 @@ make install
 This runs the default harness renderers (OpenCode, Copilot, Claude, and π.dev). Use `make install-codex` separately for Codex.
 
 Each installer writes only to its own harness config root: `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.pi/`, or `~/.codex/` via `make install-codex`.
+
+### Install Claude Code (Interactive Development)
+
+For interactive development and rapid prototyping with Claude Code IDE:
+
+```bash
+make install-claude
+```
+
+This configures Claude Code with agent definitions, skills, and the DELEGATE/HANDBACK protocol. Configuration is installed to `~/.claude/`.
 
 ### Install Specific Harness
 
@@ -79,8 +89,12 @@ See the [Troubleshooting Guide](../troubleshooting.md) for common issues and fix
 |-------|---------|-----|
 | Queue directories not found | OpenCode | `mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}` |
 | Model not recognized | Copilot CLI | Verify `copilot --version` is ≥2.0.0 |
-| System prompt not loaded | Claude Code | Run `make install-claude` |
+| Agent not found | Claude Code | Run `make install-claude` or see [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md) |
 | Events not firing | π.dev | Check `~/.pi/agent/extensions/` for handler files |
+
+**Harness-Specific Guides:**
+- [OpenCode Troubleshooting](../../HARNESS-OPENCODE-TROUBLESHOOTING.md)
+- [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md)
 
 ## Quality Gates
 

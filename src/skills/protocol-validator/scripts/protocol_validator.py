@@ -56,7 +56,7 @@ VALID_EFFORTS = {'low', 'medium', 'high'}
 # Forward-compatible additions accepted at runtime before the canonical spec
 # update lands elsewhere in the repo.
 KNOWN_DELEGATE_RUNTIME_FIELDS = {'token_quota'}
-KNOWN_HANDBACK_RUNTIME_FIELDS = {'token_usage'}
+KNOWN_HANDBACK_RUNTIME_FIELDS = {'token_usage', 'skill_feedback'}
 
 # ---------------------------------------------------------------------------
 # Enum drift detection
@@ -591,6 +591,18 @@ class ExtensionValidator:
 
         if 'children_results' in handback and not isinstance(handback['children_results'], dict):
             errors.append("children_results: must be an object")
+
+        # Note: skill_feedback validation is deliberately loose (non-blocking).
+        # Malformed feedback will not cause HANDBACK validation to fail, allowing
+        # agents to include partial/incomplete feedback without breaking the protocol.
+        # The feedback loop handles structural issues gracefully.
+        if 'skill_feedback' in handback:
+            feedback = handback['skill_feedback']
+            # Only validate structure if present; don't fail on missing/invalid fields
+            if isinstance(feedback, list):
+                # Feedback is present and is an array - acceptable regardless of contents
+                pass
+            # If not a list, we silently accept it anyway (loose validation)
 
         return (len(errors) == 0, errors)
 

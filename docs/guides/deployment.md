@@ -71,12 +71,10 @@ sudo chmod +x /opt/orchestrator/bin/run-automation-controller.sh
 # Create queue directories
 mkdir -p /opt/orchestrator/data/queue/{incoming,done}
 mkdir -p /opt/orchestrator/logs
-mkdir -p /opt/orchestrator/metrics
 
 # Set permissions
 chmod 755 /opt/orchestrator/data/queue/{incoming,done}
 chmod 755 /opt/orchestrator/logs
-chmod 755 /opt/orchestrator/metrics
 ```
 
 ### 3. Configure Environment
@@ -195,9 +193,9 @@ USER orchestrator
 # Set entrypoint
 ENTRYPOINT ["/opt/orchestrator/bin/run-automation-controller.sh"]
 
-# Health check
+# Health check (monitors log output)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:9090/health || exit 1
+    CMD test -n "$(find /opt/orchestrator/logs -name 'automation-*.log' -mmin -1)" || exit 1
 ```
 
 Build and run:
@@ -210,10 +208,8 @@ docker run -d \
   --name orchestrator-automation \
   -v /opt/queue:/opt/orchestrator/data/queue \
   -v /opt/logs:/opt/orchestrator/logs \
-  -v /opt/metrics:/opt/orchestrator/metrics \
   -e POLL_INTERVAL_SECONDS=5 \
   -e LOG_LEVEL=INFO \
-  -p 9090:9090 \
   orchestrator-automation:latest
 
 # Check logs
@@ -256,23 +252,6 @@ spec:
           mountPath: /opt/orchestrator/data/queue
         - name: logs
           mountPath: /opt/orchestrator/logs
-        - name: metrics
-          mountPath: /opt/orchestrator/metrics
-        ports:
-        - containerPort: 9090
-          name: health
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 9090
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 9090
-          initialDelaySeconds: 5
-          periodSeconds: 10
         resources:
           limits:
             memory: "1Gi"
@@ -287,21 +266,6 @@ spec:
       - name: logs
         hostPath:
           path: /mnt/logs
-      - name: metrics
-        hostPath:
-          path: /mnt/metrics
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: orchestrator-automation
-spec:
-  selector:
-    app: orchestrator-automation
-  ports:
-  - port: 9090
-    targetPort: 9090
-    name: health
 ```
 
 Deploy:
@@ -341,33 +305,17 @@ LOG_LEVEL=DEBUG
 AUTOMATION_MAX_CYCLES=100  # For testing
 ```
 
-### Metrics Configuration
-
-```bash
-# Prometheus format (recommended for monitoring)
-METRICS_FORMAT=prometheus
-
-# Metrics file location
-METRICS_FILE=/var/metrics/automation-metrics.json
-
-# Export metrics regularly
-# Script to periodically copy metrics to monitoring system
-```
-
 ---
 
 ## Monitoring & Observability
 
 ### Health Check Endpoint
 
-The entrypoint script exposes a health check endpoint on port 9090:
+The entrypoint script provides health monitoring capabilities:
 
 ```bash
-# Check health
-curl http://localhost:9090/health
-
-# Get current metrics
-curl http://localhost:9090/metrics
+# Check health status via logs
+tail -f /opt/orchestrator/logs/automation-*.log
 ```
 
 ### Logging
@@ -390,28 +338,13 @@ tail -f /opt/orchestrator/logs/automation-*.log | grep -E "ERROR|WARN"
 
 ### Metrics Collection
 
-Metrics are saved to:
-- **File**: `/opt/orchestrator/metrics/metrics-{timestamp}.json`
+Metrics are collected and stored for analysis:
+- **Directory**: `/opt/orchestrator/metrics/` (for local backup and analysis)
 
-View latest metrics:
+View logs for metrics tracking:
 ```bash
-# Display latest metrics
-cat /opt/orchestrator/metrics/metrics-*.json | python3 -m json.tool | tail -50
-
-# Monitor metrics continuously
-watch -n 5 'cat /opt/orchestrator/metrics/metrics-*.json | python3 -m json.tool | tail -50'
-```
-
-### Prometheus Integration
-
-Add to Prometheus scrape config:
-```yaml
-scrape_configs:
-  - job_name: 'orchestrator-automation'
-    static_configs:
-      - targets: ['localhost:9090']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
+# Monitor metrics via logs
+tail -f /opt/orchestrator/logs/automation-*.log | grep -i metric
 ```
 
 ---
@@ -560,12 +493,6 @@ sudo systemctl status orchestrator-automation.service
 
 # View logs
 sudo journalctl -u orchestrator-automation.service -f
-
-# Check health
-curl http://localhost:9090/health
-
-# View metrics
-curl http://localhost:9090/metrics
 
 # Manual run (useful for debugging)
 cd /opt/orchestrator

@@ -93,21 +93,22 @@ class SessionAnalysis:
     session_start: Optional[str]
     session_end: Optional[str]
     duration_seconds: int
-    
+
     task_count: int
     total_cost: float
     total_tokens: int
     overall_quality: float
-    
+
     tasks_by_agent: Dict[str, int]
     tasks_by_status: Dict[str, int]
     model_performance: Dict[str, Dict[str, Any]]
-    
+
     repetitive_patterns: List[RepetitivePattern] = field(default_factory=list)
     quality_anomalies: List[QualityAnomaly] = field(default_factory=list)
     drift_detection: List[DriftEvent] = field(default_factory=list)
     recommendations: List[Recommendation] = field(default_factory=list)
-    
+    skill_feedback_summary: Dict[str, Any] = field(default_factory=dict)
+
     generated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     generator: str = "session-analyzer v1.0"
     format_version: str = "1.0"
@@ -130,6 +131,7 @@ class SessionAnalysis:
             "quality_anomalies": [asdict(a) for a in self.quality_anomalies],
             "drift_detection": [asdict(d) for d in self.drift_detection],
             "recommendations": [asdict(r) for r in self.recommendations],
+            "skill_feedback_summary": self.skill_feedback_summary,
             "generated_at": self.generated_at,
             "generator": self.generator,
             "format_version": self.format_version,
@@ -161,7 +163,7 @@ class SessionAnalyzer:
     ):
         """
         Initialize analyzer.
-        
+
         Args:
             session_id: Session ID to analyze (e.g., "2026-06-13-session")
             queue_path: Path to queue directory
@@ -174,34 +176,40 @@ class SessionAnalyzer:
     def analyze_session(self) -> SessionAnalysis:
         """
         Run full analysis on session artifacts.
-        
+
         Returns:
             SessionAnalysis with metrics, patterns, anomalies, recommendations
         """
         # 1. Load artifacts
         self._load_artifacts()
-        
+
         if not self.delegates:
             logger.warning(f"No DELEGATEs found for session {self.session_id}")
             # Return empty analysis
             return self._empty_analysis()
-        
+
         # 2. Compute metrics
         metrics = self._compute_metrics()
-        
+
         # 3. Detect patterns
         patterns = self._detect_repetitive_patterns()
-        
+
         # 4. Detect anomalies
         anomalies = self._detect_quality_anomalies()
-        
+
         # 5. Detect drift
         drift = self._detect_drift()
-        
-        # 6. Generate recommendations
+
+        # 6. Harvest skill feedback
+        skill_feedback_map = self._harvest_skill_feedback()
+        skill_feedback_summary = self._compute_skill_feedback_summary(skill_feedback_map)
+
+        # 7. Generate recommendations (including skill-based ones)
         recommendations = self._generate_recommendations(patterns, anomalies, drift)
-        
-        # 7. Assemble analysis
+        skill_recommendations = self._generate_skill_improvement_recommendations(skill_feedback_map)
+        recommendations.extend(skill_recommendations)
+
+        # 8. Assemble analysis
         analysis = SessionAnalysis(
             session_id=self.session_id,
             session_start=self._get_session_start(),
@@ -218,8 +226,9 @@ class SessionAnalyzer:
             quality_anomalies=anomalies,
             drift_detection=drift,
             recommendations=recommendations,
+            skill_feedback_summary=skill_feedback_summary,
         )
-        
+
         return analysis
     
     def _load_artifacts(self) -> None:
@@ -458,11 +467,187 @@ class SessionAnalyzer:
         # This is a simplified implementation
         # In production, would check file timestamps against session window
         drift_events = []
-        
+
         # For now, just log that drift detection is implemented but no drift found
         # (would require file access and timestamp comparison)
-        
+
         return drift_events
+
+    def _harvest_skill_feedback(self) -> Dict[str, List[Dict]]:
+        """
+        Extract skill_feedback from all HANDBACKs and aggregate by skill_name.
+
+        Returns:
+            Dict mapping skill_name -> list of feedback items (with task_id added)
+        """
+        feedback_map: Dict[str, List[Dict]] = {}
+
+        for task_id, handback in self.handbacks.items():
+            skill_feedback = handback.get("skill_feedback", [])
+            if not skill_feedback:
+                continue
+
+            for item in skill_feedback:
+                skill_name = item.get("skill_name")
+                if not skill_name:
+                    continue
+
+                # Add task_id for traceability
+                item_with_context = {**item, "task_id": task_id}
+                feedback_map.setdefault(skill_name, []).append(item_with_context)
+
+        logger.debug(f"Harvested skill feedback for {len(feedback_map)} skills")
+        return feedback_map
+
+    def _compute_skill_feedback_summary(
+        self, feedback_map: Dict[str, List[Dict]]
+    ) -> Dict[str, Any]:
+        """
+        Compute aggregated summary statistics for each skill's feedback.
+
+        Args:
+            feedback_map: Dict mapping skill_name -> list of feedback items
+
+        Returns:
+            Dict with skill_name -> summary stats
+        """
+        summary = {}
+
+        for skill_name, items in feedback_map.items():
+            if not items:
+                continue
+
+            effectiveness_scores = []
+            clarity_scores = []
+            all_gaps = []
+            all_suggestions = []
+            all_tone_notes = []
+
+            for item in items:
+                if "effectiveness_score" in item:
+                    effectiveness_scores.append(item["effectiveness_score"])
+                if "clarity_score" in item:
+                    clarity_scores.append(item["clarity_score"])
+                if "coverage_gaps" in item:
+                    all_gaps.extend(item["coverage_gaps"])
+                if "improvement_suggestions" in item:
+                    all_suggestions.extend(item["improvement_suggestions"])
+                if "tone_note" in item:
+                    all_tone_notes.append(item["tone_note"])
+
+            avg_effectiveness = (
+                sum(effectiveness_scores) / len(effectiveness_scores)
+                if effectiveness_scores
+                else 0.0
+            )
+            avg_clarity = (
+                sum(clarity_scores) / len(clarity_scores) if clarity_scores else 0.0
+            )
+
+            summary[skill_name] = {
+                "count": len(items),
+                "avg_effectiveness": round(avg_effectiveness, 2),
+                "avg_clarity": round(avg_clarity, 2),
+                "top_gaps": list(set(all_gaps))[:5],  # Top 5 unique gaps
+                "top_suggestions": list(set(all_suggestions))[:5],  # Top 5 unique suggestions
+                "tone_notes": all_tone_notes,
+                "improvement_priority": self._determine_skill_priority(
+                    len(items), avg_effectiveness, avg_clarity
+                ),
+            }
+
+        return summary
+
+    def _determine_skill_priority(
+        self, count: int, avg_effectiveness: float, avg_clarity: float
+    ) -> str:
+        """
+        Determine priority for skill improvement based on feedback metrics.
+
+        Args:
+            count: Number of feedback items
+            avg_effectiveness: Average effectiveness score (0.0-1.0)
+            avg_clarity: Average clarity score (0.0-1.0)
+
+        Returns:
+            Priority string: "P0", "P1", or "P2"
+        """
+        # P0: ≥3 items OR (≥2 items AND avg_effectiveness <0.6)
+        if count >= 3 or (count >= 2 and avg_effectiveness < 0.6):
+            return "P0"
+
+        # P1: ≥2 items OR avg_effectiveness <0.5
+        if count >= 2 or avg_effectiveness < 0.5:
+            return "P1"
+
+        # P2: Otherwise
+        return "P2"
+
+    def _generate_skill_improvement_recommendations(
+        self, feedback_map: Dict[str, List[Dict]]
+    ) -> List[Recommendation]:
+        """
+        Generate improvement recommendations based on accumulated skill feedback.
+
+        Args:
+            feedback_map: Dict mapping skill_name -> list of feedback items
+
+        Returns:
+            List of Recommendation objects for skills needing improvement
+        """
+        recommendations = []
+
+        for skill_name, items in feedback_map.items():
+            if not items:
+                continue
+
+            # Compute summary stats
+            effectiveness_scores = [
+                item.get("effectiveness_score", 0.5) for item in items
+            ]
+            avg_effectiveness = sum(effectiveness_scores) / len(effectiveness_scores)
+
+            priority = self._determine_skill_priority(
+                len(items),
+                avg_effectiveness,
+                sum(item.get("clarity_score", 0.5) for item in items)
+                / len(items),
+            )
+
+            # Only create recommendations for P0 and P1 priorities
+            if priority not in ("P0", "P1"):
+                continue
+
+            # Collect top gaps and suggestions
+            all_gaps = []
+            all_suggestions = []
+            for item in items:
+                all_gaps.extend(item.get("coverage_gaps", []))
+                all_suggestions.extend(item.get("improvement_suggestions", []))
+
+            # Get unique gaps and suggestions (preserve order with dict.fromkeys)
+            unique_gaps = list(dict.fromkeys(all_gaps))[:2]
+            unique_suggestions = list(dict.fromkeys(all_suggestions))[:2]
+
+            rationale = (
+                f"Skill used in {len(items)} tasks with avg effectiveness {avg_effectiveness:.2f}. "
+                f"Key gaps: {'; '.join(unique_gaps) if unique_gaps else 'None noted'}. "
+                f"Suggestions: {'; '.join(unique_suggestions) if unique_suggestions else 'None'}"
+            )
+
+            recommendations.append(
+                Recommendation(
+                    title=f"Improve {skill_name} skill based on feedback",
+                    category="skill-enhancement",
+                    rationale=rationale,
+                    effort="low",
+                    impact=f"Medium — {len(items)} tasks affected; affects skill reliability",
+                    priority=priority,
+                    stakeholders=["orchestrator", skill_name],
+                )
+            )
+
+        return recommendations
     
     def _generate_recommendations(
         self,

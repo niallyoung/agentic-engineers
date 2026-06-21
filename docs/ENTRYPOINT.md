@@ -279,7 +279,7 @@ See `orchestration/AGENTS.md` for full decision tree.
 
 After tasks complete, Orchestrator generates:
 
-**SPAN files** (OpenTelemetry):
+**SPAN files** (Structured span records):
 ```
 artifacts/2026-05-02/
 ├── SPAN-2026-05-02T10:20:00Z-Engineer.yaml

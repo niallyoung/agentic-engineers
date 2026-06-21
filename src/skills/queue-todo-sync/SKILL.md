@@ -25,8 +25,8 @@ status: implemented
 
 The `queue-todo-sync` skill provides bidirectional synchronization between:
 
-1. **DELEGATE files** in `artifacts/queue/incoming/` → TODO.md (add pending tasks)
-2. **HANDBACK files** in `artifacts/queue/done/` → TODO.md (mark tasks complete)
+1. **DELEGATE files** in `~/.agentic-engineers/queue/incoming/` → TODO.md (add pending tasks)
+2. **HANDBACK files** in `~/.agentic-engineers/queue/done/` → TODO.md (mark tasks complete)
 3. **TODO.md manual edits** → queue (detect conflicts, apply merge strategy)
 
 ### Key Features
@@ -76,7 +76,7 @@ TodoSyncManager = queue_todo_sync.TodoSyncManager
 
 manager = TodoSyncManager(
     todo_path=Path("TODO.md"),
-    queue_path=Path("artifacts/queue")
+    queue_path=Path.home() / ".agentic-engineers" / "queue"
 )
 
 # Sync DELEGATE to TODO
@@ -140,7 +140,7 @@ The skill expects TODO.md to follow this format:
 ### DELEGATE → TODO.md Sync
 
 ```
-1. DELEGATE created in artifacts/queue/incoming/DELEGATE-*.yaml
+1. DELEGATE created in ~/.agentic-engineers/queue/incoming/DELEGATE-*.yaml
 2. Orchestrator invokes queue-todo-sync skill
 3. Skill reads DELEGATE file
 4. Skill extracts: task_id, role, scope, effort, plan
@@ -152,7 +152,7 @@ The skill expects TODO.md to follow this format:
 ### HANDBACK → TODO.md Sync
 
 ```
-1. HANDBACK created in artifacts/queue/done/HANDBACK-*.json
+1. HANDBACK created in ~/.agentic-engineers/queue/done/HANDBACK-*.json
 2. Orchestrator invokes queue-todo-sync skill
 3. Skill reads HANDBACK file
 4. Skill extracts: task_id, status, timestamp, quality_score
@@ -420,3 +420,26 @@ The skill handles errors gracefully:
 **Owner:** Engineer Agent  
 **Last Updated:** 2026-05-18  
 **Status:** ✅ Production Ready
+
+## Self-Improvement
+
+This skill participates in the framework's continuous improvement cycle
+(see [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md)).
+
+When you use **queue-todo-sync** during a task, include a skill_feedback entry
+in your HANDBACK to help improve it over time:
+
+```yaml
+skill_feedback:
+  - skill_name: queue-todo-sync
+    effectiveness_score: 0.85        # required: 0.0–1.0
+    clarity_score: 0.90              # optional
+    coverage_gaps:
+      - "Specific scenario the skill did not address"
+    improvement_suggestions:
+      - "Concrete change that would have helped"
+    usage_context: "One sentence on how you used this skill"
+```
+
+Positive feedback is as valuable as critical feedback. Three or more
+feedback items for this skill automatically trigger an improvement task.

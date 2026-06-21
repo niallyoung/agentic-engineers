@@ -57,7 +57,7 @@ The agentic-engineers framework routes complex tasks to specialized agents (engi
 | **Execution Logs** | Per-agent, per-phase logs | "engineer-phase1-20260524-001.jsonl" | Configurable (default: 90 days) |
 | **Thinking** | Agent reasoning output | "2026-05-24-senior-refactor-thinking.md" | Permanent |
 | **Metadata** | Session config & timeline | "metadata.json" | Permanent |
-| **Spans/Traces** | OpenTelemetry traces | "spans/" | Configurable (default: 30 days) |
+| **Spans/Traces** | Structured span records | "spans/" | Configurable (default: 30 days) |
 | **Feedback Loops** | QE feedback & corrections | "feedback/" | Permanent |
 | **Metrics** | Token usage, quality scores | "metrics/" | Permanent |
 
@@ -91,7 +91,7 @@ The agentic-engineers framework routes complex tasks to specialized agents (engi
         │   ├── 2026-05-24-task2-thinking.md
         │   └── index.jsonl              # Thinking index
         │
-        ├── spans/                        # OpenTelemetry traces
+        ├── spans/                        # Structured span records
         │   ├── 2026-05-24-span-001.yaml
         │   ├── 2026-05-24-span-002.yaml
         │   └── index.jsonl

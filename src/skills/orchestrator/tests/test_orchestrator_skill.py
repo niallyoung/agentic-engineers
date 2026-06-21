@@ -1393,3 +1393,120 @@ def test_invoke_qe_gate_captures_span(orchestrator, temp_queue):
     assert spans_dir.exists()
     span_files = list(spans_dir.glob("**/*.span.json"))
     assert len(span_files) > 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test: Skill Feedback Routing
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_route_skill_feedback_below_threshold(orchestrator, temp_queue):
+    """Test that 2 feedback items do not spawn DELEGATE."""
+    task_id = "skill-feedback-below-threshold"
+    handback_text = f"""
+handoff_type: HANDBACK
+task_id: {task_id}
+status: success
+metrics:
+  quality: 0.90
+  tokens: 1000
+  cost: 0.05
+  duration_seconds: 60
+skill_feedback:
+  - skill_name: queue-management
+    effectiveness_score: 0.85
+  - skill_name: queue-management
+    effectiveness_score: 0.80
+"""
+
+    # This should not create a DELEGATE (threshold is 3)
+    orchestrator.handle_handback(task_id, handback_text)
+
+    # Check incoming queue: no improve-skill-queue-management file
+    incoming_files = list((temp_queue / "incoming").glob("*improve-skill-queue-management*"))
+    assert len(incoming_files) == 0
+
+
+def test_route_skill_feedback_at_threshold_spawns_delegate(orchestrator, temp_queue):
+    """Test that 3 items spawn DELEGATE to incoming/."""
+    task_id = "skill-feedback-at-threshold"
+    handback_text = f"""
+handoff_type: HANDBACK
+task_id: {task_id}
+status: success
+metrics:
+  quality: 0.90
+  tokens: 1000
+  cost: 0.05
+  duration_seconds: 60
+skill_feedback:
+  - skill_name: queue-management
+    effectiveness_score: 0.85
+  - skill_name: queue-management
+    effectiveness_score: 0.80
+  - skill_name: queue-management
+    effectiveness_score: 0.90
+"""
+
+    orchestrator.handle_handback(task_id, handback_text)
+
+    # Check incoming queue: should have improve-skill-queue-management file
+    incoming_files = list((temp_queue / "incoming").glob("*improve-skill-queue-management*"))
+    assert len(incoming_files) == 1
+
+    # Verify it's a YAML file with DELEGATE structure
+    with open(incoming_files[0]) as f:
+        import yaml
+        delegate_content = yaml.safe_load(f)
+    assert delegate_content.get("handoff_type") == "DELEGATE"
+    assert "queue-management" in delegate_content.get("task_id", "")
+
+
+def test_route_skill_feedback_deduplication(orchestrator, temp_queue):
+    """Test that existing pending task prevents duplicate spawn."""
+    # First handback with 3 items triggers spawn
+    task_id_1 = "skill-feedback-dup-1"
+    handback_text_1 = f"""
+handoff_type: HANDBACK
+task_id: {task_id_1}
+status: success
+metrics:
+  quality: 0.90
+  tokens: 1000
+  cost: 0.05
+  duration_seconds: 60
+skill_feedback:
+  - skill_name: protocol-validator
+    effectiveness_score: 0.85
+  - skill_name: protocol-validator
+    effectiveness_score: 0.80
+  - skill_name: protocol-validator
+    effectiveness_score: 0.90
+"""
+
+    orchestrator.handle_handback(task_id_1, handback_text_1)
+
+    # Check that file was created
+    incoming_files_1 = list((temp_queue / "incoming").glob("*improve-skill-protocol-validator*"))
+    assert len(incoming_files_1) == 1
+
+    # Second handback with more feedback for same skill should NOT spawn duplicate
+    task_id_2 = "skill-feedback-dup-2"
+    handback_text_2 = f"""
+handoff_type: HANDBACK
+task_id: {task_id_2}
+status: success
+metrics:
+  quality: 0.88
+  tokens: 1200
+  cost: 0.06
+  duration_seconds: 70
+skill_feedback:
+  - skill_name: protocol-validator
+    effectiveness_score: 0.75
+"""
+
+    orchestrator.handle_handback(task_id_2, handback_text_2)
+
+    # Check that NO new file was created (deduplication)
+    incoming_files_2 = list((temp_queue / "incoming").glob("*improve-skill-protocol-validator*"))
+    assert len(incoming_files_2) == 1  # Still just the original

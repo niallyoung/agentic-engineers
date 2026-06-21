@@ -13,7 +13,7 @@ Handles:
 Design references:
 - orchestration/SKILLS.md: SKILL: Agent Delegation (DELEGATE Transmission)
 - orchestration/HANDOFF.md: HANDBACK block format and mandatory fields
-- orchestration/SPAN-CAPTURE-INTEGRATION.md: OpenTelemetry SPAN schema
+- orchestration/SPAN-CAPTURE-INTEGRATION.md: Structured SPAN schema
 """
 
 import os
@@ -83,7 +83,7 @@ class AgentInvoker:
         5. Validate HANDBACK on discovery; raise HandbackValidationError if invalid
         6. On timeout or crash → terminate process (SIGTERM → SIGKILL) and return
            a synthetic HANDBACK with status "blocked"
-        7. Write OpenTelemetry-style SPAN file to spans_dir after each invocation
+        7. Write Structured SPAN file to spans_dir after each invocation
 
     Timeout limits by effort level (overridable via ``effort_timeouts``):
         low=30s, medium=120s, high=600s, max=3600s, epic=3600s
@@ -624,7 +624,7 @@ class AgentInvoker:
         span_status: str = "success",
     ) -> Optional[Path]:
         """
-        Write an OpenTelemetry-style SPAN YAML file.
+        Write a structured SPAN YAML file.
 
         Path: ``{spans_dir}/{YYYY-MM-DD}/SPAN-{YYYYMMDD-HHMMSS}-{role}.yaml``
 
