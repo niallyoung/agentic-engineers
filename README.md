@@ -117,29 +117,41 @@ DESTDIR=/tmp/test-install make install-codex BACKUP=never
 
 ### Using the Orchestrator
 
-The **Orchestrator** is the single entry point for all work. It routes tasks to specialist agents based on complexity and type:
+The **Orchestrator** is the single entry point for all work. It routes tasks to specialist agents based on complexity and type.
+
+**Start the Orchestrator and delegate work:**
 
 ```bash
-# OpenCode (recommended)
-opencode --agent orchestrator "Your task description"
+# Claude (recommended)
+claude --permission-mode auto --dangerously-skip-permissions --agent orchestrator
+
+# OpenCode CLI
+opencode --agent orchestrator
 
 # Copilot CLI
-copilot --agent orchestrator "Your task description"
-
-# Claude Code
-# Paste the orchestrator system prompt into Claude's settings, then:
-# "Your task description"
+copilot --agent orchestrator
 
 # Codex
-codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request "Your task description"
+codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
+
+# π.dev
+# Paste the orchestrator system prompt into π.dev settings, then invoke
 ```
 
-**Example Tasks:**
+**Delegate tasks using the pattern:**
+
 ```bash
-opencode --agent orchestrator "Fix the CI/CD timeout in .github/workflows/ci.yml"
-opencode --agent orchestrator "Add authentication to the API endpoints"
-opencode --agent orchestrator "Review PR #42 for security issues"
-opencode --agent orchestrator "Optimize token usage across all agents"
+delegate: Fix the CI/CD timeout in .github/workflows/ci.yml
+
+delegate: Add authentication to the API endpoints; Review PR #42 for security issues; Optimize token usage across all agents
+```
+
+Or as individual delegations:
+```bash
+delegate: Fix the CI/CD timeout in .github/workflows/ci.yml
+delegate: Add authentication to the API endpoints
+delegate: Review PR #42 for security issues
+delegate: Optimize token usage across all agents
 ```
 
 The orchestrator will:
