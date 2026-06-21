@@ -19,43 +19,6 @@ A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, a
 4. Quality gates validate all work before moving to done
 5. Metrics feed back into model selection and routing optimization
 
-### Files Agentic Engineers Creates & Modifies
-
-Installing/rendering a harness writes **only** to that harness's own config
-location, plus a single framework work directory. It never touches your project
-source.
-
-| Path | Created / Modified | Purpose |
-|------|--------------------|---------|
-| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
-| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
-| `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
-
-### ⚠️ Backups & Conflicts (read before installing)
-
-`make install` / `make clean-install` **back up your existing harness config by
-moving it aside** to a date-stamped copy (e.g. `~/.claude/` → `~/.claude.20260611/`)
-before writing the new one. Two important caveats:
-
-- **The backup suffix is the date only (`YYYYMMDD`), not a full timestamp.** If
-  you install the **same harness twice on the same day**, the second backup
-  target already exists and the backup step will fail (it will not silently
-  overwrite your first backup). **Handling today:** rename or remove the
-  existing `~/.<harness>.YYYYMMDD/` before re-installing, or restore from it
-  first (`rm -rf ~/.claude && mv ~/.claude.20260611 ~/.claude`). *We plan to
-  switch the suffix to a full `YYYYMMDD-HHMMSS` timestamp soon so same-day
-  re-installs stop colliding — oops.* 🙇
-- **Backups cover harness config dirs only — never `~/.agentic-engineers/`.**
-  Your queue/work directory is left in place across installs. If you want a
-  truly clean slate, remove the relevant session dirs under
-  `~/.agentic-engineers/` yourself.
-- **If you skip the backup prompt** and the harness dir already contains
-  non-framework files, the installer warns about pollution but proceeds —
-  mixing your files with rendered ones. Back up or start clean if unsure.
-
-To preview without writing to your home dir, render to `dist/` instead:
-`make render-claude` (and friends) produce the exact files under `dist/<harness>/`.
-
 ### Key Benefits
 
 1. **90+/100 Quality** — Structured DELEGATE/HANDBACK protocol enforces clarity
@@ -64,6 +27,16 @@ To preview without writing to your home dir, render to `dist/` instead:
 4. **80% Fewer Iterations** — Clear success criteria prevent rework
 
 See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
+
+### Goals
+
+The Agentic Engineers framework is built to be **minimal, portable, and self-reducing**:
+
+- **Small AGENTS + SKILLS mechanisms** — A portable orchestration layer that works across many harnesses (Claude, Copilot, OpenCode, Codex, π.dev) without requiring proprietary integrations
+- **Framework self-reduction** — As base-level and frontier models improve, LOC and complexity decrease. The framework is designed to become simpler and ultimately unnecessary as harnesses and models mature
+- **Eventual redundancy** — When harnesses intelligently compose and delegate work by default, the Agentic Engineers coordination layer fades into standard best practices
+- **Harness comparative analysis** — Via the `src/ → make render → dist/ → make install → ~/.[harness]` pipeline, we can analyze which harness delivers relative feature parity, multi-agent support, and quality trade-offs
+- **Open standards alignment** — Exploring what an open standard for agent orchestration could look like: protocol portability, cross-harness delegation, metric exchange, and human-in-the-loop oversight mechanisms that transcend any single vendor
 
 ---
 
@@ -202,6 +175,45 @@ See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/gui
 - **🌐 Multi-Harness Support** — OpenCode, Copilot, Claude, π.dev, Codex
 - **🔐 Security by Default** — Opus-tier Security Engineer for threat modeling
 - **📚 Comprehensive Documentation** — Protocol specs, guides, troubleshooting
+
+---
+
+### Files Agentic Engineers Creates & Modifies
+
+Installing/rendering a harness writes **only** to that harness's own config
+location, plus a single framework work directory. It never touches your project
+source.
+
+| Path | Created / Modified | Purpose |
+|------|--------------------|---------|
+| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
+| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
+| `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
+
+### ⚠️ Backups & Conflicts (read before installing)
+
+`make install` / `make clean-install` **back up your existing harness config by
+moving it aside** to a date-stamped copy (e.g. `~/.claude/` → `~/.claude.20260611/`)
+before writing the new one. Two important caveats:
+
+- **The backup suffix is the date only (`YYYYMMDD`), not a full timestamp.** If
+  you install the **same harness twice on the same day**, the second backup
+  target already exists and the backup step will fail (it will not silently
+  overwrite your first backup). **Handling today:** rename or remove the
+  existing `~/.<harness>.YYYYMMDD/` before re-installing, or restore from it
+  first (`rm -rf ~/.claude && mv ~/.claude.20260611 ~/.claude`). *We plan to
+  switch the suffix to a full `YYYYMMDD-HHMMSS` timestamp soon so same-day
+  re-installs stop colliding — oops.* 🙇
+- **Backups cover harness config dirs only — never `~/.agentic-engineers/`.**
+  Your queue/work directory is left in place across installs. If you want a
+  truly clean slate, remove the relevant session dirs under
+  `~/.agentic-engineers/` yourself.
+- **If you skip the backup prompt** and the harness dir already contains
+  non-framework files, the installer warns about pollution but proceeds —
+  mixing your files with rendered ones. Back up or start clean if unsure.
+
+To preview without writing to your home dir, render to `dist/` instead:
+`make render-claude` (and friends) produce the exact files under `dist/<harness>/`.
 
 ---
 
