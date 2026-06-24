@@ -17,6 +17,10 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Any, Dict, List
 
+# Prometheus text format template
+PROMETHEUS_FORMAT = """{help}
+{metric_lines}"""
+
 
 class MetricsETL:
     """Extract, transform, and load metrics for dashboards."""
