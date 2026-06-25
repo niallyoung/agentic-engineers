@@ -231,6 +231,49 @@ This framework uses git hooks (`.githooks/`) to enforce protocol compliance and 
 
 ---
 
+### Files Agentic Engineers Creates & Modifies
+
+Installing/rendering a harness writes **only** to that harness's own config
+location, plus a single framework work directory. It never touches your project
+source.
+
+| Path | Created / Modified | Purpose |
+|------|--------------------|---------|
+| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
+| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
+| `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
+
+### ⚠️ Backups & Conflicts (read before installing)
+
+`make install` / `make clean-install` **back up your existing harness config by
+moving it aside** to a date-stamped copy (e.g. `~/.claude/` → `~/.claude.20260611/`)
+before writing the new one. Two important caveats:
+
+- **The backup suffix is the date only (`YYYYMMDD`), not a full timestamp.** If
+  you install the **same harness twice on the same day**, the second backup
+  target already exists and the backup step will fail (it will not silently
+  overwrite your first backup). **Handling today:** rename or remove the
+  existing `~/.<harness>.YYYYMMDD/` before re-installing, or restore from it
+  first (`rm -rf ~/.claude && mv ~/.claude.20260611 ~/.claude`). *We plan to
+  switch the suffix to a full `YYYYMMDD-HHMMSS` timestamp soon so same-day
+  re-installs stop colliding — oops.* 🙇
+- **Backups cover harness config dirs only — never `~/.agentic-engineers/`.**
+  Your queue/work directory is left in place across installs. If you want a
+  truly clean slate, remove the relevant session dirs under
+  `~/.agentic-engineers/` yourself.
+- **If you skip the backup prompt** and the harness dir already contains
+  non-framework files, the installer warns about pollution but proceeds —
+  mixing your files with rendered ones. Back up or start clean if unsure.
+
+To preview without writing to your home dir, render to `dist/` instead:
+`make render-claude` (and friends) produce the exact files under `dist/<harness>/`.
+
+### Git Hooks for Enforcement
+
+This framework uses git hooks (`.githooks/`) to enforce protocol compliance and quality standards at commit time. The hooks validate DELEGATE/HANDBACK structure, check for secret leaks, and verify SPEC changes before they're committed. During CI, the quality gate re-installs hooks to ensure the same checks run in the pipeline. Future work (Phase 5.3) will enable transferring core, reusable hooks (credential checks, secret scanning) to other repositories.
+
+---
+
 ## Key Benefits & Discoveries
 
 ### 1. DELEGATE/HANDBACK Protocol Enforces Quality

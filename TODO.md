@@ -1,14 +1,14 @@
 # TODO: agentic-engineers
 
-**Last Updated:** 2026-06-14  
-**Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged), **Phase 1.5 Security Hardening Complete (5 FIXes + 38+ tests)**, **Milestone 2/3 DELEGATEs queued (2026-06-14)**
+**Last Updated:** 2026-06-24  
+**Status:** Active — Phase G Complete, Doc Consolidation Round 2 Complete, README Refactored, Phase H Complete (633 tests TIER1/2/3), Cost Management Complete (3 skills merged), **Phase 1.5 Security Hardening Complete (5 FIXes + 38+ tests)**, **PR #67 MERGED to main (2026-06-20)**, **Wave 3 DELEGATEs queued (2026-06-24)**
 
 ---
 
-## Milestone 2 — Harness Stability (Wave 1-3, 2026-06-14)
+## Milestone 2 — Harness Stability (Wave 1-3, 2026-06-24)
 
-Queue path: `~/.agentic-engineers/claude/2026-06-14-111501/queue/incoming/`  
-10 DELEGATEs staged; Orchestrator to process in 3 waves.
+Queue path: `~/.agentic-engineers/claude/<current-session>/queue/incoming/`  
+DELEGATEs staged; Orchestrator processing in 3 waves. (PR #67 harness improvements merged 2026-06-20.)
 
 ### Wave 1 (parallel, no dependencies)
 - [ ] `m2-harness-eval-baseline` — quality-engineer: run eval suite, capture harness x model x feature matrix
@@ -28,8 +28,9 @@ Queue path: `~/.agentic-engineers/claude/2026-06-14-111501/queue/incoming/`
 
 ---
 
-## Wave 3: Final Harness Validation & Release (2026-06-14)
+## Wave 3: Final Harness Validation & Release (2026-06-24+)
 
+- [x] **PR #67 MERGED (2026-06-20)** — feat: harness + orchestrator auto-polling + self-improvement + cleanup (5,026 lines, 108 tests, 95%+ compliance). Includes Phase 1 harness deliverables.
 - [ ] Finalize m2 harness stability (95%+ target for opencode, claude, copilot)
 - [ ] Merge consolidation changes from chore/m3-skills-inventory-audit
 - [ ] Final regression validation (`python scripts/check_test_regression.py`)
@@ -40,7 +41,7 @@ See WAVE-3-PLAN.md for full context.
 
 ---
 
-## Milestone 3 — Skills Consolidation Plan (m3-skills-consolidation-plan HANDBACK, 2026-06-14)
+## Milestone 3 — Skills Consolidation Plan (m3-skills-consolidation-plan HANDBACK, 2026-06-24)
 
 **Lead Engineer review complete. Plan ready for Wave 3 execution (m3-skills-deprecation).**
 
@@ -923,7 +924,7 @@ Residual items from the retired PLAN.md (2026-06-08, written for PR #40 — merg
 
 ---
 
-## Next: Skill Improvements & Self-Improvement Architecture (2026-06-13)
+## Next: Wave 3 Skill Improvements & Post-Protocol-Revival Roadmap (2026-06-24)
 
 **Ref:** PLAN_skill-improvements.md (repo root)
 
