@@ -175,9 +175,9 @@ class ModelResolver:
         """
         Derive concrete per-role fallback default models from models.yaml.
 
-        For each role in role_models, the fallback default is its claude-provider
-        model (the framework's canonical execution provider). Extra alias roles
-        (orchestrator, metrics, etc.) inherit the default of the role they alias.
+        For each role in role_models, the fallback default is its canonical model
+        (what resolve() returns when called with no provider argument).
+        Extra alias roles (orchestrator, metrics, etc.) inherit the default of the role they alias.
 
         This is intentionally NOT hardcoded: the values are computed from the
         loaded registry so they can never disagree with the canonical config.
@@ -201,8 +201,8 @@ class ModelResolver:
         for role, role_cfg in role_models.items():
             if not isinstance(role_cfg, dict):
                 continue
-            providers = role_cfg.get('providers', {})
-            model = providers.get(self._FALLBACK_PROVIDER) or role_cfg.get('canonical')
+            # Use canonical model (what resolve() returns with no provider)
+            model = role_cfg.get('canonical')
             if model:
                 defaults[role] = model
 
