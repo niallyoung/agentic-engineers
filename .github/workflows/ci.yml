@@ -115,7 +115,7 @@ jobs:
         #   Copilot CLI harness: ≥71 tests   (tests/harnesses/copilot-cli/)
         #   Full test suite:     ≥4925 tests  (total collected)
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-        run: python scripts/check_test_regression.py
+        run: python renderer/scripts/check_test_regression.py
 
       - name: Verify
         run: make verify

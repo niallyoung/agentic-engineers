@@ -3,7 +3,7 @@
 **Status**: Active  
 **Effective**: 2026-06-14  
 **Owner**: Quality Engineer  
-**Gate implementation**: `scripts/check_test_regression.py`  
+**Gate implementation**: `renderer/scripts/check_test_regression.py`  
 **CI enforcement**: `.github/workflows/ci.yml` — Gate 5
 
 ---
@@ -35,7 +35,7 @@ The full-suite baseline (4925) is the total tests collected at Wave 2 sign-off
 
 ## How the Gate Works
 
-`scripts/check_test_regression.py` runs `pytest --collect-only` for each harness
+`renderer/scripts/check_test_regression.py` runs `pytest --collect-only` for each harness
 path and the full suite. It compares the collected count against the baseline.
 If any count is below the minimum, the script exits non-zero and CI fails.
 
