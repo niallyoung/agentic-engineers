@@ -40,7 +40,7 @@ help:
 	@echo "  setup               Install Git hooks (.githooks/ → .git/hooks) + dependencies"
 	@echo ""
 	@echo "Install targets (platform-specific):"
-	@echo "  install             Install default harness set (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/)"
+	@echo "  install             Install default harness set (~/.claude/, ~/.copilot/, ~/.pi/, ~/.config/opencode/, ~/.codex/)"
 	@echo "                      (override root for testing: make install DESTDIR=/tmp/ae-test)"
 	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
 	@echo "  fresh-install-copilot     Interactive: install Copilot only (with optional backup)"
@@ -146,7 +146,7 @@ test-protocol-e2e: ## Run end-to-end protocol tests (DELEGATE → HANDBACK)
 	@echo "✅ All protocol E2E tests passed!"
 
 install: render-all ## Install default harness set (auto-backup, non-interactive)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" $(BACKUP_FLAG) --destdir "$(DESTDIR)" copilot claude pi opencode
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" $(BACKUP_FLAG) --destdir "$(DESTDIR)" copilot claude pi opencode codex
 	@echo ""
 	@echo "✅ Installation complete!"
 	@echo ""
@@ -154,7 +154,7 @@ install: render-all ## Install default harness set (auto-backup, non-interactive
 	@echo "Or: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 
 clean-install: render-all ## Interactive: Install default harness set (prompt for each)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot claude pi opencode
+	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot claude pi opencode codex
 
 fresh-install-copilot: ## Interactive: install Copilot only (prompt for backup)
 	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot

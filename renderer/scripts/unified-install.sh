@@ -110,7 +110,7 @@ parse_args() {
     
     # Default to all harnesses if none specified
     if [ ${#HARNESSES[@]} -eq 0 ]; then
-        HARNESSES=("copilot" "claude" "pi" "opencode")
+        HARNESSES=("copilot" "claude" "pi" "opencode" "codex")
     fi
 }
 

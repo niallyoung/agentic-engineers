@@ -50,6 +50,11 @@ Harness idle-loop  →  scheduler SKILL  →  queue polling
 - `src/harnesses/copilot_cli/idle_loop.py` — Copilot CLI idle-loop
 - `src/skills/orchestrator-scheduler/` — the `--poll-once` SKILL
 
+> **Scope:** This guide currently covers **3 harnesses** — Claude Code, OpenCode,
+> and Copilot CLI. The π.dev (`src/harnesses/pi/`) and Codex idle-loop
+> infrastructure is planned for a future release (π.dev is an empty stub today;
+> Codex was recently wired into `make install` but has no idle-loop yet).
+
 ---
 
 ## Configuration

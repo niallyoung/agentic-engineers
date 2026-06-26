@@ -467,6 +467,19 @@ network_access = false
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
+
+# Phase G: harness queue auto-polling (see docs/guides/harness-queue-polling.md).
+# In Orchestrator mode the idle harness invokes the orchestrator-scheduler skill
+# to drain the DELEGATE queue, backing off exponentially when the queue is empty.
+[idle_loop]
+enabled = true
+interval_seconds = 180
+action = "invoke_skill"
+skill = "orchestrator-scheduler"
+args = ["--poll-once"]
+backoff_intervals = [5, 30, 180, 600]
+watch_enabled = true
+watch_poll_seconds = 0.5
 """,
             encoding="utf-8",
         )
@@ -498,6 +511,19 @@ network_access = false
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
+
+# Phase G: harness queue auto-polling (see docs/guides/harness-queue-polling.md).
+# During idle periods the harness invokes the orchestrator-scheduler skill to
+# drain the DELEGATE queue, backing off exponentially when the queue is empty.
+[idle_loop]
+enabled = true
+interval_seconds = 180
+action = "invoke_skill"
+skill = "orchestrator-scheduler"
+args = ["--poll-once"]
+backoff_intervals = [5, 30, 180, 600]
+watch_enabled = true
+watch_poll_seconds = 0.5
 
 # Autopilot-style self-tests can use:
 #   codex exec --sandbox workspace-write --ask-for-approval never "<task>"

@@ -1,0 +1,36 @@
+id: test-phase-f-model-resolution-001
+name: "Phase F - Canonical model resolution happy path"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - haiku
+  - sonnet
+category: model-resolution
+severity: critical
+timeout_seconds: 90
+requirements:
+  - Must understand the canonical ModelResolver (src/orchestration/models/canonical_resolver.py)
+  - Must know src/config/models.yaml is the single source of truth for role to model mapping
+  - Must answer from knowledge without running tools or reading files
+prompt: |
+  In the HANDBACK output field, describe how the canonical ModelResolver routes an
+  agent role to a concrete model. Answer from your own knowledge in two or three
+  sentences. Do NOT run tools, read files, or explore the repository.
+
+  Your answer MUST mention:
+  - that "models.yaml" is the authoritative registry / single source of truth
+  - that calling resolve with the role "engineer" returns "claude-haiku-4.5"
+  - that resolve for "security_engineer" returns "claude-opus-4.8" by default
+  - that an explicit "provider" argument selects the provider-specific model
+expected_contains:
+  - "models.yaml"
+  - "resolve"
+  - "engineer"
+  - "claude-haiku-4.5"
+  - "claude-opus-4.8"
+  - "provider"
+expected_not_contains:
+  - "Invalid format"
+  - "hardcoded"

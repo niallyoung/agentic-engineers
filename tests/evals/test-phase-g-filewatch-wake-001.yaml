@@ -1,0 +1,36 @@
+id: test-phase-g-filewatch-wake-001
+name: "Phase G - File-watch wake on new DELEGATE resets backoff"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - haiku
+  - sonnet
+category: queue-polling
+severity: high
+timeout_seconds: 90
+requirements:
+  - Must understand the file-watch on queue/incoming wakes the harness early
+  - Must know detecting a new DELEGATE resets the backoff to 5s
+  - Must know the watch is a cheap directory scan polled on a short interval
+prompt: |
+  In the HANDBACK output field, describe the Phase G file-watch wake mechanism for
+  the harness queue poller. Answer from your own knowledge in two or three
+  sentences. Do NOT run tools or read files.
+
+  Your answer MUST state:
+  - a file-watch monitors the "queue/incoming" directory while the poller sleeps
+  - when a new DELEGATE arrives, the watch wakes the harness early instead of
+    waiting out the current backoff interval
+  - waking on a new DELEGATE resets the backoff level back to 5s (active)
+expected_contains:
+  - "file-watch"
+  - "queue/incoming"
+  - "DELEGATE"
+  - "wakes"
+  - "reset"
+  - "5s"
+expected_not_contains:
+  - "Invalid format"
+  - "polling daemon"

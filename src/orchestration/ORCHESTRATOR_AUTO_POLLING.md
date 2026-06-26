@@ -1,6 +1,16 @@
-# Design Phase G: Orchestrator Auto-Polling Architecture
+> ⚠️ **SUPERSEDED** — This is an earlier design iteration. See
+> [PHASE_G_HARNESS_COOPERATION.md](PHASE_G_HARNESS_COOPERATION.md) for the current
+> implementation.
+>
+> Phase G **shipped** (G-1 + G-2 complete, 2026-06-26): harnesses poll the queue
+> via an in-process idle-loop invoking `orchestrator-scheduler --poll-once`, not
+> via the session-startup hooks proposed below. This document is retained for
+> historical context only; the `settings.json` `hooks.on_session_start` approach
+> described here was **not** the design that shipped.
 
-**Status:** Design Phase (Pre-Implementation)  
+# Design Phase G: Orchestrator Auto-Polling Architecture (Historical / Superseded)
+
+**Status:** Superseded — historical design iteration (Phase G shipped via idle-loop cooperation; see PHASE_G_HARNESS_COOPERATION.md)  
 **Priority:** P1 (Blocker for autonomous operation)  
 **Date:** 2026-06-25  
 **Effort Estimate:** 20-30 engineer hours across 3-4 weeks  
@@ -722,7 +732,7 @@ kill -TERM $PID
 - [orchestrator-scheduler SKILL](../skills/orchestrator-scheduler/SKILL.md)
 - [orchestrator SKILL](../skills/orchestrator/SKILL.md)
 - [OrchestratorSkill implementation](../skills/orchestrator/scripts/orchestrator_skill.py)
-- [Queue isolation SKILL](_meta/queue-isolation/SKILL.md)
+- [Queue isolation SKILL](../skills/_meta/queue-isolation/SKILL.md)
 - [DELEGATE/HANDBACK Protocol](../../docs/QUEUE-PROTOCOL.md)
 - [Orchestrator Agent](../../src/agents/orchestrator-agent.md)
 

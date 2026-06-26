@@ -206,7 +206,7 @@ Harness A (Claude):          Harness B (OpenCode):
 
 #### 1.1 Claude Code Harness
 
-**File:** `dist/claude/harness/idle_loop.py` (new file)
+**File:** `src/harnesses/claude_code/idle_loop.py`
 
 **Responsibilities:**
 - Detect user inactivity (no keystrokes, no API calls, no message queue entries)
@@ -262,9 +262,9 @@ class ClaudeIdleLoop:
 
 **Same pattern as Claude.** Each harness gets its own `idle_loop.py` with same interface.
 
-#### 1.3 Local CLI
+#### 1.3 Local CLI (planned — not yet shipped)
 
-**File:** `src/harnesses/cli/idle_loop.py`
+**File:** `src/harnesses/cli/idle_loop.py` (future; `src/harnesses/cli/` is not yet wired)
 
 **Behavior:** 
 - CLI waits for next user command
@@ -596,9 +596,9 @@ def _detect_harness(self) -> str:
    - Define SkillInvoker interface for calling `/orchestrator-scheduler --poll-once`
    - Implement signal handling for skill timeout (SIGALRM on Unix)
    - Create concrete implementations:
-     - `dist/claude/harness/idle_loop.py`
-     - `dist/opencode/harness/idle_loop.py`
-     - `dist/copilot/harness/idle_loop.py`
+     - `src/harnesses/claude_code/idle_loop.py`
+     - `src/harnesses/opencode/idle_loop.py`
+     - `src/harnesses/copilot_cli/idle_loop.py`
 
 3. **Enhance orchestrator-scheduler SKILL** (4 hours)
    - Add `--poll-once` flag (explicit, documented)
@@ -1032,12 +1032,16 @@ done
 ### New Files
 
 1. `src/orchestration/PHASE_G_HARNESS_COOPERATION.md` (this file)
-2. `dist/claude/harness/idle_loop.py` — Claude Code idle-loop integration
-3. `dist/opencode/harness/idle_loop.py` — OpenCode idle-loop integration
-4. `dist/copilot/harness/idle_loop.py` — Copilot idle-loop integration
-5. `src/harnesses/cli/idle_loop.py` — Local CLI idle-loop integration
+2. `src/harnesses/claude_code/idle_loop.py` — Claude Code idle-loop integration
+3. `src/harnesses/opencode/idle_loop.py` — OpenCode idle-loop integration
+4. `src/harnesses/copilot_cli/idle_loop.py` — Copilot CLI idle-loop integration
+5. `src/harnesses/shared/backoff_poller.py` — shared backoff + file-watch engine (G-2)
 6. `tests/orchestration/test_harness_queue_cooperation.py` — Unit tests
 7. `tests/integration/test_e2e_queue_processing.py` — Integration tests
+
+> **Note:** `src/harnesses/pi/` and `src/harnesses/cli/` idle-loop integrations are
+> not yet wired (π.dev has an empty stub; Codex was recently wired into
+> `make install`). Their idle-loop infrastructure is planned for a future release.
 
 ### Modified Files
 
@@ -1056,14 +1060,14 @@ done
    - Implement stale lock cleanup
    - Update `poll_queue()` signature to use lock
 
-4. `docs/guides/ORCHESTRATION.md` (new or updated)
+4. `docs/guides/harness-queue-polling.md` (shipped)
    - Explain harness idle-loop → scheduler SKILL coordination
    - Document multi-harness queue sharing
    - Troubleshooting section
 
-5. `dist/claude/harness/main.py`, `dist/opencode/harness/main.py`, etc.
-   - Integrate idle-loop into harness main loop
-   - Call `idle_loop.check_idle()` every 30-60 seconds
+5. Each harness idle-loop module (`src/harnesses/{claude_code,opencode,copilot_cli}/idle_loop.py`)
+   - Integrate idle-loop into harness event loop
+   - Call `check_idle()` each tick; delegate cadence to `BackoffPoller`
 
 ---
 
@@ -1106,9 +1110,9 @@ done
 
 ### Q2: Where should idle_loop.py live?
 
-**Proposal:**
-- Framework-wide base class: `src/skills/orchestrator-scheduler/harness_idle_loop.py`
-- Harness-specific implementation: `dist/{claude,opencode,copilot}/harness/idle_loop.py`
+**Resolved (shipped):**
+- Shared engine: `src/harnesses/shared/backoff_poller.py`
+- Harness-specific implementation: `src/harnesses/{claude_code,opencode,copilot_cli}/idle_loop.py`
 
 ### Q3: Should --poll-once be explicit or default?
 
@@ -1174,9 +1178,10 @@ done
 
 ## Version & Changelog
 
-| Date | Author | Status | Notes |
-|------|--------|--------|-------|
-| 2026-06-25 | Niall Young | Design Phase | Phase G: Harness-Native Queue Cooperation (AGENTS with SKILLS compliant) |
+| Date | Author | Status | Version | Notes |
+|------|--------|--------|---------|-------|
+| 2026-06-25 | Niall Young | Design Phase | 1.0 | Phase G: Harness-Native Queue Cooperation (AGENTS with SKILLS compliant) |
+| 2026-06-26 | Niall Young | G-1 + G-2 Complete | 1.1 | Shipped: idle-loop integration across Claude Code, OpenCode, Copilot CLI; `BackoffPoller` continuous in-process polling (5s→600s) + file-watch. 567 harness + 64 infra tests passing. Paths corrected `dist/*/harness/` → `src/harnesses/`. G-3 (external daemon) deferred. |
 
 ---
 
