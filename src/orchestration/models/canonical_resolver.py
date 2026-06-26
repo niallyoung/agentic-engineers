@@ -201,8 +201,17 @@ class ModelResolver:
         for role, role_cfg in role_models.items():
             if not isinstance(role_cfg, dict):
                 continue
-            # Use canonical model (what resolve() returns with no provider)
-            model = role_cfg.get('canonical')
+            # Fallback default is the role's concrete claude-provider model
+            # (e.g. "claude-haiku-4.5"), the version a real resolve() returns for
+            # the default provider. Fall back to the short canonical alias only
+            # when no claude provider entry exists. Deriving from providers.claude
+            # keeps FALLBACK_DEFAULTS from drifting vs the canonical registry.
+            providers = role_cfg.get('providers')
+            model = None
+            if isinstance(providers, dict):
+                model = providers.get('claude')
+            if not model:
+                model = role_cfg.get('canonical')
             if model:
                 defaults[role] = model
 
@@ -265,11 +274,19 @@ class ModelResolver:
                 f"Role '{role}' not found in models.yaml and not in fallback defaults"
             )
 
+        providers = role_config.get('providers', {})
         if provider:
-            providers = role_config.get('providers', {})
             if provider in providers:
                 return providers[provider]
-            logger.debug(f"Provider {provider} not in models.yaml, falling back to canonical")
+            logger.debug(f"Provider {provider} not in models.yaml, falling back to default")
+
+        # No (or unknown) provider: default to the concrete claude-provider model
+        # (the framework's default harness), so a bare resolve(role) returns the
+        # same versioned value as FALLBACK_DEFAULTS[role]. Fall back to the short
+        # canonical alias only when no claude provider entry exists.
+        claude_model = providers.get('claude')
+        if claude_model:
+            return claude_model
 
         canonical = role_config.get('canonical')
         if canonical:

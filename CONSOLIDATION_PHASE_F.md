@@ -1,7 +1,25 @@
 # Agentic-Engineers Consolidation Initiative (Phase F)
-**Date:** 2026-06-25  
+**Date:** 2026-06-25 (updated 2026-06-26)  
 **Scope:** Architecture unification, enforcement modernization, cleanup  
 **Target:** Single source-of-truth for config, specs, harness structure; shift from hard rules to principle-based positive reinforcement; remove dead code and stale artifacts.
+
+---
+
+## Completion Status (2026-06-26)
+
+| Phase | Status | Highlights |
+|-------|--------|-----------|
+| **F-1 → F-4** | ✅ **COMPLETE** | Single source-of-truth config/specs, unified `src/harnesses/` structure, single model resolver, enforcement modernized, dead code removed. **~5,170 tests**, **~22 files changed**. |
+| **G-1** Harness idle-loop integration | ✅ **COMPLETE** | 3 harnesses (Claude Code, OpenCode, Copilot CLI); **567 harness tests** + 64 infra (21 scheduler + 43 backoff). DELEGATE auto-processing works end-to-end. |
+| **G-2** Continuous in-process polling | ✅ **COMPLETE** | Exponential backoff (5s→600s) + file-watch wake; **60 new tests** (14 G-2 integration + 46 backoff); 5 DELEGATEs in 71ms, backoff overhead <2ms. **656+ tests total passing** across G work. |
+| **G-3** External daemon mode | ⏸️ Deferred (optional) | Not required — G-2 provides continuous polling with no external daemon. |
+
+**Conclusion:** Full harness queue cooperation is implemented. DELEGATEs
+**auto-process without manual invocation** — each harness polls its session queue
+during idle periods, backing off when empty and waking immediately on arrival,
+entirely in-process (no external daemon, cron, or system service). See
+[`src/orchestration/PHASE_G_HARNESS_COOPERATION.md`](src/orchestration/PHASE_G_HARNESS_COOPERATION.md)
+and [`docs/guides/harness-queue-polling.md`](docs/guides/harness-queue-polling.md).
 
 ---
 

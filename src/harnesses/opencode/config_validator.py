@@ -133,6 +133,7 @@ KNOWN_TOP_LEVEL: frozenset[str] = frozenset({
     "default_agent",
     "model",
     "compaction",
+    "idle_loop",
     "permission",
     "agent",
     "command",
@@ -286,6 +287,7 @@ class OpenCodeConfigValidator:
         self._check_default_agent(data, result)
         self._check_global_model(data, result)
         self._check_compaction(data, result)
+        self._check_idle_loop(data, result)
         self._check_permission(data, result)
         self._check_agent(data, result)
         self._check_command(data, result)
@@ -468,6 +470,38 @@ class OpenCodeConfigValidator:
                                       message=f"`compaction.reserved` ({v}) exceeds {MAX_COMPACTION_RESERVED}",
                                       path="compaction.reserved",
                                       hint="Too-high reservation defeats compaction; typical value is 20000–30000."))
+
+    def _check_idle_loop(self, data: dict, r: ValidationResult) -> None:
+        if "idle_loop" not in data:
+            return
+        il = data["idle_loop"]
+        if not isinstance(il, dict):
+            r.add(ValidationError(code="OC034", severity=Severity.ERROR,
+                                  message="`idle_loop` must be an object", path="idle_loop"))
+            return
+        if "enabled" in il and not isinstance(il["enabled"], bool):
+            r.add(ValidationError(code="OC035", severity=Severity.ERROR,
+                                  message="`idle_loop.enabled` must be boolean",
+                                  path="idle_loop.enabled"))
+        if "interval_seconds" in il:
+            v = il["interval_seconds"]
+            if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
+                r.add(ValidationError(code="OC036", severity=Severity.ERROR,
+                                      message=f"`idle_loop.interval_seconds` must be a positive integer; got {v!r}",
+                                      path="idle_loop.interval_seconds"))
+            elif v < 30:
+                r.add(ValidationError(code="OC037", severity=Severity.WARN,
+                                      message=f"`idle_loop.interval_seconds` ({v}) is very low; risks excessive polling",
+                                      path="idle_loop.interval_seconds",
+                                      hint="Phase G design recommends 180–300s (3–5 minutes)."))
+        if "skill" in il and not isinstance(il["skill"], str):
+            r.add(ValidationError(code="OC038", severity=Severity.ERROR,
+                                  message="`idle_loop.skill` must be a string",
+                                  path="idle_loop.skill"))
+        if "args" in il and not isinstance(il["args"], list):
+            r.add(ValidationError(code="OC039", severity=Severity.ERROR,
+                                  message="`idle_loop.args` must be an array",
+                                  path="idle_loop.args"))
 
     def _check_permission(self, data: dict, r: ValidationResult) -> None:
         if "permission" not in data:

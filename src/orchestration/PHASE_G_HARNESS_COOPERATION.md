@@ -1,13 +1,19 @@
 ---
-name: Design Phase G - Harness-Native Queue Cooperation
+name: Phase G - Harness-Native Queue Cooperation
 description: Queue coordination via harness idle-loop integration without external daemons
-version: 1.0
-date: 2026-06-25
-status: Design Phase
+version: 1.1
+date: 2026-06-26
+status: G-1 COMPLETE, G-2 COMPLETE (G-3 optional, deferred)
 owner: Niall Young
 effort_hours: 40-60
 phases: 3
 ---
+
+> **Status (2026-06-26):** Phases **G-1** and **G-2** are **COMPLETE** and merge-ready.
+> Phase **G-3** (continuous external daemon mode) is intentionally **deferred** —
+> G-2 delivers continuous in-process polling without any external daemon, so G-3
+> is optional for the autonomous-queue-processing milestone. See
+> [Phase G Completion Status](#phase-g-completion-status) below for metrics.
 
 # Phase G: Harness-Native Queue Cooperation (AGENTS with SKILLS Compliant)
 
@@ -38,6 +44,58 @@ Traditional queue automation (cron, systemd, launchd) violates SPEC.md constrain
 ✅ **All work through SKILLS** — Orchestrator-scheduler is a SKILL, not a script or cron job  
 ✅ **AGENTS with SKILLS** — Framework orchestrates itself via agent-invoked skills  
 ✅ **Session-first model** — Each harness+session pair manages its own queue  
+
+---
+
+## Phase G Completion Status
+
+### Phase G-1: Harness Idle-Loop Integration — ✅ COMPLETE
+
+Each harness now wires its idle-loop to `orchestrator-scheduler --poll-once`, and
+DELEGATE auto-processing works end-to-end (incoming → processing → done) with no
+manual invocation.
+
+| Metric | Result |
+|--------|--------|
+| Harnesses wired | 3 — Claude Code, OpenCode, Copilot CLI |
+| Harness idle-loop tests | 303 (Claude) + 163 (OpenCode) + 101 (Copilot CLI) = **567 passing** |
+| Scheduler tests | **21 passing** (`orchestrator-scheduler`) |
+| Backoff-engine tests | **43 passing** (`BackoffPoller`) |
+| Infrastructure tests | 21 scheduler + 43 backoff = **64 passing** |
+| DELEGATE auto-processing | ✅ Working end-to-end across all 3 harnesses |
+
+### Phase G-2: Continuous In-Process Polling — ✅ COMPLETE
+
+G-2 adds the continuous polling engine (`src/harnesses/shared/backoff_poller.py`)
+beneath the single-shot `--poll-once` call: adaptive exponential backoff plus a
+file-watch on `queue/incoming/` that wakes immediately on DELEGATE arrival.
+
+| Metric | Result |
+|--------|--------|
+| Backoff engine | **43 tests passing** (`tests/harnesses/shared/test_backoff_poller.py`) |
+| Harness integration | **60 tests** — 14 new G-2 integration + 46 backoff-integration |
+| Performance | 5 DELEGATEs processed in **71 ms**; backoff overhead **< 2 ms** per cycle |
+| Backoff ladder | 5s → 30s → 180s → 600s (capped); resets to 5s on work/file-watch |
+
+### G-2 Implementation Complete — No External Daemon
+
+Phase G-2 delivers **continuous** queue polling **without any external daemon,
+cron job, or system service** — a hard SPEC.md constraint. The mechanism:
+
+- **All polling is in-process** within the harness idle-loop. The harness owns
+  the cadence; `BackoffPoller` owns the *decision* of how long to wait and *when*
+  to poll. No separate process, no systemd/launchd, no startup hook.
+- **File-watch wakes immediately on queue arrival.** While sleeping, the poller
+  scans `queue/incoming/` in short slices (`watch_poll_seconds`, default 0.5s) and
+  wakes the instant a new DELEGATE file appears — resetting backoff to level 0.
+- **Exponential backoff (5s → 600s) prevents thrashing.** Every empty poll
+  advances the backoff one rung (5 → 30 → 180 → 600s, capped). Any processed
+  DELEGATE or detected file resets to 5s, so an idle session settles into a cheap
+  10-minute deep-sleep cadence yet still reacts within a poll-slice of new work.
+
+Because polling runs inside the harness, **Phase G-3** (an *external* daemon mode
+with systemd/launchd templates) is **optional and deferred** — G-1 + G-2 already
+provide fully autonomous, continuous queue processing.
 
 ---
 

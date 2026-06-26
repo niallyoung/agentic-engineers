@@ -211,6 +211,30 @@ case "$MODE" in
 		echo "📖 Writing AGENTS.md → $DST_RULES ..."
 		write_agents_md
 
+		# 2b. settings.json — harness session model + Phase G queue auto-polling
+		# (idle_loop: exponential backoff + file-watch). Written for both dist
+		# rendering and home install so the installed tree matches dist exactly
+		# and the harness ships with auto-polling enabled.
+		# See docs/guides/harness-queue-polling.md.
+		echo "⚙️  Writing settings.json → $COPILOT/settings.json ..."
+		cat > "$COPILOT/settings.json" <<'EOF'
+{
+  "model": "claude-haiku-4-5",
+  "harness": "copilot",
+  "idle_loop": {
+    "enabled": true,
+    "interval_seconds": 180,
+    "action": "invoke_skill",
+    "skill": "orchestrator-scheduler",
+    "args": ["--poll-once"],
+    "backoff_intervals": [5, 30, 180, 600],
+    "watch_enabled": true,
+    "watch_poll_seconds": 0.5
+  }
+}
+EOF
+		echo "  ✅ settings.json (session model + idle_loop auto-polling)"
+
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
 		# Note: Copilot uses the same git repo as OpenCode/Claude, so hooks are shared.

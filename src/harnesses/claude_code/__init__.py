@@ -7,6 +7,7 @@ from src.harnesses.claude_code.agent_verifier import (
     CompatibilityReport,
 )
 from src.harnesses.claude_code.startup_check import StartupChecker, initialize_harness_check
+from src.harnesses.claude_code.idle_loop import ClaudeIdleLoop, IdleLoopConfig
 
 __version__ = "1.0.0"
 __all__ = [
@@ -16,4 +17,6 @@ __all__ = [
     "CompatibilityReport",
     "StartupChecker",
     "initialize_harness_check",
+    "ClaudeIdleLoop",
+    "IdleLoopConfig",
 ]
