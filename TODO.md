@@ -770,6 +770,66 @@ No new skills or agents may be added to the framework after this date. All API a
 
 ---
 
+## 🔵 Git Hooks Portability (Session N+1)
+
+**Status:** Planning  
+**Objective:** Separate framework-compatible hooks from framework-internal hooks, enable portable git hook export for downstream repos.
+
+### Hook Categories & Portability
+
+**Core Hooks (Transferable to Any Repo):**
+- `credential-check` — Detects embedded tokens/secrets in commits
+- `secret-scanning` — GPG-based pre-push credential validation
+- `basic-linting` — Style/formatting checks (optional, framework-agnostic)
+
+**Agentic-Engineers Meta Hooks (Framework-Only, Do Not Export):**
+- `protocol-validator` — DELEGATE/HANDBACK YAML schema validation (framework-specific)
+- `skill-compliance` — SKILL.md frontmatter + standards (agentic-engineers-only)
+- `queue-checks` — Queue state machine transition validation (framework-specific)
+- `spec-protection` — spec-management access control enforcement (framework-only)
+- `commit-msg-task-id` — Task ID format validation (framework workflow)
+
+### Implementation Plan
+
+- [ ] **Phase N+1-1: Audit Phase**
+  - Inspect `.githooks/` (pre-commit, commit-msg, post-merge, pre-push)
+  - Categorize each rule: core vs. meta
+  - Document rule dependencies and assumptions
+  - Effort: 2-3 hours | Owner: Lead Engineer
+
+- [ ] **Phase N+1-2: Extract Core Hooks**
+  - Create `hooks/portable/` directory structure
+  - Refactor core hooks to zero framework assumptions
+  - Create installer: `scripts/install-portable-hooks.sh`
+  - Effort: 3-4 hours | Owner: Senior Engineer
+
+- [ ] **Phase N+1-3: Documentation**
+  - Create `docs/guides/git-hooks-portability.md`
+  - Document which hooks are portable, which are framework-only
+  - Installation instructions for downstream repos
+  - Troubleshooting guide
+  - Effort: 2-3 hours | Owner: Technical Writer
+
+- [ ] **Phase N+1-4: Testing**
+  - Verify portable hooks work in isolated repo
+  - Test hook interaction with common CI systems (GHA, GitLab CI, etc.)
+  - Effort: 2-3 hours | Owner: Quality Engineer
+
+### Target Output
+
+```
+hooks/portable/
+├── README.md
+├── pre-commit.d/
+│   ├── 00-credential-check
+│   └── 01-basic-linting
+├── pre-push.d/
+│   └── 00-secret-scanning
+└── install.sh
+```
+
+---
+
 ## 🔵 PLANNED (Phase J+)
 
 - [x] **STANDARDS-002:** Create STANDARDS.md comprehensive guide
