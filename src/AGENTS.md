@@ -22,23 +22,31 @@
 
 ## Agent Roster
 
-**MODEL NAMING (LOCKED):** All models use canonical format with DOTS: `claude-{variant}-{major}.{minor}`
-(e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.8`). See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
+**MODEL NAMING (LOCKED):** Models use canonical format with a DOT version separator,
+`claude-{variant}-{major}.{minor}` (e.g. `claude-haiku-4.5`, `claude-opus-4.8`). Current-generation
+models carry a **single-part version** and therefore have no separator at all:
+`claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. The invariant is "never a hyphen as the
+version separator" (`claude-opus-4-7` is a per-harness render, never source).
+See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
 | **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-4.6 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-4.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-4.6 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-4.6 | high | 4.6/4.7/4.8 | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4.8 | max | 4.8 (pinned) \| fable-5 (defensive-only) | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-4.5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+| **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Lead Engineer** | claude-sonnet-5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Principal Engineer** | claude-opus-5 | high | opus-5 (default) \| 4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
+| **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Model Engineer** | claude-sonnet-5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+
+> **This table is load-bearing, not documentation.** `renderer/lib/render-lib.sh:parse_agents_md()`
+> reads the Model and Effort columns to render the Claude Code and OpenCode harnesses. Editing an
+> agent's frontmatter without editing this row ships the *old* model to those two harnesses.
 
 **Multi-Model column notes:**
-- Principal Engineer: 4.6 (default/pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
-- Security Engineer: 4.8 (default, pinned) | fable-5 (defensive-only alternative at effort:medium). 4.7 only as emergency fallback if 4.8 unavailable; document in HANDBACK. Fable-5 restricted to defensive analysis (vulnerability assessment, threat modelling, compliance review). See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
+- Principal Engineer: opus-5 (default, all planning and cross-repo design). claude-opus-4.8 only as emergency fallback if opus-5 is unavailable; document in HANDBACK. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
+- Security Engineer: fable-5 (default). claude-opus-4.8 only as emergency fallback if fable-5 is unavailable; document in HANDBACK. The defensive-only scope constraint applies on **every** model, not just fable-5 — restricted-topic work is out of scope framework-wide and is rejected by the Orchestrator's DelegateValidator C5 gate rather than re-routed. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
 
 ### Cost Tiers
 
@@ -131,8 +139,8 @@ confidence: 0.95                   # 0.0-1.0 float
 Principal Engineer and Security Engineer support model variant selection based on task complexity.
 
 **Decision criteria:**
-- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
-- Security Engineer: Use `claude-opus-4.8` (default, pinned) | `claude-fable-5` with adaptive thinking at effort:medium (defensive analysis only; see SPEC.md constraint)
+- Principal Engineer: Use `claude-opus-5` for all planning and cross-repo design work. `claude-opus-4.8` is an emergency fallback only (opus-5 unavailable); document the substitution in HANDBACK.
+- Security Engineer: Use `claude-fable-5` for all security analysis. `claude-opus-4.8` is an emergency fallback only; document the substitution in HANDBACK. Scope limits are model-independent — see the defensive-only constraint in [SPEC.md](../docs/SPEC.md).
 
 For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
 
@@ -246,7 +254,7 @@ ops.enqueue({
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
+**Model:** `claude-sonnet-5`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
 
 **Purpose:** Plans unscoped work; handles multi-file implementations requiring architectural awareness.
 
@@ -273,7 +281,7 @@ ops.enqueue({
 
 ### 4. Lead Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/lead-engineer.md`
+**Model:** `claude-sonnet-5`  **Tier:** Medium  **Skill:** `src/skills/roles/lead-engineer.md`
 
 **Purpose:** Architecture decisions, 8-point code review, API contract design, conflict resolution.
 
@@ -297,7 +305,7 @@ ops.enqueue({
 
 ### 5. Quality Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/quality-engineer.md`
+**Model:** `claude-sonnet-5`  **Tier:** Medium  **Skill:** `src/skills/roles/quality-engineer.md`
 
 **Purpose:** Post-implementation validation. Verifies HANDBACK correctness and assesses model suitability.
 
@@ -321,7 +329,7 @@ ops.enqueue({
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
+**Model:** `claude-sonnet-5`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
 
 **Purpose:** Analyse HANDBACK efficiency metrics; recommend model or effort tier adjustments.
 
@@ -344,7 +352,7 @@ ops.enqueue({
 
 ### 7. Principal Engineer
 
-**Model:** `claude-opus-4-6`  **Tier:** Premium  **Skill:** `src/skills/roles/principal-engineer.md`
+**Model:** `claude-opus-5`  **Tier:** Premium  **Skill:** `src/skills/roles/principal-engineer.md`
 
 **Purpose:** Cross-service architecture, hard debugging, critical design decisions. Escalation only.
 
