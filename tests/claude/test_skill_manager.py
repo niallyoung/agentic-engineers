@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from typing import List, Dict
 
-from src.claude.skill_manager import (
+from src.harnesses.claude_code.skill_manager import (
     SkillManager,
     SkillMetadata,
     SkillAccessibilityStatus,

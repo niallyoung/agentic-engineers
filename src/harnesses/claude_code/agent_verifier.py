@@ -83,20 +83,31 @@ class CompatibilityReport:
         }
 
 
-# Known valid model names in canonical format (source)
+# Known valid model names in canonical format (source).
+#
+# MUST stay in sync with .githooks/LOCKED_MODELS.sh (the single source of
+# truth). tests/claude/test_agent_verifier.py asserts that it does.
+#
+# Two version shapes are valid: two-part with a DOT separator
+# (claude-opus-4.8) and single-part (claude-opus-5, claude-fable-5), which
+# has no separator at all.
 KNOWN_MODELS = {
     "claude-haiku-4.5",
     "claude-haiku-4.6",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
+    "claude-sonnet-5",
     "claude-opus-4.5",
     "claude-opus-4.6",
     "claude-opus-4.7",
     "claude-opus-4.8",
+    "claude-opus-5",
+    "claude-fable-5",
     # Claude Code harness aliases (no dots)
     "haiku",
     "sonnet",
     "opus",
+    "fable",
 }
 
 # Expected agent count
@@ -369,16 +380,18 @@ class AgentVerifier:
             model=agent.model,
         )
         
-        # Define expected model routing
+        # Expected model routing.
+        # MUST stay in sync with AGENT_MODEL_ASSIGNMENTS in
+        # .githooks/LOCKED_MODELS.sh; a test asserts the two agree.
         expected_routing = {
             "orchestrator": "claude-haiku-4.5",
             "engineer": "claude-haiku-4.5",
-            "senior-engineer": "claude-sonnet-4.5",
-            "lead-engineer": "claude-sonnet-4.6",
-            "quality-engineer": "claude-sonnet-4.6",
-            "model-engineer": "claude-sonnet-4.5",
-            "principal-engineer": "claude-opus-4.6",
-            "security-engineer": "claude-opus-4.8",
+            "senior-engineer": "claude-sonnet-5",
+            "lead-engineer": "claude-sonnet-5",
+            "quality-engineer": "claude-sonnet-5",
+            "model-engineer": "claude-sonnet-5",
+            "principal-engineer": "claude-opus-5",
+            "security-engineer": "claude-fable-5",
         }
         
         if agent.name not in expected_routing:

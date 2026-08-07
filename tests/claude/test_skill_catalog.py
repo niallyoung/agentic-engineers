@@ -5,8 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
 
-from src.claude.skill_catalog import SkillCatalog, SkillRenderResult
-from src.claude.skill_manager import SkillManager
+from src.harnesses.claude_code.skill_catalog import SkillCatalog, SkillRenderResult
+from src.harnesses.claude_code.skill_manager import SkillManager
 
 
 class TestSkillRendering:

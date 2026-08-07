@@ -20,7 +20,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 
-from src.claude.agent_verifier import (
+from src.harnesses.claude_code.agent_verifier import (
     AgentVerifier,
     AgentDefinition,
     VerificationResult,
@@ -29,7 +29,7 @@ from src.claude.agent_verifier import (
     EXPECTED_AGENTS,
     EXPECTED_AGENT_COUNT,
 )
-from src.claude.startup_check import StartupChecker, initialize_harness_check
+from src.harnesses.claude_code.startup_check import StartupChecker, initialize_harness_check
 
 
 class TestAgentDefinition:
