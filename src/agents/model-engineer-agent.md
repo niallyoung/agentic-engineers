@@ -1,7 +1,7 @@
 ---
 name: model-engineer
 description: Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks
-model: claude-sonnet-4.5
+model: claude-sonnet-5
 accepts:
   - DELEGATE
 returns:
@@ -12,11 +12,10 @@ role: model-engineer
 # Model Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Model Engineer  
-**Model**: claude-haiku-4.5  
-**Effort**: medium (downgraded from Sonnet for cost optimization)
+**Model**: claude-sonnet-5  
+**Effort**: medium
 
-**Why Haiku**: Token efficiency analysis is numeric/arithmetic (efficiency ratio, confidence scoring). Haiku excels at this.
-**Cost savings**: 67% reduction (Sonnet $0.027 → Haiku $0.009)
+**Why Sonnet-5**: Strong reasoning for model selection analysis and cost/quality tradeoff evaluation.
 
 ## Agent Logic
 
@@ -270,4 +269,4 @@ copilot --allow-all --autopilot --agent model-engineer "Model optimization"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6
+You are powered by the model named claude-sonnet-5.

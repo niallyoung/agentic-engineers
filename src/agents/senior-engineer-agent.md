@@ -1,7 +1,7 @@
 ---
 name: senior-engineer
 description: Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes
-model: claude-sonnet-4.5
+model: claude-sonnet-5
 accepts:
   - DELEGATE
 returns:
@@ -12,7 +12,7 @@ role: senior-engineer
 # Senior Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Senior Engineer
-**Model**: claude-sonnet-4.5
+**Model**: claude-sonnet-5
 **Effort**: high
 **Purpose**: Complex coding tasks without pre-written plans. Writes plans first, then executes or delegates. Diagnoses root causes. Handles ambiguous requirements.
 
@@ -228,4 +228,4 @@ copilot --allow-all --autopilot --agent senior-engineer "Planning & analysis"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6
+You are powered by the model named claude-sonnet-5.

@@ -93,6 +93,7 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 ## Key Features
 
 - **🎯 Queue-Based Orchestration** — Centralized task routing via DELEGATE/HANDBACK protocol
+- **♻️ Automatic Queue Polling** — Harnesses automatically poll their queues during idle periods (exponential backoff, file-watch wake — see [docs/guides/harness-queue-polling.md](docs/guides/harness-queue-polling.md))
 - **⚖️ Multi-Tier Model Selection** — Haiku for execution, Sonnet for planning, Opus for architecture
 - **✅ Quality Gates (3 Layers)** — DELEGATE structure, task routing, HANDBACK validation
 - **📊 Real-Time Metrics** — Token tracking, quality scores, cost per task

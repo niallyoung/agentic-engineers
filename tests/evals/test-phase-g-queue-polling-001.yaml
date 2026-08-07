@@ -1,0 +1,36 @@
+id: test-phase-g-queue-polling-001
+name: "Phase G - Queue polling happy path (poll, detect DELEGATE, return JSON)"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - haiku
+  - sonnet
+category: queue-polling
+severity: critical
+timeout_seconds: 90
+requirements:
+  - Must understand the harness-native queue polling cycle (Phase G)
+  - Must know a polling cycle acquires the session lock, scans queue/incoming, processes DELEGATEs
+  - Must know the cycle returns a structured JSON summary
+prompt: |
+  In the HANDBACK output field, describe one healthy harness queue-polling cycle
+  as designed in Phase G. Answer from your own knowledge in three or four
+  sentences. Do NOT run tools or read files.
+
+  Your answer MUST mention:
+  - the cycle acquires the per-session queue lock before working
+  - it scans the "queue/incoming" directory to detect any new DELEGATE
+  - each detected DELEGATE is processed and produces a HANDBACK
+  - the cycle returns a structured JSON result reporting how many were processed
+expected_contains:
+  - "lock"
+  - "queue/incoming"
+  - "DELEGATE"
+  - "HANDBACK"
+  - "JSON"
+  - "processed"
+expected_not_contains:
+  - "Invalid format"
+  - "infinite loop"

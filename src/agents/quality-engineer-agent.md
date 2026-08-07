@@ -1,7 +1,7 @@
 ---
 name: quality-engineer
 description: Post-implementation quality gate; code review; model suitability assessment
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 accepts:
   - DELEGATE
 returns:
@@ -12,7 +12,7 @@ role: quality-engineer
 # Quality Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Quality Engineer
-**Model**: claude-sonnet-4.6
+**Model**: claude-sonnet-5
 **Effort**: medium
 **Purpose**: Post-implementation validation. Verify deliverables meet spec. Test execution, coverage analysis, quality assessment.
 
@@ -169,4 +169,4 @@ copilot --allow-all --autopilot --agent quality-engineer "Quality validation"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6
+You are powered by the model named claude-sonnet-5.

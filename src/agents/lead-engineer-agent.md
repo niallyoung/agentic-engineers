@@ -1,7 +1,7 @@
 ---
 name: lead-engineer
 description: Code review; quality decisions; medium-complexity planning; architectural guidance
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 accepts:
   - DELEGATE
 returns:
@@ -12,7 +12,7 @@ role: lead-engineer
 # Lead Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Lead Engineer
-**Model**: claude-sonnet-4.6
+**Model**: claude-sonnet-5
 **Effort**: high
 **Purpose**: Code review, architectural guidance, medium-complexity planning. Provides quality assurance and design feedback.
 
@@ -176,4 +176,4 @@ copilot --allow-all --autopilot --agent lead-engineer "Code review task"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-4.6. The exact model ID is github-copilot/claude-sonnet-4.6
+You are powered by the model named claude-sonnet-5.

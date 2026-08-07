@@ -1,0 +1,37 @@
+id: test-phase-f-resolver-errors-001
+name: "Phase F - Resolver error paths (unknown role, missing config, provider mismatch)"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - sonnet
+  - opus
+category: model-resolution
+severity: high
+timeout_seconds: 90
+requirements:
+  - Must know ModelResolver raises ModelNotFoundError for unknown roles
+  - Must understand provider-mismatch fallback behaviour
+  - Must understand FileNotFoundError when models.yaml is missing and fallback is disabled
+prompt: |
+  In the HANDBACK output field, explain how the canonical ModelResolver behaves on
+  three error or edge conditions. Answer from your own knowledge in three or four
+  sentences. Do NOT run tools or read files.
+
+  Cover all three:
+  1. Resolving an unknown role that is not in models.yaml and not in the fallback
+     defaults raises a ModelNotFoundError.
+  2. When a role exists but the requested provider is not mapped for it, resolve
+     does NOT error — it falls back to the default claude-provider model.
+  3. Constructing the resolver with an explicit models.yaml path that does not
+     exist while fallback_to_defaults is False raises a FileNotFoundError.
+expected_contains:
+  - "ModelNotFoundError"
+  - "unknown role"
+  - "provider"
+  - "fallback"
+  - "FileNotFoundError"
+expected_not_contains:
+  - "Invalid format"
+  - "silently returns"

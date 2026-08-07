@@ -441,7 +441,10 @@ def test_idle_loop_return_structure(orchestrator):
     """Test that run_idle_loop returns correct tuple structure."""
     orchestrator.clean_poll_count = 0
 
-    result = orchestrator.run_idle_loop()
+    # Mock time.sleep so the normal-poll branch does not block on the real
+    # poll_interval_idle (180s default).
+    with patch('time.sleep'):
+        result = orchestrator.run_idle_loop()
 
     # Verify return type and keys
     assert isinstance(result, dict)
@@ -456,21 +459,25 @@ def test_idle_loop_return_structure(orchestrator):
 
 def test_idle_loop_multiple_cycles(orchestrator):
     """Test idle detection across multiple poll cycles."""
-    # First two polls - clean
-    orchestrator.clean_poll_count = 0
-    result1 = orchestrator.run_idle_loop()
-    assert result1['idle_entered'] is False
-    assert orchestrator.clean_poll_count == 0
+    # The first three cycles take the normal-poll branch, which calls
+    # time.sleep(poll_interval_idle) (180s default). Mock time.sleep so the
+    # test completes in milliseconds instead of blocking for ~9 minutes.
+    with patch('time.sleep'):
+        # First two polls - clean
+        orchestrator.clean_poll_count = 0
+        result1 = orchestrator.run_idle_loop()
+        assert result1['idle_entered'] is False
+        assert orchestrator.clean_poll_count == 0
 
-    # Simulate another clean poll by incrementing counter
-    orchestrator.clean_poll_count = 1
-    result2 = orchestrator.run_idle_loop()
-    assert result2['idle_entered'] is False
+        # Simulate another clean poll by incrementing counter
+        orchestrator.clean_poll_count = 1
+        result2 = orchestrator.run_idle_loop()
+        assert result2['idle_entered'] is False
 
-    # Simulate third clean poll
-    orchestrator.clean_poll_count = 2
-    result3 = orchestrator.run_idle_loop()
-    assert result3['idle_entered'] is False
+        # Simulate third clean poll
+        orchestrator.clean_poll_count = 2
+        result3 = orchestrator.run_idle_loop()
+        assert result3['idle_entered'] is False
 
     # Simulate fourth clean poll - should trigger deep sleep
     orchestrator.clean_poll_count = 3
@@ -493,34 +500,34 @@ def test_deep_sleep_polling_detects_new_file(orchestrator, temp_queue):
     def mock_glob(self, pattern):
         call_count[0] += 1
         # Call 1 is the initial snapshot; call 2 is the first in-loop poll.
-        # With DEEP_SLEEP_SEC=0.5 and poll_interval=10s, only one in-loop
+        # With deep_sleep_sec=0.5 and poll_interval=10s, only one in-loop
         # poll happens before timeout, so the new file must appear on call 2.
         if call_count[0] > 1:
             return [incoming_dir / "new-task.yaml"]
         return []
 
-    original_timeout = orchestrator.DEEP_SLEEP_SEC
-    orchestrator.DEEP_SLEEP_SEC = 0.5
+    original_timeout = orchestrator.config.deep_sleep_sec
+    orchestrator.config.deep_sleep_sec = 0.5
 
     try:
         with patch.object(Path, 'glob', mock_glob):
             result = orchestrator._deep_sleep_polling()
             assert result == 'file_event'
     finally:
-        orchestrator.DEEP_SLEEP_SEC = original_timeout
+        orchestrator.config.deep_sleep_sec = original_timeout
 
 
 def test_deep_sleep_polling_timeout(orchestrator):
     """Test that deep sleep polling returns timeout if no files added."""
     # Use very short timeout for fast testing
-    original_timeout = orchestrator.DEEP_SLEEP_SEC
-    orchestrator.DEEP_SLEEP_SEC = 0.05  # 50ms timeout for fast test
+    original_timeout = orchestrator.config.deep_sleep_sec
+    orchestrator.config.deep_sleep_sec = 0.05  # 50ms timeout for fast test
 
     try:
         result = orchestrator._deep_sleep_polling()
         assert result == 'timeout'
     finally:
-        orchestrator.DEEP_SLEEP_SEC = original_timeout
+        orchestrator.config.deep_sleep_sec = original_timeout
 
 
 def test_deep_sleep_polling_signal_handling(orchestrator):
@@ -541,15 +548,15 @@ def test_deep_sleep_polling_signal_handling(orchestrator):
     thread.start()
 
     # Use moderate timeout
-    original_timeout = orchestrator.DEEP_SLEEP_SEC
-    orchestrator.DEEP_SLEEP_SEC = 0.5
+    original_timeout = orchestrator.config.deep_sleep_sec
+    orchestrator.config.deep_sleep_sec = 0.5
 
     try:
         result = orchestrator._deep_sleep_polling()
         # May be 'signal' or 'timeout' depending on timing
         assert result in ('signal', 'timeout')
     finally:
-        orchestrator.DEEP_SLEEP_SEC = original_timeout
+        orchestrator.config.deep_sleep_sec = original_timeout
         thread.join(timeout=1)
 
 

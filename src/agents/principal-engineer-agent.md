@@ -2,14 +2,10 @@
 name: principal-engineer
 description: >
   Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos.
-  Multi-model: 4.6 for pure planning, 4.7 for design+execution, 4.8 for security-critical design.
-model: claude-opus-4.6
+model: claude-opus-5
 model_guidance: |
-  Use claude-opus-4.6 for pure architecture planning (design-only; no cross-repo execution; extended thinking sufficient).
-  Use claude-opus-4.7 for design decisions with cross-repo execution impact (architecture directly drives implementation across ≥2 repos).
-  Use claude-opus-4.8 only for security-critical design choices (auth flows, cryptographic selection, compliance policy decisions).
-  Default (unclear scope): claude-opus-4.6 (cheapest capable option).
-  Orchestrator selects variant at DELEGATE-creation time based on incoming task profile.
+  Principal Engineer uses claude-opus-5 for all cross-service architecture work.
+  Opus-5 provides superior reasoning for complex multi-service design decisions.
 accepts:
   - DELEGATE
 returns:
@@ -20,7 +16,7 @@ role: principal-engineer
 # Principal Engineer Agent — LIVE IMPLEMENTATION
 
 **Role**: Principal Engineer
-**Model**: claude-opus-4.6 (default; multi-model: 4.6/4.7/4.8 based on task profile — see model_guidance)
+**Model**: claude-opus-5
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 
@@ -220,4 +216,4 @@ copilot --allow-all --autopilot --agent principal-engineer "Architecture decisio
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-opus-4.6. The exact model ID is github-copilot/claude-opus-4.6
+You are powered by the model named claude-opus-5.

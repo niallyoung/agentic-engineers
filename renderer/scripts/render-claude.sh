@@ -68,16 +68,39 @@ map_model() {
 # inject_settings_model SETTINGS_FILE MODEL_ALIAS
 # Merges {"model": MODEL_ALIAS} into the JSON settings file using Python.
 # Creates the file if absent; preserves all other keys.
+#
+# When the file is absent (fresh install/render), it is seeded with the canonical
+# harness defaults — currently the Phase G ``idle_loop`` block (queue auto-polling
+# with exponential backoff + file-watch). This keeps a freshly-rendered
+# dist/claude/settings.json byte-identical to a fresh install, and ensures the
+# harness ships with auto-polling enabled. Existing user keys are always
+# preserved (only ``model`` is overwritten).
 inject_settings_model() {
 	local settings="$1" model_alias="$2"
 	python3 - "$settings" "$model_alias" <<'PY'
 import json, sys, os
 settings_file, model_alias = sys.argv[1], sys.argv[2]
+
+# Canonical defaults seeded only when no settings.json exists yet. Phase G:
+# harness queue auto-polling (see docs/guides/harness-queue-polling.md).
+DEFAULT_SETTINGS = {
+	"idle_loop": {
+		"enabled": True,
+		"interval_seconds": 180,
+		"action": "invoke_skill",
+		"skill": "orchestrator-scheduler",
+		"args": ["--poll-once"],
+		"backoff_intervals": [5, 30, 180, 600],
+		"watch_enabled": True,
+		"watch_poll_seconds": 0.5,
+	},
+}
+
 try:
 	with open(settings_file) as f:
 		data = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
-	data = {}
+	data = dict(DEFAULT_SETTINGS)
 data["model"] = model_alias
 tmp = settings_file + ".tmp"
 with open(tmp, "w") as f:
