@@ -48,10 +48,16 @@ The module uses a three-tier pricing model matching the Copilot agent roles:
 
 | Model | Cost (per M tokens) | Tier | Role |
 |-------|-------------------|------|------|
-| claude-haiku-4.5 | Input: $0.80, Output: $4.00 | Cheap | Engineer, Orchestrator |
-| claude-sonnet-4.6 | Input: $3.00, Output: $15.00 | Medium | Senior, Lead, QE, Model Engineer |
-| claude-opus-4-6 | Input: $15.00, Output: $75.00 | Premium | Principal Engineer |
-| claude-opus-4.8 | Input: $15.00, Output: $75.00 | Premium | Security Engineer |
+| claude-haiku-4.5 | Input: $1.00, Output: $5.00 | Cheap | Engineer, Orchestrator |
+| claude-sonnet-5 | Input: $3.00, Output: $15.00 | Medium | Senior, Lead, QE, Model Engineer |
+| claude-opus-5 | Input: $5.00, Output: $25.00 | Premium | Principal Engineer |
+| claude-fable-5 | Input: $10.00, Output: $50.00 | Premium | Security Engineer |
+| claude-opus-4.8 | Input: $5.00, Output: $25.00 | Premium | Fallback tier |
+
+Rates are Anthropic list price per million tokens. The previous table priced
+Opus at $15/$75 and Haiku at $0.80/$4.00 — those were Claude 3-era figures and
+overstated Opus spend 3x. Sonnet 5 keeps Sonnet 4.6's rate but emits ~30% more
+tokens for the same text, so budgets drain ~30% faster at an unchanged price.
 
 Cached tokens receive a 10% discount on input token cost.
 

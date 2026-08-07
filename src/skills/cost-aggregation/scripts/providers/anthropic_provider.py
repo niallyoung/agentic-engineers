@@ -23,8 +23,8 @@ class AnthropicProvider(BaseProvider):
     _BUILTIN_MODELS: Dict[str, Dict[str, float]] = {
         "claude-sonnet-4.6": {"input_per_1m": 3.00, "output_per_1m": 15.00},
         "claude-sonnet-4.5": {"input_per_1m": 3.00, "output_per_1m": 15.00},
-        "claude-haiku-4.5": {"input_per_1m": 0.25, "output_per_1m": 1.25},
-        "claude-opus-4.8": {"input_per_1m": 15.00, "output_per_1m": 75.00},
+        "claude-haiku-4.5": {"input_per_1m": 1.00, "output_per_1m": 5.00},
+        "claude-opus-4.8": {"input_per_1m": 5.00, "output_per_1m": 25.00},
         # Standard rate; an introductory $2/$10 applies through 2026-08-31.
         "claude-sonnet-5": {"input_per_1m": 3.00, "output_per_1m": 15.00},
         "claude-opus-5": {"input_per_1m": 5.00, "output_per_1m": 25.00},
