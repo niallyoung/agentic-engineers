@@ -113,7 +113,7 @@ When security issues are found:
 handoff_type: DELEGATE
 task_id: 2026-05-26-commit-security-abc123
 agent: security-engineer
-model: claude-opus-4.8
+model: claude-fable-5
 effort: max
 scope: >
   Security scan of {example-service} commit abc123. Assess credentials exposure,

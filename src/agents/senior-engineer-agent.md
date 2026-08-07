@@ -123,7 +123,7 @@ PROCESS:
 handoff_type: DELEGATE
 task_id: 2026-06-02-senior-refactor-event-store
 agent: senior-engineer
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 effort: high
 scope: >
   Refactor {example-service} DynamoDB event store to support new delta-token-based sync.

@@ -54,9 +54,9 @@ class TestFallbackDefaultsDerivedFromYaml:
             )
 
     def test_senior_engineer_default_is_canonical_not_drifted(self, resolver):
-        """Regression: the old hardcoded default was claude-sonnet-4.6, which
-        disagreed with the canonical policy (claude-sonnet-4.5)."""
-        assert resolver.FALLBACK_DEFAULTS["senior_engineer"] == "claude-sonnet-4.5"
+        """Regression: the default must come from models.yaml, not a hardcoded
+        constant that drifts from canonical policy."""
+        assert resolver.FALLBACK_DEFAULTS["senior_engineer"] == "claude-sonnet-5"
 
     def test_from_defaults_derives_same_values(self, canonical_config):
         """from_defaults() (no explicit path) must derive identical values."""
@@ -119,12 +119,14 @@ class TestWrapperCompatibility:
 class TestAssignmentsUnchanged:
     EXPECTED_CLAUDE_ASSIGNMENTS = {
         "engineer": "claude-haiku-4.5",
-        "senior_engineer": "claude-sonnet-4.5",
-        "quality_engineer": "claude-sonnet-4.6",
-        "lead_engineer": "claude-sonnet-4.6",
+        "senior_engineer": "claude-sonnet-5",
+        "quality_engineer": "claude-sonnet-5",
+        "lead_engineer": "claude-sonnet-5",
+        # Unchanged on purpose: fable-5 is the opt-in defensive alternative
+        # (resolve(..., defensive=True)), not the default assignment.
         "security_engineer": "claude-opus-4.8",
-        "principal_engineer": "claude-opus-4.6",
-        "model_engineer": "claude-sonnet-4.5",
+        "principal_engineer": "claude-opus-5",
+        "model_engineer": "claude-sonnet-5",
         "general_orchestrator": "claude-haiku-4.5",
     }
 
@@ -243,7 +245,7 @@ class TestDeriveFallbackDefaults:
         derived by reading the canonical file directly (file-read branch)."""
         ModelResolver._fallback_cache.clear()  # force the cache-miss / file-read path
         r = ModelResolver("/nonexistent/models.yaml", fallback_to_defaults=True)
-        assert r.FALLBACK_DEFAULTS["senior_engineer"] == "claude-sonnet-4.5"
+        assert r.FALLBACK_DEFAULTS["senior_engineer"] == "claude-sonnet-5"
 
     def test_no_registry_uses_fallback_cache_on_second_call(self):
         """Priming the class-level cache with a canonical-backed resolver lets a

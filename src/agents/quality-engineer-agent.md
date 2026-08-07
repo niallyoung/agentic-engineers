@@ -67,7 +67,7 @@ ASSESSMENT FRAMEWORK:
 handoff_type: DELEGATE
 task_id: 2026-06-02-quality-validate-oauth-impl
 agent: quality-engineer
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 effort: medium
 scope: >
   Validate OAuth2 refresh token rotation implementation.

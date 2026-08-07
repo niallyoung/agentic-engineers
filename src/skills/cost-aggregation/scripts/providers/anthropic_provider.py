@@ -25,6 +25,10 @@ class AnthropicProvider(BaseProvider):
         "claude-sonnet-4.5": {"input_per_1m": 3.00, "output_per_1m": 15.00},
         "claude-haiku-4.5": {"input_per_1m": 0.25, "output_per_1m": 1.25},
         "claude-opus-4.8": {"input_per_1m": 15.00, "output_per_1m": 75.00},
+        # Standard rate; an introductory $2/$10 applies through 2026-08-31.
+        "claude-sonnet-5": {"input_per_1m": 3.00, "output_per_1m": 15.00},
+        "claude-opus-5": {"input_per_1m": 5.00, "output_per_1m": 25.00},
+        "claude-fable-5": {"input_per_1m": 10.00, "output_per_1m": 50.00},
         "claude-3-5-sonnet-20241022": {"input_per_1m": 3.00, "output_per_1m": 15.00},
         "claude-3-haiku-20240307": {"input_per_1m": 0.25, "output_per_1m": 1.25},
         "claude-3-opus-20240229": {"input_per_1m": 15.00, "output_per_1m": 75.00},

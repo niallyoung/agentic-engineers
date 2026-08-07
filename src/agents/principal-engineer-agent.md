@@ -102,7 +102,7 @@ When making design decisions, consider:
 handoff_type: DELEGATE
 task_id: 2026-06-02-principal-redesign-event-store
 agent: principal-engineer
-model: claude-opus-4.6
+model: claude-opus-5
 effort: high
 scope: >
   Redesign event store architecture for multi-region deployment.

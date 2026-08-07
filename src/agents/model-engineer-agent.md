@@ -128,7 +128,7 @@ WHEN Orchestrator finishes quality gate and wants feedback:
 handoff_type: DELEGATE
 task_id: 2026-05-26-model-feedback-quality-gate
 agent: model-engineer
-model: claude-sonnet-4.5
+model: claude-sonnet-5
 effort: medium
 scope: >
   Analyse token efficiency and quality metrics from the most recent commit-quality-gate
