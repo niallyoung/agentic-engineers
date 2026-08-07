@@ -350,6 +350,16 @@ write_config() {
     "auto": true,
     "reserved": 30000
   },
+  "idle_loop": {
+    "enabled": true,
+    "interval_seconds": 180,
+    "action": "invoke_skill",
+    "skill": "orchestrator-scheduler",
+    "args": ["--poll-once"],
+    "backoff_intervals": [5, 30, 180, 600],
+    "watch_enabled": true,
+    "watch_poll_seconds": 0.5
+  },
   "permission": {
     "read": "allow",
     "edit": "allow",
@@ -393,6 +403,9 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
   applies Model Engineer recommendations.
 - It runs in-harness via a polling loop (no external cron / outbound tools).
+- During idle periods (\`idle_loop\` config, default 180s) the harness invokes the
+  \`orchestrator-scheduler --poll-once\` SKILL to drain the queue. A file-based lock
+  serializes polling across harnesses (Claude Code, OpenCode, …) sharing a session.
 - ALL execution work is delegated to a specialist via DELEGATE/HANDBACK.
 
 ### Role-specific rules

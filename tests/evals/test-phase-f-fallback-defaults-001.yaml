@@ -1,0 +1,39 @@
+id: test-phase-f-fallback-defaults-001
+name: "Phase F - FALLBACK_DEFAULTS derivation and migration compatibility"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - sonnet
+  - opus
+category: model-resolution
+severity: high
+timeout_seconds: 90
+requirements:
+  - Must understand FALLBACK_DEFAULTS is DERIVED from models.yaml, never hardcoded
+  - Must know defaults derive from each role's claude provider entry
+  - Must understand the migration guarantee that defaults cannot drift from the registry
+prompt: |
+  In the HANDBACK output field, explain the FALLBACK_DEFAULTS mechanism of the
+  canonical ModelResolver and why it matters for harness migration compatibility.
+  Answer from your own knowledge in three or four sentences. Do NOT run tools or
+  read files.
+
+  Your answer MUST make these points:
+  - FALLBACK_DEFAULTS is DERIVED from models.yaml at load time, not hardcoded, so
+    it can never drift from the canonical registry.
+  - Each role's default is taken from its claude provider model (for example
+    "engineer" derives to "claude-haiku-4.5").
+  - When models.yaml cannot be loaded but fallback_to_defaults is True, the
+    resolver still derives defaults from the canonical file so older harnesses
+    keep resolving correctly during migration.
+expected_contains:
+  - "FALLBACK_DEFAULTS"
+  - "derived"
+  - "models.yaml"
+  - "drift"
+  - "claude-haiku-4.5"
+expected_not_contains:
+  - "Invalid format"
+  - "hardcoded list"

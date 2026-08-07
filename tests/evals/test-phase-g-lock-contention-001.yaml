@@ -1,0 +1,36 @@
+id: test-phase-g-lock-contention-001
+name: "Phase G - Lock contention, stale lock cleanup, missing queue error paths"
+harnesses:
+  - opencode
+  - copilot
+  - claude-code
+models:
+  - sonnet
+  - opus
+category: queue-polling
+severity: high
+timeout_seconds: 90
+requirements:
+  - Must understand multi-harness contention produces lock_skipped, not an error
+  - Must know a lock older than 300s is treated as stale and auto-removed
+  - Must know the lock is released in a finally block
+prompt: |
+  In the HANDBACK output field, explain how the Phase G queue poller handles three
+  failure or contention conditions. Answer from your own knowledge in three or four
+  sentences. Do NOT run tools or read files.
+
+  Cover all three:
+  1. If another live harness already holds the session lock, this cycle is skipped
+     with "lock_skipped" true and processed zero — this is normal, not an error.
+  2. A lock whose mtime is older than 300s is presumed orphaned (stale) and is
+     auto-removed so the next cycle can proceed.
+  3. The lock is always released in a finally block, even when processing raises.
+expected_contains:
+  - "lock_skipped"
+  - "300s"
+  - "stale"
+  - "finally"
+  - "released"
+expected_not_contains:
+  - "Invalid format"
+  - "double-processing"

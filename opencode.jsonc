@@ -12,6 +12,20 @@
     "reserved": 30000
   },
 
+  // Idle-loop queue cooperation (Phase G-1): when the harness is idle for
+  // interval_seconds, invoke the orchestrator-scheduler SKILL to poll the
+  // session queue once. File-based locking coordinates with other harnesses.
+  "idle_loop": {
+    "enabled": true,
+    "interval_seconds": 180,
+    "action": "invoke_skill",
+    "skill": "orchestrator-scheduler",
+    "args": ["--poll-once"],
+    "backoff_intervals": [5, 30, 180, 600],
+    "watch_enabled": true,
+    "watch_poll_seconds": 0.5
+  },
+
   // Permission model for tool access
   "permission": {
     "read": "allow",

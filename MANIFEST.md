@@ -10,7 +10,7 @@
 
 Distributed AI orchestration system for multi-agent task delegation via queue-based DELEGATE/HANDBACK protocol. All work flows through `~/.agentic-engineers/{session-id}/{harness}/queue/`.
 
-**Installation:** See `docs/INSTALLATION.md`  
+**Installation:** See [`docs/INSTALLATION.md`](docs/INSTALLATION.md)  
 **Agent Roles:** See `src/AGENTS.md`  
 **Skills:** See `src/SKILLS.md`
 
@@ -33,7 +33,7 @@ Distributed AI orchestration system for multi-agent task delegation via queue-ba
 
 See `src/AGENTS.md` for full documentation.
 
-### Skill List (24 skills)
+### Skill List (26 skills)
 
 **Task Management**
 - queue-management (queue operations, isolation)
@@ -46,10 +46,12 @@ See `src/AGENTS.md` for full documentation.
 - spec-validator (SPEC.md compliance)
 
 **Optimization**
+- ab-testing (experiment orchestration, traffic allocation, statistical analysis)
 - model-engineer (cost/quality analysis)
 - model-selection (routing recommendations)
 - cost-aggregation (multi-provider costs)
 - local-model-runtime (Ollama routing)
+- metrics-etl (metrics pipeline)
 - tokenadvisor (token efficiency)
 
 **Automation & Setup**

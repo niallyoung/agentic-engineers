@@ -1,8 +1,3 @@
-"""
-Copilot CLI harness utilities.
+"""Copilot harness model routing and cost analysis."""
 
-Provides streaming output support for render-copilot.sh.
-"""
-from .streaming import StreamingRenderer, StreamEvent
-
-__all__ = ["StreamingRenderer", "StreamEvent"]
+__version__ = "1.0.0"
