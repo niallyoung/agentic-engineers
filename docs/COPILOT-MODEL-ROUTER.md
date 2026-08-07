@@ -150,14 +150,14 @@ Pricing from `src/config/models.yaml`:
 | Model | Provider | Input | Output |
 |-------|----------|-------|--------|
 | claude-haiku-4.5 | Anthropic | $0.001/1K | $0.005/1K |
-| claude-sonnet-4.6 | Anthropic | $0.003/1K | $0.015/1K |
-| claude-opus-4.8 | Anthropic | $0.005/1K | $0.025/1K |
+| claude-sonnet-5 | Anthropic | $0.003/1K | $0.015/1K |
+| claude-opus-5 | Anthropic | $0.005/1K | $0.025/1K |
 | claude-fable-5 | Anthropic | $0.010/1K | $0.050/1K |
 
 Note: `claude-fable-5` is restricted to Security Engineer **defensive-only**
 analysis (effort <= medium) and is never auto-routed — see docs/SPEC.md >
 Security Engineer: Multi-Model Strategy. Copilot's upstream model registry may
-not serve fable-5; the router falls back to claude-opus-4.8 in that case.
+not serve fable-5; it is only used when explicitly requested for defensive analysis.
 
 Cost calculation assumes 60% input / 40% output token ratio.
 

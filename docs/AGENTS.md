@@ -72,8 +72,8 @@ See [src/AGENTS.md](../src/AGENTS.md) for the canonical agent roster.
 Principal Engineer and Security Engineer support model variant selection based on task complexity.
 
 **Decision criteria:**
-- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
-- Security Engineer: Always use `claude-opus-4.8` (non-downgrade rule)
+- Principal Engineer: Use `claude-opus-5` for architecture and design decisions
+- Security Engineer: Always use `claude-fable-5` for defensive-only analysis (effort <= medium)
 
 For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../SPEC.md).
 

@@ -19,12 +19,12 @@ We use **positive enforcement** (locked choices) instead of **negative enforceme
 
 ## Locked Models Today
 
-| Model | Agents | Rationale | Cost/Token |
+| Model | Agents | Rationale | Cost/Task |
 |-------|--------|-----------|-----------|
-| **claude-haiku-4.5** | engineer, orchestrator | Fast, cost-effective for standard tasks | $0.035 |
-| **claude-sonnet-4.5** | model-engineer | Analysis tasks, cost-quality balance | $0.06 |
-| **claude-sonnet-4.6** | lead, quality, senior | Complex tasks, higher quality | $0.065 |
-| **claude-opus-4.7** | security, principal | High-stakes, cross-service decisions | $0.15 |
+| **claude-haiku-4.5** | engineer, orchestrator | Fast, cost-effective for standard tasks | $0.03-0.05 |
+| **claude-sonnet-5** | model-engineer, lead, quality, senior | Complex tasks, higher quality, cost-optimized | $0.12 |
+| **claude-opus-5** | principal | High-stakes, cross-service decisions | $0.18 |
+| **claude-fable-5** | security | Defensive security analysis only | $0.36 |
 
 ## Model Switch Process
 

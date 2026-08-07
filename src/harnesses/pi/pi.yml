@@ -17,7 +17,7 @@ version: "1.0"
 # Core settings
 core:
   defaultProvider: "anthropic"
-  defaultModel: "claude-sonnet-4.6"
+  defaultModel: "claude-sonnet-5"
   thinking:
     enabled: true
     level: "medium"
@@ -40,42 +40,42 @@ agents:
 
   - id: "senior-engineer"
     role: "Senior Engineer"
-    model: "claude-sonnet-4.5"
+    model: "claude-sonnet-5"
     effort: "high"
     expertise: "Complex system design, debugging, root-cause diagnosis"
     scope: "Multi-service, complex logic"
 
   - id: "lead-engineer"
     role: "Lead Engineer"
-    model: "claude-sonnet-4.6"
+    model: "claude-sonnet-5"
     effort: "high"
     expertise: "Code review, quality assurance, architectural guidance"
     scope: "Validation, review, quality gates"
 
   - id: "quality-engineer"
     role: "Quality Engineer"
-    model: "claude-sonnet-4.6"
+    model: "claude-sonnet-5"
     effort: "medium"
     expertise: "Post-implementation quality gate, model assessment"
     scope: "Quality verification, model suitability assessment"
 
   - id: "principal-engineer"
     role: "Principal Engineer"
-    model: "claude-opus-4.6"
+    model: "claude-opus-5"
     effort: "high"
     expertise: "Cross-organization architecture, strategy"
     scope: "Organization-wide impact, decisions affecting >2 repos"
 
   - id: "security-engineer"
     role: "Security Engineer"
-    model: "claude-opus-4.8"
-    effort: "max"
+    model: "claude-fable-5"
+    effort: "medium"
     expertise: "Security architecture, vulnerability analysis, threat modeling"
     scope: "Security decisions only — all other routes blocked"
 
   - id: "model-engineer"
     role: "Model Engineer"
-    model: "claude-sonnet-4.5"
+    model: "claude-sonnet-5"
     effort: "high"
     expertise: "Token optimization, cost-quality trade-offs, model selection"
     scope: "Performance metrics, cost analysis, optimization recommendations"

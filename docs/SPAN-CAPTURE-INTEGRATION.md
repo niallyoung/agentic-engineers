@@ -204,9 +204,10 @@ When calculating cost in span attributes, use model-specific pricing:
 
 | Model | Input Price | Output Price |
 |-------|-------------|--------------|
-| claude-haiku-4.5 | $0.000080/token | $0.000240/token |
-| claude-sonnet-4.6 | $0.000003/token | $0.000015/token |
-| claude-opus-4.7 | $0.000015/token | $0.000075/token |
+| claude-haiku-4.5 | $0.000001/token | $0.000005/token |
+| claude-sonnet-5 | $0.000003/token | $0.000015/token |
+| claude-opus-5 | $0.000005/token | $0.000025/token |
+| claude-fable-5 | $0.000010/token | $0.000050/token |
 
 **Formula:** `cost_usd = (input_tokens × input_price) + (output_tokens × output_price)`
 

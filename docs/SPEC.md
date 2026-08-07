@@ -377,12 +377,12 @@ All work enters via **Orchestrator** (default entry point). Orchestrator applies
 |------|-------|--------|-----------|---------|
 | **Orchestrator** | claude-haiku-4.5 | low | $0.03 | Entry point; routing decisions; queue management; span capture; metrics collection |
 | **Engineer** | claude-haiku-4.5 | high | $0.03 | Execute well-scoped tasks with pre-written plans |
-| **Senior Engineer** | claude-sonnet-4.6 | high | $0.09 | Complex coding without plan; diagnosis; planning |
-| **Lead Engineer** | claude-sonnet-4.6 | high | $0.09 | Code review; quality verification; unblock stuck tasks |
-| **Quality Engineer** | claude-sonnet-4.6 | medium | $0.09 | Tier 1 quality checks; model suitability assessment |
-| **Principal Engineer** | claude-opus-4-6 | high | $0.15 | Cross-service architecture; complex multi-step planning |
-| **Security Engineer** | claude-opus-4.8 | max | $0.15 | Security analysis; vulnerability audits; threat modeling |
-| **Model Engineer** | claude-sonnet-4.6 | high | $0.09 | Analyze feedback; recommend optimal model/effort; generate artifact index |
+| **Senior Engineer** | claude-sonnet-5 | high | $0.12 | Complex coding without plan; diagnosis; planning |
+| **Lead Engineer** | claude-sonnet-5 | high | $0.12 | Code review; quality verification; unblock stuck tasks |
+| **Quality Engineer** | claude-sonnet-5 | medium | $0.12 | Tier 1 quality checks; model suitability assessment |
+| **Principal Engineer** | claude-opus-5 | high | $0.18 | Cross-service architecture; complex multi-step planning |
+| **Security Engineer** | claude-fable-5 | max | $0.36 | Security analysis; vulnerability audits; threat modeling |
+| **Model Engineer** | claude-sonnet-5 | high | $0.12 | Analyze feedback; recommend optimal model/effort; generate artifact index |
 
 **Cost Target Distribution:**
 - Orchestrator: 60%
@@ -1044,7 +1044,7 @@ Execute well-scoped tasks with pre-written plans.
 
 ### Senior Engineer
 
-**Model:** claude-sonnet-4.6 (high effort)  
+**Model:** claude-sonnet-5 (high effort)  
 **Cost Target:** 7%
 
 Design solutions for complex tasks without pre-written plans. Diagnose bugs when root cause unclear.
@@ -1065,7 +1065,7 @@ Design solutions for complex tasks without pre-written plans. Diagnose bugs when
 
 ### Lead Engineer
 
-**Model:** claude-sonnet-4.6 (high effort)  
+**Model:** claude-sonnet-5 (high effort)  
 **Cost Target:** 2%
 
 Review code and unblock stuck tasks.
@@ -1082,7 +1082,7 @@ Review code and unblock stuck tasks.
 
 ### Quality Engineer
 
-**Model:** claude-sonnet-4.6 (medium effort)  
+**Model:** claude-sonnet-5 (medium effort)  
 **Cost Target:** 8%
 
 Run Tier 1 quality checks. Assess model suitability.
@@ -1097,7 +1097,7 @@ Run Tier 1 quality checks. Assess model suitability.
 
 ### Principal Engineer
 
-**Model:** claude-opus-4-6 (high effort)  
+**Model:** claude-opus-5 (high effort)  
 **Cost Target:** 1%
 
 Design when changes affect >2 repos or service boundaries.
@@ -1110,7 +1110,7 @@ Design when changes affect >2 repos or service boundaries.
 
 ### Security Engineer
 
-**Model:** claude-opus-4.8 (max effort)  
+**Model:** claude-fable-5 (max effort)  
 **Cost Target:** 1%
 
 Scan for vulnerabilities, check dependencies, verify access controls.
@@ -1119,7 +1119,7 @@ Scan for vulnerabilities, check dependencies, verify access controls.
 
 ### Model Engineer
 
-**Model:** claude-sonnet-4.6 (high effort)  
+**Model:** claude-sonnet-5 (high effort)  
 **Cost Target:** 3%
 
 Analyze completed task feedback (~10-100 samples). Identify patterns.
@@ -1609,25 +1609,27 @@ This section documents how agent roles select among approved opus model variants
 
 | Variant | Strengths | Weaknesses | Best For |
 |---------|-----------|------------|----------|
-| `claude-opus-4.6` | Extended thinking; lowest cost in opus tier | No cross-repo execution edge; not for security-critical tasks | Pure architecture planning; design-only scopes |
-| `claude-opus-4.7` | Balanced capability + cost; strong cross-repo reasoning | Not optimal for highest-stakes security tasks | Design decisions that drive implementation across ≥2 repos |
-| `claude-opus-4.8` | Highest capability; best for threat modeling and compliance | Highest cost | Security analysis; auth flows; cryptographic selection; compliance policy |
+| `claude-opus-5` | Current Opus; strongest reasoning and long-horizon agentic work at $5/$25 per MTok | Heavier tokenizer than 4.6, so the same task costs more even at an unchanged rate | All Principal Engineer work: architecture planning, cross-repo design, security-critical design |
+| `claude-opus-4.8` | Previous Opus; same $5/$25 per MTok | Superseded by opus-5 on every axis | Emergency fallback only (opus-5 unavailable); Security Engineer resolver default |
+| `claude-opus-4.7` | Previous generation | Superseded | Emergency fallback only |
+| `claude-opus-4.6` | Older generation; lighter tokenizer | Lower capability; no cross-repo execution edge | Emergency fallback only |
 
 ### Principal Engineer: Variant Selection
 
-The Orchestrator applies this decision tree when creating a DELEGATE for Principal Engineer:
+**Variant selection is retired for Principal Engineer.** The 4.6/4.7/4.8 split existed
+because those variants traded capability against cost within the opus tier. `claude-opus-5`
+supersedes all three at the same $5/$25 per MTok as 4.8, so there is no tradeoff left to
+select on — routing by task profile would only pick a weaker model for the same price.
 
 | Task Profile | Model | Trigger |
 |-------------|-------|---------|
-| Pure architecture planning | `claude-opus-4.6` | Design-only scope; no cross-repo execution required; extended thinking sufficient |
-| Design with cross-repo execution | `claude-opus-4.7` | Architecture decision drives implementation across ≥2 repos |
-| Security-critical design | `claude-opus-4.8` | Involves auth flows, cryptographic selection, or compliance policy |
+| All Principal Engineer work | `claude-opus-5` | Default and only assignment |
+| Any profile, opus-5 unavailable | `claude-opus-4.8` | Emergency fallback; must be documented in HANDBACK `model_assessment` |
 
 **Orchestrator decision tree:**
-1. Pure planning (design-only, no execution)? → `claude-opus-4.6`
-2. Design directly drives cross-repo implementation? → `claude-opus-4.7`
-3. Security-critical design (auth/crypto/compliance)? → `claude-opus-4.8`
-4. Default (unclear scope) → `claude-opus-4.6` (cheapest capable option)
+1. Principal Engineer DELEGATE? → `claude-opus-5`
+2. opus-5 unavailable (API outage)? → `claude-opus-4.8`, and record the substitution in HANDBACK
+3. Never downgrade by choice — the fallback is an availability measure, not a cost lever
 
 ### Security Engineer: Multi-Model Strategy
 
@@ -1777,11 +1779,13 @@ Canonical (source) model IDs use a **dot** in the two-part version
 | Model | Canonical (source) ID | Context Window | Max Output | Use Case |
 |-------|-----------------------|-----------------|------------|----------|
 | **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
-| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 64K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer |
-| **Claude Opus 4.6** | `claude-opus-4.6` | 1M | 64K | High capability; Principal Engineer (when needed) |
-| **Claude Opus 4.7** | `claude-opus-4.7` | 1M | 128K | High capability; Principal Engineer |
-| **Claude Opus 4.8** | `claude-opus-4.8` | 1M | 128K | Latest, highest Opus; Security Engineer (pinned default) |
-| **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer **defensive-only** alternative (effort <= medium). Single-part version — identical in every harness, no transformation. |
+| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
+| **Claude Opus 5** | `claude-opus-5` | 1M | 128K | High capability; Principal Engineer. Single-part version — no transformation in any harness. |
+| **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer (defensive-only, effort <= medium). Most expensive model in the roster ($10/$50 per MTok, 2x Opus 5) — a capability upgrade, never a cost saving. Single-part version — identical in every harness, no transformation. |
+| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 128K | Still locked/approved; no longer assigned to a role |
+| **Claude Opus 4.6** | `claude-opus-4.6` | 1M | 64K | Still locked/approved; no longer assigned to a role |
+| **Claude Opus 4.7** | `claude-opus-4.7` | 1M | 128K | Still locked/approved; no longer assigned to a role |
+| **Claude Opus 4.8** | `claude-opus-4.8` | 1M | 128K | Emergency fallback tier. **Still the ModelResolver default for `security_engineer`** — fable-5 is returned only for `resolve(..., defensive=True)`. |
 
 **CRITICAL RULE — canonical IDs:** the two-part version uses a **dot**
 (`claude-opus-4.8`), never an underscore or uppercase. The fully-hyphenated form
@@ -1798,23 +1802,27 @@ and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/refer
 
 | Harness | Canonical ID | Rendered Format | Transformation |
 |---------|--------------|-----------------|----------------|
-| **Claude (Claude Code)** | `claude-opus-4.8` | `opus` (tier alias) or full ID | Tier alias where the runtime accepts it; else dot→hyphen |
-| **Copilot CLI** | `claude-opus-4.8` | `claude-opus-4.8` | None (dotted form) |
-| **OpenCode** | `claude-opus-4.8` | `anthropic/claude-opus-4-8` | `anthropic/` prefix + dot→hyphen |
-| **Pi (pi.dev)** | `claude-opus-4.8` | `claude-opus-4-8` | dot→hyphen |
+| **Claude (Claude Code)** | `claude-opus-5` | `opus` (tier alias) or full ID | Tier alias where the runtime accepts it; else no transformation (single-part) |
+| **Copilot CLI** | `claude-opus-5` | `claude-opus-5` | None (single-part) |
+| **OpenCode** | `claude-opus-5` | `anthropic/claude-opus-5` | `anthropic/` prefix (single-part, no dot→hyphen) |
+| **Pi (pi.dev)** | `claude-opus-5` | `claude-opus-5` | No transformation (single-part) |
 
 ### Model Assignment by Agent Role
 
-As of 2026-05-25:
+As of 2026-08-07:
 
 - **Orchestrator:** `claude-haiku-4.5` (fast, low-cost, routing-only)
 - **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
-- **Senior Engineer:** `claude-sonnet-4.6` (complex coding, unscoped work)
-- **Lead Engineer:** `claude-sonnet-4.6` (code review, architectural guidance)
-- **Quality Engineer:** `claude-sonnet-4.6` (quality gates, verification)
-- **Model Engineer:** `claude-sonnet-4.6` (metrics analysis, recommendations)
-- **Principal Engineer:** `claude-opus-4-6` or `claude-opus-4.7` (cross-service architecture)
-- **Security Engineer:** `claude-opus-4.8` (complex threat modeling, vulnerability analysis)
+- **Senior Engineer:** `claude-sonnet-5` (complex coding, unscoped work)
+- **Lead Engineer:** `claude-sonnet-5` (code review, architectural guidance)
+- **Quality Engineer:** `claude-sonnet-5` (quality gates, verification)
+- **Model Engineer:** `claude-sonnet-5` (metrics analysis, recommendations)
+- **Principal Engineer:** `claude-opus-5` (cross-service architecture)
+- **Security Engineer:** `claude-fable-5` (defensive-only; complex threat modeling, vulnerability analysis).
+  Note the runtime nuance: `ModelResolver.resolve('security_engineer')` still returns
+  `claude-opus-4.8` by default and yields fable-5 only for an explicitly defensive
+  request (`resolve(..., defensive=True)`). The C5 offensive-scope gate in
+  `DelegateValidator` applies on every model and is not bypassed by either.
 
 ### Model Governance: Locking & Switching
 

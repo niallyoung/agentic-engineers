@@ -43,7 +43,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Complex system design, debugging intricate problems, root-cause diagnosis
 **Best for**: Unscoped complex work, architectural decisions, deep debugging
-**Model**: claude-sonnet-4-6 (high effort)
+**Model**: claude-sonnet-5 (high effort)
 **Scope**: Multi-service impact, complex logic, performance optimization
 
 **When to use**:
@@ -61,7 +61,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Code review, quality assurance, spec validation, architectural guidance
 **Best for**: Code review, quality gates, ensuring spec compliance, medium-complexity planning
-**Model**: claude-sonnet-4-6 (high effort)
+**Model**: claude-sonnet-5 (high effort)
 **Scope**: Validation, review, quality decisions
 
 **When to use**:
@@ -77,7 +77,7 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Security architecture, vulnerability analysis, compliance, threat modeling
 **Best for**: Security-scoped work, vulnerability analysis, secure design
-**Model**: claude-opus-4-8 (max effort, pinned default) | claude-fable-5 (defensive-only alternative, effort <= medium)
+**Model**: claude-fable-5 (defensive-only, effort <= medium)
 **Scope**: Security decisions, architecture, compliance
 
 **Defensive-Only Model Constraint**: fable-5 (and any Mythos-class model) is approved
@@ -105,7 +105,7 @@ are hard stops — never rephrase or retry around them.
 
 **Expertise**: Cross-organization architecture, strategy, high-stakes decisions
 **Best for**: System architecture, major refactors, organizational decisions
-**Model**: claude-opus-4-8 (high effort)
+**Model**: claude-opus-5 (high effort)
 **Scope**: Organization-wide impact, strategic decisions affecting >2 repos
 
 **When to use**:
@@ -121,7 +121,7 @@ are hard stops — never rephrase or retry around them.
 
 **Expertise**: Post-implementation quality gate, code review, model suitability assessment
 **Best for**: Quality verification after implementation, model assessment feedback
-**Model**: claude-sonnet-4-6 (medium effort)
+**Model**: claude-sonnet-5 (medium effort)
 **Scope**: Testing decisions, coverage, model assessment
 
 **When to use**:
@@ -136,7 +136,7 @@ are hard stops — never rephrase or retry around them.
 
 **Expertise**: Token optimization, cost-quality trade-offs, model selection
 **Best for**: Cost optimization, model selection, efficiency analysis
-**Model**: claude-sonnet-4-6 (high effort)
+**Model**: claude-sonnet-5 (high effort)
 **Scope**: Performance metrics, cost analysis, optimization recommendations
 
 **When to use**:

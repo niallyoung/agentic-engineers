@@ -21,7 +21,7 @@ This document indexes all available (active) skills in the agentic-engineers fra
 | protocol-validator | Runtime protocol validation for DELEGATEs/HANDBACKs | validation | - |
 | spec-validator | Validates implementation compliance with SPEC.md | validation | - |
 | spec-management | Exclusive SPEC.md change protection | management | - |
-| workflow-review | Validates end-to-end delegation workflows | validation | claude-sonnet-4.6 |
+| workflow-review | Validates end-to-end delegation workflows | validation | claude-sonnet-5 |
 
 ## Agent Skills
 

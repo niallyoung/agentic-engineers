@@ -79,7 +79,7 @@ Execute well-scoped tasks with pre-written plans. Recommended (not mandatory): u
 
 ## Senior Engineer
 
-**Model:** claude-sonnet-4.6 (high effort)  
+**Model:** claude-sonnet-5 (high effort)  
 **Cost Target:** 7%
 
 Design solutions for complex tasks without pre-written plans. Diagnose bugs when root cause is unclear.
@@ -94,7 +94,7 @@ Design solutions for complex tasks without pre-written plans. Diagnose bugs when
 
 ## Lead Engineer
 
-**Model:** claude-sonnet-4.6 (high effort)  
+**Model:** claude-sonnet-5 (high effort)  
 **Cost Target:** 2%
 
 Review code and unblock stuck tasks. Verify quality before work proceeds.
@@ -113,7 +113,7 @@ Review code and unblock stuck tasks. Verify quality before work proceeds.
 
 ## Quality Engineer
 
-**Model:** claude-sonnet-4.6 (medium effort)  
+**Model:** claude-sonnet-5 (medium effort)  
 **Cost Target:** 8%
 
 Run Tier 1 quality checks. Assess model performance.
@@ -128,7 +128,7 @@ Run Tier 1 quality checks. Assess model performance.
 
 ## Principal Engineer
 
-**Model:** claude-opus-4-6 (high effort)  
+**Model:** claude-opus-5 (high effort)  
 **Cost Target:** 1%
 
 Design when changes affect >2 repos or touch service boundaries.
@@ -139,7 +139,7 @@ Design when changes affect >2 repos or touch service boundaries.
 
 ## Security Engineer
 
-**Model:** claude-opus-4.7 (max effort)  
+**Model:** claude-fable-5 (max effort, defensive-only)  
 **Cost Target:** 1%
 
 Scan for vulnerabilities, check dependencies, verify access controls, return findings by severity (CRITICAL, HIGH, MEDIUM, LOW).
@@ -148,7 +148,7 @@ Scan for vulnerabilities, check dependencies, verify access controls, return fin
 
 ## Model Engineer
 
-**Model:** claude-sonnet-4.6 (high effort)  
+**Model:** claude-sonnet-5 (high effort)  
 **Cost Target:** 3%
 
 **Primary:** Analyze completed task feedback (~10-100 samples). Identify patterns: which models succeed? Which fail? Token efficiency?
