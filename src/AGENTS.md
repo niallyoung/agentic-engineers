@@ -51,10 +51,16 @@ See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
 ### Cost Tiers
 
 ```
-Tier 1 — Cheap (Haiku):   Orchestrator + Engineer          → $0.03–0.05/task
-Tier 2 — Medium (Sonnet): Model Eng + QE + Lead + Senior   → $0.09/task
-Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
+Tier 1 — Cheap (haiku-4.5):   Orchestrator + Engineer        → $0.03–0.05/task
+Tier 2 — Medium (sonnet-5):   Model Eng + QE + Lead + Senior → ~$0.12/task
+Tier 3 — Premium (opus-5):    Principal                      → ~$0.18/task
+Tier 3 — Premium (fable-5):   Security                       → ~$0.36/task
 ```
+
+Per-task figures rose at the model upgrade without any price change: Sonnet 5
+keeps Sonnet 4.6's $3/$15 per MTok but its tokenizer emits ~30% more tokens for
+the same text. Re-baseline with `count_tokens` against the new model instead of
+scaling old token counts.
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
 

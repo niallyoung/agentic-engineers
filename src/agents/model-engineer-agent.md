@@ -19,6 +19,14 @@ role: model-engineer
 
 ## Agent Logic
 
+> **Token baselines are model-specific.** The counts in the examples below were
+> measured on the previous model generation. Claude Sonnet 5 emits **~30% more
+> tokens for the same text** than Sonnet 4.6 (its per-token price is unchanged at
+> $3/$15 per MTok), and Opus 5 shares the heavier Opus 4.7/4.8 tokenizer. When
+> comparing observed against estimated tokens, re-baseline with `count_tokens`
+> against the model that actually ran the task — never scale a stored count from
+> another model, and never read a 30% rise as a regression in efficiency.
+
 ```
 WHEN Orchestrator finishes quality gate and wants feedback:
 

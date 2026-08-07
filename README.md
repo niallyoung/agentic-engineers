@@ -68,17 +68,29 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 |------|------------------|----------------|--------|---------|
 | **Orchestrator** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | Low | Routes all work via decision tree; never does work itself |
 | **Engineer** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | High | Executes well-scoped, pre-planned tasks |
-| **Model Engineer** | `claude-sonnet-4.5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Analyzes metrics; optimizes routing and model selection |
-| **Quality Engineer** | `claude-sonnet-4.6` | `gpt-4-turbo` / `gpt-5.5` | Medium | Post-implementation validation; model suitability assessment |
-| **Lead Engineer** | `claude-sonnet-4.6` | `gpt-4` / `gpt-5.5` | High | Code review (8-point checklist); architectural guidance |
-| **Senior Engineer** | `claude-sonnet-4.6` | `gpt-4-turbo` / `gpt-5.5` | High | Analyzes unscoped work; produces detailed plans |
-| **Principal Engineer** | `claude-opus-4.6` | `gpt-4o` / `gpt-5.5` | High | Cross-service architecture; major refactors |
-| **Security Engineer** | `claude-opus-4.8` | `gpt-4o` / `gpt-5.5` | Max | Threat modeling; vulnerability assessment |
+| **Model Engineer** | `claude-sonnet-5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Analyzes metrics; optimizes routing and model selection |
+| **Quality Engineer** | `claude-sonnet-5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Post-implementation validation; model suitability assessment |
+| **Lead Engineer** | `claude-sonnet-5` | `gpt-4` / `gpt-5.5` | High | Code review (8-point checklist); architectural guidance |
+| **Senior Engineer** | `claude-sonnet-5` | `gpt-4-turbo` / `gpt-5.5` | High | Analyzes unscoped work; produces detailed plans |
+| **Principal Engineer** | `claude-opus-5` | `gpt-4o` / `gpt-5.5` | High | Cross-service architecture; major refactors |
+| **Security Engineer** | `claude-fable-5` | `gpt-4o` / `gpt-5.5` | Max | Threat modeling; vulnerability assessment |
 
-**Cost Breakdown:**
-- **Haiku:** $0.03–$0.05 per task — Routing, well-scoped implementation
-- **Sonnet:** $0.09 per task — Planning, review, quality, optimization
-- **Opus:** $0.15 per task — Complex architecture, security analysis
+**Cost Breakdown** (list price per MTok, and a rough per-task estimate):
+
+| Tier | Model | Input / Output | Est. per task | Used for |
+|---|---|---|---|---|
+| Cheap | `claude-haiku-4.5` | $1 / $5 | $0.03–$0.05 | Routing, well-scoped implementation |
+| Medium | `claude-sonnet-5` | $3 / $15 | ~$0.12 | Planning, review, quality, optimization |
+| Premium | `claude-opus-5` | $5 / $25 | ~$0.18 | Complex architecture |
+| Premium | `claude-fable-5` | $10 / $50 | ~$0.36 | Security analysis |
+
+> **Per-task estimates rose without a price rise.** Sonnet 5 keeps Sonnet 4.6's
+> $3/$15 rate but uses a new tokenizer that produces **~30% more tokens for the
+> same text**, so an equivalent task costs ~30% more. Opus 5 shares the Opus 4.7/4.8
+> tokenizer, which is also heavier than Opus 4.6's. Re-baseline with
+> `count_tokens` against the new model rather than scaling old counts.
+> Sonnet 5 additionally carries an introductory $2/$10 rate through 2026-08-31;
+> budgets here use the standard rate so they do not under-report once it lapses.
 
 **Effort Levels:**
 - **Low:** Minimal reasoning, direct execution (Orchestrator routing)
@@ -299,13 +311,17 @@ This framework uses git hooks (`.githooks/`) to enforce protocol compliance and 
 
 **Real-World Data:**
 - **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
-- **Sonnet (claude-sonnet-4.6):** $0.09 per task, needed for complex analysis and planning
-- **Opus (claude-opus-4.6/4.8):** $0.15 per task, only for security/architecture decisions
+- **Sonnet (claude-sonnet-5):** ~$0.12 per task, needed for complex analysis and planning
+- **Opus (claude-opus-5):** ~$0.18 per task, only for architecture decisions
+- **Fable (claude-fable-5):** ~$0.36 per task, security analysis only
 
-**Token Savings Example:**
-- **Without protocol:** All tasks → Opus (max reasoning) = $0.15 × 100 tasks = $15.00
-- **With protocol:** Haiku (90 tasks) + Sonnet (8 tasks) + Opus (2 tasks) = $0.05×90 + $0.09×8 + $0.15×2 = $5.22
-- **Savings:** 65% reduction ($9.78 saved)
+**Token Savings Example** (100 tasks, standard rates):
+- **Without protocol:** All tasks → Opus 5 = $0.18 × 100 = $18.00
+- **With protocol:** Haiku (90) + Sonnet 5 (8) + Opus 5 (2) = $0.05×90 + $0.12×8 + $0.18×2 = $5.82
+- **Savings:** ~68% reduction ($12.18 saved)
+
+The ratio between tiers is what drives the saving, so it survived the model
+upgrade even though every absolute figure moved.
 
 ### 3. Parallel Sub-Agent Execution at Scale
 
@@ -386,14 +402,18 @@ Every role has a **canonical model tier** (the primary recommendation) plus **pr
 |------|-----------|-------------------|----------------|-------|---------|---------------|
 | **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
 | **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Quality Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Model Engineer** | Sonnet | `claude-sonnet-4.5` | `claude-sonnet-4.5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Lead Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Senior Engineer** | Sonnet | `claude-sonnet-4.6` | `claude-sonnet-4.6` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Principal Engineer** | Opus | `claude-opus-4.6` | `claude-opus-4.6` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
-| **Security Engineer** | Opus | `claude-opus-4.8` | `claude-opus-4.8` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+| **Quality Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Model Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Lead Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Senior Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
+| **Principal Engineer** | Opus | `claude-opus-5` | `claude-opus-5` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+| **Security Engineer** | Opus | `claude-opus-4.8` \| `claude-fable-5`¹ | `claude-opus-4.8` \| `claude-fable-5`¹ | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
 
 * Untested in this repo.
+
+¹ Security Engineer resolves to `claude-opus-4.8` by default; `claude-fable-5` is
+returned only for an explicitly defensive request (`resolve(..., defensive=True)`).
+See [SPEC.md > Security Engineer: Multi-Model Strategy](docs/SPEC.md).
 
 **Why these model choices:**
 - **Haiku / gpt-4o-mini / gpt-5.4-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution

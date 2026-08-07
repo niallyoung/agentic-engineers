@@ -134,15 +134,17 @@ the resulting `commit_sha` (see §5 and `docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.m
 
 ### 4.1 Locked model set
 
-Canonical format is **dots**, `claude-{variant}-{major}.{minor}`:
+Canonical format uses a **dot** version separator, `claude-{variant}-{major}.{minor}`.
+Current-generation models carry a single-part version and so have no separator
+at all (`claude-opus-5`). The rule is "never a hyphen as the version separator".
 
 | Model | Used by |
 |-------|---------|
 | `claude-haiku-4.5` | Orchestrator, Engineer |
-| `claude-sonnet-4.5` | Senior Engineer, Model Engineer |
-| `claude-sonnet-4.6` | Lead Engineer, Quality Engineer |
-| `claude-opus-4.6` | Principal Engineer |
-| `claude-opus-4.8` | Security Engineer |
+| `claude-sonnet-5` | Senior Engineer, Model Engineer, Lead Engineer, Quality Engineer |
+| `claude-opus-5` | Principal Engineer |
+| `claude-fable-5` | Security Engineer |
+| `claude-opus-4.8` | Security Engineer resolver default; emergency fallback tier |
 
 Rejected by the pre-commit hook: hyphenated versions (`claude-opus-4-7`),
 unversioned (`claude-opus`), and non-Claude models (`gpt-4`). Per-harness
@@ -153,9 +155,10 @@ always stays dotted.
 ### 4.2 Cost tiers
 
 ```
-Tier 1 — Cheap (Haiku):   Orchestrator + Engineer        → $0.03–0.05/task
-Tier 2 — Medium (Sonnet): Model Eng + QE + Lead + Senior → $0.09/task
-Tier 3 — Premium (Opus):  Principal + Security           → $0.15/task
+Tier 1 — Cheap (haiku-4.5): Orchestrator + Engineer        → $0.03–0.05/task
+Tier 2 — Medium (sonnet-5): Model Eng + QE + Lead + Senior → ~$0.12/task
+Tier 3 — Premium (opus-5):  Principal                      → ~$0.18/task
+Tier 3 — Premium (fable-5): Security                       → ~$0.36/task
 ```
 
 ### 4.3 Effort & thinking

@@ -24,12 +24,12 @@ Distributed AI orchestration system for multi-agent task delegation via queue-ba
 |---|---|---|
 | Orchestrator | claude-haiku-4.5 | Routing & queue management |
 | Engineer | claude-haiku-4.5 | Implementation (well-scoped) |
-| Senior Engineer | claude-sonnet-4.5 | Complex problem-solving |
-| Lead Engineer | claude-sonnet-4.6 | Code review & quality |
-| Quality Engineer | claude-sonnet-4.6 | Post-implementation verification |
-| Principal Engineer | claude-opus-4.6 | Cross-service architecture |
-| Security Engineer | claude-opus-4.8 | Security & threat modeling |
-| Model Engineer | claude-sonnet-4.5 | Cost/quality optimization |
+| Senior Engineer | claude-sonnet-5 | Complex problem-solving |
+| Lead Engineer | claude-sonnet-5 | Code review & quality |
+| Quality Engineer | claude-sonnet-5 | Post-implementation verification |
+| Principal Engineer | claude-opus-5 | Cross-service architecture |
+| Security Engineer | claude-fable-5 | Security & threat modeling |
+| Model Engineer | claude-sonnet-5 | Cost/quality optimization |
 
 See `src/AGENTS.md` for full documentation.
 

@@ -53,7 +53,10 @@ PROCESS:
 
   3. MAKE DECISION: Execute or Delegate?
      
-     IF plan is still high effort (>3000 tokens):
+     IF plan is still high effort (>4000 tokens):
+       # Raised from 3000 with the move to claude-sonnet-5, whose tokenizer
+       # emits ~30% more tokens for the same text. The threshold tracks the
+       # amount of real work, not the raw count, so it scales with it.
        - Consider delegation to multiple agents
        - Break into sub-tasks
        - Assign to appropriate agents (Engineer, Lead Engineer, etc.)
