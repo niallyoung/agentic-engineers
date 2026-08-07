@@ -57,12 +57,12 @@ role_models:
     description: "Code review specialist - 8-point checklist validation"
 
   security_engineer:
-    canonical: "claude-fable"
+    canonical: "claude-opus"
     thinking: true
     effort: "max"
     providers:
-      copilot: "claude-fable-5"
-      claude: "claude-fable-5"
+      copilot: "claude-opus-5"
+      claude: "claude-opus-5"
       openai: "gpt-4o"
       codex: "gpt-5.5"
       google: "gemini-2-pro"
