@@ -271,34 +271,30 @@ Moved to `src/internal/experimental/security/` for future protocol hardening pha
 
 ## Model Selection Strategy
 
-### Security Engineer: Fable-5 Defensive Alternative
+### Security Engineer: Fable-5 Unconditional Default
 
-The Security Engineer role supports two models:
-- **Default:** `claude-opus-4.8` (canonical, used for all security_engineer delegations)
-- **Defensive:** `claude-fable-5` (opt-in via `resolve(..., defensive=True)`)
+The Security Engineer role uses a single model:
+- **Unconditional Default:** `claude-fable-5` (highest capability tier for threat modeling)
 
 **Routing Logic:**
 ```python
 resolver = ModelResolver()
 
-# Normal (default)
+# Unconditional fable-5 for all security_engineer delegations
 model = resolver.resolve('security_engineer')
-# → 'claude-opus-4.8'
-
-# Defensive (explicit opt-in)
-model = resolver.resolve('security_engineer', defensive=True)
 # → 'claude-fable-5'
 ```
 
-**Defensive Semantics:**
-- Fable-5 is **defensive-only** (cannot be rerouted, only paused)
-- Cannot escalate to other models once engaged
+**Model Rationale:**
+- Fable-5 provides highest reasoning capability for security analysis
+- Unconditional routing ensures security tasks receive the best model available
+- Offensive-scope gating is enforced by DelegateValidator C5 gate, not by model routing
 - See `docs/SPEC.md` > "Security Engineer: Multi-Model Strategy"
 
 **Implementation:**
-- `src/config/models.yaml` defines both models
-- `canonical_resolver.py` implements routing logic
-- Tests validate fable-5 routing (`test_model_resolver_consistency.py`)
+- `src/config/models.yaml` defines fable-5 as canonical default
+- `canonical_resolver.py` routes unconditionally to fable-5
+- Tests validate fable-5 as default (`test_model_resolver_consistency.py`)
 
 ---
 

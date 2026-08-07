@@ -57,17 +57,17 @@ role_models:
     description: "Code review specialist - 8-point checklist validation"
 
   security_engineer:
-    canonical: "claude-opus"
+    canonical: "claude-fable-5"
     thinking: true
     effort: "max"
     providers:
-      copilot: "claude-opus-5"
-      claude: "claude-opus-5"
+      copilot: "claude-fable-5"
+      claude: "claude-fable-5"
       openai: "gpt-4o"
       codex: "gpt-5.5"
       google: "gemini-2-pro"
       meta: "llama-3-405b"
-    description: "Threat modeling & security validation - STRIDE framework"
+    description: "Threat modeling & security validation - STRIDE framework (unconditional fable-5)"
 
   principal_engineer:
     canonical: "claude-opus"

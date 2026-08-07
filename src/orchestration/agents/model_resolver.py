@@ -12,12 +12,10 @@ from src.orchestration.models.canonical_resolver import (
     ModelResolver,
     ModelNotFoundError,
     ValidationError,
-    FABLE_5_MODEL,
 )
 
 __all__ = [
     "ModelResolver",
     "ModelNotFoundError",
     "ValidationError",
-    "FABLE_5_MODEL",
 ]

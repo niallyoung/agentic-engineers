@@ -117,28 +117,19 @@ class TestModelResolverFallbackDefaults:
                     f"Role '{role}' missing 'claude' provider in models.yaml"
 
     def test_fable5_is_unconditional_security_engineer_default(self):
-        """security_engineer resolves to fable-5 regardless of the deprecated flag.
+        """security_engineer unconditionally resolves to fable-5.
 
-        The defensive-only gate was removed; fable-5 is now the unconditional
-        default. The `defensive` kwarg is retained for backwards compatibility
-        and must be a no-op for every role. Offensive-scope work is rejected by
-        the DelegateValidator C5 gate, not by model routing.
+        The defensive-only gate was removed in feature/model-update.
+        fable-5 is now the unconditional default for security_engineer
+        with highest capability for threat modeling and vulnerability analysis.
         """
         resolver = ModelResolver()
 
         assert resolver.resolve('security_engineer') == 'claude-fable-5', \
             "security_engineer should default to claude-fable-5"
 
-        # The deprecated flag must not change routing in either direction.
-        assert resolver.resolve('security_engineer', defensive=False) == 'claude-fable-5', \
-            "defensive=False must not downgrade security_engineer off fable-5"
-        assert resolver.resolve('security_engineer', defensive=True) == 'claude-fable-5', \
-            "defensive=True must still resolve to claude-fable-5"
-
-        # Other roles are unaffected by the flag and never routed to fable-5.
-        engineer_normal = resolver.resolve('engineer', defensive=False)
-        engineer_defensive = resolver.resolve('engineer', defensive=True)
-        assert engineer_normal == engineer_defensive, \
-            "Non-security roles should ignore defensive flag"
-        assert engineer_normal != 'claude-fable-5', \
-            "fable-5 must never be the default for non-security roles"
+        # Verify other roles are never routed to fable-5
+        assert resolver.resolve('engineer') != 'claude-fable-5', \
+            "fable-5 must only be the default for security_engineer"
+        assert resolver.resolve('lead_engineer') != 'claude-fable-5', \
+            "fable-5 must only be the default for security_engineer"

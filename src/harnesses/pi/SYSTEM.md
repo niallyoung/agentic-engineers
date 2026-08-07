@@ -85,7 +85,7 @@ You are integrated into the **pi.dev coding agent harness**, giving you access t
 | **Lead Engineer** | claude-sonnet-5 | high | Code review; quality decisions; architectural guidance |
 | **Quality Engineer** | claude-sonnet-5 | medium | Post-implementation quality gate; model assessment |
 | **Principal Engineer** | claude-opus-5 | high | Cross-service architecture; design decisions |
-| **Security Engineer** | claude-fable-5 (defensive-only) | medium | Security analysis; threat modeling; vulnerability audits |
+| **Security Engineer** | claude-fable-5 | max | Security analysis; threat modeling; vulnerability audits |
 | **Model Engineer** | claude-sonnet-5 | high | Cost optimization; model/effort recommendations |
 
 ## Communication Patterns

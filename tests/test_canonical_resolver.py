@@ -4,7 +4,7 @@ Tests for the canonical ModelResolver (single source of truth).
 
 Covers:
 - FALLBACK_DEFAULTS is derived from models.yaml (drift prevention via asserting test)
-- fable-5 defensive-only routing for security_engineer
+- fable-5 unconditional default for security_engineer
 - backwards-compatible wrapper import path
 - agent→model assignments unchanged vs canonical config
 """
@@ -19,7 +19,6 @@ import pytest
 from src.orchestration.models.canonical_resolver import (
     ModelResolver,
     ModelNotFoundError,
-    FABLE_5_MODEL,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -73,21 +72,13 @@ class TestFallbackDefaultsDerivedFromYaml:
 
 
 # ---------------------------------------------------------------------------
-# AC4: fable-5 supported for security_engineer (defensive-only)
+# AC4: fable-5 is unconditional default for security_engineer
 # ---------------------------------------------------------------------------
 
 class TestFable5Routing:
-    def test_security_engineer_default_is_opus(self, resolver):
-        """Default (non-defensive) security_engineer assignment is opus-5."""
-        assert resolver.resolve("security_engineer", provider="claude") == "claude-opus-5"
-
-    def test_security_engineer_defensive_routes_to_fable5(self, resolver):
-        assert resolver.resolve("security_engineer", defensive=True) == FABLE_5_MODEL
-        assert FABLE_5_MODEL == "claude-fable-5"
-
-    def test_defensive_flag_ignored_for_non_security_roles(self, resolver):
-        """defensive=True must not affect any other role."""
-        assert resolver.resolve("engineer", defensive=True) != FABLE_5_MODEL
+    def test_security_engineer_default_is_fable5(self, resolver):
+        """Security Engineer unconditionally routes to fable-5."""
+        assert resolver.resolve("security_engineer", provider="claude") == "claude-fable-5"
 
     def test_fable5_in_locked_models(self):
         """LOCKED_MODELS.sh must contain the fable-5 entry."""
@@ -122,8 +113,8 @@ class TestAssignmentsUnchanged:
         "senior_engineer": "claude-sonnet-5",
         "quality_engineer": "claude-sonnet-5",
         "lead_engineer": "claude-sonnet-5",
-        # Default is opus-5; fable-5 is defensive-only alternative
-        "security_engineer": "claude-opus-5",
+        # Unconditional fable-5 for highest-capability security analysis
+        "security_engineer": "claude-fable-5",
         "principal_engineer": "claude-opus-5",
         "model_engineer": "claude-sonnet-5",
         "general_orchestrator": "claude-haiku-4.5",
