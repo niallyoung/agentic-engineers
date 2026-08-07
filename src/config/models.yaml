@@ -57,7 +57,7 @@ role_models:
     description: "Code review specialist - 8-point checklist validation"
 
   security_engineer:
-    canonical: "claude-fable-5"
+    canonical: "claude-fable"
     thinking: true
     effort: "max"
     providers:
