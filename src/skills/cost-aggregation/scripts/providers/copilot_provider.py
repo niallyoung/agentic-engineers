@@ -29,6 +29,8 @@ class CopilotProvider(BaseProvider):
         "claude-opus-4.6": {"input_per_1m": 2.00, "output_per_1m": 4.00},
         "claude-sonnet-5": {"input_per_1m": 1.00, "output_per_1m": 1.50},
         "claude-opus-5": {"input_per_1m": 2.00, "output_per_1m": 4.00},
+        # Security Engineer default; 2x the Copilot opus rate (see providers.yaml).
+        "claude-fable-5": {"input_per_1m": 4.00, "output_per_1m": 8.00},
         "gpt-4o": {"input_per_1m": 0.80, "output_per_1m": 1.20},
         "gpt-4o-mini": {"input_per_1m": 0.10, "output_per_1m": 0.20},
     }

@@ -89,10 +89,10 @@ class TestBasicResolution:
         assert 'sonnet' in model.lower()
 
     def test_resolve_security_engineer_role(self, resolver):
-        """Test resolving security_engineer role."""
+        """Test resolving security_engineer role returns fable-5 unconditionally."""
         model = resolver.resolve('security_engineer')
         assert model is not None
-        assert 'opus' in model.lower()
+        assert 'fable' in model.lower()
 
     def test_resolve_with_kebab_case_role(self, resolver):
         """Test resolving role in kebab-case (auto-converts to snake_case)."""

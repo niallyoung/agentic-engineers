@@ -134,6 +134,12 @@ providers:
       claude-opus-5:
         input_per_1m: 2.00
         output_per_1m: 4.00
+      # Fable-5 is the unconditional Security Engineer default. Copilot does not
+      # publish a fable rate; extrapolated at 2x the Copilot opus rate, matching
+      # the 2x opus-to-fable ratio in the Anthropic direct-API table above.
+      claude-fable-5:
+        input_per_1m: 4.00
+        output_per_1m: 8.00
       gpt-4o:
         input_per_1m: 0.80
         output_per_1m: 1.20

@@ -147,11 +147,16 @@ class TestComplexityBasedModelRouting:
             f"Senior Engineer should use sonnet on Copilot; got '{model}'"
         )
 
-    def test_security_engineer_uses_opus_class_model(self, models_data: dict):
-        """Security Engineer (threat modelling) must use opus-class model."""
+    def test_security_engineer_uses_top_tier_model(self, models_data: dict):
+        """Security Engineer (threat modelling) must use a top-tier model.
+
+        fable-5 is the unconditional default; opus remains acceptable as the
+        next tier down. Anything cheaper is a regression.
+        """
         model = models_data["role_models"]["security_engineer"]["providers"]["copilot"]
-        assert "opus" in model.lower(), (
-            f"Security Engineer should use opus on Copilot; got '{model}'"
+        assert any(t in model.lower() for t in ("fable", "opus")), (
+            f"Security Engineer should use a fable- or opus-class model on Copilot; "
+            f"got '{model}'"
         )
 
     def test_orchestrator_uses_lowest_tier_model(self, models_data: dict):
@@ -163,7 +168,7 @@ class TestComplexityBasedModelRouting:
         )
 
     def test_model_routing_escalates_with_complexity(self, models_data: dict):
-        """Verify cost-increasing complexity routing: haiku < sonnet < opus."""
+        """Verify cost-increasing complexity routing: haiku < sonnet < opus < fable."""
         role_models = models_data["role_models"]
 
         def tier_rank(model: str) -> int:
@@ -173,6 +178,8 @@ class TestComplexityBasedModelRouting:
                 return 1
             if "opus" in model:
                 return 2
+            if "fable" in model:
+                return 3
             return -1
 
         engineer_tier = tier_rank(
@@ -924,7 +931,7 @@ class TestProductionResilience:
                 model_lower = copilot_model.lower()
                 is_valid = any(
                     tier in model_lower
-                    for tier in ("haiku", "sonnet", "opus", "gpt", "mini")
+                    for tier in ("haiku", "sonnet", "opus", "fable", "gpt", "mini")
                 )
                 assert is_valid, f"Role {role} has unknown model class: {copilot_model}"
 
