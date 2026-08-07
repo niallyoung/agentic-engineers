@@ -4,10 +4,14 @@ description: Security analysis; threat modeling; vulnerability audits; final esc
 model: claude-fable-5
 model_guidance: |
   Security Engineer uses claude-fable-5 for all security analysis work.
-  Fable-5 provides strong security reasoning at cost-optimized efficiency.
-  No defensive-only constraints or gating applied; all approved security tasks are in scope.
-  Restricted-topic work is OUT OF SCOPE for this framework on every model — no model
-  re-routing; reject and escalate to the user.
+  Fable-5 is the highest-capability tier and the most expensive model in the roster
+  ($10/$50 per MTok — 2x claude-opus-5). It is a capability upgrade, never a cost saving;
+  bound spend with effort, not by assuming it is cheap.
+  Fable-5 is not scoped more narrowly than the role's own approved work — but the
+  framework-wide scope limit still applies and is unchanged: restricted-topic work
+  (offensive tooling, exploit development, attack automation) is OUT OF SCOPE on every
+  model. The Orchestrator's DelegateValidator C5 gate rejects such DELEGATEs and
+  escalates to the user — there is no model re-routing and no bypass.
 accepts:
   - DELEGATE
 returns:
