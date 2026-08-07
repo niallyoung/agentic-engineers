@@ -73,21 +73,24 @@ class TestFallbackDefaultsDerivedFromYaml:
 
 
 # ---------------------------------------------------------------------------
-# AC4: fable-5 supported for security_engineer (defensive-only)
+# AC4: fable-5 as unconditional default for security_engineer
 # ---------------------------------------------------------------------------
 
 class TestFable5Routing:
-    def test_security_engineer_default_is_opus(self, resolver):
-        """Default (non-defensive) security_engineer assignment unchanged."""
-        assert resolver.resolve("security_engineer", provider="claude") == "claude-opus-4.8"
+    def test_security_engineer_default_is_fable5(self, resolver):
+        """Security Engineer now unconditionally uses fable-5."""
+        assert resolver.resolve("security_engineer", provider="claude") == "claude-fable-5"
 
-    def test_security_engineer_defensive_routes_to_fable5(self, resolver):
-        assert resolver.resolve("security_engineer", defensive=True) == FABLE_5_MODEL
+    def test_security_engineer_fable5_is_canonical(self, resolver):
+        """Fable-5 is the canonical (provider-independent) model for security_engineer."""
+        assert resolver.resolve("security_engineer") == FABLE_5_MODEL
         assert FABLE_5_MODEL == "claude-fable-5"
 
-    def test_defensive_flag_ignored_for_non_security_roles(self, resolver):
-        """defensive=True must not affect any other role."""
-        assert resolver.resolve("engineer", defensive=True) != FABLE_5_MODEL
+    def test_defensive_flag_ignored_for_security_roles(self, resolver):
+        """defensive parameter is now deprecated and ignored."""
+        # Both should resolve to fable-5 regardless of defensive flag
+        assert resolver.resolve("security_engineer", defensive=False) == FABLE_5_MODEL
+        assert resolver.resolve("security_engineer", defensive=True) == FABLE_5_MODEL
 
     def test_fable5_in_locked_models(self):
         """LOCKED_MODELS.sh must contain the fable-5 entry."""
@@ -122,9 +125,8 @@ class TestAssignmentsUnchanged:
         "senior_engineer": "claude-sonnet-5",
         "quality_engineer": "claude-sonnet-5",
         "lead_engineer": "claude-sonnet-5",
-        # Unchanged on purpose: fable-5 is the opt-in defensive alternative
-        # (resolve(..., defensive=True)), not the default assignment.
-        "security_engineer": "claude-opus-4.8",
+        # Fable-5 is now the unconditional default for security_engineer
+        "security_engineer": "claude-fable-5",
         "principal_engineer": "claude-opus-5",
         "model_engineer": "claude-sonnet-5",
         "general_orchestrator": "claude-haiku-4.5",

@@ -53,7 +53,7 @@ Substitute your actual home directory where `~` appears.
 | **Senior Engineer** | claude-sonnet-5 | high | Complex design, debugging | Multi-service, logic |
 | **Lead Engineer** | claude-sonnet-5 | high | Code review, quality gates | Validation, review |
 | **Quality Engineer** | claude-sonnet-5 | medium | Post-impl quality gate | Quality verification |
-| **Security Engineer** | claude-fable-5 (defensive-only) | medium | Vulnerability analysis, compliance | Security only; defensive analysis only |
+| **Security Engineer** | claude-fable-5 | max | Vulnerability analysis, compliance | Security analysis only |
 | **Principal Engineer** | claude-opus-5 | high | Architecture, strategy | Organization-wide |
 | **Model Engineer** | claude-sonnet-5 | high | Token optimization, cost analysis | Performance, budget |
 
@@ -179,7 +179,7 @@ If pi.dev reports a model not found:
 1. Check `settings.json` `defaultModel` value
 2. Verify the model ID is supported by your pi.dev subscription
 3. Update `settings.json` `defaultModel` to a supported model
-4. Current model IDs: `claude-haiku-4-5`, `claude-sonnet-5`, `claude-opus-5`, `claude-fable-5` (defensive-only for Security Engineer)
+4. Current model IDs: `claude-haiku-4-5`, `claude-sonnet-5`, `claude-opus-5`, `claude-fable-5` (default for Security Engineer)
 
 **Harness limitation — fable-5 on pi:** pi.dev has a single `defaultModel` and no
 per-agent model selection, so the framework cannot route an individual DELEGATE

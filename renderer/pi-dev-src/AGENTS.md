@@ -77,11 +77,11 @@ This file defines the 8 canonical specialized agent roles available in the agent
 
 **Expertise**: Security architecture, vulnerability analysis, compliance, threat modeling
 **Best for**: Security-scoped work, vulnerability analysis, secure design
-**Model**: claude-fable-5 (defensive-only, effort <= medium)
+**Model**: claude-fable-5 (unconditional default)
 **Scope**: Security decisions, architecture, compliance
 
-**Defensive-Only Model Constraint**: fable-5 (and any Mythos-class model) is approved
-exclusively for defensive analysis (assess, detect, remediate, harden, comply).
+**Scope Constraint**: fable-5 is approved for defensive security analysis only
+(assess, detect, remediate, harden, comply).
 Restricted topics — exploit development, offensive tooling, attack automation, red team,
 jailbreak/prompt-injection research — are OUT OF SCOPE on every model: reject and
 escalate to the user; the framework performs no model re-routing for these.

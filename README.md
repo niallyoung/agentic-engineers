@@ -407,13 +407,11 @@ Every role has a **canonical model tier** (the primary recommendation) plus **pr
 | **Lead Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
 | **Senior Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
 | **Principal Engineer** | Opus | `claude-opus-5` | `claude-opus-5` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
-| **Security Engineer** | Opus | `claude-opus-4.8` \| `claude-fable-5`¹ | `claude-opus-4.8` \| `claude-fable-5`¹ | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
+| **Security Engineer** | Fable | `claude-fable-5` | `claude-fable-5` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
 
 * Untested in this repo.
 
-¹ Security Engineer resolves to `claude-opus-4.8` by default; `claude-fable-5` is
-returned only for an explicitly defensive request (`resolve(..., defensive=True)`).
-See [SPEC.md > Security Engineer: Multi-Model Strategy](docs/SPEC.md).
+¹ See [SPEC.md > Security Engineer: Multi-Model Strategy](docs/SPEC.md).
 
 **Why these model choices:**
 - **Haiku / gpt-4o-mini / gpt-5.4-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution

@@ -11,10 +11,8 @@ Key guarantees:
 - ``FALLBACK_DEFAULTS`` is DERIVED from ``models.yaml`` (not hardcoded), so it can
   never drift from the canonical registry. A test asserts the derived values match
   the canonical assignments.
-- fable-5 is supported as a Security Engineer **defensive-only** alternative
-  (see docs/SPEC.md > Security Engineer: Multi-Model Strategy). The default
-  Security Engineer assignment remains ``claude-opus-4.8``; fable-5 is only
-  returned when the caller explicitly requests the defensive alternative.
+- fable-5 is the unconditional default model for Security Engineer role
+  (see docs/SPEC.md > Security Engineer: Multi-Model Strategy).
 
 Design: docs/architecture-model-centralization.md
 """
@@ -40,9 +38,7 @@ if os.getenv("MODEL_RESOLVER_DEBUG"):
     logger.addHandler(handler)
 
 
-# Security Engineer defensive-only alternative (see docs/SPEC.md).
-# The DEFAULT security_engineer assignment is claude-opus-4.8; fable-5 is only
-# routed when the caller explicitly requests the defensive alternative.
+# Fable-5: unconditional default for Security Engineer (see docs/SPEC.md).
 FABLE_5_MODEL = "claude-fable-5"
 
 # Roles that are not present in models.yaml's role_models but are still valid
@@ -80,7 +76,6 @@ class ModelResolver:
     - Environment-specific overrides (CLI > env vars > YAML > defaults)
     - Fallback strategies for missing providers or roles (derived from YAML)
     - Capability delta detection (thinking mode, structured output, etc.)
-    - fable-5 defensive-only routing for the Security Engineer
     """
 
     # Provider used to derive the concrete fallback default model for each role.
@@ -242,10 +237,8 @@ class ModelResolver:
             role: Role name (e.g., 'engineer', 'senior_engineer')
             provider: Provider context (e.g., 'copilot', 'claude', 'openai')
             override: Explicit override model name (highest precedence)
-            defensive: For security_engineer only — when True, route to the
-                fable-5 defensive-only alternative (see docs/SPEC.md). Ignored
-                for all other roles. The default (False) preserves the canonical
-                claude-opus-4.8 assignment.
+            defensive: DEPRECATED — kept for backwards compatibility, ignored.
+                fable-5 is now the unconditional default for security_engineer.
 
         Returns:
             Model name (canonical or provider-specific equivalent)
@@ -253,17 +246,12 @@ class ModelResolver:
         Raises:
             ModelNotFoundError: If role not found and not in fallback defaults
         """
-        logger.debug(f"resolve(role={role}, provider={provider}, override={override}, defensive={defensive})")
+        logger.debug(f"resolve(role={role}, provider={provider}, override={override})")
 
         if override:
             return override
 
         normalized_role = role.replace('-', '_')
-
-        # fable-5 defensive-only routing for the Security Engineer.
-        if defensive and normalized_role == "security_engineer":
-            logger.debug("security_engineer defensive request → fable-5")
-            return FABLE_5_MODEL
 
         role_config = self.models_config.get(normalized_role)
 

@@ -1,13 +1,12 @@
 """
-Fable-5 defensive-only routing gate (C5).
+Fable-5 restricted-scope gate (C5).
 
 Validates the Orchestrator-side enforcement documented in
 docs/SPEC.md > Security Engineer: Multi-Model Strategy:
 
-- fable-5 may only be requested for security_engineer
-- offensive-scoped work must never route to fable-5
-- fable-5 runs at effort <= medium
-- the DELEGATE must carry `model_constraint: defensive-only`
+- fable-5 is the unconditional default for security_engineer
+- offensive-scoped work must never route to fable-5 (C5 gate enforcement)
+- fable-5 runs at effort <= max
 """
 
 import sys
@@ -37,7 +36,6 @@ def make_delegate(**overrides):
         "task_id": "2026-06-10-fable5-gate-test",
         "role": "security_engineer",
         "model": "claude-fable-5",
-        "model_constraint": "defensive-only",
         "effort": "medium",
         "scope": DEFENSIVE_SCOPE,
     }
@@ -74,18 +72,23 @@ class TestFable5DefensiveGate:
         failures = c5_failures(make_delegate(role="senior_engineer"))
         assert any("security_engineer" in f for f in failures)
 
-    def test_high_effort_rejected(self):
+    def test_high_effort_allowed(self):
+        """Fable-5 now supports any effort level for security_engineer."""
         failures = c5_failures(make_delegate(effort="high"))
-        assert any("effort" in f for f in failures)
+        assert failures == []
 
-    def test_missing_model_constraint_rejected(self):
+    def test_defensive_scope_without_constraint_passes(self):
+        """model_constraint is no longer required; fable-5 is unconditional."""
         delegate = make_delegate()
-        del delegate["model_constraint"]
+        # model_constraint should not be present in base delegate
+        assert "model_constraint" not in delegate
         failures = c5_failures(delegate)
-        assert any("model_constraint" in f for f in failures)
+        assert failures == []
 
-    def test_opus_delegate_not_gated(self):
-        assert c5_failures(make_delegate(model="claude-opus-4.8")) == []
+    def test_other_models_for_other_roles_not_gated(self):
+        """The C5 gate only applies to fable-5 for security_engineer."""
+        other_role_delegate = make_delegate(role="principal_engineer", model="claude-opus-5")
+        assert c5_failures(other_role_delegate) == []
 
     def test_gate_enforced_via_validate_routing_role(self):
         ok, failures = DelegateValidator.validate_routing_role(

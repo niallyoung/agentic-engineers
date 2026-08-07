@@ -3,7 +3,7 @@ name: security-engineer
 description: Security analysis; threat modeling; vulnerability audits; final escalation path.
 model: claude-fable-5
 model_guidance: |
-  Security Engineer uses claude-fable-5 for all security analysis work.
+  Security Engineer uses claude-fable-5 unconditionally for all security analysis work.
   Fable-5 is the highest-capability tier and the most expensive model in the roster
   ($10/$50 per MTok — 2x claude-opus-5). It is a capability upgrade, never a cost saving;
   bound spend with effort, not by assuming it is cheap.

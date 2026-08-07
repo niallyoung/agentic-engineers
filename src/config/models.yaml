@@ -57,12 +57,12 @@ role_models:
     description: "Code review specialist - 8-point checklist validation"
 
   security_engineer:
-    canonical: "claude-opus"
+    canonical: "claude-fable"
     thinking: true
     effort: "max"
     providers:
-      copilot: "claude-opus-4.8"
-      claude: "claude-opus-4.8"
+      copilot: "claude-fable-5"
+      claude: "claude-fable-5"
       openai: "gpt-4o"
       codex: "gpt-5.5"
       google: "gemini-2-pro"
@@ -219,8 +219,8 @@ model_selection:
       tier: opus
       base_quality: 0.96
       avg_latency_sec: 7.0
-    # Fable-5: highest-capability tier; Security Engineer defensive-only
-    # alternative (see docs/SPEC.md > Security Engineer: Multi-Model Strategy)
+    # Fable-5: highest-capability tier; unconditional default for Security Engineer
+    # (see docs/SPEC.md > Security Engineer: Multi-Model Strategy)
     claude-fable-5:
       provider: anthropic
       tier: opus

@@ -44,7 +44,7 @@ class DelegateValidator:
          'senior_engineer': 'claude-sonnet-4.6',
          'lead_engineer': 'claude-sonnet-4.6',
          'principal_engineer': 'claude-opus-4.6',
-         'security_engineer': 'claude-opus-4.8',
+         'security_engineer': 'claude-fable-5',
          'quality_engineer': 'claude-sonnet-4.6',
          'model_engineer': 'claude-sonnet-4.6'
      }
@@ -108,13 +108,12 @@ class DelegateValidator:
         'private_key', 'private-key', 'aws_secret', 'db_password'
     ]
 
-    # Fable-5 defensive-only gate (SPEC.md > Security Engineer: Multi-Model
-    # Strategy). Fable-5 is approved only for security_engineer, only for
-    # defensive analysis, at effort <= medium, and the DELEGATE must carry an
-    # explicit `model_constraint: defensive-only` field.
+    # Fable-5 restricted-scope gate (SPEC.md > Security Engineer: Multi-Model
+    # Strategy). Fable-5 is the unconditional default for security_engineer.
+    # Offensive-scoped work (exploit, attack automation, etc.) must never route
+    # to fable-5 and must be escalated to the user.
     FABLE5_MODEL_MARKER = 'fable'
     FABLE5_ALLOWED_ROLE = 'security_engineer'
-    FABLE5_ALLOWED_EFFORTS = {'low', 'medium'}
     OFFENSIVE_SCOPE_PATTERNS = [
         'exploit', 'attack automation', 'offensive', 'red team',
         'proof-of-concept attack', 'jailbreak', 'prompt injection',
@@ -355,21 +354,21 @@ class DelegateValidator:
                         'C4: review/audit task must route to lead_engineer or quality_engineer'
                     )
 
-        # C5: fable-5 defensive-only gate (SPEC.md > Security Engineer:
-        # Multi-Model Strategy). Offensive-scoped work must route to
-        # claude-opus-4.8 — never fable-5.
+        # C5: fable-5 restricted-scope gate (SPEC.md > Security Engineer:
+        # Multi-Model Strategy). Offensive-scoped work must never route to fable-5.
         failures.extend(self._check_fable5_gate(delegate))
 
         return failures
 
     def _check_fable5_gate(self, delegate: Dict) -> List[str]:
-        """Enforce the fable-5 defensive-only constraint on a DELEGATE.
+        """Enforce the fable-5 restricted-scope constraint on a DELEGATE.
 
         Returns C5 failures when the DELEGATE requests a fable-5 model but:
         - the role is not security_engineer, or
-        - the scope matches an offensive-work pattern, or
-        - effort exceeds medium, or
-        - the explicit ``model_constraint: defensive-only`` field is missing.
+        - the scope matches an offensive-work pattern.
+
+        Offensive work must be rejected and escalated to the user; there is
+        no model re-routing for restricted-topic work.
         """
         model = str(delegate.get('model', '')).lower()
         if self.FABLE5_MODEL_MARKER not in model:
@@ -380,7 +379,7 @@ class DelegateValidator:
         if role != self.FABLE5_ALLOWED_ROLE:
             failures.append(
                 f'C5: model "{delegate.get("model")}" is approved only for '
-                f'{self.FABLE5_ALLOWED_ROLE} (defensive-only), got role "{role}"'
+                f'{self.FABLE5_ALLOWED_ROLE}, got role "{role}"'
             )
 
         scope = str(delegate.get('scope', '')).lower()
@@ -390,18 +389,6 @@ class DelegateValidator:
                 'C5: restricted-topic scope is out of framework scope — reject '
                 'and escalate to the user; never run on fable-5 and never '
                 f're-route to another model (matched: {", ".join(sorted(offensive_hits))})'
-            )
-
-        effort = delegate.get('effort', '')
-        if effort and effort not in self.FABLE5_ALLOWED_EFFORTS:
-            failures.append(
-                f'C5: fable-5 is approved at effort <= medium, got "{effort}"'
-            )
-
-        if delegate.get('model_constraint') != 'defensive-only':
-            failures.append(
-                'C5: fable-5 DELEGATE must carry explicit '
-                '`model_constraint: defensive-only` field'
             )
 
         return failures
