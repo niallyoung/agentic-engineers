@@ -28,6 +28,13 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DIST = REPO_ROOT / "dist"
 
+# Canonical source format for a Claude model id. Two version shapes are valid:
+#   - two-part  claude-haiku-4.5, claude-opus-4.8   (DOT separator)
+#   - one-part  claude-opus-5, claude-sonnet-5, claude-fable-5
+# The invariant is "the version separator is a DOT, never a hyphen". A
+# single-part version has no separator at all, so it need not contain a dot.
+CANONICAL_MODEL_RE = re.compile(r"^claude-(haiku|sonnet|opus|fable)-\d+(\.\d+)?$")
+
 # The 8 canonical specialist roles (source basename without -agent.md).
 EXPECTED_ROLES = {
     "orchestrator",
@@ -202,11 +209,11 @@ def test_rendered_models_are_harness_appropriate(harness):
                 "provider-prefixed (e.g. github-copilot/...)"
             )
         elif harness == "copilot":
-            assert re.match(r"^claude-(haiku|sonnet|opus)-\d", model_val), (
-                f"copilot/{agent_file.name}: model '{model_val}' is not a dotted "
-                "versioned Claude id"
+            assert CANONICAL_MODEL_RE.match(model_val), (
+                f"copilot/{agent_file.name}: model '{model_val}' is not a "
+                "canonical versioned Claude id"
             )
         elif harness == "claude":
-            assert re.match(r"^(haiku|sonnet|opus)$", model_val) or re.match(
-                r"^claude-(haiku|sonnet|opus)", model_val
+            assert re.match(r"^(haiku|sonnet|opus|fable)$", model_val) or re.match(
+                r"^claude-(haiku|sonnet|opus|fable)", model_val
             ), f"claude/{agent_file.name}: unexpected model id '{model_val}'"

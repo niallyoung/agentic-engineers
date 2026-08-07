@@ -34,6 +34,29 @@ import re
 from pathlib import Path
 from typing import Set
 
+# Canonical source format for a Claude model id.
+#
+# Two version shapes are valid, because Anthropic ships both:
+#   - two-part  e.g. claude-haiku-4.5, claude-opus-4.8   (DOT separator)
+#   - one-part  e.g. claude-opus-5, claude-sonnet-5, claude-fable-5
+#
+# The invariant this enforces is "the version separator is a DOT, never a
+# hyphen" (claude-opus-4-7 is the forbidden per-harness render, not source).
+# It is NOT "the id contains a dot" — single-part versions have no dot at all.
+CANONICAL_MODEL_RE = re.compile(r"^claude-(haiku|sonnet|opus|fable)-\d+(\.\d+)?$")
+
+_LOCKED_MODELS_SH = Path(__file__).parent.parent / ".githooks" / "LOCKED_MODELS.sh"
+
+
+def _load_locked_models() -> Set[str]:
+    """Parse the LOCKED_MODELS bash array from the canonical source of truth."""
+    content = _LOCKED_MODELS_SH.read_text()
+    block = re.search(r"^LOCKED_MODELS=\((.*?)^\)", content, re.DOTALL | re.MULTILINE)
+    assert block, f"LOCKED_MODELS array not found in {_LOCKED_MODELS_SH}"
+    models = set(re.findall(r'"([^"]+)"', block.group(1)))
+    assert models, f"LOCKED_MODELS array is empty in {_LOCKED_MODELS_SH}"
+    return models
+
 
 class TestModelNamingCompliance:
     """Test model naming compliance across entire codebase (positive enforcement).
@@ -45,31 +68,17 @@ class TestModelNamingCompliance:
     - CI/CD pipeline
     """
 
-    # Locked models (canonical format with dots for Copilot CLI)
-    # Source of truth: .githooks/LOCKED_MODELS.sh
-    LOCKED_MODELS = {
-        "claude-haiku-4.5",
-        "claude-sonnet-4.5",
-        "claude-sonnet-4.6",
-        "claude-opus-4.6",
-        "claude-opus-4.7",
-        "claude-opus-4.8",
-        # Single-part version: canonical name equals the API alias in every
-        # harness (no dot transformation). Defensive-only for security-engineer.
-        "claude-fable-5",
-    }
+    # Locked models are READ FROM .githooks/LOCKED_MODELS.sh rather than
+    # duplicated here. A hardcoded copy silently drifts from the hook the moment
+    # a model is approved, which is exactly how the fable-5/opus-5/sonnet-5
+    # upgrade broke CI while the pre-commit hook passed.
+    LOCKED_MODELS = _load_locked_models()
 
-    # Official approved model names (hyphens only)
-    APPROVED_MODELS = {
-        "claude-haiku-4.5",
+    # Approved = locked set plus legacy ids still valid in rendered/example
+    # output but no longer assigned to any agent.
+    APPROVED_MODELS = LOCKED_MODELS | {
         "claude-haiku-4.6",
-        "claude-sonnet-4.5",
-        "claude-sonnet-4.6",
         "claude-opus-4.5",
-        "claude-opus-4.6",
-        "claude-opus-4.7",
-        "claude-opus-4.8",
-        "claude-fable-5",
     }
 
     # Forbidden patterns (old hyphenated format, underscores, uppercase, etc.)
@@ -180,11 +189,12 @@ class TestModelNamingCompliance:
         assert model_names, "No models found in KNOWN_MODELS"
 
         for model in model_names:
-            # Check approved (allow dots for Copilot CLI)
             if model in self.APPROVED_MODELS:
-                # Should have dots for Copilot CLI models
-                assert "." in model, (
-                    f"Validator: Model '{model}' should use dots for Copilot CLI format (e.g., claude-opus-4.7)"
+                # Canonical shape: dot-separated version, or a single-part
+                # version (claude-opus-5) which has no separator at all.
+                assert CANONICAL_MODEL_RE.match(model), (
+                    f"Validator: Model '{model}' is not a canonical Claude id "
+                    f"(e.g. claude-opus-4.7 or claude-opus-5)"
                 )
 
     def test_agents_registry_uses_hyphen_format(self):
@@ -219,10 +229,18 @@ class TestModelNamingCompliance:
             model_refs = re.findall(r'^model:\s*([^\s\n]+)', content, re.MULTILINE)
 
             for model in model_refs:
-                # Copilot CLI requires dots in model names
-                assert "." in model or model in {"haiku", "sonnet", "opus"}, (
-                    f"dist/copilot/{agent_file.name}: Model '{model}' should use dots for Copilot CLI "
-                    f"(e.g., claude-opus-4.7 or short form: opus)"
+                # Copilot CLI takes the canonical id through unchanged: a
+                # dotted version (claude-opus-4.7), a single-part version
+                # (claude-opus-5), or a bare short-form alias.
+                assert CANONICAL_MODEL_RE.match(model) or model in {
+                    "haiku",
+                    "sonnet",
+                    "opus",
+                    "fable",
+                }, (
+                    f"dist/copilot/{agent_file.name}: Model '{model}' is not a "
+                    f"canonical Claude id (e.g. claude-opus-4.7, claude-opus-5) "
+                    f"or short form (opus)"
                 )
 
     def test_rendered_claude_uses_hyphen_format(self):
