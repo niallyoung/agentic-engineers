@@ -368,16 +368,16 @@ class AuditReporter:
         clusters = [
             {
                 "name": "Cost / Token Analytics",
-                "skills": ["tokenadvisor", "usage-tracking", "cost-aggregation", "metrics-etl"],
+                "skills": ["usage-tracking", "cost-aggregation"],
                 "overlap": (
-                    "All four skills deal with token/cost measurement. "
-                    "`cost-aggregation` is the best-tested and most complete; "
-                    "`tokenadvisor` and `metrics-etl` have zero tests and limited scope."
+                    "`cost-aggregation` handles consolidated cost tracking across providers; "
+                    "`usage-tracking` handles real-time session-scoped capture. "
+                    "(Archived 2026-08-08: `tokenadvisor` and `metrics-etl` have been consolidated.)"
                 ),
                 "recommendation": (
-                    "Consolidate `tokenadvisor` and `metrics-etl` into "
-                    "`cost-aggregation`. Retain `usage-tracking` for real-time "
-                    "session-scoped shell-based capture."
+                    "Retain `cost-aggregation` as primary consolidation tool. "
+                    "`usage-tracking` provides session-level instrumentation. "
+                    "No further consolidation needed."
                 ),
             },
             {

@@ -20,7 +20,6 @@ metadata:
   dependencies:
     - queue-query
     - usage-tracking
-    - metrics-etl
 ---
 
 # session-analyzer
@@ -248,8 +247,8 @@ Load all session tasks and their DELEGATE/HANDBACK artifacts.
 ### With usage-tracking
 Get cost and token metrics for each task.
 
-### With metrics-etl
-Get structured span records for duration and performance analysis.
+### With usage-tracking (extended)
+Get detailed span records for duration and performance analysis (formerly metrics-etl, archived 2026-08-08).
 
 ---
 
@@ -288,8 +287,7 @@ Coverage target: ≥85% line coverage
 
 - `docs/DELEGATE-HANDBACK-protocol.md` — DELEGATE/HANDBACK schema
 - `skills/queue-query/` — Load session tasks
-- `skills/usage-tracking/` — Token and cost metrics
-- `skills/metrics-etl/` — Structured span records
+- `skills/usage-tracking/` — Token, cost, and span metrics
 - `docs/AGENTS.md` — Agent routing
 
 ---
@@ -298,9 +296,10 @@ Coverage target: ≥85% line coverage
 
 ### v1.0 (Current)
 - Initial release with pattern detection and quality anomaly analysis
-- Integration with queue-query, usage-tracking, metrics-etl
+- Integration with queue-query, usage-tracking
 - Session-level cost analysis and recommendations
 - Effort mismatch detection
+- (Archived 2026-08-08: metrics-etl consolidated into usage-tracking)
 
 ## Self-Improvement
 

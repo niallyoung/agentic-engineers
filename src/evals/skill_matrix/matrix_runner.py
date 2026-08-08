@@ -19,20 +19,17 @@ from .protocol import DelegateGenerator
 class SkillInteropMatrix:
     """Main test runner for skill interoperability matrix."""
 
-    # 14 skills available across all harnesses
+    # 12 skills available across all harnesses (archived: cicd-monitor, metrics-etl, skill-creator)
     ALL_SKILLS = [
         "ab-testing",
         "agent-creator",
-        "cicd-monitor",
         "consistency-checker",
         "cost-aggregation",
         "file-sync",
-        "metrics-etl",
         "model-engineer",
         "model-selection",
         "protocol-validator",
         "queue-management",
-        "skill-creator",
         "spec-management",
         "spec-validator",
         "usage-tracking",

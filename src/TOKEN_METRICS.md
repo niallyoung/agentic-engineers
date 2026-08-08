@@ -211,7 +211,7 @@ After each Quality Engineer HANDBACK, the Model Engineer runs:
 
 ```
 1. Read HANDBACK.metrics (tokens, efficiency, quality, model)
-2. Compare against task_type baseline (from metrics-etl)
+2. Compare against task_type baseline (from historical data analysis)
 3. Classify: DOWNGRADE / KEEP / UPGRADE / EXPAND_BUDGET
 4. Write recommendation to ~/.copilot/metrics/recommendations/TASK-NNN.md
 5. Orchestrator reads recommendations before next routing decision

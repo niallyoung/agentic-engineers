@@ -71,10 +71,10 @@ class SkillManager:
 
     def discover_skills(self) -> List[str]:
         """
-        Discover all available skills.
+        Discover all available skills, excluding archived/deprecated ones.
 
         Returns:
-            List of skill names found in skills_root directory
+            List of skill names found in skills_root directory (excluding deprecated)
         """
         if not self.skills_root.exists():
             return []
@@ -82,9 +82,41 @@ class SkillManager:
         skills = []
         for item in self.skills_root.iterdir():
             if item.is_dir() and not item.name.startswith("."):
+                # Skip archived/deprecated skills
+                if self._is_deprecated_skill(item.name):
+                    continue
                 skills.append(item.name)
 
         return sorted(skills)
+
+    def _is_deprecated_skill(self, skill_name: str) -> bool:
+        """
+        Check if a skill is archived or deprecated.
+
+        Args:
+            skill_name: Name of the skill to check
+
+        Returns:
+            True if skill is deprecated/archived, False otherwise
+        """
+        # Explicitly archived skills (moved to docs/archive/deprecated-skills/)
+        archived_skills = {
+            "skill-creator",
+            "tokenadvisor",
+            "harness-opencode-feature-sync",
+            "repo-init",
+            "metrics-etl",
+        }
+
+        if skill_name in archived_skills:
+            return True
+
+        # Check metadata status field
+        metadata = self.load_skill_metadata(skill_name)
+        if metadata and metadata.extra_fields.get("status") == "deprecated":
+            return True
+
+        return False
 
     def load_skill_metadata(self, skill_name: str) -> Optional[SkillMetadata]:
         """
@@ -277,16 +309,35 @@ class SkillManager:
 
     def get_all_skills_metadata(self) -> Dict[str, SkillMetadata]:
         """
-        Load metadata for all discovered skills.
+        Load metadata for all discovered skills (excluding deprecated).
 
         Returns:
-            Dictionary mapping skill names to SkillMetadata
+            Dictionary mapping skill names to SkillMetadata (non-deprecated only)
         """
         result = {}
         for skill_name in self.discover_skills():
             metadata = self.load_skill_metadata(skill_name)
-            if metadata:
+            if metadata and not self._is_deprecated_skill(skill_name):
                 result[skill_name] = metadata
+
+        return result
+
+    def get_all_skills_metadata_including_deprecated(self) -> Dict[str, SkillMetadata]:
+        """
+        Load metadata for all skills including deprecated ones (for auditing).
+
+        Returns:
+            Dictionary mapping skill names to SkillMetadata (including deprecated)
+        """
+        result = {}
+        if not self.skills_root.exists():
+            return result
+
+        for item in self.skills_root.iterdir():
+            if item.is_dir() and not item.name.startswith("."):
+                metadata = self.load_skill_metadata(item.name)
+                if metadata:
+                    result[item.name] = metadata
 
         return result
 

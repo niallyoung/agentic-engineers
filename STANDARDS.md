@@ -44,7 +44,7 @@ These are drawn directly from `src/AGENTS.md` and govern every contribution.
 - **Token-conscious** — Summarise (tables, not prose), suppress verbose output,
   trust tool confirmations, grep before reading.
 - **Framework-first** — Extend the framework using its own meta-skills
-  (`agent-creator`, `skill-creator`), not by hand-editing user-config directories.
+  (`agent-creator`), not by hand-editing user-config directories.
 
 ---
 
@@ -294,7 +294,7 @@ docs: add STANDARDS.md engineering standards (STANDARDS-002)
 ## 9. Skill & Agent Authoring Standards
 
 Follow the [agentskills.io](https://agentskills.io/specification) spec and the
-`skill-creator` / `agent-creator` meta-skills.
+`agent-creator` meta-skill. (Note: `skill-creator` is archived; use `agent-creator` framework instead.)
 
 ### 9.1 Skills
 
@@ -373,7 +373,7 @@ workflow. It is never edited ad-hoc.
 | Locked model assignments & rationale | `src/config/MODEL_ASSIGNMENTS_LOCKED.md`, `.githooks/LOCKED_MODELS.sh`, `.githooks/LOCKED_MODELS_RATIONALE.md` |
 | Git hooks (commit-msg / pre-commit / pre-push) | `.githooks/` |
 | Architecture specification | `SPEC.md` / `docs/SPEC.md` |
-| Skill authoring | `src/skills/skill-creator/SKILL.md` |
+| Skill authoring | Follow agentskills.io spec; see `agent-creator` for framework-managed skills |
 | Security hardening (Phase 1.5) | `PHASE-1.5-SECURITY-HARDENING.md` |
 | Background-agent commit protocol | `docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md` |
 | Hook bypass procedure | `docs/SECURITY-HOOKS.md` |
