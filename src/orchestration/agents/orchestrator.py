@@ -95,6 +95,24 @@ def sanitize_path_component(value: object, *, field: str = "component") -> str:
     return value
 
 
+# The canonical set of roles a task may be escalated to (mirrors
+# src/skills/queue-management/scripts/queue_ops.py:48 VALID_AGENTS and
+# docs/QUEUE-PROTOCOL.md's hyphenated "agent:" wire format). escalate_to is
+# read out of a sub-agent's HANDBACK output — attacker/LLM-controlled — and
+# must be validated against this set before it is folded into a task_id /
+# filename (see OrchestratorAgent._process_task's escalation-chaining block).
+VALID_ESCALATION_TARGETS = {
+    "orchestrator",
+    "engineer",
+    "senior-engineer",
+    "lead-engineer",
+    "principal-engineer",
+    "security-engineer",
+    "quality-engineer",
+    "model-engineer",
+}
+
+
 def ensure_within_directory(candidate: Path, base_dir: Path, *, field: str = "path") -> Path:
     """Ensure *candidate* resolves to a location inside *base_dir*.
 
@@ -1979,42 +1997,72 @@ class OrchestratorAgent(Agent):
                     # Fallback: check for escalate_to at top level
                     escalate_to_role = handback.get('escalate_to', 'lead-engineer')
 
-                escalation_context = {
-                    "original_task_id": task_id,
-                    "original_role": role,
-                    "original_handback": handback,
-                    "escalation_reason": handback.get('output', {}).get('escalation_reason') if isinstance(handback.get('output'), dict) else handback.get('escalation_reason'),
-                }
-
-                # Create escalation DELEGATE for incoming queue
-                escalation_delegate_new = {
-                    "handoff_type": "DELEGATE",
-                    "task_id": f"{task_id}-escalated-to-{escalate_to_role}",
-                    "agent": escalate_to_role,
-                    "role": escalate_to_role,
-                    "scope": f"Escalation from {role}: {escalation_context.get('escalation_reason', 'See original_handback')}",
-                    "context": escalation_context,
-                    # plan included so the synthesized DELEGATE passes skill-side
-                    # _validate_delegate when re-ingested from incoming/
-                    "plan": [
-                        "Review original work and HANDBACK in context.original_handback",
-                        "Address the escalation reason",
-                        "Return HANDBACK with assessment and next steps",
-                    ],
-                    "success_criteria": [
-                        "Review original work and HANDBACK",
-                        "Address escalation reason",
-                        "Provide assessment and next steps",
-                    ],
-                    "escalation_chain": handback.get('escalation_chain', []) + [role],
-                }
-
                 # Write escalation DELEGATE to incoming queue
                 try:
+                    # SECURITY (Vulnerability 2 — LLM-controlled escalate_to in
+                    # filesystem paths): escalate_to_role is parsed straight out
+                    # of a sub-agent's HANDBACK output, i.e. attacker/LLM
+                    # controlled. It is folded into escalation_task_id below,
+                    # which becomes a filename under incoming/. Validate it
+                    # against the fixed set of known agent roles *before* any
+                    # path is built — sanitize_path_component() closes off
+                    # separators/traversal characters and VALID_ESCALATION_TARGETS
+                    # closes off role-name spoofing. A failure here falls
+                    # through to normal quality validation below, exactly like
+                    # any other escalation-creation failure.
+                    escalate_to_role = sanitize_path_component(
+                        escalate_to_role, field="escalate_to"
+                    )
+                    if escalate_to_role not in VALID_ESCALATION_TARGETS:
+                        raise ValueError(
+                            f"escalate_to must be one of "
+                            f"{sorted(VALID_ESCALATION_TARGETS)}, got "
+                            f"{escalate_to_role!r}"
+                        )
+
+                    escalation_context = {
+                        "original_task_id": task_id,
+                        "original_role": role,
+                        "original_handback": handback,
+                        "escalation_reason": handback.get('output', {}).get('escalation_reason') if isinstance(handback.get('output'), dict) else handback.get('escalation_reason'),
+                    }
+
+                    # Create escalation DELEGATE for incoming queue
+                    escalation_delegate_new = {
+                        "handoff_type": "DELEGATE",
+                        "task_id": f"{task_id}-escalated-to-{escalate_to_role}",
+                        "agent": escalate_to_role,
+                        "role": escalate_to_role,
+                        "scope": f"Escalation from {role}: {escalation_context.get('escalation_reason', 'See original_handback')}",
+                        "context": escalation_context,
+                        # plan included so the synthesized DELEGATE passes skill-side
+                        # _validate_delegate when re-ingested from incoming/
+                        "plan": [
+                            "Review original work and HANDBACK in context.original_handback",
+                            "Address the escalation reason",
+                            "Return HANDBACK with assessment and next steps",
+                        ],
+                        "success_criteria": [
+                            "Review original work and HANDBACK",
+                            "Address escalation reason",
+                            "Provide assessment and next steps",
+                        ],
+                        "escalation_chain": handback.get('escalation_chain', []) + [role],
+                    }
+
                     # Generate filename from task_id
                     escalation_task_id = escalation_delegate_new['task_id']
                     escalation_filename = f"{escalation_task_id}.yaml"
                     escalation_filepath = self.queue_manager._agent.incoming_dir / escalation_filename
+
+                    # Defence-in-depth: ensure the resolved path stays within
+                    # incoming/ even though escalate_to_role and task_id are
+                    # already validated above.
+                    ensure_within_directory(
+                        escalation_filepath,
+                        self.queue_manager._agent.incoming_dir,
+                        field="escalation_filepath",
+                    )
 
                     # Write DELEGATE to incoming queue
                     with open(escalation_filepath, 'w') as f:

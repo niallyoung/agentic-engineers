@@ -360,5 +360,173 @@ class TestEscalationChaining:
                 "Missing escalate_to should default to 'lead-engineer'"
 
 
+class TestEscalationChainingSecurity:
+    """
+    Security regression: Vulnerability 2 — LLM-controlled escalate_to in
+    filesystem paths.
+
+    escalate_to is parsed straight out of a sub-agent's HANDBACK output
+    (attacker/LLM-controlled) and used to build escalation_task_id, which
+    becomes a filename written under incoming/. Before the fix,
+    OrchestratorAgent._process_task() interpolated escalate_to directly into
+    that path with no validation — a crafted escalate_to value (e.g.
+    containing '../') would let a malicious/compromised sub-agent escape
+    incoming/ and write a file anywhere on disk. These tests fail without
+    the fix: the malicious escalation file would land outside incoming_dir
+    instead of the write being rejected and safely falling through to
+    normal quality validation.
+    """
+
+    @pytest.fixture
+    def mock_queue_manager(self):
+        mock_qm = Mock(spec=QueueManager)
+        mock_qm.move_task = Mock(return_value={"filename": "escalation-task.yaml", "audit_trail": []})
+        mock_qm.list_incoming_tasks = Mock(return_value=[])
+        mock_qm.read_task = Mock(return_value={})
+        mock_qm.incoming_dir = Path("/tmp/queue/incoming")
+        mock_qm.processing_dir = Path("/tmp/queue/processing")
+        mock_qm.done_dir = Path("/tmp/queue/done")
+        mock_qm.failed_dir = Path("/tmp/queue/failed")
+        return mock_qm
+
+    @pytest.fixture
+    def mock_orchestrator(self, mock_queue_manager):
+        with patch.object(QueueManager, '__init__', return_value=None):
+            orch = OrchestratorAgent(queue_dir=None, agent_context=None)
+            orch.queue_manager._agent = mock_queue_manager
+            orch.task_router = Mock(spec=TaskRouter)
+            orch.quality_validator = Mock()
+            orch.token_tracker = Mock()
+            orch.orchestrator_cli = Mock()
+            return orch
+
+    def _run_process_task_with_escalate_to(self, mock_orchestrator, mock_queue_manager, escalate_to, tmpdir):
+        """Drive _process_task() through a HANDBACK carrying a malicious
+        escalate_to and return (incoming_dir, sibling_dir) for assertions."""
+        task_id = "exploit-task"
+        mock_delegate = {
+            "task_id": task_id,
+            "role": "engineer",
+            "scope": "Test task",
+            "plan": [],
+            "success_criteria": [],
+        }
+        mock_handback = {
+            "task_id": task_id,
+            "status": "escalate",
+            "output": {
+                "escalate_to": escalate_to,
+                "escalation_reason": "Exploit attempt",
+            },
+            "escalation_chain": [],
+        }
+
+        mock_agent = Mock()
+        mock_agent.execute = Mock(return_value=mock_handback)
+        mock_orchestrator.task_router.route_task = Mock(return_value=("engineer", mock_agent))
+
+        mock_orchestrator.quality_validator.validate_delegate = Mock(
+            return_value=Mock(routing_decision=Mock(value="high"), quality_score=90, findings=[])
+        )
+        mock_orchestrator.quality_validator.validate_handback = Mock(
+            return_value=Mock(quality_score=85, critical_findings=[], as_dict=lambda: {})
+        )
+        mock_orchestrator.quality_validator.summary = Mock(return_value="OK")
+
+        incoming_dir = Path(tmpdir) / "incoming"
+        incoming_dir.mkdir()
+        mock_queue_manager.incoming_dir = incoming_dir
+
+        with patch.object(mock_orchestrator.queue_manager._agent, 'read_task', return_value=mock_delegate):
+            with patch.object(mock_orchestrator.queue_manager._agent, 'move_task', return_value={"filename": "test.yaml", "audit_trail": []}):
+                mock_orchestrator._process_task(f"{task_id}.yaml")
+
+        return incoming_dir
+
+    @pytest.mark.parametrize(
+        "malicious_escalate_to",
+        [
+            "not-a-real-agent-role",
+        ],
+    )
+    def test_malicious_escalate_to_does_not_escape_incoming_dir(
+        self, mock_orchestrator, mock_queue_manager, malicious_escalate_to
+    ):
+        """A crafted escalate_to that isn't a valid role must never result in
+        a file written outside incoming/, and no escalation DELEGATE should
+        be created for it."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            incoming_dir = self._run_process_task_with_escalate_to(
+                mock_orchestrator, mock_queue_manager, malicious_escalate_to, tmpdir
+            )
+
+            # Nothing should have been written for the rejected target —
+            # incoming/ must remain empty.
+            written = list(incoming_dir.glob("*.yaml"))
+            assert written == [], (
+                f"Malicious escalate_to must not create any DELEGATE file, "
+                f"found: {written}"
+            )
+
+    @pytest.mark.parametrize(
+        "malicious_escalate_to",
+        [
+            "../../../../../../tmp/pwned-escalation",
+            "/tmp/absolute-escalation-escape",
+        ],
+    )
+    def test_slash_containing_escalate_to_is_rejected_by_validation(
+        self, mock_orchestrator, mock_queue_manager, malicious_escalate_to, capsys
+    ):
+        """
+        escalate_to containing '/' must be rejected by our explicit
+        validation (sanitize_path_component / VALID_ESCALATION_TARGETS),
+        not merely happen to fail for an unrelated, incidental reason.
+
+        Note: because escalate_to is embedded as a *suffix* of
+        escalation_task_id (f"{task_id}-escalated-to-{escalate_to}"), a
+        slash-containing value can't achieve a clean directory-traversal
+        write even pre-fix — the merged first path component never
+        literally exists on disk, so the kernel's open() call fails at that
+        hop regardless. That incidental failure is NOT the same as the
+        value being validated and safely rejected by design. This test
+        proves the *validation* fires (by inspecting the printed error) —
+        the fix in Vulnerability 2 makes rejection intentional and
+        immediate (before any path is built) rather than an accidental
+        OSError caught by the generic fallthrough handler.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            incoming_dir = self._run_process_task_with_escalate_to(
+                mock_orchestrator, mock_queue_manager, malicious_escalate_to, tmpdir
+            )
+            written = list(incoming_dir.glob("*.yaml"))
+            assert written == [], (
+                f"Malicious escalate_to must not create any DELEGATE file, "
+                f"found: {written}"
+            )
+
+        captured = capsys.readouterr()
+        assert "escalate_to" in captured.out, (
+            "Escalation failure must be attributed to escalate_to "
+            f"validation, not an incidental OSError. Got: {captured.out!r}"
+        )
+
+    def test_malicious_escalate_to_falls_through_without_raising(
+        self, mock_orchestrator, mock_queue_manager
+    ):
+        """_process_task must not crash the whole task on a malicious
+        escalate_to — it should fall through to normal quality validation,
+        matching the existing error-handling contract for escalation
+        failures (see the `except Exception as esc_err` fallthrough)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Should not raise — the malicious value is caught internally.
+            self._run_process_task_with_escalate_to(
+                mock_orchestrator,
+                mock_queue_manager,
+                "../../../../etc/evil",
+                tmpdir,
+            )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -1005,6 +1005,69 @@ def test_escalation_default_target_lead_engineer(orchestrator, temp_queue):
     assert expected.exists()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Security regression: Vulnerability 2 — LLM-controlled escalate_to in
+# filesystem paths.
+#
+# escalate_to is parsed straight out of a sub-agent's HANDBACK output
+# (output.escalate_to) — it is attacker/LLM-controlled, not validated
+# elsewhere, and used to build escalation_task_id -> a filename written into
+# incoming/. Before the fix, a crafted escalate_to (e.g. containing '../')
+# would let a malicious/compromised sub-agent write arbitrary files via the
+# escalation path. These tests fail without the fix: _move_task_to_escalation
+# would happily build the malicious path and write to it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize(
+    "malicious_escalate_to",
+    [
+        "../../../../../../tmp/pwned",
+        "/tmp/absolute-escape",
+        "not-a-real-agent",
+        "..",
+    ],
+)
+def test_escalation_rejects_invalid_escalate_to(orchestrator, temp_queue, malicious_escalate_to):
+    """_move_task_to_escalation must reject an escalate_to outside VALID_AGENTS."""
+    task_id = "escalate-exploit-001"
+    _stage_processing_delegate(temp_queue, task_id)
+    handback = _escalate_handback(task_id, escalate_to=malicious_escalate_to)
+
+    with pytest.raises(QueueValidationError, match="escalate_to"):
+        orchestrator._move_task_to_escalation(task_id, handback)
+
+    # Nothing must have been written to incoming/ for the malicious target.
+    poisoned = list((temp_queue / "incoming").glob("*escalated-to*"))
+    assert poisoned == [], f"Escalation must not write a DELEGATE for a rejected target: {poisoned}"
+
+
+def test_handle_handback_escalate_with_malicious_target_routes_to_failed(orchestrator, temp_queue):
+    """
+    End-to-end exploit attempt: a HANDBACK claiming status=escalate with a
+    path-traversal escalate_to must not write outside the queue, and the
+    task must end up in failed/ rather than silently vanishing or the
+    exploit path succeeding.
+    """
+    task_id = "escalate-exploit-002"
+    _stage_processing_delegate(temp_queue, task_id)
+    handback_text = f"""
+handoff_type: HANDBACK
+task_id: {task_id}
+status: escalate
+output:
+  escalate_to: ../../../../tmp/pwned-escalation
+  escalation_reason: Exploit attempt
+escalation_chain: []
+"""
+
+    with pytest.raises(HandbackParseError):
+        orchestrator.handle_handback(task_id, handback_text)
+
+    # No poisoned DELEGATE must have been written anywhere under the queue.
+    poisoned = list(temp_queue.rglob("*pwned*"))
+    assert poisoned == [], f"Malicious escalate_to must not create files: {poisoned}"
+
+
 def test_escalation_moves_original_to_done_with_audit(orchestrator, temp_queue):
     """Original task archives to done/ with HANDBACK audit metadata."""
     import yaml

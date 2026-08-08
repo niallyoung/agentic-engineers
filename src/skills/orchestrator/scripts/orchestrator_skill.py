@@ -1571,6 +1571,20 @@ class OrchestratorSkill:
         if not escalate_to:
             escalate_to = handback.get("escalate_to", "lead-engineer")
 
+        # SECURITY (Vulnerability 2 — LLM-controlled escalate_to in
+        # filesystem paths): escalate_to is parsed straight out of a
+        # sub-agent's HANDBACK output and is otherwise attacker-controlled.
+        # It gets interpolated into escalation_task_id below, which becomes
+        # a filename in incoming/. Validate against the fixed set of known
+        # agent roles *before* it is used in any path — an unvalidated value
+        # (e.g. "../../../../tmp/pwned") would let a malicious/compromised
+        # sub-agent write arbitrary files via the escalation path.
+        if not isinstance(escalate_to, str) or escalate_to not in VALID_AGENTS:
+            raise QueueValidationError(
+                f"escalate_to is not a valid agent: {escalate_to!r} "
+                f"(must be one of {sorted(VALID_AGENTS)})"
+            )
+
         escalation_reason = (
             output.get("escalation_reason")
             if isinstance(output, dict)
@@ -1620,7 +1634,7 @@ class OrchestratorSkill:
         }
 
         escalation_filename = f"{escalation_task_id}.yaml"
-        escalation_file = incoming_dir / escalation_filename
+        escalation_file = self._safe_queue_path(incoming_dir, escalation_filename)
         with escalation_file.open("w") as f:
             f.write(self._dict_to_yaml(escalation_delegate))
 
