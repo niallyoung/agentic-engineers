@@ -92,7 +92,7 @@ Haiku 4.5 (Orchestrator, Engineer)
 Sonnet 4.5 (Quality, Senior, Model Engineer)
 Sonnet 4.6 (Lead)
 Opus 4.6 (Principal)
-Opus 4.8 (Security)
+Fable 5 (Security)
 ```
 
 **Real examples:**

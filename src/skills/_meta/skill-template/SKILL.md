@@ -127,7 +127,7 @@ python src/skills/<skill-name>/scripts/<skill_name>.py \
 |------|-------|-----------------|
 | Haiku (fast/cheap) | `claude-haiku-4.5` | engineer, orchestrator |
 | Sonnet (balanced) | `claude-sonnet-4.5`, `claude-sonnet-4.6` | senior, lead, quality |
-| Opus (powerful) | `claude-opus-4.7`, `claude-opus-4.8` | principal, security |
+| Opus & Fable | `claude-opus-5`, `claude-fable-5` | principal, security |
 | OpenAI | `gpt-4o-mini`, `gpt-4o`, `gpt-5-mini` | special cases |
 | Gemini | `gemini-3.5-flash`, `gemini-3.1-pro-preview` | special cases |
 

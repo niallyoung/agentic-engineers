@@ -6,7 +6,7 @@
 
 ---
 
-## Rendered Skills Inventory (41 Active)
+## Rendered Skills Inventory (35 Active, 6 Archived)
 
 This is the canonical registry of all rendered skills available for agents to reference. Each skill has a corresponding `SKILL.md` frontmatter file with metadata (name, description, roles, model, effort, version).
 
@@ -29,9 +29,9 @@ This is the canonical registry of all rendered skills available for agents to re
 | gh-actions-monitor | `src/skills/_meta/gh-actions-monitor/SKILL.md` | Monitors GitHub Actions workflow status and alerts on failures or anomalies. |
 | git-operations | `src/skills/_meta/git-operations/SKILL.md` | Low-level git operation utilities for automation and workflow scripting. |
 | harness-integration-tracker | `src/skills/harness-integration-tracker/SKILL.md` | Continuously discover and document agent/sub-agent integration code/docs/info across all harnesses (OpenCode, Copilot, Claude, PI) to prevent drift and keep integrations fresh. |
-| harness-opencode-feature-sync | `src/skills/harness-opencode-feature-sync/SKILL.md` | Drift/feature sync between OpenCode's agent and sub-agent integration points and the agentic-engineers OpenCode renderer. |
+| ~~harness-opencode-feature-sync~~ | `docs/archive/deprecated-skills/harness-opencode-feature-sync/SKILL.md` | **[ARCHIVED]** Drift/feature sync between OpenCode's agent and sub-agent integration points. (Removed 2026-08-08) |
 | local-model-runtime | `src/skills/local-model-runtime/SKILL.md` | Local Model Runtime support (COST-004) — detects a running local Ollama instance, lists locally-available models, and routes tasks to a zero-cost local model when a suitable one exists, falling back to a cloud provider otherwise. |
-| metrics-etl | `src/skills/metrics-etl/SKILL.md` | Data pipeline that aggregates daily metrics to Prometheus format for Grafana dashboards. |
+| ~~metrics-etl~~ | `src/skills/metrics-etl/SKILL.md` | **[ARCHIVED]** Data pipeline for metrics (deprecated, infrastructure never implemented). Use local JSON metrics analysis instead. (Removed 2026-08-08) |
 | model-engineer | `src/skills/model-engineer/SKILL.md` | Cost-quality optimization agent that analyzes tradeoffs, scores routing candidates, and proposes A/B tests. |
 | model-selection | `src/skills/model-selection/SKILL.md` | Model Selection Optimization (COST-003) — recommends optimal AI models for tasks given budget constraints, quality targets, and latency requirements. |
 | orchestrator | `src/skills/orchestrator/SKILL.md` | In-harness queue orchestration system that implements the DELEGATE/HANDBACK protocol lifecycle. |
@@ -42,17 +42,17 @@ This is the canonical registry of all rendered skills available for agents to re
 | queue-path-validator | `src/skills/_meta/queue-path-validator/SKILL.md` | Validates queue file paths and detects filesystem consistency issues. |
 | queue-query | `src/skills/queue-query/SKILL.md` | Local-queue visibility skill — query and inspect the per-session, per-harness filesystem queue by state (incoming backlog, processing orphans to resume, done results/next-steps). |
 | queue-todo-sync | `src/skills/queue-todo-sync/SKILL.md` | Auto-sync queue DELEGATEs ↔ TODO. |
-| repo-init | `src/skills/repo-init/SKILL.md` | [DISABLED] Initializes new repositories with the agentic-engineers framework. |
+| ~~repo-init~~ | `docs/archive/deprecated-skills/repo-init/SKILL.md` | **[ARCHIVED]** Initializes new repositories with the agentic-engineers framework. (Removed 2026-08-08) |
 | security-field-validator | `src/skills/_meta/security-field-validator/SKILL.md` | Validates sensitive fields and enforces security constraints in configuration and data. |
 | session-analyzer | `src/skills/session-analyzer/SKILL.md` | Meta-skill for automated session transcript analysis and quality recommendations. |
-| skill-creator | `src/skills/skill-creator/SKILL.md` | Create new agentic-engineers skills following the agentskills. |
+| ~~skill-creator~~ | `docs/archive/deprecated-skills/skill-creator/SKILL.md` | **[ARCHIVED]** Create new agentic-engineers skills following agentskills.io specification. (Removed 2026-08-08; use `agent-creator` meta-skill framework instead). |
 | skill-template | `src/skills/_meta/skill-template/SKILL.md` | Template and checklist for creating new skills with proper structure and documentation. |
 | spec-management | `src/skills/spec-management/SKILL.md` | Exclusive SPEC. |
 | spec-validator | `src/skills/spec-validator/SKILL.md` | Validates implementation compliance with SPEC. |
 | spec-version-validator | `src/skills/_meta/spec-version-validator/SKILL.md` | Validates spec version compatibility and detects incompatible version changes. |
 | task-orchestration | `src/skills/_meta/task-orchestration/SKILL.md` | Encodes task execution framework principle for parallel task execution and decision points. |
 | test-sync-validator | `src/skills/testing/SKILL.md` | Validates test fixture synchronization with code changes. |
-| tokenadvisor | `src/skills/tokenadvisor/SKILL.md` | Daily metrics analysis agent that aggregates metrics by role, identifies cost inefficiencies, flags outliers, and recommends optimizations. |
+| ~~tokenadvisor~~ | `docs/archive/deprecated-skills/tokenadvisor/SKILL.md` | **[ARCHIVED]** Daily metrics analysis agent (no longer maintained; consolidated into other cost-tracking skills). (Removed 2026-08-08) |
 | usage-tracking | `src/skills/usage-tracking/SKILL.md` | Real-time and historical token usage capture, analysis, and forecasting skill for agents. |
 | workflow-review | `src/skills/workflow-review/SKILL.md` | Validates end-to-end delegation workflows for correctness. |
 
@@ -99,7 +99,7 @@ This is the canonical registry of all rendered skills available for agents to re
 | Lead Engineer | [`src/skills/roles/lead-engineer.md`](skills/roles/lead-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
 | Senior Engineer | [`src/skills/roles/senior-engineer.md`](skills/roles/senior-engineer.md) | `claude-sonnet-4.6` | 💰💰 Medium |
 | Principal Engineer | [`src/skills/roles/principal-engineer.md`](skills/roles/principal-engineer.md) | `claude-opus-4-6` | 💰💰💰 Premium |
- | Security Engineer | [`src/skills/roles/security-engineer.md`](skills/roles/security-engineer.md) | `claude-opus-4.8` | 💰💰💰 Premium |
+ | Security Engineer | [`src/skills/roles/security-engineer.md`](skills/roles/security-engineer.md) | `claude-fable-5` | 💰💰💰 Premium |
 
 ---
 

@@ -100,7 +100,8 @@ python src/skills/agent-creator/scripts/agent_creator.py \
 
 - `claude-haiku-4.5` ← default (recommended for engineer role)
 - `claude-sonnet-4.5`, `claude-sonnet-4.6` (recommended for senior/lead/quality)
-- `claude-opus-4.8` (recommended for principal/security)
+- `claude-opus-5` (recommended for principal)
+- `claude-fable-5` (recommended for security)
 - `gpt-4o-mini`, `gpt-4`, `gpt-4o`, `gpt-4-turbo`
 - `gemini-2.0-flash`, `gemini-1-5-pro`, `gemini-2-pro`
 

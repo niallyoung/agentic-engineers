@@ -97,7 +97,7 @@ Verifies agents are assigned the correct models according to the routing table:
 | quality-engineer | claude-sonnet-4.6 | Post-implementation validation |
 | model-engineer | claude-sonnet-4.5 | HANDBACK metrics analysis |
 | principal-engineer | claude-opus-4.6 | Hard debugging, cross-service |
-| security-engineer | claude-opus-4.8 | Threat modeling, compliance |
+| security-engineer | claude-fable-5 | Threat modeling, compliance |
 
 ---
 

@@ -29,6 +29,11 @@ models carry a **single-part version** and therefore have no separator at all:
 version separator" (`claude-opus-4-7` is a per-harness render, never source).
 See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
 
+**SINGLE SOURCE OF TRUTH:** Model assignments are defined in `src/config/models.yaml`.
+All documentation, AGENTS.md, and configuration files must stay synchronized with this canonical
+source. When updating model assignments, update `models.yaml` first, then audit related docs
+(SPEC.md, README, guides, skills files) to ensure consistency.
+
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
 | **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
@@ -382,7 +387,7 @@ ops.enqueue({
 
 ### 8. Security Engineer
 
-**Model:** `claude-opus-4.8` (pinned) | `claude-fable-5` (defensive-only alternative)  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
+**Model:** `claude-fable-5` (unconditional default) | `claude-opus-4.8` (emergency fallback)  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
 
 **Purpose:** Threat modelling, vulnerability assessment, compliance review. Always assigned for security-scoped work.
 
@@ -777,8 +782,8 @@ task_id: task-303-jwt-refresh-audit
 handoff_type: DELEGATE
 agent: security-engineer
 skill: security-engineer
-model: claude-opus-4.8
-effort: high
+model: claude-fable-5
+effort: max
 
 scope: |
   Audit the JWT refresh token flow in auth-service for vulnerabilities before shipping.

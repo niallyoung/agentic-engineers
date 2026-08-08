@@ -219,8 +219,8 @@ token_metrics:
  | Principal Engineer | Opus 4.6 | high | $0.375 |
 | Quality Engineer | Sonnet 4.6 | medium | $0.045 |
 | Model Engineer | Haiku 4.5 | medium | $0.009 |
-| Security Engineer | Opus 4.8 | max | $0.375 |
-| Security Agent (QG) | Opus 4.8 | high | $0.375 |
+| Security Engineer | Fable 5 | max | $0.36 |
+| Security Agent (QG) | Fable 5 | high | $0.36 |
 | Testing Agent | Haiku 4.5 | medium | $0.009 |
 | Metrics Agent | Haiku 4.5 | medium | $0.009 |
 | Healing Agent | Sonnet 4.6 | medium | $0.045 |
@@ -233,7 +233,7 @@ token_metrics:
 
 The Orchestrator uses a 6-point decision tree:
 
-1. **Is security-scoped?** → `security_engineer` (max effort, Opus)
+1. **Is security-scoped?** → `security_engineer` (max effort, Fable 5)
 2. **Is complexity HIGH and no plan?** → `senior_engineer` (plan first)
 3. **Has clear plan?** → `engineer` (execute plan, Haiku)
 4. **Otherwise** → `lead_engineer` (complex unplanned work)

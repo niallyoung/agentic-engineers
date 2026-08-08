@@ -22,14 +22,14 @@ prompt: |
   Your answer MUST mention:
   - that "models.yaml" is the authoritative registry / single source of truth
   - that calling resolve with the role "engineer" returns "claude-haiku-4.5"
-  - that resolve for "security_engineer" returns "claude-opus-4.8" by default
+  - that resolve for "security_engineer" returns "claude-fable-5" by default
   - that an explicit "provider" argument selects the provider-specific model
 expected_contains:
   - "models.yaml"
   - "resolve"
   - "engineer"
   - "claude-haiku-4.5"
-  - "claude-opus-4.8"
+  - "claude-fable-5"
   - "provider"
 expected_not_contains:
   - "Invalid format"

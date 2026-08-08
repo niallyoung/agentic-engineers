@@ -676,9 +676,9 @@ Some Tier 3 (Opus) roles support **multi-model selection** within the opus famil
 - `claude-opus-4.7` — design decisions with cross-repo execution impact
 - `claude-opus-4.8` — security-critical design choices (auth, crypto, compliance)
 
-**Security Engineer** — always 4.8 (non-downgrade rule):
-- `claude-opus-4.8` — always; security analysis is non-negotiable
-- `claude-opus-4.7` — emergency fallback only if 4.8 is unavailable; document in HANDBACK
+**Security Engineer** — always fable-5 (unconditional default):
+- `claude-fable-5` — always; security analysis is non-negotiable (highest capability tier)
+- `claude-opus-4.8` — emergency fallback only if fable-5 is unavailable; document in HANDBACK
 - Never downgrade by choice
 
 ### How It Works
@@ -719,11 +719,9 @@ All changes are backward-compatible. Validators and tests require no updates for
 
 We have chosen these Claude models today for cost-quality alignment:
 - **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
-- **claude-sonnet-4.5** — model-engineer (analysis, cost-quality balance)
-- **claude-sonnet-4.6** — lead, quality, senior engineers (complex tasks)
-- **claude-opus-4.6** — principal-engineer default (pure planning tasks)
-- **claude-opus-4.7** — principal-engineer variant (design+execution tasks)
-- **claude-opus-4.8** — security-engineer (non-downgrade; all security tasks)
+- **claude-sonnet-5** — model-engineer, quality, lead, senior engineers (complex tasks)
+- **claude-opus-5** — principal-engineer (cross-service architecture)
+- **claude-fable-5** — security-engineer (unconditional; highest capability for security tasks)
 
 ### Why Locked Models?
 

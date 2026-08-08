@@ -1635,7 +1635,7 @@ select on — routing by task profile would only pick a weaker model for the sam
 
 Security Engineer supports two approved models:
 
-#### Default: `claude-opus-4.8` (Primary)
+#### Default: `claude-fable-5` (Unconditional)
 
 Security analysis is the highest-stakes task in the system. Fable-5 is the unconditional default because it provides the highest-capability reasoning for threat modeling, vulnerability assessment, and compliance review.
 

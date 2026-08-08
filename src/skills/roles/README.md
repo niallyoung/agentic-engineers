@@ -15,7 +15,7 @@ This is the new role-as-container approach: minimal files, maximum reuse.
 | **senior-engineer.md** | Sonnet 4.5 | high + thinking | 3x | Complex coding, cross-service |
 | **lead-engineer.md** | Sonnet 4.6 | high + thinking | 3x | Quality verification, code review |
 | **principal-engineer.md** | Opus 4.6 | high + thinking | 7.5x | Cross-service architecture |
-| **security-engineer.md** | Opus 4.8 | max + thinking | 7.5x | Threat modeling, security review |
+| **security-engineer.md** | Fable 5 | max + thinking | 7.5x | Threat modeling, security review |
 | **quality-engineer.md** | Sonnet 4.5 | medium | 3x | QA gates, E2E validation |
 | **model-engineer.md** | Sonnet 4.5 | high + thinking | 3x | Cost optimization, recommendations |
 
