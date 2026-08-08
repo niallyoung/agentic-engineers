@@ -434,10 +434,14 @@ parse_agents_md() {
 		/^\| \*\*[A-Za-z]/ {
 			gsub(/^\| /, "")
 			gsub(/ \|$/, "")
+			# Replace escaped pipes with placeholder to protect them from splitting
+			gsub(/\\\|/, "__ESCAPED_PIPE__")
 			n = split($0, fields, "|")
 			if (n < 5) next
 			for (i = 1; i <= n; i++) {
 				gsub(/^[ \t]+|[ \t]+$/, "", fields[i])
+				# Restore escaped pipes in each field
+				gsub(/__ESCAPED_PIPE__/, "|", fields[i])
 			}
 			# Table columns: Role | Model | Effort | Multi-Model? | Use When (description)
 			role = fields[1]; model = fields[2]; effort = fields[3]; description = fields[5]
