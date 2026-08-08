@@ -392,7 +392,8 @@ class OrchestratorSkill:
 
     def claim_task(self, task_id: str, delegate_file: Path) -> Dict[str, Any]:
         """
-        Atomically move task from incoming/ → processing/ with metadata.
+        Atomically and *exclusively* move task from incoming/ → processing/
+        with metadata.
 
         Args:
             task_id: Task identifier
@@ -402,7 +403,8 @@ class OrchestratorSkill:
             Parsed DELEGATE dictionary
 
         Raises:
-            TaskClaimError: If claiming fails
+            TaskClaimError: If claiming fails, including when the task has
+                already been claimed by a concurrent racer.
         """
         try:
             # Read DELEGATE
@@ -419,8 +421,26 @@ class OrchestratorSkill:
 
             # Move DELEGATE file to processing/
             processing_dir = self.queue_root / "processing"
-            processing_file = processing_dir / f"{task_id}.yaml"
-            delegate_file.rename(processing_file)
+            processing_file = self._safe_queue_path(processing_dir, f"{task_id}.yaml")
+
+            # SECURITY (Vulnerability 4 — no exclusive task claim): a bare
+            # rename() silently *overwrites* an existing destination on
+            # POSIX, so two concurrent orchestrators racing to claim the
+            # same task_id (e.g. two DELEGATE files with a duplicate
+            # task_id, or two pollers sharing a queue) could both believe
+            # they'd won the claim and both execute the task. os.link()
+            # atomically fails with FileExistsError if processing_file
+            # already exists, so at most one racer can ever win — the loser
+            # gets a clean TaskClaimError instead of silently double-running
+            # the task. The source file is only removed after the link
+            # (the claim) has been confirmed to succeed.
+            try:
+                os.link(str(delegate_file), str(processing_file))
+            except FileExistsError as e:
+                raise TaskClaimError(
+                    f"Task {task_id} already claimed: {processing_file} exists"
+                ) from e
+            delegate_file.unlink()
 
             # Write metadata
             meta_file = processing_dir / f"{task_id}.meta.json"

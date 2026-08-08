@@ -324,6 +324,104 @@ def test_claim_task_nonexistent(orchestrator):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Security regression: Vulnerability 4 — no exclusive task claim.
+#
+# claim_task() used to move the DELEGATE with a bare Path.rename(), which
+# silently *overwrites* an existing destination on POSIX. Two concurrent
+# racers claiming the same task_id (e.g. two DELEGATE files carrying a
+# duplicate task_id, submitted to incoming/ under different filenames) could
+# therefore BOTH succeed, and the task would be executed twice. The fix uses
+# os.link() (atomically fails with FileExistsError if the destination
+# already exists) before removing the source, so at most one claimant wins.
+# These tests fail without the fix: both claim_task() calls below would
+# return successfully instead of the second raising TaskClaimError.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_claim_task_duplicate_task_id_only_first_wins(orchestrator, temp_queue):
+    """Two DELEGATE files sharing a task_id: only the first claim may succeed."""
+    import yaml
+
+    task_id = "dup-claim-task"
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": task_id,
+        "agent": "engineer",
+        "scope": "Test",
+        "plan": ["Step 1"],
+        "success_criteria": ["AC1"],
+    }
+
+    file_a = temp_queue / "incoming" / "dup-a.yaml"
+    file_b = temp_queue / "incoming" / "dup-b.yaml"
+    for f in (file_a, file_b):
+        with f.open("w") as fh:
+            yaml.dump(delegate, fh)
+
+    # First claim succeeds and consumes its source file.
+    orchestrator.claim_task(task_id, file_a)
+    assert (temp_queue / "processing" / f"{task_id}.yaml").exists()
+    assert not file_a.exists()
+
+    # Second claim of the SAME task_id (simulating a concurrent racer that
+    # listed a duplicate DELEGATE before the first claim completed) must be
+    # rejected, not silently overwrite the winner's claim.
+    with pytest.raises(TaskClaimError):
+        orchestrator.claim_task(task_id, file_b)
+
+    # The loser's source file must be left untouched (not consumed), and the
+    # winner's processing/ record must be intact (not overwritten).
+    assert file_b.exists()
+    assert (temp_queue / "processing" / f"{task_id}.yaml").exists()
+
+
+def test_claim_task_concurrent_threads_only_one_wins(orchestrator, temp_queue):
+    """True-concurrency variant: two threads race to claim the same task_id
+    via os.link(); exactly one must succeed."""
+    import threading
+    import yaml
+
+    task_id = "dup-claim-thread-task"
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": task_id,
+        "agent": "engineer",
+        "scope": "Test",
+        "plan": ["Step 1"],
+        "success_criteria": ["AC1"],
+    }
+
+    file_a = temp_queue / "incoming" / "thread-dup-a.yaml"
+    file_b = temp_queue / "incoming" / "thread-dup-b.yaml"
+    for f in (file_a, file_b):
+        with f.open("w") as fh:
+            yaml.dump(delegate, fh)
+
+    results = {}
+    barrier = threading.Barrier(2)
+
+    def claim(name, source_file):
+        barrier.wait()  # maximize the chance both threads race os.link()
+        try:
+            orchestrator.claim_task(task_id, source_file)
+            results[name] = "success"
+        except TaskClaimError:
+            results[name] = "failed"
+
+    t1 = threading.Thread(target=claim, args=("a", file_a))
+    t2 = threading.Thread(target=claim, args=("b", file_b))
+    t1.start()
+    t2.start()
+    t1.join(timeout=5)
+    t2.join(timeout=5)
+
+    outcomes = sorted(results.values())
+    assert outcomes == ["failed", "success"], (
+        f"Exactly one racer must win the claim, got: {results}"
+    )
+    assert (temp_queue / "processing" / f"{task_id}.yaml").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Test: State Transitions
 # ─────────────────────────────────────────────────────────────────────────────
 
