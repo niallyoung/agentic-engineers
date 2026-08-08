@@ -39,33 +39,28 @@ class DelegateValidator:
 
         # Valid roles (8 canonical from AGENTS.md)
         self.valid_roles = {
-            "Engineer",
-            "Senior Engineer",
-            "Lead Engineer",
-            "Principal Engineer",
-            "Quality Engineer",
-            "Security Engineer",
-            "Model Engineer",
-            "Orchestrator",
+            "engineer",
+            "senior-engineer",
+            "lead-engineer",
+            "principal-engineer",
+            "quality-engineer",
+            "security-engineer",
+            "model-engineer",
+            "orchestrator",
         }
 
         # Valid effort levels
-        self.valid_efforts = {"low", "medium", "high"}
+        self.valid_efforts = {"low", "medium", "high", "max"}
 
         # Valid models
         self.valid_models = {
-            "gpt-5.5",
-            "gpt-5.4",
-            "gpt-5.3-codex",
-            "gpt-5.2-codex",
-            "gpt-5.2",
-            "gpt-5.4-mini",
-            "gpt-5-mini",
-            "gpt-4.1",
+            "claude-sonnet-5",
             "claude-sonnet-4.6",
             "claude-sonnet-4.5",
-            "claude-haiku-4.5",
+            "claude-opus-5",
             "claude-opus-4.8",
+            "claude-haiku-4.5",
+            "claude-fable-5",
         }
 
     def validate_groups(self, delegate: Dict) -> Tuple[bool, List[str]]:

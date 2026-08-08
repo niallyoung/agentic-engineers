@@ -18,7 +18,7 @@ def _valid_delegate(**overrides) -> dict:
     delegate = {
         "task_id": "2025-01-01-add-retry-logic-abc123",
         "role": "senior_engineer",
-        "model": "claude-sonnet-4.6",
+        "model": "claude-sonnet-5",
         "effort": "high",
         "scope": (
             "Implement exponential back-off retry logic for all outbound HTTP "

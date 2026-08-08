@@ -46,7 +46,7 @@ class TestGroupAValidation:
         """Test valid Group A delegate."""
         delegate = {
             "task_id": "valid-task-001",
-            "role": "Engineer",
+            "role": "engineer",
             "scope": VALID_SCOPE,
             "plan": [VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             "context": VALID_CONTEXT,
@@ -66,7 +66,7 @@ class TestGroupAValidation:
         """Test Group A with invalid task_id."""
         delegate = {
             "task_id": "Invalid-Task-ID",
-            "role": "Engineer",
+            "role": "engineer",
             "scope": VALID_SCOPE,
             "plan": [VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             "context": VALID_CONTEXT,

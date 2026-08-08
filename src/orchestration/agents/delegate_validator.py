@@ -41,12 +41,12 @@ class DelegateValidator:
     # Default models per role
     DEFAULT_MODELS = {
          'engineer': 'claude-haiku-4.5',
-         'senior_engineer': 'claude-sonnet-4.6',
-         'lead_engineer': 'claude-sonnet-4.6',
-         'principal_engineer': 'claude-opus-4.6',
+         'senior_engineer': 'claude-sonnet-5',
+         'lead_engineer': 'claude-sonnet-5',
+         'principal_engineer': 'claude-opus-5',
          'security_engineer': 'claude-fable-5',
-         'quality_engineer': 'claude-sonnet-4.6',
-         'model_engineer': 'claude-sonnet-4.6'
+         'quality_engineer': 'claude-sonnet-5',
+         'model_engineer': 'claude-sonnet-5'
      }
     
     # Effort bands
