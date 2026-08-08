@@ -27,6 +27,38 @@ logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Security: queue path safety constants
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# task_id and escalate_to are attacker/LLM-controlled values (parsed from
+# DELEGATE/HANDBACK YAML written by sub-agents) that get interpolated
+# directly into filesystem paths throughout this module (claim_task,
+# _move_task_to_done/_failed/_retry_pending/_escalation). Both MUST be
+# validated against a strict allow-list *before* any path is constructed —
+# see _validate_delegate() and _move_task_to_escalation().
+
+# Mirrors src/skills/queue-management/scripts/queue_ops.py:379 — the same
+# pattern already enforced by QueueOperations.enqueue() for any DELEGATE that
+# enters the queue via the canonical path. This closes the gap for DELEGATEs
+# that reach OrchestratorSkill without going through enqueue() first.
+TASK_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$")
+
+# Mirrors src/skills/queue-management/scripts/queue_ops.py:48 VALID_AGENTS —
+# the canonical set of roles a task may be escalated to. escalate_to is read
+# from sub-agent HANDBACK output and is otherwise attacker-controlled.
+VALID_AGENTS = {
+    "orchestrator",
+    "engineer",
+    "senior-engineer",
+    "lead-engineer",
+    "principal-engineer",
+    "security-engineer",
+    "quality-engineer",
+    "model-engineer",
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Queue Isolation Integration
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1179,9 +1211,13 @@ class OrchestratorSkill:
 
         # Write to incoming/
         incoming_dir = self.queue_root / "incoming"
-        delegate_file = incoming_dir / f"{task_id}.yaml"
 
         try:
+            # skill_name (folded into task_id above) originates from
+            # skill_feedback[].skill_name inside a sub-agent HANDBACK — the
+            # same attacker/LLM-controlled-input class as Vulnerability 1.
+            # Route it through the same containment guard before writing.
+            delegate_file = self._safe_queue_path(incoming_dir, f"{task_id}.yaml")
             with delegate_file.open("w") as f:
                 f.write(self._dict_to_yaml(delegate))
 
@@ -1231,6 +1267,41 @@ class OrchestratorSkill:
     # ─────────────────────────────────────────────────────────────────────────
     # Helper Methods
     # ─────────────────────────────────────────────────────────────────────────
+
+    def _safe_queue_path(self, base_dir: Path, filename: str) -> Path:
+        """
+        Build ``base_dir / filename`` and verify the resolved path stays
+        within ``base_dir``.
+
+        Defence-in-depth against path traversal (Vulnerability 1): task_id
+        (and, for escalation, escalate_to) are already validated by
+        _validate_delegate() / _move_task_to_escalation() before they reach
+        here, but every call site that builds a queue path from a
+        caller-supplied identifier goes through this helper as a second,
+        independent guard — a resolve()-based containment check catches
+        anything a regex might miss (e.g. a future call site that forgets
+        to validate first).
+
+        Args:
+            base_dir: The queue subdirectory the path must stay within
+                (e.g. processing/, done/, failed/).
+            filename: The candidate filename (already interpolated).
+
+        Returns:
+            The (unresolved) candidate path, ready to use.
+
+        Raises:
+            QueueValidationError: If the resolved candidate escapes base_dir.
+        """
+        candidate = base_dir / filename
+        base_resolved = base_dir.resolve()
+        candidate_resolved = candidate.resolve()
+        if candidate_resolved != base_resolved and base_resolved not in candidate_resolved.parents:
+            raise QueueValidationError(
+                f"Refusing to write outside queue directory: {candidate} "
+                f"(resolved {candidate_resolved}) is not within {base_resolved}"
+            )
+        return candidate
 
     def _read_yaml(self, path: Path) -> Dict[str, Any]:
         """Read and parse YAML file."""
@@ -1359,6 +1430,20 @@ class OrchestratorSkill:
         if delegate.get("handoff_type") != "DELEGATE":
             raise QueueValidationError("Invalid handoff_type (must be DELEGATE)")
 
+        # SECURITY (Vulnerability 1 — arbitrary file write via unvalidated
+        # task_id): task_id is interpolated directly into filesystem paths by
+        # claim_task() and every _move_task_to_*() method. Reject anything
+        # that isn't a safe kebab-case identifier here, BEFORE it can ever
+        # reach path construction. Without this check a task_id such as
+        # "../../../../../../tmp/pwned" or "/tmp/absolute-escape" would let a
+        # malicious/compromised DELEGATE write files outside the queue root.
+        task_id = delegate.get("task_id")
+        if not isinstance(task_id, str) or not TASK_ID_PATTERN.match(task_id):
+            raise QueueValidationError(
+                f"DELEGATE task_id is not a safe identifier: {task_id!r} "
+                f"(must match {TASK_ID_PATTERN.pattern})"
+            )
+
     def _validate_handback(self, handback: Dict[str, Any]) -> None:
         """Validate HANDBACK structure."""
         required = ["handoff_type", "task_id", "status"]
@@ -1383,12 +1468,12 @@ class OrchestratorSkill:
 
         # Move DELEGATE file
         processing_file = processing_dir / f"{task_id}.yaml"
-        done_file = done_dir / f"{task_id}.yaml"
+        done_file = self._safe_queue_path(done_dir, f"{task_id}.yaml")
         if processing_file.exists():
             processing_file.rename(done_file)
 
         # Write HANDBACK file
-        handback_file = done_dir / f"{task_id}-HANDBACK.yaml"
+        handback_file = self._safe_queue_path(done_dir, f"{task_id}-HANDBACK.yaml")
         with handback_file.open("w") as f:
             f.write(self._dict_to_yaml(handback))
 
@@ -1414,11 +1499,11 @@ class OrchestratorSkill:
                 break
 
         if source_file:
-            failed_file = failed_dir / f"{task_id}.yaml"
+            failed_file = self._safe_queue_path(failed_dir, f"{task_id}.yaml")
             source_file.rename(failed_file)
 
         # Write error file
-        error_file = failed_dir / f"{task_id}-ERROR.json"
+        error_file = self._safe_queue_path(failed_dir, f"{task_id}-ERROR.json")
         error_data = {
             "task_id": task_id,
             "error": error_msg,
@@ -1444,14 +1529,14 @@ class OrchestratorSkill:
 
         # Move DELEGATE file
         processing_file = processing_dir / f"{task_id}.yaml"
-        retry_file = retry_pending_dir / f"{task_id}.yaml"
+        retry_file = self._safe_queue_path(retry_pending_dir, f"{task_id}.yaml")
         if processing_file.exists():
             processing_file.rename(retry_file)
 
         # Update and write metadata
         metadata["retry_count"] = metadata.get("retry_count", 0) + 1
         metadata["last_error"] = "Crashed and recovered"
-        meta_file = retry_pending_dir / f"{task_id}.meta.json"
+        meta_file = self._safe_queue_path(retry_pending_dir, f"{task_id}.meta.json")
         with meta_file.open("w") as f:
             json.dump(metadata, f, indent=2)
 
@@ -1589,7 +1674,7 @@ class OrchestratorSkill:
         }
 
         escalation_filename = f"{escalation_task_id}.yaml"
-        escalation_file = incoming_dir / escalation_filename
+        escalation_file = self._safe_queue_path(incoming_dir, escalation_filename)
         with escalation_file.open("w") as f:
             f.write(self._dict_to_yaml(escalation_delegate))
 

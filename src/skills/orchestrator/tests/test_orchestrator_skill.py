@@ -116,6 +116,115 @@ def test_validate_delegate_invalid_handoff_type(orchestrator):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Security regression: Vulnerability 1 — arbitrary file write via
+# unvalidated task_id.
+#
+# task_id is interpolated directly into filesystem paths by claim_task() and
+# every _move_task_to_*() method. Before the fix, _validate_delegate() never
+# checked task_id's shape, so a crafted DELEGATE with a path-traversal or
+# absolute-path task_id would escape the queue root the moment it was
+# claimed. These tests fail without the fix (no exception raised, and the
+# claim would succeed and write outside temp_queue).
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize(
+    "malicious_task_id",
+    [
+        "../../../../../../tmp/pwned",
+        "/tmp/absolute-escape",
+        "..",
+        "foo/bar",
+        "foo\\bar",
+        "",
+    ],
+)
+def test_validate_delegate_rejects_path_traversal_task_id(orchestrator, malicious_task_id):
+    """DELEGATE with a path-traversal/absolute task_id must be rejected."""
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": malicious_task_id,
+        "agent": "engineer",
+        "scope": "Test scope",
+        "plan": ["Step 1"],
+        "success_criteria": ["AC1"],
+    }
+    with pytest.raises(QueueValidationError, match="task_id"):
+        orchestrator._validate_delegate(delegate)
+
+
+def test_poll_queue_blocks_path_traversal_exploit(orchestrator, temp_queue):
+    """
+    End-to-end exploit attempt: a DELEGATE with an absolute-path task_id
+    must never reach claim_task()/rename(), and must never write outside
+    temp_queue.
+
+    Uses an absolute-path task_id (rather than a relative '../' one) because
+    pathlib's `/` operator *fully replaces* the left-hand side when the
+    right-hand side is absolute (``Path("/a/b") / "/tmp/x" == Path("/tmp/x")``),
+    giving a deterministic, filesystem-depth-independent escape target to
+    assert against. The '../' relative-traversal case is covered
+    deterministically at the unit level by
+    test_validate_delegate_rejects_path_traversal_task_id.
+    """
+    import yaml
+
+    escape_basename = "pwned-orchestrator-skill-test"
+    malicious_task_id = f"/tmp/{escape_basename}"
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": malicious_task_id,
+        "agent": "engineer",
+        "scope": "Exploit attempt",
+        "plan": ["Step 1"],
+        "success_criteria": ["AC1"],
+    }
+    # The malicious DELEGATE file itself must live inside incoming/ (its own
+    # filename is safe) — only the task_id field inside it is malicious.
+    incoming_file = temp_queue / "incoming" / "exploit.yaml"
+    with incoming_file.open("w") as f:
+        yaml.dump(delegate, f)
+
+    def _find_escaped_files():
+        # Every downstream path helper (claim_task, _move_task_to_done, ...)
+        # would independently collapse to an absolute /tmp/<escape_basename>*
+        # path for this malicious task_id — glob broadly to catch whichever
+        # one wrote first.
+        return list(Path("/tmp").glob(f"{escape_basename}*"))
+
+    pre_existing = set(_find_escaped_files())
+    try:
+        processed, failed = orchestrator.poll_queue()
+
+        # Must be rejected, not processed.
+        assert processed == 0
+        assert failed == 1
+        # Nothing must have been written outside the queue root.
+        new_escapes = [p for p in _find_escaped_files() if p not in pre_existing]
+        assert new_escapes == [], (
+            f"Absolute-path task_id must not create files outside the queue "
+            f"root, found: {new_escapes}"
+        )
+    finally:
+        # Best-effort cleanup in case the fix regresses and the exploit
+        # actually creates files — never leave attacker-written state behind
+        # in a shared /tmp.
+        for p in _find_escaped_files():
+            if p not in pre_existing:
+                try:
+                    p.unlink()
+                except FileNotFoundError:
+                    pass
+
+
+def test_safe_queue_path_rejects_escape(orchestrator, temp_queue):
+    """_safe_queue_path() must independently reject an escaping candidate,
+    even if a caller forgot to pre-validate task_id (defence in depth)."""
+    processing_dir = temp_queue / "processing"
+    with pytest.raises(QueueValidationError):
+        orchestrator._safe_queue_path(processing_dir, "../../../../etc/passwd")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Test: HANDBACK Validation
 # ─────────────────────────────────────────────────────────────────────────────
 
