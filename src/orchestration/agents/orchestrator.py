@@ -1032,30 +1032,51 @@ class TaskRouter:
     def route_task(self, delegate: Dict) -> Tuple[str, Optional[Agent]]:
         """
         Route task to appropriate agent by name.
-        
+
         Returns:
             (agent_name, None)  — caller uses agent_name to invoke via AgentInvoker
         """
-        # Priority 1: Explicit role in DELEGATE
-        if "role" in delegate and delegate.get("role"):
-            # Enforce the role validator at routing time: reject an invalid role
-            # or a role that conflicts with the task's scope/effort routing rules
-            # (e.g. a security-scoped task mis-tagged as `engineer`). Previously
-            # the validator was imported but never invoked, so mismatches were
-            # silently honoured.
-            ok, role_failures = DelegateValidator.validate_routing_role(delegate)
+        # Priority 1: Explicit agent/role in DELEGATE.
+        #
+        # `agent` is the CANONICAL wire-format field (hyphenated, e.g.
+        # "security-engineer") — the only field queue_ops.enqueue() accepts;
+        # it rejects `role` outright as a legacy field. `role` is kept here
+        # only as a backwards-compat fallback for callers that still build
+        # delegate dicts directly (e.g. quality-override re-routing).
+        #
+        # SECURITY (C1 fix): this used to check `role` ONLY. A canonical
+        # DELEGATE carrying `agent: security-engineer` (and no `role`) fell
+        # straight through Priority 1 into the Priority 2 keyword heuristics
+        # below, which silently returned ("engineer", None) — routing
+        # security-scoped work to Haiku instead of fable-5, and skipping the
+        # C5 fable-5 restricted-scope gate entirely.
+        #
+        # Hyphens are normalized to underscores exactly ONCE, right here, so
+        # every downstream consumer (AGENT_NAMES, DelegateValidator.VALID_ROLES,
+        # ModelResolver) sees a single consistent underscored form.
+        raw = delegate.get("agent") or delegate.get("role")
+        if raw:
+            normalized_role = str(raw).strip().lower().replace("-", "_")
+
+            # Enforce the role validator at routing time: reject an invalid
+            # agent/role, or one that conflicts with the task's scope/effort
+            # routing rules (e.g. a security-scoped task mis-tagged as
+            # `engineer`). Previously the validator was imported but never
+            # invoked, so mismatches were silently honoured.
+            ok, role_failures = DelegateValidator.validate_routing_role(
+                {**delegate, "role": normalized_role}
+            )
             if not ok:
                 raise RoleRoutingError(
-                    "DELEGATE role "
-                    f"'{delegate.get('role')}' failed routing validation: "
+                    "DELEGATE agent/role "
+                    f"'{raw}' failed routing validation: "
                     + "; ".join(role_failures),
                     failures=role_failures,
                 )
 
-            role = delegate.get("role", "").lower()
-            if role in self.AGENT_NAMES:
-                return (role, None)
-        
+            if normalized_role in self.AGENT_NAMES:
+                return (normalized_role, None)
+
         # Priority 2: Apply AGENTS.md decision tree
         scope = delegate.get("scope", "").lower()
         complexity = delegate.get("complexity", "medium").lower()
