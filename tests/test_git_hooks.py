@@ -190,7 +190,7 @@ class TestPreCommitHook:
         """AWS access key pattern (AKIA…) must be rejected."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "config.py", "AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'\n")
+            stage_file(tmpdir, "config.py", "AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
         combined = result.stdout + result.stderr
@@ -205,7 +205,7 @@ class TestPreCommitHook:
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "settings.py", "api_key: abcdefghijklmnopqrstuvwxyz123456\n")
+            stage_file(tmpdir, "settings.py", "api_key: abcdefghijklmnopqrstuvwxyz123456\n")  # pragma: allowlist secret
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
 

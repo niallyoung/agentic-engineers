@@ -283,7 +283,7 @@ class TestAuthenticationManager:
         with pytest.raises(AuthenticationError, match="Invalid credentials"):
             auth_manager.authenticate(
                 user_id="user123",
-                password="wrongpassword"
+                password="wrongpassword"  # pragma: allowlist secret
             )
 
     def test_refresh_access_token_success(self, auth_manager):

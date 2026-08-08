@@ -40,7 +40,7 @@ from src.orchestration.security import EntropyDetector
 detector = EntropyDetector()
 
 # Pattern-based detection (high confidence)
-is_cred, reason = detector.detect_in_value("AKIAIOSFODNN7EXAMPLE")
+is_cred, reason = detector.detect_in_value("AKIAIOSFODNN7EXAMPLE")  # pragma: allowlist secret
 # → (True, "Matches pattern: aws_access_key")
 
 # Field name + entropy (conservative)
@@ -355,17 +355,50 @@ python -m pytest tests/test_model_resolver_consistency.py -v
 
 ### What Gets Flagged
 
+**LLM / AI provider keys (CRITICAL severity):**
+- ✅ Anthropic: `sk-ant-<24+>` (api03, admin01, sid01)
+- ✅ OpenAI: `sk-proj-`, `sk-svcacct-`, `sk-admin-`, legacy `sk-<32+ alnum>`
+- ✅ OpenRouter: `sk-or-v1-<32+>`
+- ✅ Google / Gemini: `AIza<35>`, `GOCSPX-<20+>`, `*.apps.googleusercontent.com`
+- ✅ Hugging Face `hf_`, Groq `gsk_`, Perplexity `pplx-`, xAI `xai-`
+- ✅ Replicate `r8_`, Fireworks `fw_`, NVIDIA `nvapi-`, Anyscale `esecret_`
+- ✅ LangSmith: `lsv2_(pt|sk)_<32>_<10>`
+- ✅ Prefix-less providers (Cohere, Mistral, Together, Azure OpenAI, DeepSeek)
+  via env-var assignment: `<PROVIDER>_API_KEY = <16+ chars>`
+
 **High Confidence (Pattern Matching):**
 - ✅ AWS access keys: `AKIA[0-9A-Z]{16}`
 - ✅ AWS secret keys: `aws_secret_access_key = <40-char base64>`
 - ✅ GitHub tokens: `gh[ousp]_[A-Za-z0-9_]{36,255}`
+- ✅ GitLab tokens: `glpat-<20+>`
+- ✅ Slack: `xox[baprs]-`, `xapp-`, and `hooks.slack.com` webhook URLs
 - ✅ Azure keys: Base64-encoded 88-char + `==`
+- ✅ npm `npm_`, PyPI `pypi-`, SendGrid `SG.`, Twilio, Databricks, Vault `hvs.`
 - ✅ Private key headers: `-----BEGIN (RSA|DSA|EC|OPENSSH|PRIVATE) KEY-----`
 - ✅ Database passwords: `password|passwd|pwd = <12+ special chars>`
 - ✅ API keys: `api[_-]?key = <20+ chars>`
-- ✅ OAuth tokens: `(access|bearer) <token>`
+- ✅ Bearer tokens: `Bearer <20+ chars including a digit>`
 - ✅ JWT tokens: `eyJ...eyJ...` format
 - ✅ Stripe keys: `(sk|pk)_(test|live)_<24+ chars>`
+
+### What Gets Scanned
+
+`scan_directory()` walks source **and configuration**: `.py`, `.yaml`, `.yml`,
+`.json`, `.toml`, `.ini`, `.env`, `.tf`, `.sh`, `.md` and more, skipping
+vendored/build trees (`node_modules`, `.venv`, `dist`, …). Comment lines are
+scanned too — commented-out config is a common place live credentials get
+committed.
+
+### Suppressing Deliberate Fixtures
+
+Test fixtures and documentation examples are suppressed inline:
+
+```python
+aws_key = "AKIAIOSFODNN7EXAMPLE"  # pragma: allowlist secret
+```
+
+Suppression is per-line and greppable, so every exemption is reviewable in a
+diff. `# noqa: secret` and `# gitleaks:allow` are also honoured.
 
 **Medium Confidence (Field Name + Entropy):**
 - ⚠️ Field names: password, secret, token, api_key, private_key, etc.
@@ -376,12 +409,24 @@ python -m pytest tests/test_model_resolver_consistency.py -v
 **Legitimate high-entropy patterns (not flagged):**
 - ❌ Hashes: `[a-f0-9]{32,}` (MD5, SHA1, SHA256)
 - ❌ UUIDs: Standard UUID format
-- ❌ URLs: `https://...`
 - ❌ Hex colors: `#[0-9a-fA-F]{6}`
 - ❌ Shebangs: `#!/usr/bin/env python`
-- ❌ Python paths: Paths containing 'python'
+- ❌ Python paths: `/usr/lib/python3.11/...`, `site-packages`
 - ❌ Import statements: `from X import Y`
-- ❌ Base64: Likely base64 strings
+
+Exclusions apply to **entropy-based detection only**. A confirmed provider-key
+pattern match is always reported, even when the value also looks like base64 or
+a hash — exclusions can never mask a known credential format.
+
+Separately, placeholders and env-var indirection are not flagged:
+`sk-ant-api03-xxxx`, `your-api-key-here`, `${ANTHROPIC_API_KEY}`,
+`os.environ["OPENAI_API_KEY"]`.
+
+> **Removed (2026-08, C4):** `base64_likely` (`^[A-Za-z0-9+/]{32,}={0,2}$`)
+> excluded exactly what a secret looks like, suppressing Google `AIza…` keys and
+> every base64-encoded credential. `url` suppressed Slack webhook URLs.
+> `python_path` was `^.*python.*$`, which suppressed any line containing the
+> word "python".
 
 ### Configuration
 

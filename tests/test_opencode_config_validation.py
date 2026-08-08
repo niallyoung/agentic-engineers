@@ -195,7 +195,7 @@ class TestSchemaRules:
         text = _replace(
             MIN_VALID,
             '"model": "github-copilot/claude-haiku-4.5"',
-            '"model": "github-copilot/claude-haiku-4.5",\n  "leak": "api_key: \\"AKIAABCDEFGHIJKLMNOP\\""',
+            '"model": "github-copilot/claude-haiku-4.5",\n  "leak": "api_key: \\"AKIAABCDEFGHIJKLMNOP\\""',  # pragma: allowlist secret
         )
         r = _v(text)
         assert any(e.code == "OC013" for e in r.errors)
