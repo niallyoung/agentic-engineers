@@ -36,6 +36,7 @@ from . import (
     MODEL_ENGINEER_CONFIG, SECURITY_ENGINEER_CONFIG
 )
 from .quality_validator import QualityValidator, RoutingDecision
+from .quality_engineer_protocol_integration import QualityEngineerProtocolIntegration
 from .delegate_validator import (
     DelegateValidator,
     RoleRoutingError,
@@ -1122,6 +1123,7 @@ class OrchestratorAgent(Agent):
         idle_timeout: int = 60,
         agent_invoker=None,
         quality_validator: Optional["QualityValidator"] = None,
+        quality_engineer_integration: Optional["QualityEngineerProtocolIntegration"] = None,
         budget_config_path: Optional[Path] = None,
         no_color: Optional[bool] = None,
     ):
@@ -1138,6 +1140,12 @@ class OrchestratorAgent(Agent):
         self.agent_invoker = agent_invoker
         # Quality validator — defaults to a fresh instance if not injected
         self.quality_validator = quality_validator or QualityValidator()
+        # Quality Engineer protocol integration — real (non-fabricated) secondary
+        # review used when a task is escalated for QE review. Defaults to a
+        # fresh instance if not injected.
+        self.quality_engineer_integration = (
+            quality_engineer_integration or QualityEngineerProtocolIntegration()
+        )
         # Task state tracking for retry management
         self.task_state = {}  # Maps task_id -> {retry_count, quality_score, failure_reasons}
 
@@ -2175,17 +2183,79 @@ class OrchestratorAgent(Agent):
                         "Approve for merge or request rework"
                     ]
                 }
-                # Execute Quality Engineer review (stub result — real review via AgentInvoker)
-                qe_review = {
-                    "quality_score": 90,
-                    "model_assessment": "Model suitable",
-                    "test_coverage": "95%",
-                    "regressions_detected": 0,
-                    "production_ready": True,
-                    "confidence": 0.92,
-                    "deliverables": ["Quality assessment", "Model feedback"],
-                    "decision": "PROCEED",
-                }
+                # Execute Quality Engineer review via the real
+                # QualityEngineerProtocolIntegration — NOT a hardcoded verdict.
+                #
+                # SECURITY (fabricated quality stamp): this block used to
+                # return a hardcoded {"quality_score": 90, ..., "decision":
+                # "PROCEED"} on every escalation, regardless of what actually
+                # triggered the escalation. Every task that reached secondary
+                # review was rubber-stamped approved. It now evaluates the
+                # HANDBACK for real: the quality_score fed into the QE
+                # evaluation is the independently-computed Layer 3
+                # quality_validator score (handback_validation.quality_score
+                # — derived from HANDBACK structure/checklist proof, not the
+                # sub-agent's self-report), and the PROCEED/ESCALATE decision
+                # comes from QualityEngineerProtocolIntegration's own
+                # escalation logic, not a constant.
+                try:
+                    handback_for_qe = dict(handback)
+                    handback_for_qe.setdefault("task_id", task_id)
+                    handback_for_qe.setdefault("status", handback.get("status", "partial"))
+                    # Ground the QE evaluation in the real, independently
+                    # computed Layer 3 score rather than trusting whatever
+                    # quality_score the sub-agent self-reported.
+                    handback_for_qe["quality_score"] = handback_validation.quality_score
+                    handback_for_qe.setdefault(
+                        "regressions_detected",
+                        1 if (handback.get("coverage_decreased") or handback.get("tests_failed")) else 0,
+                    )
+                    handback_for_qe.setdefault("test_coverage", handback.get("test_coverage", 0.0))
+                    handback_for_qe.setdefault(
+                        "acceptance_criteria_met", handback.get("acceptance_criteria_met", [])
+                    )
+
+                    delegate_for_qe = dict(delegate)
+                    delegate_for_qe.setdefault("model", delegate.get("model", "unknown"))
+                    delegate_for_qe.setdefault("effort", delegate.get("effort", "medium"))
+                    delegate_for_qe.setdefault(
+                        "acceptance_criteria",
+                        delegate.get("acceptance_criteria") or delegate.get("success_criteria") or [],
+                    )
+
+                    evaluation = self.quality_engineer_integration.evaluate_quality(
+                        delegate_for_qe, handback_for_qe
+                    )
+                    still_escalate, escalation_context = self.quality_engineer_integration.check_escalation(
+                        evaluation, delegate_for_qe
+                    )
+
+                    qe_review = {
+                        "quality_score": evaluation.quality_score,
+                        "quality_baseline": evaluation.quality_baseline,
+                        "quality_achieved": evaluation.quality_achieved,
+                        "acceptance_criteria_assessment": evaluation.acceptance_criteria_assessment,
+                        "issues_found": evaluation.issues_found,
+                        "recommendations": evaluation.recommendations,
+                        "escalation_required": still_escalate,
+                        "escalation_reason": evaluation.escalation_reason,
+                        "escalation_context": escalation_context,
+                        "evaluator": "quality_engineer_protocol_integration",
+                        "evaluated_at": evaluation.evaluated_at,
+                        "decision": "ESCALATE" if still_escalate else "PROCEED",
+                    }
+                except Exception as qe_err:
+                    # Fail closed: an evaluation error is NOT evidence of
+                    # quality. Never let an exception here silently become an
+                    # approval — that would just be fabrication wearing a
+                    # try/except.
+                    logger.error(f"Real QE evaluation failed for {task_id}: {qe_err}")
+                    qe_review = {
+                        "decision": "ESCALATE",
+                        "escalation_reason": f"QE evaluation error: {qe_err}",
+                        "evaluator": "quality_engineer_protocol_integration",
+                        "error": str(qe_err),
+                    }
                 print(f"   ✓ Quality Engineer review: {qe_review.get('decision', 'PENDING')}")
                 # Merge QE feedback into handback
                 handback["quality_engineer_review"] = qe_review

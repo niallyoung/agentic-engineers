@@ -246,6 +246,10 @@ class OrchestratorSkill:
         # Feedback loop (imported on first use to avoid circular dependencies)
         self.feedback_loop = None
 
+        # Real structural HANDBACK validator for invoke_qe_gate() (imported on
+        # first use — see invoke_qe_gate() docstring for why this matters).
+        self._quality_validator = None
+
         logger.info(
             f"OrchestratorSkill initialized: "
             f"session={self.session_id}, harness={self.harness}, "
@@ -1045,7 +1049,24 @@ class OrchestratorSkill:
         2. Spawn quality-engineer agent via spawn_sub_agent()
         3. Parse QE HANDBACK for approval decision
 
-        For now, uses a simplified gate based on confidence and quality thresholds.
+        spawn_sub_agent() has no real agent-invocation backend at this layer
+        (see its docstring), so step 2 above isn't available yet. Approval
+        here combines two checks instead of trusting either alone:
+
+        1. Self-reported confidence/quality thresholds from the HANDBACK
+           (confidence > 0.7 AND quality > 0.75) — fast, but this is the
+           sub-agent grading its own work.
+        2. Independent structural verification via QualityValidator's real
+           rule-based Layer 3 HANDBACK check (src/orchestration/agents/
+           quality_validator.py) — inspects HANDBACK structure/completeness
+           on its own terms, so a sub-agent can't self-certify a hollow or
+           malformed HANDBACK just by claiming high confidence/quality
+           numbers.
+
+        A task is approved only if BOTH checks pass. If the structural
+        validator can't be imported (e.g. this skill running standalone in a
+        harness without the full src.orchestration package), the gate falls
+        back to the threshold-only check rather than failing every task.
 
         Args:
             task_id: Task identifier
@@ -1056,19 +1077,34 @@ class OrchestratorSkill:
         """
         logger.info(f"Invoking QE gate for task {task_id}")
 
-        # Simplified gate: approve if confidence > 0.7 AND quality > 0.75
-        # This is a placeholder for the real QE delegation flow.
-        # Real implementation would:
-        #   1. Create QE DELEGATE with handback in context
-        #   2. Call spawn_sub_agent(qe_delegate)
-        #   3. Parse QE HANDBACK for approval decision
         confidence = handback.get("confidence", 0.5)
         quality = handback.get("metrics", {}).get("quality", 0.5)
+        threshold_approved = (confidence > 0.7 and quality > 0.75)
 
-        approved = (confidence > 0.7 and quality > 0.75)
+        structural_approved = True
+        structural_score = None
+        try:
+            if self._quality_validator is None:
+                from src.orchestration.agents.quality_validator import QualityValidator
+                self._quality_validator = QualityValidator()
+            validation_result = self._quality_validator.validate_handback(handback)
+            structural_approved = validation_result.passed
+            structural_score = validation_result.quality_score
+        except ImportError:
+            logger.warning(
+                f"QualityValidator unavailable — QE gate for {task_id} falling "
+                "back to self-reported threshold check only."
+            )
 
-        logger.info(f"QE gate for {task_id}: {'APPROVED' if approved else 'REJECTED'} "
-                   f"(confidence={confidence}, quality={quality})")
+        approved = threshold_approved and structural_approved
+
+        logger.info(
+            f"QE gate for {task_id}: {'APPROVED' if approved else 'REJECTED'} "
+            f"(confidence={confidence}, quality={quality}, "
+            f"threshold_approved={threshold_approved}, "
+            f"structural_approved={structural_approved}, "
+            f"structural_score={structural_score})"
+        )
 
         self.capture_span(
             "invoke_qe_gate",
@@ -1076,6 +1112,9 @@ class OrchestratorSkill:
             approved=approved,
             confidence=confidence,
             quality=quality,
+            threshold_approved=threshold_approved,
+            structural_approved=structural_approved,
+            structural_score=structural_score,
         )
 
         return approved
