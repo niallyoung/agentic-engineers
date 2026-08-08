@@ -238,16 +238,16 @@ def test_route_respects_cloud_override(down_runtime):
 # --------------------------------------------------------------------------
 
 def test_cloud_cost_from_providers_yaml(up_runtime):
-    # anthropic/claude-haiku-4.5: input 0.25/1M, output 1.25/1M
+    # anthropic/claude-haiku-4.5 (src/config/providers.yaml): input 1.00/1M, output 5.00/1M
     cost = up_runtime._cloud_cost("anthropic", "claude-haiku-4.5", 1_000_000, 1_000_000)
-    assert cost == pytest.approx(1.50, abs=1e-6)
+    assert cost == pytest.approx(6.00, abs=1e-6)
 
 
 def test_estimate_savings_equals_cloud_cost(up_runtime):
     savings = up_runtime.estimate_savings(
         "anthropic", "claude-haiku-4.5", 1_000_000, 0
     )
-    assert savings == pytest.approx(0.25, abs=1e-6)
+    assert savings == pytest.approx(1.00, abs=1e-6)
 
 
 def test_local_model_cost_is_zero():

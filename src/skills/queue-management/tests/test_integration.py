@@ -30,7 +30,7 @@ class TestCompleteWorkflow:
         """Test workflow: create -> processing -> done."""
         result = queue_ops.create_delegate(
             task_id="workflow-test",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -52,7 +52,7 @@ class TestSubtaskWorkflow:
         """Test creating parent and children."""
         queue_ops.create_delegate(
             task_id="parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -61,7 +61,7 @@ class TestSubtaskWorkflow:
         for i in range(3):
             queue_ops.create_delegate(
                 task_id=f"child-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
                 context=VALID_CONTEXT,
@@ -79,7 +79,7 @@ class TestErrorHandling:
         """Test duplicate task_id raises FileExistsError."""
         queue_ops.create_delegate(
             task_id="dup-task",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -88,7 +88,7 @@ class TestErrorHandling:
         with pytest.raises(FileExistsError):
             queue_ops.create_delegate(
                 task_id="dup-task",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
                 context=VALID_CONTEXT,
@@ -105,7 +105,7 @@ class TestSessionIsolation:
 
         s1.create_delegate(
             task_id="task-1",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -113,7 +113,7 @@ class TestSessionIsolation:
 
         s2.create_delegate(
             task_id="task-2",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,

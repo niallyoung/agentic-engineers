@@ -4,7 +4,7 @@
         setup status harness-toggle migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
         verify verify-harness-sync validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-codex render-specs render-all \
-        lint test test-evals test-concurrent test-ci test-ci-force test-ci-shell quality-gate
+        lint test test-skills test-evals test-concurrent test-ci test-ci-force test-ci-shell quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -376,7 +376,7 @@ lint: ## Lint Python, Shell, and YAML files
 	@echo ""
 	@echo "✅ All lints passed"
 
-test: ## Run pytest test suite with coverage
+test: ## Run pytest test suite with coverage (tests/ + every src/skills/*/tests suite)
 	@echo "🧪 Running pytest test suite..."
 	@cd "$(REPO_ROOT)" && python3 -m pytest tests/ \
 		--cov=src \
@@ -385,6 +385,14 @@ test: ## Run pytest test suite with coverage
 		-v --tb=short
 	@echo ""
 	@echo "✅ Tests complete. HTML coverage report: htmlcov/index.html"
+	@$(MAKE) test-skills
+
+test-skills: ## Run each src/skills/*/tests suite (~1,200 tests, 35 skills) in its own subprocess
+	@echo ""
+	@echo "🧪 Running skill test suites (src/skills/*/tests)..."
+	@echo "   Each skill runs in its own subprocess — see scripts/run_skill_tests.py"
+	@echo "   for why (cross-skill 'scripts' package import collisions)."
+	@cd "$(REPO_ROOT)" && python3 scripts/run_skill_tests.py
 
 test-evals: ## Run DELEGATE/HANDBACK quality evaluation tests
 	@echo "🧪 Running eval framework tests (20+ quality checks)..."

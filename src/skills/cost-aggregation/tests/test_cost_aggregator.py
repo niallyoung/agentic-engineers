@@ -65,9 +65,9 @@ providers:
       claude-haiku-4.5:
         input_per_1m: 0.25
         output_per_1m: 1.25
-      claude-opus-4.7:
-        input_per_1m: 15.00
-        output_per_1m: 75.00
+      claude-opus-4.8:
+        input_per_1m: 5.00
+        output_per_1m: 25.00
     fallback:
       input_per_1m: 3.00
       output_per_1m: 15.00
@@ -359,10 +359,10 @@ class TestAnthropicProvider:
         cost = provider.calculate_cost(1_000_000, 1_000_000, "claude-haiku-4.5")
         assert cost == pytest.approx(0.25 + 1.25)
 
-    def test_claude_opus_47_cost(self, provider):
-        """$15/$75 per 1M"""
+    def test_claude_opus_48_cost(self, provider):
+        """$5/$25 per 1M (canonical rate, see src/config/models.yaml)"""
         cost = provider.calculate_cost(1_000_000, 1_000_000, "claude-opus-4.8")
-        assert cost == pytest.approx(15.0 + 75.0)
+        assert cost == pytest.approx(5.0 + 25.0)
 
     def test_unknown_model_uses_sonnet_fallback(self, providers_yaml):
         """Fallback for unknown model should be sonnet rates ($3/$15)"""

@@ -120,10 +120,10 @@ class GHActionsMonitor:
         errors = []
         
         for line in logs.split("\n"):
-            if "FAILED" in line or "ERROR" in line or "✗" in line:
-                failures.append(line.strip())
-            elif "error:" in line.lower():
+            if "error:" in line.lower():
                 errors.append(line.strip())
+            elif "FAILED" in line or "✗" in line:
+                failures.append(line.strip())
         
         return {
             "total_failures": len(failures),

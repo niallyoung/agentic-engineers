@@ -51,12 +51,17 @@ SKILLS_ROOT = REPO_ROOT / "src" / "skills"
 # silently reporting a shrinking number.
 MIN_EXPECTED_TESTS = 1100
 
-COLLECTED_RE = re.compile(r"(\d+) (?:tests?|errors?) collected")
-SUMMARY_RE = re.compile(
-    r"(?P<passed>\d+) passed"
-    r"(?:, (?P<failed>\d+) failed)?"
-    r"(?:, (?P<errors>\d+) error)?"
-)
+# Some skill suites (file-sync in particular) exercise the real repository
+# tree end-to-end rather than an isolated fixture, so they run considerably
+# slower than a typical unit-test suite. Generous but bounded.
+SUBPROCESS_TIMEOUT_SECONDS = 600
+
+# Matches every count-bearing token in pytest's final summary line, e.g.:
+#   "41 passed in 24.28s"
+#   "1 failed, 6 passed in 0.06s"
+#   "3 passed, 2 skipped, 1 warning in 0.4s"
+#   "no tests ran in 0.01s"
+SUMMARY_COUNT_RE = re.compile(r"(\d+) (passed|failed|error|errors|skipped)")
 
 
 def discover_skill_test_dirs() -> list[Path]:
@@ -70,8 +75,18 @@ def discover_skill_test_dirs() -> list[Path]:
     return dirs
 
 
+def _count_from_summary(output: str) -> int:
+    """Sum every counted bucket (passed/failed/error/skipped) in pytest's final summary line."""
+    lines = output.strip().splitlines()
+    for line in reversed(lines):
+        matches = SUMMARY_COUNT_RE.findall(line)
+        if matches:
+            return sum(int(n) for n, _ in matches)
+    return 0
+
+
 def run_one(tests_dir: Path, cov_append: bool) -> tuple[bool, str, int]:
-    """Run one skill's tests in an isolated subprocess. Returns (ok, summary_line, count)."""
+    """Run one skill's tests in an isolated subprocess. Returns (ok, tail_output, count)."""
     rel = tests_dir.relative_to(REPO_ROOT)
     skill_dir = tests_dir.parent
     cov_target = skill_dir.relative_to(REPO_ROOT)
@@ -79,6 +94,13 @@ def run_one(tests_dir: Path, cov_append: bool) -> tuple[bool, str, int]:
     cmd = [
         sys.executable, "-m", "pytest", str(rel),
         "--import-mode=importlib",
+        # Scope `scripts` package resolution to THIS skill only. Several
+        # skills' tests do `from scripts.foo import Bar` without their own
+        # sys.path.insert, relying on the ini-level `pythonpath`. Overriding
+        # it per-subprocess (rather than listing every skill in pytest.ini)
+        # is what actually gives each skill an isolated, correct `scripts`
+        # package — see the pytest.ini and module-docstring notes.
+        "-o", f"pythonpath={cov_target}",
         "-q", "--tb=short",
         f"--cov={cov_target}",
         "--cov-report=",
@@ -86,15 +108,23 @@ def run_one(tests_dir: Path, cov_append: bool) -> tuple[bool, str, int]:
     if cov_append:
         cmd.append("--cov-append")
 
-    proc = subprocess.run(
-        cmd, cwd=REPO_ROOT, capture_output=True, text=True, timeout=300
-    )
+    try:
+        proc = subprocess.run(
+            cmd, cwd=REPO_ROOT, capture_output=True, text=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        partial = (exc.stdout or "") + (exc.stderr or "")
+        tail = "\n".join(partial.strip().splitlines()[-15:])
+        return False, (
+            f"TIMED OUT after {SUBPROCESS_TIMEOUT_SECONDS}s\n{tail}"
+        ), 0
+
     output = proc.stdout + proc.stderr
     last_lines = "\n".join(output.strip().splitlines()[-15:])
 
     ok = proc.returncode == 0
-    count_match = COLLECTED_RE.search(output)
-    count = int(count_match.group(1)) if count_match else 0
+    count = _count_from_summary(output)
 
     return ok, last_lines, count
 

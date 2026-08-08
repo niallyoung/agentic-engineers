@@ -83,7 +83,7 @@ class TestQueueOpsBasic:
         """Test creating valid DELEGATE."""
         result = queue_ops.create_delegate(
             task_id="test-task-001",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -97,7 +97,7 @@ class TestQueueOpsBasic:
         """Test that duplicate task_id raises FileExistsError."""
         queue_ops.create_delegate(
             task_id="duplicate",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -106,7 +106,7 @@ class TestQueueOpsBasic:
         with pytest.raises(FileExistsError):
             queue_ops.create_delegate(
                 task_id="duplicate",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
                 context=VALID_CONTEXT,
@@ -116,7 +116,7 @@ class TestQueueOpsBasic:
         """Test moving task between states."""
         queue_ops.create_delegate(
             task_id="move-test",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -132,7 +132,7 @@ class TestQueueOpsBasic:
         for i in range(3):
             queue_ops.create_delegate(
                 task_id=f"task-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
                 context=VALID_CONTEXT,
@@ -145,7 +145,7 @@ class TestQueueOpsBasic:
         """Test validation of valid DELEGATE."""
         delegate = {
             "task_id": "valid-task",
-            "role": "Engineer",
+            "role": "engineer",
             "scope": VALID_SCOPE,
             "plan": [VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             "context": VALID_CONTEXT,
@@ -174,7 +174,7 @@ class TestQueueOpsBasic:
         # Create parent
         queue_ops.create_delegate(
             task_id="parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -183,7 +183,7 @@ class TestQueueOpsBasic:
         # Create child
         result = queue_ops.create_delegate(
             task_id="child",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -196,7 +196,7 @@ class TestQueueOpsBasic:
         """Test querying tasks by parent."""
         queue_ops.create_delegate(
             task_id="parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
@@ -205,7 +205,7 @@ class TestQueueOpsBasic:
         for i in range(2):
             queue_ops.create_delegate(
                 task_id=f"child-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
                 context=VALID_CONTEXT,
@@ -225,7 +225,7 @@ class TestQueueOpsBasic:
         """Test complete workflow: create -> processing -> done."""
         queue_ops.create_delegate(
             task_id="workflow-test",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
             context=VALID_CONTEXT,
