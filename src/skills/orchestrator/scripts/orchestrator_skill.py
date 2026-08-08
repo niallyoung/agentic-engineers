@@ -654,68 +654,53 @@ class OrchestratorSkill:
         invoke specialized agents (engineer, senior-engineer, lead-engineer, etc.)
         based on DELEGATE role and complexity.
 
+        NOT YET IMPLEMENTED. Real agent invocation is a runtime harness
+        capability: the OrchestratorSkill runs as an in-harness skill and
+        cannot itself spawn subprocesses. The DELEGATE must instead be
+        routed to the harness's Agent tool, which:
+        1. Spawns the agent subprocess via invoke_agent.py
+        2. Passes DELEGATE via stdin
+        3. Polls for HANDBACK file output
+        4. Returns the HANDBACK to orchestrator_skill.handle_handback()
+
         Args:
             delegate: Parsed DELEGATE dictionary
 
         Returns:
-            Output text (may contain HANDBACK YAML block)
+            Never returns — this method always raises.
 
         Raises:
-            SubAgentError: If agent invocation fails
+            SubAgentError: Always. Wraps a NotImplementedError.
+
+        SECURITY (Vulnerability 3 — fabricated success records): this method
+        used to return a hardcoded "success" HANDBACK with invented metrics
+        (quality=0.88, tokens=1200, ...) on every call, regardless of whether
+        any work actually happened. Documented as a "test seam", it ran in
+        production and populated the queue's done/ audit trail with false
+        records of completed work. It now fails loudly instead of lying
+        about task completion — callers (poll_queue) already treat a raised
+        exception here as a task failure and route it to failed/, which is
+        the correct behaviour until real harness-level agent dispatch is
+        wired up.
         """
+        task_id = delegate.get("task_id", "unknown")
+        agent_role = delegate.get("agent", "engineer")
+
+        logger.error(
+            f"spawn_sub_agent called for task {task_id} (agent={agent_role}) "
+            "but real agent invocation is not implemented at the "
+            "orchestrator_skill layer. Refusing to fabricate a success "
+            "HANDBACK."
+        )
+
         try:
-            task_id = delegate.get("task_id", "unknown")
-            agent_role = delegate.get("agent", "engineer")
-
-            logger.info(f"Spawning sub-agent: {agent_role} for task {task_id}")
-
-            # Serialize DELEGATE as YAML
-            delegate_yaml = self._dict_to_yaml(delegate)
-
-            # NOTE: Real agent invocation is a runtime harness capability.
-            # The OrchestratorSkill runs as an in-harness skill and cannot directly
-            # invoke other agents (no subprocess capability in-process).
-            #
-            # The DELEGATE is instead routed to the harness's Agent tool, which:
-            # 1. Spawns the agent subprocess via invoke_agent.py
-            # 2. Passes DELEGATE via stdin
-            # 3. Polls for HANDBACK file output
-            # 4. Returns the HANDBACK to orchestrator_skill.handle_handback()
-            #
-            # This is a limitation of the in-harness model: orchestrator_skill
-            # must return a HANDBACK block (or error) for each polled DELEGATE,
-            # but actual agent dispatch happens at the harness level.
-            #
-            # For now, return a success HANDBACK to allow the queue to flow.
-            # Real implementations will integrate harness-specific Agent tool invocation.
-
-            now_iso = datetime.now(tz=timezone.utc).isoformat()
-            handback = {
-                "handoff_type": "HANDBACK",
-                "task_id": task_id,
-                "status": "success",
-                "output": f"Task {task_id} completed via {agent_role} agent",
-                "metrics": {
-                    "quality": 0.88,
-                    "tokens": 1200,
-                    "cost": 0.025,
-                    "duration_seconds": 120,
-                },
-                "confidence": 0.90,
-            }
-
-            handback_yaml = self._dict_to_yaml(handback)
-
-            # Capture span
-            self.capture_span(
-                "spawn_sub_agent",
-                task_id=task_id,
-                agent_role=agent_role,
-                output_length=len(handback_yaml),
+            raise NotImplementedError(
+                "OrchestratorSkill.spawn_sub_agent() has no real "
+                "agent-invocation backend. Real dispatch must go through "
+                "the harness's Agent tool / invoke_agent.py subprocess "
+                "integration; returning a synthetic HANDBACK here would "
+                "corrupt the audit trail with false success records."
             )
-
-            return handback_yaml
-
         except Exception as e:
             raise SubAgentError(f"Failed to spawn sub-agent: {e}") from e
 

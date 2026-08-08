@@ -507,8 +507,26 @@ def test_idle_detection_reset_on_processed(orchestrator, temp_queue):
         import yaml
         yaml.dump(delegate, f)
 
-    # Poll should process the task and reset counter
-    processed, failed = orchestrator.poll_queue()
+    # spawn_sub_agent has no real invocation backend (Vulnerability 3 fix) —
+    # mock it here since this test targets poll_queue()'s idle-counter
+    # bookkeeping, not agent dispatch.
+    def mock_spawn(delegate_dict):
+        return f"""
+handoff_type: HANDBACK
+task_id: {task_id}
+status: success
+confidence: 0.9
+output: Mocked completion
+metrics:
+  quality: 0.9
+  tokens: 100
+  cost: 0.01
+  duration_seconds: 10
+"""
+
+    with patch.object(orchestrator, 'spawn_sub_agent', side_effect=mock_spawn):
+        # Poll should process the task and reset counter
+        processed, failed = orchestrator.poll_queue()
 
     assert processed == 1
     assert orchestrator.clean_poll_count == 0
@@ -815,8 +833,27 @@ def test_full_workflow_success(orchestrator, temp_queue):
         import yaml
         yaml.dump(delegate, f)
 
-    # Poll and process
-    processed, failed = orchestrator.poll_queue()
+    # spawn_sub_agent has no real invocation backend (Vulnerability 3 fix) —
+    # this test targets the poll → claim → handle → done wiring, so mock the
+    # agent-dispatch step with a real HANDBACK instead of relying on the
+    # (now removed) fabricated-success default.
+    def mock_spawn(delegate_dict):
+        return f"""
+handoff_type: HANDBACK
+task_id: {task_id}
+status: success
+confidence: 0.9
+output: Mocked completion
+metrics:
+  quality: 0.9
+  tokens: 100
+  cost: 0.01
+  duration_seconds: 10
+"""
+
+    with patch.object(orchestrator, 'spawn_sub_agent', side_effect=mock_spawn):
+        # Poll and process
+        processed, failed = orchestrator.poll_queue()
 
     # Verify task moved to done
     assert processed == 1
@@ -1314,11 +1351,18 @@ def test_wake_timer_span_capture(orchestrator, temp_queue):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Test: spawn_sub_agent (Real Agent Dispatch Pattern)
+# Test: spawn_sub_agent (Vulnerability 3 — no fabricated success records)
+#
+# spawn_sub_agent has no real agent-invocation backend at this layer. It must
+# fail loudly (SubAgentError wrapping NotImplementedError) rather than
+# returning a hardcoded "success" HANDBACK with invented metrics — the old
+# behaviour populated done/ with false audit records for work that never
+# happened. These tests would fail under the old implementation, which always
+# returned a YAML success HANDBACK instead of raising.
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_spawn_sub_agent_returns_handback_yaml(orchestrator):
-    """Test spawn_sub_agent returns HANDBACK YAML text."""
+def test_spawn_sub_agent_raises_not_implemented(orchestrator):
+    """spawn_sub_agent must raise instead of fabricating a success HANDBACK."""
     delegate = {
         "handoff_type": "DELEGATE",
         "task_id": "agent-test-001",
@@ -1328,17 +1372,16 @@ def test_spawn_sub_agent_returns_handback_yaml(orchestrator):
         "success_criteria": ["AC1"],
     }
 
-    output = orchestrator.spawn_sub_agent(delegate)
+    with pytest.raises(SubAgentError) as exc_info:
+        orchestrator.spawn_sub_agent(delegate)
 
-    # Verify output is non-empty string containing HANDBACK block
-    assert isinstance(output, str)
-    assert len(output) > 0
-    assert "handoff_type: HANDBACK" in output or "handoff_type: 'HANDBACK'" in output
-    assert "task_id: agent-test-001" in output or "task_id: 'agent-test-001'" in output
+    # The underlying cause must be a NotImplementedError, per the security
+    # fix's explicit requirement (no synthetic success data).
+    assert isinstance(exc_info.value.__cause__, NotImplementedError)
 
 
-def test_spawn_sub_agent_handback_structure(orchestrator):
-    """Test spawn_sub_agent returns properly structured HANDBACK."""
+def test_spawn_sub_agent_never_returns_success_handback(orchestrator):
+    """No HANDBACK YAML (with fabricated metrics) must ever be returned."""
     delegate = {
         "handoff_type": "DELEGATE",
         "task_id": "agent-test-002",
@@ -1348,49 +1391,14 @@ def test_spawn_sub_agent_handback_structure(orchestrator):
         "success_criteria": ["AC1", "AC2"],
     }
 
-    output = orchestrator.spawn_sub_agent(delegate)
-
-    # Parse HANDBACK from output
-    handback = orchestrator._parse_handback(output)
-
-    # Verify structure
-    assert handback["handoff_type"] == "HANDBACK"
-    assert handback["task_id"] == "agent-test-002"
-    assert handback["status"] == "success"
-    assert "output" in handback
-    assert "metrics" in handback
-    assert "confidence" in handback
+    with pytest.raises(SubAgentError):
+        # Old implementation returned a string here; new implementation must
+        # never reach a `return` statement.
+        orchestrator.spawn_sub_agent(delegate)
 
 
-def test_spawn_sub_agent_metrics_structure(orchestrator):
-    """Test spawn_sub_agent returns metrics with required fields."""
-    delegate = {
-        "handoff_type": "DELEGATE",
-        "task_id": "agent-test-003",
-        "agent": "engineer",
-        "scope": "Implementation",
-        "plan": ["Implement"],
-        "success_criteria": ["AC1"],
-    }
-
-    output = orchestrator.spawn_sub_agent(delegate)
-    handback = orchestrator._parse_handback(output)
-
-    # Verify metrics structure
-    metrics = handback.get("metrics", {})
-    assert isinstance(metrics, dict)
-    assert "quality" in metrics
-    assert "tokens" in metrics
-    assert "cost" in metrics
-    assert "duration_seconds" in metrics
-    assert 0 <= metrics["quality"] <= 1.0
-    assert metrics["tokens"] >= 0
-    assert metrics["cost"] >= 0
-    assert metrics["duration_seconds"] >= 0
-
-
-def test_spawn_sub_agent_different_roles(orchestrator):
-    """Test spawn_sub_agent works with different agent roles."""
+def test_spawn_sub_agent_raises_for_every_role(orchestrator):
+    """The fabrication is closed for every agent role, not just one."""
     roles = ["engineer", "senior-engineer", "lead-engineer", "quality-engineer"]
 
     for role in roles:
@@ -1403,46 +1411,52 @@ def test_spawn_sub_agent_different_roles(orchestrator):
             "success_criteria": ["AC1"],
         }
 
-        output = orchestrator.spawn_sub_agent(delegate)
-        handback = orchestrator._parse_handback(output)
-
-        assert handback["task_id"] == f"agent-role-{role}"
-        assert handback["status"] == "success"
+        with pytest.raises(SubAgentError):
+            orchestrator.spawn_sub_agent(delegate)
 
 
-def test_spawn_sub_agent_captures_span(orchestrator, temp_queue):
-    """Test spawn_sub_agent captures observability span."""
+def test_spawn_sub_agent_does_not_write_done_audit_record(orchestrator, temp_queue):
+    """
+    End-to-end: poll_queue must NOT create a done/ HANDBACK for a task whose
+    agent invocation never actually happened (the exact false-audit-trail
+    scenario Vulnerability 3 describes). It must land in failed/ instead.
+    """
+    task_id = "agent-audit-001"
     delegate = {
         "handoff_type": "DELEGATE",
-        "task_id": "agent-span-001",
+        "task_id": task_id,
         "agent": "engineer",
         "scope": "Test",
         "plan": ["Step"],
         "success_criteria": ["AC1"],
     }
+    incoming_file = temp_queue / "incoming" / f"{task_id}.yaml"
+    with incoming_file.open("w") as f:
+        import yaml
+        yaml.dump(delegate, f)
 
-    output = orchestrator.spawn_sub_agent(delegate)
+    processed, failed = orchestrator.poll_queue()
 
-    # Verify span was captured
-    spans_dir = temp_queue.parent / "spans"
-    assert spans_dir.exists()
-    # At least one span file should exist
-    span_files = list(spans_dir.glob("**/*.span.json"))
-    assert len(span_files) > 0
+    assert failed == 1
+    assert processed == 0
+    assert not (temp_queue / "done" / f"{task_id}-HANDBACK.yaml").exists(), (
+        "No fabricated success HANDBACK should be written to done/ when "
+        "agent invocation was never actually implemented/performed"
+    )
+    assert (temp_queue / "failed" / f"{task_id}.yaml").exists()
 
 
-def test_spawn_sub_agent_minimal_delegate(orchestrator):
-    """Test spawn_sub_agent works with minimal delegate."""
-    # spawn_sub_agent accepts minimal delegates and still returns a HANDBACK
+def test_spawn_sub_agent_minimal_delegate_still_raises(orchestrator):
+    """Minimal/malformed delegates must also hit the NotImplementedError path,
+    not a silent fabricated success (regression for the old 'gracefully
+    returns HANDBACK YAML' behaviour)."""
     minimal_delegate = {
         "task_id": "minimal-task",
         # Missing: handoff_type, agent, scope, plan, success_criteria
     }
 
-    # Should gracefully handle and return HANDBACK YAML
-    output = orchestrator.spawn_sub_agent(minimal_delegate)
-    assert isinstance(output, str)
-    assert "handoff_type: HANDBACK" in output or "handoff_type: 'HANDBACK'" in output
+    with pytest.raises(SubAgentError):
+        orchestrator.spawn_sub_agent(minimal_delegate)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
