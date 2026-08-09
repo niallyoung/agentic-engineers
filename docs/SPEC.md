@@ -26,104 +26,172 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 
 **This is a hard constraint. All work MUST flow through the Orchestrator. No exceptions.**
 
+The Orchestrator remains the single entry point and the single router. What this
+revision changes is *how* the Orchestrator dispatches work. Dispatch happens by
+directly spawning a sub-agent with the DELEGATE as its prompt. Control flow lives in
+the Orchestrator's context, not in a Python process polling a directory on a timer.
+
 ### What This Means
 
 1. **No Direct Agent Invocation**
-   - Engineers MUST NOT invoke agents directly via tool calls or message passing
-   - Engineers MUST NOT create DELEGATE blocks manually and send them to agents
-   - Work only flows through the Orchestrator queue system
+   - Engineers MUST NOT invoke specialist agents directly, bypassing the Orchestrator
+   - Engineers MUST NOT hand-write DELEGATE blocks and pass them to agents out of band
+   - All work is routed by the Orchestrator, which owns the decision tree
 
-2. **All Work Enters the Queue**
-   - New tasks arrive as files in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.yaml`
-   - Each session has its own isolated queue partition
-   - Orchestrator polls this directory every 30-60 seconds
-   - No other entry point exists (no Makefile targets, no scripts, no cron jobs, no ad-hoc invocations)
+2. **Dispatch is a Direct Sub-Agent Spawn**
+   - The Orchestrator constructs a DELEGATE block per the DELEGATE/HANDBACK Protocol section
+   - It spawns a sub-agent using the harness sub-agent tool, passing the DELEGATE as the prompt
+   - The sub-agent returns its HANDBACK as its final message
+   - The Orchestrator reads that HANDBACK directly from the tool result
+   - There is NO polling interval, NO timer, and NO intermediate queue hop required for
+     the Orchestrator to observe a result. Dispatch and collection are synchronous with
+     respect to the Orchestrator's own reasoning.
 
-3. **Orchestrator is the Router**
-   - Reads incoming task from session-partitioned queue
-   - Applies AGENTS.md routing decision tree to determine which agent to delegate to
-   - Creates DELEGATE block in `artifacts/delegates/YYYY-MM-DD/` with complete context
-   - Sends DELEGATE to agent
-   - Receives HANDBACK from agent
-   - Routes HANDBACK to Quality Engineer for verification
-   - Moves completed task to session-partitioned `done/` queue
-   - Applies Model Engineer recommendations to improve future routing
+3. **Control Flow Lives in Agent Context; Python is Advisory Only**
+   - The routing decision tree, escalation rules, retry decisions, and the
+     DELEGATE -> spawn -> HANDBACK -> gate lifecycle are executed by the Orchestrator
+     agent reasoning over its context.
+   - Python modules are **ADVISORY ONLY**. They MAY validate a DELEGATE against a schema,
+     score a HANDBACK, compute cost and token rollups, format YAML, or recommend a model.
+     They MUST NOT own the control loop, MUST NOT decide what runs next, and MUST NOT
+     spawn or supervise agents.
+   - Any advisory helper MUST be callable as a pure function returning data to the agent.
+     If removing it would halt the system rather than degrade its advice, it is control
+     flow and is prohibited here.
 
-4. **No External Scripts, Tools, or Cron Jobs (Agent Operations)**
-   - **NO Python scripts** for queue management, span capture, indexing, or any other operations
-   - **NO Makefile targets** for Orchestrator operations, span capture, or artifact generation (exception: `render-*` targets)
-   - **NO shell scripts** for queue automation, task creation, or observability (exception: `renderer/scripts/` for installation only)
-   - **NO cron jobs** for polling, index generation, or metrics collection
+4. **The Queue is a Durable Inbox and Audit Substrate, Not the Dispatch Mechanism**
+   - The canonical queue paths defined in the LOCKED "Queue Architecture & Paths" section
+     remain authoritative and unchanged.
+   - The queue's role is narrowed to: (a) accepting work submitted by humans or external
+     systems while no Orchestrator context is live, and (b) holding durable DELEGATE and
+     HANDBACK records for audit and resumption after a context ends.
+   - A live Orchestrator drains the inbox when it starts and when a task completes. It does
+     not wake on a timer to check it.
+   - Queue records are written for durability and audit. They are not the channel by which
+     a result reaches the Orchestrator.
+
+5. **Recursion, Depth and Fan-Out Limits (MANDATORY)**
+   - **Depth limit 3.** The Orchestrator is depth 0. A specialist it spawns is depth 1. A
+     task at depth 3 MUST NOT spawn further sub-agents; it completes the work itself or
+     returns `status: blocked` with the reason.
+   - **Fan-out limit 5.** A single parent MUST NOT have more than 5 concurrent children.
+     Work beyond that is queued by the parent and dispatched as children complete.
+   - **Ancestry tracking.** Every DELEGATE MUST carry `depth` and `ancestry`, where
+     `ancestry` is the ordered list of ancestor task_ids from the root. A parent MUST
+     refuse to spawn a child whose (agent_role, scope) pair already appears in its own
+     ancestry, as this is a delegation cycle.
+   - Exceeding any limit is a refusal, not a silent truncation. The parent returns
+     `status: blocked` naming the limit that was hit, so the operator sees it.
+
+6. **Permissions are Declared in Agent `tools` Frontmatter**
+   - Each agent definition declares its allowed tools in its frontmatter `tools:` field.
+     The harness enforces that list; the agent cannot widen it at runtime.
+   - The sub-agent spawn tool is granted to the Orchestrator role. Specialist roles do not
+     receive it by default. Recursion limits are therefore enforced structurally by the
+     permission model, not only by instruction-following.
+   - Least privilege applies. Review and audit roles (Quality Engineer review passes,
+     Security Engineer audits) are granted read and search tools without Write or Edit
+     unless a specific task requires otherwise.
+   - Granting spawn capability to any non-Orchestrator role is a SPEC change and requires a
+     proposal through the `spec-management` skill.
+
+7. **Audit Trail: Append-Only JSONL, Write-Only from the Agent**
+   - Every orchestration event is appended as one JSON object per line to
+     `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`.
+   - Required events: `delegate_issued`, `subagent_spawned`, `handback_received`,
+     `gate_result`, `escalation`, `refusal`, `limit_exceeded`.
+   - Required fields per event: `ts` (ISO-8601 UTC), `event`, `task_id`, `parent_task_id`,
+     `depth`, `agent_role`, `agent_model`, `status`, and where applicable `tokens_in`,
+     `tokens_out`, `cost_usd`.
+   - The log is **append-only and write-only from the agent's perspective**. Agents append
+     events. Agents MUST NOT rewrite, reorder, truncate or delete prior lines. Correction is
+     expressed by appending a new event, never by editing an old one.
+   - Because a result is a real event rather than an inferred state transition, the log is
+     the authoritative record of what actually ran. Metrics and cost reporting derive from
+     it. No metric may be reported that is not grounded in a logged event.
+
+8. **No External Scripts, Tools, or Cron Jobs (Agent Operations)**
+   - **NO Python scripts** that own queue management, dispatch, scheduling, or supervision
+   - **NO Makefile targets** for Orchestrator operations or artifact generation (exception: `render-*`)
+   - **NO shell scripts** for queue automation or task creation (exception: `renderer/scripts/` for installation)
+   - **NO cron jobs, daemons, or background timers** for polling, wakeups, or metrics collection
    - **NO external monitoring or indexing tools** beyond what agents natively produce
-   - All functionality is implemented as agent SKILLS (Orchestrator SKILL for span capture, Model Engineer SKILL for artifact indexing)
-   
+   - Advisory Python that validates, scores, or formats is permitted under clause 3
+
    **EXEMPTIONS (Build & Installation Only):**
-   - `renderer/scripts/` — Shell scripts for rendering agents/skills to ~/.copilot/ and ~/.claude/ (called by `make install/render` targets only)
-   - `make install`, `make install-copilot`, `make install-claude` — Invoke renderer scripts for framework bootstrap
-   - `make render-copilot`, `make render-claude` — Generate dist/ artifacts
-   - These are build-time operations, not runtime agent operations. Once installed, all work flows through Orchestrator queue.
+   - `renderer/scripts/` — rendering agents and skills to ~/.copilot/ and ~/.claude/
+   - `make install`, `make install-copilot`, `make install-claude` — framework bootstrap
+   - `make render-copilot`, `make render-claude` — generate dist/ artifacts
+   - These are build-time operations, not runtime agent operations.
 
 ### Implementation Requirements for Engineers
 
-**When creating an agent implementation:**
+**When implementing the Orchestrator:**
 
-1. **Implement QUEUE POLLING**
-   - Orchestrator SKILL detects session-id (from COPILOT_SESSION_ID or filesystem scan)
-   - Orchestrator SKILL polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` every 30-60 seconds
-   - Each poll reads new tasks from session's queue partition only
-   - This is the ONLY way work enters the system
+1. **Implement DISPATCH BY SPAWN (replaces queue polling)**
+   - Build the DELEGATE, spawn a sub-agent with it as the prompt, read the HANDBACK from
+     the tool result. No timer and no polling loop.
+   - Drain the durable inbox at context start and after each task completes.
+   - Independent tasks are spawned concurrently within the fan-out limit of 5.
 
 2. **Implement ROUTING**
-   - Orchestrator applies AGENTS.md decision tree to route each task to the correct agent
-   - Decision tree is documented in AGENTS.md; Orchestrator implements it
-   - All routing logic is inside the Orchestrator agent; no external configuration
+   - Apply the AGENTS.md decision tree to select the agent, model and effort for each task.
+   - Routing is reasoning performed by the Orchestrator. Advisory scoring helpers may inform
+     it but MUST NOT decide it.
 
-3. **Implement DELEGATE/HANDBACK PROTOCOL**
-   - Orchestrator creates DELEGATE blocks in YAML format per HANDOFF.md spec
-   - Agents receive DELEGATE, execute work, return HANDBACK
-   - DELEGATE includes: scope, context, plan (for Engineer), success criteria
-   - HANDBACK includes: status, deliverables, test results, token counts, model assessment
-   - Structured format is machine-readable for metrics and span capture
+3. **Implement the DELEGATE/HANDBACK PROTOCOL**
+   - DELEGATE carries scope, context, plan, success criteria, plus `depth` and `ancestry`.
+   - HANDBACK carries status, output, and the four required metrics fields.
+   - A HANDBACK that is structurally invalid is a failure, not a pass. It MUST NOT be
+     treated as success on the strength of the sub-agent's own claims.
 
-4. **Implement SPAN CAPTURE**
-   - When Orchestrator receives HANDBACK from any agent, capture structured span record
-   - Extract: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
-   - Write SPAN to `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
-   - This is the ONLY observability mechanism; no external logging or monitoring
+4. **Implement QUALITY GATES ON REAL EVIDENCE**
+   - Gate decisions MUST be grounded in independently computed signals: structural HANDBACK
+     validation, test results, and validator output.
+   - A sub-agent's self-reported confidence or quality score is an input, never the sole
+     basis for approval.
+   - Evaluation errors fail closed to escalation. They never fall through to approval.
+   - No hardcoded scores, decisions, or approval constants. Ever.
 
-5. **Implement ARTIFACT INDEXING**
-   - Model Engineer generates `artifacts/index.json` as part of feedback loop analysis
-   - Scans artifacts/2026-*/ for DELEGATE/HANDBACK/SPAN metadata
-   - Creates searchable index by: file_type, task_id, agent_type, status
-   - Calculates: total_tokens, total_cost, critical_issues, escalations
-   - This is the ONLY cost analysis and trend reporting mechanism
+5. **Implement the AUDIT TRAIL**
+   - Append every event listed in clause 7 as it happens, not in a batch at the end.
+   - Cost and token reporting is computed from the log, so an unlogged action is an
+     unreported action.
 
 ### What NOT to Do
 
 **PROHIBITED ACTIVITIES (NO EXCEPTIONS, EVER):**
 
-- ❌ Do NOT write Python scripts that manage queues, capture spans, or generate indexes (exception: `renderer/scripts/` for installation only)
-- ❌ Do NOT add Makefile targets for Orchestrator operations (exception: `render-*` and `install*` targets that invoke renderer scripts)
-- ❌ Do NOT create shell scripts for queue automation, task processing, or external invocation (exception: `renderer/scripts/` for build-time rendering only)
-- ❌ Do NOT set up cron jobs for any system operations (all scheduling via agent SKILLs)
-- ❌ Do NOT invoke external scripts or spawn processes from **agent/harness code** to manage orchestration (queues, timers, wakeups) — use SKILLs and the Orchestrator instead. Exception: `src/skills/_meta/evaluation_framework/` for functional test harness invocation, and `src/harnesses/*/` rendering infrastructure can use subprocess for build-time operations (rsync, etc.)
-- ❌ Do NOT create external daemons or cron jobs for queue management, task scheduling, or orchestration — all scheduling goes through agent SKILLs and the Orchestrator's timer system
-- ❌ Do NOT invoke agents directly without going through Orchestrator queue
-- ❌ Do NOT create manual DELEGATE blocks and send them to agents
-- ❌ Do NOT skip quality checks or escalation rules
-- ❌ Do NOT implement observability outside of agent SKILLS
-- ❌ Do NOT use "trivial fixes" or other undefined escape clauses to bypass queue
-- ❌ Do NOT allow CI/CD or external systems to invoke scripts directly for orchestration work
-- ❌ Do NOT allow any automated external system to write files directly to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` — all queue entries originate from humans or the Orchestrator
-- ❌ Do NOT create automated cron job installers or pre-configured cron jobs
+- Do NOT write Python that owns dispatch, scheduling, polling, or agent supervision
+  (exception: `renderer/scripts/` for installation only)
+- Do NOT reintroduce a polling loop, timer, daemon, or cron job for orchestration
+- Do NOT add Makefile targets for Orchestrator operations (exception: `render-*` and `install*`)
+- Do NOT invoke specialist agents directly, bypassing the Orchestrator
+- Do NOT hand-write DELEGATE blocks and pass them to agents out of band
+- Do NOT spawn sub-agents from a role whose `tools` frontmatter does not grant it
+- Do NOT exceed depth 3 or fan-out 5, and do NOT silently truncate when a limit is hit
+- Do NOT spawn a child whose (agent_role, scope) already appears in the task's ancestry
+- Do NOT rewrite, reorder, truncate or delete audit log lines
+- Do NOT report a metric that is not grounded in a logged event
+- Do NOT hardcode quality scores, gate decisions, or approval constants
+- Do NOT approve work solely on a sub-agent's self-reported confidence
+- Do NOT skip quality gates or escalation rules
+- Do NOT use "trivial fix" or other undefined escape clauses to bypass the Orchestrator
+- Do NOT allow CI/CD or external systems to invoke orchestration scripts directly
 
 **Why This Constraint Exists:**
-The queue-first model ensures all work is tracked, routable, optimizable, and auditable. External **orchestration** scripts and daemons create gaps in observability, break routing logic, and prevent the system from improving itself through the feedback loop. By making Orchestrator the single point of control, we guarantee:
-- ✅ Complete audit trail of all work
-- ✅ Correct routing via decision tree
-- ✅ Accurate cost tracking via span capture
+Orchestrator-first guarantees that all work is tracked, routable, optimizable and
+auditable. The earlier polling formulation attempted to achieve this through a Python
+scheduler, which both violated the no-external-scripts constraint and never carried a
+single real task. Moving control flow into agent context and dispatching by direct spawn
+achieves the original intent using the harness itself:
+- Complete audit trail, because every spawn and handback is a real logged event
+- Correct routing, because the decision tree is applied by the agent that owns it
+- Accurate cost tracking, because metrics derive from logged events rather than constants
 
-Note: **Rendering infrastructure** (harness distribution, build-time skill rendering) can use subprocess for deterministic build operations. The constraint applies to orchestration and agent code, not infrastructure.
+Note: **Rendering infrastructure** (harness distribution, build-time skill rendering) may
+use subprocess for deterministic build operations. This constraint applies to orchestration
+and agent runtime code, not to build infrastructure.
 
 ---
 
