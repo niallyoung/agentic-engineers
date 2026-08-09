@@ -863,6 +863,7 @@ class ComplianceChecker:
         # Build & installation tooling (SPEC-exempt)
         "renderer/",
         "setup/",
+        "scripts/",  # CI/dev tooling scripts (run_skill_tests.py, etc.)
         # Harness rendering infrastructure (SPEC-exempt per SPEC.md line 109 and §Note):
         # "src/harnesses/*/ rendering infrastructure can use subprocess for
         #  build-time operations (rsync, etc.)"
