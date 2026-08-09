@@ -35,6 +35,15 @@ SRC_AGENTS_MD="$REPO_ROOT/src/AGENTS.md"
 SKILL_MARKER=".agentic-engine-claude"
 # Agents are single files; we use a sidecar manifest to track managed names.
 AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-claude"
+
+# DELEGATE/HANDBACK protocol-enforcement hook: PreToolUse guard for the
+# Agent/Task tool. See renderer/scripts/claude-delegate-guard.py for the
+# implementation and root-cause rationale.
+SRC_HOOK="$REPO_ROOT/renderer/scripts/claude-delegate-guard.py"
+DST_HOOKS="$CLAUDE/hooks"
+HOOK_SCRIPT_NAME="claude-delegate-guard.py"
+DST_HOOK="$DST_HOOKS/$HOOK_SCRIPT_NAME"
+HOOK_MARKER="$DST_HOOKS/.agentic-engine-claude"
 # Sentinel on line 1 of generated docs (CLAUDE.md/AGENTS.md) so we can tell ours
 # apart from a user's own file and never overwrite or delete a foreign one.
 # CLAUDE.md is the user's primary memory file — foreign protection is critical.
@@ -114,6 +123,110 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
 	sys.exit(0)
 data.pop("model", None)
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
+# inject_settings_hook SETTINGS_FILE HOOK_SCRIPT_ABS_PATH
+# Non-destructively merges a PreToolUse hook entry (matching the Agent/Task
+# tool) into the JSON settings file's "hooks" key, so the guard fires on
+# every Agent-tool spawn. Preserves all other keys, all other hook event
+# names (SessionStart, PostToolUse, ...), and any PreToolUse entries the
+# user added themselves. Idempotent: re-running with the same script path
+# updates the existing entry in place instead of appending a duplicate,
+# identified by the hook command containing HOOK_SCRIPT_NAME (matched by
+# basename so the entry survives CLAUDE root relocation between renders).
+inject_settings_hook() {
+	local settings="$1" hook_path="$2"
+	python3 - "$settings" "$hook_path" "$HOOK_SCRIPT_NAME" <<'PY'
+import json, sys, os
+
+settings_file, hook_path, hook_name = sys.argv[1], sys.argv[2], sys.argv[3]
+
+try:
+	with open(settings_file) as f:
+		data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+	data = {}
+
+command = "python3 %s" % hook_path
+entry = {
+	"matcher": "Task|Agent",
+	"hooks": [
+		{"type": "command", "command": command, "timeout": 10}
+	],
+}
+
+hooks = data.setdefault("hooks", {})
+pre_tool_use = hooks.setdefault("PreToolUse", [])
+
+# Find our own previously-installed entry (identified by hook_name appearing
+# in any inner hook's command) and update it in place; otherwise append.
+replaced = False
+for existing in pre_tool_use:
+	for inner in existing.get("hooks", []):
+		if hook_name in inner.get("command", ""):
+			existing["matcher"] = entry["matcher"]
+			existing["hooks"] = entry["hooks"]
+			replaced = True
+			break
+	if replaced:
+		break
+if not replaced:
+	pre_tool_use.append(entry)
+
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
+# remove_settings_hook SETTINGS_FILE
+# Removes only the PreToolUse entry this installer added (identified by
+# HOOK_SCRIPT_NAME in the command string), leaving any other PreToolUse
+# entries, any other hook event names, and all unrelated settings untouched.
+# Cleans up now-empty "PreToolUse"/"hooks" containers so uninstall doesn't
+# leave litter behind.
+remove_settings_hook() {
+	local settings="$1"
+	[ -f "$settings" ] || return 0
+	python3 - "$settings" "$HOOK_SCRIPT_NAME" <<'PY'
+import json, sys, os
+
+settings_file, hook_name = sys.argv[1], sys.argv[2]
+
+try:
+	with open(settings_file) as f:
+		data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+	sys.exit(0)
+
+hooks = data.get("hooks")
+if not isinstance(hooks, dict):
+	sys.exit(0)
+
+pre_tool_use = hooks.get("PreToolUse")
+if isinstance(pre_tool_use, list):
+	kept = []
+	for existing in pre_tool_use:
+		inner_hooks = existing.get("hooks", [])
+		is_ours = any(hook_name in inner.get("command", "") for inner in inner_hooks)
+		if not is_ours:
+			kept.append(existing)
+	if kept:
+		hooks["PreToolUse"] = kept
+	else:
+		hooks.pop("PreToolUse", None)
+
+if not hooks:
+	data.pop("hooks", None)
+
 tmp = settings_file + ".tmp"
 with open(tmp, "w") as f:
 	json.dump(data, f, indent=2)
@@ -267,6 +380,14 @@ case "$MODE" in
 				echo "  $(_yellow "⚠️  keeping $(basename "$doc") — foreign (not managed by us)")"
 			fi
 		done
+		# DELEGATE/HANDBACK protocol guard hook (only if we installed it)
+		hook_removed=0
+		if [ -f "$HOOK_MARKER" ]; then
+			rm -f "$DST_HOOK" "$HOOK_MARKER"
+			hook_removed=1
+		fi
+		remove_settings_hook "$CLAUDE/settings.json"
+		[ "$hook_removed" -eq 1 ] && echo "  removed DELEGATE protocol-guard hook"
 		# Remove session model (if we set it)
 		remove_settings_model "$CLAUDE/settings.json"
 		echo "  removed model from settings.json"
@@ -306,6 +427,34 @@ case "$MODE" in
 			echo "  ✅ settings.json model: $settings_model"
 		else
 			echo "  ❌ settings.json model: not set (session will use Anthropic default)"
+		fi
+		# DELEGATE/HANDBACK protocol guard hook
+		if [ ! -f "$DST_HOOK" ]; then
+			echo "  ❌ hook claude-delegate-guard.py (not installed)"
+		elif [ ! -f "$HOOK_MARKER" ]; then
+			echo "  ⚠️  hook claude-delegate-guard.py (foreign)"
+		elif cmp -s "$SRC_HOOK" "$DST_HOOK"; then
+			echo "  ✅ hook claude-delegate-guard.py"
+		else
+			echo "  🔄 hook claude-delegate-guard.py (drift)"
+		fi
+		hook_wired=$(python3 -c "
+import json
+try:
+    d = json.load(open('$CLAUDE/settings.json'))
+except Exception:
+    d = {}
+entries = d.get('hooks', {}).get('PreToolUse', [])
+wired = any(
+    '$HOOK_SCRIPT_NAME' in inner.get('command', '')
+    for e in entries for inner in e.get('hooks', [])
+)
+print('yes' if wired else 'no')
+" 2>/dev/null || echo "no")
+		if [ "$hook_wired" = "yes" ]; then
+			echo "  ✅ settings.json PreToolUse hook: wired"
+		else
+			echo "  ❌ settings.json PreToolUse hook: not wired"
 		fi
 		;;
 
@@ -453,6 +602,23 @@ case "$MODE" in
 				inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
 				echo "✅ Set session model → $orchestrator_model (orchestrator default)"
 			fi
+		fi
+
+		# 5. DELEGATE/HANDBACK protocol guard: install the PreToolUse hook that
+		# validates Agent/Task-tool spawns of the 8 framework specialist roles
+		# carry a well-formed DELEGATE block, and wire it into settings.json.
+		# See renderer/scripts/claude-delegate-guard.py for the implementation
+		# and root-cause rationale for why this exists.
+		echo "🔒 Installing DELEGATE protocol-guard hook → $DST_HOOKS/..."
+		if [ -f "$DST_HOOK" ] && [ ! -f "$HOOK_MARKER" ]; then
+			echo "  $(_yellow "⚠️  skipping hook — foreign file at $DST_HOOK")"
+		else
+			mkdir -p "$DST_HOOKS"
+			cp "$SRC_HOOK" "$DST_HOOK"
+			chmod +x "$DST_HOOK"
+			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$HOOK_MARKER"
+			inject_settings_hook "$CLAUDE/settings.json" "$DST_HOOK"
+			echo "  $(_green "✅") hook claude-delegate-guard.py (wired into settings.json PreToolUse)"
 		fi
 		;;
 
