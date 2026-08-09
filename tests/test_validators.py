@@ -73,7 +73,7 @@ def valid_delegate():
     """Return a fully-valid DELEGATE dict."""
     return {
         "task_id": "valid-task-01",
-        "role": "Engineer",
+        "role": "engineer",
         "scope": VALID_SCOPE,
         "plan": [VALID_PLAN_STEP1, VALID_PLAN_STEP2],
         "context": VALID_CONTEXT,
@@ -239,8 +239,8 @@ class TestGroupAValidation:
     def test_group_a_all_valid_roles(self, delegate_validator, valid_delegate):
         """All canonical roles are accepted."""
         valid_roles = [
-            "Engineer", "Senior Engineer", "Lead Engineer", "Principal Engineer",
-            "Quality Engineer", "Security Engineer", "Model Engineer", "Orchestrator",
+            "engineer", "senior-engineer", "lead-engineer", "principal-engineer",
+            "quality-engineer", "security-engineer", "model-engineer", "orchestrator",
         ]
         for role in valid_roles:
             valid_delegate["role"] = role
@@ -388,7 +388,7 @@ class TestGroupCValidation:
 
     def test_group_c_valid_model(self, delegate_validator):
         """A valid model string produces no errors."""
-        errors = delegate_validator.check_group_c({"model": "gpt-5.4"})
+        errors = delegate_validator.check_group_c({"model": "claude-sonnet-5"})
         assert errors == []
 
     def test_group_c_invalid_model(self, delegate_validator):

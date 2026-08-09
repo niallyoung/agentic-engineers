@@ -14,6 +14,7 @@ Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 import subprocess
 import sys
 import os
+import re
 
 # Wave 2 baselines — update only via SPEC change + QE sign-off
 BASELINES = {
@@ -59,7 +60,9 @@ def count_collected(test_path: str) -> int:
     )
     # Parse "N tests collected" or "N test collected" from stdout or stderr
     # Example line: "94 tests collected in 0.09s"
-    output = result.stdout + result.stderr
+    # Strip ANSI color codes first (pytest may include them)
+    ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+    output = ansi_escape.sub('', result.stdout + result.stderr)
     for line in reversed(output.splitlines()):
         line = line.strip()
         if "collected" in line:

@@ -138,14 +138,14 @@ class TestParentCreatesSingleChild:
         """Parent creates exactly one child; child count is 1."""
         ops.create_delegate(
             task_id="parent-task",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
         )
         result = ops.create_delegate(
             task_id="child-task",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -159,14 +159,14 @@ class TestParentCreatesSingleChild:
         """Child task is placed in incoming queue."""
         ops.create_delegate(
             task_id="par-one",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
         )
         ops.create_delegate(
             task_id="child-one",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -186,7 +186,7 @@ class TestParentCreatesMultipleChildren:
         """Parent can create 3 children; all appear in query."""
         ops.create_delegate(
             task_id="multi-parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -194,7 +194,7 @@ class TestParentCreatesMultipleChildren:
         for i in range(3):
             ops.create_delegate(
                 task_id=f"child-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -208,7 +208,7 @@ class TestParentCreatesMultipleChildren:
         """All direct children have task_tier == 1."""
         ops.create_delegate(
             task_id="tier-parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -216,7 +216,7 @@ class TestParentCreatesMultipleChildren:
         for i in range(2):
             result = ops.create_delegate(
                 task_id=f"tier-child-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -235,7 +235,7 @@ class TestThreeTierHierarchy:
         # Tier 0: root
         ops.create_delegate(
             task_id="root",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -243,7 +243,7 @@ class TestThreeTierHierarchy:
         # Tier 1: child of root
         r1 = ops.create_delegate(
             task_id="mid",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -254,7 +254,7 @@ class TestThreeTierHierarchy:
         # Tier 2: grandchild
         r2 = ops.create_delegate(
             task_id="leaf",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -273,7 +273,7 @@ class TestMaxDepth:
         # Create root
         ops.create_delegate(
             task_id="depth-root",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -283,7 +283,7 @@ class TestMaxDepth:
             tid = f"depth-{i}"
             ops.create_delegate(
                 task_id=tid,
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -297,7 +297,7 @@ class TestMaxDepth:
         leaf = self._build_chain(ops, MAX_TASK_TIER)  # depth-root + 4 children = tier 4
         result = ops.create_delegate(
             task_id="depth-max",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -311,7 +311,7 @@ class TestMaxDepth:
         # depth-max is at tier MAX_TASK_TIER; trying to go one deeper should fail
         ops.create_delegate(
             task_id="depth-max",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -320,7 +320,7 @@ class TestMaxDepth:
         with pytest.raises((ValueError, RuntimeError)):
             ops.create_delegate(
                 task_id="depth-over",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -337,7 +337,7 @@ class TestMaxWidth:
         """10 children per parent is allowed."""
         ops.create_delegate(
             task_id="wide-parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -345,7 +345,7 @@ class TestMaxWidth:
         for i in range(MAX_CHILDREN_PER_PARENT):
             ops.create_delegate(
                 task_id=f"wide-child-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -358,7 +358,7 @@ class TestMaxWidth:
         """11th child exceeds max width and is rejected."""
         ops.create_delegate(
             task_id="wide-parent2",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -366,7 +366,7 @@ class TestMaxWidth:
         for i in range(MAX_CHILDREN_PER_PARENT):
             ops.create_delegate(
                 task_id=f"wc2-child-{i}",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -375,7 +375,7 @@ class TestMaxWidth:
         with pytest.raises(RuntimeError, match="max 10"):
             ops.create_delegate(
                 task_id="wc2-child-over",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -438,14 +438,14 @@ class TestChildTimeoutHandling:
         ops = QueueOperations(session_id="timeout-sess", queue_path=tmp_queue)
         ops.create_delegate(
             task_id="parent-timeout",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
         )
         ops.create_delegate(
             task_id="slow-child",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -529,7 +529,7 @@ class TestInvalidParentTaskId:
         with pytest.raises(ValueError, match="parent_task_id"):
             ops.create_delegate(
                 task_id="orphan-child",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -541,7 +541,7 @@ class TestInvalidParentTaskId:
         with pytest.raises((ValueError, RuntimeError)):
             ops.create_delegate(
                 task_id="empty-parent",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -567,7 +567,7 @@ class TestInvalidTaskTier:
         ops = QueueOperations(session_id="tier-check", queue_path=tmp_queue)
         ops.create_delegate(
             task_id="tier-root",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -588,7 +588,7 @@ class TestOrphanedChildDetection:
         with pytest.raises(ValueError):
             ops.create_delegate(
                 task_id="orphan",
-                role="Engineer",
+                role="engineer",
                 scope=VALID_SCOPE,
                 plan=VALID_PLAN,
                 context=VALID_CONTEXT,
@@ -631,7 +631,7 @@ class TestConcurrentChildExecution:
         ops = QueueOperations(session_id="concurrent-sess", queue_path=tmp_queue)
         ops.create_delegate(
             task_id="concurrent-parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -643,7 +643,7 @@ class TestConcurrentChildExecution:
             try:
                 ops.create_delegate(
                     task_id=f"concurrent-child-{i}",
-                    role="Engineer",
+                    role="engineer",
                     scope=VALID_SCOPE,
                     plan=VALID_PLAN,
                     context=VALID_CONTEXT,
@@ -677,14 +677,14 @@ class TestSessionIsolation:
 
         s_a.create_delegate(
             task_id="parent-a",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
         )
         s_a.create_delegate(
             task_id="child-a",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -699,14 +699,14 @@ class TestSessionIsolation:
         """Parent and child tasks can coexist in the same session queue."""
         ops.create_delegate(
             task_id="same-sess-parent",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
         )
         ops.create_delegate(
             task_id="same-sess-child",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -725,7 +725,7 @@ class TestBackwardCompatibility:
         """A DELEGATE without parent_task_id is still created successfully."""
         result = ops.create_delegate(
             task_id="legacy-task",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,
@@ -738,7 +738,7 @@ class TestBackwardCompatibility:
         """A root task can transition through the full workflow unchanged."""
         ops.create_delegate(
             task_id="compat-task",
-            role="Engineer",
+            role="engineer",
             scope=VALID_SCOPE,
             plan=VALID_PLAN,
             context=VALID_CONTEXT,

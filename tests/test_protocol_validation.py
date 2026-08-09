@@ -44,7 +44,7 @@ def make_valid_delegate(task_id, role='engineer', effort='low', hours=2, **overr
     delegate = {
         'task_id': task_id,
         'role': role,
-        'model': 'claude-haiku-4.5' if role == 'engineer' else 'claude-sonnet-4.6',
+        'model': 'claude-haiku-4.5' if role == 'engineer' else 'claude-sonnet-5',
         'effort': effort,
         'estimated_hours': hours,
         # Scope: ≥15 words, has action verb, avoids B7-trigger keywords
@@ -336,7 +336,7 @@ class TestIntegration:
         delegate = {
             'task_id': '2026-05-09-protocol-week1-validation',
             'role': 'senior_engineer',
-            'model': 'claude-sonnet-4.6',
+            'model': 'claude-sonnet-5',
             'effort': 'high',
             'estimated_hours': 14,
             'scope': 'Create and implement comprehensive pre-flight validation system enforcing the protocol compliance with hard gates checking',
