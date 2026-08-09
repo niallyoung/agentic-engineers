@@ -7,6 +7,8 @@ accepts:
 returns:
   - HANDBACK
 role: senior-engineer
+tools:
+  - spawn_subagent
 ---
 
 # Senior Engineer Agent — LIVE IMPLEMENTATION
@@ -103,6 +105,27 @@ PROCESS:
      ---
      ```
 ```
+
+---
+
+## Execution Model
+
+Senior Engineer is spawned directly — the parent agent passes the DELEGATE block as this
+agent's prompt via a direct sub-agent spawn (Agent/Task tool), and receives Senior
+Engineer's HANDBACK back as that spawn call's result, in-context.
+
+**This agent's frontmatter grants `spawn_subagent`** (see `src/AGENTS.md` §
+Tools-Frontmatter Permission Model) — when delegating sub-tasks to Engineer, or
+escalating to Lead/Principal/Security Engineer, it spawns them directly, subject to the
+framework-wide recursion limits: max delegation depth 3, max 5 concurrent spawns in
+flight, and mandatory `ancestry` tracking on every DELEGATE it issues so a cycle back to
+one of its own ancestors is refused rather than followed. If a limit is hit, Senior
+Engineer MUST stop and return `status: blocked` or `status: escalate` rather than
+proceeding — see `src/AGENTS.md` § Recursion Limits.
+
+Every DELEGATE this agent issues and every HANDBACK it receives is recorded to the
+durable queue via `enqueue()` as an audit trail; the queue is written to, never polled,
+for this agent's own control flow.
 
 ---
 

@@ -4,7 +4,7 @@
         setup status harness-toggle migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
         verify verify-harness-sync validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-codex render-specs render-all \
-        lint test test-skills test-evals test-concurrent test-ci test-ci-force test-ci-shell quality-gate
+        lint test test-skills test-evals test-ci test-ci-force test-ci-shell quality-gate
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -84,13 +84,12 @@ help:
 	@echo ""
 	@echo "Queue & Testing:"
 	@echo "  create-test-session Create test session + sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)"
-	@echo "  run-orchestrator    Start orchestrator polling loop (AGENTIC_SESSION_ID=X)"
+	@echo "  run-orchestrator    [DEPRECATED] Polling-based orchestration replaced by direct sub-agent spawning"
 	@echo "  test-protocol-e2e   Run end-to-end protocol tests (DELEGATE → HANDBACK)"
 	@echo ""
 	@echo "Quality & Testing:"
 	@echo "  lint                Lint Python, Shell, and YAML files"
 	@echo "  test                Run pytest test suite with coverage"
-	@echo "  test-concurrent     Run concurrent invocation tests (race condition guard)"
 	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
 	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
 	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
@@ -129,14 +128,14 @@ migrate-queue-paths: ## Migrate queue sessions from old paths (artifacts/) to ca
 create-test-session: ## Create test session with sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)
 	@bash "$(REPO_ROOT)/setup/create-test-session.sh"
 
-run-orchestrator: ## Start orchestrator polling loop (AGENTIC_SESSION_ID=X required)
-	@if [ -z "$(AGENTIC_SESSION_ID)" ]; then \
-		echo "ERROR: AGENTIC_SESSION_ID not set. Usage: make run-orchestrator AGENTIC_SESSION_ID=test-001"; \
-		exit 1; \
-	fi
-	@echo "🚀 Starting orchestrator for session: $(AGENTIC_SESSION_ID)"
-	@echo "TODO: Implement orchestrator-poll command (placeholder)"
-	@echo "Polling queue: ~/.agentic-engineers/$(AGENTIC_SESSION_ID)/$${AGENTIC_HARNESS:-local}/queue/incoming/"
+run-orchestrator: ## Orchestrator polling command (DEPRECATED — direct sub-agent spawning replaces polling)
+	@echo "⚠️  Queue polling has been removed (2026-08-09)"
+	@echo ""
+	@echo "Polling-based execution has been replaced with direct sub-agent spawning."
+	@echo "The Orchestrator now constructs a DELEGATE block and invokes a sub-agent directly,"
+	@echo "reading the HANDBACK from the tool result (per SPEC-2026-004)."
+	@echo ""
+	@echo "For more details, see: docs/spec-proposals/SPEC-2026-004.yaml"
 
 test-protocol-e2e: ## Run end-to-end protocol tests (DELEGATE → HANDBACK)
 	@echo "🧪 Running end-to-end protocol tests (Phase 4)..."
@@ -403,16 +402,6 @@ test-evals: ## Run DELEGATE/HANDBACK quality evaluation tests
 	@echo ""
 	@echo "✅ All eval tests passed"
 
-test-concurrent: ## Run concurrent invocation tests (race condition guard)
-	@echo "🔀 Running concurrent invocation tests (race condition guard)..."
-	@echo "   Validates that HANDBACK file writes are atomic and the poller"
-	@echo "   never reads a partially-written file under thread concurrency."
-	@cd "$(REPO_ROOT)" && python3 -m pytest \
-		tests/test_invoke_agent.py::TestConcurrentInvocations \
-		-v --tb=short
-	@echo ""
-	@echo "✅ Concurrent tests passed — no race conditions detected"
-
 test-ci: ## Run tests in CI container (simulates GitHub Actions environment, first run, no-fail)
 	@echo "🐳 Starting CI environment simulation in Docker container..."
 	@echo "   This simulates the exact GitHub Actions ubuntu-latest environment."
@@ -477,7 +466,7 @@ test-ci-shell: ## Open interactive shell in CI container for debugging
 	@echo ""
 	@echo "👋 Exited CI container"
 
-quality-gate: lint test test-concurrent verify validate-renders ## Pre-push quality checks (lint + test + concurrent + verify + render validation)
+quality-gate: lint test verify validate-renders ## Pre-push quality checks (lint + test + verify + render validation)
 	@echo ""
 	@echo "✅✅✅ Quality gate PASSED ✅✅✅"
 	@echo ""

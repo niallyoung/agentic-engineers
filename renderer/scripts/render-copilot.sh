@@ -220,20 +220,10 @@ case "$MODE" in
 		cat > "$COPILOT/settings.json" <<'EOF'
 {
   "model": "claude-haiku-4-5",
-  "harness": "copilot",
-  "idle_loop": {
-    "enabled": true,
-    "interval_seconds": 180,
-    "action": "invoke_skill",
-    "skill": "orchestrator-scheduler",
-    "args": ["--poll-once"],
-    "backoff_intervals": [5, 30, 180, 600],
-    "watch_enabled": true,
-    "watch_poll_seconds": 0.5
-  }
+  "harness": "copilot"
 }
 EOF
-		echo "  ✅ settings.json (session model + idle_loop auto-polling)"
+		echo "  ✅ settings.json (session model configuration)"
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.

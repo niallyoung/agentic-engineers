@@ -1019,9 +1019,14 @@ class QueueManager:
 
 class TaskRouter:
     """Route tasks to appropriate agents based on AGENTS.md decision tree.
-    
-    Routes by agent name only — no stub class instantiation.
-    Agent execution is handled by AgentInvoker (subprocess) or OrchestratorAgent.
+
+    Routes by agent name only — no stub class instantiation. Returns
+    ``(agent_name, None)``: the caller (OrchestratorAgent) is responsible for
+    turning ``agent_name`` into an executed HANDBACK. Historically that was
+    the job of ``AgentInvoker`` (subprocess spawn + poll for a HANDBACK
+    file) — that class has been removed in favor of direct sub-agent
+    spawning via the harness's Agent tool, which is not yet wired up at this
+    layer (see ``OrchestratorAgent._process_task``'s ``agent is None`` seam).
     """
     
     # Valid agent names per AGENTS.md
@@ -1035,7 +1040,9 @@ class TaskRouter:
         Route task to appropriate agent by name.
 
         Returns:
-            (agent_name, None)  — caller uses agent_name to invoke via AgentInvoker
+            (agent_name, None) — the caller (OrchestratorAgent) turns
+            agent_name into an executed HANDBACK. See TaskRouter's class
+            docstring for the current (direct sub-agent spawning) model.
         """
         # Priority 1: Explicit agent/role in DELEGATE.
         #
@@ -1110,12 +1117,16 @@ class TaskRouter:
 
 class OrchestratorAgent(Agent):
     """
-    Main Orchestrator Agent - Polls queue and delegates work.
-    
-    Runs continuously until queue is idle (60+ seconds with no tasks).
-    Supports optional AgentInvoker for subprocess-based agent invocation.
+    Main Orchestrator Agent - delegates work by task.
+
+    NOTE (queue-polling removal, direct-spawn migration): this class no
+    longer polls the queue itself (poll_and_process/run_poll_cycle removed —
+    see _process_task's docstring). The harness now spawns sub-agents
+    directly via the Agent tool. The queue (QueueManager, retained per
+    SPEC-2026-004) remains a durable inbox/audit substrate that
+    _process_task still reads from and writes to per task.
     """
-    
+
     def __init__(
         self,
         queue_dir: Optional[str] = None,
@@ -1136,7 +1147,11 @@ class OrchestratorAgent(Agent):
         self.tasks_processed = 0
         self.tasks_success = 0
         self.tasks_escalated = 0
-        # Optional AgentInvoker for subprocess-based delegation (task 5106)
+        # Historically an optional AgentInvoker (subprocess-based delegation,
+        # task 5106) — that class has been removed under direct sub-agent
+        # spawning. This constructor param is kept (unused internally) for
+        # backward-compatible call signatures; nothing in this class reads
+        # self.agent_invoker.
         self.agent_invoker = agent_invoker
         # Quality validator — defaults to a fresh instance if not injected
         self.quality_validator = quality_validator or QualityValidator()
@@ -1849,112 +1864,33 @@ class OrchestratorAgent(Agent):
         
         return result
 
-    def run_poll_cycle(self) -> Dict:
-        """
-        Execute a single polling cycle — list all incoming tasks and process each.
-
-        Single-batch polling entry point for harness-driven hosts. Unlike
-        poll_and_process (which loops until idle), run_poll_cycle processes one
-        batch and returns immediately with a metrics dict.
-
-        Note: the former AutomationController polling daemon
-        (src/orchestration/agents/automation.py) was removed in the
-        2026-05-17 daemon-removal refactor — the harness now owns the polling
-        loop (see OrchestratorSkill.run_idle_loop in
-        src/skills/orchestrator/scripts/orchestrator_skill.py). This method
-        remains the per-cycle interface for harness integrations
-        (see invoke_agent.py) and integration tests.
-
-        Returns:
-            Dict with keys:
-            - tasks_processed: int — number of tasks attempted this cycle
-            - tasks_success: int — cumulative tasks successfully completed
-            - tasks_escalated: int — cumulative tasks escalated
-            - tasks_failed: int — cumulative tasks failed (errors)
-        """
-        incoming_tasks = self.queue_manager.list_incoming_tasks()
-        tasks_this_cycle = len(incoming_tasks)
-
-        for filename in incoming_tasks:
-            self._process_task(filename)
-            self.last_task_time = time.time()
-
-        stats = self.token_tracker.get_stats()
-        return {
-            "tasks_processed": tasks_this_cycle,
-            "tasks_success": self.tasks_success,
-            "tasks_escalated": self.tasks_escalated,
-            "tasks_failed": 0,
-            "tokens": {
-                "input": stats.total_input_tokens,
-                "output": stats.total_output_tokens,
-                "cached": stats.total_cached_tokens,
-                "cost_usd": stats.total_cost_usd,
-            },
-        }
-
-    def poll_and_process(self):
-        """
-        Main polling loop - poll queue and process all available tasks.
-        Exits when idle for idle_timeout seconds.
-        """
-        print(f"\n🚀 Orchestrator starting polling loop (idle timeout: {self.idle_timeout}s)")
-        
-        # Validate queue paths at startup (security hardening)
-        print(f"\n🔐 Validating queue paths...")
-        try:
-            validation_result = self.validate_queue_paths()
-            print(
-                f"   ✓ Queue path validation: {validation_result['valid_count']} valid, "
-                f"{validation_result['invalid_count']} invalid. Status: {validation_result['status']}"
-            )
-        except SecurityError as sec_err:
-            print(f"   ❌ Security validation failed: {sec_err}")
-            raise
-        
-        # Verify agent definitions at startup (security hardening)
-        print(f"\n🔐 Verifying agent definitions...")
-        try:
-            verification_result = self.verify_agent_definitions()
-            if verification_result['bypassed']:
-                print(f"   ⚠️  Agent verification BYPASSED (SKIP_AGENT_VERIFICATION=true)")
-            elif verification_result['verified']:
-                print(f"   ✓ Agent definitions verified. SHA256: {verification_result['actual_sha'][:16]}...")
-            else:
-                print(f"   ❌ Agent verification failed: {verification_result['error']}")
-                raise SecurityError(verification_result['error'])
-        except SecurityError as sec_err:
-            print(f"   ❌ Agent verification failed: {sec_err}")
-            raise
-        
-        while True:
-            # Poll for tasks
-            incoming_tasks = self.queue_manager.list_incoming_tasks()
-            
-            if not incoming_tasks:
-                # No tasks - check idle timeout
-                elapsed = time.time() - self.last_task_time
-                if elapsed >= self.idle_timeout:
-                    print(f"\n✅ Queue idle for {elapsed:.0f}s, exiting orchestrator")
-                    break
-                else:
-                    remaining = self.idle_timeout - elapsed
-                    print(f"⏳ No tasks, checking again in 10s (idle timeout in {remaining:.0f}s)...")
-                    time.sleep(10)
-                    continue
-            
-            # Process each task
-            for filename in incoming_tasks:
-                self._process_task(filename)
-                self.last_task_time = time.time()
-
-        # Print session summary at end of polling loop
-        print("\n" + "=" * 60)
-        self.orchestrator_cli.print_session_summary()
-        print("=" * 60)
-
     def _process_task(self, filename: str):
-        """Process a single task from queue."""
+        """
+        Process a single queued task end-to-end: validate, route, execute, finalize.
+
+        NOTE (queue-polling removal, direct-spawn migration): this method
+        contains zero polling itself — it processes exactly one named task
+        found in incoming/ and returns. The former callers that repeatedly
+        invoked it in a loop (``run_poll_cycle`` and ``poll_and_process``)
+        were the actual "polling" layer and have been removed; the harness
+        now spawns sub-agents directly via the Agent tool rather than
+        subprocess-polling a queue directory for HANDBACK files.
+
+        This method is KEPT because most of its body — Layer 1/2/3 quality
+        validation, HANDBACK escalation chaining, gray-zone/QE re-review
+        routing, done-queue transition, and metrics recording — is durable
+        per-task business logic that a future direct-spawn integration will
+        still need (the queue itself remains a durable inbox/audit substrate
+        per SPEC-2026-004). The one part that IS obsolete is step 5 below
+        (``agent.execute(...)``): ``TaskRouter.route_task`` always returns
+        ``(agent_name, None)`` now (see its docstring), so in production this
+        line always raised ``AttributeError`` and the task was archived via
+        the except-block below. That has been replaced with an explicit,
+        documented seam (see the ``if agent is None`` guard) rather than a
+        confusing crash, matching the pattern already used by
+        ``OrchestratorSkill.spawn_sub_agent``. Wiring step 5 up to a real
+        direct sub-agent call is the next lane's job, not this one's.
+        """
         print(f"\n📋 Processing task: {filename}")
         
         try:
@@ -2014,6 +1950,25 @@ class OrchestratorAgent(Agent):
                     f"({len(handback.get('children_created', []))} children)"
                 )
             else:
+                if agent is None:
+                    # SEAM: TaskRouter.route_task() only ever returns an
+                    # agent_name, never an in-process Agent instance (the
+                    # subprocess-invocation model this used to rely on,
+                    # AgentInvoker, has been removed). Direct sub-agent
+                    # dispatch — spawning `agent_name` via the harness's
+                    # Agent tool and getting a HANDBACK back — is not
+                    # implemented at this layer. Raise loudly and specifically
+                    # rather than let `None.execute(...)` crash with a
+                    # confusing AttributeError; the except-block below still
+                    # catches this and archives the task, exactly as it did
+                    # for the old AttributeError.
+                    raise RuntimeError(
+                        f"No in-process agent available for '{agent_name}' "
+                        f"(task_id={task_id}). Direct sub-agent dispatch is not "
+                        "wired up in OrchestratorAgent._process_task — the "
+                        "harness must spawn the agent via the Agent tool and "
+                        "supply the resulting HANDBACK."
+                    )
                 handback = agent.execute(effective_delegate)
                 print(f"   ✓ Agent executed with status: {handback.get('status')}")
 
@@ -2379,26 +2334,45 @@ class OrchestratorAgent(Agent):
         self, parent_task_id: str, timeout_minutes: int = 60
     ) -> Dict:
         """
-        Wait for all child tasks of *parent_task_id* to reach done/.
+        Check completion status of all child tasks of *parent_task_id*.
 
-        Scans processing/ until all children have moved to done/ or until
-        *timeout_minutes* elapses.
+        NOTE (queue-polling removal, direct-spawn migration): this used to
+        block, re-scanning done/ every 5 seconds via ``time.sleep(5)`` until
+        all children completed or *timeout_minutes* elapsed. That blocking
+        poll loop has been removed — it is unused in production (zero test
+        coverage; ``execute_with_result_aggregation`` is its only caller) and
+        is the same class of dead "wait via repeated queue scan" pattern as
+        the top-level dispatch polling removed elsewhere in this file. Under
+        direct sub-agent spawning, fanning out children happens via parallel
+        Agent tool calls whose results return synchronously in the same
+        turn, so a caller no longer needs to poll a queue directory
+        afterwards to find out when they're done.
+
+        This method now performs a SINGLE scan of done/ and returns
+        immediately with whatever it finds — "all_complete" if every
+        expected child is already in done/, otherwise "partial" (never
+        "timed_out", since there is no waiting left to time out on). The
+        child-discovery and result-collection logic below is preserved
+        as-is since the queue remains a durable inbox/audit substrate
+        (SPEC-2026-004) that a caller may still want to reconcile against.
+        Restoring an actual wait (e.g. driven by real sub-agent results
+        rather than filesystem polling) is a follow-up integration task,
+        not implemented here.
 
         Args:
             parent_task_id:   Parent task ID.
-            timeout_minutes:  Maximum wait time (default 60 minutes).
+            timeout_minutes:  Unused (retained for signature compatibility).
 
         Returns:
             {
-                status:           "all_complete" | "partial" | "timed_out",
+                status:           "all_complete" | "partial",
                 children_results: {task_id: task_dict, ...},
                 children_failed:  [task_ids],
-                completion_time:  float (seconds elapsed),
+                completion_time:  float (seconds elapsed — always ~0 now).
             }
         """
         import yaml as _yaml
 
-        timeout_seconds = timeout_minutes * 60.0
         start = time.time()
 
         # Collect all child task IDs across all states
@@ -2440,48 +2414,26 @@ class OrchestratorAgent(Agent):
         children_results: Dict[str, Dict] = {}
         children_failed: List[str] = []
 
-        while remaining:
-            elapsed = time.time() - start
-            if elapsed >= timeout_seconds:
-                for cid in list(remaining):
-                    children_results[cid] = {
-                        "task_id": cid,
-                        "status": "timed_out",
-                        "output": None,
-                        "quality_score": 0,
-                    }
-                    children_failed.append(cid)
-                return {
-                    "status": "timed_out",
-                    "children_results": children_results,
-                    "children_failed": children_failed,
-                    "completion_time": elapsed,
-                }
-
-            # Check done/ for completions
-            done_children = _find_children(self.queue_manager.done_dir)
-            for task_file in self.queue_manager.done_dir.glob("*.yaml"):
-                try:
-                    with open(task_file) as fh:
-                        content = fh.read()
-                    docs = [d.strip() for d in content.split("---") if d.strip()]
-                    task = _yaml.safe_load(docs[0]) if docs else _yaml.safe_load(content)
-                    if not isinstance(task, dict):
-                        continue
-                    cid = task.get("task_id", task_file.stem)
-                    if cid in remaining:
-                        children_results[cid] = task
-                        remaining.discard(cid)
-                        if task.get("status") in ("failed", "blocked"):
-                            children_failed.append(cid)
-                except Exception:
+        # Single-pass scan of done/ (see docstring — no more blocking retry loop).
+        for task_file in self.queue_manager.done_dir.glob("*.yaml"):
+            try:
+                with open(task_file) as fh:
+                    content = fh.read()
+                docs = [d.strip() for d in content.split("---") if d.strip()]
+                task = _yaml.safe_load(docs[0]) if docs else _yaml.safe_load(content)
+                if not isinstance(task, dict):
                     continue
-
-            if remaining:
-                time.sleep(5)  # Check every 5 seconds in production
+                cid = task.get("task_id", task_file.stem)
+                if cid in remaining:
+                    children_results[cid] = task
+                    remaining.discard(cid)
+                    if task.get("status") in ("failed", "blocked"):
+                        children_failed.append(cid)
+            except Exception:
+                continue
 
         elapsed = time.time() - start
-        agg_status = "all_complete" if not children_failed else "partial"
+        agg_status = "all_complete" if not remaining and not children_failed else "partial"
         return {
             "status": agg_status,
             "children_results": children_results,
@@ -2622,20 +2574,22 @@ class OrchestratorAgent(Agent):
     def do_work(self) -> Dict:
         """
         Execute orchestrator work from DELEGATE block.
-        
-        If invoked directly (not polling), process scope from delegate.
+
+        Process scope/plan from the DELEGATE. Queue-polling dispatch
+        (``poll_and_process``/``run_poll_cycle``) has been removed — the
+        harness now spawns sub-agents directly via the Agent tool rather
+        than this class draining incoming/ in a loop. This method no longer
+        drives any dispatch itself; it reports current counters as-is.
+        Wiring a direct-spawn dispatch path into this entry point is a
+        follow-up integration task, not implemented here.
         """
         scope = self.delegate_block.get("scope", "")
         plan = self.delegate_block.get("plan", [])
-        
-        # If no explicit polling request, treat as standalone orchestration
+
         print(f"Orchestrator scope: {scope}")
         if plan:
             print(f"Plan: {plan}")
-        
-        # Always run polling loop
-        self.poll_and_process()
-        
+
         return {
             "status": "COMPLETE",
             "tasks_processed": self.tasks_processed,

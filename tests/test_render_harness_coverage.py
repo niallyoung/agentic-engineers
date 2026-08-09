@@ -85,10 +85,10 @@ def _render_all():
     yield
 
 
-def test_source_has_exactly_27_user_skills():
+def test_source_has_exactly_25_user_skills():
     names = _source_skill_names()
-    assert len(names) == 27, (
-        f"Expected 27 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 25, (
+        f"Expected 25 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 

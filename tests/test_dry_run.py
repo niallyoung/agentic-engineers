@@ -11,7 +11,6 @@ Tests cover:
 7. JSON serialization
 8. Context manager behavior
 9. Global context management
-10. Integration with Orchestrator polling (OrchestratorSkill.run_idle_loop)
 """
 
 import pytest

@@ -7,6 +7,7 @@ compliance, debugging, and security auditing.
 
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -14,8 +15,58 @@ import hashlib
 
 logger = logging.getLogger(__name__)
 
-# Audit log directory
-AUDIT_DIR = Path.home() / ".agentic-engineers" / "audit"
+# Import queue-isolation API for canonical harness/session-id resolution.
+# This is the single source of truth for {harness}/{session-id} detection
+# (AGENTIC_HARNESS / AGENTIC_SESSION_ID / CLAUDE_SESSION_ID / COPILOT_SESSION_ID
+# and the 'local' + generated-UUID fallbacks) — do not re-implement env parsing
+# here. See src/skills/_meta/queue-isolation/scripts/queue_isolation.py.
+_QUEUE_ISOLATION = None
+try:
+    from src.skills._meta.queue_isolation.scripts import queue_isolation as qi
+    _QUEUE_ISOLATION = qi
+except ImportError:
+    try:
+        queue_isolation_path = (
+            Path(__file__).parent.parent.parent / "skills" / "_meta" / "queue-isolation" / "scripts"
+        )
+        if str(queue_isolation_path) not in sys.path:
+            sys.path.insert(0, str(queue_isolation_path))
+        import queue_isolation as qi
+        _QUEUE_ISOLATION = qi
+    except ImportError:
+        qi = None
+        _QUEUE_ISOLATION = None
+        logger.warning(
+            "queue-isolation module unavailable; AuditLogger falling back to "
+            "'local' harness with a generated session id."
+        )
+
+
+def _default_audit_dir(harness: Optional[str] = None, session_id: Optional[str] = None) -> Path:
+    """
+    Resolve the canonical audit directory:
+
+        ~/.agentic-engineers/{harness}/{session-id}/audit/
+
+    {harness} and {session-id} are resolved via the shared queue-isolation
+    convention (AGENTIC_HARNESS / AGENTIC_SESSION_ID, etc.), the same way the
+    rest of the framework resolves them, so audit logs land in the same
+    per-harness/per-session partition as the queue. Computed lazily (not a
+    module-level constant) so HOME/env overrides in tests take effect.
+    """
+    if _QUEUE_ISOLATION is not None:
+        resolved_harness = harness or _QUEUE_ISOLATION.detect_harness()
+        resolved_session_id = session_id or _QUEUE_ISOLATION.get_session_id()
+    else:
+        # Last-resort fallback mirroring queue-isolation's own defaults
+        # ('local' harness, generated UUID session) if the shared module
+        # could not be imported at all.
+        import os
+        import uuid
+        resolved_harness = harness or os.environ.get("AGENTIC_HARNESS", "local")
+        resolved_session_id = session_id or os.environ.get("AGENTIC_SESSION_ID") or str(uuid.uuid4())
+
+    return Path.home() / ".agentic-engineers" / resolved_harness / resolved_session_id / "audit"
 
 
 class AuditLogger:
@@ -30,23 +81,36 @@ class AuditLogger:
     - Error conditions
     """
     
-    def __init__(self, log_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        log_dir: Optional[Path] = None,
+        harness: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ):
         """
         Initialize audit logger.
-        
+
         Args:
-            log_dir: Directory for audit logs (default: ~/.agentic-engineers/audit/)
+            log_dir: Directory for audit logs. If not provided, resolves to the
+                canonical path
+                ``~/.agentic-engineers/{harness}/{session-id}/audit/`` via the
+                shared queue-isolation convention. Pass an explicit tmp_path
+                in tests to avoid writing into the real ~/.agentic-engineers/.
+            harness: Override harness (default: auto-detected, see
+                queue_isolation.detect_harness()). Ignored if log_dir is given.
+            session_id: Override session id (default: auto-detected, see
+                queue_isolation.get_session_id()). Ignored if log_dir is given.
         """
-        self.log_dir = log_dir or AUDIT_DIR
+        self.log_dir = log_dir or _default_audit_dir(harness, session_id)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Current audit file (rotated daily)
         self.current_log = self._get_current_log_file()
-    
+
     def _get_current_log_file(self) -> Path:
         """Get today's audit log file."""
         today = datetime.utcnow().strftime("%Y-%m-%d")
-        return self.log_dir / f"audit-{today}.jsonl"
+        return self.log_dir / f"events-{today}.jsonl"
     
     def _ensure_rotation(self) -> None:
         """Check if log file should be rotated (new day)."""
@@ -300,7 +364,7 @@ class AuditLogger:
         events = []
         
         # Scan recent log files
-        for log_file in sorted(self.log_dir.glob("audit-*.jsonl"), reverse=True)[:7]:  # Last 7 days
+        for log_file in sorted(self.log_dir.glob("events-*.jsonl"), reverse=True)[:7]:  # Last 7 days
             try:
                 with open(log_file, 'r') as f:
                     for line in f:

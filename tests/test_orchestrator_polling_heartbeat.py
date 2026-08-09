@@ -1,13 +1,18 @@
 """
-Tests for OrchestratorSkill configurable polling intervals and heartbeat detection.
+Tests for OrchestratorSkill heartbeat/stall-detection configuration.
 
 Covers:
 - PollingConfig schema and serialization
 - Heartbeat tracking and update
 - Stalled task detection (no heartbeat for N seconds)
 - Stalled task recovery with retry backoff
-- Configurable poll intervals (fast/idle)
-- Run idle loop with config parameters
+
+NOTE (queue-polling removal, direct-spawn migration): PollingConfig's
+poll_interval_fast/poll_interval_idle/idle_threshold_polls/deep_sleep_sec
+fields, and run_idle_loop()/_deep_sleep()/_deep_sleep_polling() themselves,
+have been removed — see orchestrator_skill.py. This file now covers only
+the heartbeat/stall-detection/retry substrate that survives under direct
+sub-agent spawning.
 """
 
 import json
@@ -46,14 +51,10 @@ def tmp_queue(tmp_path):
 def custom_config():
     """Create a custom PollingConfig with short timeouts for testing."""
     return PollingConfig(
-        poll_interval_fast=10,
-        poll_interval_idle=30,
         heartbeat_timeout_sec=5,
         task_deadline_sec=10,
         retry_max_attempts=2,
         retry_backoff_multiplier=2.0,
-        idle_threshold_polls=2,
-        deep_sleep_sec=20,
     )
 
 
@@ -84,18 +85,12 @@ class TestPollingConfig:
     def test_polling_config_defaults(self):
         """Test that PollingConfig uses sensible defaults."""
         config = PollingConfig()
-        assert config.poll_interval_fast == 30
-        assert config.poll_interval_idle == 180
         assert config.heartbeat_timeout_sec == 120
         assert config.task_deadline_sec == 600
         assert config.retry_max_attempts == 3
-        assert config.idle_threshold_polls == 3
-        assert config.deep_sleep_sec == 600
 
     def test_polling_config_custom(self, custom_config):
         """Test that PollingConfig accepts custom values."""
-        assert custom_config.poll_interval_fast == 10
-        assert custom_config.poll_interval_idle == 30
         assert custom_config.heartbeat_timeout_sec == 5
         assert custom_config.task_deadline_sec == 10
 
@@ -103,25 +98,17 @@ class TestPollingConfig:
         """Test that PollingConfig can be serialized to dict."""
         config_dict = custom_config.to_dict()
         assert isinstance(config_dict, dict)
-        assert config_dict["poll_interval_fast"] == 10
-        assert config_dict["poll_interval_idle"] == 30
         assert config_dict["heartbeat_timeout_sec"] == 5
 
     def test_polling_config_from_dict(self):
         """Test that PollingConfig can be deserialized from dict."""
         config_dict = {
-            "poll_interval_fast": 15,
-            "poll_interval_idle": 60,
             "heartbeat_timeout_sec": 30,
             "task_deadline_sec": 120,
             "retry_max_attempts": 5,
             "retry_backoff_multiplier": 1.5,
-            "idle_threshold_polls": 4,
-            "deep_sleep_sec": 300,
         }
         config = PollingConfig.from_dict(config_dict)
-        assert config.poll_interval_fast == 15
-        assert config.poll_interval_idle == 60
         assert config.heartbeat_timeout_sec == 30
 
 
@@ -135,12 +122,10 @@ class TestOrchestratorInitialization:
     def test_initialization_with_default_config(self, orchestrator_default):
         """Test initialization with default polling config."""
         assert isinstance(orchestrator_default.config, PollingConfig)
-        assert orchestrator_default.config.poll_interval_fast == 30
         assert orchestrator_default.config.heartbeat_timeout_sec == 120
 
     def test_initialization_with_custom_config(self, orchestrator_with_config):
         """Test initialization with custom polling config."""
-        assert orchestrator_with_config.config.poll_interval_fast == 10
         assert orchestrator_with_config.config.heartbeat_timeout_sec == 5
 
     def test_heartbeat_tracker_initialized(self, orchestrator_default):
@@ -402,72 +387,18 @@ class TestStalledTaskRecovery:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Test Idle Loop with Configurable Intervals
+# NOTE (queue-polling removal, direct-spawn migration): TestIdleLoopWithConfig
+# and TestDeepSleepWithConfig previously lived here, testing
+# OrchestratorSkill.run_idle_loop() / _deep_sleep() / _deep_sleep_polling().
+# Those methods have been removed (see orchestrator_skill.py) — they
+# implemented the harness-idle-triggered sleep/deep-sleep mechanism driven by
+# the now-deleted orchestrator-scheduler skill and harness idle_loop.py
+# modules, which direct sub-agent spawning replaces. PollingConfig itself
+# (TestPollingConfig, above) and the heartbeat/stall-detection/recovery
+# machinery (TestHeartbeatManagement, TestStalledTaskDetection,
+# TestStalledTaskRecovery, below) are unaffected and remain fully tested —
+# none of them loop or sleep themselves.
 # ─────────────────────────────────────────────────────────────────────────────
-
-class TestIdleLoopWithConfig:
-    """Test idle loop behavior with configurable intervals."""
-
-    def test_run_idle_loop_normal_polling_interval(self, orchestrator_with_config):
-        """Test that idle loop uses poll_interval_idle."""
-        # Set clean_poll_count below threshold
-        orchestrator_with_config.clean_poll_count = 0
-
-        # Mock time.sleep to avoid actual sleeping
-        with patch("src.skills.orchestrator.scripts.orchestrator_skill.time.sleep") as mock_sleep:
-            result = orchestrator_with_config.run_idle_loop()
-
-        assert result["work_processed"] == 0
-        assert result["idle_entered"] is False
-        assert result["wake_reason"] == "normal"
-
-        # Verify sleep was called with poll_interval_idle
-        mock_sleep.assert_called_once()
-        actual_sleep_time = mock_sleep.call_args[0][0]
-        assert actual_sleep_time == orchestrator_with_config.config.poll_interval_idle
-
-    def test_run_idle_loop_deep_sleep_threshold(self, orchestrator_with_config):
-        """Test that idle loop enters deep sleep after threshold clean polls."""
-        # Set clean_poll_count >= threshold
-        orchestrator_with_config.clean_poll_count = orchestrator_with_config.config.idle_threshold_polls
-
-        # Mock _deep_sleep to avoid actual waiting
-        with patch.object(orchestrator_with_config, "_deep_sleep", return_value="timeout"):
-            result = orchestrator_with_config.run_idle_loop()
-
-        assert result["work_processed"] == 0
-        assert result["idle_entered"] is True
-        assert result["wake_reason"] == "timeout"
-        # Verify clean_poll_count reset
-        assert orchestrator_with_config.clean_poll_count == 0
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Test Deep Sleep with Config
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TestDeepSleepWithConfig:
-    """Test deep sleep respecting config timeouts."""
-
-    def test_deep_sleep_polling_respects_timeout(self, orchestrator_with_config, tmp_queue):
-        """Test that _deep_sleep_polling respects deep_sleep_sec timeout."""
-        incoming_dir = tmp_queue / "incoming"
-        initial_files = set(incoming_dir.glob("*.yaml"))
-
-        # Mock time.sleep to fast-forward
-        sleep_calls = []
-
-        def mock_sleep(duration):
-            sleep_calls.append(duration)
-            if sum(sleep_calls) >= orchestrator_with_config.config.deep_sleep_sec:
-                # Simulate timeout reached
-                pass
-
-        with patch("src.skills.orchestrator.scripts.orchestrator_skill.time.sleep", side_effect=mock_sleep):
-            result = orchestrator_with_config._deep_sleep_polling()
-
-        assert result in ("timeout", "file_event", "signal")
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Integration Tests
@@ -533,14 +464,10 @@ class TestIntegration:
         assert (retry_pending_dir / f"{task_id}.yaml").exists()
 
     def test_polling_config_persists_across_poll_cycles(self, orchestrator_with_config):
-        """Test that polling config is stable across multiple poll cycles."""
-        # Capture config values
-        initial_poll_fast = orchestrator_with_config.config.poll_interval_fast
-        initial_poll_idle = orchestrator_with_config.config.poll_interval_idle
+        """Test that config is stable across multiple poll_queue() cycles."""
+        # Capture config value
         initial_heartbeat_timeout = orchestrator_with_config.config.heartbeat_timeout_sec
 
         # Simulate multiple poll cycles (just check config doesn't change)
         for _ in range(5):
-            assert orchestrator_with_config.config.poll_interval_fast == initial_poll_fast
-            assert orchestrator_with_config.config.poll_interval_idle == initial_poll_idle
             assert orchestrator_with_config.config.heartbeat_timeout_sec == initial_heartbeat_timeout

@@ -7,6 +7,8 @@ accepts:
 returns:
   - HANDBACK
 role: lead-engineer
+tools:
+  - spawn_subagent
 ---
 
 # Lead Engineer Agent — LIVE IMPLEMENTATION
@@ -45,6 +47,27 @@ PROCESS (ARCHITECTURAL GUIDANCE):
 
 OUTPUT: HANDBACK with assessment + recommendations
 ```
+
+---
+
+## Execution Model
+
+Lead Engineer is spawned directly — the parent agent passes the DELEGATE block as this
+agent's prompt via a direct sub-agent spawn (Agent/Task tool), and receives Lead
+Engineer's HANDBACK back as that spawn call's result, in-context.
+
+**This agent's frontmatter grants `spawn_subagent`** (see `src/AGENTS.md` §
+Tools-Frontmatter Permission Model) — after making an architecture decision, Lead
+Engineer produces implementation DELEGATEs and spawns Engineer/Senior Engineer directly
+to carry them out, subject to the framework-wide recursion limits: max delegation depth
+3, max 5 concurrent spawns in flight, and mandatory `ancestry` tracking on every DELEGATE
+it issues so a cycle back to one of its own ancestors is refused rather than followed. If
+a limit is hit, Lead Engineer MUST stop and return `status: blocked` or `status:
+escalate` rather than proceeding — see `src/AGENTS.md` § Recursion Limits.
+
+Every DELEGATE this agent issues and every HANDBACK it receives is recorded to the
+durable queue via `enqueue()` as an audit trail; the queue is written to, never polled,
+for this agent's own control flow.
 
 ---
 

@@ -223,60 +223,6 @@ class TestValidateQueuePaths:
             assert mock_logger.info.called or mock_logger.debug.called
 
 
-class TestValidateQueuePathsIntegration:
-    """Integration tests for validate_queue_paths with real OrchestratorAgent."""
-    
-    @pytest.fixture
-    def temp_queue_structure(self):
-        """Create a temporary queue structure."""
-        temp_dir = tempfile.mkdtemp()
-        queue_path = Path(temp_dir) / ".agentic-engineers" / "opencode" / "session-test-001" / "queue"
-        
-        (queue_path / "incoming").mkdir(parents=True, exist_ok=True)
-        (queue_path / "processing").mkdir(parents=True, exist_ok=True)
-        (queue_path / "done").mkdir(parents=True, exist_ok=True)
-        
-        return temp_dir, queue_path
-    
-    def test_validate_queue_paths_called_at_startup(self, temp_queue_structure, monkeypatch):
-        """Test that validate_queue_paths is called during poll_and_process startup."""
-        temp_dir, queue_path = temp_queue_structure
-        
-        # Mock queue isolation to use our temp path
-        mock_qi = MagicMock()
-        mock_qi.get_session_id.return_value = "session-test-001"
-        mock_qi.detect_harness.return_value = "opencode"
-        mock_qi.get_queue_path.return_value = queue_path
-        mock_qi.init_queue_structure.return_value = None
-        
-        with patch('src.orchestration.agents.orchestrator._QUEUE_ISOLATION', mock_qi):
-            # Create orchestrator with mocked queue
-            try:
-                agent = OrchestratorAgent(queue_dir=None, idle_timeout=1)
-                
-                # Mock poll_and_process to avoid infinite loop
-                with patch.object(agent, 'validate_queue_paths', wraps=agent.validate_queue_paths) as mock_validate:
-                    # Use a limited time context to avoid infinite loop
-                    import threading
-                    
-                    def timeout_run():
-                        try:
-                            agent.poll_and_process()
-                        except:
-                            pass
-                    
-                    thread = threading.Thread(target=timeout_run)
-                    thread.daemon = True
-                    thread.start()
-                    thread.join(timeout=2)
-                    
-                    # validate_queue_paths should have been called
-                    assert mock_validate.called, "validate_queue_paths was not called during poll_and_process"
-            except Exception as e:
-                # Some initialization may fail in test environment
-                pass
-
-
 class TestValidateQueuePathsErrorHandling:
     """Test error handling in validate_queue_paths."""
     

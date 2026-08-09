@@ -375,11 +375,15 @@ class SpecManager:
                     spec_content, proposal
                 )
             else:
-                # Simple replacement
+                # True section-body replacement: locate the `## {section}`
+                # heading and replace everything up to (but not including) the
+                # next same-or-higher-level heading, preserving the heading
+                # itself. Raises ValueError (caught below) if the section is
+                # not found, so a typo'd section name fails loudly instead of
+                # silently no-op'ing.
                 for section, new_text in proposal.proposed_changes.items():
-                    spec_content = spec_content.replace(
-                        f"## {section}",
-                        f"## {section}\n{new_text}"
+                    spec_content = self._replace_section_body(
+                        spec_content, section, new_text
                     )
 
             # Write updated SPEC.md
@@ -504,6 +508,79 @@ class SpecManager:
             )
 
         return result
+
+    # ========================================================================
+    # SECTION BODY REPLACEMENT
+    # ========================================================================
+
+    def _replace_section_body(self, spec_content: str, section: str, new_text: str) -> str:
+        """Replace the body of a `## {section}` heading with new_text.
+
+        Locates the heading line matching exactly `## {section}` at the start
+        of a line (ignoring any such text inside fenced ``` or ~~~ code
+        blocks), then replaces everything from immediately after that heading
+        up to (but not including) the next same-or-higher-level heading
+        (a line matching `^## ` or `^# `), or end-of-file if there is none.
+        The heading itself is preserved; only the section body is replaced.
+
+        Exactly one occurrence is replaced (the first true heading match) —
+        this method does not touch any other section, and it does not treat
+        `## Foo`-looking text inside fenced code blocks as a heading.
+
+        Args:
+            spec_content: Current SPEC.md content
+            section: Section name (without the leading "## ")
+            new_text: Replacement body text for the section
+
+        Returns:
+            Updated spec_content with the section body replaced
+
+        Raises:
+            ValueError: If no `## {section}` heading is found (outside of
+                fenced code blocks). Applying an amendment for a typo'd or
+                missing section must fail loudly rather than silently no-op.
+        """
+        lines = spec_content.split("\n")
+        heading_line = f"## {section}"
+
+        # Find the heading line, skipping over fenced code blocks so that
+        # `## Foo` appearing inside ``` ... ``` is never mistaken for a
+        # real heading.
+        in_fence = False
+        heading_idx = None
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            if line == heading_line:
+                heading_idx = i
+                break
+
+        if heading_idx is None:
+            raise ValueError(f"Section not found in SPEC.md: {section}")
+
+        # Find the end of the section: the next line matching a same-or-
+        # higher-level heading (`# ` or `## `), again skipping fenced code
+        # blocks. End-of-file if no such heading follows.
+        end_idx = len(lines)
+        in_fence = False
+        for j in range(heading_idx + 1, len(lines)):
+            line = lines[j]
+            stripped = line.strip()
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            if re.match(r"^#{1,2} ", line):
+                end_idx = j
+                break
+
+        new_lines = lines[: heading_idx + 1] + new_text.split("\n") + lines[end_idx:]
+        return "\n".join(new_lines)
 
     # ========================================================================
     # POSITIONAL INSERTION

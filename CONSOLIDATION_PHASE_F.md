@@ -14,12 +14,20 @@
 | **G-2** Continuous in-process polling | ✅ **COMPLETE** | Exponential backoff (5s→600s) + file-watch wake; **60 new tests** (14 G-2 integration + 46 backoff); 5 DELEGATEs in 71ms, backoff overhead <2ms. **656+ tests total passing** across G work. |
 | **G-3** External daemon mode | ⏸️ Deferred (optional) | Not required — G-2 provides continuous polling with no external daemon. |
 
-**Conclusion:** Full harness queue cooperation is implemented. DELEGATEs
-**auto-process without manual invocation** — each harness polls its session queue
-during idle periods, backing off when empty and waking immediately on arrival,
-entirely in-process (no external daemon, cron, or system service). See
-[`src/orchestration/PHASE_G_HARNESS_COOPERATION.md`](src/orchestration/PHASE_G_HARNESS_COOPERATION.md)
-and [`docs/guides/harness-queue-polling.md`](docs/guides/harness-queue-polling.md).
+**Conclusion:** Full harness queue cooperation was implemented as described below.
+DELEGATEs auto-processed without manual invocation — each harness polled its
+session queue during idle periods, backing off when empty and waking immediately
+on arrival, entirely in-process (no external daemon, cron, or system service).
+
+> **Superseded (Phase 4):** The G-1/G-2 idle-loop polling mechanism described in
+> this section has since been retired — the Orchestrator now builds a DELEGATE
+> and passes it directly as the prompt of a sub-agent spawn, reading the
+> HANDBACK back as the tool result, rather than polling a queue. The queue is
+> retained as a durable audit trail, not a dispatch mechanism. `PHASE_G_HARNESS_COOPERATION.md`
+> and `docs/guides/harness-queue-polling.md` (formerly linked here) have been
+> removed along with the idle-loop/scheduler code they documented. See
+> [`src/AGENTS.md` — Direct Sub-Agent Spawn Execution Model](src/AGENTS.md#direct-sub-agent-spawn-execution-model)
+> for the current, canonical model.
 
 ---
 

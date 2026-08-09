@@ -9,7 +9,7 @@
 ## Features
 
 - ✅ Full DELEGATE/HANDBACK protocol support
-- ✅ Queue-based task routing
+- ✅ Direct sub-agent spawn dispatch (Agent/Task tool), with the queue retained as a durable audit trail — not something anything polls to route work
 - ✅ Real-time token tracking (27% Orchestrator + 73% subagents)
 - ✅ Concurrent agent execution (tested with 36+ agents)
 - ✅ Voice notifications with distinct personalities
@@ -29,9 +29,11 @@ This will:
 
 ## Configuration
 
-### Queue Directories
+### Queue Directories (Audit Trail)
 
-OpenCode requires queue directories for task routing:
+OpenCode records every DELEGATE and HANDBACK to a per-session queue directory as a
+durable audit trail — dispatch itself happens via direct sub-agent spawn, not by
+anything reading this directory:
 
 ```bash
 mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}
@@ -62,10 +64,11 @@ opencode --agent orchestrator --dark-factory "Process all pending tasks in queue
 ```
 
 This mode:
-- Polls the queue continuously
-- Processes tasks autonomously
+- Processes tasks autonomously, spawning specialists directly (Agent/Task tool) rather than polling
 - Routes to specialists based on task type
+- Reads each HANDBACK back in-context as its spawn call returns
 - Aggregates results and reports back
+- Records each DELEGATE/HANDBACK to the audit-trail queue, then pauses when no pending DELEGATEs or outstanding spawns remain
 
 ### Voice Notifications
 
@@ -114,12 +117,18 @@ make install-opencode
 
 ### Agent not routing correctly
 
-**Symptom:** Tasks not appearing in queue or agents not picking up work.
+**Symptom:** Orchestrator isn't spawning the expected specialist, or the audit trail
+isn't recording DELEGATE/HANDBACK entries.
 
 **Fix:**
 1. Check queue permissions: `ls -la ~/.agentic-engineers/opencode/{session-id}/queue/`
-2. Verify orchestrator is polling: `opencode --agent orchestrator --debug`
+2. Run with `--debug` and confirm the Agent/Task spawn call for the expected role
+   actually fires: `opencode --agent orchestrator --debug`
 3. Check logs: `tail -f ~/.agentic-engineers/{session-id}/memory/logs/*.log`
+
+There is no polling loop to check separately — if the spawn call fires and returns a
+HANDBACK, routing worked; if it doesn't fire at all, the issue is in the Orchestrator's
+routing decision, not a stalled poller.
 
 ## Advanced Configuration
 

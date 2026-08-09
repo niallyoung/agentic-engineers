@@ -11,13 +11,14 @@ A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, a
 - **How do you optimize cost** while maintaining quality?
 - **How do you stay within token budgets** across unlimited work?
 
-**The answer:** A queue-based ORCHESTRATOR-FIRST architecture:
+**The answer:** An ORCHESTRATOR-FIRST architecture built on direct sub-agent spawning:
 
-1. All work enters a queue as DELEGATE tasks (SPEC-compliant YAML)
-2. Orchestrator polls and routes to the right specialist
+1. Work is expressed as a DELEGATE task (SPEC-compliant YAML)
+2. Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as the tool result — no queue polling involved
 3. Each agent returns a HANDBACK with results + metrics
-4. Quality gates validate all work before moving to done
-5. Metrics feed back into model selection and routing optimization
+4. Quality gates validate all work before it's considered done
+5. Every DELEGATE and HANDBACK is durably recorded to the queue as an audit trail
+6. Metrics feed back into model selection and routing optimization
 
 ### Key Benefits
 
@@ -104,8 +105,8 @@ opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflo
 
 ## Key Features
 
-- **🎯 Queue-Based Orchestration** — Centralized task routing via DELEGATE/HANDBACK protocol
-- **♻️ Automatic Queue Polling** — Harnesses automatically poll their queues during idle periods (exponential backoff, file-watch wake — see [docs/guides/harness-queue-polling.md](docs/guides/harness-queue-polling.md))
+- **🎯 Direct Sub-Agent Spawn Orchestration** — Centralized task routing via DELEGATE/HANDBACK protocol; the Orchestrator spawns specialists directly (Agent/Task tool) rather than polling a queue
+- **📜 Durable Audit Trail** — Every DELEGATE and HANDBACK is recorded to the queue for audit and crash-recovery visibility, even though dispatch itself is direct (see [src/AGENTS.md > Audit-Trail Strategy](src/AGENTS.md#audit-trail-strategy))
 - **⚖️ Multi-Tier Model Selection** — Haiku for execution, Sonnet for planning, Opus for architecture
 - **✅ Quality Gates (3 Layers)** — DELEGATE structure, task routing, HANDBACK validation
 - **📊 Real-Time Metrics** — Token tracking, quality scores, cost per task
@@ -182,8 +183,8 @@ delegate: Optimize token usage across all agents
 
 The orchestrator will:
 1. Parse the task
-2. Route to the appropriate specialist agent(s)
-3. Monitor progress via queue
+2. Spawn the appropriate specialist agent(s) directly, one DELEGATE per spawn
+3. Read each HANDBACK back as the result of its spawn call
 4. Aggregate results and metrics
 5. Report back to you
 

@@ -1,608 +1,160 @@
-# Troubleshooting Guide: Continuous Polling Loop Automation
+# Troubleshooting Guide: Agentic Engineers
+
+This guide covers problems you can actually hit under the current architecture:
+installing/rendering the framework into a harness, invoking the Orchestrator, and
+direct sub-agent spawn dispatch. See
+[src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
+for how dispatch actually works today.
+
+> **Note for anyone arriving from an old bookmark:** this guide previously diagnosed a
+> background "Continuous Polling Loop Automation" process (`bin/run-automation-controller.sh`)
+> — stuck polling cycles, stale queue claims, scheduler not firing, memory leaks in a
+> long-running daemon, systemd/Docker restart procedures, etc. That script and the
+> polling loop it wrapped no longer exist, and none of those symptoms can occur under
+> the current model: there is no background loop to get stuck, and a spawned sub-agent
+> either returns a HANDBACK in-context or the spawn call itself fails/errors visibly.
+> Those sections have been removed rather than reworded — see
+> [docs/guides/deployment.md](deployment.md) for what deployment looks like now.
+
+---
 
 ## Quick Diagnostic Checklist
 
-Before diving into specific issues, run through these checks:
-
 ```bash
-# 1. Verify script is executable
-ls -la /opt/orchestrator/bin/run-automation-controller.sh
+# 1. Check the harness installation is healthy (Claude Code / OpenCode)
+python3 -m src.harness.harness_checker --harness claude
+python3 -m src.harness.harness_checker --harness opencode
 
-# 2. Check Python version
-python3 --version  # Should be 3.8+
+# 2. Verify agents rendered correctly
+ls ~/.claude/config/agents/*.md 2>/dev/null | wc -l     # Claude Code
+ls ~/.config/opencode/agent/*.md 2>/dev/null | wc -l    # OpenCode
 
-# 3. Verify project structure
-ls -la /opt/orchestrator/  # Should see: bin/, orchestration/, data/, docs/
+# 3. Confirm the audit-trail queue directory exists for your session
+find ~/.agentic-engineers -path '*/queue' -type d | sort
 
-# 4. Check queue directories
-ls -la /opt/orchestrator/data/queue/  # Should have: incoming/, done/
-
-# 5. Verify permissions
-id orchestrator  # Should be a valid user
-
-# 6. Check disk space
-df -h /opt/orchestrator  # Should have > 1GB free
-
-# 7. Verify Python path
-python3 -c "import sys; print(sys.path)"
-
-# 8. Test basic import
-python3 -c "from orchestration.agents import orchestrator; print('OK')"
+# 4. Re-render + reinstall if anything above looks wrong
+make install
 ```
+
+For harness-specific installation/rendering problems, see:
+- [docs/HARNESS-CLAUDE-TROUBLESHOOTING.md](../HARNESS-CLAUDE-TROUBLESHOOTING.md)
+- [docs/HARNESS-OPENCODE-TROUBLESHOOTING.md](../HARNESS-OPENCODE-TROUBLESHOOTING.md)
+
+(Copilot CLI, Codex, and π.dev do not yet have dedicated troubleshooting docs; if you
+hit a harness-specific problem there, treat the general sections below as your
+starting point.)
 
 ---
 
 ## Common Issues & Solutions
 
-### Issue 1: "ModuleNotFoundError: No module named 'orchestration'"
+### Issue: "Agent not found" / Orchestrator won't start
 
-**Symptoms:**
-```
-ModuleNotFoundError: No module named 'orchestration'
-```
+**Symptoms:** the harness reports it can't find the `orchestrator` agent, or invoking
+`--agent orchestrator` errors immediately.
 
-**Causes:**
-- `PYTHONPATH` not set correctly
-- Running from wrong directory
-- Project files not installed
+**Likely cause:** agent definitions weren't rendered/installed for this harness, or
+the install is stale relative to the repo.
 
-**Solutions:**
-
+**Fix:**
 ```bash
-# Option 1: Set PYTHONPATH explicitly
-export PYTHONPATH=/opt/orchestrator:$PYTHONPATH
-./bin/run-automation-controller.sh
-
-# Option 2: Run from project root
-cd /opt/orchestrator
-./bin/run-automation-controller.sh
-
-# Option 3: Verify installation
-python3 -c "import sys; sys.path.insert(0, '/opt/orchestrator'); from orchestration.agents import orchestrator; print('OK')"
-
-# Option 4: Check if files exist
-ls -la /opt/orchestrator/orchestration/agents/automation.py
+make install-<harness>       # e.g. make install-claude, make install-opencode
 ```
-
-**Prevention:**
-- Always source `.env` before running
-- Run from project root
-- Check entrypoint script sets PYTHONPATH
+Then re-run the harness-specific quick-start checks above.
 
 ---
 
-### Issue 2: "Queue directory not found or not writable"
+### Issue: A spawned sub-agent never returns / hangs
 
-**Symptoms:**
-```
-ERROR: Queue directory not found
-ERROR: Permission denied writing to queue
-```
+**Symptoms:** the Orchestrator (or any spawning agent) issued an Agent/Task tool call
+and it appears stuck.
 
-**Causes:**
-- Queue directory doesn't exist
-- Wrong ownership
-- Insufficient permissions
-- Disk space full
+**What this means under direct spawn:** there is no separate process to inspect —
+the spawning agent's context is blocked on that one tool call returning. There is no
+"check if the scheduler picked it up" step, because nothing is polling for it; the
+spawn call itself *is* the dispatch.
 
-**Solutions:**
-
-```bash
-# Check queue directory exists
-ls -la /opt/orchestrator/data/queue/
-
-# Create if missing
-mkdir -p /opt/orchestrator/data/queue/{incoming,done}
-
-# Fix ownership
-sudo chown -R orchestrator:orchestrator /opt/orchestrator/data
-
-# Fix permissions
-sudo chmod 755 /opt/orchestrator/data/queue/{incoming,done}
-sudo chmod 755 /opt/orchestrator/logs
-sudo chmod 755 /opt/orchestrator/metrics
-
-# Check disk space
-df -h /opt/orchestrator
-# If < 10%, free up space or increase volume
-
-# Verify writable
-touch /opt/orchestrator/data/queue/test.txt && rm /opt/orchestrator/data/queue/test.txt
-echo "Queue directory is writable"
-```
-
-**Prevention:**
-- Check permissions in deployment checklist
-- Monitor disk space weekly
-- Use `umask 0002` to ensure group writability
+**What to do:**
+1. If it's a single spawn, this is a genuine long-running task — let it finish, or
+   interrupt the session if your harness supports that.
+2. If it's one of several concurrent spawns (parallel delegation), treat the slow one
+   as a timeout: proceed with the results already in hand, mark
+   `result_aggregation_status: timed_out` in the aggregating HANDBACK, and record the
+   incomplete child in `children_failed` (see
+   [docs/AGENTS.md > Parallel Delegation](../AGENTS.md#parallel-delegation-direct-spawn-fan-out)).
 
 ---
 
-### Issue 3: "Polling loop not processing tasks"
+### Issue: Spawn depth or fan-out seems wrong / a cycle wasn't caught
 
-**Symptoms:**
-- DELEGATE files stay in `incoming` directory
-- No HANDBACK files created
-- `tasks_processed: 0` in metrics
+**Symptoms:** an agent re-delegated further than expected, spawned more than 5
+concurrent sub-agents, or delegated back to a role already in its own ancestry chain.
 
-**Causes:**
-- OrchestratorAgent not processing queue
-- Agent spawning failing silently
-- Invalid DELEGATE file format
-- AgentInvoker not available
-
-**Solutions:**
-
-```bash
-# 1. Enable debug logging
-LOG_LEVEL=DEBUG ./bin/run-automation-controller.sh
-
-# 2. Check DELEGATE file format
-head -20 /opt/orchestrator/data/queue/incoming/DELEGATE-*.yaml
-# Should have: handoff_type: DELEGATE, task_id, role, etc.
-
-# 3. Verify OrchestratorAgent initialization
-python3 << 'EOF'
-from orchestration.agents.orchestrator import OrchestratorAgent
-agent = OrchestratorAgent(queue_dir="/opt/orchestrator/data/queue")
-print(f"Queue dir: {agent.queue_dir}")
-print(f"Available: {agent.queue_manager is not None}")
-EOF
-
-# 4. Check AgentInvoker is available
-python3 -c "from orchestration.agents.invoke_agent import AgentInvoker; print('AgentInvoker available')"
-
-# 5. Test queue reading directly
-python3 << 'EOF'
-from orchestration.agents.orchestrator import QueueManager
-qm = QueueManager("/opt/orchestrator/data/queue")
-tasks = qm.list_pending_tasks()
-print(f"Pending tasks: {len(tasks)}")
-for task in tasks[:3]:
-    print(f"  - {task}")
-EOF
-
-# 6. Check for errors in logs
-grep -E "ERROR|FAILED|Exception" /opt/orchestrator/logs/automation-*.log | tail -20
-```
-
-**Prevention:**
-- Use provided sample DELEGATE files for testing
-- Validate DELEGATE format before deploying
-- Test with small batch before going to production
+**Important:** the depth-3 / fan-out-5 / ancestry limits in
+[src/AGENTS.md > Recursion Limits](../../src/AGENTS.md#recursion-limits) are a
+documented contract each agent's own definition must observe (via its `tools:`
+frontmatter grant — see
+[Tools-Frontmatter Permission Model](../../src/AGENTS.md#tools-frontmatter-permission-model)).
+**No harness currently enforces this mechanically** — if an agent's own definition or
+prompt doesn't respect the limit, nothing will stop it automatically. If you see a
+violation, it's a defect in that agent's behavior (or its definition), not a harness
+bug to route around. Report it against the offending agent's definition in
+`src/agents/`.
 
 ---
 
-### Issue 4: "High CPU usage / Spinning loop"
+### Issue: DELEGATE or HANDBACK looks malformed
 
-**Symptoms:**
-- CPU usage > 50% constantly
-- `automation` process consuming resources
-- High frequency polling without sleep
+**Symptoms:** a spawned agent reports it couldn't parse the DELEGATE it was given, or
+the spawning agent can't make sense of a HANDBACK it received.
 
-**Causes:**
-- `POLL_INTERVAL_SECONDS` too low
-- Queue always empty causing busy loop
-- Backoff not working correctly
-- Infinite loop in agent processing
-
-**Solutions:**
-
-```bash
-# 1. Check current poll interval
-grep POLL_INTERVAL /opt/orchestrator/.env
-# Default should be 5 seconds
-
-# 2. Increase poll interval
-echo "POLL_INTERVAL_SECONDS=10" >> /opt/orchestrator/.env
-sudo systemctl restart orchestrator-automation.service
-
-# 3. Monitor CPU after change
-top -p $(pgrep -f "run-automation-controller")
-
-# 4. Check if queue is genuinely empty
-find /opt/orchestrator/data/queue/incoming -type f | wc -l
-# If 0, then polling is correct (sleep between cycles)
-
-# 5. Check for infinite loops in logs
-grep -c "Cycle" /opt/orchestrator/logs/automation-*.log
-# High count = many cycles = spinning
-
-# 6. Profile the process
-python3 -m cProfile -s cumtime bin/run-automation-controller.sh 2>&1 | tail -30
-
-# 7. Temporary fix: Stop and restart with higher interval
-POLL_INTERVAL_SECONDS=30 ./bin/run-automation-controller.sh
-```
-
-**Prevention:**
-- Set `POLL_INTERVAL_SECONDS` to 5-10 seconds for most workloads
-- Monitor CPU usage in first week of deployment
-- Alert if CPU > 40% for extended period
+**Fix:**
+1. Check required fields against `orchestration/HANDOFF.md` (`handoff_type`, `task_id`,
+   `agent`/`role`, `scope`, `plan`, `success_criteria` for DELEGATE; `handoff_type`,
+   `task_id`, `status`, `output`/`deliverables`, `metrics` for HANDBACK).
+2. If the DELEGATE is genuinely incomplete or unclear, the receiving agent should
+   report `status: blocked` rather than guess — that's expected behavior, not a bug.
 
 ---
 
-### Issue 5: "Graceful shutdown not working / Process hangs"
+### Issue: Can't find the audit trail for a session
 
-**Symptoms:**
-- `SIGTERM` doesn't shut down process
-- Process doesn't respond to signals
-- Stuck in polling cycle
-- Manual `kill -9` required
+**Symptoms:** you expect a DELEGATE/HANDBACK pair under
+`~/.agentic-engineers/{harness}/{session-id}/queue/` and can't find it.
 
-**Causes:**
-- Signal handlers not installed
-- Thread blocking operations
-- Unresponsive agent processing
-- Sleep interrupted incorrectly
-
-**Solutions:**
-
+**Fix:**
 ```bash
-# 1. Get process PID
-PID=$(pgrep -f "run-automation-controller")
-echo "Process PID: $PID"
+# List every session queue root that does exist
+find ~/.agentic-engineers -path '*/queue' -type d | sort
 
-# 2. Send SIGTERM (graceful)
-kill -TERM $PID
-sleep 5
-# Wait up to 5 seconds for graceful shutdown
-
-# 3. Check if process still running
-if ps -p $PID > /dev/null; then
-    echo "Process still running, forcing kill..."
-    kill -9 $PID
-fi
-
-# 4. Verify shutdown
-ps -p $PID && echo "Failed to kill" || echo "Process terminated"
-
-# 5. Check logs for shutdown reason
-tail -50 /opt/orchestrator/logs/automation-*.log | grep -E "shutdown|SIGTERM|SIGINT"
-
-# 6. Test signal handling in isolation
-python3 << 'EOF'
-import signal
-import time
-
-def handler(sig, frame):
-    print(f"Received signal {sig}")
-    exit(0)
-
-signal.signal(signal.SIGTERM, handler)
-print(f"PID: {os.getpid()}, waiting for signal...")
-while True:
-    time.sleep(1)
-EOF
-
-# In another terminal: kill -TERM <pid>
-# Process should exit immediately
+# For Claude/Copilot, confirm your session-id
+echo $CLAUDE_SESSION_ID
+echo $COPILOT_SESSION_ID
 ```
-
-**Prevention:**
-- Always use `systemctl stop` instead of `kill -9`
-- Monitor shutdown logs
-- Set `SIGTERM_TIMEOUT=30` to allow graceful shutdown
-
----
-
-### Issue 6: "Metrics file not created / Metrics empty"
-
-**Symptoms:**
-- No metrics file in `/opt/orchestrator/metrics/`
-- Metrics file exists but is empty or invalid JSON
-- Cannot parse metrics
-
-**Causes:**
-- `METRICS_FILE` path wrong or not writable
-- Metrics not being collected
-- Metrics directory doesn't exist
-- Insufficient permissions
-
-**Solutions:**
-
-```bash
-# 1. Check metrics configuration
-grep METRICS_FILE /opt/orchestrator/.env
-
-# 2. Verify metrics directory exists and is writable
-mkdir -p /opt/orchestrator/metrics
-chmod 755 /opt/orchestrator/metrics
-touch /opt/orchestrator/metrics/test.json && rm /opt/orchestrator/metrics/test.json
-
-# 3. Check latest metrics file
-ls -lrt /opt/orchestrator/metrics/ | tail -5
-
-# 4. Validate metrics JSON
-python3 -m json.tool < /opt/orchestrator/metrics/metrics-*.json | head -50
-
-# 5. If empty, check if controller ran
-grep -E "cycles_completed|tasks_processed" /opt/orchestrator/logs/automation-*.log
-
-# 6. Run controller with explicit metrics file
-METRICS_FILE=/tmp/test-metrics.json ./bin/run-automation-controller.sh
-cat /tmp/test-metrics.json
-
-# 7. Check for write errors in logs
-grep -i "metrics\|write\|permission" /opt/orchestrator/logs/automation-*.log
-```
-
-**Prevention:**
-- Always create metrics directory before starting
-- Verify METRICS_FILE is set in .env
-- Check metrics file after first run
-
----
-
-### Issue 7: "Service appears unresponsive"
-
-**Symptoms:**
-```
-No new tasks being processed
-Logs seem stale
-```
-
-**Causes:**
-- Process crashed
-- Polling loop stuck
-- Queue directory permissions
-- Polling interval too long
-
-**Solutions:**
-
-```bash
-# 1. Check process is running
-ps aux | grep run-automation-controller.sh
-
-# 2. Check if logs are current
-ls -lt /opt/orchestrator/logs/automation-*.log | head -1
-date && tail -5 /opt/orchestrator/logs/automation-*.log
-
-# 3. Check queue directory permissions
-ls -la /opt/orchestrator/data/queue/
-
-# 4. Check for recent errors in logs
-grep -i "error\|exception\|traceback" /opt/orchestrator/logs/automation-*.log | tail -10
-
-# 5. Restart the service
-sudo systemctl restart orchestrator-automation.service
-
-# 6. Check systemd journal for startup issues
-sudo journalctl -u orchestrator-automation.service -n 50
-```
-
-**Prevention:**
-- Monitor log file timestamps regularly
-- Set up systemd auto-restart on failure
-- Configure appropriate polling intervals
-
----
-
-### Issue 8: "Memory usage growing / Memory leak"
-
-**Symptoms:**
-- Process memory usage increases over time
-- Eventually causes OOM (Out of Memory)
-- Server becomes unresponsive
-
-**Causes:**
-- OrchestratorAgent holding stale references
-- Queue not being cleaned up
-- Logs not being rotated
-- Task history accumulating in memory
-
-**Solutions:**
-
-```bash
-# 1. Monitor memory usage
-watch -n 5 'ps -o pid,vsz,rss,comm -p $(pgrep -f run-automation-controller)'
-
-# 2. Check memory over time
-ps aux | grep run-automation-controller
-
-# 3. Check if queue cleanup is working
-find /opt/orchestrator/data/queue/done -type f | wc -l
-# Should be steadily increasing or being archived
-
-# 4. Verify log rotation is enabled
-ls -lh /opt/orchestrator/logs/ | head -10
-# Should see multiple log files with dates, not one giant file
-current, peak = tracemalloc.get_traced_memory()
-print(f"Current: {current / 1024 / 1024:.1f} MB")
-print(f"Peak: {peak / 1024 / 1024:.1f} MB")
-EOF
-
-# 4. Rotate old logs to free space
-find /opt/orchestrator/logs -name "*.log" -mtime +7 -delete
-
-# 5. Set restart schedule (systemd)
-# Add to [Service] section:
-# Restart=on-failure
-# RestartSec=300
-
-# 6. Or use cron for periodic restart
-# 0 2 * * * /bin/systemctl restart orchestrator-automation.service
-
-# 7. Monitor with memory limit
-# Add to .env:
-# MEMORY_LIMIT=1024  # MB
-```
-
-**Prevention:**
-- Implement log rotation
-- Schedule periodic restarts (if needed)
-- Monitor memory weekly
-- Test with high task volumes
-
----
-
-### Issue 9: "DELEGATE files not moving to done directory"
-
-**Symptoms:**
-- Files remain in `incoming` directory
-- No corresponding files in `done` directory
-- Possible duplicate processing
-
-**Causes:**
-- QueueManager not moving files
-- Permission issues
-- File locking problems
-- Network issues (if NFS)
-
-**Solutions:**
-
-```bash
-# 1. Check file permissions
-ls -la /opt/orchestrator/data/queue/incoming/
-ls -la /opt/orchestrator/data/queue/done/
-
-# 2. Test file movement manually
-cp /opt/orchestrator/data/queue/incoming/DELEGATE-test.yaml \
-   /opt/orchestrator/data/queue/done/DELEGATE-test.yaml
-echo "Movement successful"
-
-# 3. Check QueueManager directly
-python3 << 'EOF'
-from orchestration.agents.orchestrator import QueueManager
-qm = QueueManager("/opt/orchestrator/data/queue")
-tasks = qm.list_pending_tasks()
-print(f"Pending: {len(tasks)}")
-EOF
-
-# 4. Check for NFS issues
-df /opt/orchestrator/data/queue
-# Verify mount is active and responsive
-
-# 5. Check for file locking
-fuser /opt/orchestrator/data/queue/done/DELEGATE-*.yaml
-
-# 6. Review logs for move operations
-grep -E "moving\|moving task\|done directory" /opt/orchestrator/logs/automation-*.log
-
-# 7. Manually clean up stale files
-ls -la /opt/orchestrator/data/queue/incoming/ | wc -l
-# If > 1000, consider cleanup strategy
-```
-
-**Prevention:**
-- Regular cleanup of old files
-- Monitor queue directory size
-- Implement file archive strategy
-
----
-
-### Issue 10: "Task failure rate high / Many escalations"
-
-**Symptoms:**
-- `tasks_failed` or `tasks_escalated` increasing
-- Agents not completing successfully
-- Agent spawn failures
-
-**Causes:**
-- Agent resources exhausted
-- Invalid task configuration
-- Agent code errors
-- Dependency missing
-
-**Solutions:**
-
-```bash
-# 1. Check failure metrics
-python3 << 'EOF'
-import json
-with open("/opt/orchestrator/metrics/metrics-*.json") as f:
-    m = json.load(f)["metrics"]
-    print(f"Processed: {m['tasks_processed']}")
-    print(f"Success: {m['tasks_success']}")
-    print(f"Failed: {m['tasks_failed']}")
-    print(f"Escalated: {m['tasks_escalated']}")
-    if m['tasks_processed'] > 0:
-        print(f"Success Rate: {m['tasks_success']/m['tasks_processed']*100:.1f}%")
-EOF
-
-# 2. Review agent logs
-ls -lrt /opt/orchestrator/logs/agent-* | tail -10
-grep -i error /opt/orchestrator/logs/agent-*.log
-
-# 3. Check DELEGATE file format
-head -20 /opt/orchestrator/data/queue/done/HANDBACK-*.yaml | grep -A 5 "status:"
-
-# 4. Increase agent resources
-# Modify .env or Docker resource limits
-
-# 5. Test agent directly
-python3 -m orchestration.agents.invoke_agent --help
-
-# 6. Review agent implementation for bugs
-python3 -c "from orchestration.agents.invoke_agent import AgentInvoker; print('OK')"
-```
-
-**Prevention:**
-- Validate DELEGATE format before deployment
-- Monitor failure rate continuously
-- Alert on > 5% failure rate
-- Test agents in staging first
-
----
-
-## Performance Optimization
-
-### Tuning for High Throughput
-
-```bash
-# Reduce polling interval
-POLL_INTERVAL_SECONDS=2
-
-# Increase batch processing
-BATCH_SIZE=10  # If supported
-
-# Optimize logging
-LOG_LEVEL=WARNING
-
-# Enable metrics caching
-METRICS_CACHE_INTERVAL=60
-```
-
-### Tuning for Low Resources
-
-```bash
-# Increase polling interval
-POLL_INTERVAL_SECONDS=30
-
-# Reduce logging verbosity
-LOG_LEVEL=ERROR
-
-# Enable memory-efficient mode
-EFFICIENT_MODE=true
-```
+If nothing has been recorded at all for a session that clearly did work, that's an
+audit-trail bug worth reporting — recording every DELEGATE (at spawn) and every
+HANDBACK (at completion) via `enqueue()` is mandatory, not optional cleanup (see
+[Audit-Trail Strategy](../../src/AGENTS.md#audit-trail-strategy)).
 
 ---
 
 ## Getting Help
 
-If issue persists after troubleshooting:
+If an issue persists after the steps above:
 
 1. **Collect diagnostic information:**
    ```bash
-   # Gather all relevant information
    echo "=== System Info ===" && uname -a
    echo "=== Python ===" && python3 --version
-   echo "=== Disk ===" && df -h /opt/orchestrator
-   echo "=== Processes ===" && ps aux | grep automation
-   echo "=== Recent Logs ===" && tail -100 /opt/orchestrator/logs/automation-*.log
-   echo "=== Configuration ===" && cat /opt/orchestrator/.env
+   echo "=== Harness health ===" && python3 -m src.harness.harness_checker --harness claude --json
+   echo "=== Queue roots ===" && find ~/.agentic-engineers -path '*/queue' -type d
    ```
-
-2. **Create bug report with:**
-   - Full error message and stack trace
-   - Steps to reproduce
-   - Configuration and environment
-   - Logs and diagnostic output
-
-3. **Contact infrastructure team with details**
+2. **File a bug report with:** the full error/output, the harness and command you ran,
+   and (if relevant) the DELEGATE/HANDBACK YAML from the audit trail.
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2024-05-03
-**Status**: Production Ready
+**Document Version**: 2.0
+**Last Updated**: 2026-08-09
+**Status**: Reflects the Direct Sub-Agent Spawn Execution Model; supersedes the
+Continuous Polling Loop Automation troubleshooting guide.

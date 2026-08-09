@@ -5,7 +5,9 @@ agent identity verification, audit logging, rate limiting, and budget enforcemen
 
 import pytest
 import json
+import re
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from datetime import datetime
 
@@ -491,6 +493,132 @@ class TestAuditLogging:
             # Query specific task
             task_events = logger.query_events(task_id='task-001')
             assert len(task_events) >= 1
+
+    def test_default_path_uses_canonical_harness_session_layout(self, tmp_path, monkeypatch):
+        """
+        Default (no explicit log_dir) resolves to
+        ~/.agentic-engineers/{harness}/{session-id}/audit/ via the shared
+        queue-isolation convention, NOT a flat ~/.agentic-engineers/audit/.
+
+        HOME is monkeypatched to tmp_path so this never touches the real
+        ~/.agentic-engineers/ directory.
+        """
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("AGENTIC_HARNESS", "test-harness")
+        monkeypatch.setenv("AGENTIC_SESSION_ID", "test-session-123")
+        # Ensure no other env var short-circuits harness/session detection
+        monkeypatch.delenv("CLAUDE_SESSION_ID", raising=False)
+        monkeypatch.delenv("COPILOT_SESSION_ID", raising=False)
+
+        logger = AuditLogger()
+
+        expected_dir = tmp_path / ".agentic-engineers" / "test-harness" / "test-session-123" / "audit"
+        assert logger.log_dir == expected_dir
+        assert logger.log_dir.exists()
+        # Never wrote outside the sandboxed HOME
+        assert str(logger.log_dir).startswith(str(tmp_path))
+
+    def test_default_path_falls_back_when_session_and_harness_unset(self, tmp_path, monkeypatch):
+        """
+        Local/dev fallback: with no AGENTIC_HARNESS / AGENTIC_SESSION_ID /
+        CLAUDE_SESSION_ID / COPILOT_SESSION_ID set, the logger still resolves
+        a valid canonical path (harness defaults to 'local', session_id is
+        generated) rather than erroring or writing to a flat legacy path.
+        """
+        monkeypatch.setenv("HOME", str(tmp_path))
+        for var in ("AGENTIC_HARNESS", "AGENTIC_SESSION_ID", "CLAUDE_SESSION_ID", "COPILOT_SESSION_ID"):
+            monkeypatch.delenv(var, raising=False)
+
+        logger = AuditLogger()
+
+        # harness/session-id/audit under the sandboxed HOME
+        relative = logger.log_dir.relative_to(tmp_path / ".agentic-engineers")
+        parts = relative.parts
+        assert len(parts) == 3  # {harness}/{session-id}/audit
+        assert parts[0] == "local"
+        assert parts[2] == "audit"
+        assert logger.log_dir.exists()
+
+    def test_log_filename_matches_events_date_pattern(self, tmp_path):
+        """Log filename must be events-YYYY-MM-DD.jsonl, not audit-YYYY-MM-DD.jsonl."""
+        logger = AuditLogger(log_dir=tmp_path)
+
+        assert re.fullmatch(r"events-\d{4}-\d{2}-\d{2}\.jsonl", logger.current_log.name)
+
+    def test_date_rollover_produces_new_file(self, tmp_path):
+        """When the computed 'today' file differs from the current one, rotation swaps to it."""
+        logger = AuditLogger(log_dir=tmp_path)
+        logger.log_delegate('task-rollover', {}, 'engineer')
+
+        original_log = logger.current_log
+        assert original_log.exists()
+
+        # Simulate a day boundary having passed by pointing current_log at a
+        # stale (yesterday) filename; _ensure_rotation must detect the
+        # mismatch against the freshly-computed 'today' file and roll over.
+        stale_log = logger.log_dir / "events-2000-01-01.jsonl"
+        logger.current_log = stale_log
+
+        logger._ensure_rotation()
+
+        assert logger.current_log == original_log
+        assert logger.current_log != stale_log
+
+    def test_entries_are_valid_one_json_object_per_line(self, tmp_path):
+        """Every non-empty line in the log file is exactly one valid JSON object."""
+        logger = AuditLogger(log_dir=tmp_path)
+
+        logger.log_delegate('task-a', {'effort': 'low'}, 'engineer')
+        logger.log_validation('task-a', {'passed': True, 'score': 88})
+        logger.log_security_check('task-a', 'entropy_detection', True, [])
+        logger.log_handback('task-a', {'tokens_in': 10, 'tokens_out': 20}, 'engineer', 'complete', 90)
+
+        lines = [
+            line for line in logger.current_log.read_text().splitlines() if line.strip()
+        ]
+        assert len(lines) == 4
+
+        for line in lines:
+            parsed = json.loads(line)  # raises if not valid JSON
+            assert isinstance(parsed, dict)
+            assert 'event_type' in parsed
+            assert 'checksum' in parsed
+
+    def test_concurrent_appends_do_not_corrupt_file(self, tmp_path):
+        """
+        Append-only writes from multiple threads must not interleave or
+        corrupt lines: total line count matches total writes, and every
+        line remains independently parseable as JSON.
+        """
+        logger = AuditLogger(log_dir=tmp_path)
+
+        writes_per_thread = 20
+        thread_count = 8
+
+        def worker(thread_idx):
+            for i in range(writes_per_thread):
+                logger.log_compliance_check(
+                    item=f"thread-{thread_idx}-item-{i}",
+                    check_type="CONCURRENCY_TEST",
+                    passed=True,
+                    details=f"t{thread_idx}-{i}",
+                )
+
+        with ThreadPoolExecutor(max_workers=thread_count) as pool:
+            list(pool.map(worker, range(thread_count)))
+
+        lines = [
+            line for line in logger.current_log.read_text().splitlines() if line.strip()
+        ]
+        assert len(lines) == thread_count * writes_per_thread
+
+        seen_items = set()
+        for line in lines:
+            parsed = json.loads(line)  # any corrupted/interleaved line fails here
+            assert parsed['event_type'] == 'COMPLIANCE_CHECK'
+            seen_items.add(parsed['item'])
+
+        assert len(seen_items) == thread_count * writes_per_thread
 
 
 class TestRateLimiter:

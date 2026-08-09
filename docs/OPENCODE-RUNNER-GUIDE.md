@@ -3,7 +3,16 @@
 
 ## Overview
 
-The TaskRunner is a queue-based task execution engine providing complete lifecycle management for the OpenCode runner infrastructure. It implements atomic state transitions, error handling with exponential backoff retry logic, and dead-letter queue functionality.
+The TaskRunner is a standalone, queue-based task execution engine (`src/opencode/runner.py`) providing complete lifecycle management for generic batch-style task processing. It implements atomic state transitions, error handling with exponential backoff retry logic, and dead-letter queue functionality.
+
+> **This is not how the Orchestrator dispatches DELEGATEs to sub-agents.** Orchestrator
+> dispatch uses direct sub-agent spawn (Agent/Task tool) — the Orchestrator builds a
+> DELEGATE and spawns the target agent directly, reading the HANDBACK back as the tool
+> result, with no poll loop in between. See
+> [src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
+> for that model. TaskRunner below is a separate, general-purpose primitive for anyone
+> who needs an actual polling batch-queue (e.g. background job processing); it is not
+> currently wired into the Orchestrator's own agent-routing path.
 
 ### Key Features
 
@@ -398,12 +407,17 @@ def handler(context):
 
 ## Integration Examples
 
-### With Orchestrator
+### Generic Worker-Loop Pattern (not Orchestrator agent dispatch)
+
+This shows how a consumer of TaskRunner might drain a batch queue with a worker loop.
+**This is not the pattern the Orchestrator uses to route DELEGATEs to agents** — that
+dispatch is a direct sub-agent spawn per task, not a poll loop (see the note in
+[Overview](#overview) above). Use this pattern only if you're building your own
+batch/background job consumer on top of TaskRunner:
 
 ```python
 from src.opencode.runner import TaskRunner
 
-# In Orchestrator main loop
 runner = TaskRunner.from_session()
 runner.initialize()
 
@@ -413,9 +427,8 @@ while True:
     
     for task_id in task_ids:
         def execute_task(context):
-            # Route to appropriate agent
-            agent = get_agent_for_role(context.metadata["role"])
-            return agent.execute(context)
+            # Your own task-handling logic goes here
+            return handle_task(context)
         
         result = runner.execute_task(task_id, execute_task)
         

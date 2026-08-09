@@ -80,12 +80,21 @@ def _try_import_queue_isolation():
 # ─────────────────────────────────────────────────────────────────────────────
 
 class PollingConfig:
-    """Configuration schema for polling intervals and heartbeat detection."""
+    """
+    Configuration schema for heartbeat/stall-detection and retry behavior.
+
+    NOTE (queue-polling removal, direct-spawn migration): this used to also
+    carry poll_interval_fast/poll_interval_idle/idle_threshold_polls/
+    deep_sleep_sec — sleep-interval knobs for run_idle_loop()/_deep_sleep()/
+    _deep_sleep_polling(), which have been removed (see poll_queue's
+    surrounding NOTE, above). Those fields have been removed too rather than
+    left as configuration nothing reads: they controlled sleep durations for
+    a loop that no longer exists, and keeping them would silently mislead
+    anyone tuning them into thinking they still affect runtime behavior.
+    """
 
     def __init__(
         self,
-        poll_interval_fast: int = 30,
-        poll_interval_idle: int = 180,
         heartbeat_interval: int = 30,
         heartbeat_timeout_sec: int = 120,
         task_deadline_sec: int = 600,
@@ -93,16 +102,12 @@ class PollingConfig:
         crash_threshold_sec: int = 600,
         retry_max_attempts: int = 3,
         retry_backoff_multiplier: float = 1.5,
-        idle_threshold_polls: int = 3,
-        deep_sleep_sec: int = 600,
         skill_improvement_threshold: int = 3,
     ):
         """
         Initialize polling configuration.
 
         Args:
-            poll_interval_fast: Polling interval when tasks are processing (seconds)
-            poll_interval_idle: Polling interval when queue is idle (seconds)
             heartbeat_interval: Expected interval between heartbeats (seconds, default 30s)
             heartbeat_timeout_sec: Max time without task update before stalled (seconds)
             task_deadline_sec: Max time in processing before marked crashed (seconds)
@@ -110,12 +115,8 @@ class PollingConfig:
             crash_threshold_sec: Threshold for ESCALATE (600s since claimed_at, LOCKED)
             retry_max_attempts: Max retries for crashed/stalled tasks
             retry_backoff_multiplier: Exponential backoff multiplier for retries
-            idle_threshold_polls: Consecutive clean polls before deep sleep
-            deep_sleep_sec: Max duration of deep sleep (seconds)
             skill_improvement_threshold: Min feedback count to trigger skill improvement task (default 3)
         """
-        self.poll_interval_fast = poll_interval_fast
-        self.poll_interval_idle = poll_interval_idle
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout_sec = heartbeat_timeout_sec
         self.task_deadline_sec = task_deadline_sec
@@ -123,15 +124,11 @@ class PollingConfig:
         self.crash_threshold_sec = crash_threshold_sec
         self.retry_max_attempts = retry_max_attempts
         self.retry_backoff_multiplier = retry_backoff_multiplier
-        self.idle_threshold_polls = idle_threshold_polls
-        self.deep_sleep_sec = deep_sleep_sec
         self.skill_improvement_threshold = skill_improvement_threshold
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary."""
         return {
-            "poll_interval_fast": self.poll_interval_fast,
-            "poll_interval_idle": self.poll_interval_idle,
             "heartbeat_interval": self.heartbeat_interval,
             "heartbeat_timeout_sec": self.heartbeat_timeout_sec,
             "task_deadline_sec": self.task_deadline_sec,
@@ -139,8 +136,6 @@ class PollingConfig:
             "crash_threshold_sec": self.crash_threshold_sec,
             "retry_max_attempts": self.retry_max_attempts,
             "retry_backoff_multiplier": self.retry_backoff_multiplier,
-            "idle_threshold_polls": self.idle_threshold_polls,
-            "deep_sleep_sec": self.deep_sleep_sec,
             "skill_improvement_threshold": self.skill_improvement_threshold,
         }
 
@@ -254,8 +249,6 @@ class OrchestratorSkill:
             f"OrchestratorSkill initialized: "
             f"session={self.session_id}, harness={self.harness}, "
             f"queue_root={self.queue_root}, "
-            f"poll_fast={self.config.poll_interval_fast}s, "
-            f"poll_idle={self.config.poll_interval_idle}s, "
             f"heartbeat_timeout={self.config.heartbeat_timeout_sec}s"
         )
 
@@ -674,17 +667,20 @@ class OrchestratorSkill:
         """
         Invoke Agent tool with full DELEGATE context.
 
-        In-harness integration: Uses AgentInvoker subprocess model to
-        invoke specialized agents (engineer, senior-engineer, lead-engineer, etc.)
-        based on DELEGATE role and complexity.
+        In-harness integration target: spawn specialized agents
+        (engineer, senior-engineer, lead-engineer, etc.) based on DELEGATE
+        role and complexity via the harness's native Agent tool.
 
         NOT YET IMPLEMENTED. Real agent invocation is a runtime harness
         capability: the OrchestratorSkill runs as an in-harness skill and
         cannot itself spawn subprocesses. The DELEGATE must instead be
         routed to the harness's Agent tool, which:
-        1. Spawns the agent subprocess via invoke_agent.py
-        2. Passes DELEGATE via stdin
-        3. Polls for HANDBACK file output
+        1. Spawns the sub-agent directly (no subprocess, no queue polling —
+           the subprocess-poll AgentInvoker model this docstring used to
+           describe has been removed; see docs/design/spawn-sub-agent-pattern.md
+           for the current direct-spawn design)
+        2. Passes the DELEGATE as the sub-agent's prompt/context
+        3. Receives the HANDBACK directly as the tool call result
         4. Returns the HANDBACK to orchestrator_skill.handle_handback()
 
         Args:
@@ -850,195 +846,27 @@ class OrchestratorSkill:
 
         return (recovered_count, failed_count)
 
-    def run_idle_loop(self) -> Dict[str, Any]:
-        """
-        Implement configurable polling sleep with deep sleep after N consecutive clean polls.
-
-        Behavior:
-        - If clean_poll_count < idle_threshold: sleep poll_interval_idle, return 'normal'
-        - If clean_poll_count >= idle_threshold: enter deep sleep, block until file system event or signal
-        - On wake: reset clean_poll_count = 0 and return 'file_event' or 'signal'
-
-        Uses configuration from PollingConfig:
-        - poll_interval_idle: seconds to sleep during normal polling
-        - idle_threshold_polls: consecutive clean polls before deep sleep
-        - deep_sleep_sec: max time to sleep in deep sleep
-
-        Returns:
-            Dict with keys:
-            - 'work_processed': int (always 0 in idle loop)
-            - 'idle_entered': bool (True if deep sleep was entered)
-            - 'wake_reason': str ('normal' | 'deep_sleep' | 'file_event' | 'signal')
-        """
-        if self.clean_poll_count >= self.config.idle_threshold_polls:
-            logger.info(
-                f"Queue idle ({self.config.idle_threshold_polls} clean polls), "
-                f"entering deep sleep ({self.config.deep_sleep_sec}s max)"
-            )
-            self.capture_span(
-                "idle_loop",
-                sleep_type="deep",
-                duration_sec=self.config.deep_sleep_sec,
-                idle_entered=True,
-            )
-
-            # Enter deep sleep - block until file system event or signal
-            wake_reason = self._deep_sleep()
-            self.clean_poll_count = 0
-
-            logger.info(f"Woken from deep sleep: {wake_reason}")
-
-            return {
-                'work_processed': 0,
-                'idle_entered': True,
-                'wake_reason': wake_reason,
-            }
-        else:
-            logger.debug(
-                f"Queue polling sleep ({self.config.poll_interval_idle}s, "
-                f"clean_poll_count={self.clean_poll_count}/{self.config.idle_threshold_polls})"
-            )
-            self.capture_span(
-                "idle_loop",
-                sleep_type="normal",
-                duration_sec=self.config.poll_interval_idle,
-                idle_entered=False,
-            )
-            time.sleep(self.config.poll_interval_idle)
-
-            return {
-                'work_processed': 0,
-                'idle_entered': False,
-                'wake_reason': 'normal',
-            }
-
-    def _deep_sleep(self) -> str:
-        """
-        Enter deep sleep and block until woken by file system event or signal.
-
-        Uses file system watching on the queue/incoming/ directory to detect
-        new DELEGATE files. Falls back to signal handling (SIGUSR1) if available.
-
-        Respects config.deep_sleep_sec as the maximum sleep duration.
-
-        Returns:
-            'file_event' if woken by new file in incoming/
-            'signal' if woken by SIGUSR1 signal
-            'timeout' if deep sleep timeout reached (config.deep_sleep_sec)
-        """
-        import select
-        import signal as sig
-
-        incoming_dir = self.queue_root / "incoming"
-        wake_reason = 'timeout'
-
-        # Setup SIGUSR1 handler
-        def signal_handler(signum, frame):
-            nonlocal wake_reason
-            wake_reason = 'signal'
-            logger.debug("Received SIGUSR1, waking from deep sleep")
-
-        old_handler = sig.signal(sig.SIGUSR1, signal_handler)
-
-        try:
-            # Try to use inotify if available (Linux)
-            try:
-                import inotify_simple
-                inotify = inotify_simple.INotify()
-                watch_fd = inotify.add_watch(str(incoming_dir), inotify_simple.flags.CREATE)
-
-                logger.debug(f"Watching {incoming_dir} for new files (inotify)")
-
-                # Wait for file creation event with timeout
-                start = time.time()
-                timeout_remaining = self.config.deep_sleep_sec
-
-                while timeout_remaining > 0:
-                    try:
-                        events = inotify.read(timeout=timeout_remaining)
-                        if events:
-                            logger.debug(f"File system event detected: {events}")
-                            wake_reason = 'file_event'
-                            break
-                    except Exception as e:
-                        logger.debug(f"inotify read error: {e}, retrying")
-
-                    if wake_reason == 'signal':
-                        break
-
-                    elapsed = time.time() - start
-                    timeout_remaining = self.config.deep_sleep_sec - elapsed
-
-                return wake_reason
-
-            except (ImportError, AttributeError):
-                # Fallback: polling-based deep sleep (no inotify available)
-                logger.debug(f"inotify not available, using polling-based deep sleep")
-                return self._deep_sleep_polling()
-
-        finally:
-            # Restore original signal handler
-            sig.signal(sig.SIGUSR1, old_handler)
-
-    def _deep_sleep_polling(self) -> str:
-        """
-        Fallback deep sleep using polling and signal handling.
-
-        Polls the incoming/ directory every 10 seconds for new files,
-        with overall timeout of config.deep_sleep_sec.
-
-        Returns:
-            'file_event' if new file detected
-            'signal' if SIGUSR1 received
-            'timeout' if timeout reached
-        """
-        import signal as sig
-
-        incoming_dir = self.queue_root / "incoming"
-        wake_reason = 'timeout'
-        poll_interval = 10  # seconds between checks
-
-        def signal_handler(signum, frame):
-            nonlocal wake_reason
-            wake_reason = 'signal'
-            logger.debug("Received SIGUSR1, waking from deep sleep")
-
-        old_handler = sig.signal(sig.SIGUSR1, signal_handler)
-
-        try:
-            # Get initial file list
-            initial_files = set(incoming_dir.glob("*.yaml"))
-            logger.debug(f"Initial incoming/ file count: {len(initial_files)}")
-
-            start = time.time()
-
-            while True:
-                if wake_reason == 'signal':
-                    break
-
-                # Check if timeout reached
-                elapsed = time.time() - start
-                if elapsed >= self.config.deep_sleep_sec:
-                    break
-
-                # Sleep for poll_interval or remaining time, whichever is smaller
-                remaining = self.config.deep_sleep_sec - elapsed
-                sleep_time = min(poll_interval, remaining)
-
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
-
-                # Check for new files
-                current_files = set(incoming_dir.glob("*.yaml"))
-                if len(current_files) > len(initial_files):
-                    logger.debug(f"New file(s) detected in incoming/")
-                    wake_reason = 'file_event'
-                    break
-
-            return wake_reason
-
-        finally:
-            sig.signal(sig.SIGUSR1, old_handler)
+    # NOTE (queue-polling removal, direct-spawn migration): run_idle_loop(),
+    # _deep_sleep(), and _deep_sleep_polling() have been removed. They
+    # implemented the harness-facing idle/backoff sleep mechanism (normal
+    # poll_interval_idle sleep, then deep sleep with inotify/signal/polling
+    # wake-up after idle_threshold_polls consecutive clean polls) that the
+    # now-deleted orchestrator-scheduler skill and harness idle_loop.py
+    # modules drove in a loop. Direct sub-agent spawning replaces that
+    # whole idle-triggered polling mechanism, so there is no longer a
+    # "sleep between polls" concern at this layer. PollingConfig's
+    # poll_interval_fast/poll_interval_idle/idle_threshold_polls/
+    # deep_sleep_sec fields have been removed too (see PollingConfig's
+    # class docstring) — they configured sleep durations for this now-gone
+    # mechanism and nothing in this file consumed them.
+    #
+    # poll_queue(), claim_task(), wake_timer(), detect_stalled_tasks(), and
+    # recover_stalled_tasks() are KEPT: none of them loop or sleep
+    # themselves — they each process the queue's CURRENT state once and
+    # return, exactly like OrchestratorAgent._process_task() in
+    # src/orchestration/agents/orchestrator.py. The repeated re-invocation
+    # that turned poll_queue() into "polling" was external (the deleted
+    # scheduler/idle_loop), not part of this method.
 
     def invoke_qe_gate(self, task_id: str, handback: Dict[str, Any]) -> bool:
         """

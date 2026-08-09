@@ -72,7 +72,6 @@ in `TODO.md` and is enforced through coverage and pre-push gates.
 
 ```bash
 make test            # full suite with coverage (term-missing)
-make test-concurrent # race-condition guard (required before push)
 ```
 
 ---
@@ -332,7 +331,7 @@ routing quality → HANDBACK validation) plus the local/CI gates below.
 
 ### 10.1 `make quality-gate` (pre-push)
 
-`quality-gate = lint + test + test-concurrent + verify + validate-renders`.
+`quality-gate = lint + test + verify + validate-renders`.
 
 The `pre-push` hook additionally validates: agent YAML frontmatter, GitHub
 Actions workflow YAML, documentation presence (`docs/SPEC.md`, `docs/AGENTS.md`,

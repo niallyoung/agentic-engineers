@@ -1,15 +1,15 @@
 # Agent Roster & Handover Packet Protocol
 
-> **Architecture:** Queue-based DELEGATE/HANDBACK — all work enters the queue; no direct agent-to-agent calls.  
-> **Autonomy mode:** Reduced — agents pause when the queue is empty rather than inventing new work.  
+> **Architecture:** Direct sub-agent spawn DELEGATE/HANDBACK — the spawning agent (Orchestrator, or another role with spawn authority) constructs a DELEGATE block and passes it directly as the prompt of a sub-agent spawn (the harness's Agent/Task tool); the HANDBACK returns synchronously as that tool call's result, in-context. Every DELEGATE and HANDBACK is *also* durably recorded to the filesystem queue as an audit trail — the queue records what happened, it no longer drives dispatch. See [Direct Sub-Agent Spawn Execution Model](#direct-sub-agent-spawn-execution-model).  
+> **Autonomy mode:** Reduced — agents pause when there is no pending or in-flight delegated work, rather than inventing new work.  
 > **Model selection:** Informed by the Model Engineer feedback loop; see [`src/skills/roles/model-engineer.md`](skills/roles/model-engineer.md).
 
 ---
 
 ## Philosophy
 
-- **Queue-first** — every task enters `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
-- **enqueue() is mandatory** — ALL DELEGATEs and HANDBACKs MUST be created via `QueueOperations.enqueue()` (the `queue-management` skill). Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
+- **Direct spawn, not ad-hoc** — every task is delegated by constructing a DELEGATE block and passing it directly as the prompt of a sub-agent spawn (the harness's Agent/Task tool); there is no free-form delegation outside this mechanism, and only agents whose frontmatter grants `spawn_subagent` may do it (see [Tools-Frontmatter Permission Model](#tools-frontmatter-permission-model))
+- **Audit-first, not dispatch-first** — every DELEGATE (at spawn) and every HANDBACK (at completion) MUST be durably recorded via `QueueOperations.enqueue()` (the `queue-management` skill) to `~/.agentic-engineers/{harness}/{session-id}/queue/`. This is bookkeeping written *after* the spawn already happened directly — nothing polls these directories to trigger work. Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
 - **Reduced autonomy** — agents pause when the queue is empty; they do NOT invent work
 - **Start cheap, escalate deliberately** — route to the cheapest capable model; upgrade only when blocked
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
@@ -195,22 +195,21 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 **Purpose:** Entry point for all user requests. Routes work via the decision tree. Never implements.
 
 **Capabilities:**
-- Parse incoming requests and create DELEGATE blocks **via `queue-management` skill (`enqueue()`)**
-- Route tasks to the correct role using routing rules above
-- Fan out parallel DELEGATEs when tasks are independent
-- Poll `~/.agentic-engineers/{harness}/{session-id}/queue/done/` for HANDBACKs and update `TODO.md`
-- Re-delegate ESCALATION packets at the higher tier
+- Parse incoming requests and construct DELEGATE blocks
+- Route tasks to the correct role using routing rules above, then **spawn the target agent directly** (Agent/Task tool) with the DELEGATE block as its prompt
+- Fan out parallel DELEGATEs when tasks are independent — up to **5 concurrent sub-agent spawns** per parent (see [Recursion Limits](#recursion-limits))
+- Receive each HANDBACK directly as the spawn call's result, in-context, and update `TODO.md`
+- Record every DELEGATE (at spawn) and every HANDBACK (at completion) to the queue via `enqueue()`, for audit — after dispatch, never instead of it
+- Re-delegate ESCALATION packets at the higher tier via direct spawn, subject to the same depth/ancestry checks as any other DELEGATE
 - Summarise squad status as tables (not prose)
 
-**MANDATORY — Creating DELEGATEs:**
-All DELEGATEs MUST be created via `QueueOperations.enqueue()` from the `queue-management` skill.  
+**MANDATORY — Auditing DELEGATEs and HANDBACKs:**
+Dispatch itself is a **direct sub-agent spawn** — the Orchestrator passes the DELEGATE block straight into the Agent/Task tool call and gets the HANDBACK back as that call's result. Separately, and in addition, every DELEGATE (at spawn time) and every HANDBACK (at completion) MUST be durably recorded via `QueueOperations.enqueue()` from the `queue-management` skill. This is the audit trail, not the transport — nothing polls the target directory to discover or trigger work.  
 Direct file writes to queue directories are forbidden and bypass schema validation.
 
 ```python
-# Correct — use enqueue() via queue-management skill
-from skills.queue_management.scripts.queue_ops import QueueOperations
-ops = QueueOperations(session_id=session_id)
-ops.enqueue({
+# Correct — spawn directly (dispatch), then enqueue() the record (audit)
+delegate_block = {
     "handoff_type": "DELEGATE",
     "task_id": "my-task-001",
     "agent": "engineer",         # NOT "role": "Engineer"
@@ -218,7 +217,13 @@ ops.enqueue({
     "plan": ["step 1 ...", "step 2 ..."],
     "context": "...",
     "success_criteria": ["criterion 1"],
-})
+}
+handback = spawn_agent(agent="engineer", prompt=delegate_block)   # direct spawn — this IS dispatch
+
+from skills.queue_management.scripts.queue_ops import QueueOperations
+ops = QueueOperations(session_id=session_id)
+ops.enqueue(delegate_block)   # audit record of the DELEGATE, written after dispatch
+ops.enqueue(handback)         # audit record of the HANDBACK, written after completion
 
 # FORBIDDEN — never write directly to queue dirs
 # open("~/.agentic-engineers/.../incoming/my-task.json", "w")  # NO
@@ -228,11 +233,12 @@ ops.enqueue({
 - Write code, edit files, or run tests
 - Make architecture or security decisions
 - Hold state across sessions (use `TODO.md` and the queue)
-- Write DELEGATE or HANDBACK files directly to the queue directory (always use `enqueue()`)
+- Write DELEGATE or HANDBACK files directly to the queue directory (always use `enqueue()` for the audit record)
+- Spawn beyond the recursion limits (max depth 3, max 5 concurrent sub-agents per parent) — refuse and return `status: blocked`/`escalate` instead of silently proceeding (see [Recursion Limits](#recursion-limits))
 
 **Escalation triggers:** None — the Orchestrator is the top of the routing chain. If the user's request requires human input (security/compliance critical, budget exceeded), pause and surface to the user.
 
-**Pause condition:** Queue empty → Orchestrator PAUSES. Does not invent new work.
+**Pause condition:** No pending DELEGATEs and no outstanding sub-agent spawns awaiting a HANDBACK → Orchestrator PAUSES. Does not invent new work.
 
 ---
 
@@ -411,8 +417,9 @@ ops.enqueue({
 
 ## Handover Packet Protocol
 
-All work is delegated via a **DELEGATE block** written to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml`.  
-On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml`.
+All work is delegated via a **DELEGATE block** — constructed by the spawning agent and passed directly as the prompt of a sub-agent spawn call (the harness's Agent/Task tool). On completion, the receiving agent returns a **HANDBACK block** directly as that spawn call's result, in-context; the spawning agent never polls or reads a file to get it.
+
+Every DELEGATE and HANDBACK is *also* durably recorded to the filesystem queue as an audit trail (`~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml` and `.../queue/done/TASK-NNN-handback.yaml` respectively) — this is bookkeeping for audit and crash-recovery, not the transport. Nothing polls these paths to trigger work; see [Audit-Trail Strategy](#audit-trail-strategy).
 
 ### DELEGATE Block Format
 
@@ -420,7 +427,8 @@ On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{harn
 > **Deprecated:** `type: DELEGATE` — use `handoff_type: DELEGATE` instead. Files using `type:` will pass with a deprecation warning; the field will become an error in the next major version.
 
 ```yaml
-# File: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
+# Passed directly as the sub-agent spawn prompt (dispatch).
+# Audit copy also written to: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
 ---
 task_id: my-task-identifier    # kebab-case, 3-50 chars (^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$)
 handoff_type: DELEGATE         # canonical discriminator (NOT type:)
@@ -455,10 +463,17 @@ budget: 0.09                   # $ ceiling based on model + estimate
 priority: 5                    # 1 (lowest) - 10 (highest)
 deadline: "2026-06-08T18:00:00Z"
 dependencies: []               # task_ids that must complete first
+ancestry: [orchestrator]       # chain of agent roles from root to this DELEGATE's
+                                # spawning parent, inclusive. REQUIRED whenever the
+                                # spawning agent was itself spawned (depth > 0) — used
+                                # to enforce max delegation depth and detect cycles.
+                                # See Recursion Limits.
 ```
 
 > **Required core fields:** `task_id`, `handoff_type`, `agent`, `skill`, `scope` (>=15 words),
-> `plan` (>=2 steps, each >=3 words), `success_criteria` (>=1 item), `context` (>=20 words or non-empty array).  
+> `plan` (>=2 steps, each >=3 words), `success_criteria` (>=1 item), `context` (>=20 words or non-empty array).
+> This core schema is unchanged by the direct-spawn execution model — `ancestry` above is an
+> additive, forward-compatible extension field, not a redesign of the required core.
 >
 > **Valid agents:** `orchestrator`, `engineer`, `senior-engineer`, `lead-engineer`,
 > `principal-engineer`, `security-engineer`, `quality-engineer`, `model-engineer`
@@ -472,7 +487,8 @@ Required core fields: `task_id`, `status`, `output`, `metrics` (with `quality`, 
 > **Deprecated:** `type: HANDBACK` — use `handoff_type: HANDBACK` instead (same migration as DELEGATE).
 
 ```yaml
-# File: ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
+# Returned directly as the spawn call's result (dispatch), in-context.
+# Audit copy also written to: ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
 ---
 task_id: my-task-identifier    # must match the originating DELEGATE's task_id
 handoff_type: HANDBACK         # canonical discriminator (NOT type:)
@@ -534,9 +550,11 @@ recommended_focus:
   - Specific area 2 to investigate
 ```
 
-The Orchestrator reads this ESCALATION block from the HANDBACK, creates a new DELEGATE block
+The agent that receives this HANDBACK (the Orchestrator, or whichever role spawned the
+escalating agent) reads the ESCALATION block in-context, constructs a new DELEGATE block
 targeting `to_role` (using `handoff_type: DELEGATE` and `agent: principal-engineer`) with the
-escalation content inlined in `context`.
+escalation content inlined in `context` and its own role appended to `ancestry`, and spawns
+`to_role` directly — subject to the same depth/fan-out/cycle checks as any other spawn.
 
 ---
 
@@ -577,48 +595,166 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 
 ---
 
-## Queue-Based Execution Model
+## Direct Sub-Agent Spawn Execution Model
+
+> **Why this changed:** the framework previously specified an Orchestrator that polled a
+> filesystem queue every 30–60 seconds, claimed tasks, and spawned agents as subprocesses
+> correlated by HANDBACK files. An audit of 16 live session partitions found **zero tasks**
+> ever traversed the queue that way — every real delegation happened via a direct sub-agent
+> spawn instead, with the polling loop dead code alongside it. This section documents the
+> model that was actually running, and closes the gap between spec and behavior. The queue
+> is retained — see [Audit-Trail Strategy](#audit-trail-strategy) — but as a durable record,
+> not a dispatch mechanism. This also satisfies `docs/SPEC.md`'s "NO Python scripts for
+> queue management" constraint: there is no longer a polling script whose job is to manage
+> the queue as a work source.
 
 ### Full Flow
 
 ```
-1.  User drops DELEGATE into ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
-    (or Orchestrator generates DELEGATE from a user request)
+1.  User request arrives, or the current agent generates a DELEGATE from prior
+    HANDBACK output (e.g. re-delegating remaining work, or an ESCALATION)
 
-2.  Orchestrator polls queue → reads TASK-NNN.yaml → applies routing rules
+2.  The spawning agent applies routing rules and selects the target role
 
-3.  Orchestrator fans out DELEGATEs for independent tasks in parallel
+3.  The spawning agent SPAWNS the target agent directly (Agent/Task tool),
+    passing the DELEGATE block as the sub-agent's prompt. For independent
+    tasks, it fans out multiple spawns in parallel — up to 5 concurrent per
+    parent (see Recursion Limits)
 
-4.  Each agent:
+4.  Each spawned agent:
       a. ACKs the task (first output)
       b. Loads its skill file from skill_refs
-      c. Performs work
-      d. Writes HANDBACK to ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
+      c. Performs work — and MAY itself spawn further sub-agents if its own
+         frontmatter grants `spawn_subagent` (see Tools-Frontmatter Permission
+         Model), subject to the same depth/fan-out/cycle checks
+      d. Returns a HANDBACK directly, as the result of the spawn call — there
+         is no file to write and nothing to poll for this step to complete
 
-5.  Quality Engineer validates the HANDBACK:
+5.  Quality Engineer validates the HANDBACK (spawned directly, like any role):
       - Checks acceptance_criteria are met
       - Runs repro command to verify
       - Populates metrics.quality (0.0–1.0) in the HANDBACK
 
-6.  Model Engineer analyses HANDBACK metrics:
+6.  Model Engineer analyses HANDBACK metrics (spawned directly):
       - Compares tokens used vs. estimated across task history
       - Emits model/effort recommendation if drift detected
 
-7.  Orchestrator reads HANDBACK status:
-      - COMPLETE   → mark TASK-NNN done in TODO.md
-      - PARTIAL    → re-delegate remaining work
-      - BLOCKED    → surface to user with blocker detail
-      - ESCALATE   → re-delegate ESCALATION block at higher tier
+7.  The spawning agent reads the HANDBACK it just received, in-context:
+      - success    → mark TASK-NNN done in TODO.md
+      - partial    → re-delegate remaining work (direct spawn)
+      - blocked    → surface to user with blocker detail
+      - escalate   → re-delegate the ESCALATION block at the higher tier (direct spawn)
 
-8.  If queue empty → Orchestrator PAUSES
+8.  Every DELEGATE (at spawn) and every HANDBACK (at completion) is durably
+    recorded to the queue via enqueue() — the audit trail. No step above
+    depends on a file existing in incoming/, processing/, or done/; the queue
+    is written to, never read from, for control flow
+
+9.  If no pending DELEGATEs and no outstanding spawns remain → the
+    Orchestrator PAUSES
 ```
+
+### Recursion Limits
+
+Direct spawn removes the natural throttling a polling loop provided — a queue nobody
+drains just grows silently, but a spawn chain nobody bounds recurses actively. These
+limits are load-bearing, not advisory:
+
+- **Max delegation depth: 3.** Depth is measured in spawn hops from the root DELEGATE
+  (depth 0 = the Orchestrator's own top-level DELEGATE; each direct spawn increments
+  depth by 1). An agent operating at depth 3 MUST NOT itself spawn — it executes or
+  refuses; it does not re-delegate further. This is *why* Engineer and Quality Engineer
+  never need `spawn_subagent`: every routing path in this document reaches them at the
+  final hop, and they are meant to be the leaf regardless of what depth they are
+  reached at.
+- **Max fan-out: 5 concurrent sub-agents per parent.** A single agent may have at most 5
+  spawns in flight at once. Additional independent work waits for one of the first 5 to
+  complete (or is grouped into a consolidating DELEGATE); it is never spawned as a 6th
+  concurrent call.
+- **Ancestry tracking (cycle detection).** Every DELEGATE issued by an agent that was
+  itself spawned (depth > 0) MUST set the `ancestry` extension field: the ordered list
+  of agent roles from the root to this DELEGATE's spawning parent, inclusive (see the
+  DELEGATE schema above). Before spawning, the spawning agent checks whether the target
+  role already appears in its own ancestry chain. If it does, that is a cycle — e.g.
+  Senior Engineer escalates to Lead Engineer, and Lead Engineer's implementation
+  DELEGATE incorrectly targets `senior-engineer` again for the same task — and the spawn
+  MUST be refused.
+
+**What an agent does when a limit is hit:** it stops; it does not silently proceed and
+it does not silently drop the work. It returns a HANDBACK with `status: blocked` (the
+limit is procedural and likely resolvable by consolidating or restructuring the
+remaining fan-out) or `status: escalate` (the limit indicates a design problem — a
+genuine cycle, or a task that fundamentally needs more than 3 hops — that a human or a
+higher-tier agent must resolve), with `output` stating which limit was hit and why. The
+agent that receives that HANDBACK decides how to proceed; the refusing agent never
+invents a workaround (e.g. spawning "just one more" past the limit) on its own.
+
+### Tools-Frontmatter Permission Model
+
+A documented depth limit that every agent could ignore is not a limit. Enforcement lives
+in each agent's own definition, via a `tools:` frontmatter key:
+
+```yaml
+tools:
+  - spawn_subagent      # this agent's definition grants sub-agent spawn authority
+```
+
+or, for an agent with no spawn authority:
+
+```yaml
+tools: []
+```
+
+An agent may invoke the Agent/Task tool to spawn a sub-agent **only if** `spawn_subagent`
+is present in its *own* `tools:` list — checked against the receiving agent's definition,
+not the DELEGATE it was handed. A DELEGATE cannot grant spawn authority that the
+receiving agent's frontmatter doesn't already have.
+
+| Role | `tools:` | Why |
+|---|---|---|
+| Orchestrator | `[spawn_subagent]` | Root of every delegation chain; must be able to route to any specialist |
+| Senior Engineer | `[spawn_subagent]` | Delegates sub-tasks to Engineer directly, or escalates to Lead/Principal/Security (Role Definitions §3) |
+| Lead Engineer | `[spawn_subagent]` | Produces implementation DELEGATEs for Engineer/Senior after an architecture decision (Role Definitions §4) |
+| Principal Engineer | `[spawn_subagent]` | Produces implementation DELEGATEs for Engineer/Senior after a cross-service finding (Role Definitions §7) |
+| Security Engineer | `[spawn_subagent]` | Produces implementation DELEGATEs for Engineer/Senior for each audit finding (Role Definitions §8) |
+| Model Engineer | `[]` | Recommendations only — writes to `src/TOKEN_METRICS.md` and returns its HANDBACK to whoever spawned it; never delegates |
+| Engineer | `[]` | Leaf by design — this is what actually enforces the depth bound at the cheapest tier. Escalates via HANDBACK `status: escalate`; never re-delegates itself |
+| Quality Engineer | `[]` | Leaf by design — "produce DELEGATE blocks if issues are found" (Role Definitions §5) means the *content* is embedded in QE's own HANDBACK for the spawning agent to act on, not that QE spawns it itself |
+
+Since Lead/Principal/Security/Senior sit at depth 1–2 on the routing paths in the
+Delegation Model diagram above, and Engineer/QE/Model Engineer are always reached at the
+deepest hop of their respective paths, the grant table and the depth-3 limit are two
+independent mechanisms enforcing the same invariant — the frontmatter grant is the one
+that actually *stops* a leaf agent from attempting a spawn, regardless of what depth it
+believes it is at.
+
+### Audit-Trail Strategy
+
+Dispatch no longer touches the filesystem queue, so the queue's contents no longer imply
+that work happened — the audit trail is now an explicit obligation, not a side effect:
+
+- **At spawn (dispatch time):** the spawning agent MUST `enqueue()` the DELEGATE block to
+  `.../queue/incoming/TASK-NNN.yaml` at or immediately after the spawn call.
+- **At completion:** the spawning agent MUST `enqueue()` the HANDBACK it received to
+  `.../queue/done/TASK-NNN-handback.yaml` as soon as the spawn call returns.
+- **At Quality Engineer verdict:** in addition to the general HANDBACK recording above, a
+  QE `status: success`/`failure` verdict is recorded so the audit trail distinguishes
+  "work happened" from "work was verified" — this is what audit/monitoring tooling (e.g.
+  the `consistency-checker` and `session-analyzer` skills) reads to reconstruct what
+  actually ran, since it can no longer observe dispatch directly.
+
+If a DELEGATE or HANDBACK is not enqueued, it did not happen as far as the audit trail,
+cost tracking (Model Engineer), and crash-recovery tooling are concerned — even though the
+work itself completed in-context. Treat the `enqueue()` call as part of the spawn, not as
+optional cleanup afterward.
 
 ### Pause Condition
 
-The Orchestrator **pauses** when `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` is empty.  
-It does NOT invent new work. This is by design — reduced autonomy prevents runaway scope.
+The Orchestrator **pauses** when it has no pending DELEGATEs to issue and no outstanding
+sub-agent spawns awaiting a HANDBACK. It does NOT invent new work. This is by design —
+reduced autonomy prevents runaway scope.
 
-To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
+To resume: give the Orchestrator a new request, or add a task to `TODO.md`.
 
 ---
 
@@ -627,7 +763,8 @@ To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
 ### Example 1 — Simple File Edit (Engineer)
 
 ```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-101.yaml
+# Spawned directly as the Engineer sub-agent's prompt.
+# Audit copy: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-101.yaml
 ---
 task_id: task-101-postal-validation
 handoff_type: DELEGATE
@@ -721,7 +858,8 @@ escalation:
 **Step 2: Orchestrator re-delegates to Senior Engineer**
 
 ```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-202-senior.yaml
+# Spawned directly as the Senior Engineer sub-agent's prompt (re-delegation after ESCALATE).
+# Audit copy: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-202-senior.yaml
 ---
 task_id: task-202-senior-payment-arch
 handoff_type: DELEGATE
@@ -776,7 +914,8 @@ the updated `processor.py` call site.
 ### Example 3 — Security Audit (Security Engineer)
 
 ```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-303.yaml
+# Spawned directly as the Security Engineer sub-agent's prompt.
+# Audit copy: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-303.yaml
 ---
 task_id: task-303-jwt-refresh-audit
 handoff_type: DELEGATE
@@ -842,7 +981,8 @@ MODEL_USED: claude-opus-4.8
 ### Example 4 — Post-Implementation Validation (Quality Engineer)
 
 ```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-404-qe.yaml
+# Spawned directly as the Quality Engineer sub-agent's prompt.
+# Audit copy: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-404-qe.yaml
 ---
 task_id: task-404-qe-address-validation
 handoff_type: DELEGATE

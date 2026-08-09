@@ -4,7 +4,7 @@ A guide to efficiently assign AI agents (Anthropic Opus, Sonnet, Haiku) across 8
 
 **Primary Entry Point:** Orchestrator (Haiku, low effort) routes all work to specialists based on task complexity and requirements.
 
-**Queue-Based Delegation:** Orchestrator polls `artifacts/queue/incoming/` and manages work via queue system (incoming → processing → done). See [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md).
+**Direct Sub-Agent Spawn Delegation:** Orchestrator builds a DELEGATE and spawns the target agent directly (Agent/Task tool), reading the HANDBACK back as the tool result. The queue is retained as a durable audit trail — every DELEGATE and HANDBACK is recorded via `enqueue()` — but it no longer drives dispatch. See [src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) and [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md).
 
 **Optimization Loop:** Engineer → Quality Engineer → Model Engineer → Orchestrator (improved routing for future similar tasks).
 
@@ -105,11 +105,10 @@ For detailed guidance, decision trees, and examples, see [SPEC.md > Model Select
 
 **Mandatory Constraints:**
 
-**QUEUE-BASED ROUTING** (see [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)):
-- ALL work flows through queue: `artifacts/queue/incoming/ → processing/ → done/`
-- Orchestrator (running in harness) polls every 30-60 seconds and routes per decision tree
-- DELEGATE stored in `artifacts/delegates/YYYY-MM-DD/` for reference
-- HANDBACK stored in `artifacts/queue/processing/` (then moved to done/ after QE review)
+**DIRECT SUB-AGENT SPAWN ROUTING** (see [src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model)):
+- Orchestrator builds a DELEGATE and spawns the target role directly (Agent/Task tool), passing the DELEGATE block as the sub-agent's prompt, and reads the HANDBACK back as the tool result — no polling loop is involved
+- Every DELEGATE (at spawn) and every HANDBACK (at completion) is durably recorded to the queue via `enqueue()` for audit purposes; the queue is written to, never read from, for control flow (see [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md))
+- DELEGATE audit copy stored under `.../queue/incoming/TASK-NNN.yaml`; HANDBACK audit copy stored under `.../queue/done/TASK-NNN-handback.yaml`
 
 **PLANNING & ESCALATION**:
 - Engineer MUST NOT receive task without pre-written `plan` in DELEGATE (except trivial fixes)
@@ -118,7 +117,7 @@ For detailed guidance, decision trees, and examples, see [SPEC.md > Model Select
 
 **ORCHESTRATOR CONSTRAINTS**:
 - Orchestrator MUST NOT perform work (only route, coordinate, apply recommendations)
-- Orchestrator runs in harness via polling loop (no external cron/tools)
+- Orchestrator runs in-harness; it spawns sub-agents directly and PAUSES when it has no pending DELEGATEs to issue and no outstanding sub-agent spawns awaiting a HANDBACK (no external cron/scheduler/tools — see [src/AGENTS.md > Pause Condition](../src/AGENTS.md#pause-condition))
 - ALL execution work delegated to appropriate role via DELEGATE/HANDBACK
 
 **ROLE-SPECIFIC RULES**:
@@ -129,7 +128,7 @@ For detailed guidance, decision trees, and examples, see [SPEC.md > Model Select
 
 **Routing Decision Tree (for Orchestrator):**
 
-When Orchestrator polls `artifacts/queue/incoming/` and finds a new task:
+When the Orchestrator receives a new task (from the user, or a re-delegation generated from a prior HANDBACK):
 
 1. Is task security-scoped? → **Security Engineer** (see [SKILLS.md](SKILLS.md) > Security Engineer Skills)
 2. Is task cross-service architecture (affects >2 repos)? → **Principal Engineer** (see [SKILLS.md](SKILLS.md) > Principal Engineer Skills)
@@ -138,12 +137,13 @@ When Orchestrator polls `artifacts/queue/incoming/` and finds a new task:
 5. Is task well-planned, low-medium complexity? → **Engineer** (see [SKILLS.md](SKILLS.md) > Engineer Skills)
 6. Otherwise → Escalate to human (unclear scope)
 
-**For each route:** Orchestrator creates DELEGATE block with mandatory fields:
+**For each route:** Orchestrator creates a DELEGATE block with mandatory fields:
 - `role`, `model`, `effort` (from AGENTS.md columns)
 - `plan` (pre-written concrete steps, required for Engineer)
 - `scope`, `context`, `success_criteria` (see HANDOFF.md for format)
-- Store DELEGATE in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
-- Move task to `processing/` and await HANDBACK
+- Spawns the target role directly (Agent/Task tool), passing the DELEGATE block as the sub-agent's prompt
+- Records the DELEGATE to the queue via `enqueue()` (audit trail) at or immediately after the spawn call
+- Reads the HANDBACK back as the result of the spawn call itself — there is no `processing/` move or poll wait involved
 
 **Handoff Protocol (Mandatory):**
 All agent-to-agent work transfer uses structured DELEGATE/HANDBACK markup blocks (see [HANDOFF.md](HANDOFF.md) for format). Markup enables:
@@ -528,20 +528,29 @@ Measured quarterly; adjust if cost targets drift.
 
 ---
 
-## Parallel Delegation (Phase 2 Feature)
+## Parallel Delegation (Direct Spawn Fan-Out)
 
-**New in Phase 2:** Agents can now decompose work into parallel sub-tasks without routing through the Orchestrator. This reduces Orchestrator bottleneck by 60-70% and enables true parallel execution.
+Any agent whose `tools:` frontmatter grants `spawn_subagent` (see
+[src/AGENTS.md > Tools-Frontmatter Permission Model](../src/AGENTS.md#tools-frontmatter-permission-model))
+can decompose its assigned task into independent sub-tasks and fan them out as
+concurrent direct sub-agent spawns, rather than routing everything back through the
+Orchestrator serially. This reduces Orchestrator bottleneck and enables true parallel
+execution.
 
 ### What is Parallel Delegation?
 
-Parallel delegation allows any agent to break its assigned task into independent child tasks and queue them directly to the work queue. The Orchestrator automatically detects parent-child relationships and waits for all children to complete before aggregating results.
+Parallel delegation means a spawning agent issues multiple Agent/Task tool calls in the
+same turn — one DELEGATE per independent sub-task — and awaits them concurrently. Each
+spawn call blocks until it returns a HANDBACK in-context; once every spawn in a batch
+has returned, the spawning agent aggregates the results itself. There is no separate
+polling or "wait for children" step — the spawn calls returning *is* the wait.
 
 **Key benefits:**
-- ✅ **Decentralized task creation** — no Orchestrator bottleneck
-- ✅ **Parallel execution** — children run concurrently
-- ✅ **Automatic aggregation** — quality scores, tokens, costs combined
-- ✅ **Backward compatible** — root tasks (no parent) work unchanged
-- ✅ **Cycle prevention** — validator prevents circular dependencies
+- ✅ **Decentralized task creation** — no Orchestrator bottleneck; any agent with spawn authority can fan out
+- ✅ **Parallel execution** — sub-tasks run concurrently, up to the fan-out limit
+- ✅ **In-context aggregation** — the spawning agent combines quality, tokens, and costs once its batch of spawn calls returns
+- ✅ **Audit trail preserved** — each DELEGATE and HANDBACK is still recorded via `enqueue()` (see [src/AGENTS.md > Audit-Trail Strategy](../src/AGENTS.md#audit-trail-strategy))
+- ✅ **Cycle prevention** — ancestry tracking refuses a spawn that would target a role already in the spawning agent's own ancestry chain
 
 ### When to Use Parallel Delegation
 
@@ -562,65 +571,38 @@ Use parallel delegation when:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Parent Task (e.g., Senior Engineer)        │
-│  "Analyze all 3 payment services"           │
-│  ├─ Creates 3 child tasks                   │
-│  └─ Queues them directly to incoming/       │
+│  Parent (e.g., Senior Engineer)              │
+│  "Analyze all 3 payment services"            │
+│  Issues 3 concurrent Agent/Task spawns,      │
+│  one DELEGATE per service                    │
 └─────────────────────────────────────────────┘
            │
-           ├─► Child 1: Analyze Stripe       (Engineer)
-           ├─► Child 2: Analyze PayPal       (Engineer)
-           └─► Child 3: Analyze Crypto       (Engineer)
+           ├─► Spawn 1: Analyze Stripe   (Engineer) ─┐
+           ├─► Spawn 2: Analyze PayPal   (Engineer) ─┼─ concurrent, in flight
+           └─► Spawn 3: Analyze Crypto   (Engineer) ─┘
                 │         │         │
-                ├─────────┼─────────┤
-                │ (all run in parallel)
-                │
-           ┌────┴─────────┴────┐
-           │ Orchestrator waits │
-           │ for all children   │
-           └────────┬───────────┘
-                    │
-           ┌────────▼──────────┐
-           │ Aggregates results│
-           │ - Quality score   │
-           │ - Tokens used     │
-           │ - Cost total      │
-           └───────────────────┘
+                ▼         ▼         ▼
+           HANDBACK   HANDBACK   HANDBACK   (each returned as its spawn call's result)
+                │         │         │
+                └────┬────┴────┬────┘
+                     ▼          ▼
+              Parent aggregates results in-context
+              - Quality score (effort-weighted)
+              - Tokens used (sum)
+              - Cost total (sum)
 ```
 
-### Creating Sub-Tasks
+### Fanning Out Sub-Tasks
 
-Agents create sub-tasks using the `queue-management` skill:
-
-```python
-from skills.queue_management.scripts.queue_ops import QueueOperations
-
-ops = QueueOperations(queue_dir="/path/to/queue")
-
-# Agent creates parent task (done by Orchestrator)
-# Then agent creates children:
-
-for service in ["stripe", "paypal", "crypto"]:
-    ops.create_delegate(
-        task_id=f"payment-analysis-{service}-001",
-        role="engineer",
-        scope=f"Analyze {service} payment service for security risks...",
-        plan=["Review code", "Check dependencies", "Document findings"],
-        context="Parent task: payment-analysis-001",
-        parent_task_id="payment-analysis-001",  # Link to parent
-        # task_tier is auto-calculated
-    )
-```
-
-### DELEGATE Fields for Sub-Tasks
-
-When creating a sub-task, include these new optional fields:
+The spawning agent issues one Agent/Task tool call per sub-task, each with a DELEGATE
+block as its prompt, and records each DELEGATE to the queue via `enqueue()` for audit
+purposes (see [src/AGENTS.md > Audit-Trail Strategy](../src/AGENTS.md#audit-trail-strategy)):
 
 ```yaml
 ---
 handoff_type: DELEGATE
 task_id: payment-analysis-stripe-001
-role: engineer
+agent: engineer
 model: claude-haiku-4.5
 effort: high
 scope: "Analyze Stripe payment service for security risks..."
@@ -632,18 +614,19 @@ context:
   - Parent task: payment-analysis-001
   - Repo: stripe-integration/
   - Focus: Payment processing logic
-parent_task_id: payment-analysis-001        # NEW: Link to parent
-task_tier: 1                                # NEW: Auto-calculated (parent_tier + 1)
+parent_task_id: payment-analysis-001   # links this sub-task's HANDBACK back to the aggregating parent
+ancestry: [senior-engineer]            # required once depth > 0 — see Recursion Limits
 ---
 ```
 
-**New fields:**
-- `parent_task_id` (optional) — Task ID of the parent task
-- `task_tier` (optional) — Depth in hierarchy (auto-calculated; max 5)
+**Fields relevant to fan-out:**
+- `parent_task_id` (optional) — the aggregating task this sub-task's result belongs to
+- `ancestry` (required at depth > 0) — ordered list of roles from root to the spawning parent, used for cycle detection (see [src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits))
 
-### HANDBACK Fields for Parent Tasks
+### Aggregating Results
 
-When a parent task completes, its HANDBACK includes aggregated results from all children:
+When a parent's batch of spawn calls all return, it aggregates their HANDBACKs
+in-context and produces its own HANDBACK:
 
 ```yaml
 ---
@@ -652,10 +635,6 @@ task_id: payment-analysis-001
 status: success
 deliverables:
   - Analysis report: payment-analysis-report.md
-children_created:
-  - payment-analysis-stripe-001
-  - payment-analysis-paypal-001
-  - payment-analysis-crypto-001
 children_results:
   payment-analysis-stripe-001:
     status: success
@@ -679,10 +658,9 @@ duration_minutes: 45
 ---
 ```
 
-**New fields:**
-- `children_created` — List of child task IDs
-- `children_results` — Dict of results keyed by task_id
-- `children_failed` — List of failed child task IDs
+**Fields:**
+- `children_results` — dict of results keyed by task_id
+- `children_failed` — list of failed child task IDs
 - `result_aggregation_status` — `all_complete`, `partial`, or `timed_out`
 
 ### Quality Score Aggregation
@@ -702,18 +680,28 @@ weighted_quality = (92×3 + 88×3 + 85×2) / (3+3+2) = 618/8 = 77.25
 
 ### Constraints & Limits
 
-| Constraint | Value | Error |
-|-----------|-------|-------|
-| Max depth (task_tier) | 5 | `ValueError: task_tier exceeds maximum` |
-| Max children per parent | 10 | `RuntimeError: already has N children (max 10)` |
-| Max tasks per session | 100 | `RuntimeError: Rate limit exceeded` |
-| Max task_id length | 64 chars | `ValueError: task_id too long` |
+These are the same recursion limits that apply to every direct spawn, not a separate
+parallel-delegation rule set — see
+[src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits) for the
+authoritative definitions:
 
-**Validation rules:**
-- `parent_task_id` must exist in queue (incoming/, processing/, or done/)
-- Cannot link to self: `task_id != parent_task_id`
-- Cannot create cycles: parent must not be descendant of child
-- Child scope must overlap parent scope by ≥20% (word overlap)
+| Constraint | Value |
+|-----------|-------|
+| Max delegation depth | 3 (root DELEGATE = depth 0) |
+| Max fan-out | 5 concurrent sub-agent spawns per parent |
+| Ancestry tracking | Required at depth > 0; a target role already in the spawning agent's own ancestry chain is a cycle and the spawn MUST be refused |
+
+Additional independent work beyond 5 concurrent spawns waits for one of the first 5 to
+return, or is grouped into a consolidating DELEGATE — it is never spawned as a 6th
+concurrent call.
+
+**Note on enforcement:** the limits above are a documented contract every agent's own
+definition must observe — enforced today via each agent's `tools:` frontmatter grant at
+the leaf tiers (see
+[src/AGENTS.md > Tools-Frontmatter Permission Model](../src/AGENTS.md#tools-frontmatter-permission-model)).
+No harness currently blocks an over-deep or over-wide spawn mechanically; agents
+self-enforce, and a limit violation is reported via HANDBACK `status: blocked` or
+`status: escalate`, not silently prevented.
 
 ### Failure Modes
 
@@ -728,32 +716,21 @@ weighted_quality = (92×3 + 88×3 + 85×2) / (3+3+2) = 618/8 = 77.25
 - Caller decides whether to fail parent
 
 **Timeout:**
-- Default timeout: 60 minutes
-- On timeout: `result_aggregation_status = timed_out`
+- If a spawn call is taking unacceptably long, the spawning agent may proceed with the
+  results it already has rather than wait indefinitely; `result_aggregation_status =
+  timed_out`
 - Available results included in `children_results`
 
-### Orchestrator Behavior
+### Spawning Agent Behavior
 
-The Orchestrator automatically:
+The spawning agent (not the Orchestrator on its behalf — this is decentralized):
 
-1. **Detects parent-child relationships** via `parent_task_id` field
-2. **Waits for all children** to complete (with 60-minute timeout)
-3. **Aggregates results** — quality (weighted), tokens (sum), costs (sum)
-4. **Writes parent HANDBACK** with `children_results` populated
-5. **Moves to done/** when all aggregation complete
-
-**Code flow:**
-```python
-def _process_task(self, task: dict) -> None:
-    task_id = task.get("task_id")
-    if self.has_children(task_id):
-        # Parent task: wait for children, aggregate
-        result = self.execute_with_result_aggregation(task_id)
-    else:
-        # Root task: execute normally
-        result = self.do_work(task)
-    self.queue_manager.write_handback(task_id, result)
-```
+1. **Issues one concurrent spawn per sub-task**, each carrying its own DELEGATE as prompt
+2. **Awaits its batch of spawn calls** — a spawn call does not return control until the
+   sub-agent's HANDBACK is available; "waiting" is simply the tool calls being in flight
+3. **Aggregates results** as they return — quality (weighted), tokens (sum), costs (sum)
+4. **Writes its own HANDBACK** with `children_results` populated
+5. **Records the HANDBACK to the queue** via `enqueue()` for audit purposes once aggregation is complete
 
 ### Cost Impact
 
@@ -764,7 +741,7 @@ Parallel delegation **reduces wall-clock time** but may increase token cost:
 - Tokens: 3 × 2000 = 6000
 - Cost: $0.18
 
-**Parallel (3 tasks, 1 hour each, concurrent):**
+**Parallel (3 tasks, 1 hour each, concurrent spawns):**
 - Wall-clock: 1 hour
 - Tokens: 3 × 2000 = 6000 (same)
 - Cost: $0.18 (same)
@@ -780,31 +757,27 @@ Parallel delegation **reduces wall-clock time** but may increase token cost:
 
 ✅ **DO:**
 - Use for naturally decomposable work
-- Limit children to 3-10 per parent (more = coordination overhead)
-- Set realistic timeouts (60 min default is usually fine)
+- Keep concurrent spawns within the fan-out limit of 5; group the rest into a consolidating DELEGATE
 - Monitor token consumption (parallel = more concurrent usage)
 - Use effort levels to weight results appropriately
+- Set `ancestry` on every DELEGATE issued at depth > 0
 
 ❌ **DON'T:**
-- Create circular dependencies (validator prevents this)
-- Go deeper than tier 5 (validator prevents this)
-- Create >10 children per parent (validator prevents this)
+- Create circular dependencies — refuse a spawn whose target role already appears in your own ancestry chain
+- Exceed the depth-3 or fan-out-5 limits — these are self-enforced (see Constraints & Limits above), not blocked by any harness
 - Use for sequential work (defeats the purpose)
 - Ignore failed children (check `children_failed` in HANDBACK)
 
 ### Troubleshooting Parallel Delegation
 
-**Q: Child task is stuck in "processing" for hours**
-A: Check Orchestrator logs. If no agent picked it up, the queue may be full. Check `artifacts/queue/processing/` for stuck tasks. Escalate to Principal Engineer if >2 hours stuck.
+**Q: A concurrent spawn is taking much longer than the others**
+A: The spawning agent's context is blocked on that tool call returning — there is no separate process to check logs on. If it's unacceptably slow, treat it as a timeout: proceed with the results already in hand, mark `result_aggregation_status = timed_out`, and record the incomplete child in `children_failed`.
 
 **Q: Aggregation quality score seems wrong**
 A: Verify effort levels in child HANDBACKs. Quality is effort-weighted; high-effort children have 3× weight. Use formula: `Σ(quality × weight) / Σ(weight)`.
 
-**Q: Parent task timed out waiting for children**
-A: Default timeout is 60 minutes. If children need more time, increase `timeout_minutes` in Orchestrator config. Check if children are blocked (see `children_failed`).
-
 **Q: Can I create sub-tasks of sub-tasks?**
-A: Yes, up to tier 5 (5 levels deep). Each level auto-increments `task_tier`. Validator prevents cycles.
+A: Yes, up to the depth-3 limit (root DELEGATE = depth 0; each spawn hop increments depth by 1). Ancestry tracking prevents cycles.
 
 **Q: What if 2 of 3 children fail?**
 A: `result_aggregation_status = partial`, `children_failed = [task_id_1, task_id_2]`. Parent continues with 1 successful result. Quality score reflects only successful children.
@@ -817,13 +790,12 @@ A: `result_aggregation_status = partial`, `children_failed = [task_id_1, task_id
 - Orchestrator → Security Engineer (4 hours, $0.30)
 - Wall-clock: 4 hours
 
-**Parallel approach (new):**
-1. Orchestrator → Senior Engineer (30 min, plan + create sub-tasks)
-2. Senior Engineer creates 4 child tasks (one per service)
-3. Orchestrator detects 4 children, routes to 4 Security Engineers in parallel
-4. All 4 run concurrently (1 hour wall-clock)
-5. Orchestrator aggregates results
-6. Total: 1.5 hours wall-clock, $0.36 cost
+**Parallel approach (direct spawn fan-out):**
+1. Orchestrator spawns Senior Engineer directly (30 min: plan + prepare 4 sub-task DELEGATEs)
+2. Senior Engineer fans out 4 concurrent Security Engineer spawns, one per service — within the fan-out-5 limit
+3. All 4 run concurrently (1 hour wall-clock)
+4. Senior Engineer aggregates results in-context as each spawn call returns
+5. Total: 1.5 hours wall-clock, $0.36 cost
 - **Benefit:** 2.5 hours saved (62% faster)
 
 ---
@@ -1211,4 +1183,5 @@ For comprehensive enforcement documentation, see:
 - **2026-05-09:** Added Protocol Compliance Expectations section (Week 4). Per-role DELEGATE/HANDBACK/Metrics/Escalation protocol responsibilities defined. Cross-references to ORCHESTRATION-PROTOCOL.md added.
 - **2026-05-16:** Added Git Hook Workflow section documenting pre-commit hook checks, bypass procedures, and installation. Added Workflow Enforcement Points section covering all three git hooks and their integration with the DELEGATE/HANDBACK protocol. Cross-references to docs/SDLC-HOOKS.md, docs/WORKFLOW.md, docs/TROUBLESHOOTING.md, and docs/BYPASS-PROCEDURES.md.
 - **2026-05-16:** Added comprehensive Parallel Delegation section (Phase 2 feature). Documents parallel sub-task creation, DELEGATE/HANDBACK fields for parent-child relationships, quality score aggregation (effort-weighted), constraints (max 5 tiers, 10 children/parent), failure modes, Orchestrator behavior, cost impact analysis, best practices, troubleshooting, and real-world example. Cross-references to PARALLEL-DELEGATION-GUIDE.md.
+- **2026-08-09:** Converted the execution-model narrative from filesystem-queue polling to the Direct Sub-Agent Spawn Execution Model — the Orchestrator (and any agent with `spawn_subagent` in its `tools:` frontmatter) now spawns sub-agents directly and reads the HANDBACK back as the tool result, rather than polling `artifacts/queue/incoming/` every 30-60 seconds. The queue is retained as an audit trail only (see [src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model)). Rewrote the Parallel Delegation section as concurrent direct-spawn fan-out and reconciled its constraints (depth 3, fan-out 5, ancestry tracking) with the canonical Recursion Limits in src/AGENTS.md.
 - **Recommendation:** Review this guide quarterly and update tier assignments based on new model releases and Model Engineer recommendation trends. Parallel delegation enables 60-70% Orchestrator load reduction; monitor adoption and adjust constraints based on real-world usage patterns.

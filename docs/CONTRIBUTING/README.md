@@ -597,7 +597,7 @@ make render-copilot render-claude render-opencode render-pi render-specs
 make verify
 ```
 
-The pre-push git hook runs `make test-concurrent` automatically — do not bypass
+The pre-push git hook runs the full test suite automatically — do not bypass
 with `SKIP_HOOKS=1` except in documented emergencies.
 
 ---
@@ -609,10 +609,7 @@ with `SKIP_HOOKS=1` except in documented emergencies.
 make test
 
 # Run specific test file
-pytest tests/test_invoke_agent.py -v
-
-# Run concurrent tests (required before push)
-make test-concurrent
+pytest tests/orchestration/test_orchestrator_integration.py -v
 ```
 
 All new code must have tests. CI enforces >85% coverage.
@@ -631,37 +628,27 @@ python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
 
 ### Parallel & Concurrent Test Validation
 
-The `TestConcurrentInvocations` test class validates that concurrent agent
-invocations work correctly under thread concurrency. This test class guards
-against a class of **TOCTOU race conditions** where a HANDBACK file poller
-reads an empty file that is still being written by a writer thread.
+**Historical context:** the `TestConcurrentInvocations` test class validated that
+concurrent agent invocations were safe under thread concurrency in the old
+subprocess-based `invoke_agent.py` seam, which wrote and read HANDBACK files across
+threads. It guarded against a **TOCTOU race condition** where a HANDBACK file poller
+read an empty file that was still being written by a writer thread.
 
-**Run it before every push:**
+`src/orchestration/agents/invoke_agent.py` and its file poller have since been removed
+as part of the move to the
+[Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model):
+a spawned sub-agent's HANDBACK is now returned directly as the result of the Agent/Task
+tool call, in-context, with no separate file poller reading it. The `enqueue()` calls
+that still record DELEGATE/HANDBACK to the queue for audit purposes are a distinct code
+path from that removed subprocess seam and are not what this test class covered.
 
-```bash
-make test-concurrent
-```
-
-Or equivalently:
-
-```bash
-python3 -m pytest tests/test_invoke_agent.py::TestConcurrentInvocations -v --tb=short
-```
-
-The pre-push hook (`.githooks/pre-push`) runs this automatically. If it fails
-locally it **will** fail in CI — do not bypass with `SKIP_HOOKS=1` unless you
-have an unrelated emergency.
-
-**Root cause history:** CI builds were failing with
-`HandbackValidationError('HANDBACK file does not contain a YAML mapping (dict)')`
-because `open(path, 'w')` creates the file on disk before `yaml.dump()` writes
-its content. The poller saw `path.exists() == True`, read an empty file, and
-failed validation. The fix is:
-
-1. **Test helper** (`write_handback_after_delay`): atomic write via `os.replace`
-   after writing to a `.tmp` sibling file.
-2. **Production code** (`_read_and_validate_handback`): returns `None` for empty
-   files instead of raising, signalling the polling loop to continue retrying.
+**RESOLVED:** the `test-concurrent` Makefile target and its `quality-gate`
+prerequisite, and the equivalent inline check in `.githooks/pre-push`
+("6b. RUN CONCURRENT TESTS"), have been removed rather than repointed —
+there is no surviving mechanism (subprocess spawn + file-poll race) for a
+replacement test to guard. If concurrent `enqueue()` audit-write coverage
+under the new model is wanted, that is new test coverage to design, not a
+repoint of this guard.
 
 ---
 
@@ -923,46 +910,95 @@ See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness chec
 
 ---
 
-## OpenCode Renderer (Phase 4 Details) — IMPLEMENTED
+## OpenCode Renderer (Phase 4 Details) — PARTIALLY IMPLEMENTED
 
-The `renderer/scripts/render-opencode.sh` emits agent frontmatter for OpenCode integration. Two defects previously prevented correct reasoning emission and overstated permission enforcement. **Both are now fixed** (see `effort_to_variant()` and `emit_permission_block()` in the renderer). The same per-role least-privilege intent is also applied to the Claude renderer via per-role `tools:` allow-lists (`claude_tools_for_role()` in `render-claude.sh`).
+The `renderer/scripts/render-opencode.sh` emits agent frontmatter and `opencode.jsonc`
+for OpenCode integration. Two defects were originally identified: a no-op `thinking:`
+block, and overstated permission enforcement. **Only the first is fixed.** The second —
+per-role spawn/permission gating — is **not implemented**, and this section previously
+claimed otherwise. That was corrected here on 2026-08-09 after independent verification
+(see below); treat the "IMPLEMENTED"/"COMPLETE" language that used to be on this
+section as having been inaccurate.
 
 ### Defect 1: No-op `thinking:` Block — FIXED
 
 **Was:** Emitted a `thinking:` key, but OpenCode ignores it (not in `KNOWN_KEYS`), so extended thinking was never enabled for principal-engineer / security-engineer.
 **Fix (done):** The `thinking:` block was removed and replaced with the supported `variant:` key (`effort_to_variant`: medium→medium, high/max→high, low→omit). `variant` is in OpenCode `KNOWN_KEYS` and maps to Anthropic extended-thinking budgets. Protocol metadata (`role`/`accepts`/`returns`), which are also non-`KNOWN_KEYS`, were moved under the recognized `options:` block so they are preserved rather than silently swept away.
 
-### Defect 2: Uniform Permissions vs. Claimed Granularity
+### Defect 2: Uniform Permissions vs. Claimed Granularity — NOT IMPLEMENTED
 
-**Current:** Every agent gets identical `permission:` block (allow-all).
-**Was:** Every agent received an identical allow-all `permission:` block, so review roles (quality, lead, model-engineer) incorrectly had `edit`/`bash`.
-**Fix (done):** `emit_permission_block()` now emits a least-privilege block (baseline `"*": deny`, explicit allows per role) implementing the matrix below. The Claude renderer mirrors this with per-role `tools:` allow-lists.
+**Verified current behavior (2026-08-09):** `render-opencode.sh` (around lines 353-360)
+emits a single **global** `permission` block into `opencode.jsonc` — not a per-role
+one:
 
-### Per-Role Permission Matrix (IMPLEMENTED)
+```json
+"permission": {
+  "read": "allow",
+  "edit": "allow",
+  "bash": "allow",
+  "task": "allow",
+  "glob": "allow",
+  "grep": "allow",
+  "webfetch": "allow"
+}
+```
 
-| Role | read | glob | grep | webfetch | websearch | edit | bash | task |
+Every agent gets this same allow-all block, including `task` — the permission that
+gates spawning a sub-agent. The renderer's own generated `AGENTS.md` rules file says as
+much explicitly ("All agents use uniform **allow-all** permissions"). There is no
+`emit_permission_block()` function and no per-role permission lookup in the OpenCode
+renderer today — that was aspirational, not shipped.
+
+**What the real permission model is, and where it lives:** the intended least-privilege
+design — including which roles may spawn sub-agents — is the **tools-frontmatter
+permission model** defined per-role in `src/agents/*-agent.md` (`tools: [spawn_subagent]`
+vs. `tools: []`) and documented in
+[src/AGENTS.md > Tools-Frontmatter Permission Model](../../src/AGENTS.md#tools-frontmatter-permission-model).
+Per that document, spawn authority (`spawn_subagent`) is granted to **five** roles —
+orchestrator, senior-engineer, lead-engineer, principal-engineer, and security-engineer
+— not just orchestrator and senior-engineer as an earlier version of the matrix below
+implied. **No renderer currently propagates this model into any harness.** It is a
+contract each agent's own definition and prompt must self-enforce; nothing in
+OpenCode's (or any other harness's) generated config blocks or refuses an unauthorized
+or over-deep spawn. The same is true of the depth-3 / fan-out-5 / ancestry-tracking
+recursion limits (see
+[src/AGENTS.md > Recursion Limits](../../src/AGENTS.md#recursion-limits)): documented
+required behavior, not mechanically enforced behavior.
+
+### Per-Role Permission Matrix — INTENDED DESIGN, NOT YET IMPLEMENTED BY ANY RENDERER
+
+The table below reflects the *intended* least-privilege design (spawn authority per
+`src/AGENTS.md`'s Tools-Frontmatter Permission Model; other columns per this project's
+original least-privilege intent for OpenCode). None of it is live — every OpenCode
+agent currently gets the uniform allow-all block shown above instead.
+
+| Role | read | glob | grep | webfetch | websearch | edit | bash | task (spawn) |
 |------|:----:|:----:|:----:|:--------:|:---------:|:----:|:----:|:----:|
 | orchestrator      | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| principal-engineer| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| principal-engineer| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | senior-engineer   | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | engineer          | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| lead-engineer     | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| lead-engineer     | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | quality-engineer  | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| security-engineer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| security-engineer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | model-engineer    | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 
-**Rationale:** Orchestrator routes without direct edits. Review roles are read-only. Implementation roles get edit/bash. Only orchestrator and senior-engineer may spawn subagents.
+**Rationale (design intent, not current behavior):** Orchestrator routes without direct
+edits. Review roles are read-only. Implementation roles get edit/bash. Spawn authority
+(`task`) is intended for orchestrator, senior-engineer, lead-engineer,
+principal-engineer, and security-engineer per `src/AGENTS.md`; engineer,
+quality-engineer, and model-engineer are meant to be leaves.
 
-### Implementation Steps (Phase 4) — COMPLETE
+### Implementation Steps (Phase 4) — OUTSTANDING
 
 1. ✅ Removed the `thinking:` case from `render-opencode.sh`
 2. ✅ Added per-role reasoning `variant` emission (`effort_to_variant`)
 3. ✅ Provider blocks in `opencode.jsonc` declare `reasoning: true` per model
-4. ✅ Replaced uniform permission block with least-privilege per-role lookup (`emit_permission_block`)
-5. ✅ Gated `task` permission to orchestrator and senior-engineer only
-6. ✅ Added `websearch: allow` to research-capable roles
+4. ❌ **Not done:** replace the uniform global `permission` block with a least-privilege per-role lookup
+5. ❌ **Not done:** gate `task` permission to the five spawn-authorized roles per `src/AGENTS.md`
+6. ❌ **Not done:** differentiate `websearch` by role (currently uniform `allow`, bundled into the same global block)
 7. ✅ Moved no-op protocol keys (`role`/`accepts`/`returns`) under the recognized `options:` block
-8. ✅ Validated: `harness-opencode-feature-sync` reports "No drift detected"; tests green
+8. ❓ **Unverified:** whether `harness-opencode-feature-sync` reports drift for this gap — re-run it rather than trusting the old "No drift detected" claim, since that claim was made about a permission model that (per this correction) was never actually shipped
 
 ---
 

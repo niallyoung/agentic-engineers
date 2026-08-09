@@ -2,38 +2,67 @@
 
 **Canonical workflow for running agentic-engineers**
 
-The system works across multiple agent contexts with per-session queue partitioning:
-- **Copilot agents** queue work in `~/.agentic-engineers/copilot/{session-id}/queue/`
-- **Claude agents** queue work in `~/.agentic-engineers/claude/{session-id}/queue/`
-- **OpenCode agents** queue work in `~/.agentic-engineers/opencode/{session-id}/queue/`
-- **Codex agents** queue work in `~/.agentic-engineers/codex/{session-id}/queue/`
+The system works across multiple agent contexts with per-session queue partitioning
+used as a **durable audit trail** for delegation:
+- **Copilot agents** record work in `~/.agentic-engineers/copilot/{session-id}/queue/`
+- **Claude agents** record work in `~/.agentic-engineers/claude/{session-id}/queue/`
+- **OpenCode agents** record work in `~/.agentic-engineers/opencode/{session-id}/queue/`
+- **Codex agents** record work in `~/.agentic-engineers/codex/{session-id}/queue/`
 - All use identical DELEGATE/HANDBACK protocol
 - Orchestrator auto-detects the harness/session partition
 - Multiple simultaneous harness instances don't interfere with each other
+
+**Dispatch is direct sub-agent spawn, not queue polling.** The Orchestrator builds a
+DELEGATE and spawns the target agent directly (Agent/Task tool), reading the HANDBACK
+back as the tool result in the same turn. The queue above still exists and is still
+written to — every DELEGATE (at spawn) and every HANDBACK (at completion) is recorded
+via `enqueue()` — but it is a record of what happened, not something anything polls to
+decide what to do next. See
+[src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
+for the canonical description.
 
 ---
 
 ## 🎯 How to Use Agentic Engineers
 
-When you have work to do:
+When you have work to do, invoke the Orchestrator in your harness and tell it what you
+want — you do not need to hand-write a DELEGATE YAML file for anything to find.
 
-### 1. Queue the work (create a DELEGATE block)
+### 1. Invoke the Orchestrator
 
 ```bash
-cd ~/.agentic-engineers/<harness>/<session-id>/queue
-# OR
-cd /home/user/agentic-engineers
+# Claude Code
+claude --agent orchestrator
+
+# OpenCode CLI
+opencode --agent orchestrator
+
+# Copilot CLI
+copilot --agent orchestrator
 ```
 
-Create a DELEGATE YAML in the appropriate session-specific queue:
+### 2. Give it your request
 
-**For Copilot agents:**
-```bash
-mkdir -p ~/.agentic-engineers/copilot/<session-id>/queue/incoming
-cat > ~/.agentic-engineers/copilot/<session-id>/queue/incoming/{task_id}.yaml <<'EOF'
+```
+delegate: Fix the race condition in span capture (see ISSUE #42)
+```
+
+The Orchestrator:
+1. Builds a DELEGATE block from your request (`agent`, `model`, `effort`, `scope`, `context`, `plan`, `success_criteria` — see `orchestration/HANDOFF.md` for the full format)
+2. Spawns the target role directly (Agent/Task tool), passing the DELEGATE as the sub-agent's prompt
+3. Records the DELEGATE to the queue via `enqueue()` (audit trail) at or immediately after the spawn call
+4. Reads the HANDBACK back as the result of the spawn call itself — no polling, no wait loop
+5. Records the HANDBACK to `done/` via `enqueue()` once the spawn call returns
+6. Repeats for any further work (re-delegation, escalation) until it has no pending DELEGATEs and no outstanding spawns — then it **pauses** (see [src/AGENTS.md > Pause Condition](../src/AGENTS.md#pause-condition))
+
+**Authoring a DELEGATE by hand** — for scripting, or to hand the Orchestrator a
+fully-specified task — still uses the same YAML shape as before; what changed is what
+happens to it once written:
+
+```yaml
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
-role: Engineer | Senior Engineer | Lead Engineer | Principal Engineer | Security Engineer | Quality Engineer | Model Engineer | Orchestrator
+agent: engineer | senior-engineer | lead-engineer | principal-engineer | security-engineer | quality-engineer | model-engineer | orchestrator
 model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.7
 effort: low | medium | high | max
 scope: |
@@ -47,86 +76,29 @@ plan:
   - 2. Second step
 success_criteria:
   - What "done" looks like
-EOF
 ```
 
-**For Claude agents:**
-```bash
-# Queue paths are now partitioned by session-id
-mkdir -p ~/.agentic-engineers/claude/<session-id>/queue/incoming
-cat > ~/.agentic-engineers/claude/<session-id>/queue/incoming/{task_id}.yaml <<'EOF'
-# Same YAML structure as above
-EOF
-```
-
-See `orchestration/HANDOFF.md` for complete DELEGATE format.
-
-### 2. Start the Orchestrator Agent
-
-The **Orchestrator** is a special agent defined in `orchestration/AGENTS.md` that:
-- Auto-detects the harness/session partition
-- Polls the correct queue under `~/.agentic-engineers/{harness}/{session-id}/queue/`
-- Routes tasks to appropriate agents using the AGENTS.md decision tree
-- Delegates work via DELEGATE/HANDBACK protocol
-- Processes results and moves tasks through queue states
-- Captures observability (span data, indexing)
-- Continues until queue is empty
-
-**Invoke Orchestrator:**
-
-The Orchestrator is invoked by the agent harness (Claude or Copilot CLI). Queue a DELEGATE task specifying `role: Orchestrator`:
-
-```yaml
----
-handoff_type: DELEGATE
-task_id: orchestrator-polling-session
-role: Orchestrator
-model: claude-haiku-4.5
-effort: low
-scope: |
-  Poll queue and delegate all work to appropriate agents.
-  Process until idle (no tasks for 60+ seconds).
-context: |
-  Tasks in queue awaiting delegation (Orchestrator auto-detects correct queue).
-plan:
-  - Auto-detect agent context (Claude, Copilot, OpenCode, or Codex)
-  - Poll correct queue partition under ~/.agentic-engineers/{harness}/{session-id}/queue/
-  - Route each task per AGENTS.md
-  - Delegate with proper context
-  - Wait for HANDBACK
-  - Move to done/
-  - Continue until idle
-success_criteria:
-  - All incoming tasks routed
-  - HANDBACK results processed
-  - Tasks moved through queue states
-  - Exited cleanly on idle timeout
----
-```
-
-Then the harness will invoke the Orchestrator agent which implements the SKILLs defined in `orchestration/SKILLS.md`.
+You pass this to the Orchestrator directly — as your prompt, or as the payload of a
+re-delegation it issues itself — rather than dropping it into `queue/incoming/` for a
+poller to notice. See `orchestration/HANDOFF.md` for the complete DELEGATE format.
 
 ### 3. Orchestrator handles everything
 
-Once running, the Orchestrator:
-1. ✅ Polls the harness-specific queue partition
-2. ✅ Routes tasks to appropriate agents (per AGENTS.md)
-3. ✅ Delegates via DELEGATE blocks
-4. ✅ Waits for agents to complete
-5. ✅ Processes HANDBACK results
-6. ✅ Captures span data (observability)
-7. ✅ Updates `artifacts/index.json`
-8. ✅ Moves tasks through queue: incoming → processing → done
-9. ✅ Idles when queue is empty
+Per request, the Orchestrator:
+1. ✅ Routes the task to the appropriate agent (per AGENTS.md)
+2. ✅ Spawns that agent directly, passing the DELEGATE as its prompt
+3. ✅ Reads the HANDBACK back as the spawn call's result — no wait loop involved
+4. ✅ Captures span data (observability)
+5. ✅ Updates `artifacts/index.json`
+6. ✅ Records the DELEGATE and HANDBACK to the queue (`incoming/` and `done/`) for audit
+7. ✅ Pauses when there is no pending DELEGATE and no outstanding spawn
 
 ### 4. Check results
 
-**While Orchestrator is running:**
-- Watch `~/.agentic-engineers/<harness>/<session-id>/queue/processing/` for active tasks
-- Watch `~/.agentic-engineers/<harness>/<session-id>/queue/done/` for completed tasks
-- Check `artifacts/` for generated files (SPAN files, index.json, reports)
+**Immediately:** the Orchestrator reports the HANDBACK's outcome back to you in the same
+session — you don't need to watch a directory for it to finish.
 
-**After Orchestrator completes:**
+**For the audit trail:**
 - Review `~/.agentic-engineers/<harness>/<session-id>/queue/done/{task_id}-HANDBACK-{role}.yaml`
 - Check generated artifacts (updated specs, reports, code changes)
 - Review `artifacts/index.json` for metrics
@@ -138,121 +110,62 @@ Once running, the Orchestrator:
 
 ### Workflow 1: Update Documentation
 
+```
+delegate: Update docs/SPEC.md with current Phase 5.10 implementation
+```
+
+The Orchestrator spawns Senior Engineer directly with a DELEGATE built from that
+request (scope: update `docs/SPEC.md` for Phase 5.10; context: SKILLS.md changes,
+SPAN-CAPTURE-INTEGRATION.md; plan: read the relevant docs, then update SPEC.md), reads
+the HANDBACK back in-context, and reports the outcome to you. Both the DELEGATE and the
+HANDBACK are recorded to the queue for audit:
+
 ```bash
-# 1. Create DELEGATE for spec extraction
-cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-update-spec.yaml << 'EOF'
----
-handoff_type: DELEGATE
-task_id: 2026-05-02-update-spec
-role: Senior Engineer
-model: claude-sonnet-4.6
-effort: high
-scope: Update docs/SPEC.md with current Phase 5.10 implementation
-context:
-  - Phase 5.10 just completed (span capture + indexing)
-  - Update SPEC.md to reflect new SKILLS responsibilities
-plan:
-  - Read orchestration/SKILLS.md (Orchestrator + Model Engineer sections)
-  - Review orchestration/SPAN-CAPTURE-INTEGRATION.md
-  - Update docs/SPEC.md with Phase 5.10 details
-success_criteria:
-  - docs/SPEC.md is current and complete
-  - Phase 5.10 changes are documented
-  - All implementation details match actual code
----
-EOF
-
-# 2. Start Orchestrator (it will pick up the task and delegate to Senior Engineer)
-# Orchestrator polls queue, routes to Senior Engineer, receives HANDBACK
-# Senior Engineer updates docs/SPEC.md and commits
-
-# 3. Check results
-cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-update-spec-HANDBACK-Senior\ Engineer.yaml
+cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-update-spec-HANDBACK-senior-engineer.yaml
 git log --oneline | head -1
 ```
 
 ### Workflow 2: Code Review & Validation
 
+```
+delegate: Validate implementation against docs/SPEC.md
+```
+
+The Orchestrator spawns Lead Engineer directly, reads back the HANDBACK (validation
+report), and reports the outcome:
+
 ```bash
-# 1. Create DELEGATE for code review
-cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-validate-impl.yaml << 'EOF'
----
-handoff_type: DELEGATE
-task_id: 2026-05-02-validate-impl
-role: Lead Engineer
-model: claude-sonnet-4.6
-effort: high
-scope: Validate implementation against docs/SPEC.md
-context:
-  - Spec: docs/SPEC.md
-  - Implementation: orchestration/AGENTS.md, orchestration/SKILLS.md
-plan:
-  - Review spec
-  - Audit implementation
-  - Identify drift or violations
-  - Create validation report
-success_criteria:
-  - artifacts/spec-validation-report.md created
-  - All violations documented
-  - No critical issues found
----
-EOF
-
-# 2. Start Orchestrator
-# Orchestrator routes to Lead Engineer, receives HANDBACK, captures span data
-
-# 3. Check report
 cat artifacts/spec-validation-report.md
 ```
 
 ### Workflow 3: Fix Code Issues
 
+```
+delegate: Fix race condition in Orchestrator span capture (see ISSUE #42)
+```
+
+The Orchestrator spawns Engineer directly with a DELEGATE (RED-GREEN-REFACTOR plan),
+reads the HANDBACK back, and reports the outcome:
+
 ```bash
-# 1. Create DELEGATE for bug fix
-cat > ~/.agentic-engineers/<harness>/<session-id>/queue/incoming/2026-05-02-fix-bug.yaml << 'EOF'
----
-handoff_type: DELEGATE
-task_id: 2026-05-02-fix-orchestrator-bug
-role: Engineer
-model: claude-haiku-4.5
-effort: medium
-scope: Fix race condition in Orchestrator span capture
-context:
-  - Bug: SPAN files sometimes overwrite in parallel execution
-  - Root cause analysis in ISSUE #42
-  - Related: orchestration/SPAN-CAPTURE-INTEGRATION.md
-plan:
-  - 1. RED: Write test that reproduces race condition
-  - 2. GREEN: Implement file-locking mechanism
-  - 3. REFACTOR: Clean up error handling
-success_criteria:
-  - Test passes
-  - No race conditions under concurrent load
-  - Code reviewed (check for violations of SKILLS.md)
----
-EOF
-
-# 2. Start Orchestrator
-# Routes to Engineer, Engineer runs TDD (RED-GREEN-REFACTOR), returns HANDBACK
-
-# 3. Check results
-cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-Engineer.yaml
+cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-fix-orchestrator-bug-HANDBACK-engineer.yaml
 ```
 
 ---
 
-## 🏗️ Queue Structure
+## 🏗️ Queue Structure (Audit Trail)
+
+The queue is a durable record of what has been dispatched and what has completed. It is
+written to at spawn time and at completion time, and it is never read to decide what to
+spawn next:
 
 ```
 ~/.agentic-engineers/<harness>/<session-id>/queue/
-├── incoming/                          # New tasks, ready for Orchestrator
+├── incoming/                          # Audit copy of each DELEGATE, recorded at spawn time
 │   ├── 2026-05-02-my-task.yaml
 │   └── 2026-05-02-another-task.yaml
-├── processing/                        # Tasks assigned to agents
-│   ├── 2026-05-02-my-task-HANDBACK-Engineer.yaml
-│   └── [agent working...]
-└── done/                              # Completed tasks
-    ├── 2026-05-02-my-task-HANDBACK-Engineer.yaml
+└── done/                              # Audit copy of each HANDBACK, recorded at completion
+    ├── 2026-05-02-my-task-HANDBACK-engineer.yaml
     └── [results + metrics]
 ```
 
@@ -269,7 +182,7 @@ cat ~/.agentic-engineers/<harness>/<session-id>/queue/done/2026-05-02-fix-orches
 | **Security Engineer** | Opus (premium) | Security reviews, auth, crypto, compliance |
 | **Quality Engineer** | Sonnet (strong) | Test quality, coverage, best practices |
 | **Model Engineer** | Sonnet (strong) | Cost-quality tradeoffs, recommendations |
-| **Orchestrator** | All models | Routing, delegation, observability, queue management |
+| **Orchestrator** | All models | Routing, direct spawn dispatch, observability, audit-trail management |
 
 See `orchestration/AGENTS.md` for full decision tree.
 
@@ -311,24 +224,31 @@ artifacts/index.json
 
 ## ⚙️ Configuration
 
-**Orchestrator behavior** (in future, can be configured via `orchestration/config.yaml`):
-- Queue poll interval: 30-60 seconds (default: 45s)
-- Max concurrent agents: 4 (default)
+**Orchestrator behavior:**
+- Dispatch: direct sub-agent spawn — there is no poll interval to configure
+- Max concurrent spawns: 5 per parent (see [src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits))
+- Max delegation depth: 3 (root DELEGATE = depth 0)
 - Retry limit: 3 attempts before escalate
 - Span capture: Enabled by default
 - Index generation: After each HANDBACK
+
+**Note on enforcement:** the depth/fan-out limits above are a documented contract each
+agent's own definition observes (via its `tools:` frontmatter grant — see
+[src/AGENTS.md > Tools-Frontmatter Permission Model](../src/AGENTS.md#tools-frontmatter-permission-model)).
+No harness mechanically blocks an over-deep or over-wide spawn today; agents self-enforce.
 
 ---
 
 ## 🔀 Multi-Session Queue Partitioning
 
-When multiple Copilot or Claude instances run concurrently, each session has its own isolated queue partition:
+When multiple Copilot or Claude instances run concurrently, each session has its own
+isolated queue partition for its audit trail:
 
 ### Session-ID Concept
 
 - **Session-ID** is a UUID assigned to each Copilot/Claude instance
 - Location: `~/.copilot/session-state/{session-id}/` or `~/.claude/session-state/{session-id}/`
-- Each session's Orchestrator only polls its own queue partition
+- Each session's Orchestrator records only to its own queue partition
 - No cross-contamination between simultaneous sessions
 
 ### Queue Paths by Session
@@ -336,12 +256,10 @@ When multiple Copilot or Claude instances run concurrently, each session has its
 ```
 ~/.agentic-engineers/copilot/{session-id}/queue/
 ├── 54744939-4acb-430c-b2c4-3b8322289d0b/
-│   ├── incoming/     # Tasks for this session only
-│   ├── processing/
+│   ├── incoming/     # Audit records for this session only
 │   └── done/
 ├── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/  # Different session
 │   ├── incoming/
-│   ├── processing/
 │   └── done/
 └── .migration-log    # Record of queue migrations
 ```
@@ -349,7 +267,7 @@ When multiple Copilot or Claude instances run concurrently, each session has its
 ### Automatic Migration
 
 When upgrading to session-id partitioning:
-1. Old queue structure (`~/.copilot/queue/{incoming,processing,done}`) is auto-detected
+1. Old queue structure (`~/.copilot/queue/{incoming,done}`) is auto-detected
 2. Files are copied to new session-specific location
 3. Old directories renamed to backup (e.g., `incoming-legacy-20260503-143022/`)
 4. Migration logged in `.migration-log` for audit trail
@@ -384,8 +302,8 @@ If you see "queue not found" errors:
 ## 🔐 Security & Constraints
 
 ✅ **All work flows through agents** — no external scripts, cron jobs, or utilities
-✅ **No direct file manipulation** — only via DELEGATE/HANDBACK protocol  
-✅ **Audit trail** — all work tracked in queue and spans
+✅ **No direct file manipulation** — only via DELEGATE/HANDBACK protocol
+✅ **Audit trail** — every DELEGATE and HANDBACK is recorded to the queue and spans
 ✅ **Escalation path** — for blocked or rework items
 ✅ **Cost tracking** — SPAN files capture tokens and cost per task
 
@@ -398,18 +316,19 @@ See `docs/SPEC.md` for full architectural constraints.
 - **orchestration/AGENTS.md** — Full agent definitions, routing rules
 - **orchestration/SKILLS.md** — How each agent executes their role
 - **orchestration/HANDOFF.md** — DELEGATE/HANDBACK/FEEDBACK formats
-- **orchestration/QUEUE-PROTOCOL.md** — Queue mechanics
+- **orchestration/QUEUE-PROTOCOL.md** — Queue mechanics (note: this reference document is locked/out of scope for this update and may still describe queue polling as canonical dispatch; treat `src/AGENTS.md > Direct Sub-Agent Spawn Execution Model` as authoritative for how dispatch actually works)
 - **docs/SPEC.md** — Complete specification & constraints
 
 ---
 
 ## 🚀 TL;DR
 
-1. **Queue a task** → Create DELEGATE YAML in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
-   - Session-id auto-detected from environment or filesystem
-2. **Start Orchestrator** → It polls your session's queue and delegates work
-   - Multi-session support: Each session has isolated queue
-3. **Check results** → Review `~/.agentic-engineers/{harness}/{session-id}/queue/done/` and generated files
-4. **Commit** → Add artifacts to git
+1. **Tell the Orchestrator what you want** → it builds the DELEGATE for you and spawns the right agent directly (Agent/Task tool)
+2. **Orchestrator handles everything** → routes, spawns, reads the HANDBACK back in-context, aggregates, and records both to the queue for audit
+   - Multi-session support: each session has an isolated audit-trail partition
+3. **Check results** → the outcome is reported to you directly; the audit trail lives in `~/.agentic-engineers/{harness}/{session-id}/queue/done/` and generated files
+4. **Commit** → add artifacts to git
 
-That's it. Orchestrator handles routing, execution, observability, session isolation, and queue management. Everything is agent-based, auditable, and framework-native.
+That's it. Orchestrator handles routing, direct-spawn execution, observability, session
+isolation, and the audit trail. Everything is agent-based, auditable, and
+framework-native — and nothing is waiting on a poll loop to notice your request.

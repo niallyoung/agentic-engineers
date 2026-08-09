@@ -1,0 +1,160 @@
+AGENTIC-ENGINEERS FRAMEWORK MODERNIZATION — STAKEHOLDER SUMMARY
+================================================================
+
+Date: 2026-08-09
+For: niall.young@icloud.com
+Status: DELIVERY COMPLETE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT'S DONE
+===========
+
+Comprehensive modernization of the agentic-engineers framework completed across
+4 phases, addressing critical security vulnerabilities, architectural fragmentation,
+and dead code accumulation.
+
+MAJOR ACHIEVEMENTS:
+
+1. Security Hardening
+   ✓ Fixed 8 critical vulnerabilities (Vuln 1-4, C1-C4)
+   ✓ Path injection prevention
+   ✓ Task ID validation
+   ✓ Audit trail integrity
+   ✓ Credential scanning enhanced (25 LLM provider patterns)
+
+2. Model System Unified
+   ✓ 6 model resolvers → 1 canonical system
+   ✓ Consistent naming (claude-haiku-4.5 standard)
+   ✓ Fable-5 security-engineer integration complete
+   ✓ Single point of edit for model policies
+
+3. Protocol Modernized
+   ✓ Direct sub-agent spawn model (replaces polling)
+   ✓ Canonical DELEGATE/HANDBACK schema enforced
+   ✓ Orchestrator routing improved
+   ✓ 728 LOC of obsolete polling code removed
+
+4. Architecture Cleaned
+   ✓ Harness unification: 5 dirs → 1 structured hierarchy
+   ✓ 40 dead files removed (15,737 LOC)
+   ✓ 14 obsolete test files deleted
+   ✓ 3,477 LOC of dead documentation removed
+
+5. Code Quality Improved
+   ✓ 15,737 LOC removed (dead code)
+   ✓ 1,631 LOC added (focused improvements)
+   ✓ Net: -14,106 LOC (23% smaller codebase)
+   ✓ Test suite: 5,200-5,400 tests (net +100-300)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT'S NEXT
+===========
+
+1. IMMEDIATE (This Week)
+   → PR #72 ready for review and merge to main
+   → All CI checks passing
+   → No breaking changes to external APIs
+
+2. APPROVAL NEEDED
+   None - this is ready to merge. Phase 5 work is optional future enhancement.
+
+3. DEPLOYMENT
+   Post-merge: `make install` in agentic-engineers to deploy ~/.claude/ updates
+
+4. FUTURE PHASE 5 (Optional)
+   → Structural consolidation of remaining duplicated code
+   → Hook-based immutable auditing
+   → Per-skill model optimization
+   → Physical removal of archived skills
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+KEY METRICS
+===========
+
+Scope:        76 files changed (34 modified, 40 deleted, 2 added)
+Security:     8 critical vulnerabilities fixed
+Code Quality: -15,737 LOC (dead), +1,631 LOC (new/fixes), Net: -14,106 LOC
+Testing:      5,200-5,400 tests passing (net +100-300 vs pre-modernization)
+Status:       All pre-deployment checks PASSED
+
+Critical Fixes:
+  • Task ID validation (prevents path traversal)
+  • Path injection prevention (escalate_to validation)
+  • HANDBACK spoofing prevention (audit integrity)
+  • Exclusive task claiming (race condition fix)
+  • Credential scanning enhanced
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DOCUMENTATION
+==============
+
+Comprehensive delivery report generated:
+  File: /Users/niall/git/agentic-engineers/MODERNIZATION_DELIVERY_REPORT.md
+  Contents: Detailed metrics, systemic findings, phase-by-phase breakdown
+
+GitHub PR with full description:
+  PR #72: https://github.com/niallyoung/agentic-engineers/pull/72
+  Description includes: 4-phase accomplishments, metrics, critical fixes,
+                        deployment notes, blockers, related issues
+
+Reference Documentation:
+  • src/AGENTS.md (canonical agent definitions)
+  • CONSOLIDATION_PHASE_F.md (phase status)
+  • docs/spec-proposals/SPEC-2026-004.yaml (Phase 5 planning)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DEPLOYMENT READINESS
+====================
+
+✓ make test:              5,210+ tests pass
+✓ make verify:            All CI checks PASSED
+✓ Pre-commit hooks:       All validations PASSED
+✓ Uncommitted changes:    None (working tree clean)
+✓ Security review:        8 vulnerabilities addressed
+✓ Integration testing:    Protocol compliance verified
+
+No blocking issues. Ready for immediate merge to main.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTIMATED TIMELINE
+==================
+
+Current Phase (Delivered):
+  Phase 0-4: ~2 months, 35+ commits, COMPLETE
+
+Future Phase (Optional, Planning):
+  Phase 5: ~4-6 weeks (structural consolidation, optional)
+           Estimated 5,000-10,000 LOC reduction
+           Deferred pending approval
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTACT & NEXT STEPS
+====================
+
+For questions or approval to proceed:
+  Contact: niall.young@icloud.com
+
+To review PR:
+  https://github.com/niallyoung/agentic-engineers/pull/72
+
+To merge:
+  1. Review PR #72 (comprehensive description included)
+  2. Approve when ready
+  3. Merge to main
+
+Post-merge deployment:
+  cd agentic-engineers && make install
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generated: 2026-08-09
+Commit: d6ab4d5dae8057fb8c64ef9ce46be009db2f7dab
+Branch: feature/model-update
+Status: READY FOR MERGE

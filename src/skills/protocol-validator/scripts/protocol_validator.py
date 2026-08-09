@@ -97,12 +97,6 @@ _STATUS_REGISTRY: List[Dict[str, Any]] = [
         "expected": VALID_STATUSES,
         "allows_legacy": False,
     },
-    {
-        "path": "src/orchestration/agents/invoke_agent.py",
-        "name": "VALID_HANDBACK_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
 ]
 
 

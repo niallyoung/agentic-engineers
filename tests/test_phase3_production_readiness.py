@@ -30,7 +30,6 @@ from src.orchestration.monitoring.budget_checker import BudgetChecker, BudgetSta
 from src.orchestration.monitoring.orchestrator_cli import OrchestratorCLI
 from src.orchestration.models.complexity_scorer import ComplexityScorer, TaskAttributes
 from src.orchestration.models.model_selector import ModelSelector, ModelTier
-from src.orchestration.agents.invoke_agent import AgentInvoker
 
 
 # ===========================================================================
@@ -148,16 +147,6 @@ class TestNoBreakingChangesToExistingAPIs:
         selector = ModelSelector()
         assert selector is not None
 
-    def test_agent_invoker_accepts_optional_token_tracker(self, tmp_dirs):
-        """Verify AgentInvoker token_tracker parameter is optional."""
-        # Should work without token_tracker
-        invoker = AgentInvoker(
-            processing_dir=tmp_dirs["processing"],
-            delegates_dir=tmp_dirs["delegates"],
-            spans_dir=tmp_dirs["spans"],
-        )
-        assert invoker._token_tracker is None
-
     def test_task_attributes_all_optional_fields(self):
         """Verify TaskAttributes can be created with no arguments."""
         attrs = TaskAttributes()
@@ -217,57 +206,12 @@ class TestOptionalParametersDefaultCorrectly:
         assert attrs.required_quality_score == 85.0
 
 
-class TestGracefulDegradationWithoutTokenTracker:
-    """Verify system works correctly without TokenTracker."""
-
-    def test_invoker_without_tracker_does_not_crash(self, tmp_dirs):
-        """Verify AgentInvoker works without token_tracker."""
-        invoker = AgentInvoker(
-            processing_dir=tmp_dirs["processing"],
-            delegates_dir=tmp_dirs["delegates"],
-            spans_dir=tmp_dirs["spans"],
-        )
-        # No crash on initialization
-        assert invoker._token_tracker is None
-
-    def test_invoker_record_metrics_skipped_without_tracker(self, tmp_dirs):
-        """Verify _record_token_metrics is no-op without tracker."""
-        invoker = AgentInvoker(
-            processing_dir=tmp_dirs["processing"],
-            delegates_dir=tmp_dirs["delegates"],
-            spans_dir=tmp_dirs["spans"],
-        )
-        delegate = make_delegate()
-        handback = make_handback()
-
-        # Should not raise
-        if invoker._token_tracker:
-            invoker._record_token_metrics(delegate, handback)
-        # No assertion needed — just verify no crash
-
-
 # ===========================================================================
 # 2. Error Handling Tests
 # ===========================================================================
 
 class TestTokenTrackerErrorsDontBreakTaskExecution:
     """Verify TokenTracker errors are handled gracefully."""
-
-    def test_tracker_error_does_not_propagate_from_invoker(self, tmp_dirs, tracker):
-        """Verify tracker errors are caught in _record_token_metrics."""
-        invoker = AgentInvoker(
-            processing_dir=tmp_dirs["processing"],
-            delegates_dir=tmp_dirs["delegates"],
-            spans_dir=tmp_dirs["spans"],
-            token_tracker=tracker,
-        )
-        tracker.record_task_tokens = MagicMock(side_effect=RuntimeError("DB error"))
-
-        delegate = make_delegate()
-        handback = make_handback()
-
-        # Should not raise — error is caught and logged
-        invoker._record_token_metrics(delegate, handback)
 
     def test_tracker_handles_concurrent_errors_gracefully(self, tracker):
         """Verify tracker remains consistent after concurrent error conditions."""

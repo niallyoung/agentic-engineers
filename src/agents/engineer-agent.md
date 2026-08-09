@@ -11,6 +11,7 @@ accepts:
 returns:
   - HANDBACK
 role: engineer
+tools: []
 ---
 
 # Engineer Agent — LIVE IMPLEMENTATION
@@ -169,6 +170,23 @@ confidence: 0.95
 escalations: []
 ---
 ```
+
+---
+
+## Execution Model
+
+Engineer is spawned directly — the parent agent (Orchestrator, or Senior Engineer)
+passes the DELEGATE block above as this agent's prompt via a direct sub-agent spawn
+(Agent/Task tool), and receives the HANDBACK back as that spawn call's result,
+in-context. There is no queue file to poll or write for this exchange to complete; the
+parent records the DELEGATE/HANDBACK pair to the durable queue afterward, for audit only.
+
+**This agent's frontmatter does not grant `spawn_subagent`** (`tools: []`) — Engineer is
+a leaf in the delegation tree by design (see `src/AGENTS.md` § Tools-Frontmatter
+Permission Model), and this is what actually enforces the max delegation depth: whatever
+depth Engineer is reached at, it cannot re-delegate further. When it hits an escalation
+trigger it stops and returns `status: escalate` in its HANDBACK; the parent agent is
+responsible for re-delegating.
 
 ---
 

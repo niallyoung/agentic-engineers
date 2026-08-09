@@ -81,20 +81,10 @@ inject_settings_model() {
 import json, sys, os
 settings_file, model_alias = sys.argv[1], sys.argv[2]
 
-# Canonical defaults seeded only when no settings.json exists yet. Phase G:
-# harness queue auto-polling (see docs/guides/harness-queue-polling.md).
-DEFAULT_SETTINGS = {
-	"idle_loop": {
-		"enabled": True,
-		"interval_seconds": 180,
-		"action": "invoke_skill",
-		"skill": "orchestrator-scheduler",
-		"args": ["--poll-once"],
-		"backoff_intervals": [5, 30, 180, 600],
-		"watch_enabled": True,
-		"watch_poll_seconds": 0.5,
-	},
-}
+# Canonical defaults seeded only when no settings.json exists yet.
+# Polling-based execution has been removed (2026-08-09) per SPEC-2026-004.
+# Orchestration now uses direct sub-agent spawning.
+DEFAULT_SETTINGS = {}
 
 try:
 	with open(settings_file) as f:

@@ -630,159 +630,17 @@ metrics:
     assert orchestrator.clean_poll_count == 0
 
 
-def test_idle_loop_normal_sleep(orchestrator):
-    """Test normal sleep behavior when below idle threshold."""
-    orchestrator.clean_poll_count = 1  # < IDLE_THRESHOLD_POLLS
-
-    # Mock time.sleep to verify it's called with correct duration
-    with patch('time.sleep') as mock_sleep:
-        result = orchestrator.run_idle_loop()
-        mock_sleep.assert_called_once_with(orchestrator.config.poll_interval_idle)
-
-    # Verify return structure
-    assert result['work_processed'] == 0
-    assert result['idle_entered'] is False
-    assert result['wake_reason'] == 'normal'
-
-
-def test_idle_loop_deep_sleep_enters_idle(orchestrator):
-    """Test deep sleep behavior when idle threshold reached."""
-    orchestrator.clean_poll_count = 3  # >= IDLE_THRESHOLD_POLLS
-
-    # Mock _deep_sleep to avoid actual sleep
-    with patch.object(orchestrator, '_deep_sleep', return_value='timeout'):
-        result = orchestrator.run_idle_loop()
-
-    # Verify return structure
-    assert result['work_processed'] == 0
-    assert result['idle_entered'] is True
-    assert result['wake_reason'] == 'timeout'
-
-    # Verify counter reset after deep sleep
-    assert orchestrator.clean_poll_count == 0
-
-
-def test_idle_loop_return_structure(orchestrator):
-    """Test that run_idle_loop returns correct tuple structure."""
-    orchestrator.clean_poll_count = 0
-
-    # Mock time.sleep so the normal-poll branch does not block on the real
-    # poll_interval_idle (180s default).
-    with patch('time.sleep'):
-        result = orchestrator.run_idle_loop()
-
-    # Verify return type and keys
-    assert isinstance(result, dict)
-    assert 'work_processed' in result
-    assert 'idle_entered' in result
-    assert 'wake_reason' in result
-
-    assert isinstance(result['work_processed'], int)
-    assert isinstance(result['idle_entered'], bool)
-    assert isinstance(result['wake_reason'], str)
-
-
-def test_idle_loop_multiple_cycles(orchestrator):
-    """Test idle detection across multiple poll cycles."""
-    # The first three cycles take the normal-poll branch, which calls
-    # time.sleep(poll_interval_idle) (180s default). Mock time.sleep so the
-    # test completes in milliseconds instead of blocking for ~9 minutes.
-    with patch('time.sleep'):
-        # First two polls - clean
-        orchestrator.clean_poll_count = 0
-        result1 = orchestrator.run_idle_loop()
-        assert result1['idle_entered'] is False
-        assert orchestrator.clean_poll_count == 0
-
-        # Simulate another clean poll by incrementing counter
-        orchestrator.clean_poll_count = 1
-        result2 = orchestrator.run_idle_loop()
-        assert result2['idle_entered'] is False
-
-        # Simulate third clean poll
-        orchestrator.clean_poll_count = 2
-        result3 = orchestrator.run_idle_loop()
-        assert result3['idle_entered'] is False
-
-    # Simulate fourth clean poll - should trigger deep sleep
-    orchestrator.clean_poll_count = 3
-    with patch.object(orchestrator, '_deep_sleep', return_value='file_event'):
-        result4 = orchestrator.run_idle_loop()
-        assert result4['idle_entered'] is True
-        assert result4['wake_reason'] == 'file_event'
-
-
-def test_deep_sleep_polling_detects_new_file(orchestrator, temp_queue):
-    """Test that deep sleep polling detects new files in incoming/."""
-    # This test is skipped in fast mode - file detection is tested via integration
-    # Use mock to verify polling logic without actual file I/O delays
-    incoming_dir = temp_queue / "incoming"
-
-    # Mock Path.glob to simulate new files being created
-    original_glob = Path.glob
-    call_count = [0]
-
-    def mock_glob(self, pattern):
-        call_count[0] += 1
-        # Call 1 is the initial snapshot; call 2 is the first in-loop poll.
-        # With deep_sleep_sec=0.5 and poll_interval=10s, only one in-loop
-        # poll happens before timeout, so the new file must appear on call 2.
-        if call_count[0] > 1:
-            return [incoming_dir / "new-task.yaml"]
-        return []
-
-    original_timeout = orchestrator.config.deep_sleep_sec
-    orchestrator.config.deep_sleep_sec = 0.5
-
-    try:
-        with patch.object(Path, 'glob', mock_glob):
-            result = orchestrator._deep_sleep_polling()
-            assert result == 'file_event'
-    finally:
-        orchestrator.config.deep_sleep_sec = original_timeout
-
-
-def test_deep_sleep_polling_timeout(orchestrator):
-    """Test that deep sleep polling returns timeout if no files added."""
-    # Use very short timeout for fast testing
-    original_timeout = orchestrator.config.deep_sleep_sec
-    orchestrator.config.deep_sleep_sec = 0.05  # 50ms timeout for fast test
-
-    try:
-        result = orchestrator._deep_sleep_polling()
-        assert result == 'timeout'
-    finally:
-        orchestrator.config.deep_sleep_sec = original_timeout
-
-
-def test_deep_sleep_polling_signal_handling(orchestrator):
-    """Test that deep sleep responds to SIGUSR1 signal."""
-    import signal as sig
-    import os
-    import threading
-
-    # Send SIGUSR1 after a short delay
-    def send_signal_after_delay():
-        time.sleep(0.05)
-        try:
-            os.kill(os.getpid(), sig.SIGUSR1)
-        except:
-            pass  # Ignore if signal fails
-
-    thread = threading.Thread(target=send_signal_after_delay, daemon=True)
-    thread.start()
-
-    # Use moderate timeout
-    original_timeout = orchestrator.config.deep_sleep_sec
-    orchestrator.config.deep_sleep_sec = 0.5
-
-    try:
-        result = orchestrator._deep_sleep_polling()
-        # May be 'signal' or 'timeout' depending on timing
-        assert result in ('signal', 'timeout')
-    finally:
-        orchestrator.config.deep_sleep_sec = original_timeout
-        thread.join(timeout=1)
+# NOTE (queue-polling removal, direct-spawn migration): the idle-loop and
+# deep-sleep tests that used to live here (test_idle_loop_normal_sleep,
+# test_idle_loop_deep_sleep_enters_idle, test_idle_loop_return_structure,
+# test_idle_loop_multiple_cycles, test_deep_sleep_polling_detects_new_file,
+# test_deep_sleep_polling_timeout, test_deep_sleep_polling_signal_handling)
+# tested OrchestratorSkill.run_idle_loop()/_deep_sleep()/_deep_sleep_polling(),
+# which have been removed. They implemented the harness-idle-triggered
+# sleep/deep-sleep mechanism driven by the now-deleted orchestrator-scheduler
+# skill and harness idle_loop.py modules — direct sub-agent spawning replaces
+# that whole mechanism. poll_queue() itself (tested above) is unaffected: it
+# doesn't loop or sleep, it processes whatever is currently in incoming/ once.
 
 
 # ─────────────────────────────────────────────────────────────────────────────

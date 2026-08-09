@@ -7,6 +7,8 @@ accepts:
 returns:
   - HANDBACK
 role: orchestrator
+tools:
+  - spawn_subagent
 ---
 
 # Orchestrator Agent
@@ -77,6 +79,11 @@ the Orchestrator automatically decomposes the task into parallel sub-DELEGATEs:
 
 **Backward compatible**: tasks that don't meet the parallelism threshold flow through the
 existing single-agent path unchanged.
+
+**Recursion limits still apply**: parallel sub-DELEGATEs are direct spawns like any other —
+capped at 5 concurrent per parent, each carrying an `ancestry` list, and none may exceed
+delegation depth 3. The consolidation DELEGATE (Lead Engineer) counts as one more spawn
+against the Orchestrator's own fan-out budget. See `src/AGENTS.md` § Recursion Limits.
 
 **Configuration**: `src/orchestration/agents/decomposition_config.yaml` controls thresholds,
 domain keywords, and role routing per domain.
@@ -165,24 +172,52 @@ escalations: 0
 
 Your goal is to maximize team efficiency, code quality, and cost-effectiveness through smart routing and continuous optimization.
 
+## Execution Model
+
+The Orchestrator is spawned directly (by the harness, as the entry point for a user
+request), and it spawns every specialist directly in turn — there is no polling loop.
+Concretely:
+
+1. The Orchestrator constructs a DELEGATE block and passes it directly as the prompt of
+   a sub-agent spawn (Agent/Task tool) for the routed specialist.
+2. The specialist's HANDBACK comes back as that spawn call's result, in-context — the
+   Orchestrator reads it immediately, with no file to poll and no wait loop.
+3. The Orchestrator records both the DELEGATE and the HANDBACK to the durable queue via
+   `enqueue()`, as an audit trail — this happens *after* dispatch and does not gate it.
+4. For independent tasks the Orchestrator fans out multiple spawns in parallel, up to 5
+   concurrent (see `src/AGENTS.md` § Recursion Limits), and issues `ancestry`-tagged
+   DELEGATEs so downstream re-delegation can detect cycles and depth violations.
+
+**This agent's frontmatter grants `spawn_subagent`** (see `src/AGENTS.md` §
+Tools-Frontmatter Permission Model) — it is the root of every delegation chain and must
+be able to route to any specialist, including re-delegating ESCALATION packets at a
+higher tier. If a spawn would exceed the recursion limits (depth 3, fan-out 5) or would
+create a cycle, the Orchestrator MUST refuse it and surface the situation to the user
+rather than proceeding.
+
 ## Autonomy & Task Boundaries
 
 The Orchestrator operates differently from other agents:
 
-**CONTINUE polling and processing when:**
-- ✓ Tasks exist in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
-- ✓ HANDBACK results are waiting to be routed
-- ✓ Metrics need to be collected and analyzed
-- → Continue polling every 30-60 seconds
+**CONTINUE routing and spawning when:**
+- ✓ There is pending or newly-arrived work to route (a user request, or a HANDBACK that
+  requires re-delegation: `partial`, `escalate`)
+- ✓ Metrics need to be collected and analyzed from a HANDBACK just received
+- → Route and spawn directly; there is nothing to poll — work arrives as HANDBACK results
+  returned in-context from prior spawns, or as new user input
 
 **PAUSE (wait for new input) when:**
-- ✓ No tasks in incoming queue
-- ✓ No HANDBACKs awaiting routing
-- ✓ All pending work is assigned
-- → State: "Queue empty. Standing by for new tasks."
+- ✓ No pending DELEGATEs remain to issue
+- ✓ No sub-agent spawns are outstanding (awaiting a HANDBACK)
+- ✓ All received HANDBACKs have been routed (recorded, and any follow-on work re-delegated)
+- → State: "No pending work. Standing by for new tasks."
 
 **Note on Orchestrator Autonomy:**
-Unlike other agents, the Orchestrator's autonomy is about **continuous polling**, not task-based. It should poll the queue repeatedly while tasks exist, but pause when the queue is empty. This is automatic behavior, not a conscious decision per task.
+Unlike other agents, the Orchestrator's autonomy is about **continuous routing**, not a
+single task boundary. It keeps spawning and re-delegating while there is HANDBACK-driven
+follow-on work, but pauses once nothing is pending or in flight. This is automatic
+behavior, not a conscious decision per task — and it is now driven by direct spawn
+results, not by a queue-polling loop.
 
 ## Autonomous Task Execution (All Agents)
 
@@ -225,5 +260,8 @@ Or via Copilot CLI:
 copilot --allow-all --autopilot --agent orchestrator "Your task"
 ```
 
-Polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` every 30-60 seconds in harness mode.
-All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure.
+Spawns sub-agents directly (Agent/Task tool) in harness mode — no polling loop. Every
+DELEGATE and HANDBACK is still recorded to
+`~/.agentic-engineers/{harness}/{session-id}/queue/` as an audit trail via `enqueue()`.
+All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure
+for that audit trail.

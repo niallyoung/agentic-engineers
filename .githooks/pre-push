@@ -13,7 +13,6 @@
 #   - Main/master push warnings
 #   - DELEGATE/HANDBACK protocol compliance
 #   - Render pipeline completion
-#   - Concurrent test execution (race condition guard)
 #   - Queue path validation
 #   - Agent definition verification
 #
@@ -312,35 +311,18 @@ elif [ -d "tests" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6b. RUN CONCURRENT TESTS (race condition guard)
+# 6b. (removed) RUN CONCURRENT TESTS (race condition guard)
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# TestConcurrentInvocations::test_concurrent_invocations_independent_files
-# has a history of flaking in CI due to a TOCTOU race between the HANDBACK
-# file poller and the writer thread.  Running it three times locally (the
-# test itself spawns threads; no -n / xdist needed) ensures the fix holds
-# before the commit reaches CI.
+# This step used to run TestConcurrentInvocations::test_concurrent_invocations_independent_files,
+# which guarded a TOCTOU race between invoke_agent.py's subprocess HANDBACK
+# file poller and the writer thread. That subprocess/file-poll mechanism
+# (invoke_agent.py, AgentInvoker) has been removed as part of the move to
+# direct sub-agent spawning — the HANDBACK is now returned directly as the
+# Agent/Task tool call result, in-context, with no separate file poller to
+# race against. There is no surviving mechanism for this check to guard, so
+# the step has been removed rather than pointed at a deleted test file.
 #
-echo ""
-echo "🔀 Running concurrent invocation tests (race condition guard)..."
-
-CONCURRENT_ERRORS=0
-if [ "${SKIP_PYTEST:-}" != "1" ] && command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
-  if timeout 60 pytest tests/test_invoke_agent.py::TestConcurrentInvocations \
-        -q --tb=short 2>/dev/null; then
-    pass "Concurrent invocation tests passed"
-  else
-    PYTEST_EXIT=$?
-    if [ "$PYTEST_EXIT" -eq 124 ]; then
-      fail "Concurrent invocation tests timed out (>60s) — race condition suspected"
-    else
-      fail "Concurrent invocation tests FAILED — race condition detected. Fix before pushing."
-    fi
-    CONCURRENT_ERRORS=$((CONCURRENT_ERRORS + 1))
-    ERRORS=$((ERRORS + 1))
-    CHECKS_FAILED=$((CHECKS_FAILED + 1))
-  fi
-fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. VALIDATE SPEC COMPLIANCE (No external scripts except renderer/)

@@ -28,9 +28,16 @@ def test_orchestrator_with_context(agent_context: str = 'copilot', idle_timeout:
     orchestrator = OrchestratorAgent(agent_context=agent_context, idle_timeout=idle_timeout)
     print(f"Queue: {orchestrator.queue_manager.base_dir}")
     print()
-    
-    orchestrator.poll_and_process()
-    
+
+    # poll_and_process() (subprocess-poll dispatch loop) has been removed —
+    # the harness now spawns sub-agents directly via the Agent tool instead
+    # of this class draining incoming/ in a loop. This manual harness has not
+    # been updated for direct-spawn dispatch yet; there is currently nothing
+    # here to drive task processing.
+    print("NOTE: poll_and_process() has been removed (direct sub-agent spawning "
+          "replaces queue polling). This harness does not yet drive direct-spawn "
+          "dispatch, so no tasks will be processed by this call.")
+
     print(f"\n{'='*70}")
     print("ORCHESTRATOR TEST RESULTS")
     print(f"{'='*70}")

@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 # Effort-level to timeout mapping (seconds).
-# Mirrors invoke_agent.AgentInvoker.EFFORT_TIMEOUTS.
+# Historically mirrored invoke_agent.AgentInvoker.EFFORT_TIMEOUTS
+# (subprocess-poll dispatch retired in favor of direct sub-agent spawning).
 EFFORT_TIMEOUTS: Dict[str, int] = {
     "low": 30,
     "medium": 120,
