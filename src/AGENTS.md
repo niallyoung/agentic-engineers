@@ -11,7 +11,7 @@
 - **Direct spawn, not ad-hoc** — every task is delegated by constructing a DELEGATE block and passing it directly as the prompt of a sub-agent spawn (the harness's Agent/Task tool); there is no free-form delegation outside this mechanism, and only agents whose frontmatter grants `spawn_subagent` may do it (see [Tools-Frontmatter Permission Model](#tools-frontmatter-permission-model))
 - **Audit-first, not dispatch-first** — every DELEGATE (at spawn) and every HANDBACK (at completion) MUST be durably recorded via `QueueOperations.enqueue()` (the `queue-management` skill) to `~/.agentic-engineers/{harness}/{session-id}/queue/`. This is bookkeeping written *after* the spawn already happened directly — nothing polls these directories to trigger work. Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
 - **Reduced autonomy** — agents pause when the queue is empty; they do NOT invent work
-- **Start cheap, escalate deliberately** — route to the cheapest capable model; upgrade only when blocked
+- **Start cheap, escalate deliberately** — each role's default model is the cheapest tier capable of that role's job (see Cost Tiers below); a low-quality HANDBACK triggers rework or reroutes to a higher-tier role via `route_handback` (`orchestrator.py`) — this is a static per-role assignment plus post-hoc rerouting, not a live mid-task model upgrade
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
 - **Cold-context agents** — every DELEGATE is self-contained; the receiving agent cannot rely on session state
 - **Parallel by default** — the Orchestrator fans out multiple DELEGATEs simultaneously when tasks are independent
@@ -85,7 +85,7 @@ User request / External trigger
 
 **Why Orchestrator-first?**
 - **Auditability** — all work is tracked as DELEGATE/HANDBACK blocks in the queue
-- **Cost discipline** — starts cheap (Haiku), escalates only when needed
+- **Cost discipline** — each role has a fixed, cost-appropriate model (see Cost Tiers); a low-quality HANDBACK reroutes to a higher tier rather than upgrading the model mid-task
 - **Protocol enforcement** — routing rules and model selection are consistent
 - **Parallel execution** — independent tasks fan out simultaneously
 
@@ -630,12 +630,15 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
       d. Returns a HANDBACK directly, as the result of the spawn call — there
          is no file to write and nothing to poll for this step to complete
 
-5.  Quality Engineer validates the HANDBACK (spawned directly, like any role):
+5.  **Convention, not automatic:** the spawning agent MAY spawn Quality Engineer to
+    validate the HANDBACK. Nothing triggers this on its own — it only runs if the
+    spawning agent issues that DELEGATE:
       - Checks acceptance_criteria are met
       - Runs repro command to verify
       - Populates metrics.quality (0.0–1.0) in the HANDBACK
 
-6.  Model Engineer analyses HANDBACK metrics (spawned directly):
+6.  **Convention, not automatic:** likewise, the spawning agent MAY spawn Model Engineer
+    after a Quality Engineer verdict to analyse HANDBACK metrics:
       - Compares tokens used vs. estimated across task history
       - Emits model/effort recommendation if drift detected
 
@@ -658,7 +661,10 @@ MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
 
 Direct spawn removes the natural throttling a polling loop provided — a queue nobody
 drains just grows silently, but a spawn chain nobody bounds recurses actively. These
-limits are load-bearing, not advisory:
+limits are the framework's convention for bounding that recursion. **No runtime code
+counts depth, counts fan-out, or detects cycles today** — see [Tools-Frontmatter
+Permission Model](#tools-frontmatter-permission-model) for what is and isn't checked in
+practice. Every agent is expected to self-enforce the following:
 
 - **Max delegation depth: 3.** Depth is measured in spawn hops from the root DELEGATE
   (depth 0 = the Orchestrator's own top-level DELEGATE; each direct spawn increments
@@ -691,42 +697,34 @@ invents a workaround (e.g. spawning "just one more" past the limit) on its own.
 
 ### Tools-Frontmatter Permission Model
 
-A documented depth limit that every agent could ignore is not a limit. Enforcement lives
-in each agent's own definition, via a `tools:` frontmatter key:
+The `tools:` key in each agent's source frontmatter (`src/agents/<name>-agent.md`) states
+which roles are *meant* to spawn sub-agents. **Neither harness renderer enforces it:**
 
-```yaml
-tools:
-  - spawn_subagent      # this agent's definition grants sub-agent spawn authority
-```
+- **Claude Code:** `renderer/scripts/render-claude.sh` drops the `tools:` key entirely
+  when rendering `~/.claude/agents/*.md` — every rendered Claude Code sub-agent gets the
+  harness's full default tool access, including Engineer and Quality Engineer.
+- **OpenCode:** `renderer/scripts/render-opencode.sh` documents the same reality plainly:
+  "all agents use uniform allow-all permissions... the core constraint model is social
+  (shared responsibility, code review, audit trails) rather than technical restrictions."
 
-or, for an agent with no spawn authority:
+The PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) only checks that an
+Agent/Task-tool call carries a well-formed DELEGATE block (required fields present,
+`scope` ≥15 words, etc.). It does not check the calling agent's role, its `tools:` grant,
+ancestry, depth, or fan-out — none of those checks exist in code on either harness today.
 
-```yaml
-tools: []
-```
+The table below is the convention every role is expected to follow. Compliance is the
+spawning agent's own judgment call, guided by this document — not a runtime guarantee.
 
-An agent may invoke the Agent/Task tool to spawn a sub-agent **only if** `spawn_subagent`
-is present in its *own* `tools:` list — checked against the receiving agent's definition,
-not the DELEGATE it was handed. A DELEGATE cannot grant spawn authority that the
-receiving agent's frontmatter doesn't already have.
-
-| Role | `tools:` | Why |
+| Role | Spawns sub-agents? | Why |
 |---|---|---|
-| Orchestrator | `[spawn_subagent]` | Root of every delegation chain; must be able to route to any specialist |
-| Senior Engineer | `[spawn_subagent]` | Delegates sub-tasks to Engineer directly, or escalates to Lead/Principal/Security (Role Definitions §3) |
-| Lead Engineer | `[spawn_subagent]` | Produces implementation DELEGATEs for Engineer/Senior after an architecture decision (Role Definitions §4) |
-| Principal Engineer | `[spawn_subagent]` | Produces implementation DELEGATEs for Engineer/Senior after a cross-service finding (Role Definitions §7) |
-| Security Engineer | `[spawn_subagent]` | Produces implementation DELEGATEs for Engineer/Senior for each audit finding (Role Definitions §8) |
-| Model Engineer | `[]` | Recommendations only — writes to `src/TOKEN_METRICS.md` and returns its HANDBACK to whoever spawned it; never delegates |
-| Engineer | `[]` | Leaf by design — this is what actually enforces the depth bound at the cheapest tier. Escalates via HANDBACK `status: escalate`; never re-delegates itself |
-| Quality Engineer | `[]` | Leaf by design — "produce DELEGATE blocks if issues are found" (Role Definitions §5) means the *content* is embedded in QE's own HANDBACK for the spawning agent to act on, not that QE spawns it itself |
-
-Since Lead/Principal/Security/Senior sit at depth 1–2 on the routing paths in the
-Delegation Model diagram above, and Engineer/QE/Model Engineer are always reached at the
-deepest hop of their respective paths, the grant table and the depth-3 limit are two
-independent mechanisms enforcing the same invariant — the frontmatter grant is the one
-that actually *stops* a leaf agent from attempting a spawn, regardless of what depth it
-believes it is at.
+| Orchestrator | Yes | Root of every delegation chain; routes to any specialist |
+| Senior Engineer | Yes | Delegates to Engineer, or escalates to Lead/Principal/Security (§3) |
+| Lead Engineer | Yes | Produces implementation DELEGATEs after an architecture decision (§4) |
+| Principal Engineer | Yes | Produces implementation DELEGATEs after a cross-service finding (§7) |
+| Security Engineer | Yes | Produces implementation DELEGATEs for each audit finding (§8) |
+| Model Engineer | No | Recommendations only — returns findings in its own HANDBACK, never delegates |
+| Engineer | No | Leaf by design — escalates via HANDBACK `status: escalate`, never re-delegates |
+| Quality Engineer | No | Leaf by design — issues raised go in QE's own HANDBACK, not a spawn |
 
 ### Audit-Trail Strategy
 
@@ -747,6 +745,11 @@ If a DELEGATE or HANDBACK is not enqueued, it did not happen as far as the audit
 cost tracking (Model Engineer), and crash-recovery tooling are concerned — even though the
 work itself completed in-context. Treat the `enqueue()` call as part of the spawn, not as
 optional cleanup afterward.
+
+**Known gap:** this is not happening reliably. A check of real session directories
+(`~/.agentic-engineers/{harness}/{session-id}/queue/`) across ~12 live sessions found only
+placeholder `.keep.me` files — no DELEGATE or HANDBACK actually recorded. Treat this
+section as the target behavior, not a guarantee of what has been captured so far.
 
 ### Pause Condition
 

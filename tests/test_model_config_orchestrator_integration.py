@@ -38,28 +38,28 @@ class TestModelConfigIntegration:
             model = orch.model_config.get_model_for_delegate(agent="engineer")
             assert model == "claude-haiku-4.5"
 
-            # Principal engineer should get Opus-4.6
+            # Principal engineer should get Opus-5
             model = orch.model_config.get_model_for_delegate(
                 agent="principal_engineer"
             )
-            assert model == "claude-opus-4.6"
+            assert model == "claude-opus-5"
 
-            # Security engineer should get Opus-4.8
+            # Security engineer should get Fable-5 (unconditional default)
             model = orch.model_config.get_model_for_delegate(
                 agent="security_engineer"
             )
-            assert model == "claude-opus-4.8"
+            assert model == "claude-fable-5"
 
     def test_orchestrator_model_selection_per_task(self):
         """Test per-task-type model override through orchestrator."""
         with tempfile.TemporaryDirectory() as tmpdir:
             orch = OrchestratorAgent(queue_dir=tmpdir)
 
-            # Security audit task should upgrade to Opus-4.8
+            # Security audit task should upgrade to Fable-5
             model = orch.model_config.get_model_for_delegate(
                 agent="engineer", task_type="security_audit"
             )
-            assert model == "claude-opus-4.8"
+            assert model == "claude-fable-5"
 
             # Documentation should stay with Haiku
             model = orch.model_config.get_model_for_delegate(
@@ -78,14 +78,14 @@ class TestModelConfigIntegration:
                 agent="engineer",
                 task_type="code_review",  # Has task override
             )
-            assert model == "claude-sonnet-4.6"
+            assert model == "claude-sonnet-5"
 
             # No override = agent default
             model = orch.model_config.get_model_for_delegate(
                 agent="quality_engineer",
                 task_type="unknown_task",  # No override for this task
             )
-            assert model == "claude-sonnet-4.6"  # agent default
+            assert model == "claude-sonnet-5"  # agent default
 
     def test_orchestrator_fallback_to_global(self):
         """Test fallback to global default for unconfigured agents."""
@@ -145,7 +145,7 @@ class TestModelConfigIntegration:
                 task_id="task-002",
                 scope_word_count=200,
             )
-            assert model == "claude-opus-4.8"  # Upgraded by task override
+            assert model == "claude-fable-5"  # Upgraded by task override
 
             # Scenario 3: Principal engineer with architecture design
             model = orch.model_config.get_model_for_delegate(
@@ -154,8 +154,8 @@ class TestModelConfigIntegration:
                 task_id="task-003",
                 scope_word_count=500,
             )
-            # Principal engineer override, but task override also exists
-            assert model == "claude-opus-4.6"  # Task override
+            # No task override for "architecture_design" -> falls through to agent default
+            assert model == "claude-opus-5"  # Agent default
 
     def test_provider_registry_available(self):
         """Test that provider registry is accessible."""

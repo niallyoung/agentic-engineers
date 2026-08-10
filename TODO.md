@@ -1050,3 +1050,71 @@ via the P1 self-improvement round (PR #57, merged to main 2026-06-13):**
 - [ ] **Phase Timeline:** Post-Phase I (Standards Compliance); coordinate with harness feature releases
 
 **Target Docs Location:** `docs/guides/git-hooks-reuse.md` (placeholder for Phase 5.3)
+
+---
+
+## Follow-Ups: Docs-Truth Pass (2026-08-10, task-2026-08-10-docs-truth-simplification)
+
+Deliberately deferred during the docs-truth-and-simplify pass (src/AGENTS.md, CLAUDE.md
+template, agent templates, effort enum, 3 stale-model fixes, archived
+DELEGATE-HANDBACK-QUALITY-GATES.md). None of these were implemented — collected here per
+the task's scope boundary ("do not wire dead subsystems, no module deletion, no new
+hooks"). Two pre-existing test failures were also found (not caused by this pass, not
+fixed — see bottom of this section).
+
+**Architectural / wiring gaps (all currently unwired, by design of this task):**
+- [ ] Wire `RecommendationsEngine` into the post-HANDBACK flow so Model Engineer's
+  recommendations actually feed back into routing (currently advisory-only; see
+  `src/agents/model-engineer-agent.md` § Feedback Loop, now marked "design intent, not
+  current behavior")
+- [ ] Add a PostToolUse/SubagentStop hook to auto-trigger Quality Engineer review (Gate 2)
+  and Lead Engineer review (Gate 3) — currently convention steps the spawning agent
+  performs manually; see `src/AGENTS.md` § Direct Sub-Agent Spawn Execution Model, steps 5-6
+- [ ] Add ancestry/depth/fan-out checking to `renderer/scripts/claude-delegate-guard.py` —
+  it currently validates DELEGATE structure only; see `src/AGENTS.md` §
+  Tools-Frontmatter Permission Model
+- [ ] Decide fate of `parallel_delegate.py` (delete or wire it) — its integration-test
+  docstring currently overclaims
+- [ ] Unify the two incompatible metrics writer/reader pairs (`metrics_writer.py` vs
+  `model-engineer.py`)
+- [ ] Delete dead `create_task()` / role-based `DelegateValidator`
+  (`queue_ops.py:260-277`, `queue-management/validators.py`)
+- [ ] Fix `delegate_validator.py` hardcoded `/home/user` path (H3) and its
+  `YYYY-MM-DD` task_id prefix requirement, which rejects the canonical examples in
+  `src/AGENTS.md`. Also reconcile its `EFFORT_BANDS`/`EFFORT_ROLE_REQUIREMENTS` use of
+  `'epic'` as a real effort tier — `docs/specs/protocol-core-v1.0.yaml` and
+  `protocol_validator.py` now document `epic` as explicitly non-canonical (only
+  `low|medium|high|max` are valid); `delegate_validator.py` was left untouched per this
+  task's scope but should either drop `epic` or the spec should special-case it
+- [ ] Add a CI dist-drift check (`git diff --exit-code` after `make render-all`) so
+  source/dist drift is caught automatically
+- [ ] Retire `CycleDetector` (superseded by the ancestry-chain convention in
+  `src/AGENTS.md` § Recursion Limits, which — see above — is not yet code-enforced either)
+- [ ] `tokenadvisor` skill still points at archived code
+- [ ] Trim `protocol_audit.py` `REQUIRED_MODULES`
+
+**Stale model strings beyond the 3 fixed in this pass** (orchestrator.py:2127,
+model-config.yaml, agents/__init__.py were fixed; these were not, since they weren't in
+the confirmed-live 3 and reviewing them was out of this task's explicit scope):
+- [ ] `src/claude/agent_verifier.py:376-380` and
+  `src/harnesses/claude_code/agent_verifier.py` — per-role model defaults use
+  previous-gen names (`claude-sonnet-4.5`/`4.6`, `claude-opus-4.6`); check whether these
+  are live-used defaults (like `agents/__init__.py` was) or legitimate backward-compat
+  validation lists (like `test_config_naming_consistency.py`'s `LOCKED_MODELS` treats
+  them) before touching
+- [ ] `src/copilot/model_router.py`, `src/harnesses/copilot_cli/cost_tracker.py`,
+  `src/harnesses/claude_code/model_registry.py`, `src/harnesses/claude_code/agent_dispatch.py`
+  — same audit needed; several of these look like intentional "recognize legacy names"
+  validation sets rather than live routing defaults, but this pass did not verify each one
+
+**Pre-existing test failures found during this pass (NOT introduced by it, NOT fixed —
+confirmed present on the unmodified baseline commit c87cc57 via `git stash`):**
+- [ ] `tests/test_install_correctness.py::test_installed_matches_dist[claude]` —
+  `settings.json` differs between `dist/claude/` and a fresh install (likely a
+  session-id or timestamp field baked in at render time)
+- [ ] `tests/test_install_correctness.py::test_installed_matches_dist[opencode]` —
+  `render-opencode.sh` silently drops the entire `## Protocol Guard` section for
+  exactly 3 of 8 agents (`engineer.md`, `lead-engineer.md`, `model-engineer.md`) in one
+  render path but not another with identical source, causing dist/opencode and a fresh
+  install to diverge; root cause not diagnosed (reproduced with plain `make
+  render-opencode` alone — deterministic, not a race)

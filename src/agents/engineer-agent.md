@@ -18,7 +18,7 @@ tools: []
 
 ## Protocol Guard
 
-If the prompt you receive is not a well-formed DELEGATE block — missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria` — do not attempt the work. Return a HANDBACK immediately with `status: failure` and an `output` explaining the protocol violation and what a compliant DELEGATE requires. This is defense-in-depth: the harness's PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) should already have blocked a non-compliant Agent-tool spawn before it reached you — treat this check as a backstop, not the primary gate.
+If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Engineer
 **Model**: claude-haiku-4.5

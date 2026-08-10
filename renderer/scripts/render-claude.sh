@@ -237,6 +237,26 @@ PY
 
 # parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
 
+# render_claude_agent_body SRC_FILE
+# Emits the agent body (frontmatter stripped) for the Claude Code target, with
+# the source's "## Integration" section (OpenCode/Copilot CLI invocation
+# instructions — dead weight on Claude Code, which spawns agents via the
+# Agent/Task tool, not a CLI flag) replaced by a one-line Claude-native pointer.
+# "## Integration" is always the final section of a src/agents/*-agent.md file
+# (verified: it runs to EOF in all 8 agents), so this is a safe truncation.
+render_claude_agent_body() {
+	local src="$1"
+	strip_fm "$src" | sed '/^## Integration$/,$d'
+	cat <<'EOF'
+## Integration
+
+This agent is spawned directly via the Agent/Task tool as part of the
+agentic-engineers DELEGATE/HANDBACK protocol. Every DELEGATE and HANDBACK is
+also recorded to `~/.agentic-engineers/{harness}/{session-id}/queue/` as a
+durable audit trail via `enqueue()` — see `~/.claude/AGENTS.md`.
+EOF
+}
+
 
 # Write a managed framework doc with a sentinel on line 1, refusing to overwrite
 # a foreign (user-authored) file of the same name. Used for CLAUDE.md/AGENTS.md.
@@ -287,9 +307,9 @@ auditability, and the DELEGATE/HANDBACK coordination layer.
 
 ## Why protocol-first matters
 
-- **Auditability** — every task is a DELEGATE block in the queue; every result is a HANDBACK
-- **Enforcement** — routing rules, model selection, and escalation triggers are applied consistently
-- **Cost discipline** — the Orchestrator starts with cheap Haiku models and escalates only when needed
+- **Auditability** — every task is meant to be a DELEGATE block in the queue; every result a HANDBACK (in practice this recording is a known gap — see `~/.claude/AGENTS.md` § Audit-Trail Strategy)
+- **Consistency** — routing rules and escalation triggers are documented once and followed by every role
+- **Cost discipline** — each role has a fixed, cost-appropriate model; a low-quality HANDBACK reroutes to a higher tier rather than upgrading the model mid-task
 - **Coordination** — independent tasks are fanned out in parallel; escalation chains are tracked
 
 ## Specialist agents (invoked by the Orchestrator, not directly by users)
@@ -553,7 +573,7 @@ print('yes' if wired else 'no')
 			echo "role: $role_val"
 			echo "---"
 			echo
-			strip_fm "$src_file"
+			render_claude_agent_body "$src_file"
 		} > "$dst_file"
 
 			echo "$name" >> "$AGENT_MANIFEST.tmp"

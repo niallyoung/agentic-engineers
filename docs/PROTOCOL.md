@@ -6,7 +6,7 @@ created: 2026-05-09
 owner: Lead Engineer
 references:
   - orchestration/AGENTS.md
-  - orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md
+  - archive/DELEGATE-HANDBACK-QUALITY-GATES.md (archived)
   - orchestration/delegate-schema.yaml
   - orchestration/handback-schema.yaml
   - orchestration/agents/quality_validator.py
@@ -756,8 +756,8 @@ else:                 action = "escalate"
 
 ### Appendix D: Metrics Schema (35 Fields)
 
-See `orchestration/DELEGATE-HANDBACK-QUALITY-GATES.md` Section 5 for the full 35-field
-canonical metrics YAML schema with all field descriptions and example values.
+See `archive/DELEGATE-HANDBACK-QUALITY-GATES.md` (archived) Section 5 for the full
+35-field canonical metrics YAML schema with all field descriptions and example values.
 
 ### Appendix E: Glossary
 

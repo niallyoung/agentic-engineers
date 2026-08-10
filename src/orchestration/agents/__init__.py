@@ -119,7 +119,7 @@ ENGINEER_CONFIG = AgentConfig(
 
 SENIOR_ENGINEER_CONFIG = AgentConfig(
     name="Senior Engineer",
-    model="claude-sonnet-4.6",
+    model="claude-sonnet-5",
     effort="high",
     role="senior_engineer",
     description="Complex work, writes plans, diagnoses root causes"
@@ -127,7 +127,7 @@ SENIOR_ENGINEER_CONFIG = AgentConfig(
 
 LEAD_ENGINEER_CONFIG = AgentConfig(
     name="Lead Engineer",
-    model="claude-sonnet-4.6",
+    model="claude-sonnet-5",
     effort="high",
     role="lead_engineer",
     description="Code review, architectural guidance, quality decisions"
@@ -135,7 +135,7 @@ LEAD_ENGINEER_CONFIG = AgentConfig(
 
 PRINCIPAL_ENGINEER_CONFIG = AgentConfig(
      name="Principal Engineer",
-     model="claude-opus-4.6",
+     model="claude-opus-5",
      effort="high",
      role="principal_engineer",
      description="Cross-service architecture, complex design decisions"
@@ -143,7 +143,7 @@ PRINCIPAL_ENGINEER_CONFIG = AgentConfig(
 
 QUALITY_ENGINEER_CONFIG = AgentConfig(
     name="Quality Engineer",
-    model="claude-sonnet-4.6",
+    model="claude-sonnet-5",
     effort="medium",
     role="quality_engineer",
     description="Post-implementation quality gate, code review"
@@ -151,15 +151,15 @@ QUALITY_ENGINEER_CONFIG = AgentConfig(
 
 MODEL_ENGINEER_CONFIG = AgentConfig(
     name="Model Engineer",
-    model="claude-haiku-4.5",
-    effort="medium",
+    model="claude-sonnet-5",
+    effort="high",
     role="model_engineer",
     description="Token analysis, confidence scoring, model recommendations"
 )
 
 SECURITY_ENGINEER_CONFIG = AgentConfig(
      name="Security Engineer",
-     model="claude-opus-4.8",
+     model="claude-fable-5",
      effort="max",
      role="security_engineer",
      description="Security analysis, threat modeling, vulnerability audits"

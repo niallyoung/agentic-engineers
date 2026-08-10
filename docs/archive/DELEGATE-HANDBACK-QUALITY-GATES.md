@@ -2,9 +2,16 @@
 name: Delegate/Handback Quality Gates & Re-work Mechanism
 description: Quality gates, acceptance criteria, and re-work policy ensuring every HANDBACK meets minimum standards before Orchestrator acts on it
 created: 2026-06-02
+archived: 2026-08-10
 type: policy
 owner: Quality Engineer
-status: APPROVED
+status: ARCHIVED — describes automated gates (e.g. auto-triggered re-work, automatic
+  Quality Engineer review) that pre-date the 2026-08-09 direct-spawn rewrite and were
+  never fully wired (the auto-rework code path is exercised only by tests, not real
+  runs). For the current, honest picture — Gate 1 (PreToolUse DELEGATE-structure hook)
+  is automated; Gates 2/3 (Lead/QE review) are convention steps the spawning agent
+  performs, not automated triggers — see `src/AGENTS.md` § Direct Sub-Agent Spawn
+  Execution Model (Quality Gates steps) and § Audit-Trail Strategy.
 references:
   - orchestration/QUALITY.md
   - orchestration/HANDOFF.md

@@ -79,7 +79,7 @@ Welcome to the agentic-engineers documentation directory. This guide explains ho
 
 - **Agent orchestration:** SPEC.md, AGENTS.md, ORCHESTRATION-README.md
 - **Queue protocol:** PROTOCOL.md, queue-enforcement-*.md
-- **Quality gates:** QUALITY.md, quality-gate-*.md, DELEGATE-HANDBACK-QUALITY-GATES.md
+- **Quality gates:** QUALITY.md, quality-gate-*.md, archive/DELEGATE-HANDBACK-QUALITY-GATES.md (archived)
 - **Skills & automation:** SKILLS.md, TOKEN-USAGE-TRACKING.md
 - **Deployment & operations:** SYSTEM.md, INSTALL.md, MSMTP-SETUP.md
 - **Model selection:** [docs/architecture/model-optimization.md](architecture/model-optimization.md)

@@ -1015,7 +1015,7 @@ chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
 | [AGENT-ONBOARDING.md](AGENT-ONBOARDING.md) | Onboarding checklist for new agents |
 | [PROTOCOL.md — Appendix G](PROTOCOL.md) | One-page quick reference cheat sheet |
 | [PROTOCOL-IMPLEMENTATION-STATUS.md](PROTOCOL-IMPLEMENTATION-STATUS.md) | Implementation status and metrics |
-| [DELEGATE-HANDBACK-QUALITY-GATES.md](DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gates detail |
+| [archive/DELEGATE-HANDBACK-QUALITY-GATES.md](archive/DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gates detail (archived — see `src/AGENTS.md` for the current picture) |
 | [delegate-schema.yaml](delegate-schema.yaml) | Machine-readable DELEGATE schema |
 | [handback-schema.yaml](handback-schema.yaml) | Machine-readable HANDBACK schema |
 

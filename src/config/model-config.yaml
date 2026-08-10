@@ -34,27 +34,27 @@ agents:
     notes: "Execution specialist; well-scoped tasks"
 
   quality_engineer:
-    model: "claude-sonnet-4.6"
+    model: "claude-sonnet-5"
     notes: "Post-implementation validation"
 
   senior_engineer:
-    model: "claude-sonnet-4.5"
+    model: "claude-sonnet-5"
     notes: "Complex, unscoped work; analysis & planning"
 
   lead_engineer:
-    model: "claude-sonnet-4.6"
+    model: "claude-sonnet-5"
     notes: "Code review & architecture guidance"
 
   principal_engineer:
-    model: "claude-opus-4.6"
+    model: "claude-opus-5"
     notes: "Cross-service architecture; design decisions"
 
   security_engineer:
-    model: "claude-opus-4.8"
-    notes: "Security analysis; threat modeling; final escalation"
+    model: "claude-fable-5"
+    notes: "Security analysis; threat modeling; final escalation (unconditional default; claude-opus-5 is emergency fallback only)"
 
   model_engineer:
-    model: "claude-sonnet-4.5"
+    model: "claude-sonnet-5"
     notes: "Cost/quality optimization analysis"
 
 # ==============================================================================
@@ -63,17 +63,17 @@ agents:
 # Useful for cost optimization or quality tuning on specific task patterns
 # ==============================================================================
 tasks:
-  # High-complexity tasks benefit from Opus despite normal agent tier
+  # High-complexity tasks benefit from the best model despite normal agent tier
   security_audit:
-    model: "claude-opus-4.8"
-    notes: "Security audits always use best model"
+    model: "claude-fable-5"
+    notes: "Security audits always use the unconditional-default security model"
 
   threat_modeling:
-    model: "claude-opus-4.8"
+    model: "claude-fable-5"
     notes: "Threat modeling requires best-in-class reasoning"
 
   architecture_review:
-    model: "claude-opus-4.6"
+    model: "claude-opus-5"
     notes: "Cross-service architecture design"
 
   # Documentation tasks can use cheaper models
@@ -83,7 +83,7 @@ tasks:
 
   # Code reviews benefit from Sonnet but not always Opus
   code_review:
-    model: "claude-sonnet-4.6"
+    model: "claude-sonnet-5"
     notes: "Code review — balanced quality/cost"
 
   # Testing and testing infrastructure
@@ -92,7 +92,7 @@ tasks:
     notes: "Test code generation — simpler than feature code"
 
   test_validation:
-    model: "claude-sonnet-4.5"
+    model: "claude-sonnet-5"
     notes: "Test validation and test suite review"
 
 # ==============================================================================
@@ -175,8 +175,8 @@ provider_preference:
   provider_models:
     anthropic:
       engineer: "claude-haiku-4.5"
-      senior_engineer: "claude-sonnet-4.5"
-      principal_engineer: "claude-opus-4.6"
+      senior_engineer: "claude-sonnet-5"
+      principal_engineer: "claude-opus-5"
 
     openai:
       engineer: "gpt-4o-mini"
@@ -209,10 +209,9 @@ cost_limits:
   # Model tiers (sorted by cost)
   cost_tiers:
     - "claude-haiku-4.5"
-    - "claude-sonnet-4.5"
-    - "claude-sonnet-4.6"
-    - "claude-opus-4.6"
-    - "claude-opus-4.8"
+    - "claude-sonnet-5"
+    - "claude-opus-5"
+    - "claude-fable-5"
 
 # ==============================================================================
 # SCHEMA DOCUMENTATION

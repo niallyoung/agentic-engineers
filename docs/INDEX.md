@@ -38,7 +38,7 @@
 | [SKILLS.md](SKILLS.md) | Skills overview and creation |
 | [QUALITY.md](QUALITY.md) | Quality gates and validation |
 | [ENTRYPOINT.md](ENTRYPOINT.md) | Standard execution model |
-| [DELEGATE-HANDBACK-QUALITY-GATES.md](DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gate implementation |
+| [archive/DELEGATE-HANDBACK-QUALITY-GATES.md](archive/DELEGATE-HANDBACK-QUALITY-GATES.md) | Quality gate implementation (archived — see `src/AGENTS.md` for the current picture) |
 | [SELF-REFERENTIAL-WORKFLOW.md](SELF-REFERENTIAL-WORKFLOW.md) | Self-improvement patterns |
 | [SPAN-CAPTURE-INTEGRATION.md](SPAN-CAPTURE-INTEGRATION.md) | Structured span record integration |
 | [FEEDBACK-LOOPS.md](FEEDBACK-LOOPS.md) | Feedback loop documentation |

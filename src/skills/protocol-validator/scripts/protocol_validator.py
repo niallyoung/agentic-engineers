@@ -51,7 +51,7 @@ VALID_STATUSES = {'success', 'failure', 'partial', 'blocked', 'escalate'}
 # Files that accept *only* these without the canonical equivalents are drifted.
 LEGACY_STATUS_ALIASES = {'complete': 'success', 'failed': 'failure', 'escalated': 'escalate'}
 
-VALID_EFFORTS = {'low', 'medium', 'high'}
+VALID_EFFORTS = {'low', 'medium', 'high', 'max'}  # 'max' is Security Engineer's tier; 'epic' (seen in some legacy validators) is not canonical
 
 # Forward-compatible additions accepted at runtime before the canonical spec
 # update lands elsewhere in the repo.
@@ -528,7 +528,7 @@ class ExtensionValidator:
 
         if 'effort' in delegate:
             if delegate['effort'] not in VALID_EFFORTS:
-                errors.append(f"effort: invalid value '{delegate['effort']}' (must be low|medium|high)")
+                errors.append(f"effort: invalid value '{delegate['effort']}' (must be low|medium|high|max)")
 
         if 'model' in delegate and not isinstance(delegate['model'], str):
             errors.append("model: must be a string")
@@ -570,7 +570,7 @@ class ExtensionValidator:
 
         if 'effort_actual' in handback:
             if handback['effort_actual'] not in VALID_EFFORTS:
-                errors.append("effort_actual: invalid value (must be low|medium|high)")
+                errors.append("effort_actual: invalid value (must be low|medium|high|max)")
 
         if 'flags' in handback:
             if not isinstance(handback['flags'], list):

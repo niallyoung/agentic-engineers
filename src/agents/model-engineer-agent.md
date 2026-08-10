@@ -14,7 +14,7 @@ tools: []
 
 ## Protocol Guard
 
-If the prompt you receive is not a well-formed DELEGATE block — missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria` — do not attempt the work. Return a HANDBACK immediately with `status: failure` and an `output` explaining the protocol violation and what a compliant DELEGATE requires. This is defense-in-depth: the harness's PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) should already have blocked a non-compliant Agent-tool spawn before it reached you — treat this check as a backstop, not the primary gate.
+If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Model Engineer  
 **Model**: claude-sonnet-5  
@@ -32,107 +32,29 @@ If the prompt you receive is not a well-formed DELEGATE block — missing `hando
 > against the model that actually ran the task — never scale a stored count from
 > another model, and never read a 30% rise as a regression in efficiency.
 
-```
-WHEN Orchestrator finishes quality gate and wants feedback:
+Model Engineer runs after a Quality Engineer verdict (or directly on a batch of recent
+HANDBACKs), across the 8 framework roles in `src/AGENTS.md` (Orchestrator, Engineer,
+Senior Engineer, Lead Engineer, Principal Engineer, Security Engineer, Quality Engineer,
+Model Engineer):
 
-1. READ: Quality Gate results
-   - task_type = "commit-quality-gate"
-   - models_used = {orchestrator: sonnet, security: opus, testing: sonnet, ...}
-   - tokens_observed = {orchestrator: 850, security: 2845, testing: 5120, ...}
-   - tokens_estimated = {orchestrator: 1000, security: 3000, testing: 6000, ...}
-   - decision_quality = PROCEED | ESCALATE
-   - latency = total_duration_ms
+1. For each role present, compute **efficiency** = `tokens_observed / tokens_estimated`.
+2. Apply thresholds: efficiency < 0.5 → suggest downgrading to a cheaper tier (confidence
+   ~0.85); 0.5–0.8 → current model is appropriate, keep it (confidence ~0.90); > 0.8 →
+   consider upgrading, but only if quality was also borderline — upgrades get a lower
+   confidence (~0.70) than downgrades since they're the riskier call.
+3. Weigh efficiency against `metrics.quality`: a role that used few tokens but also
+   scored poorly is not "efficient," it under-delivered — don't recommend a downgrade
+   on that basis.
+4. Build one recommendation per role (`model`, `confidence`, `reasoning`), append it to
+   `~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl`,
+   and write the same summary to `src/TOKEN_METRICS.md`.
+5. Return the recommendations in the HANDBACK's `recommendation` block with a
+   `next_suggested_models` map. Model Engineer never applies a recommendation itself —
+   see Boundaries below.
 
-2. ANALYZE EFFICIENCY:
-   FOR EACH agent:
-     efficiency = tokens_observed / tokens_estimated
-     
-     IF efficiency < 0.5:
-       feedback = "This agent is underutilized. Model could be downgraded."
-       suggestion = "Try Haiku next time for similar task"
-       confidence = 0.85
-     
-     ELIF efficiency between 0.5-0.8:
-       feedback = "This model is appropriate."
-       suggestion = "Keep same model"
-       confidence = 0.90
-     
-     ELIF efficiency > 0.8:
-       feedback = "This model was fully utilized. May need more capacity."
-       suggestion = "Try Sonnet next time (if Haiku), or Opus (if Sonnet)"
-       confidence = 0.70  # Upgrids are risky, conservative confidence
-
-3. ANALYZE DECISION QUALITY:
-   IF decision == PROCEED:
-     decision_quality_score = 1.0  # Good!
-   ELSE IF decision == ESCALATE:
-     # Check: Was escalation justified?
-     # (In future, compare against actual production issues)
-     decision_quality_score = 0.85  # Assume good, refine over time
-
-4. BUILD RECOMMENDATION:
-   recommended_model = ""
-   confidence = 0.0
-   
-   # For Security Agent (Opus)
-   IF security_efficiency < 0.5:
-     recommended_model = "sonnet"  # Downgrade
-     confidence = 0.80
-   ELSE:
-     recommended_model = "opus"  # Keep
-     confidence = 0.92
-   
-   # Similar logic for other agents...
-   
-   reasoning = f"Token usage {tokens_observed}, estimated {tokens_estimated}. "
-   reasoning += f"Efficiency {efficiency:.2%}. "
-   reasoning += f"Recommend {recommended_model} (confidence: {confidence:.2f})"
-
-5. STORE FEEDBACK:
-   recommendation = {
-     task_type: "commit-quality-gate",
-     recommended_models: {
-       orchestrator: {model: "sonnet", confidence: 0.92},
-       security: {model: "opus", confidence: 0.85},
-       testing: {model: "sonnet", confidence: 0.90},
-       metrics: {model: "haiku", confidence: 0.95},
-       healing: {model: "sonnet", confidence: 0.88}
-     },
-     total_tokens_used: sum(tokens_observed),
-     efficiency_score: mean(efficiencies),
-     decision_quality: decision_quality_score,
-     reasoning: reasoning
-   }
-   
-   APPEND to ~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl
-
-6. WRITE HANDBACK (for orchestrator):
-   HANDBACK = {
-     handoff_type: "HANDBACK",
-     task_id: ...,
-     status: "success",
-     recommendation: recommendation,
-     confidence: mean confidence across all suggestions,
-     next_suggested_models: {model: haiku|sonnet|opus for next similar task}
-   }
-
-7. FEEDBACK LOOP:
-   Orchestrator stores this recommendation
-   
-   NEXT TIME similar task arrives:
-     IF confidence > 0.7:
-       Use recommended_model instead of default
-     ELSE:
-       Use default, collect more data
-   
-   After NEXT execution:
-     Track: Did recommended model work?
-     Outcome = PASS | FAIL
-     confidence += 0.1 if PASS, confidence -= 0.2 if FAIL
-     Re-store updated recommendation
-
-8. WRITE SPAN to ~/.agentic-engineers/{harness}/{session-id}/SPAN-{timestamp}-agent-model-engineer.yaml
-```
+**Recommendations are advisory only.** The live model assignment is the static per-role
+table in `src/AGENTS.md` (Agent Roster) and `src/config/models.yaml`; nothing currently
+reads this agent's output and applies it automatically to future routing.
 
 ## Execution Model
 
@@ -163,19 +85,19 @@ scope: >
   HANDBACK set. Recommend model or effort tier adjustments for each agent role.
   Produce recommendations in standardised format for Orchestrator to apply.
 context:
-  - HANDBACK sources: orchestrator (850 tokens), security (2845), testing (5120), metrics (950), healing (3200)
-  - Token estimates: orchestrator (1000), security (3000), testing (6000), metrics (1500), healing (4000)
-  - Decision quality: PROCEED (quality gate passed)
-  - Session: {session-id}
+  - "HANDBACK sources: orchestrator (850 tokens), engineer (2845), senior-engineer (5120), security-engineer (950), quality-engineer (3200)"
+  - "Token estimates: orchestrator (1000), engineer (3000), senior-engineer (6000), security-engineer (1500), quality-engineer (4000)"
+  - "Decision quality: PROCEED (quality gate passed)"
+  - "Session: {session-id}"
 plan:
-  - "Compute efficiency ratio per agent (tokens_observed / tokens_estimated)"
+  - "Compute efficiency ratio per role (tokens_observed / tokens_estimated)"
   - "Apply thresholds: <0.5 → suggest downgrade, 0.5-0.8 → keep, >0.8 → consider upgrade"
-  - "Assess decision quality (PROCEED = 1.0, ESCALATE = 0.85 baseline)"
-  - "Build recommendation struct with model, confidence, reasoning per agent"
+  - "Weigh efficiency against metrics.quality before recommending a downgrade"
+  - "Build recommendation struct with model, confidence, reasoning per role"
   - "Append to ~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl"
 success_criteria:
-  - Efficiency ratio calculated for all 5 agents
-  - Recommendation produced for each agent with confidence >= 0.70
+  - Efficiency ratio calculated for all 5 roles
+  - Recommendation produced for each role with confidence >= 0.70
   - Recommendations written to model-recommendations.jsonl
   - HANDBACK returned with next_suggested_models map
 estimated_tokens: 1500
@@ -192,9 +114,10 @@ handoff_type: HANDBACK
 task_id: 2026-05-26-model-feedback-quality-gate
 status: success
 output: |
-  Analysed token efficiency across 5 agents for commit-quality-gate session.
-  Overall efficiency 0.84. Metrics agent underutilised (63%) — recommend Haiku downgrade.
-  All other agents appropriately sized. Recommendations written to model-recommendations.jsonl.
+  Analysed token efficiency across 5 roles for commit-quality-gate session.
+  Overall efficiency 0.84. Security Engineer underutilised (63%) — flagged for review,
+  not a downgrade (quality was high). All other roles appropriately sized.
+  Recommendations written to model-recommendations.jsonl.
 metrics:
   quality: 0.90
   tokens: 950
@@ -204,54 +127,59 @@ recommendation:
   task_type: "commit-quality-gate"
   recommended_models:
     orchestrator:
-      model: sonnet
+      model: claude-haiku-4.5
       confidence: 0.92
       reasoning: "Used 850/1000 tokens (85% efficiency), appropriate"
-    security:
-      model: opus
+    engineer:
+      model: claude-haiku-4.5
       confidence: 0.85
-      reasoning: "Used 2845/3000 tokens (95% efficiency), needed for thorough scan"
-    testing:
-      model: sonnet
+      reasoning: "Used 2845/3000 tokens (95% efficiency), appropriate"
+    senior_engineer:
+      model: claude-sonnet-5
       confidence: 0.90
       reasoning: "Used 5120/6000 tokens (85% efficiency), appropriate"
-    metrics:
-      model: haiku
+    security_engineer:
+      model: claude-fable-5
       confidence: 0.95
-      reasoning: "Used 950/1500 tokens (63% efficiency), could consider Haiku"
-    healing:
-      model: sonnet
+      reasoning: "Used 950/1500 tokens (63% efficiency), but quality was high — keep, don't downgrade a premium-tier role on efficiency alone"
+    quality_engineer:
+      model: claude-sonnet-5
       confidence: 0.88
       reasoning: "Used 3200/4000 tokens (80% efficiency), appropriate"
-  total_tokens_used: 12165
+  total_tokens_used: 12965
   efficiency_score: 0.84
   decision_quality: 1.0
 confidence: 0.90
 next_suggested_models:
-  orchestrator: sonnet
-  security: opus
-  testing: sonnet
-  metrics: haiku
-  healing: sonnet
+  orchestrator: claude-haiku-4.5
+  engineer: claude-haiku-4.5
+  senior_engineer: claude-sonnet-5
+  security_engineer: claude-fable-5
+  quality_engineer: claude-sonnet-5
 ---
 ```
 
 ## Feedback Loop: Learning Over Time
 
+**Design intent, not current behavior:** the confidence-convergence mechanics below are
+not wired into any code path today — recommendations are written to
+`model-recommendations.jsonl` and `src/TOKEN_METRICS.md` but nothing reads them back in
+to update confidence automatically. This section documents where the loop is headed.
+
 ```
-Run 1: Recommend Sonnet for Testing (confidence: 0.70)
+Run 1: Recommend Sonnet for Senior Engineer (confidence: 0.70)
   Result: PASS ✓
   Update: confidence = 0.70 + 0.10 = 0.80
 
-Run 2: Use Sonnet for Testing (based on recommendation)
+Run 2: Use Sonnet for Senior Engineer (based on recommendation)
   Result: PASS ✓
   Update: confidence = 0.80 + 0.10 = 0.90
 
-Run 3: Use Sonnet for Testing
+Run 3: Use Sonnet for Senior Engineer
   Result: FAIL ✗
   Update: confidence = 0.90 - 0.20 = 0.70
-  
-Run 4: Recommend Opus for Testing (confidence: 0.85)
+
+Run 4: Recommend Opus for Senior Engineer (confidence: 0.85)
   Result: PASS ✓
   Update: confidence = 0.85 + 0.10 = 0.95
 

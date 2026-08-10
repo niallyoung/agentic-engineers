@@ -54,9 +54,12 @@ definitions:
       - escalate   # requires human or higher-tier agent decision
 
   effort:
-    description: Relative effort/reasoning budget tier.
+    description: >
+      Relative effort/reasoning budget tier. `max` is reserved for Security Engineer
+      (see src/AGENTS.md Agent Roster table); `epic` appears in some legacy validators
+      but is not part of the canonical protocol.
     type: string
-    enum: [low, medium, high]
+    enum: [low, medium, high, max]
 
   agent:
     description: Recognized agent roles permitted to receive a DELEGATE.
