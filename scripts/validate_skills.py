@@ -36,21 +36,23 @@ SKILLS_DIR = REPO_ROOT / "src" / "skills"
 
 # Skills listed in docs/SKILLS-AVAILABLE.md as active.
 # Update this list whenever a skill is added or deprecated.
+#
+# SPEC-2026-005 framework slimdown, WP-0 (2026-08-11): pruned from 14 to the
+# 8 skills that survive the slimdown (principal-engineer design authority:
+# task-2026-08-11-framework-slimdown-design HANDBACK). Removed:
+# harness-integration-tracker, consistency-checker, workflow-review,
+# agent-creator, usage-tracking, file-sync, queue-todo-sync, model-engineer
+# (all deleted in a later WP). Added: orchestrator, codex-agent-cleanup
+# (both already active but were missing from this list).
 ACTIVE_SKILLS: List[str] = [
-    "harness-integration-tracker",
-    "consistency-checker",
+    "orchestrator",
+    "queue-management",
+    "queue-query",
     "protocol-validator",
     "spec-validator",
     "spec-management",
-    "workflow-review",
-    "agent-creator",
-    "queue-management",
-    "queue-query",
-    "usage-tracking",
-    "file-sync",
-    "queue-todo-sync",
-    "model-engineer",
     "skill-improvement-feedback",
+    "codex-agent-cleanup",
 ]
 
 # Required top-level frontmatter keys

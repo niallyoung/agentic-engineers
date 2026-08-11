@@ -34,7 +34,7 @@ jobs:
           python3 << 'EOF'
           import sys
           from collections import Counter
-          from src.orchestration.security import EntropyDetector
+          from scripts.entropy_detector import EntropyDetector
           from pathlib import Path
 
           detector = EntropyDetector()
@@ -111,8 +111,8 @@ jobs:
           from pathlib import Path
           
           yaml_files = [
-              'src/orchestration/delegate-schema.yaml',
-              'src/orchestration/handback-schema.yaml',
+              'docs/specs/delegate-schema.yaml',
+              'docs/specs/handback-schema.yaml',
           ]
           
           for yml_file in yaml_files:

@@ -1,7 +1,7 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-pi fresh-install-opencode fresh-install-codex \
         install-copilot install-claude install-pi install-opencode install-codex \
         uninstall-copilot uninstall-claude uninstall-pi uninstall-all uninstall-opencode uninstall-codex \
-        setup status harness-toggle migrate-queue-paths run-orchestrator create-test-session test-protocol-e2e \
+        setup status harness-toggle migrate-queue-paths create-test-session test-protocol-e2e \
         verify verify-harness-sync validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-pi render-opencode render-codex render-specs render-all \
         lint test test-skills test-evals test-ci test-ci-force test-ci-shell quality-gate
@@ -84,7 +84,6 @@ help:
 	@echo ""
 	@echo "Queue & Testing:"
 	@echo "  create-test-session Create test session + sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)"
-	@echo "  run-orchestrator    [DEPRECATED] Polling-based orchestration replaced by direct sub-agent spawning"
 	@echo "  test-protocol-e2e   Run end-to-end protocol tests (DELEGATE → HANDBACK)"
 	@echo ""
 	@echo "Quality & Testing:"
@@ -127,15 +126,6 @@ migrate-queue-paths: ## Migrate queue sessions from old paths (artifacts/) to ca
 
 create-test-session: ## Create test session with sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)
 	@bash "$(REPO_ROOT)/setup/create-test-session.sh"
-
-run-orchestrator: ## Orchestrator polling command (DEPRECATED — direct sub-agent spawning replaces polling)
-	@echo "⚠️  Queue polling has been removed (2026-08-09)"
-	@echo ""
-	@echo "Polling-based execution has been replaced with direct sub-agent spawning."
-	@echo "The Orchestrator now constructs a DELEGATE block and invokes a sub-agent directly,"
-	@echo "reading the HANDBACK from the tool result (per SPEC-2026-004)."
-	@echo ""
-	@echo "For more details, see: docs/spec-proposals/SPEC-2026-004.yaml"
 
 test-protocol-e2e: ## Run end-to-end protocol tests (DELEGATE → HANDBACK)
 	@echo "🧪 Running end-to-end protocol tests (Phase 4)..."
@@ -240,21 +230,11 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 	@echo "🔍 Verifying framework structure..."
 	@echo ""
 	@echo "1️⃣  Checking directory structure..."
-	@test -d "$(REPO_ROOT)/src/orchestration/agents" || (echo "❌ src/orchestration/agents/ missing" && exit 1)
-	@test -d "$(REPO_ROOT)/src/orchestration" || (echo "❌ src/orchestration/ missing" && exit 1)
 	@test -d "$(REPO_ROOT)/src/skills" || (echo "❌ src/skills/ missing" && exit 1)
 	@test -d "$(REPO_ROOT)/tests" || (echo "❌ tests/ missing" && exit 1)
 	@echo "   ✓ Directory structure verified"
 	@echo ""
-	@echo "2️⃣  Checking agent YAML validity..."
-	@for agent in $(REPO_ROOT)/src/orchestration/agents/*.py; do \
-		if [ -f "$$agent" ]; then \
-			python3 -m py_compile "$$agent" 2>/dev/null || (echo "❌ $$agent has syntax errors" && exit 1); \
-		fi; \
-	done
-	@echo "   ✓ All agents have valid Python syntax"
-	@echo ""
-	@echo "3️⃣  Checking skill references exist..."
+	@echo "2️⃣  Checking skill references exist..."
 	@SKILLS_DIR="$(REPO_ROOT)/src/skills"; \
 	if [ -d "$$SKILLS_DIR" ]; then \
 		SKILL_COUNT=$$(find "$$SKILLS_DIR" -name "SKILL.md" | wc -l | tr -d ' '); \
@@ -263,13 +243,7 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 		echo "❌ Skills directory not found"; exit 1; \
 	fi
 	@echo ""
-	@echo "4️⃣  Checking for circular dependencies..."
-	@python3 -c "import sys; sys.path.insert(0, '$(REPO_ROOT)'); \
-		from src.orchestration.agents import spec_validator; \
-		print('   ✓ No circular dependencies detected')" 2>/dev/null || \
-		echo "   ⚠️  Unable to check dependencies (validator not available)"
-	@echo ""
-	@echo "5️⃣  Checking installation structure completeness..."
+	@echo "3️⃣  Checking installation structure completeness..."
 	@test -f "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" || (echo "❌ render-copilot.sh missing" && exit 1)
 	@test -f "$(REPO_ROOT)/renderer/scripts/render-claude.sh" || (echo "❌ render-claude.sh missing" && exit 1)
 	@test -f "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" || (echo "❌ render-opencode.sh missing" && exit 1)
@@ -277,20 +251,20 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 	@test -f "$(REPO_ROOT)/renderer/scripts/render-codex.py" || (echo "❌ render-codex.py missing" && exit 1)
 	@echo "   ✓ Installation scripts verified"
 	@echo ""
-	@echo "6️⃣  Checking queue infrastructure..."
+	@echo "4️⃣  Checking queue infrastructure..."
 	@if [ -d "$(HOME)/.copilot/queue" ]; then \
 		echo "   ✓ Queue infrastructure exists (Copilot)"; \
 	else \
 		echo "   ⚠️  Queue not installed (run 'make install-copilot')"; \
 	fi
 	@echo ""
-	@echo "7️⃣  Validating agent definitions (src/agents/)..."
+	@echo "5️⃣  Validating agent definitions (src/agents/)..."
 	@python3 "$(REPO_ROOT)/renderer/validate_agents.py" 2>&1 || echo "   ⚠️  Agent validation skipped (validator error)"
 	@echo ""
-	@echo "8️⃣  Validating skill definitions (src/skills/)..."
+	@echo "6️⃣  Validating skill definitions (src/skills/)..."
 	@python3 "$(REPO_ROOT)/renderer/validate_skills.py" 2>&1 || echo "   ⚠️  Skill validation skipped (validator error)"
 	@echo ""
-	@echo "9️⃣  Checking protocol documents present..."
+	@echo "7️⃣  Checking protocol documents present..."
 	@test -f "$(REPO_ROOT)/src/AGENTS.md" || (echo "❌ src/AGENTS.md missing" && exit 1)
 	@test -f "$(REPO_ROOT)/src/DECISION-MAKING.md" || (echo "❌ src/DECISION-MAKING.md missing" && exit 1)
 	@test -f "$(REPO_ROOT)/src/SKILLS.md" || (echo "❌ src/SKILLS.md missing" && exit 1)

@@ -1,6 +1,6 @@
 """Comprehensive tests for the OpenCode config validator.
 
-Target: ≥95 % line coverage of ``src/opencode/config_validator.py``.
+Target: ≥95 % line coverage of ``scripts/validate_opencode_config.py``.
 
 Test groups
 -----------
@@ -27,7 +27,7 @@ import pytest
 # Ensure repo root is importable when pytest is invoked from anywhere
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.opencode.config_validator import (  # noqa: E402
+from scripts.validate_opencode_config import (  # noqa: E402
     MAX_COMPACTION_RESERVED,
     OpenCodeConfigValidator,
     Severity,

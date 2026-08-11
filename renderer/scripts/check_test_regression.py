@@ -2,10 +2,27 @@
 """
 Regression gate: enforce minimum test counts per harness and overall.
 
-Wave 2 baselines (from harness-compatibility-baseline.md, 2026-06-14):
-  - OpenCode harness tests:    94  (tests/harnesses/opencode/)
-  - Claude Code harness tests: 103 (tests/harnesses/claude_code/)
-  - Copilot CLI harness tests:  71 (tests/harnesses/copilot-cli/)
+INTERIM STATE (SPEC-2026-005, framework slimdown, WP-0 — 2026-08-11):
+The Wave 2 per-harness and full-suite baselines below have been set
+PERMISSIVE (floors of 0) for the duration of the multi-package slimdown
+(~165k LOC across src/orchestration, src/harnesses, src/examples,
+src/internal, src/harness, src/claude, src/copilot, src/evals,
+src/standardization, src/audit, src/config, src/opencode, most of docs/,
+17 auxiliary skills, and ~67k LOC of tests). A volume-based floor cannot
+gate a deliberate mass deletion. The three per-harness baselines
+(opencode/claude_code/copilot-cli) have been dropped entirely: those test
+directories cover src/harnesses/ modules with zero production callers and
+are deleted as part of this slimdown.
+
+WP-5 of the slimdown re-baselines this gate from measured post-deletion
+actuals and restores real (non-zero) floors. Until then this gate is a
+no-op that exists only so CI keeps a "Gate 5" step to re-populate later.
+
+Prior baselines (from harness-compatibility-baseline.md, 2026-06-14, now
+retired — kept here for historical reference only):
+  - OpenCode harness tests:    94  (tests/harnesses/opencode/)   [removed]
+  - Claude Code harness tests: 103 (tests/harnesses/claude_code/) [removed]
+  - Copilot CLI harness tests:  71 (tests/harnesses/copilot-cli/) [removed]
   - Full test suite:          4925 (total passing, excluding skipped/xfailed)
 
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
@@ -16,26 +33,12 @@ import sys
 import os
 import re
 
-# Wave 2 baselines — update only via SPEC change + QE sign-off
+# Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
+# Interim permissive floor during SPEC-2026-005 slimdown; WP-5 restores real minimums.
 BASELINES = {
-    "opencode_harness": {
-        "path": "tests/harnesses/opencode/",
-        "minimum": 94,
-        "label": "OpenCode harness",
-    },
-    "claude_code_harness": {
-        "path": "tests/harnesses/claude_code/",
-        "minimum": 103,
-        "label": "Claude Code harness",
-    },
-    "copilot_cli_harness": {
-        "path": "tests/harnesses/copilot-cli/",
-        "minimum": 71,
-        "label": "Copilot CLI harness",
-    },
     "full_suite": {
         "path": "tests/",
-        "minimum": 4925,
+        "minimum": 0,
         "label": "Full test suite",
     },
 }
@@ -79,7 +82,7 @@ def count_collected(test_path: str) -> int:
 
 def main() -> int:
     failures = []
-    print("Regression Gate — Wave 2 Baseline Check")
+    print("Regression Gate — interim permissive baseline (SPEC-2026-005)")
     print("=" * 60)
 
     for key, spec in BASELINES.items():

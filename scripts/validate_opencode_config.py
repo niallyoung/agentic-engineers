@@ -16,7 +16,7 @@ run in pre-commit hooks (must be fast: <50 ms on typical configs).
 Public API
 ----------
 
-    >>> from src.opencode.config_validator import validate_file
+    >>> from scripts.validate_opencode_config import validate_file
     >>> result = validate_file("opencode.jsonc")
     >>> result.ok
     True
@@ -26,11 +26,18 @@ Public API
 CLI usage
 ---------
 
-    python -m src.opencode.config_validator opencode.jsonc
-    python -m src.opencode.config_validator --strict opencode.jsonc
-    python -m src.opencode.config_validator --json opencode.jsonc
+    python3 scripts/validate_opencode_config.py opencode.jsonc
+    python3 scripts/validate_opencode_config.py --strict opencode.jsonc
+    python3 scripts/validate_opencode_config.py --json opencode.jsonc
 
 Exit codes: 0 = valid, 1 = errors, 2 = warnings (in --strict mode), 3 = I/O error.
+
+NOTE (SPEC-2026-005 framework slimdown, WP-0): moved here from
+src/opencode/config_validator.py — that file was pure stdlib (no relative
+imports) and this move rescues it ahead of src/opencode/ being deleted in a
+later WP. Call sites updated: .githooks/pre-commit, scripts/opencode-safe.sh,
+.github/workflows/ci.yml (credential-scan path exclusion), and
+tests/test_opencode_config_validation.py.
 """
 
 from __future__ import annotations
@@ -728,7 +735,7 @@ def _format_report(result: ValidationResult, *, use_json: bool) -> str:
 
 
 def main(argv: Iterable[str] | None = None) -> int:
-    """Module entry point — also wired into ``python -m src.opencode.config_validator``."""
+    """Module entry point — also wired into ``python3 scripts/validate_opencode_config.py``."""
     parser = argparse.ArgumentParser(
         prog="opencode-config-validator",
         description="Validate an opencode.jsonc file.",

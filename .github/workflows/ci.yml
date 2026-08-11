@@ -58,7 +58,7 @@ jobs:
           # Defense-in-depth against the token-in-gitconfig incident class.
           # 1. Fail if any committed file contains a real token signature.
           if git grep -nIE 'x-access-token|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|https://[^/@[:space:]]+:[^/@[:space:]]+@github' \
-               -- ':!*test*' ':!*Test*' ':!scripts/check-gitconfig-no-tokens.sh' ':!docs/**' ':!*.md' ':!src/opencode/config_validator.py' ':!.github/workflows/ci.yml'; then
+               -- ':!*test*' ':!*Test*' ':!scripts/check-gitconfig-no-tokens.sh' ':!docs/**' ':!*.md' ':!scripts/validate_opencode_config.py' ':!.github/workflows/ci.yml'; then
             echo "::error::Embedded token/credential pattern found in tracked files"
             exit 1
           fi
@@ -107,13 +107,12 @@ jobs:
       - name: Test
         run: make test
 
-      - name: "Gate 5: Harness regression check (Wave 2 baselines)"
-        # Enforces minimum test counts per harness and overall.
-        # Fails the build if any harness loses tests vs Wave 2 baselines:
-        #   OpenCode harness:    ≥94 tests   (tests/harnesses/opencode/)
-        #   Claude Code harness: ≥103 tests  (tests/harnesses/claude_code/)
-        #   Copilot CLI harness: ≥71 tests   (tests/harnesses/copilot-cli/)
-        #   Full test suite:     ≥4925 tests  (total collected)
+      - name: "Gate 5: Harness regression check (interim permissive — SPEC-2026-005)"
+        # INTERIM (framework slimdown, WP-0): floor set to 0 so the gate cannot
+        # block the deliberate mass deletion in progress. Per-harness floors
+        # (opencode/claude_code/copilot-cli) were dropped entirely — those test
+        # dirs are being deleted along with src/harnesses/. WP-5 restores real,
+        # non-zero baselines from measured post-deletion actuals.
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
         run: python renderer/scripts/check_test_regression.py
 
