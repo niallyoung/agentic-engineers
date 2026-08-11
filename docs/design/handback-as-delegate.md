@@ -4,6 +4,16 @@
 **Origin:** Deferred item from the 2026-06-10 master-prompt audit
 **Question from operator:** "Is HANDBACK actually a DELEGATE / can it be, for direct agent→agent handoff vs queue-and-poll?"
 
+> **2026-08-11 note:** SPEC-2026-004 subsequently replaced queue-and-poll dispatch with
+> direct sub-agent spawn as the canonical execution model (see `docs/SPEC.md`'s
+> ORCHESTRATOR-FIRST EXECUTION MODEL and `src/AGENTS.md`). This note's framing below
+> ("Current Flow (Queue-and-Poll via Orchestrator)") describes the pre-SPEC-2026-004
+> architecture and is retained as historical context for the options analysis; the
+> "30–60s polling interval" and poll-cycle latency arguments no longer apply to Option 0.
+> The schema paths below have also moved: `src/orchestration/{delegate,handback}-schema.yaml`
+> is now `docs/specs/{delegate,handback}-schema.yaml`. The core question (should an
+> escalation HANDBACK formally embed the next DELEGATE) remains open and undecided.
+
 ---
 
 ## Problem Statement
@@ -38,8 +48,8 @@ Queue layout (LOCKED SPEC, `docs/QUEUE-PROTOCOL.md` / `docs/SPEC.md`):
 
 The two block types are discriminated by `handoff_type: DELEGATE` vs
 `handoff_type: HANDBACK`. Their canonical schemas live at
-`src/orchestration/delegate-schema.yaml` and
-`src/orchestration/handback-schema.yaml`.
+`docs/specs/delegate-schema.yaml` and
+`docs/specs/handback-schema.yaml`.
 
 Escalation today ("Escalation Chaining (C2c)", `docs/QUEUE-PROTOCOL.md`):
 

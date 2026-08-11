@@ -7,8 +7,8 @@ owner: Lead Engineer
 references:
   - orchestration/AGENTS.md
   - archive/DELEGATE-HANDBACK-QUALITY-GATES.md (archived)
-  - orchestration/delegate-schema.yaml
-  - orchestration/handback-schema.yaml
+  - docs/specs/delegate-schema.yaml
+  - docs/specs/handback-schema.yaml
   - orchestration/agents/quality_validator.py
   - orchestration/agents/decision_engine.py
   - orchestration/agents/delegate_validator.py
@@ -622,7 +622,7 @@ escalation_notice:
 
 | Role | Model | Effort | Protocol Responsibilities |
 |------|-------|--------|--------------------------|
-| **Orchestrator** | Haiku | low | Route all work; emit valid DELEGATEs; enforce Group A/B/C pre-flight; track retry counts; emit metrics |
+| **Orchestrator** | Sonnet (claude-sonnet-5) | low | Route all work by direct sub-agent spawn; emit valid DELEGATEs; enforce Group A/B/C pre-flight; track retry counts; emit metrics |
 | **Engineer** | Haiku | high | Accept well-planned DELEGATEs; return complete HANDBACKs; report `blocked` immediately if stuck |
 | **Senior Engineer** | Sonnet | high | Design solutions; write plans for Engineer; accept complex DELEGATEs; mentor Engineers |
 | **Lead Engineer** | Sonnet | high | Code review; gray-zone HANDBACK decisions; conditional approvals; quality oversight |
@@ -727,13 +727,11 @@ with full retry history and token cost overrun report.
 
 ### Appendix A: DELEGATE Schema (Formal YAML)
 
-See `orchestration/delegate-schema.yaml` for the authoritative machine-readable schema
-used by `delegate_validator.py`.
+See `docs/specs/delegate-schema.yaml` for the authoritative machine-readable schema.
 
 ### Appendix B: HANDBACK Schema (Formal YAML)
 
-See `orchestration/handback-schema.yaml` for the authoritative machine-readable schema
-used by `quality_validator.py`.
+See `docs/specs/handback-schema.yaml` for the authoritative machine-readable schema.
 
 ### Appendix C: Quality Scoring Formula
 

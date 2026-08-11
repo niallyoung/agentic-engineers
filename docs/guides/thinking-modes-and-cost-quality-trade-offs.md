@@ -25,7 +25,7 @@ Is the output determined by a fixed rule or checklist?
 
 ## Reference
 
-See [docs/ARCHITECTURE.md](../ARCHITECTURE.md) for the complete analysis.
+See [src/AGENTS.md](../../src/AGENTS.md) and [docs/decisions/](../decisions/) for the complete analysis.
 
 ---
 

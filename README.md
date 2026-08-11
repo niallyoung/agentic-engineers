@@ -1,514 +1,129 @@
 # Agentic Engineers
 
-A **Multi-Agent Orchestration Framework** for optimizing token usage, quality, and delivery speed through intelligent work routing, quality gates, and continuous cost-quality optimization feedback loops. Designed for integration with coding CLIs: **OpenCode**, **Copilot**, **Claude**, **Codex**, **Pi**.
+A **multi-agent orchestration framework** for coordinating specialized AI agents
+through structured handoffs, quality gates, and cost-aware model selection.
+Designed for integration with coding CLIs: **OpenCode**, **Copilot**, **Claude**,
+**Codex**, **π.dev**.
 
 ## What It Is
 
-**Agentic Engineers** solves the multi-agent coordination problem:
+Agentic Engineers solves the multi-agent coordination problem: how do you route
+work to the right specialist, enforce quality consistently, and keep cost
+proportional to task complexity — without spaghetti code or a polling daemon?
 
-- **How do you coordinate 8+ specialized AI agents** without spaghetti code?
-- **How do you enforce quality gates** consistently across all agents?
-- **How do you optimize cost** while maintaining quality?
-- **How do you stay within token budgets** across unlimited work?
+**The answer:** an ORCHESTRATOR-FIRST architecture built on **direct sub-agent
+spawning**, not queue polling:
 
-**The answer:** An ORCHESTRATOR-FIRST architecture built on direct sub-agent spawning:
+1. Work is expressed as a DELEGATE task (structured YAML: scope, context, plan, success criteria)
+2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result — no polling loop, no timer, no daemon
+3. The specialist executes and returns a HANDBACK with results + metrics
+4. Every DELEGATE and HANDBACK is durably recorded to the per-session queue as an audit trail (inbox only — nothing reads it via polling)
+5. Metrics feed back into model selection and routing for future tasks
 
-1. Work is expressed as a DELEGATE task (SPEC-compliant YAML)
-2. Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as the tool result — no queue polling involved
-3. Each agent returns a HANDBACK with results + metrics
-4. Quality gates validate all work before it's considered done
-5. Every DELEGATE and HANDBACK is durably recorded to the queue as an audit trail
-6. Metrics feed back into model selection and routing optimization
+## Goals
 
-### Key Benefits
+The framework is built to be **minimal, portable, and self-reducing**:
 
-1. **90+/100 Quality** — Structured DELEGATE/HANDBACK protocol enforces clarity
-2. **65% Cost Savings** — Smart model selection (Haiku for execution, Opus for architecture)
-3. **40-60% Faster** — Parallel sub-agent execution at scale
-4. **80% Fewer Iterations** — Clear success criteria prevent rework
+- **Small AGENTS + SKILLS mechanisms** — a portable orchestration layer that works across harnesses (Claude, Copilot, OpenCode, Codex, π.dev) without proprietary integrations
+- **Framework self-reduction** — as base and frontier models improve, LOC and complexity are meant to decrease, not grow
+- **Eventual redundancy** — when harnesses compose and delegate work well by default, this coordination layer should fade into standard practice
+- **Harness comparative analysis** — the `src/ → make render → dist/ → make install → ~/.<harness>` pipeline lets the same agent/skill roster be compared across harnesses for feature parity and quality trade-offs
 
-See [Key Benefits & Discoveries](#key-benefits--discoveries) below for details.
+## The Roster
 
-### Goals
-
-The Agentic Engineers framework is built to be **minimal, portable, and self-reducing**:
-
-- **Small AGENTS + SKILLS mechanisms** — A portable orchestration layer that works across many harnesses (Claude, Copilot, OpenCode, Codex, π.dev) without requiring proprietary integrations
-- **Framework self-reduction** — As base-level and frontier models improve, LOC and complexity decrease. The framework is designed to become simpler and ultimately unnecessary as harnesses and models mature
-- **Eventual redundancy** — When harnesses intelligently compose and delegate work by default, the Agentic Engineers coordination layer fades into standard best practices
-- **Harness comparative analysis** — Via the `src/ → make render → dist/ → make install → ~/.[harness]` pipeline, we can analyze which harness delivers relative feature parity, multi-agent support, and quality trade-offs
-- **Open standards alignment** — Exploring what an open standard for agent orchestration could look like: protocol portability, cross-harness delegation, metric exchange, and human-in-the-loop oversight mechanisms that transcend any single vendor
-
----
-
-## Architecture at a Glance
-
-![Architecture at a Glance](docs/assets/readme-architecture-at-a-glance.png)
-
-**Framework → Configure → Deploy → Invoke.** Each harness installs customized agents, skills, and routing logic for its provider.
-
-### How It Works
-
-![How It Works](docs/assets/readme-how-it-works.png)
-
-**Example:**
-```bash
-opencode --agent orchestrator "Fix the GitHub Actions timeout in .github/workflows/ci.yml"
-  → Orchestrator routes to Engineer (well-scoped fix)
-  → Engineer executes, measures quality + cost
-  → Returns: HANDBACK {status, quality_score, cost, changes}
-  → Quality gate validates (≥92/100 required)
-  → Results in ~/.agentic-engineers/<harness>/<session-id>/queue/done/ ✅
-```
-
----
-
-## 8 Specialized Roles
-
-| Role | Claude / Copilot | OpenAI / Codex | Effort | Purpose |
-|------|------------------|----------------|--------|---------|
-| **Orchestrator** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | Low | Routes all work via decision tree; never does work itself |
-| **Engineer** | `claude-haiku-4.5` | `gpt-4o-mini` / `gpt-5.4-mini` | High | Executes well-scoped, pre-planned tasks |
-| **Model Engineer** | `claude-sonnet-5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Analyzes metrics; optimizes routing and model selection |
-| **Quality Engineer** | `claude-sonnet-5` | `gpt-4-turbo` / `gpt-5.5` | Medium | Post-implementation validation; model suitability assessment |
-| **Lead Engineer** | `claude-sonnet-5` | `gpt-4` / `gpt-5.5` | High | Code review (8-point checklist); architectural guidance |
-| **Senior Engineer** | `claude-sonnet-5` | `gpt-4-turbo` / `gpt-5.5` | High | Analyzes unscoped work; produces detailed plans |
-| **Principal Engineer** | `claude-opus-5` | `gpt-4o` / `gpt-5.5` | High | Cross-service architecture; major refactors |
-| **Security Engineer** | `claude-fable-5` | `gpt-4o` / `gpt-5.5` | Max | Threat modeling; vulnerability assessment |
-
-**Cost Breakdown** (list price per MTok, and a rough per-task estimate):
-
-| Tier | Model | Input / Output | Est. per task | Used for |
-|---|---|---|---|---|
-| Cheap | `claude-haiku-4.5` | $1 / $5 | $0.03–$0.05 | Routing, well-scoped implementation |
-| Medium | `claude-sonnet-5` | $3 / $15 | ~$0.12 | Planning, review, quality, optimization |
-| Premium | `claude-opus-5` | $5 / $25 | ~$0.18 | Complex architecture |
-| Premium | `claude-fable-5` | $10 / $50 | ~$0.36 | Security analysis |
-
-> **Per-task estimates rose without a price rise.** Sonnet 5 keeps Sonnet 4.6's
-> $3/$15 rate but uses a new tokenizer that produces **~30% more tokens for the
-> same text**, so an equivalent task costs ~30% more. Opus 5 shares the Opus 4.7/4.8
-> tokenizer, which is also heavier than Opus 4.6's. Re-baseline with
-> `count_tokens` against the new model rather than scaling old counts.
-> Sonnet 5 additionally carries an introductory $2/$10 rate through 2026-08-31;
-> budgets here use the standard rate so they do not under-report once it lapses.
-
-**Effort Levels:**
-- **Low:** Minimal reasoning, direct execution (Orchestrator routing)
-- **Medium:** Balanced reasoning and exploration (QE validation, Model Engineer analysis)
-- **High:** Deep reasoning, multiple approaches considered (Engineers, Leads, Architects)
-- **Max:** Unconstrained reasoning, full exploration (Security analysis, threat modeling)
-
-> 💡 **Model Selection:** Each role maps to provider-specific equivalents (GPT-4o, GPT-5.5/GPT-5.4 mini, Gemini, Llama) — see [Multi-Model Support](#multi-model-support--provider-routing) below. For thinking mode details, see [docs/guides/thinking-modes-and-cost-quality-trade-offs.md](docs/guides/thinking-modes-and-cost-quality-trade-offs.md).
-
----
-
-## Key Features
-
-- **🎯 Direct Sub-Agent Spawn Orchestration** — Centralized task routing via DELEGATE/HANDBACK protocol; the Orchestrator spawns specialists directly (Agent/Task tool) rather than polling a queue
-- **📜 Durable Audit Trail** — Every DELEGATE and HANDBACK is recorded to the queue for audit and crash-recovery visibility, even though dispatch itself is direct (see [src/AGENTS.md > Audit-Trail Strategy](src/AGENTS.md#audit-trail-strategy))
-- **⚖️ Multi-Tier Model Selection** — Haiku for execution, Sonnet for planning, Opus for architecture
-- **✅ Quality Gates (3 Layers)** — DELEGATE structure, task routing, HANDBACK validation
-- **📊 Real-Time Metrics** — Token tracking, quality scores, cost per task
-- **🔄 Self-Improving Feedback Loops** — Model Engineer optimizes routing based on metrics
-- **🌐 Multi-Harness Support** — OpenCode, Copilot, Claude, π.dev, Codex
-- **🔐 Security by Default** — Opus-tier Security Engineer for threat modeling
-- **📚 Comprehensive Documentation** — Protocol specs, guides, troubleshooting
-
----
+Eight roles: **Orchestrator** (routing, `claude-sonnet-5`), **Engineer** (well-scoped
+implementation, `claude-haiku-4.5`), **Senior Engineer**, **Lead Engineer**,
+**Quality Engineer**, **Model Engineer** (all `claude-sonnet-5`), **Principal
+Engineer** (`claude-opus-5`), and **Security Engineer** (`claude-fable-5`). Full
+definitions, routing rules, and escalation paths live in
+[src/AGENTS.md](src/AGENTS.md). Skills are cataloged in
+[src/SKILLS.md](src/SKILLS.md).
 
 ## Quick Start
 
-### Installation (Choose Your Harness)
-
-The default `make install` target covers OpenCode, Copilot, Claude, and π.dev. Codex remains an explicit `make install-codex` path for workspace-managed runs:
-
 ```bash
-# Default harness set
+# Install the default harness set (OpenCode, Copilot, Claude, π.dev)
 make install
 
-# Or install individual harnesses:
-make install-opencode      # OpenCode CLI (recommended for production)
-make install-copilot       # Copilot CLI
-make install-claude        # Claude Code (IDE)
-make install-codex         # Codex CLI/IDE custom agents + skills
-make install-pi            # π.dev (experimental)
+# Or a single harness:
+make install-claude
+make install-opencode
+make install-codex
+
+# Preview without touching your home dir — renders to dist/<harness>/ instead:
+make render-claude
+make render-copilot
+make render-opencode
+make render-codex
+make render-pi
+make render-all      # every harness + dist/specs/
 ```
 
-By default the framework installs under your home directory (`$HOME`). To install into an alternate root — for sandboxed or end-to-end testing without touching your real config — pass `DESTDIR`:
+`make install` backs up your existing harness config to a date-stamped copy
+before writing the new one (see `make install-<harness>` output for details).
+To install into an alternate root instead of `$HOME` (e.g. for testing):
 
 ```bash
 DESTDIR=/tmp/test-install make install-opencode
-DESTDIR=/tmp/test-install make install-codex BACKUP=never
 ```
 
-### Using the Orchestrator
-
-The **Orchestrator** is the single entry point for all work. It routes tasks to specialist agents based on complexity and type.
-
-**Start the Orchestrator and delegate work:**
+**Using the Orchestrator:**
 
 ```bash
-# Claude (recommended)
 claude --permission-mode auto --dangerously-skip-permissions --agent orchestrator
-
-# OpenCode CLI
 opencode --agent orchestrator
-
-# Copilot CLI
 copilot --agent orchestrator
-
-# Codex
-codex --profile agentic-engineers-orchestrator --sandbox workspace-write --ask-for-approval on-request
-
-# π.dev
-# Paste the orchestrator system prompt into π.dev settings, then invoke
 ```
 
-**Delegate tasks using the pattern:**
+Then delegate work in plain language:
 
 ```bash
 delegate: Fix the CI/CD timeout in .github/workflows/ci.yml
-
-delegate: Add authentication to the API endpoints; Review PR #42 for security issues; Optimize token usage across all agents
 ```
 
-Or as individual delegations:
-```bash
-delegate: Fix the CI/CD timeout in .github/workflows/ci.yml
-delegate: Add authentication to the API endpoints
-delegate: Review PR #42 for security issues
-delegate: Optimize token usage across all agents
-```
+The Orchestrator parses the task, spawns the right specialist(s) directly (one
+DELEGATE per spawn), reads each HANDBACK back as the spawn result, and reports
+back to you.
 
-The orchestrator will:
-1. Parse the task
-2. Spawn the appropriate specialist agent(s) directly, one DELEGATE per spawn
-3. Read each HANDBACK back as the result of its spawn call
-4. Aggregate results and metrics
-5. Report back to you
+## Quality Gates
 
-### Extend the Framework
-
-Customize the framework by delegating agent and skill creation:
-
-```bash
-delegate: create me a new 'data engineer' role with model claude-sonnet-4.6, effort level high, and skills for data processing, SQL optimization, and warehouse management
-
-delegate: create a new skill called 'database-migration' in the infrastructure category with functionality for schema versioning, migration state tracking, and rollback support
-```
-
-See [docs/guides/agent-creation.md](docs/guides/agent-creation.md) and [docs/guides/skill-creation.md](docs/guides/skill-creation.md) for detailed specifications.
-
----
-
-### Files Agentic Engineers Creates & Modifies
-
-Installing/rendering a harness writes **only** to that harness's own config
-location, plus a single framework work directory. It never touches your project
-source.
-
-| Path | Created / Modified | Purpose |
-|------|--------------------|---------|
-| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
-| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
-| `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
-
-### ⚠️ Backups & Conflicts (read before installing)
-
-`make install` / `make clean-install` **back up your existing harness config by
-moving it aside** to a date-stamped copy (e.g. `~/.claude/` → `~/.claude.20260611/`)
-before writing the new one. Two important caveats:
-
-- **The backup suffix is the date only (`YYYYMMDD`), not a full timestamp.** If
-  you install the **same harness twice on the same day**, the second backup
-  target already exists and the backup step will fail (it will not silently
-  overwrite your first backup). **Handling today:** rename or remove the
-  existing `~/.<harness>.YYYYMMDD/` before re-installing, or restore from it
-  first (`rm -rf ~/.claude && mv ~/.claude.20260611 ~/.claude`). *We plan to
-  switch the suffix to a full `YYYYMMDD-HHMMSS` timestamp soon so same-day
-  re-installs stop colliding — oops.* 🙇
-- **Backups cover harness config dirs only — never `~/.agentic-engineers/`.**
-  Your queue/work directory is left in place across installs. If you want a
-  truly clean slate, remove the relevant session dirs under
-  `~/.agentic-engineers/` yourself.
-- **If you skip the backup prompt** and the harness dir already contains
-  non-framework files, the installer warns about pollution but proceeds —
-  mixing your files with rendered ones. Back up or start clean if unsure.
-
-To preview without writing to your home dir, render to `dist/` instead:
-`make render-claude` (and friends) produce the exact files under `dist/<harness>/`.
-
-### Git Hooks for Enforcement
-
-This framework uses git hooks (`.githooks/`) to enforce protocol compliance and quality standards at commit time. The hooks validate DELEGATE/HANDBACK structure, check for secret leaks, and verify SPEC changes before they're committed. During CI, the quality gate re-installs hooks to ensure the same checks run in the pipeline. Future work (Phase 5.3) will enable transferring core, reusable hooks (credential checks, secret scanning) to other repositories.
-
----
-
-### Files Agentic Engineers Creates & Modifies
-
-Installing/rendering a harness writes **only** to that harness's own config
-location, plus a single framework work directory. It never touches your project
-source.
-
-| Path | Created / Modified | Purpose |
-|------|--------------------|---------|
-| `~/.config/opencode/`, `~/.codex/`, `~/.claude/`, `~/.copilot/`, `~/.pi/` | **Modified** (agents, skills, settings, system prompt) | Per-harness rendered config — what `make install-<harness>` writes |
-| `~/.agentic-engineers/{harness}/{session-id}/queue/` | **Created** | Per-session, per-harness work queue (`incoming/`, `processing/`, `done/`, `failed/`) holding DELEGATE/HANDBACK YAML |
-| `~/.<harness>.YYYYMMDD/` (e.g. `~/.claude.20260611/`) | **Created on install** | Timestamped backup of your prior harness config (see warning below) |
-
-### ⚠️ Backups & Conflicts (read before installing)
-
-`make install` / `make clean-install` **back up your existing harness config by
-moving it aside** to a date-stamped copy (e.g. `~/.claude/` → `~/.claude.20260611/`)
-before writing the new one. Two important caveats:
-
-- **The backup suffix is the date only (`YYYYMMDD`), not a full timestamp.** If
-  you install the **same harness twice on the same day**, the second backup
-  target already exists and the backup step will fail (it will not silently
-  overwrite your first backup). **Handling today:** rename or remove the
-  existing `~/.<harness>.YYYYMMDD/` before re-installing, or restore from it
-  first (`rm -rf ~/.claude && mv ~/.claude.20260611 ~/.claude`). *We plan to
-  switch the suffix to a full `YYYYMMDD-HHMMSS` timestamp soon so same-day
-  re-installs stop colliding — oops.* 🙇
-- **Backups cover harness config dirs only — never `~/.agentic-engineers/`.**
-  Your queue/work directory is left in place across installs. If you want a
-  truly clean slate, remove the relevant session dirs under
-  `~/.agentic-engineers/` yourself.
-- **If you skip the backup prompt** and the harness dir already contains
-  non-framework files, the installer warns about pollution but proceeds —
-  mixing your files with rendered ones. Back up or start clean if unsure.
-
-To preview without writing to your home dir, render to `dist/` instead:
-`make render-claude` (and friends) produce the exact files under `dist/<harness>/`.
-
-### Git Hooks for Enforcement
-
-This framework uses git hooks (`.githooks/`) to enforce protocol compliance and quality standards at commit time. The hooks validate DELEGATE/HANDBACK structure, check for secret leaks, and verify SPEC changes before they're committed. During CI, the quality gate re-installs hooks to ensure the same checks run in the pipeline. Future work (Phase 5.3) will enable transferring core, reusable hooks (credential checks, secret scanning) to other repositories.
-
----
-
-## Key Benefits & Discoveries
-
-### 1. DELEGATE/HANDBACK Protocol Enforces Quality
-
-**Discovery:** Structured handoff protocol (mandatory scope, plan, success_criteria) dramatically improves output quality and reduces rework.
-
-**Benefits:**
-- ✅ **Higher Quality Output:** 90+/100 average quality score (vs. 70-80 without protocol)
-- ✅ **Faster Turnaround:** 40-60% reduction in task completion time (clear scope eliminates ambiguity)
-- ✅ **Fewer Iterations:** 80% reduction in rework/escalations (success criteria prevent scope creep)
-- ✅ **Better Context:** Structured context (files, dependencies, constraints) prevents false starts
-
-**Why It Works:**
-- Orchestrator must write clear scope before delegating (forces clarity)
-- Engineer receives concrete plan with numbered steps (no guessing)
-- Success criteria are testable (no subjective "looks good")
-- HANDBACK includes metrics (quality score, tokens, duration) for continuous improvement
-
-### 2. Token Efficiency: 40-60% Reduction via Smart Model Selection
-
-**Discovery:** Well-scoped, pre-planned work can be executed by cheaper models (Haiku) with same quality as expensive models (Opus), but 60% cheaper.
-
-**Real-World Data:**
-- **Haiku (claude-haiku-4.5):** $0.03-$0.05 per task, 90+/100 quality when plan is clear
-- **Sonnet (claude-sonnet-5):** ~$0.12 per task, needed for complex analysis and planning
-- **Opus (claude-opus-5):** ~$0.18 per task, only for architecture decisions
-- **Fable (claude-fable-5):** ~$0.36 per task, security analysis only
-
-**Token Savings Example** (100 tasks, standard rates):
-- **Without protocol:** All tasks → Opus 5 = $0.18 × 100 = $18.00
-- **With protocol:** Haiku (90) + Sonnet 5 (8) + Opus 5 (2) = $0.05×90 + $0.12×8 + $0.18×2 = $5.82
-- **Savings:** ~68% reduction ($12.18 saved)
-
-The ratio between tiers is what drives the saving, so it survived the model
-upgrade even though every absolute figure moved.
-
-### 3. Parallel Sub-Agent Execution at Scale
-
-**Discovery:** Framework supports tens to hundreds of concurrent sub-agents with automatic result aggregation, enabling massive parallelization. `opencode` recommended.
-
-**Tested Capacity:**
-- ✅ **Tens to hundreds of concurrent agents** from single parent (observed in production)
-- ✅ **100+ sub-agents** in parallel delegation chains
-- ✅ **5-tier deep hierarchies** (parent → children → grandchildren → etc.)
-- ✅ **Automatic aggregation** of quality scores, tokens, costs
-
----
+`make quality-gate` (lint + test + verify + render validation) is the standard
+pre-push check; CI re-runs the same gate. Git hooks under `.githooks/` enforce
+protocol compliance at commit time — DELEGATE/HANDBACK structure, secret-leak
+checks, and SPEC.md drift (`scripts/validate-spec-constraints.py`). CI's
+security-gate workflow additionally runs `scripts/entropy_detector.py` for
+credential/secret entropy scanning, and `scripts/check_protocol_compliance.py`
+validates queue-protocol conformance. Run the full local suite with `make test`.
 
 ## Documentation
 
-| Topic | Document | Description |
-|-------|----------|-------------|
-| **Architecture** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Detailed framework architecture and decision rationale |
-| **Protocol** | [docs/PROTOCOL.md](docs/PROTOCOL.md) | DELEGATE/HANDBACK protocol specification |
-| **Harness Setup** | [docs/guides/harness-setup/](docs/guides/harness-setup/) | Detailed setup guides for each harness |
-| **Agent Creation** | [docs/guides/agent-creation.md](docs/guides/agent-creation.md) | How to create new agent roles |
-| **Skill Creation** | [docs/guides/skill-creation.md](docs/guides/skill-creation.md) | How to create new skills |
-| **Cost Optimization** | [docs/COST-QUALITY-MATRIX.md](docs/COST-QUALITY-MATRIX.md) | Cost-quality trade-offs and optimization strategies |
-| **Testing** | [docs/guides/troubleshooting.md](docs/guides/troubleshooting.md) | Testing strategy and troubleshooting |
-| **Market Comparison** | [docs/market-comparison.md](docs/market-comparison.md) | Comparison with CrewAI, LangGraph, AutoGen, etc. |
-| **Contributing** | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to the project |
-
----
-
-## Support This Project
-
-If Agentic Engineers saves you time, money, or complexity, consider supporting independent development:
-
-<div align="center">
-
-| Bitcoin (On-Chain) | Lightning (Instant) |
-|:---:|:---:|
-| ![Bitcoin QR](docs/assets/bitcoin-qr.png) | ![Lightning QR](docs/assets/lightning-qr.png) |
-| **Pay what you like** | **Zero fee • Instant** |
-
-</div>
-
-**Support open-source development:**
-- NOSTR: npub1ydxa9ss3xkps49s2gck7lk6pptpx79uvh78p87ly8zg0setwaxps3edd7d
-- LN: bluemouse1@primal.net
-- BTC: bc1py8jw0s695nvx9efm7zfejjhxvzfx8m6q2zhxhyt8s6sukdh6wm9sy2nq0n
-
-Every satoshi helps. Thank you for believing in open-source multi-agent systems. 🙏
-
----
-
-## Installation Verification
-
-```bash
-# 1. Complete framework verification
-make test
-
-# 2. All harness installation status
-find ~/.agentic-engineers -path '*/queue' -type d | sort      # Should show harness/session queue roots
-
-# 3. Protocol docs installed (OpenCode example)
-cat ~/.config/opencode/AGENTS.md  # Should show orchestrator system prompt
-
-# 4. Smoke tests
-opencode --agent orchestrator --version        # Should show version
-opencode --agent orchestrator "echo 'Hello from orchestrator'"  # Should route and execute
-```
-
----
-
-## Multi-Model Support & Provider Routing
-
-Every role has a **canonical model tier** (the primary recommendation) plus **provider-specific equivalents** that the render pipeline substitutes automatically. The single source of truth is [`src/config/models.yaml`](src/config/models.yaml).
-
-### Role → Model Mapping (All Providers)
-
-| Role | Canonical | Claude (Anthropic) | GitHub Copilot | Codex | Google* | Meta / Llama* |
-|------|-----------|-------------------|----------------|-------|---------|---------------|
-| **Orchestrator** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Engineer** | Haiku | `claude-haiku-4.5` | `claude-haiku-4.5` | `gpt-5.4-mini` | `gemini-2.0-flash` | `llama-3-8b` |
-| **Quality Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Model Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Lead Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Senior Engineer** | Sonnet | `claude-sonnet-5` | `claude-sonnet-5` | `gpt-5.5` | `gemini-1-5-pro` | `llama-3-70b` |
-| **Principal Engineer** | Opus | `claude-opus-5` | `claude-opus-5` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
-| **Security Engineer** | Fable | `claude-fable-5` | `claude-fable-5` | `gpt-5.5` | `gemini-2-pro` | `llama-3-405b` |
-
-* Untested in this repo.
-
-¹ See [SPEC.md > Security Engineer: Multi-Model Strategy](docs/SPEC.md).
-
-**Why these model choices:**
-- **Haiku / gpt-4o-mini / gpt-5.4-mini / gemini-2.0-flash / llama-3-8b** — cheapest tier, sufficient for deterministic routing and pre-planned execution
-- **Sonnet / gpt-4-turbo / gpt-5.5 / gemini-1-5-pro / llama-3-70b** — mid-tier, balances cost and capability for planning, review, and validation
-- **Opus / gpt-4o / gemini-2-pro / llama-3-405b** — highest capability tier, required for architecture and security decisions
-
-### Provider Feature Deltas
-
-Not all providers support every feature. The framework degrades gracefully:
-
-| Feature | Claude (Anthropic) | GitHub Copilot | OpenAI | Google | Meta/Llama |
-|---------|-------------------|----------------|--------|--------|------------|
-| Extended Thinking | ✅ Native | ✅ Native | ⚠️ Limited | ❌ Not supported | ❌ Not supported |
-| Structured Output | ✅ | ✅ | ✅ | ✅ | ❌ Not guaranteed |
-| Max Context | 200K tokens | 200K tokens | 128K tokens | 1M tokens | 128K tokens |
-| Cost Tier | Premium | Premium | Premium | Standard | Budget/Free |
-
-> ⚠️ **Thinking mode on non-Claude providers:** When deploying to OpenAI, Google, or Meta, `thinking: true` roles fall back to the best available reasoning of the target model.
-
-See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed harness configuration.
-
-### Codex Support & Pricing Snapshot
-
-Current OpenAI docs describe Codex as available on Free, Go, Plus, Pro, Business, Edu, and Enterprise plans. In this repo, Codex is wired through the renderer-managed `make install-codex` path for workspace-managed runs, and the current role map uses the repo's `gpt-5.4-mini` / `gpt-5.5` split.
-
-| Codex plan | Price | Current support snapshot |
-|------------|-------|-------------------------|
-| Free | `$0/month` | Quick coding tasks |
-| Go | `$8/month` | Lightweight coding tasks |
-| Plus | `$20/month` | Codex on the web, CLI, IDE extension, and iOS; latest models include GPT-5.5, GPT-5.4, and GPT-5.4 mini |
-| Pro | `from $100/month` | 5x or 20x higher Codex rate limits; GPT-5.3-Codex-Spark research preview |
-| API key | Token-based | CLI, SDK, or IDE extension only; no cloud features; usage billed by API pricing |
-
----
-
-
-## When to Use This System
-
-**✅ Use Agentic Engineers when:**
-- You need **coordination across 8+ specialized AI agents**
-- You want **quality gates and cost optimization** built-in
-- You need **parallel sub-agent execution at scale** (tens to hundreds concurrent)
-- You want **structured handoffs** (DELEGATE/HANDBACK protocol)
-- You need **metrics and feedback loops** for continuous improvement
-
-**❌ Consider alternatives when:**
-- You only need a single agent (use the provider's native API)
-- You don't care about cost optimization (use Opus for everything)
-- You don't need quality gates or structured validation
-- You're building a chatbot or conversational AI (different problem domain)
-
-See [docs/market-comparison.md](docs/market-comparison.md) for detailed comparison with CrewAI, LangGraph, AutoGen, and other frameworks.
-
----
+| Topic | Document |
+|-------|----------|
+| Full agent roster & routing | [src/AGENTS.md](src/AGENTS.md) |
+| Skills catalog | [src/SKILLS.md](src/SKILLS.md) |
+| Specification | [docs/SPEC.md](docs/SPEC.md) |
+| Protocol (DELEGATE/HANDBACK) | [docs/PROTOCOL.md](docs/PROTOCOL.md) |
+| Queue protocol | [docs/QUEUE-PROTOCOL.md](docs/QUEUE-PROTOCOL.md) |
+| Onboarding | [docs/ONBOARDING.md](docs/ONBOARDING.md) |
+| Docs index | [docs/INDEX.md](docs/INDEX.md) |
+| Guides (agent/skill creation, harness setup, troubleshooting) | [docs/guides/](docs/guides/) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Supported Harnesses
 
-| Harness | Description | Best For | Status |
-|---------|-------------|----------|--------|
-| [OpenCode](docs/guides/harness-setup/opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
-| [GitHub Copilot](docs/guides/harness-setup/copilot.md) | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
-| [Claude Code](docs/guides/harness-setup/claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
-| [Codex](docs/guides/harness-setup/codex.md) | Codex custom agents, skills, and permission profiles | Workspace-managed runs, local development | ✅ Supported, opt-in install |
-| [π.dev](docs/guides/harness-setup/pi-dev.md) | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
-
-See [docs/guides/harness-setup/](docs/guides/harness-setup/) for detailed setup guides per harness.
-
----
+| Harness | Status |
+|---------|--------|
+| [OpenCode](docs/guides/harness-setup/opencode.md) | Recommended |
+| [Claude Code](docs/guides/harness-setup/claude.md) | Stable |
+| GitHub Copilot | Stable |
+| [Codex](docs/guides/harness-setup/codex.md) | Supported, opt-in install |
+| π.dev | Beta |
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-**Key Areas:**
-- **Harness integrations** — Add support for new AI coding harnesses
-- **Agent roles** — Design new specialist agents for specific domains
-- **Skills** — Create reusable skills for common tasks
-- **Testing** — Expand test coverage and evaluation framework
-- **Documentation** — Improve guides, examples, and troubleshooting
-
----
+See [CONTRIBUTING.md](CONTRIBUTING.md). Areas of interest: harness integrations,
+new agent roles, new skills, test coverage, documentation.
 
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
-
-## Acknowledgments
-
-Built with inspiration from:
-- **CrewAI** — Multi-agent orchestration patterns
-- **LangGraph** — State machine design for AI workflows
-- **AutoGen** — Agent communication protocols
-- **OpenAI Agents SDK** — Structured agent design
-
-Special thanks to the open-source AI community for pushing the boundaries of what's possible with multi-agent systems.
-
----
-
-**⭐ If this project helps you, please star the repository and share with others!**

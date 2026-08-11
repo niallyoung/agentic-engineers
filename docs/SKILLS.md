@@ -2,7 +2,7 @@
 
 Role-specific execution details. Complements AGENTS.md (who, when, routing) and QUEUE-PROTOCOL.md (mechanics).
 
-> **Deprecated Skills:** See [DEPRECATED-SKILLS.md](DEPRECATED-SKILLS.md) for archived skills and alternatives. As of 2026-05-30: 5 skills deprecated (repo-init, cicd-monitor, ab-testing, metrics-etl, tokenadvisor). See [SKILLS-AVAILABLE.md](SKILLS-AVAILABLE.md) for current active skills.
+> **Current skill roster:** See [`src/SKILLS.md`](../src/SKILLS.md) for the canonical, current list of the 8 surviving skills post-2026-08-11 slimdown (orchestrator, queue-management, queue-query, protocol-validator, spec-validator, spec-management, skill-improvement-feedback, codex-agent-cleanup).
 
 ---
 

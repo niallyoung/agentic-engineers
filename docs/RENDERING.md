@@ -262,7 +262,7 @@ version: <semver>      # specs only
 
 1. Create `src/agents/<name>-agent.md` with required frontmatter (`name`, `description`, `model`, `role`)
 2. Add entry to `config/FRAMEWORK-MANIFEST.yaml` under `agents:`
-3. Add to `docs/AGENTS.md` canonical registry table
+3. Add to `src/AGENTS.md`'s Agent Roster (canonical — `docs/AGENTS.md` is only a pointer)
 4. Run `make render-all` to generate dist/ artifacts
 5. Run `make validate-agents` to confirm compliance
 6. Run `make install` to deploy to harnesses
@@ -301,4 +301,4 @@ steps:
 
 ---
 
-*See also: [docs/WORKFLOW.md](WORKFLOW.md) for SDLC gates, [docs/FEEDBACK-LOOPS.md](FEEDBACK-LOOPS.md) for post-merge feedback patterns.*
+*See also: [docs/WORKFLOW.md](WORKFLOW.md) for SDLC gates.*

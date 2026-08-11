@@ -18,7 +18,7 @@ See **docs/SPEC.md - Queue Architecture & Paths (LOCKED SPEC)** for full specifi
 
 Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
 
-**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+**CANONICAL EXECUTION MODEL:** The Orchestrator builds a DELEGATE and dispatches it by directly spawning a sub-agent with the DELEGATE as its prompt, reading the HANDBACK back from the tool result — no timer, no poll interval, no intermediate queue hop (see docs/SPEC.md's ORCHESTRATOR-FIRST EXECUTION MODEL). The queue described in this document is a durable inbox and audit substrate: the Orchestrator drains `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` at context start and after each task completes, and every DELEGATE/HANDBACK is still recorded there via `enqueue()` for audit. **The Orchestrator is the ONLY way work flows through agentic-engineers.**
 
 All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure under `~/.agentic-engineers/`.
 
@@ -91,13 +91,13 @@ priority: high
 ---
 ```
 
-**Orchestrator agent (running in harness) polls `{session-id}/incoming/` every 30-60s and:**
+**Orchestrator drains `{session-id}/incoming/` at context start and after each task completes (no timer, no poll interval) and:**
 1. Reads task
 2. Applies AGENTS.md routing rules
-3. Creates DELEGATE (HANDOFF.md format)
-4. Stores DELEGATE in `artifacts/delegates/YYYY-MM-DD/`
-5. Sends DELEGATE to appropriate agent
-6. Deletes from `{session-id}/incoming/` (or moves to archive)
+3. Constructs the DELEGATE block per the DELEGATE/HANDBACK Protocol format
+4. Spawns a sub-agent directly with the DELEGATE as its prompt
+5. Records the DELEGATE via `enqueue()` for audit
+6. Marks the item processed in `{session-id}/incoming/` (moved/archived)
 
 ### 2. Processing Queue
 
@@ -121,7 +121,7 @@ escalations: 0
 ---
 ```
 
-**Orchestrator agent polls `{session-id}/processing/` and:**
+**Orchestrator reads the HANDBACK directly from the spawn's tool result (recorded to `{session-id}/processing/` via `enqueue()` for audit) and:**
 1. Routes complete work to Quality Engineer
 2. Escalates blocked work to Lead/Senior Engineer
 3. Moves to `{session-id}/done/` after decision
@@ -149,12 +149,12 @@ notes: "Quality Engineer verified; ready to merge"
 
 Orchestrator is a harness agent (defined in AGENTS.md) that:
 
-1. **Runs continuously** (loop in harness or periodic invocation)
-2. **Polls queues** every 30-60 seconds
+1. **Runs in agent context** (a live Orchestrator session, not a background loop)
+2. **Drains queues** at context start and after each task completes — no timer, no poll interval
 3. **Routes work** using AGENTS.md decision tree
-4. **Creates DELEGATEs** in HANDOFF.md format
-5. **Sends to agents** via harness (Claude Code or equiv.)
-6. **Manages transitions** (incoming → processing → done)
+4. **Constructs DELEGATEs** per the DELEGATE/HANDBACK Protocol format
+5. **Dispatches by direct sub-agent spawn** (harness Agent/Task tool), reading the HANDBACK from the tool result
+6. **Manages transitions** (incoming → processing → done) and records them via `enqueue()` for audit
 7. **Applies recommendations** from Model Engineer feedback loop
 
 **No external tools**, no cron jobs, no shell scripts — 100% agent-based.
@@ -278,7 +278,7 @@ When multiple harnesses run concurrently, each harness gets a unique queue parti
 │       └── queue/ ...
 ```
 
-Each harness's Orchestrator only polls and processes its own queue partition. No cross-contamination, no race conditions.
+Each harness's Orchestrator only drains and processes its own queue partition. No cross-contamination, no race conditions.
 
 ---
 
@@ -308,7 +308,7 @@ The pre-commit hook validates example files in the repo; `enqueue()` is the gate
 ### Why enqueue() is mandatory
 
 - Validates canonical schema before any file is written (no partial/invalid artifacts on disk)
-- Enforces atomic writes (no torn files visible to the polling Orchestrator)
+- Enforces atomic writes (no torn files visible to a concurrently draining Orchestrator)
 - Applies rate limiting, duplicate-id checks, and cycle detection
 - Returns a structured result including the written file path for auditability
 
@@ -398,7 +398,7 @@ result = ops.enqueue({
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
-| DELEGATE | `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.json` | `enqueue()` only | Orchestrator (polls), Agent (receives) |
+| DELEGATE | `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.json` | `enqueue()` only | Orchestrator (drains inbox), Agent (receives via direct spawn) |
 | HANDBACK | `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}.json` | `enqueue()` only | Orchestrator (routes), QE (verifies) |
 | Decision | `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}.json` | Orchestrator `move_task()` | Human / external system |
 
@@ -503,7 +503,7 @@ Benefits:
 - ✅ Enables batch processing (queue can hold multiple pending tasks)
 - ✅ Auditable (all DELEGATE/HANDBACK stored)
 - ✅ Durable (tasks persist if harness restarts)
-- ✅ Agent-based (Orchestrator polls; no external tools needed)
+- ✅ Agent-based (Orchestrator drains the inbox via direct sub-agent spawn; no external tools, no polling, no timer)
 
 Orchestrator implementation = AGENTS.md + SKILLS.md. See those docs for:
 - Routing rules (AGENTS.md > Routing Decision Tree)

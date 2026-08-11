@@ -118,7 +118,7 @@ data_engineer:
 - Output follows a fixed rule or checklist
 - Speed and cost matter more than deep reasoning
 
-See [docs/ARCHITECTURE.md](../ARCHITECTURE.md) for the full thinking mode rationale.
+See [src/AGENTS.md](../../src/AGENTS.md) and [docs/decisions/](../decisions/) for architecture and thinking-mode rationale.
 
 ## Effort Level Guidelines
 

@@ -288,8 +288,7 @@ agent-invokable capabilities directly under `src/skills/`.
 
 ### Phase 3 Consolidation Summary
 
-Four skills changed identity during consolidation. If you reference any old
-name, see [docs/MIGRATION-2026-06-06.md](../MIGRATION-2026-06-06.md):
+Four skills changed identity during consolidation:
 
 | Old name | New name / status | Change |
 |----------|-------------------|--------|
@@ -298,7 +297,8 @@ name, see [docs/MIGRATION-2026-06-06.md](../MIGRATION-2026-06-06.md):
 | `protocol-validation` | merged into `protocol-validator` | Merge (single source of truth) |
 | `voice-notify` | *(removed)* | Deletion — use HANDBACK status + logging |
 
-Background and rationale: [docs/guides/ARCHITECTURE-CONSOLIDATION.md](../guides/ARCHITECTURE-CONSOLIDATION.md).
+Note: `queue-todo-sync` is itself removed as of the 2026-08-11 framework slimdown
+(SPEC-2026-005) — the surviving skill roster is documented in `src/SKILLS.md`.
 
 ---
 
@@ -344,12 +344,11 @@ within cost targets.
 
 - **Per-task budgets** — A `DELEGATE` block carries a token budget; the
   executing agent should stay within it and report actuals in its `HANDBACK`.
-- **Budget enforcement & token limits** — see
-  [docs/BUDGET_MANAGEMENT.md](../BUDGET_MANAGEMENT.md) and
-  [docs/USAGE-BUDGET-MANAGER.md](../USAGE-BUDGET-MANAGER.md).
-- **Historical usage & trends** — see
-  [docs/TOKEN-USAGE-TRACKING.md](../TOKEN-USAGE-TRACKING.md); the `cost-*`
-  skills (`cost-aggregation`, `cost-budgeting`) aggregate spend across providers.
+- **Budget enforcement, token limits, and historical usage** — the standalone
+  budget/usage-tracking docs and the `cost-*` skills were removed in the 2026-08-11
+  framework slimdown (SPEC-2026-005); the surviving skill roster is `src/SKILLS.md`.
+  If you need this functionality, propose it via `spec-management` rather than
+  reviving the deleted docs.
 - **Model selection drives cost** — pick the cheapest model that meets the
   quality bar (see [Model Selection (Locked)](#model-selection-locked)); the
   `model-*` skills recommend cost-quality-optimal routing.
@@ -409,9 +408,7 @@ When using background agents (e.g., `skill-creator`, `agent-creator`) to create 
 - ✅ HANDBACK includes proof of commitment (commit SHA)
 - ✅ Orchestrator can validate files actually reached git
 
-**Read:** [`docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md`](docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md) for the detailed protocol agents must follow.
-
-**Read:** [`docs/FILE-LOSS-PREVENTION.md`](docs/FILE-LOSS-PREVENTION.md) for comprehensive prevention mechanisms and troubleshooting.
+**Read:** [`docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md`](../BACKGROUND-AGENT-COMMIT-PROTOCOL.md) for the detailed protocol agents must follow.
 
 ---
 
@@ -425,7 +422,6 @@ The framework automatically validates:
 4. **HANDBACK schema** — Requires `commit_sha` for file-creating agents
 
 **If you encounter issues with missing files:**
-- See [`docs/FILE-LOSS-PREVENTION.md#troubleshooting`](docs/FILE-LOSS-PREVENTION.md#troubleshooting)
 - Common cause: Agent didn't commit files before session ended
 - Fix: Recreate files or manually commit
 
@@ -531,8 +527,8 @@ src/skills/<skill-name>/
     └── test_<skill>.py   ← at least one test file required
 ```
 
-See [`src/skills/_meta/skill-template/QUICKSTART.md`](src/skills/_meta/skill-template/QUICKSTART.md)
-for the 5-step guide to creating a conformant skill.
+Use the `skill-creator` skill (or `agent-creator` for agents) to scaffold a
+conformant skill/agent directly — see `src/SKILLS.md` / `src/AGENTS.md`.
 
 ### Gate 2: Circular Import Detection
 
@@ -1004,11 +1000,9 @@ quality-engineer, and model-engineer are meant to be leaves.
 
 ## References
 
-- **Agent Roster:** [`src/AGENTS.md`](src/AGENTS.md) — all roles and responsibilities
+- **Agent Roster & Routing:** [`src/AGENTS.md`](src/AGENTS.md) — all roles, responsibilities, routing decision tree, and tool-access model
 - **Skills Matrix:** [`src/SKILLS.md`](src/SKILLS.md) — available skills and capabilities
-- **Routing Logic:** [`src/DECISION-MAKING.md`](src/DECISION-MAKING.md) — how agents are selected
-- **Protocol Spec:** [`src/CLI-PERMISSIONS.md`](src/CLI-PERMISSIONS.md) — tool access control
-- **Cost Model:** [`src/TOKEN_METRICS.md`](src/TOKEN_METRICS.md) — token spend specification
+- **Specification:** [`docs/SPEC.md`](docs/SPEC.md) — protocol, queue architecture, and model assignments
 
 ---
 
@@ -1027,58 +1021,10 @@ quality-engineer, and model-engineer are meant to be leaves.
 
 ## Cost & Budget Reports
 
-Phase 5.2 added per-role token budgets and a routing matrix. Use these tools
-to interpret cost behavior locally before opening a PR that changes routing,
-models, or budgets.
-
-### Per-role budgets
-
-Authoritative source: [`src/config/token-budgets.yaml`](src/config/token-budgets.yaml).
-Each role has a hard `budget` (tokens) and three thresholds:
-
-- **warn** (default 80%) — emits a warning; task continues.
-- **error** (default 100%) — budget exceeded; investigate.
-- **escalate** (default 120%) — escalate to Principal Engineer.
-
-Security has an `escalate_pct` override (150%) so threat analyses are never
-cut short for cost reasons.
-
-### Check a single task
-
-```bash
-python3 -m src.skills.cost-aggregation.scripts.monitor_budgets \
-    --role engineer --tokens 1300
-# → [WARN] engineer: 1300/1500 tokens (86.7% ≥ 80%) — approaching cap.
-```
-
-Exit code is non-zero only when at least one record hits `escalate`, which
-makes the script safe to wire into CI as a soft gate.
-
-### Roll up recent metrics
-
-```bash
-python3 -m src.skills.cost-aggregation.scripts.cost_dashboard \
-    --metrics artifacts/metrics.jsonl
-```
-
-The dashboard groups tasks by role and reports `tasks`, `avg_tok`, `budget`,
-`over` (count exceeding the error threshold), and `escalated`. Use `--json`
-for machine-readable output.
-
-### Routing decisions
-
-The canonical task → (role, model, effort, budget) matrix lives in
-[`src/orchestration/routing/model_router.py`](src/orchestration/routing/model_router.py).
-For the human-readable version and the cost/quality tradeoff rationale, see
-[`docs/COST-QUALITY-MATRIX.md`](docs/COST-QUALITY-MATRIX.md).
-
-### How to read a report
-
-1. **Sustained `escalate` for a role** → the budget is wrong, or the routing
-   rule is sending the wrong task class to that role. Open a routing-change
-   PR; do not silently raise the cap.
-2. **High `avg_tok` near the warn line on Haiku roles** → consider promoting
-   one task class to Sonnet (still cheaper than chronic rework).
-3. **Zero `over` for Sonnet/Opus roles with low `avg_tok`** → candidate for
-   downgrade to Haiku on the matching rule.
+The per-role token-budget config, routing matrix, and `cost-aggregation`/`cost-budgeting`
+tooling this section used to document were removed in the 2026-08-11 framework slimdown
+(SPEC-2026-005) along with the auxiliary skills that implemented them. Model/effort
+assignment per role is now documented directly in `docs/SPEC.md`'s Core Architecture and
+Model Naming & Harness Compatibility sections. If you need per-task cost reporting,
+propose it via the `spec-management` skill rather than reviving the deleted tooling.
 

@@ -1,24 +1,30 @@
 ---
 name: Agentic Engineers Implementation Specification
 description: Current state of the agent orchestration system, queue mechanics, and operational constraints
-version: 1.0
-updated: 2026-06-08
-phase: 5.10 (Monitoring & Continuous Improvement)
+version: 2.0
+updated: 2026-08-11
+phase: Post-slimdown (SPEC-2026-005)
 status: Current
 type: specification
 ---
 
 # Agentic Engineers Implementation Specification
 
-**Last Updated:** 2026-06-08  
-**Current Phase:** 5.10 (Monitoring & Continuous Improvement with Span Capture & Indexing)  
-**Constraint:** No external scripts/tools — all work flows through AGENTS via DELEGATE/HANDBACK
+**Last Updated:** 2026-08-11
+**Constraint:** No external scripts/tools own orchestration — all runtime work flows through AGENTS via DELEGATE/HANDBACK; Python is advisory only (see below).
 
 ---
 
 ## Executive Summary
 
-The Agentic Engineers system uses queue-based delegation to route all work through specialized AI agents (Orchestrator, Engineer, Senior Engineer, Quality Engineer, Lead Engineer, Principal Engineer, Security Engineer, Model Engineer). Each agent is assigned a specific role, model, and effort level. Work flows through a file-based queue system (`~/.agentic-engineers/{harness}/{session-id}/queue/`) with complete audit trails. Phase 5.10 adds observability via span capture and artifact indexing, both implemented within agent SKILLS (not external tools).
+The Agentic Engineers system routes all work through specialized AI agents — Orchestrator,
+Engineer, Senior Engineer, Quality Engineer, Lead Engineer, Principal Engineer, Security
+Engineer, Model Engineer — via the DELEGATE/HANDBACK protocol. The Orchestrator is the
+single entry point: it builds a DELEGATE and dispatches it by directly spawning a
+sub-agent with the DELEGATE as the prompt, then reads the HANDBACK from that spawn's
+result. There is no polling loop, timer, or daemon. The queue at
+`~/.agentic-engineers/{harness}/{session-id}/queue/` remains a durable inbox and audit
+substrate (LOCKED paths, unchanged) — not the dispatch mechanism.
 
 ---
 
@@ -26,412 +32,165 @@ The Agentic Engineers system uses queue-based delegation to route all work throu
 
 **This is a hard constraint. All work MUST flow through the Orchestrator. No exceptions.**
 
-The Orchestrator remains the single entry point and the single router. What this
-revision changes is *how* the Orchestrator dispatches work. Dispatch happens by
-directly spawning a sub-agent with the DELEGATE as its prompt. Control flow lives in
-the Orchestrator's context, not in a Python process polling a directory on a timer.
+The Orchestrator is the single entry point and single router. Dispatch happens by
+directly spawning a sub-agent with the DELEGATE as its prompt — control flow lives in the
+Orchestrator's own agent context, not in a Python process polling a directory on a timer.
 
-### What This Means
+1. **No Direct Agent Invocation.** Engineers MUST NOT invoke specialist agents directly
+   or hand-write DELEGATE blocks and pass them out of band. All work is routed by the
+   Orchestrator, which owns the decision tree.
+2. **Dispatch is a Direct Sub-Agent Spawn.** The Orchestrator builds a DELEGATE per the
+   DELEGATE/HANDBACK Protocol section below, spawns a sub-agent with it as the prompt via
+   the harness's sub-agent tool, and reads the returned HANDBACK directly from the tool
+   result. There is NO polling interval, NO timer, and NO intermediate queue hop required
+   for the Orchestrator to observe a result — dispatch and collection are synchronous
+   with respect to the Orchestrator's own reasoning.
+3. **Control Flow Lives in Agent Context; Python is Advisory Only.** Routing, escalation,
+   retries, and the DELEGATE → spawn → HANDBACK → gate lifecycle are executed by agent
+   reasoning. Python modules MAY validate a DELEGATE against a schema, score a HANDBACK,
+   compute cost/token rollups, or recommend a model — as pure functions returning data to
+   the agent. They MUST NOT own the control loop, decide what runs next, or spawn/supervise
+   agents. If removing a helper would halt the system rather than degrade its advice, it
+   is control flow and is prohibited here.
+4. **The Queue is a Durable Inbox and Audit Substrate, Not the Dispatch Mechanism.** The
+   canonical paths in the LOCKED "Queue Architecture & Paths" section remain authoritative
+   and unchanged. The queue's role is narrowed to: (a) accepting work submitted while no
+   Orchestrator context is live, and (b) holding durable DELEGATE/HANDBACK records for
+   audit and resumption after a context ends. A live Orchestrator drains the inbox at
+   start and after each task completes — it does not wake on a timer to check it.
+5. **Recursion, Depth and Fan-Out Limits (MANDATORY).** Depth limit 3 — the Orchestrator
+   is depth 0; a specialist it spawns is depth 1; a task at depth 3 MUST NOT spawn further
+   sub-agents, it completes the work itself or returns `status: blocked`. Fan-out limit 5
+   — a parent MUST NOT have more than 5 concurrent children; excess work is queued by the
+   parent and dispatched as children complete. Every DELEGATE MUST carry `depth` and
+   `ancestry` (ordered ancestor task_ids from the root); a parent MUST refuse to spawn a
+   child whose `(agent_role, scope)` pair already appears in its own ancestry — that is a
+   delegation cycle. Exceeding any limit is a refusal (`status: blocked`/`escalate` naming
+   the limit hit), never a silent truncation.
+6. **Permissions are Declared in Agent `tools` Frontmatter.** Each agent declares its
+   allowed tools in its frontmatter `tools:` field; the sub-agent spawn tool is granted to
+   the Orchestrator and, per `src/AGENTS.md`'s Tools-Frontmatter Permission Model table, to
+   Senior Engineer, Lead Engineer, Principal Engineer, and Security Engineer for producing
+   and dispatching implementation DELEGATEs after a review, architecture, or audit
+   decision — Engineer, Quality Engineer, and Model Engineer are leaves by design and do
+   not spawn. Least privilege applies to review/audit roles otherwise (read/search, not
+   Write/Edit, unless a task requires it). Granting spawn capability to a new role is a
+   SPEC change via `spec-management`.
+7. **Audit Trail: Append-Only JSONL, Write-Only from the Agent.** Every orchestration
+   event is appended as one JSON object per line to
+   `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` — required
+   events: `delegate_issued`, `subagent_spawned`, `handback_received`, `gate_result`,
+   `escalation`, `refusal`, `limit_exceeded`; required fields: `ts` (ISO-8601 UTC),
+   `event`, `task_id`, `parent_task_id`, `depth`, `agent_role`, `agent_model`, `status`,
+   and token/cost fields where applicable. Agents append; they MUST NOT rewrite, reorder,
+   truncate, or delete prior lines — corrections are new events, never edits. No metric may
+   be reported that is not grounded in a logged event.
+8. **No External Scripts, Tools, or Cron Jobs (Agent Operations).** No Python owns queue
+   management, dispatch, scheduling, or supervision; no Makefile targets for Orchestrator
+   operations; no shell scripts for queue automation; no cron jobs, daemons, or background
+   timers for polling, wakeups, or metrics collection. Advisory Python under clause 3 is
+   permitted. **Build/install-only exemptions:** `renderer/scripts/`, `make install*`,
+   `make render-*` — build-time operations, not runtime agent operations.
 
-1. **No Direct Agent Invocation**
-   - Engineers MUST NOT invoke specialist agents directly, bypassing the Orchestrator
-   - Engineers MUST NOT hand-write DELEGATE blocks and pass them to agents out of band
-   - All work is routed by the Orchestrator, which owns the decision tree
+**Prohibited, no exceptions:** reintroducing a polling loop/timer/daemon/cron for
+orchestration; direct agent invocation bypassing the Orchestrator; spawning from a role
+whose `tools:` frontmatter doesn't grant it; exceeding depth 3 or fan-out 5, or silently
+truncating instead of refusing; spawning a child whose `(agent_role, scope)` already
+appears in its own ancestry; rewriting/reordering/deleting audit-log lines; reporting an
+unlogged metric; hardcoding quality scores, gate decisions, or approval constants;
+approving work solely on a sub-agent's self-reported confidence; skipping quality gates
+or escalation rules; using "trivial fix" or similar undefined escape clauses to bypass the
+Orchestrator; letting CI/CD or external systems invoke orchestration scripts directly.
 
-2. **Dispatch is a Direct Sub-Agent Spawn**
-   - The Orchestrator constructs a DELEGATE block per the DELEGATE/HANDBACK Protocol section
-   - It spawns a sub-agent using the harness sub-agent tool, passing the DELEGATE as the prompt
-   - The sub-agent returns its HANDBACK as its final message
-   - The Orchestrator reads that HANDBACK directly from the tool result
-   - There is NO polling interval, NO timer, and NO intermediate queue hop required for
-     the Orchestrator to observe a result. Dispatch and collection are synchronous with
-     respect to the Orchestrator's own reasoning.
-
-3. **Control Flow Lives in Agent Context; Python is Advisory Only**
-   - The routing decision tree, escalation rules, retry decisions, and the
-     DELEGATE -> spawn -> HANDBACK -> gate lifecycle are executed by the Orchestrator
-     agent reasoning over its context.
-   - Python modules are **ADVISORY ONLY**. They MAY validate a DELEGATE against a schema,
-     score a HANDBACK, compute cost and token rollups, format YAML, or recommend a model.
-     They MUST NOT own the control loop, MUST NOT decide what runs next, and MUST NOT
-     spawn or supervise agents.
-   - Any advisory helper MUST be callable as a pure function returning data to the agent.
-     If removing it would halt the system rather than degrade its advice, it is control
-     flow and is prohibited here.
-
-4. **The Queue is a Durable Inbox and Audit Substrate, Not the Dispatch Mechanism**
-   - The canonical queue paths defined in the LOCKED "Queue Architecture & Paths" section
-     remain authoritative and unchanged.
-   - The queue's role is narrowed to: (a) accepting work submitted by humans or external
-     systems while no Orchestrator context is live, and (b) holding durable DELEGATE and
-     HANDBACK records for audit and resumption after a context ends.
-   - A live Orchestrator drains the inbox when it starts and when a task completes. It does
-     not wake on a timer to check it.
-   - Queue records are written for durability and audit. They are not the channel by which
-     a result reaches the Orchestrator.
-
-5. **Recursion, Depth and Fan-Out Limits (MANDATORY)**
-   - **Depth limit 3.** The Orchestrator is depth 0. A specialist it spawns is depth 1. A
-     task at depth 3 MUST NOT spawn further sub-agents; it completes the work itself or
-     returns `status: blocked` with the reason.
-   - **Fan-out limit 5.** A single parent MUST NOT have more than 5 concurrent children.
-     Work beyond that is queued by the parent and dispatched as children complete.
-   - **Ancestry tracking.** Every DELEGATE MUST carry `depth` and `ancestry`, where
-     `ancestry` is the ordered list of ancestor task_ids from the root. A parent MUST
-     refuse to spawn a child whose (agent_role, scope) pair already appears in its own
-     ancestry, as this is a delegation cycle.
-   - Exceeding any limit is a refusal, not a silent truncation. The parent returns
-     `status: blocked` naming the limit that was hit, so the operator sees it.
-
-6. **Permissions are Declared in Agent `tools` Frontmatter**
-   - Each agent definition declares its allowed tools in its frontmatter `tools:` field.
-     The harness enforces that list; the agent cannot widen it at runtime.
-   - The sub-agent spawn tool is granted to the Orchestrator role. Specialist roles do not
-     receive it by default. Recursion limits are therefore enforced structurally by the
-     permission model, not only by instruction-following.
-   - Least privilege applies. Review and audit roles (Quality Engineer review passes,
-     Security Engineer audits) are granted read and search tools without Write or Edit
-     unless a specific task requires otherwise.
-   - Granting spawn capability to any non-Orchestrator role is a SPEC change and requires a
-     proposal through the `spec-management` skill.
-
-7. **Audit Trail: Append-Only JSONL, Write-Only from the Agent**
-   - Every orchestration event is appended as one JSON object per line to
-     `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`.
-   - Required events: `delegate_issued`, `subagent_spawned`, `handback_received`,
-     `gate_result`, `escalation`, `refusal`, `limit_exceeded`.
-   - Required fields per event: `ts` (ISO-8601 UTC), `event`, `task_id`, `parent_task_id`,
-     `depth`, `agent_role`, `agent_model`, `status`, and where applicable `tokens_in`,
-     `tokens_out`, `cost_usd`.
-   - The log is **append-only and write-only from the agent's perspective**. Agents append
-     events. Agents MUST NOT rewrite, reorder, truncate or delete prior lines. Correction is
-     expressed by appending a new event, never by editing an old one.
-   - Because a result is a real event rather than an inferred state transition, the log is
-     the authoritative record of what actually ran. Metrics and cost reporting derive from
-     it. No metric may be reported that is not grounded in a logged event.
-
-8. **No External Scripts, Tools, or Cron Jobs (Agent Operations)**
-   - **NO Python scripts** that own queue management, dispatch, scheduling, or supervision
-   - **NO Makefile targets** for Orchestrator operations or artifact generation (exception: `render-*`)
-   - **NO shell scripts** for queue automation or task creation (exception: `renderer/scripts/` for installation)
-   - **NO cron jobs, daemons, or background timers** for polling, wakeups, or metrics collection
-   - **NO external monitoring or indexing tools** beyond what agents natively produce
-   - Advisory Python that validates, scores, or formats is permitted under clause 3
-
-   **EXEMPTIONS (Build & Installation Only):**
-   - `renderer/scripts/` — rendering agents and skills to ~/.copilot/ and ~/.claude/
-   - `make install`, `make install-copilot`, `make install-claude` — framework bootstrap
-   - `make render-copilot`, `make render-claude` — generate dist/ artifacts
-   - These are build-time operations, not runtime agent operations.
-
-### Implementation Requirements for Engineers
-
-**When implementing the Orchestrator:**
-
-1. **Implement DISPATCH BY SPAWN (replaces queue polling)**
-   - Build the DELEGATE, spawn a sub-agent with it as the prompt, read the HANDBACK from
-     the tool result. No timer and no polling loop.
-   - Drain the durable inbox at context start and after each task completes.
-   - Independent tasks are spawned concurrently within the fan-out limit of 5.
-
-2. **Implement ROUTING**
-   - Apply the AGENTS.md decision tree to select the agent, model and effort for each task.
-   - Routing is reasoning performed by the Orchestrator. Advisory scoring helpers may inform
-     it but MUST NOT decide it.
-
-3. **Implement the DELEGATE/HANDBACK PROTOCOL**
-   - DELEGATE carries scope, context, plan, success criteria, plus `depth` and `ancestry`.
-   - HANDBACK carries status, output, and the four required metrics fields.
-   - A HANDBACK that is structurally invalid is a failure, not a pass. It MUST NOT be
-     treated as success on the strength of the sub-agent's own claims.
-
-4. **Implement QUALITY GATES ON REAL EVIDENCE**
-   - Gate decisions MUST be grounded in independently computed signals: structural HANDBACK
-     validation, test results, and validator output.
-   - A sub-agent's self-reported confidence or quality score is an input, never the sole
-     basis for approval.
-   - Evaluation errors fail closed to escalation. They never fall through to approval.
-   - No hardcoded scores, decisions, or approval constants. Ever.
-
-5. **Implement the AUDIT TRAIL**
-   - Append every event listed in clause 7 as it happens, not in a batch at the end.
-   - Cost and token reporting is computed from the log, so an unlogged action is an
-     unreported action.
-
-### What NOT to Do
-
-**PROHIBITED ACTIVITIES (NO EXCEPTIONS, EVER):**
-
-- Do NOT write Python that owns dispatch, scheduling, polling, or agent supervision
-  (exception: `renderer/scripts/` for installation only)
-- Do NOT reintroduce a polling loop, timer, daemon, or cron job for orchestration
-- Do NOT add Makefile targets for Orchestrator operations (exception: `render-*` and `install*`)
-- Do NOT invoke specialist agents directly, bypassing the Orchestrator
-- Do NOT hand-write DELEGATE blocks and pass them to agents out of band
-- Do NOT spawn sub-agents from a role whose `tools` frontmatter does not grant it
-- Do NOT exceed depth 3 or fan-out 5, and do NOT silently truncate when a limit is hit
-- Do NOT spawn a child whose (agent_role, scope) already appears in the task's ancestry
-- Do NOT rewrite, reorder, truncate or delete audit log lines
-- Do NOT report a metric that is not grounded in a logged event
-- Do NOT hardcode quality scores, gate decisions, or approval constants
-- Do NOT approve work solely on a sub-agent's self-reported confidence
-- Do NOT skip quality gates or escalation rules
-- Do NOT use "trivial fix" or other undefined escape clauses to bypass the Orchestrator
-- Do NOT allow CI/CD or external systems to invoke orchestration scripts directly
-
-**Why This Constraint Exists:**
-Orchestrator-first guarantees that all work is tracked, routable, optimizable and
-auditable. The earlier polling formulation attempted to achieve this through a Python
-scheduler, which both violated the no-external-scripts constraint and never carried a
-single real task. Moving control flow into agent context and dispatching by direct spawn
-achieves the original intent using the harness itself:
-- Complete audit trail, because every spawn and handback is a real logged event
-- Correct routing, because the decision tree is applied by the agent that owns it
-- Accurate cost tracking, because metrics derive from logged events rather than constants
-
-Note: **Rendering infrastructure** (harness distribution, build-time skill rendering) may
-use subprocess for deterministic build operations. This constraint applies to orchestration
-and agent runtime code, not to build infrastructure.
+**Why this constraint exists:** the earlier polling formulation required a Python
+scheduler that both violated the no-external-scripts constraint and never carried a
+single real task in any live session (see SPEC-2026-004 in the Update Log). Moving control
+flow into agent context and dispatching by direct spawn achieves the original intent using
+the harness itself — a complete audit trail (every spawn/handback is a real logged event),
+correct routing (the decision tree is applied by the agent that owns it), and accurate
+cost tracking (metrics derive from logged events, not constants). Rendering infrastructure
+(harness distribution, build-time skill rendering) may use subprocess for deterministic
+build operations — this constraint is about orchestration/agent runtime code, not build
+infrastructure.
 
 ---
 
 ## SDLC ENFORCEMENT HOOKS (MANDATORY)
 
-**Git hooks are required for all contributors.** They enforce SPEC.md compliance and quality gates at commit and push time.
-
-### What Hooks Enforce
+Git hooks are required for all contributors and enforce SPEC compliance and quality gates
+at commit/push time.
 
 | Hook | Enforces | Severity |
 |------|----------|----------|
-| **pre-commit** | SPEC compliance (no external scripts, cron files, process execution) | ❌ BLOCK |
-| **pre-commit** | Secret detection (API keys, passwords, tokens) | ❌ BLOCK |
-| **pre-commit** | YAML/JSON validity | ❌ BLOCK |
-| **commit-msg** | Message format and length | ❌ BLOCK |
-| **commit-msg** | DELEGATE/HANDBACK protocol compliance | ❌ BLOCK |
-| **pre-push** | Agent YAML frontmatter validity | ❌ BLOCK |
+| **pre-commit** | SPEC compliance (no external scripts, cron files, process execution); secret detection; YAML/JSON validity | ❌ BLOCK |
+| **commit-msg** | Message format/length; DELEGATE/HANDBACK protocol compliance | ❌ BLOCK |
+| **pre-push** | Agent YAML frontmatter validity; documentation consistency (SPEC.md/AGENTS.md/README.md presence + required fields) | ❌ BLOCK |
 | **pre-push** | Test suite execution | ⚠️ WARN |
-| **pre-push** | Documentation consistency | ❌ BLOCK |
 
-### Installation
+**Installation:** `make install` (or manually: `git config core.hooksPath .githooks` and
+`chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push`).
 
-Hooks are installed automatically by `make install`:
-
-```bash
-make install
-```
-
-Or manually:
+**Bypass (emergencies only, must include a documented reason, approver, and follow-up task):**
 
 ```bash
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
+BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"   # bypass SPEC/secret checks
+SKIP_HOOKS=1 git commit -m "emergency: reason"                  # bypass all pre-commit checks
+SKIP_HOOKS=1 git push                                            # bypass pre-push checks
 ```
 
-### Bypassing Hooks
-
-Bypassing hooks requires **documented justification** and is only permitted for genuine emergencies:
-
-```bash
-# Bypass SPEC/secret checks
-BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"
-
-# Bypass all pre-commit checks
-SKIP_HOOKS=1 git commit -m "emergency: reason"
-
-# Bypass pre-push checks
-SKIP_HOOKS=1 git push
-```
-
-**Every bypass MUST include:**
-- Documented reason (what's the emergency?)
-- Approver name (who authorized this?)
-- Follow-up task (how will this be fixed?)
-
-**Never bypass for:**
-- Lazy commits that violate SPEC
-- Avoiding code review
-- Skipping tests
-- Committing secrets
-- Routine work
-
-### Full Reference
-
-See [docs/SDLC-HOOKS.md](SDLC-HOOKS.md) for comprehensive hook documentation including:
-- Complete list of all checks
-- Exact error messages
-- Troubleshooting guide (30+ scenarios)
-- Bypass procedures and authorization
-- Audit trail requirements
+Never bypass for lazy commits, avoiding review, skipping tests, or committing secrets.
 
 ---
 
 ## DOG-FOOD PRINCIPLE: Self-Improving Through Continuous Feedback
 
-**Core Design Principle (New in Phase 5.10):**
-
-Every agent and quality system we build must be validated by the quality systems it helps improve. This creates a positive feedback loop where improvements compound.
-
-### How It Works
-
-1. **Agent Implementation** → Validated by quality gates
-2. **Quality Gates** → Validated by Quality Engineer review
-3. **Quality Engineer Review** → Informed by Model Engineer analysis
-4. **Model Engineer Optimization** → Improves routing for next task
-5. **Next Task** → Routed better → produces better work → improves feedback
-6. **Cycle Repeats** → Exponential improvement
-
-### Practical Constraints
-
-- ✅ When implementing feature X, use the quality gates that X improves
-- ✅ Agent code must pass the validation rules it implements
-- ✅ Quality improvements must be validated by Quality Engineer
-- ✅ Feedback from task execution must inform next task routing
-- ✅ Metrics from improvements must drive optimization decisions
-
-### Why This Matters
-
-Traditional QA is **reactive**: code → test → fix → deploy (days/weeks)
-
-Dog-fooding is **proactive**: code → quality gate → escalate if needed → fix → next code (minutes)
-
-This creates exponential improvement instead of linear.
-
-**See:** [`docs/PHILOSOPHY-DOG-FOOD.md`](../PHILOSOPHY-DOG-FOOD.md) for full philosophy
-
----
-
-## DEPRECATION NOTICE: Removed External Scripts & Cron Jobs
-
-**Effective 2026-05-02:** The following files have been removed and MUST NOT be recreated:
-
-**Orchestration Scripts (REMOVED):**
-- `orchestration/scripts/process-log-queue.sh`
-- `orchestration/scripts/capture_token_usage.sh`
-- `orchestration/scripts/manage-credentials.sh`
-- `orchestration/scripts/setup-msmtp.sh`
-- `orchestration/scripts/send-alert-email.sh`
-- `orchestration/scripts/usage-tracking.sh`
-- `orchestration/scripts/usage-budget.sh`
-- `orchestration/install-automation.sh`
-
-**Cron Job Definitions (REMOVED):**
-- `orchestration/config/queue-processor.cron`
-- `orchestration/config/metrics-etl.cron`
-- `orchestration/config/tokenadvisor.cron`
-- `orchestration/config/model-engineer.cron`
-- `orchestration/config/ab-testing-monitor.cron`
-- `orchestration/config/daily-email-summary.cron`
-
-**Reason:** These files violated the ORCHESTRATOR-FIRST EXECUTION MODEL (MANDATORY) constraint. All logic must flow through AGENTS with SKILLS via DELEGATE/HANDBACK protocol.
-
-**If you need the functionality these scripts provided:**
-1. Implement the logic as an Agent SKILL
-2. Queue work as a DELEGATE block in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
-3. Let Orchestrator route and delegate to the appropriate agent
-4. Agent executes and returns HANDBACK
-
-This is the ONLY allowed entry point for all work.
-- ✅ Autonomous optimization via Model Engineer feedback
-- ✅ No bypasses or edge cases
+Every agent and quality system this framework builds is validated by the quality systems
+it helps improve: agent output is checked by the quality gates it implements, gates are
+reviewed by Quality Engineer, whose feedback informs Model Engineer's routing
+recommendations, and better routing produces better work — improving the next round of
+feedback. Proactive (code → gate → escalate-if-needed → fix → next code, minutes), not
+the traditional reactive cycle (code → test → fix → deploy, days).
 
 ---
 
 ## COMPLETE SCRIPT INVENTORY
 
-This section documents all script files in the repository and their compliance status with the ORCHESTRATOR-FIRST EXECUTION MODEL.
+Documents every script file in the repository and its compliance status with the
+ORCHESTRATOR-FIRST EXECUTION MODEL. Any script not listed here is a SPEC violation and
+must be removed or converted to an Agent SKILL within 30 days of discovery.
 
-### EXEMPT: Build-Time & Setup Scripts
+### EXEMPT: Build-Time & Setup Scripts — `renderer/scripts/`
 
-**Location:** `renderer/scripts/`
+Rendering and installation tooling (agent/skill/spec rendering per harness, config
+validation, backup/install helpers). Exempt because these run at build/setup time only
+and never participate in runtime orchestration or queue processing. See
+[RENDERING.md](RENDERING.md) for the full pipeline and per-file descriptions.
 
-These scripts are exempted because they run at build/setup time and do not affect runtime orchestration:
+### COMPLIANT: Root `scripts/` — Advisory & Compliance Tooling
 
-- `renderer/scripts/copilot-guard.sh` — Guard checks for Copilot environment
-- `renderer/scripts/copilot-session-init.sh` — Session initialization utility
-- `renderer/scripts/render-claude.sh` — Render tooling for Claude model setup
-- `renderer/scripts/render-copilot.sh` — Render tooling for Copilot setup
-- `renderer/scripts/render-copilot-agents.sh` — Agent rendering helper
-- `renderer/scripts/render-copilot-agents.py` — Agent rendering Python helper
+Each of these is a pure, callable advisory helper (clause 3) or a pre-commit/CI gate —
+none owns dispatch, scheduling, or supervision:
 
-**Rationale:** These scripts execute only during development environment setup and build-time rendering. They do not participate in runtime task orchestration or queue processing and therefore do not violate the ORCHESTRATOR-FIRST constraint.
-
-### REFERENCE: Reference Implementations (Non-Invokable)
-
-**Location:** `orchestration/agents/`
-
-These Python files are included as reference impls and documentation but are NOT directly invokable at runtime:
-
-- `orchestration/agents/__init__.py` — Module initialization
-- `orchestration/agents/AGENT-IMPLEMENTATION-TEMPLATE.py` — Agent pattern template
-- `orchestration/agents/ENGINEER-IMPLEMENTATION-REFERENCE.py` — Engineer agent reference
-- `orchestration/agents/ORCHESTRATOR-IMPLEMENTATION-REFERENCE.py` — Orchestrator reference
-- `orchestration/agents/artifact_manager.py` — Artifact management utilities
-- `orchestration/agents/example_end_to_end.py` — Example workflow documentation
-- `orchestration/agents/implementations.py` — Implementation examples
-- `orchestration/agents/spec_validator.py` — Specification validation utilities
-- `orchestration/agents/testing_harness.py` — Testing framework
-- `orchestration/agents/workflow.py` — Workflow utilities
-- `orchestration/agents/*.md` — Agent specification documents
-
-**Rationale:** These Python files are included as reference impls, design documentation, and utilities for agent development. All task routing flows through the Orchestrator queue via DELEGATE/HANDBACK protocol. These files are never invoked directly as autonomous scripts and therefore do not violate the ORCHESTRATOR-FIRST constraint.
-
-### COMPLIANT: Approved Skill Scripts
-
-**Location:** `skills/*/scripts/`
-
-All scripts in the skills directory are approved and compliant because they are organized as SKILLS with formal specifications (SKILLS.md). These include:
-
-- `skills/ab-testing/scripts/ab-testing.py`
-- `skills/metrics-etl/scripts/metrics-etl.py`
-- `skills/model-engineer/scripts/model-engineer.py`
-- `skills/tokenadvisor/scripts/daily-email-summary.sh`
-- `skills/tokenadvisor/scripts/tokenadvisor.py`
-- `skills/usage-tracking/scripts/analyze_usage_trends.py`
-- `skills/usage-tracking/scripts/capture_token_usage.sh`
-- `skills/usage-tracking/scripts/usage-tracking.sh`
-
-**Rationale:** Each skill follows the formal SKILLS.md specification and is properly invoked through the Orchestrator's task routing system. These are the ONLY scripts permitted to execute autonomous logic at runtime.
-
-### DEPRECATED: Removal Timeline
-
-The following files are deprecated and will be removed or converted to SKILLS within 30 days of discovery:
-
-- `orchestration/scripts/analyze_usage_trends.py`
-- `orchestration/scripts/usage_budget_check.py`
-
-**Action Required:** Convert these to properly-scoped SKILLS via `SKILLS.md` with formal specifications, or delete them entirely.
+| Script | Purpose |
+|--------|---------|
+| `check_protocol_compliance.py` | Validates DELEGATE/HANDBACK blocks against protocol schema |
+| `detect_circular_imports.py` | Static import-cycle detector (CI gate) |
+| `annotate_token_costs.py` | Advisory cost/token rollup formatting |
+| `format_skill_report.py` | Formats skill test/validation output |
+| `run_skill_tests.py` | Test runner for skill scripts (invoked by CI/make, not autonomous) |
+| `validate_skills.py` | SKILL.md frontmatter + registry validation |
+| `validate-spec-constraints.py` | Pre-commit SPEC constraint checker |
+| `get_version.py` | Reads/reports framework version |
+| `validate_opencode_config.py` | OpenCode config generation gate |
+| `entropy_detector.py` | Entropy-based credential/secret detector (security gate) |
+| `opencode-safe.sh` | OpenCode guard wrapper |
+| `check-gitconfig-no-tokens.sh` | Pre-commit check for tokens leaking into gitconfig |
 
 ### ENFORCEMENT CLAUSE
 
-**Any script file not listed in the EXEMPT, REFERENCE, or COMPLIANT sets is considered a SPEC violation.**
-
-Scripts not in these categories must be:
-1. Removed immediately, OR
-2. Converted to an Agent SKILL (via SKILLS.md) within 30 days of discovery
-
-This constraint is non-negotiable. No legacy scripts, cron jobs, or autonomous processes are permitted outside the DELEGATE/HANDBACK orchestration model.
-
----
-
-## Current Implementation vs. Original Spec
-
-### What Changed in Phase 5.10
-
-**Span Capture (Observability):**
-- Orchestrator captures structured span records when receiving HANDBACKs from agents
-- Extracts: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
-- Writes SPAN files to: `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
-- SPAN includes: trace_id, span_id, duration_ms, cost_usd, status, decision, confidence
-- **Implementation:** Added to Orchestrator's HANDBACK processing in Phase 6
-
-**Artifact Indexing (Cost Analysis):**
-- Model Engineer generates `artifacts/index.json` as part of feedback loop analysis
-- Scans artifacts/2026-*/ for DELEGATE/HANDBACK/SPAN metadata
-- Creates searchable index by: file_type, task_id, agent_type, status
-- Calculates stats: total_tokens, total_cost, critical_issues, escalations
-- **Implementation:** Natural extension of Model Engineer's existing feedback analysis
-
-**Key Constraint Maintained:** No external Python scripts, no Makefile targets — all features are agent SKILLS.
+Any script outside `renderer/scripts/` (build-time exempt) or the root `scripts/` table
+above is non-compliant. It must be removed immediately or converted to a properly-scoped
+Agent SKILL (with a `SKILL.md`) within 30 days of discovery.
 
 ---
 
@@ -439,255 +198,42 @@ This constraint is non-negotiable. No legacy scripts, cron jobs, or autonomous p
 
 ### Agents & Roles (Multi-Agent Model)
 
-All work enters via **Orchestrator** (default entry point). Orchestrator applies routing decision tree to delegate to specialists.
+All work enters via **Orchestrator** (default entry point), which applies the routing
+decision tree below to delegate to specialists.
 
-| Role | Model | Effort | Cost/Task | Purpose |
-|------|-------|--------|-----------|---------|
-| **Orchestrator** | claude-haiku-4.5 | low | $0.03 | Entry point; routing decisions; queue management; span capture; metrics collection |
-| **Engineer** | claude-haiku-4.5 | high | $0.03 | Execute well-scoped tasks with pre-written plans |
-| **Senior Engineer** | claude-sonnet-5 | high | $0.12 | Complex coding without plan; diagnosis; planning |
-| **Lead Engineer** | claude-sonnet-5 | high | $0.12 | Code review; quality verification; unblock stuck tasks |
-| **Quality Engineer** | claude-sonnet-5 | medium | $0.12 | Tier 1 quality checks; model suitability assessment |
-| **Principal Engineer** | claude-opus-5 | high | $0.18 | Cross-service architecture; complex multi-step planning |
-| **Security Engineer** | claude-fable-5 | max | $0.36 | Security analysis; vulnerability audits; threat modeling |
-| **Model Engineer** | claude-sonnet-5 | high | $0.12 | Analyze feedback; recommend optimal model/effort; generate artifact index |
+| Role | Model | Effort | Purpose |
+|------|-------|--------|---------|
+| **Orchestrator** | claude-sonnet-5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
+| **Engineer** | claude-haiku-4.5 | high | Execute well-scoped tasks with pre-written plans |
+| **Senior Engineer** | claude-sonnet-5 | high | Complex coding without a plan; diagnosis; planning |
+| **Lead Engineer** | claude-sonnet-5 | high | Code review; quality verification; unblock stuck tasks |
+| **Quality Engineer** | claude-sonnet-5 | medium | Tier 1 quality checks; model suitability assessment |
+| **Principal Engineer** | claude-opus-5 | high | Cross-service architecture; complex multi-step planning |
+| **Security Engineer** | claude-fable-5 | max | Security analysis; vulnerability audits; threat modeling (defensive-scope only, see LOCKED model section) |
+| **Model Engineer** | claude-sonnet-5 | high | Analyze feedback; recommend optimal model/effort |
 
-**Cost Target Distribution:**
-- Orchestrator: 60%
-- Engineer: 18%
-- Senior Engineer: 7%
-- Quality Engineer: 8%
-- Lead Engineer: 2%
-- Model Engineer: 3%
-- Principal Engineer: 1%
-- Security Engineer: 1%
-
----
-
-## Glossary: Standardized Terminology
-
-This section defines canonical terms used throughout the agentic-engineers framework to avoid ambiguity and ensure consistency.
-
-| Term | Definition | Example |
-|------|-----------|---------|
-| **Orchestrator** | The primary entry point agent that receives all work requests, applies routing decision tree, and delegates to specialized agents. Polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` continuously. | "The Orchestrator received the task and routed it to the Security Engineer." |
-| **DELEGATE Block** | A structured YAML file containing work request metadata (task_id, role, scope, plan, success_criteria). Placed in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` only by humans or the Orchestrator itself. Automated external systems MUST NOT write directly to the queue. Core unit of work. | `~/.agentic-engineers/copilot/{session-id}/queue/incoming/task-2026-05-02.yaml` |
-| **HANDBACK** | A structured result message returned by an agent after completing work. Placed in `~/.agentic-engineers/{harness}/{session-id}/queue/done/` by the agent. Contains deliverables, status, metrics, and confidence score. | `~/.agentic-engineers/copilot/{session-id}/queue/done/task-2026-05-02-HANDBACK.yaml` |
-| **Queue System** | File-based work queue with session-id and harness-partitioned directories: `~/.agentic-engineers/{harness}/{session-id}/queue/{incoming,processing,done,failed}/`. All four harnesses (copilot, claude, opencode, pi) use the same `~/.agentic-engineers/` base. Each session has its own isolated queue partition identified by UUID. Both DELEGATE/HANDBACK protocol is identical across all harnesses. | All work coordination happens through the canonical harness-partitioned queue. No cross-session or cross-harness contamination. |
-| **Agent SKILL** | A Python module implementing an agent's core capabilities. Invoked only through agent context (not external scripts). Located in `orchestration/agents/`. | `orchestration/agents/engineer_agent.py` |
-| **Span Capture** | Observability mechanism that tracks work execution from initiation through completion, including decision points, delays, and handoffs. | `artifacts/spans/ directory records all task spans. |
-| **Task Routing** | The process by which Orchestrator examines a DELEGATE block and applies the decision tree to select the appropriate agent role. | "Routing determined this was a security task, so Principal Engineer was selected." |
-| **Model/Effort Combo** | The pairing of an LLM model (Haiku, Sonnet, Opus) with execution effort (low, medium, high, max). Determines cost and quality tradeoff. | Quality Engineer runs at Sonnet 4.6, medium effort. |
-
----
-
-## Orchestrator Architecture (Option 1a: Dual-Layer Design)
-
-### Design Decision: Separate Agent & Skill
-
-The Orchestrator is implemented as a **two-layer system**: an **Agent** (business logic) and a **Skill** (protocol implementation). This architecture follows the framework pattern where agents define responsibilities and skills implement capabilities.
-
-### Why Separation?
-
-1. **Matches Framework Pattern** — Every agent in agentic-engineers has an associated skill. The pattern is:
-   - **Agent** (`.md` file) — Defines the role, responsibilities, and routing logic
-   - **Skill** (Python module) — Implements the protocol and mechanics
-
-2. **Clean Responsibility Boundaries** — This prevents conflation of concerns:
-   - **OrchestratorAgent** (`src/agents/orchestrator-agent.md`) — User-facing entry point; routing decisions; task flow management
-   - **OrchestratorSkill** (`src/skills/orchestrator/SKILL.md`) — Queue state machine; DELEGATE/HANDBACK lifecycle; polling; crash recovery
-
-3. **Reusability & Testing** — The skill can be tested independently of the agent, and the routing logic can be audited separately from the queue mechanics.
-
-### OrchestratorAgent Responsibilities
-
-The agent defines the **business logic** and **routing decisions**:
-
-1. **Entry Point** — All user requests flow through the Orchestrator as the default handler
-2. **Task Analysis** — Examine incoming DELEGATE blocks and extract scope, context, complexity
-3. **Routing Decision Tree** — Apply deterministic rules to select the correct agent:
-   - Security-scoped → Security Engineer
-   - Cross-service architecture → Principal Engineer
-   - Code review/validation → Lead Engineer or Quality Engineer
-   - Complex unscoped → Senior Engineer
-   - Well-scoped with plan → Engineer
-4. **Parallel Delegation** — For high-complexity tasks with ≥3 domains, decompose into sub-DELEGATEs with tier-0/tier-1 dependencies
-5. **Metrics & Model Selection** — Collect HANDBACK metrics and feed to Model Engineer for optimization recommendations
-6. **Decision Synthesis** — Interpret results and decide on next steps (escalation, retry, consolidation)
-
-**Location:** `src/agents/orchestrator-agent.md`
-
-### OrchestratorSkill Responsibilities
-
-The skill implements the **protocol mechanics** and **queue management**:
-
-1. **Queue Polling** — Continuously scan `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` for new DELEGATEs
-2. **Task Claiming** — Atomically move tasks from `incoming/` → `claimed/` → `processing/` with metadata (claimed_at, retry_count)
-3. **Sub-Agent Spawning** — Invoke the Agent tool with full DELEGATE context and capture HANDBACK
-4. **HANDBACK Correlation** — Parse HANDBACK text, extract task_id, status, metrics, and route to result handlers
-5. **Crash Recovery** — Detect orphaned tasks in `processing/` by timeout (600s), move to `crashed/`, and enqueue for retry
-6. **Quality Gating** — Invoke Quality Engineer validation before marking tasks `done`
-7. **Idle Detection** — Implement 3-cycle threshold and deep sleep (1 minute) when queue is empty
-8. **State Transitions** — 7-state queue machine with atomic file operations:
-   ```
-   incoming/ → processing/ → done/ (success)
-                           → failed/ (error)
-                           → crashed/ (timeout) → retry-pending/
-   ```
-
-**Location:** `src/skills/orchestrator/SKILL.md` and `src/skills/orchestrator/scripts/`
-
-### Integration Points
-
-**How Agent & Skill Communicate:**
-
-1. **Skill calls Agent logic** — The OrchestratorSkill is invoked as a Claude Code skill and runs in the Orchestrator agent context
-2. **Agent delegates to Skill** — When the Orchestrator agent needs to perform queue operations, it invokes the OrchestratorSkill directly
-3. **Unified Context** — Both layers share the same session-id, harness, and queue partition
-4. **DELEGATE Creation** — Agent creates DELEGATE blocks; Skill enqueues them via `queue-management` skill
-5. **HANDBACK Handling** — Skill receives HANDBACK; Agent interprets and routes result
-
-**Example Flow:**
-```
-Orchestrator Agent receives task
-  ↓
-Agent analyzes scope & applies routing decision tree
-  ↓
-Agent creates DELEGATE block with plan
-  ↓
-OrchestratorSkill.enqueue(delegate) — queues in incoming/
-  ↓
-OrchestratorSkill.poll_queue() — continuously monitors
-  ↓
-OrchestratorSkill spawns sub-agent via Agent tool
-  ↓
-Sub-agent returns HANDBACK
-  ↓
-OrchestratorSkill correlates HANDBACK → moves to done/
-  ↓
-Agent processes metrics → feeds to Model Engineer
-```
-
-### Configuration & Thresholds
-
-**Queue Configuration:**
-
-- **Poll Interval:** 30-60 seconds
-- **Idle Detection:** 3 clean polls → 1 minute sleep
-- **Crash Timeout:** 600 seconds (10 minutes) → orphaned task recovery
-- **Retry Limit:** 3 retries per task before escalation
-
-**Parallel Delegation Configuration:**
-
-- **Complexity Threshold:** ≥3 distinct domains detected
-- **Domain Keywords:** Defined in `src/orchestration/agents/decomposition_config.yaml`
-- **Tier-0 Tasks:** Run in parallel (architecture, implementation, security)
-- **Tier-1 Tasks:** Depend on tier-0 (testing, docs, review)
-- **Consolidation:** Lead Engineer integrates all results
-
-**Links:**
-- [OrchestratorAgent Definition](../src/agents/orchestrator-agent.md)
-- [OrchestratorSkill Definition](../src/skills/orchestrator/SKILL.md)
-- [Decomposition Config](../src/orchestration/agents/decomposition_config.yaml)
-- [Queue Architecture & Paths](SPEC.md#queue-architecture--paths-locked-spec)
+**Cost Target Distribution:** Orchestrator 55% · Engineer 18% · Senior Engineer 8% ·
+Quality Engineer 8% · Lead Engineer 3% · Model Engineer 3% · Principal Engineer 3% ·
+Security Engineer 2%. (Rebalanced from the prior Haiku-Orchestrator distribution now that
+Orchestrator runs on Sonnet-tier; see Update Log SPEC-2026-005.)
 
 ---
 
 ## Routing Decision Tree (Orchestrator)
 
-When Orchestrator polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` and finds a task:
+When the Orchestrator receives a task (a user request, or work drained from the durable
+inbox at context start):
 
-1. **Is task security-scoped?** (auth, crypto, data protection, vulnerability)  
-   → **Security Engineer** (block all other routes)
-
-2. **Is task cross-service architecture?** (affects >2 repos, service boundaries)  
-   → **Principal Engineer**
-
-3. **Is task complex coding WITHOUT pre-written plan?**  
-   → **Senior Engineer** (writes plan first; returns HANDBACK with plan, not code)
-
-4. **Is task code review or quality verification?**  
-   → **Lead Engineer** OR **Quality Engineer**
-
-5. **Is task well-scoped with pre-written plan, low-medium complexity?**  
-   → **Engineer** (executes plan; uses Red-Green TDD when writing code)
-
-6. **Otherwise** → Escalate to human (unclear scope)
-
----
-
-## Queue-Based Delegation Mechanics
-
-### Queue Structure (Session-ID Partitioned)
-
-```
-~/.agentic-engineers/
-├── copilot/
-│   ├── {session-id}/                    # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
-│   │   └── queue/
-│   │       ├── incoming/                # New tasks, ready for Orchestrator to process
-│   │       ├── processing/              # Work assigned to agent, awaiting HANDBACK
-│   │       ├── done/                    # Completed work, ready for human decision
-│   │       └── failed/                  # Failed work (optional, for archival)
-│   └── {other-session-id}/
-│       └── ...
-├── claude/
-│   └── {session-id}/
-│       └── queue/
-│           ├── incoming/
-│           ├── processing/
-│           ├── done/
-│           └── failed/
-├── opencode/
-│   └── {session-id}/
-│       └── queue/
-│           ├── incoming/
-│           ├── processing/
-│           ├── done/
-│           └── failed/
-└── pi/
-    └── {session-id}/
-        └── queue/
-            ├── incoming/
-            ├── processing/
-            ├── done/
-            └── failed/
-```
-
-**Session-ID Detection:**
-- COPILOT_SESSION_ID environment variable (highest priority)
-- CLAUDE_SESSION_ID environment variable
-- Filesystem scan of `~/.agentic-engineers/` (lowest priority)
-
-**Migration Status (Complete as of 2026-05-26):**
-- Legacy paths (`~/.copilot/queue/`, `~/.claude/queue/`, `artifacts/queue/`) are DEPRECATED
-- All queues have been migrated to `~/.agentic-engineers/{harness}/{session-id}/queue/`
-- Using any legacy path raises `RuntimeError` from the queue-isolation skill
-
-### Queue Flow
-
-1. **Incoming** → New task arrives as `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.yaml`
-2. **Orchestrator polls** (every 30-60s):
-   - Detects own session-id
-   - Reads task from `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
-   - Applies routing decision tree
-   - Creates DELEGATE in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
-   - Sends DELEGATE to agent
-   - Deletes from `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` (or archives)
-3. **Processing** → Agent returns HANDBACK to `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
-4. **Orchestrator routes completion**:
-   - If complete → Route to Quality Engineer
-   - If blocked → Escalate to Lead/Senior Engineer
-5. **Done** → Human/external system reads final decision from `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}-{decision}.yaml`
-
-### Artifact Storage
-
-| Artifact | Path | Created By | Used By |
-|----------|------|-----------|---------|
-| DELEGATE | `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml` | Orchestrator | Agent (receives), Orchestrator (ref) |
-| HANDBACK | `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}-HANDBACK-{role}.yaml` | Agent | Orchestrator (routes), QE (verifies) |
-| SPAN | `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml` | Orchestrator | Model Engineer (analysis), index generation |
-| Decision | `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}-{decision}.yaml` | Orchestrator | Human / external system |
+1. **Security-scoped?** (auth, crypto, data protection, vulnerability) → **Security
+   Engineer** (blocks all other routes)
+2. **Cross-service architecture?** (affects >2 repos, service boundaries) → **Principal
+   Engineer**
+3. **Complex coding WITHOUT a pre-written plan?** → **Senior Engineer** (writes the plan
+   first; returns HANDBACK with a plan, not code)
+4. **Code review or quality verification?** → **Lead Engineer** or **Quality Engineer**
+5. **Well-scoped with a pre-written plan, low-medium complexity?** → **Engineer** (Red-Green
+   TDD for code changes)
+6. **Otherwise** → escalate to a human (unclear scope)
 
 ---
 
@@ -695,7 +241,8 @@ When Orchestrator polls `~/.agentic-engineers/{harness}/{session-id}/queue/incom
 
 **⚠️ SPECIFICATION LOCKED as of 2026-05-26 — path order revised 2026-06-11**
 
-This section defines the canonical queue path architecture for all harnesses. Changes to queue paths require approval via the `spec-management` skill.
+This section defines the canonical queue path architecture for all harnesses. Changes to
+queue paths require approval via the `spec-management` skill.
 
 > **2026-06-11 change:** the path order is now **`{harness}/{session-id}`**, the
 > reverse of the original `{session-id}/{harness}`. Rationale: humans and
@@ -707,40 +254,17 @@ This section defines the canonical queue path architecture for all harnesses. Ch
 
 **All harnesses MUST use: `~/.agentic-engineers/`**
 
-Queue directory structure (**harness first, then session-id**):
+Queue directory structure (**harness first, then session-id**) — identical shape repeats
+under each of the four harness directories:
 ```
 ~/.agentic-engineers/
-├── copilot/
-│   └── {session-id}/                   # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
-│       ├── queue/
-│       │   ├── incoming/               # New DELEGATEs waiting for routing
-│       │   ├── processing/             # Work assigned to agents, HANDBACKs awaiting review
-│       │   ├── done/                   # Completed work
-│       │   └── failed/                 # Failed work (optional, for archival)
-│       └── session-state/
-├── claude/
-│   └── {session-id}/
-│       ├── queue/
-│       │   ├── incoming/
-│       │   ├── processing/
-│       │   ├── done/
-│       │   └── failed/
-│       └── session-state/
-├── opencode/
-│   └── {session-id}/
-│       ├── queue/
-│       │   ├── incoming/
-│       │   ├── processing/
-│       │   ├── done/
-│       │   └── failed/
-│       └── session-state/
-└── pi/
-    └── {session-id}/
+└── copilot/                            # or claude/, opencode/, pi/ — identical below
+    └── {session-id}/                   # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
         ├── queue/
-        │   ├── incoming/
-        │   ├── processing/
-        │   ├── done/
-        │   └── failed/
+        │   ├── incoming/               # New DELEGATEs waiting for routing
+        │   ├── processing/             # Work assigned to agents, HANDBACKs awaiting review
+        │   ├── done/                   # Completed work
+        │   └── failed/                 # Failed work (optional, for archival)
         └── session-state/
 ```
 
@@ -788,99 +312,61 @@ The following paths are **DEPRECATED and MUST NOT be used**:
 - NO fallback to legacy paths; NO conditional logic to support old paths
 
 **2. Orchestrator Hard Constraint**
-- Orchestrator MUST initialize queue polling ONLY from `~/.agentic-engineers/{harness}/{session-id}/queue/`
+- Orchestrator MUST read and write queue records ONLY from `~/.agentic-engineers/{harness}/{session-id}/queue/`
 - Orchestrator detects session-id from COPILOT_SESSION_ID or CLAUDE_SESSION_ID environment variables
 - Orchestrator MUST NOT check for legacy paths (e.g., `~/.copilot/queue/`)
 - Orchestrator MUST NOT implement conditional logic for different harnesses; all use same base
 
-**3. Harness Renderers (Build-Time Compliance)**
-- All harness configuration renderers (copilot, claude, opencode, pi) MUST output:
-  ```
-  QUEUE_PATH=~/.agentic-engineers/{harness}/{session-id}/queue/
-  ```
-- Build-time validation checks that all harness configs use correct path
-- Pre-commit hooks validate no legacy paths are introduced in harness code
+**3. Harness Renderers (Build-Time Compliance)** — all harness configuration renderers
+(copilot, claude, opencode, pi) MUST output `QUEUE_PATH=~/.agentic-engineers/{harness}/{session-id}/queue/`;
+build-time validation checks correct path; pre-commit hooks validate no legacy paths in
+harness code.
 
-**4. Pre-Commit Hooks (Enforcement Gate)**
-- Git hooks MUST block commits that introduce legacy paths (`~/.copilot/queue`, `~/.claude/queue`, `artifacts/queue`)
-- Exception: Allow in `src/orchestration/queue_compat.py` (marked DEPRECATED) and `_archive/` directories
-- Error message format:
-  ```
-  ERROR: Legacy queue paths found in {file}
-  Use ~/.agentic-engineers/ instead (see SPEC.md: Queue Architecture & Paths)
-  ```
+**4. Pre-Commit Hooks (Enforcement Gate)** — git hooks MUST block commits introducing
+legacy paths (`~/.copilot/queue`, `~/.claude/queue`, `artifacts/queue`), erroring with
+`"Legacy queue paths found in {file} — use ~/.agentic-engineers/ instead"`. Exception:
+allowed in `src/orchestration/queue_compat.py` (marked DEPRECATED) and `_archive/`.
 
-**5. Testing Validation (CI Gate)**
-- Test suite includes `tests/test_queue_path_centralization.py` with 8+ tests
-- All tests validate orchestrator initializes ONLY from canonical path
-- Tests validate all 4 harnesses initialize with correct path
-- Tests verify no legacy paths exist in active source code
+**5. Testing Validation (CI Gate)** — `tests/test_queue_path_centralization.py` (8+
+tests) validates the Orchestrator initializes ONLY from the canonical path, all 4
+harnesses use the same base, and no legacy paths exist in active source code.
 
 ### Validation Procedures
 
-**Pre-Merge Gate (Automated):**
-
-1. **Grep Check for Legacy Paths:**
-   ```bash
-   grep -r "\.copilot/queue" src/                # Must return 0 matches (except _archive/)
-   grep -r "\.claude/queue" src/                 # Must return 0 matches (except _archive/)
-   grep -r "artifacts/queue" src/                # Must return 0 matches (except queue_compat.py, _archive/)
-   ```
-
-2. **Harness Config Validation:**
-   - Verify all harness configs output `~/.agentic-engineers/{harness}/{session-id}/queue/`
-   - Test each harness: copilot, claude, opencode, pi
-   - All must use SAME base directory
-
-3. **Test Suite Execution:**
-   - Run: `pytest tests/test_queue_path_centralization.py -v`
-   - All 8+ tests must pass
-   - Tests cover:
-     - Orchestrator requires isolation skill
-     - Canonical path is only path checked
-     - All 4 harnesses use same base
-     - Legacy paths not referenced in active code
-     - Queue subdirectory structure is standard
-     - SPEC.md documents canonical path
-     - Docs/QUEUE-PROTOCOL.md is locked
-     - Pre-commit hook validates paths
-
-4. **CI Gate (GitHub Actions):**
-   - Same tests run on every push
-   - Merge blocked if any test fails
-   - All 2,900+ tests must pass (including 8+ new queue path tests)
+**Pre-Merge Gate (automated):** grep `src/` for `\.copilot/queue`, `\.claude/queue`, and
+`artifacts/queue` (must return 0 matches outside `_archive/`/`queue_compat.py`); verify
+every harness config emits the canonical `QUEUE_PATH`; run
+`pytest tests/test_queue_path_centralization.py -v` (all 8+ tests, covering isolation-skill
+requirement, canonical-path-only checks, cross-harness consistency, and pre-commit
+enforcement); the same suite runs in CI on every push and blocks merge on failure.
 
 ---
 
 ## Queue SLA & Governance
 
-Queue health is enforced inside the Orchestrator polling loop (no daemon, no cron).
-Detection resolution is bounded below by `poll_interval_sec` (default 180s); SLA
-targets shorter than one poll are aspirational, not precisely enforceable.
+Queue health is enforced when a live Orchestrator drains the inbox (no daemon, no cron,
+no timer). Detection resolution is bounded below by how often an Orchestrator context is
+active; SLA targets shorter than that are aspirational, not precisely enforceable.
 
 ### SLA Thresholds
 
 | Transition | Target | Warn | Breach | On breach |
 |------------|--------|------|--------|-----------|
-| incoming -> processing (claim) | 30s | 180s | 600s | Escalate to operator (Orchestrator down/overloaded) |
+| incoming -> processing (claim) | 30s | 180s | 600s | Escalate to operator (no live Orchestrator) |
 | processing -> done/failed (normal) | - | 300s | 600s | Orphan -> crash recovery |
 | processing -> done/failed (effort: high\|max) | - | 600s | 900s | Orphan -> crash recovery |
 | failed -> retry (per attempt) | - | - | backoff curve | Re-enqueue to retry-pending/ |
 | retry attempts exhausted | - | - | 3 attempts | Move to failed/, escalate to Lead Engineer |
 
 ### Retry & Backoff
-- `retry_max_attempts = 3` (existing).
-- Delay before attempt *n*: `min(retry_base_sec * 2^(n-1), retry_max_delay_sec)` with
-  +/-20% jitter. Defaults: base 60s, cap 600s -> ~60s, 120s, 240s.
+- `retry_max_attempts = 3`. Delay before attempt *n*: `min(retry_base_sec * 2^(n-1), retry_max_delay_sec)` with +/-20% jitter (base 60s, cap 600s → ~60s, 120s, 240s).
 - A task whose `retry_count >= retry_max_attempts` is terminal-failed and escalated.
 
 ### Orphan / Stall Detection
-- A `processing/` task is stalled when `now - claimed_at > deadline_for(effort)`,
-  where `claimed_at` is read from `{task_id}.meta.json`.
-- No mid-task heartbeat exists in this harness; `claimed_at + deadline` is the
-  canonical liveness proxy. Stalled tasks enter crash recovery (existing
-  `recover_crashed_tasks()` behaviour: increment retry_count, route to
-  retry-pending/ or failed/).
+- A `processing/` task is stalled when `now - claimed_at > deadline_for(effort)`, where
+  `claimed_at` is read from `{task_id}.meta.json`. There is no mid-task heartbeat;
+  `claimed_at + deadline` is the canonical liveness proxy. Stalled tasks enter crash
+  recovery (increment retry_count, route to retry-pending/ or failed/).
 
 ### Escalation Routing
 | Condition | Escalate to |
@@ -891,10 +377,11 @@ targets shorter than one poll are aspirational, not precisely enforceable.
 | HANDBACK status: escalate | Model Engineer -> role promotion |
 
 ### Source of Truth
-All thresholds live in `config/queue-sla.yaml`. The `queue-staleness-detection`
-and `queue-wake-timers` skills and the Orchestrator SKILL MUST read values from
-that file; they MUST NOT hardcode SLA constants. Changes to SLA thresholds are
+All thresholds live in `config/queue-sla.yaml`. Orchestrator and audit/monitoring skills
+MUST read values from that file; they MUST NOT hardcode SLA constants. Changes are
 governed by the `spec-management` skill.
+
+---
 
 ## DELEGATE/HANDBACK Protocol
 
@@ -905,9 +392,11 @@ governed by the `spec-management` skill.
 handoff_type: DELEGATE
 task_id: {unique_id}
 role: Engineer | Senior Engineer | Lead Engineer | Quality Engineer | ...
-model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4-6 | ...
+model: claude-haiku-4.5 | claude-sonnet-5 | claude-opus-5 | claude-fable-5
 effort: low | medium | high | max
-scope: "Clear one-sentence scope + explicit out-of-scope boundaries"
+depth: {int, 0 at Orchestrator}
+ancestry: [ordered ancestor task_ids from the root]
+scope: "Clear one-sentence scope + explicit out-of-scope boundaries (>=15 words)"
 context: [relevant files, error messages, root cause analysis]
 success_criteria: [measurable criteria; tests must pass, coverage maintained, etc.]
 plan: [required for Engineer; step-by-step concrete steps; include Red-Green TDD phases for code changes]
@@ -921,12 +410,11 @@ plan: [required for Engineer; step-by-step concrete steps; include Red-Green TDD
 handoff_type: HANDBACK
 task_id: {matching_delegate_task_id}
 status: success | failure | partial | blocked | escalate
-# Canonical status enum (runtime-validated):
-#   success  — task completed successfully, all success_criteria met
-#   failure  — task attempted but could not be completed
-#   partial  — some success_criteria met, work remains
-#   blocked  — cannot proceed; external dependency or decision required
-#   escalate — requires higher-tier agent or human intervention
+# success  — all success_criteria met
+# failure  — attempted but could not be completed
+# partial  — some success_criteria met, work remains
+# blocked  — cannot proceed; external dependency or decision required
+# escalate — requires higher-tier agent or human intervention
 output: "Summary of what was delivered (any value; key must be present)"
 metrics:
   quality: {0.0-1.0}
@@ -939,478 +427,99 @@ metrics:
 **Optional extension fields** (loosely validated, forward-compatible):
 `deliverables`, `tests`, `escalations`, `model_assessment` (haiku_suitable |
 sonnet_would_be_better | opus_required), `confidence` (0.0-1.0), `retry_count`,
-`model_used`, `effort_actual`, `children_created`, `children_results`, `flags`,
-`error`.
+`model_used`, `effort_actual`, `children_created`, `children_results`, `flags`, `error`.
 
-See [docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml) for the
-canonical machine-readable schema.
+Canonical machine-readable schemas: [docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml),
+[docs/specs/delegate-schema.yaml](specs/delegate-schema.yaml),
+[docs/specs/handback-schema.yaml](specs/handback-schema.yaml).
 
 ---
 
 ## Agent Autonomy Model
 
-Agents operate in **reduced autonomy mode**: they continue work autonomously when additional tasks exist, but pause and wait for user input when the current scope is complete.
+Agents operate in **reduced autonomy mode**: continue autonomously when additional work
+is documented, pause when the current scope is complete and nothing further is queued.
 
-### Autonomy Principles
+**Core rule:** did the agent complete the assigned DELEGATE and meet all
+`success_criteria`? If additional todos exist in `TODO.md` (marked `- [ ]`), continue to
+the next one and update `TODO.md` as work progresses. If the scope is complete and
+`TODO.md` has no pending items, pause: state what was completed, what (if anything)
+remains, and "Pausing here. Ready for next task or input." Always pause when scope
+boundaries are unclear rather than assuming more work exists.
 
-**Core Rule:** Agents should pause when assigned task scope is complete, unless additional work has been explicitly queued or is documented in their working notes.
+`TODO.md` (repository root) is the canonical, sole source of truth for outstanding work —
+no SQL tables, spreadsheets, or session-workspace substitutes.
 
-### Autonomy Decision Workflow
-
-When an agent completes work:
-
-1. **Check Current Scope**
-   - Did I complete the assigned task/DELEGATE?
-   - Are all success criteria met?
-   - Are all todos from the current scope marked done in TODO.md?
-
-2. **Check for Remaining Work**
-   - Is there a `TODO.md` with additional pending todos?
-   - Is there a queued follow-up task or DELEGATE?
-   - Does the repository have documented outstanding work?
-
-3. **Decide: Continue or Pause**
-   - **CONTINUE autonomously IF:** More todos exist in TODO.md (marked pending)
-   - **PAUSE and wait for input IF:** Current scope is complete AND no additional work is documented in TODO.md
-   - **Always pause** when uncertain about scope boundaries
-
-### TODO Tracking (MANDATORY)
-
-**Use TODO.md in repository ONLY for todo tracking. Do NOT use SQL databases or session artifacts.**
-
-- Agents must read `TODO.md` from repository root to find remaining todos
-- Todos are marked in markdown checklist format: `- [ ]` (pending) or `- [x]` (done)
-- Agents update TODO.md directly by editing the file
-- TODO.md is the canonical source of truth for all work items
-- **PROHIBITED:** Do not use SQL `todos` table, spreadsheets, or external tracking systems
-- Do NOT use session workspace plan.md as substitute for TODO.md
-
-### Agent Responsibilities
-
-**When pausing (end of current scope):**
-- Clearly summarize what was completed
-- List any remaining work (if known)
-- Explicitly state: "Pausing here. Ready for next task or input."
-- Do NOT assume there's more work; let the user decide
-
-**When continuing (additional work exists):**
-- Acknowledge remaining todos in TODO.md
-- Continue executing on the next item
-- Update TODO.md as you progress
-- Report progress at key milestones
-
-### Examples
-
-**Example 1: Task Complete, Pause**
-```
-✓ Feature implemented and tested
-✓ All success criteria met
-✓ No todos remaining
-
-→ PAUSE: "Task complete. Awaiting further input."
-```
-
-**Example 2: Multiple Todos, Continue**
-```
-✓ First todo (database schema) complete
-→ TODO: Second todo (API routes) pending
-→ TODO: Third todo (tests) pending
-
-→ CONTINUE: "Moving to next todo: API routes."
-```
-
-**Example 3: Unclear Scope, Pause**
-```
-? Current task done, but not sure if more work planned
-? No explicit todos documented
-
-→ PAUSE: "Completed assigned work. Are there more tasks?"
-```
-
-### Implications for Orchestrator
-
-The Orchestrator-first execution model (MANDATORY) is **not changed** by autonomy rules. Agents still:
-- Only receive work via DELEGATE blocks from Orchestrator
-- Only return HANDBACKs to Orchestrator
-- Never invoke agents directly
-- Never bypass the queue
-
-Reduced autonomy is about **when agents stop working on the current task**, not about **how work enters the system**. Both constraints work together:
-- **Orchestrator-first:** How work is routed (mandatory, enforced)
-- **Reduced autonomy:** When agents pause within their current task scope (guidance, not enforcement)
+This does not change ORCHESTRATOR-FIRST: agents still only receive work via DELEGATE and
+only return HANDBACKs; they never invoke each other directly or bypass the queue. Reduced
+autonomy governs *when* an agent stops working within its current task, not *how* work
+enters the system.
 
 ---
 
 ## Task Orchestration: Parallelization & Decision Protocol
 
-**All agents** must default to the autonomous task execution pattern defined in
-`src/skills/_meta/task-orchestration/SKILL.md`:
-
-> **Maximize throughput by parallelizing all independent tasks.**  
-> **Pause only for genuine decisions — never for task sequencing.**
-
-### Using the task-orchestration Skill
-
-```python
-from src.skills._meta.task_orchestration.scripts.task_orchestrator import (
-    Task, TaskType, classify_task, can_parallelize,
-    generate_decision_shorthand, parse_decision_response,
-)
-```
-
-### Decision Points vs. Task Sequencing
+All agents default to the autonomous execution pattern in
+`src/skills/_meta/task-orchestration/SKILL.md`: **maximize throughput by parallelizing
+all independent tasks; pause only for genuine decisions, never for task sequencing.**
 
 | Type | Definition | Agent action |
 |------|-----------|--------------|
-| **Task sequencing** | Ordering or prioritisation of independent items | Always autonomous — never ask the user |
+| **Task sequencing** | Ordering/prioritisation of independent items | Always autonomous — never ask the user |
 | **Genuine decision** | Irreversible architectural or technology choice | Always pause — present shorthand and wait |
 
-### Quick Reference
-
-```
-✅ Parallelize:   classify_task(desc) == AUTONOMOUS  AND  can_parallelize(tasks) == True
-⏸  Pause & ask:  classify_task(desc) == DECISION_NEEDED
-🔗 Run in order:  classify_task(desc) == SEQUENTIAL_ONLY  OR  can_parallelize(tasks) == False
-```
-
-### Decision Shorthand Protocol
-
-When a genuine decision must be presented:
-
-```
-1a. Option one
-1b. Option two
-1c. Option three
-```
-
-User responds: `1b` (or `1a, 2c, 3b` for multiple concurrent decisions).
-
-Parse with: `parse_decision_response("1b")` → `{1: "b"}`
-
-**See:** `src/skills/_meta/task-orchestration/SKILL.md` for the full pattern,
-examples, and Python API reference.
+When a genuine decision must be presented, use numbered-option shorthand (`1a. Option
+one`, `1b. Option two`, ...); the user responds with the letter(s) (e.g. `1b`, or `1a,
+2c` for multiple concurrent decisions). See the SKILL.md for the full pattern and the
+Python classification API.
 
 ---
 
 ## SKILLS: Role-Specific Execution Details
 
-### Engineer
+Complements `src/AGENTS.md` (who, when, routing) — this section is the compact per-role
+workflow reference; see `src/AGENTS.md`'s Role Definitions for full escalation examples.
 
-**Model:** claude-haiku-4.5 (high effort)  
-**Cost Target:** 18%
-
-Execute well-scoped tasks with pre-written plans.
-
-**Workflow:**
-1. Read DELEGATE carefully
-2. Follow plan steps in order
-3. Recommended: Use Red-Green TDD (test first, implement, refactor)
-4. Run `make verify` before HANDBACK
-5. Document deliverables and test results clearly
-
-**Escalation Trigger:** Report `status: blocked` if architectural conflicts or missing context.
-
-### Senior Engineer
-
-**Model:** claude-sonnet-5 (high effort)  
-**Cost Target:** 7%
-
-Design solutions for complex tasks without pre-written plans. Diagnose bugs when root cause unclear.
-
-**Planning Task:**
-1. Explore 2-3 approaches
-2. Write detailed plan with rationale
-3. Return HANDBACK with plan (not code)
-
-**Diagnosis Task:**
-1. Reproduce issue
-2. Trace code flow
-3. Point to specific file:line
-4. Explain root cause with evidence
-5. Suggest fixes
-
-**Escalation Trigger:** Cross-service changes, architectural impacts, security concerns → report `status: blocked`.
-
-### Lead Engineer
-
-**Model:** claude-sonnet-5 (high effort)  
-**Cost Target:** 2%
-
-Review code and unblock stuck tasks.
-
-**Code Review Checklist:**
-- Tests pass, lint clean, coverage maintained (≥85%)
-- No secrets, panics, or scope creep
-- Senior Engineer code: plan completeness verified
-- Principal Engineer code: architecture patterns followed, IAM correct
-
-**Verdict:** PASS or FAIL (with specific feedback if FAIL).
-
-**Unblock Task:** Analyze blocker, provide path forward, return to Orchestrator.
-
-### Quality Engineer
-
-**Model:** claude-sonnet-5 (medium effort)  
-**Cost Target:** 8%
-
-Run Tier 1 quality checks. Assess model suitability.
-
-**Quality Checks:** Tests pass, lint clean, no secrets, scope match.
-
-**Model Assessment:** Was this model appropriate? 
-- `haiku_suitable` / `sonnet_would_be_better` / `opus_required`
-- Confidence score (0.0–1.0)
-
-**Feedback:** Add to HANDBACK for Model Engineer analysis.
-
-### Principal Engineer
-
-**Model:** claude-opus-5 (high effort)  
-**Cost Target:** 1%
-
-Design when changes affect >2 repos or service boundaries.
-
-**Task:**
-1. Map dependencies
-2. Identify contracts
-3. Design approach (breaking vs. compatibility vs. versioning)
-4. Propose rollout plan
-
-### Security Engineer
-
-**Model:** claude-fable-5 (max effort)  
-**Cost Target:** 1%
-
-Scan for vulnerabilities, check dependencies, verify access controls.
-
-**Output:** Findings by severity (CRITICAL, HIGH, MEDIUM, LOW).
-
-### Model Engineer
-
-**Model:** claude-sonnet-5 (high effort)  
-**Cost Target:** 3%
-
-Analyze completed task feedback (~10-100 samples). Identify patterns.
-
-**Workflow:**
-1. Which models succeeded? Which failed?
-2. Token efficiency patterns?
-3. Generate ranking for next similar task:
-   - Rank 1 = highest confidence
-   - Rank 2 = exploratory
-   - Rank 3 = fallback
-4. Generate artifact index (NEW in Phase 5.10):
-   - Scan artifacts/2026-*/ for DELEGATE/HANDBACK/SPAN metadata
-   - Extract: task_id, agent_type, status, tokens, cost, severity, decision
-   - Create searchable index: artifacts/index.json
-   - Include stats: total_tokens, total_cost, critical_issues, escalations
-
-**Output:** Model Engineer recommends ranking; Orchestrator applies Rank 1 for next similar task.
-
-### Orchestrator
-
-**Model:** claude-haiku-4.5 (low effort)  
-**Cost Target:** 60%
-
-Runs continuously in harness. Polls queues every 30-60 seconds.
-
-**Core Workflow:**
-1. Check `incoming/` → route using AGENTS decision tree → create DELEGATE → send to agent
-2. Check `processing/` → if complete, route to QE; if blocked, escalate to Lead/Senior Engineer
-3. Check `done/` → if PROCEED, merge; if REWORK, return to incoming with feedback; if ESCALATE, promote role
-4. Apply Model Engineer recommendations (use Rank 1 model for similar tasks)
-
-**Span Capture (NEW Phase 5.10):** When receiving HANDBACK from any agent:
-1. Extract: task_id, agent_role, agent_model, status, tokens_in, tokens_out, decision
-2. Calculate: duration_ms = end_time - start_time
-3. Calculate: cost_usd = tokens × model pricing
-4. Create SPAN with structured span record attributes:
-   - trace_id, span_id, parent_span_id
-   - span_name (e.g., "agent.engineer.execution")
-   - start_time, end_time, duration_ms
-   - status (success/error/deadline_exceeded)
-   - attributes: agent_type, agent_model, service_name, input_tokens, output_tokens, total_tokens, cost_usd, status, decision, severity, confidence
-5. Write SPAN to: `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
-6. Queue async DELEGATE to Model Engineer to regenerate `artifacts/index.json` (non-blocking; fire-and-forget, but MUST be queued — not skipped)
-
-**Key:** Span capture is internal observability; doesn't change agent behavior. HANDBACKs include token counts (agents already track this).
-
----
-
-## Optimization Feedback Loop
-
-### Continuous Improvement Cycle
-
-```
-1. Engineer executes → returns HANDBACK with tokens, status, confidence
-2. Quality Engineer verifies → adds model_assessment feedback
-3. Orchestrator records:
-   - Task metrics (task_id, duration, cost, status)
-   - Agent metrics (model, effort, tokens, decision)
-   - Span data (for observability and cost analysis)
-4. Model Engineer analyzes:
-   - Quality score vs. expected (for assigned model)
-   - Token efficiency (cost_per_quality_point)
-   - QE model suitability feedback
-   - Historical samples for same task signature
-   - Generates artifact index for cost trend analysis
-5. Model Engineer generates recommendations:
-   - Rank 1 (highest confidence): use for next similar task
-   - Rank 2 (exploratory): consider A/B test
-   - Rank 3 (alternative): fallback if rank 1 unavailable
-6. Orchestrator applies Rank 1 for next matching task
-```
-
-**Result:** Autonomous cost optimization — each task improves routing for similar future tasks.
+| Role | Workflow | Escalation trigger |
+|------|----------|---------------------|
+| **Engineer** | Read DELEGATE → follow plan steps in order → Red-Green TDD → `make verify` before HANDBACK | Architectural conflict or missing context → `status: blocked` |
+| **Senior Engineer** | Explore 2-3 approaches → write detailed plan with rationale → HANDBACK with plan, not code (planning); reproduce → trace → file:line root cause → suggest fixes (diagnosis) | Cross-service/architectural/security impact → `status: blocked` |
+| **Lead Engineer** | Code review checklist: tests pass, lint clean, coverage ≥85%, no secrets/panics/scope-creep; verdict PASS/FAIL with specific feedback; unblock stuck tasks | N/A — top of the review escalation chain below Principal |
+| **Quality Engineer** | Tier 1 checks (tests, lint, secrets, scope match) → `model_assessment` (haiku_suitable / sonnet_would_be_better / opus_required) with confidence | Feeds Model Engineer for routing optimization |
+| **Principal Engineer** | Map dependencies → identify contracts → design approach (breaking vs. compatible vs. versioned) → propose rollout | Reserved for true cross-repo/cross-service problems |
+| **Security Engineer** | Scan for vulnerabilities, dependency risk, access-control gaps; findings by severity (CRITICAL/HIGH/MEDIUM/LOW); defensive-scope only (see LOCKED model section) | Offensive-scope request → reject + escalate to user |
+| **Model Engineer** | Analyze completed-task feedback (~10-100 samples); rank models for next similar task (Rank 1 = highest confidence, Rank 2 = exploratory, Rank 3 = fallback) | Recommendations only — never delegates |
+| **Orchestrator** | Route via the decision tree above → dispatch by direct sub-agent spawn → read HANDBACK from tool result → apply Model Engineer's Rank 1 recommendation for similar tasks | Ambiguous scope → escalate to human |
 
 ---
 
 ## Constraints & Mandatory Rules
 
-### Queue-Based Routing
-- **ALL work flows through queue:** `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/ → processing/ → done/`
-- **Orchestrator polls** every 30-60 seconds (runs in harness, no external cron/tools)
-- **DELEGATE stored** in `artifacts/delegates/YYYY-MM-DD/` for reference
-- **HANDBACK stored** in `~/.agentic-engineers/{harness}/{session-id}/queue/processing/` (moved to done/ after QE review)
+**Planning & Escalation**
+- Engineer MUST NOT receive a task without a pre-written `plan` in the DELEGATE — no
+  exceptions. Unclear scope → `status: blocked`; Orchestrator escalates to Senior Engineer
+  to write the plan.
+- Engineer unable to execute the plan → `status: blocked`; Orchestrator escalates to
+  Senior Engineer. Blocked tasks and rejections escalate automatically per the routing
+  decision tree.
 
-### Planning & Escalation
-- **Engineer MUST NOT receive task without pre-written `plan`** in DELEGATE. No exceptions — all tasks require a plan. If scope is unclear, return status: blocked and Orchestrator escalates to Senior Engineer to write the plan.
-- **If Engineer cannot execute plan** → report `status: blocked`; Orchestrator escalates to Senior Engineer
-- **Blocked tasks and rejections escalate** automatically per AGENTS decision tree
+**Role-Specific Rules**
+- Security Engineer invoked ONLY for security-scoped tasks.
+- Quality Engineer provides `model_assessment` in every HANDBACK (for Model Engineer).
+- Lead Engineer/Senior Engineer unblock or redirect Engineer when a task is blocked.
 
-### Orchestrator Constraints
-- **Orchestrator MUST NOT perform work** (only route, coordinate, apply recommendations)
-- **Orchestrator runs in harness** via polling loop (no external cron/tools)
-- **ALL execution work delegated** to appropriate role via DELEGATE/HANDBACK
+**Handoff Protocol** — all agent-to-agent work transfer uses structured DELEGATE/HANDBACK
+blocks (see format above): compact context transfer, machine-readable tracking, metrics
+per task.
 
-### Role-Specific Rules
-- **Security Engineer invoked ONLY** for security-scoped tasks
-- **Quality Engineer provides `model_assessment` feedback** in HANDBACK (for Model Engineer)
-- **Lead Engineer/Senior Engineer unblock** or redirect Engineer when task blocked
-- **Each role has specific skills** (see SKILLS section above)
+**Unattended Mode** — no interactive prompts; agents make in-scope decisions without
+human approval; only pause for a merge conflict, a post-push CI failure, or a discovered
+out-of-scope issue; human reviews post-completion.
 
-### Handoff Protocol (Mandatory)
-- All agent-to-agent work transfer uses structured **DELEGATE/HANDBACK markup blocks** (see format above)
-- Markup enables:
-  - Compact context transfer (no re-summarisation)
-  - Machine-readable task tracking
-  - Metrics collection per task
-  - Span capture for observability
-
-### Unattended Mode (YOLO Operation)
-- Voice-notify every 5–10 min with progress checkpoint (tokens, task count, blockers)
-- No interactive prompts — escalate decisions autonomously, don't wait for human input
-- Agents make decisions within their scope without human approval
-- Only pause if: (1) merge conflict, (2) CI failure post-push, (3) out-of-scope issue discovered
-- Proceed with full autonomy; human reviews post-completion
-
-### No External Tools
-- **NO external Python scripts** — all features implemented as agent SKILLS
-- **NO Makefile targets** for Orchestrator operations
-- **NO shell scripts** for queue management or span capture
-- **100% agent-based** — work flows through AGENTS via DELEGATE/HANDBACK
-
----
-
-## Phase 5.10 Additions: Span Capture & Indexing
-
-### Span Capture Architecture
-
-Span capture is **built into agent SKILLS**, not external utilities:
-
-1. **Orchestrator SKILL:** Captures spans when receiving HANDBACKs from agents
-2. **Model Engineer SKILL:** Generates `artifacts/index.json` as part of feedback analysis
-3. **Agents:** Continue normal workflow (receive DELEGATE → execute → return HANDBACK with token counts)
-
-### Span Attributes (Structured span record schema)
-
-```yaml
-handoff_type: SPAN
-task_id: {matching_delegate_task_id}
-timestamp: {ISO8601}
-span_name: "agent.{agent_type}.execution"
-trace_id: {uuid, shared across parallel agents}
-span_id: {uuid, unique per agent}
-parent_span_id: {uuid or null}
-attributes:
-  agent_type: "Engineer" | "Senior Engineer" | "Quality Engineer" | etc.
-  agent_model: "claude-haiku-4.5" | "claude-sonnet-4.6" | etc.
-  service_name: "agentic-engineers"
-  agent_role: {matching_role_from_DELEGATE}
-  task_id: {task_id}
-  status: "success" | "error" | "deadline_exceeded"
-  decision: "PASS" | "FAIL" | "ESCALATE" | "BLOCKED"
-  severity: "critical" | "high" | "medium" | "low"
-  confidence: [0.0-1.0]
-  input_tokens: {count}
-  output_tokens: {count}
-  total_tokens: {count}
-  cost_usd: {calculated from tokens × model pricing}
-  duration_ms: {end_time - start_time}
-  escalations: {count}
-```
-
-### Artifact Index Format
-
-Generated by Model Engineer, stored as `artifacts/index.json`:
-
-```json
-{
-  "generated_at": "2026-05-02T14:30:00Z",
-  "summary": {
-    "total_tasks": 245,
-    "total_tokens": 1_234_567,
-    "total_cost_usd": 45.67,
-    "critical_issues": 3,
-    "escalations": 12,
-    "average_tokens_per_task": 5037,
-    "average_cost_per_task": 0.19
-  },
-  "by_agent_type": {
-    "Engineer": {
-      "count": 150,
-      "total_tokens": 600_000,
-      "total_cost": 18.00,
-      "success_rate": 0.98
-    },
-    "Senior Engineer": {
-      "count": 30,
-      "total_tokens": 250_000,
-      "total_cost": 7.50,
-      "success_rate": 0.93
-    }
-  },
-  "by_status": {
-    "complete": 230,
-    "blocked": 10,
-    "partial": 5
-  },
-  "by_decision": {
-    "PASS": 220,
-    "FAIL": 5,
-    "ESCALATE": 20
-  },
-  "critical_issues": [
-    {
-      "task_id": "2026-05-01-sec-audit-1",
-      "agent_type": "Security Engineer",
-      "severity": "critical",
-      "description": "SQL injection vulnerability"
-    }
-  ],
-  "span_metadata": [
-    {
-      "task_id": "2026-05-02-fix-token-1",
-      "agent_type": "Engineer",
-      "span_file": "artifacts/2026-05-02/SPAN-2026-05-02T14:15:00Z-Engineer.yaml",
-      "tokens": 1200,
-      "cost_usd": 0.04,
-      "duration_ms": 45000,
-      "status": "success"
-    }
-  ]
-}
-```
+**No External Tools** — no external Python scripts, Makefile targets, or shell scripts
+own orchestration, queue management, or metrics; 100% agent-based via DELEGATE/HANDBACK
+(see ORCHESTRATOR-FIRST EXECUTION MODEL above for the full, authoritative statement of
+this constraint).
 
 ---
 
@@ -1425,411 +534,21 @@ Generated by Model Engineer, stored as `artifacts/index.json`:
 
 ---
 
-## Legacy Tiers (Mapped to Current Roles)
-
-- **Lightweight** → Haiku Orchestrator (low) or Haiku Engineer (high)
-- **Standard** → Sonnet (high effort) roles (Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer)
-- **Advanced** → Opus roles (Principal Engineer: 4.6, Security Engineer: 4.8) with high/max effort
-
----
-
-## Agent Implementations
-
-All agents are defined with detailed workflows:
-
-- ✅ **Orchestrator Agent** (`orchestration/agents/general-orchestrator-agent.md`)
-- ✅ **Engineer Agent** (`orchestration/agents/engineer-agent.md`)
-- ✅ **Senior Engineer Agent** (`orchestration/agents/senior-engineer-agent.md`)
-- ✅ **Lead Engineer Agent** (`orchestration/agents/lead-engineer-agent.md`)
-- ✅ **Quality Engineer Agent** (`orchestration/agents/quality-engineer-agent.md`)
-- ✅ **Principal Engineer Agent** (`orchestration/agents/principal-engineer-agent.md`)
-- ✅ **Security Engineer Agent** (`orchestration/agents/security-agent.md`)
-- ✅ **Model Engineer Agent** (`orchestration/agents/model-engineer-agent.md`)
-
----
-
-## Observability & Monitoring (Phase 5.10)
-
-### Span Capture
-- Orchestrator captures structured span records for every agent execution
-- Spans stored in `artifacts/2026-MM-DD/SPAN-{timestamp}-{agent_type}.yaml`
-- Includes: duration, cost, tokens, status, decision, severity, confidence
-
-### Artifact Indexing
-- Model Engineer generates searchable `artifacts/index.json`
-- Index includes: task metadata, cost analysis, critical issues, escalations
-- Used by: Orchestrator (routing decisions), Model Engineer (trend analysis), humans (cost reporting)
-
-### No External Monitoring Tools
-- All observability flows through agent SKILLS
-- No external Python scripts, no Makefile targets
-- Span data and indexing are natural extensions of agent workflows
-
----
-
-## Integration Points
-
-### With AGENTS.md
-Orchestrator uses AGENTS.md to:
-- Apply routing decision tree (which role for which task)
-- Select model/effort combo
-- Handle escalations and blocked tasks
-- Apply Model Engineer recommendations
-
-### With SKILLS.md
-Each agent role has SKILLS section:
-- How to execute their role
-- Quality standards
-- Escalation triggers
-- Specific workflows (Red-Green TDD for Engineer, etc.)
-- Span capture for Orchestrator
-- Artifact indexing for Model Engineer
-
-### With QUEUE-PROTOCOL.md
-Orchestrator implements queue mechanics:
-- Polls `incoming/`, `processing/`, `done/`
-- Creates DELEGATE blocks per format
-- Routes completed work to Quality Engineer
-- Manages transitions and escalations
-
-### With HANDOFF.md
-All agent-to-agent communication uses DELEGATE/HANDBACK markup:
-- Structured format enables metrics collection
-- Machine-readable for queue processing
-- Compact context transfer
-
----
-
-## SDLC Enforcement Hooks
-
-Git hooks enforce SPEC.md compliance and quality gates at commit and push time. Hooks are standalone bash scripts in `.githooks/` — they do **not** delegate to agents via the queue (hooks must be synchronous and fast).
-
-### Hook Summary
-
-| Hook | Trigger | Enforces | Severity |
-|------|---------|----------|----------|
-| **pre-commit** | Before `git commit` | SPEC compliance, secrets, YAML validity, DELEGATE/HANDBACK format | ❌ BLOCK |
-| **commit-msg** | After commit message | Message format (≥10 chars), SKIP_HOOKS documentation | ❌ BLOCK |
-| **pre-push** | Before `git push` | Agent YAML frontmatter, test suite, protected branch warning | ❌ BLOCK / ⚠️ WARN |
-
-### Installation
-
-Hooks are installed automatically by `make install`:
-
-```bash
-make install
-# or manually:
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit .githooks/commit-msg .githooks/pre-push
-```
-
-### Emergency Bypass
-
-```bash
-BYPASS_HOOK_VALIDATION=true git commit -m "emergency: reason"  # bypass DELEGATE/HANDBACK validation only
-SKIP_HOOKS=1 git commit -m "emergency: reason"                 # bypass all pre-commit checks
-SKIP_HOOKS=1 git push                                          # bypass pre-push checks
-```
-
-See `docs/BYPASS-PROCEDURES.md` for full bypass procedures and authorization requirements.
-
-### Full Reference
-
-See `docs/SDLC-HOOKS.md` for comprehensive hook documentation including:
-- Full check details and error messages
-- Troubleshooting guide
-- Cross-harness support matrix
-- Bypass procedures
-
----
-
-## Summary Table
-
-| Component | Role | Implementation | Status |
-|-----------|------|-----------------|--------|
-| Queue System | Orchestrator | File-based: incoming → processing → done | ✅ Active |
-| Routing Logic | Orchestrator | Decision tree per AGENTS.md | ✅ Active |
-| DELEGATE Creation | Orchestrator | Per HANDOFF.md format | ✅ Active |
-| Agent Execution | All Agents | Per SKILLS.md workflows | ✅ Active |
-| HANDBACK Processing | Orchestrator | Metric collection + QE routing | ✅ Active |
-| Span Capture | Orchestrator SKILL | Custom span format to SPAN files | ✅ Phase 5.10 |
-| Artifact Indexing | Model Engineer SKILL | Generate artifacts/index.json | ✅ Phase 5.10 |
-| Cost Optimization | Model Engineer | Feedback analysis + ranking | ✅ Active |
-| Escalation Handling | Orchestrator + Lead Engineer | Per decision tree + unblock | ✅ Active |
-| **SDLC Hooks** | **All contributors** | **`.githooks/` bash scripts** | **✅ Active** |
-
----
-
-## Next Steps (Phase 6)
-
-- Implement Span Capture in Orchestrator code (Phase 6 development)
-- Enable Artifact Indexing in Model Engineer skill (Phase 6 development)
-- Monitor span data for cost trends and routing improvements
-- Validate Phase 5.10 observability with real task data
-
----
-
-## References
-
-- **AGENTS.md** — Agent roles, models, effort levels, routing decision tree
-- **SKILLS.md** — Role-specific execution workflows, span capture, indexing
-- **QUEUE-PROTOCOL.md** — Queue mechanics, DELEGATE/HANDBACK storage, file structure
-- **HANDOFF.md** — Structured markup format for agent communication
-- **SPAN-CAPTURE-INTEGRATION.md** — Span capture architecture and data flow
-- **`docs/ONBOARDING.md`** — Developer onboarding and workflow guide
-- **FEEDBACK-LOOPS.md** — Model Engineer feedback and cost optimization
-- **TOKEN-USAGE-TRACKING.md** — Token accounting and cost calculation
-
----
-
-## Repository Structure
-
-All source code lives in `src/`:
-
-- `src/orchestration/` — Agent orchestration framework (Python modules)
-  - `src/orchestration/agents/` — Routing, delegation, spec validation
-  - `src/orchestration/tools/` — Orchestration utilities
-- `src/skills/` — Skill implementations (each subdirectory = one SKILL)
-- `src/config/` — Configuration management (`models.yaml`, assignments)
-- `src/agents/` — Agent definition files (*.md role specs)
-- `src/tools/` — Shared tooling utilities
-
-All documentation lives in `docs/`:
-
-- `docs/guides/` — Implementation guides
-- `docs/reference/` — Design patterns and standards
-- `docs/operations/` — Operational reference
-- `docs/specs/` — Protocol specification documents
-- `docs/architecture/` — Architecture decisions (ADRs)
-- `docs/REPOSITORY-STRUCTURE.md` — Full directory reference
-
-Root-level duplicate directories (`orchestration/`, `skills/`, `config/`) were removed during Phase 3 restructuring. Only `src/` contains source code.
-
-Import statements use: `from src.orchestration.agents import ...`
-
-For the complete directory reference see [docs/REPOSITORY-STRUCTURE.md](REPOSITORY-STRUCTURE.md).
-
----
-
-## Phase 3: Token Visibility & Budget Checking (Complete)
-
-**Status:** ✅ Complete as of 2026-05-17
-
-### Token Visibility Requirements
-
-1. **Real-time token tracking** across all agents and subagents in a session
-   - Orchestrator sees only ~27% of actual token usage
-   - Subagents account for ~73% of usage
-   - Tracking must aggregate across all nested sessions
-
-2. **CLI commands** for token visibility:
-   - `opencode-tokens --session <id>` — Usage by agent
-   - `opencode-budget --session <id> --limit N` — Budget status
-   - `opencode-subagents --session <id>` — List all subagents
-
-3. **Database queries** via SQLite at `~/.local/share/opencode/opencode.db`:
-   - Session hierarchy (parent_id relationships)
-   - Token counts per session
-   - Depth calculation via recursive CTE
-
-### Budget Checking Requirements
-
-1. **Budget limits** configurable per session or per task
-2. **Alert thresholds** (e.g., alert at 80% consumed)
-3. **Graceful degradation** — agents report `status: blocked` when approaching limit
-4. **DELEGATE budget field** — optional `budget_tokens` field in DELEGATE
-
-### Cost Attribution Requirements
-
-1. **Per-role cost tracking** — costs attributed to specific agent roles
-2. **Per-task cost tracking** — costs linked to task_id for audit trail
-3. **Shadow mode** — dry-run delegation that estimates costs without executing
-4. **Token cost alerts** — configurable alerts on cost thresholds
-
-### Production Deployment Requirements
-
-1. **Continuous polling loop** with signal handling (via Orchestrator SKILL)
-2. **4 deployment scenarios** — standalone, systemd, Docker, Kubernetes
-3. **Health monitoring** — queue state visibility, stuck task detection
-
-### Implementation
-
-- `opencode-tokens` CLI: `src/tools/opencode_tokens.py`
-- `opencode-budget` CLI: `src/tools/opencode_budget.py`
-- `opencode-subagents` CLI: `src/tools/opencode_subagents.py`
-- Polling loop: Implemented in Orchestrator agent polling SKILL
-
-### Documentation
-
-- [docs/QUICK-START-TOKEN-VISIBILITY.md](QUICK-START-TOKEN-VISIBILITY.md)
-- [docs/QUICK-START-BUDGET-CHECKING.md](QUICK-START-BUDGET-CHECKING.md)
-- [docs/QUICK-START-PRODUCTION-DEPLOYMENT.md](QUICK-START-PRODUCTION-DEPLOYMENT.md)
-- [docs/TOKEN-COST-MONITORING.md](TOKEN-COST-MONITORING.md)
-- [docs/USAGE-BUDGET-MANAGER.md](USAGE-BUDGET-MANAGER.md)
-
----
-
-## Model Selection Architecture
-
-This section documents how agent roles select among approved opus model variants. Principal Engineer and Security Engineer are Tier 3 (Opus) roles where task complexity varies enough to warrant variant selection within the opus family. The Orchestrator selects the appropriate variant at DELEGATE-creation time.
-
-### Opus Variant Comparison
-
-| Variant | Strengths | Weaknesses | Best For |
-|---------|-----------|------------|----------|
-| `claude-opus-5` | Current Opus; strongest reasoning and long-horizon agentic work at $5/$25 per MTok | Heavier tokenizer than 4.6, so the same task costs more even at an unchanged rate | All Principal Engineer work: architecture planning, cross-repo design, security-critical design |
-| `claude-opus-4.8` | Previous Opus; same $5/$25 per MTok | Superseded by opus-5 on every axis | Emergency fallback only (opus-5 unavailable); Security Engineer resolver default |
-| `claude-opus-4.7` | Previous generation | Superseded | Emergency fallback only |
-| `claude-opus-4.6` | Older generation; lighter tokenizer | Lower capability; no cross-repo execution edge | Emergency fallback only |
-
-### Principal Engineer: Variant Selection
-
-**Variant selection is retired for Principal Engineer.** The 4.6/4.7/4.8 split existed
-because those variants traded capability against cost within the opus tier. `claude-opus-5`
-supersedes all three at the same $5/$25 per MTok as 4.8, so there is no tradeoff left to
-select on — routing by task profile would only pick a weaker model for the same price.
-
-| Task Profile | Model | Trigger |
-|-------------|-------|---------|
-| All Principal Engineer work | `claude-opus-5` | Default and only assignment |
-| Any profile, opus-5 unavailable | `claude-opus-4.8` | Emergency fallback; must be documented in HANDBACK `model_assessment` |
-
-**Orchestrator decision tree:**
-1. Principal Engineer DELEGATE? → `claude-opus-5`
-2. opus-5 unavailable (API outage)? → `claude-opus-4.8`, and record the substitution in HANDBACK
-3. Never downgrade by choice — the fallback is an availability measure, not a cost lever
-
-### Security Engineer: Multi-Model Strategy
-
-Security Engineer supports two approved models:
-
-#### Default: `claude-fable-5` (Unconditional)
-
-Security analysis is the highest-stakes task in the system. Fable-5 is the unconditional default because it provides the highest-capability reasoning for threat modeling, vulnerability assessment, and compliance review.
-
-- Use for: threat modelling, vulnerability assessment, compliance review, secrets handling policy
-- Rationale: Highest capability (above Opus); best for security-critical analysis
-- Fallback only: `claude-opus-5` (emergency-only if fable-5 unavailable due to API outage)
-  - Fallback must be documented in HANDBACK `model_assessment`
-  - Never downgrade by choice; never use lower-tier models for Security Engineer
-
-#### Fable-5: Unconditional Default with Defensive-Scope Gating
-
-Fable-5 is the unconditional default for Security Engineer. All security-scoped delegations automatically route to fable-5 for highest reasoning capability. However, fable-5 is approved **exclusively for defensive security analysis** — prevention, detection, and remediation of existing vulnerabilities. The defensive-scope constraint is enforced by the DelegateValidator C5 gate, not by model routing.
-
-Fable-5 uses adaptive thinking for nuanced threat analysis. Note: Fable-5 is priced at $10/$50 per MTok — 2× Opus 5's $5/$25 — so this is a **capability upgrade, not a cost saving**.
-
-**Approved use cases (defensive only):**
-- Vulnerability assessment (OWASP Top 10, injection, broken auth, secrets exposure)
-- Threat modelling for existing systems
-- Compliance review (OAuth 2.0, zero-trust, secrets handling, GDPR)
-- Security audit findings triage and remediation planning
-- CLI permission policy review and hardening
-
-**Prohibited use cases (never use fable5 or any Mythos-class model):**
-- Exploit development or proof-of-concept attacks
-- Offensive security research or attack automation
-- Adversarial model behavior (jailbreak techniques, prompt injection)
-- Red team scenarios designed to demonstrate attack capability
-- Ransomware/destructive-malware work, mass data exfiltration, malicious detection evasion (Tier-1: prohibited on EVERY model, not just fable-5)
-- Any task requiring offensive capability, even if framed as "defensive research"
-
-This scope constraint mirrors Anthropic's real-time cyber safeguards (prohibited vs high-risk dual-use), which already route sensitive requests on Fable/Mythos-class models to Opus-class at the platform level. Platform refusals (`stop_reason: refusal`, `stop_details.category: cyber`) are hard stops — agents MUST NOT rephrase, fragment, or retry around them.
-
-**Constraint enforcement:**
-- Orchestrator MUST NOT route security_engineer for offensive/research tasks (see gate logic below)
-- Security Engineer receiving fable5 MUST validate scope is defensive before execution
-- Platform safeguard pauses are recorded passively in HANDBACK `safeguard_events` (expected: 0; non-zero = re-scope the DELEGATE defensively). Safeguards MUST NOT be probed, retried around, or deliberately triggered for verification
-- HANDBACK must include `model_constraint: defensive-scope` field to confirm compliance
-- Violation (offensive work attempted on security_engineer): escalate immediately to user with rationale
-
-**Gate logic in Orchestrator routing:**
-```
-IF (task_scope touches a restricted/prohibited topic — exploit, attack automation,
-    offensive, red team, proof-of-concept attack, jailbreak, prompt injection,
-    ransomware, data exfiltration, detection evasion, malware)
-  → REJECT the DELEGATE and escalate to the user (out of framework scope).
-    No model selection: the framework does not perform this work on ANY model.
-ELIF (task_scope is defensive security work)
-  → Route to security_engineer, which unconditionally uses fable-5
-ELSE
-  → Not a security-scoped task; route to appropriate specialist (not security_engineer)
-```
-
-Note: model-level fallback on sensitive topics (Fable internally re-routing to
-Opus-class) is platform behaviour controlled by an account feature flag — with
-the flag off, Fable pauses instead. agentic-engineers does not replicate that
-routing: a pause or restricted-topic match is recorded (`safeguard_events`) and
-escalated to the user, never re-routed.
-
-| Model | Task Complexity | Cost (Input/Output) | Best For | Constraint |
-|-------|-----------------|--------|----------|------------|
-| `claude-fable-5` | Any defensive security | $10/$50 per MTok | All security tasks (unconditional default) | Defensive-scope only |
-
-### Quality Engineer: model_assessment for Tier 3
-
-After each Tier 3 (Principal/Security) task, Quality Engineer provides `model_assessment` feedback in HANDBACK. This feeds the Model Engineer optimization loop for future routing decisions.
-
-```yaml
-model_assessment:
-  role: principal-engineer
-  model_used: claude-opus-4.6
-  model_appropriate: true
-  alternative_considered: claude-opus-4.7
-  rationale: "Pure planning task; 4.6 extended thinking was sufficient; 4.7 not needed"
-  recommendation: "Continue routing pure-planning Principal tasks to 4.6"
-```
-
-### Example DELEGATE Blocks with model_guidance
-
-**Principal Engineer — pure planning (4.6):**
-```yaml
-handoff_type: DELEGATE
-role: Principal Engineer
-model: claude-opus-4.6
-model_guidance: "Pure planning task — design-only, no cross-repo execution required"
-task: "Design the event-sourcing schema for the new audit trail feature"
-```
-
-**Principal Engineer — cross-repo execution (4.7):**
-```yaml
-handoff_type: DELEGATE
-role: Principal Engineer
-model: claude-opus-4.7
-model_guidance: "Architecture decision drives implementation across auth-service and api-gateway"
-task: "Design and specify OAuth2 refresh-token rotation across 3 services"
-```
-
-**Security Engineer — default (opus 4.8):**
-```yaml
-handoff_type: DELEGATE
-role: Security Engineer
-model: claude-opus-4.8
-model_guidance: "Default pinned model for all security analysis"
-task: "Threat model for the new payment processing flow"
-```
-
-**Security Engineer — defensive vulnerability analysis (fable5):**
-```yaml
-handoff_type: DELEGATE
-role: Security Engineer
-model: claude-fable-5
-output_config:
-  effort: medium
-model_guidance: "Fable-5 approved for defensive-only analysis: vulnerability assessment and remediation planning (no offensive capability)"
-model_constraint: "defensive-only"
-task: "Assess OWASP Top 10 vulnerabilities in user auth flow and recommend patches"
-```
-
-### Rollout Phases
-
-| Phase | Scope | Status |
-|-------|-------|--------|
-| Phase 1 | Principal Engineer variant selection (4.6/4.7/4.8) | Active |
-| Phase 2 | Security Engineer non-downgrade rule enforcement (opus 4.8 pinned default) | Active |
-| Phase 3 | Quality Engineer model_assessment feedback loop | Active |
-| Phase 4 | Model Engineer automated routing recommendations | Active |
-| Phase 5 | Security Engineer fable-5 option for defensive-only analysis (effort: medium) | Active |
+## Model Fallback & Defensive-Scope Notes
+
+Context for the LOCKED section below (not itself LOCKED): Principal Engineer defaults
+unconditionally to `claude-opus-5`; fallback to `claude-opus-4.8` only on opus-5
+unavailability (documented in HANDBACK `model_assessment`) — never a cost-driven
+downgrade. Security Engineer defaults unconditionally to `claude-fable-5` for its
+highest-capability reasoning on threat modeling and vulnerability assessment; fallback to
+`claude-opus-5` only on fable-5 unavailability. Fable-5 is approved **exclusively for
+defensive security analysis** — vulnerability assessment, threat modelling of existing
+systems, compliance review, audit-finding triage. It is never approved for exploit
+development, offensive research, adversarial/jailbreak work, or destructive-capability
+tasks, on any model — the Orchestrator MUST reject and escalate to the user rather than
+route such a request to any model. Platform-level safeguard pauses (`stop_reason:
+refusal`) are hard stops agents MUST NOT rephrase, fragment, or retry around; they are
+recorded passively via HANDBACK `safeguard_events` and escalated, never re-routed.
 
 ---
 
@@ -1847,8 +566,8 @@ Canonical (source) model IDs use a **dot** in the two-part version
 
 | Model | Canonical (source) ID | Context Window | Max Output | Use Case |
 |-------|-----------------------|-----------------|------------|----------|
-| **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
-| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
+| **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Engineer |
+| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Orchestrator, Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
 | **Claude Opus 5** | `claude-opus-5` | 1M | 128K | High capability; Principal Engineer. Single-part version — no transformation in any harness. |
 | **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer (unconditional default). Most expensive model in the roster ($10/$50 per MTok, 2x Opus 5) — a capability upgrade, never a cost saving. Single-part version — identical in every harness, no transformation. |
 | **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 128K | Still locked/approved; no longer assigned to a role |
@@ -1878,9 +597,9 @@ and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/refer
 
 ### Model Assignment by Agent Role
 
-As of 2026-08-07:
+As of 2026-08-11:
 
-- **Orchestrator:** `claude-haiku-4.5` (fast, low-cost, routing-only)
+- **Orchestrator:** `claude-sonnet-5` (routing)
 - **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
 - **Senior Engineer:** `claude-sonnet-5` (complex coding, unscoped work)
 - **Lead Engineer:** `claude-sonnet-5` (code review, architectural guidance)
@@ -1894,142 +613,87 @@ As of 2026-08-07:
 
 ### Model Governance: Locking & Switching
 
-*(Consolidated from the deprecated root `SPEC.md` via spec-management proposal SPEC-2026-001.)*
+**Philosophy — positive enforcement.** Models are locked by *explicit strategic choice*,
+not by forbidding patterns — "these are the approved models" rather than a rejection
+blocklist. Users *can* request changes through the process below; every change is
+auditable.
 
-**Philosophy — positive enforcement.** Models are locked by *explicit strategic
-choice*, not by forbidding patterns. We affirm "these are the approved models"
-rather than maintaining a rejection blocklist — simpler to maintain, and users
-*can* request changes through the process below, with every change auditable.
+**Single source of truth — `.githooks/LOCKED_MODELS.sh`.** Contains `LOCKED_MODELS` (the
+canonical approved list), `AGENT_MODEL_ASSIGNMENTS` (which agent uses which model), and
+validation/display helpers. All hooks and validators source this file to stay consistent.
 
-**Single source of truth — `.githooks/LOCKED_MODELS.sh`.** Contains:
-- `LOCKED_MODELS` — the canonical list of approved models (only these pass validation)
-- `AGENT_MODEL_ASSIGNMENTS` — which agent uses which model (for documentation)
-- Helper functions for validation and display
-
-All hooks and validators source this file to stay consistent. The pre-commit
-hook, `tests/test_model_naming_compliance.py`, and CI all enforce that every
-agent uses a model from this locked set.
-
-**Model Switch Process.** To change an agent's locked model:
-
-1. **Request** — provide the agent name, requested model, reason, and expected
-   impact (cost delta, quality delta).
-2. **Evaluation** — review budget impact, task-profile fit, consistency with
-   other agents, and timeline.
-3. **Decision** — ✅ Approved → implement; ⏸️ Deferred → revisit (e.g. next budget
-   cycle); ❌ Denied → record the documented reason.
-4. **Implementation (if approved)** — update `.githooks/LOCKED_MODELS.sh`
-   (add to `LOCKED_MODELS` if new; update `AGENT_MODEL_ASSIGNMENTS`), open a PR
-   with the rationale and cost impact, and merge so the pre-commit hook enforces
-   the new lock. Keep `src/config/models.yaml` and this section in sync.
+**Model Switch Process:** Request (agent, requested model, reason, cost/quality-delta
+impact) → Evaluation (budget impact, task-profile fit, consistency, timeline) → Decision
+(✅ Approved → implement; ⏸️ Deferred → revisit; ❌ Denied → documented reason) →
+Implementation (update `LOCKED_MODELS` + `AGENT_MODEL_ASSIGNMENTS` in
+`.githooks/LOCKED_MODELS.sh`, PR with rationale/cost impact, merge so pre-commit enforces
+the new lock; keep `src/config/models.yaml`, if present, and this section in sync).
 
 ### Validation & Enforcement
 
-**Mandatory Checks** (all must pass):
+**Mandatory checks (all must pass):** source files (`src/agents/*.md` `model:` fields use
+hyphen format `claude-{family}-{version-with-hyphens}`, validated by
+`renderer/validate_agents.py`'s `KNOWN_MODELS`, which rejects dotted forms like
+`claude-opus-4.7`); documentation (`src/AGENTS.md`'s roster matches source agent files
+exactly, pre-commit enforced); rendered output (`dist/{copilot,claude,opencode,pi}/agents/*`
+all use hyphen format). Dot-format regressions are caught by the pre-commit hook and CI
+(`test_model_naming_compliance.py`); Quality Engineer review is a further mandatory step.
+To add/update an approved model: verify the official source, update this section and
+`KNOWN_MODELS`, update `src/AGENTS.md`, run `make test`, commit citing the source.
 
-1. **Source Files** (`src/agents/*.md`):
-   - All `model:` fields must use hyphen format: `claude-{family}-{version-with-hyphens}`
-   - Pre-commit hook validates via `renderer/validate_agents.py`
-   - Test: `tests/test_agent_model_names.py`
+---
 
-2. **Validator** (`renderer/validate_agents.py`):
-   - `KNOWN_MODELS` constant must list only hyphen-format models
-   - Validator rejects any model with dots (e.g., `claude-opus-4.7`)
-   - Test: `tests/test_renderer_validation.py`
+## Repository Structure
 
-3. **Documentation** (`docs/AGENTS.md`):
-   - Agent registry table must match source files exactly
-   - Pre-commit hook enforces sync between agent files and registry
-   - Test: `tests/test_agents_registry_sync.py`
-
-4. **Rendered Output** (all harnesses):
-   - `dist/copilot/agents/*.agent.md` must use hyphen format
-   - `dist/claude/agents/*.md` must use hyphen format
-   - `dist/opencode/agents/*.md` must use hyphen format
-   - `dist/pi/agent/pi.yml` must use hyphen format
-   - Test: `tests/test_render_model_names.py` (validates all renderers)
-
-### No-Regression Tests
-
-**Test File:** `tests/test_model_naming_compliance.py`
-
-Tests verify:
-
-```python
-# ✅ Approved formats
-"claude-haiku-4.5"  # Hyphens only
-"claude-sonnet-4.6"
-"claude-opus-4.7"
-
-# ❌ Forbidden formats (tests must FAIL if found)
-"claude-haiku-4.5"  # Dots NOT allowed
-"claude-sonnet-4.6"
-"claude.opus-4.7"   # Mixed format
-"CLAUDE-HAIKU-4-5"  # Uppercase
+```
+agentic-engineers/
+├── src/
+│   ├── AGENTS.md                  # canonical roster, routing, execution model
+│   ├── SKILLS.md                  # canonical skill roster & role workflows
+│   ├── TODO.md.template
+│   ├── agents/                    # 8 role definitions: *-agent.md
+│   └── skills/                    # 8 surviving skills (each a SKILL.md dir):
+│       orchestrator, queue-management, queue-query, protocol-validator,
+│       spec-validator, spec-management, skill-improvement-feedback,
+│       codex-agent-cleanup
+├── docs/                          # SPEC.md (this file), PROTOCOL.md, QUEUE-PROTOCOL.md,
+│                                   # specs/, spec-proposals/, design/, decisions/, guides/
+├── renderer/                      # build-time render/install pipeline (scripts/, lib/)
+├── scripts/                       # advisory/compliance tooling (see COMPLETE SCRIPT INVENTORY)
+├── tests/                         # test suite
+└── config/                        # FRAMEWORK-MANIFEST.yaml + orchestration/deployment/token_budget YAMLs
 ```
 
-### Regression Mitigation
+`src/AGENTS.md` and `src/SKILLS.md` are canonical; `docs/AGENTS.md` and `docs/SKILLS.md`
+are thin pointers into `src/`. See [RENDERING.md](RENDERING.md) for how `src/` is rendered
+into `dist/<harness>/` and installed to each harness's home directory.
 
-If a model name with dots is committed:
+---
 
-1. **Pre-commit hook catches it** — commit is rejected with error message
-2. **CI/CD catches it** — `test_model_naming_compliance.py` fails
-3. **Quality Engineer review** — mandatory validation step in HANDBACK review
-4. **Automatic fix available** — `scripts/fix-model-names.py` converts dots to hyphens
+## References
 
-### Future Changes
-
-**Procedure to add or update approved models:**
-
-1. Verify official source (Anthropic, GitHub, pi.dev documentation)
-2. Update SPEC.md (this section)
-3. Add to `KNOWN_MODELS` in `renderer/validate_agents.py`
-4. Update `docs/AGENTS.md` agent registry
-5. Run full test suite (`make test`)
-6. Commit with clear message: `fix: add/update model {name} per official docs (source: {url})`
+- **`src/AGENTS.md`** — canonical agent roster, routing decision tree, recursion limits, tools-frontmatter permission model; **`src/SKILLS.md`** — canonical skill roster and role workflows
+- **[QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)** — queue mechanics, DELEGATE/HANDBACK storage; **[PROTOCOL.md](PROTOCOL.md)** — validation, scoring, escalation reference
+- **[RENDERING.md](RENDERING.md)** — render/install pipeline
+- **[ONBOARDING.md](ONBOARDING.md)**, **[CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md)** — developer/agent onboarding
 
 ---
 
 ## Update Log
 
-- **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements.
-- **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, bypass procedures, and references to docs/SDLC-HOOKS.md.
-- **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section. Documents token tracking requirements, budget checking requirements, cost attribution, production deployment requirements, and implementation references.
+- **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements (span capture/indexing since removed — see 2026-08-11 entry).
+- **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, and bypass procedures.
+- **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section (removed — see 2026-08-11 entry; the CLI tooling it documented no longer exists).
 - **2026-05-25:** Added Model Naming & Harness Compatibility section. Documents approved model names per official Anthropic/GitHub/pi.dev sources, validates hyphen format across all harnesses, adds no-regression tests and enforcement procedures.
-- **2026-06-08:** Reconciled queue path contradictions throughout early sections. Canonical path is `~/.agentic-engineers/{harness}/{session-id}/queue/` per the locked section (Queue Architecture & Paths, lines ~495–541). All early references to `~/.copilot/queue/`, `~/.claude/queue/`, and `artifacts/queue/` as "current" paths updated to the canonical path. Locked section unchanged (it is the authoritative source).
-- **2026-06-11:** Reversed the canonical queue path order to `{harness}/{session-id}` (was `{session-id}/{harness}`) in the locked Queue Architecture section — operators browse by harness, not opaque UUID; session IDs cannot collide across harnesses. `setup/migrate-queue-paths.sh` migrates existing installs. Also fixed the self-contradicting model-naming CRITICAL RULE and corrected the stale harness-render table.
+- **2026-06-08:** Reconciled queue path contradictions throughout early sections. Canonical path is `~/.agentic-engineers/{harness}/{session-id}/queue/` per the locked section. Locked section unchanged (it is the authoritative source).
+- **2026-06-11:** Reversed the canonical queue path order to `{harness}/{session-id}` (was `{session-id}/{harness}`) in the locked Queue Architecture section. Also fixed the self-contradicting model-naming CRITICAL RULE and corrected the stale harness-render table.
 - **2026-06-12:** [SPEC-2026-001 — principal-engineer, approved by security-engineer] Consolidated CU-5: migrated model-governance content (positive-enforcement philosophy, `.githooks/LOCKED_MODELS.sh` single source of truth, and the Model Switch Process) from the deprecated root `SPEC.md` into the Model Naming & Harness Compatibility section; root `SPEC.md` reduced to a pointer at `docs/SPEC.md`. No behavioural change.
-- **2026-06-13:** [SPEC-2026-002] Fixed residuals from the 2026-06-11 queue-path reversal (CU-4): four spots still presented the old `{session-id}/{harness}` order as current — the Queue Structure tree in Queue-Based Delegation Mechanics, the Glossary examples for DELEGATE Block and HANDBACK, the migration *destinations* in the Legacy Paths table (LOCKED section), and an erratum in the LOCKED section's 2026-06-11 note that mislabelled the original order. All now show the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/`. Legacy *source* paths in the migration table are intentionally unchanged (they correctly document the deprecated paths). Proposal: docs/spec-proposals/SPEC-2026-002.yaml.
+- **2026-06-13:** [SPEC-2026-002 — lead-engineer] Fixed residuals from the 2026-06-11 queue-path reversal (CU-4): four spots still presented the old `{session-id}/{harness}` order as current. All now show the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/`. Legacy *source* paths in the migration table intentionally unchanged (they document deprecated paths).
+- **2026-06-13:** [SPEC-2026-003 — principal-engineer, approved by security-engineer] Replaced a stale `AutomationController` reference (removed in the 2026-05-17 daemon-removal refactor) with a description of harness-initiated idle-loop polling as the then-current mechanism. Superseded by SPEC-2026-004 below.
+- **2026-08-09:** [SPEC-2026-004 — principal-engineer, approved by security-engineer + lead-engineer] Execution Model redesign: replaced queue-polling dispatch (never functional — a 2026-08-09 sweep of 16 live session partitions found zero tasks ever traversed the queue that way) with direct sub-agent spawn as the canonical ORCHESTRATOR-FIRST mechanism. Queue paths (LOCKED section) unchanged; the queue's role narrows to durable inbox + audit substrate. Governance-only; no code changed by the proposal itself.
+- **2026-08-11:** [SPEC-2026-005 — lead-engineer, framework slimdown WP-4] Consolidated rewrite, 2,035 → ~650 lines. LOCKED sections carried over near-verbatim with exactly two sanctioned edits: (a) Queue Architecture & Paths — "MUST initialize queue polling ONLY from" → "MUST read and write queue records ONLY from" (path unchanged); (b) Model Naming & Harness Compatibility — Orchestrator's assigned model changed from `claude-haiku-4.5` to `claude-sonnet-5` (commit 2b6e268). Deleted sections describing subsystems removed elsewhere in this slimdown: Phase 5.10 Span Capture & Indexing, Observability & Monitoring, Model Selection Architecture (opus-variant facts folded into a short non-LOCKED context note ahead of the LOCKED model section), Phase 3 Token Visibility, Optimization Feedback Loop, Agent Implementations, the Option-1a Dual-Layer Orchestrator Architecture and pre-direct-spawn Queue-Based Delegation Mechanics sections, Legacy Tiers, Next Steps (Phase 6), a duplicated vestigial tail, and a duplicate second SDLC-hooks section. Rewrote Repository Structure as an accurate ~20-line tree and COMPLETE SCRIPT INVENTORY from the actual surviving `scripts/` + `renderer/scripts/`. Authorizes the interim permissive floor in `renderer/scripts/check_test_regression.py` for the duration of the slimdown (WP-5 re-baselines from measured actuals). See `docs/spec-proposals/SPEC-2026-005.yaml`.
 
 ---
 
-**Document Status:** Specification current. Phase 3 complete. Phase 6 span capture in progress.  
-**Maintenance:** Update when agent roles, models, routing rules, or SKILLS change.
-
----
-
-## Specification
-
-This document defines the operational specification for the Agentic Engineers framework, including the orchestrator-first execution model, agent routing, queue management, security requirements, and compliance gates.
-
----
-
-## Core Requirements
-
-1. **Orchestrator-First Execution**: All work must flow through the Orchestrator agent. No direct agent invocation is permitted.
-2. **Queue-Based Delegation**: Tasks are queued in session-partitioned directories and processed by agents.
-3. **Audit Trails**: Complete audit trails must be maintained for all DELEGATE/HANDBACK operations.
-4. **Quality Gates**: All completed work must pass Quality Engineer verification before completion.
-5. **Security Compliance**: All code must pass entropy-based credential detection and pattern matching.
-6. **Version Management**: Changes are tracked via CHANGELOG and semantic versioning.
-
----
-
-## Quality Gates
-
-1. **Pre-Commit Gates**: Verify code integrity, SPEC compliance, and pre-push validation
-2. **Security Gates**: Entropy detection, SPEC.md compliance, dependency scanning
-3. **Framework Integrity**: Ensure consistency across all framework files
-4. **Source Validation**: Verify test sources and skill/agent file integrity
-5. **Quality Engineer Review**: Final validation of output quality and correctness
-6. **Post-Merge Validation**: Continuous monitoring for regressions and quality drift
+**Document Status:** Specification current, post-slimdown.
+**Maintenance:** Update when agent roles, models, routing rules, or SKILLS change — via the `spec-management` skill.

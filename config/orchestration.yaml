@@ -3,9 +3,15 @@
 # Single source of truth for all orchestrator settings.
 # Consolidates config/token_budget.yaml and config/deployment.yaml.
 #
-# Loader: src/orchestration/deployment/config_loader.py
 # (token_budget.yaml and deployment.yaml remain as standalone files
 #  for backward compatibility; this file adds a unified view.)
+#
+# Dispatch model (post framework-slimdown): the Orchestrator spawns specialist
+# sub-agents directly (Agent/Task tool) and reads the HANDBACK back as the
+# spawn call's result. The queue below is a durable inbox/audit trail only —
+# nothing polls it. The "Orchestrator Polling" section further down is
+# retained only as legacy config surface; idle_timeout_seconds and
+# poll_interval_seconds are not read by any polling loop, because none exists.
 
 # ---------------------------------------------------------------------------
 # Token Budget (previously config/token_budget.yaml)
@@ -82,13 +88,16 @@ deployment:
     auto_rollback_on_critical_error: true
 
 # ---------------------------------------------------------------------------
-# Orchestrator Polling
+# Orchestrator Polling (legacy — see dispatch-model note at top of file;
+# idle_timeout_seconds/poll_interval_seconds are unused under direct spawn)
 # ---------------------------------------------------------------------------
 orchestrator:
-  # Seconds of queue inactivity before the polling loop exits
+  model: claude-sonnet-5
+
+  # Seconds of queue inactivity before the polling loop exits (legacy; unused)
   idle_timeout_seconds: 60
 
-  # Polling interval when queue is empty (seconds)
+  # Polling interval when queue is empty (seconds) (legacy; unused)
   poll_interval_seconds: 10
 
   # Maximum task retries before escalation to Principal Engineer
