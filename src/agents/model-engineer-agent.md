@@ -35,7 +35,7 @@ If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `ag
 Model Engineer runs after a Quality Engineer verdict (or directly on a batch of recent
 HANDBACKs), across the 8 framework roles in `src/AGENTS.md` (Orchestrator, Engineer,
 Senior Engineer, Lead Engineer, Principal Engineer, Security Engineer, Quality Engineer,
-Model Engineer):
+Model Engineer). Orchestrator now uses claude-sonnet-5 for improved routing analysis:
 
 1. For each role present, compute **efficiency** = `tokens_observed / tokens_estimated`.
 2. Apply thresholds: efficiency < 0.5 → suggest downgrading to a cheaper tier (confidence
@@ -127,7 +127,7 @@ recommendation:
   task_type: "commit-quality-gate"
   recommended_models:
     orchestrator:
-      model: claude-haiku-4.5
+      model: claude-sonnet-5
       confidence: 0.92
       reasoning: "Used 850/1000 tokens (85% efficiency), appropriate"
     engineer:
@@ -151,7 +151,7 @@ recommendation:
   decision_quality: 1.0
 confidence: 0.90
 next_suggested_models:
-  orchestrator: claude-haiku-4.5
+  orchestrator: claude-sonnet-5
   engineer: claude-haiku-4.5
   senior_engineer: claude-sonnet-5
   security_engineer: claude-fable-5

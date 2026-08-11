@@ -96,12 +96,12 @@ role_models:
     description: "Model optimization - token efficiency & routing accuracy"
 
   general_orchestrator:
-    canonical: "claude-haiku"
+    canonical: "claude-sonnet"
     thinking: false
     effort: "low"
     providers:
-      copilot: "claude-haiku-4.5"
-      claude: "claude-haiku-4.5"
+      copilot: "claude-sonnet-5"
+      claude: "claude-sonnet-5"
       openai: "gpt-4o-mini"
       codex: "gpt-5.4-mini"
       google: "gemini-2.0-flash"

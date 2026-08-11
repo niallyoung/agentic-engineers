@@ -22,7 +22,7 @@ Distributed AI orchestration system for multi-agent task delegation via queue-ba
 
 | Agent | Model | Purpose |
 |---|---|---|
-| Orchestrator | claude-haiku-4.5 | Routing & queue management |
+| Orchestrator | claude-sonnet-5 | Routing & queue management |
 | Engineer | claude-haiku-4.5 | Implementation (well-scoped) |
 | Senior Engineer | claude-sonnet-5 | Complex problem-solving |
 | Lead Engineer | claude-sonnet-5 | Code review & quality |

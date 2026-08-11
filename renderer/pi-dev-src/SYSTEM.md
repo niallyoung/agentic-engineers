@@ -79,7 +79,7 @@ You are integrated into the **pi.dev coding agent harness**, giving you access t
 
 | Role | Model | Effort | Use Case |
 |------|-------|--------|----------|
-| **Orchestrator** | claude-haiku-4.5 | low | All entry points; routing decisions; task management |
+| **Orchestrator** | claude-sonnet-5 | low | All entry points; routing decisions; task management |
 | **Engineer** | claude-haiku-4.5 | high | Well-scoped tasks with pre-written plans |
 | **Senior Engineer** | claude-sonnet-5 | high | Complex coding; root-cause diagnosis |
 | **Lead Engineer** | claude-sonnet-5 | high | Code review; quality decisions; architectural guidance |

@@ -48,7 +48,7 @@ Substitute your actual home directory where `~` appears.
 
 | Agent | Model | Effort | Best For | Scope |
 |-------|-------|--------|----------|-------|
-| **Orchestrator** | claude-haiku-4.5 | low | Task routing, queue management | Routing only |
+| **Orchestrator** | claude-sonnet-5 | low | Task routing, queue management | Routing only |
 | **Engineer** | claude-haiku-4.5 | high | Feature implementation, bug fixes | Single file/module |
 | **Senior Engineer** | claude-sonnet-5 | high | Complex design, debugging | Multi-service, logic |
 | **Lead Engineer** | claude-sonnet-5 | high | Code review, quality gates | Validation, review |

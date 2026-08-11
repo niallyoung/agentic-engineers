@@ -36,7 +36,7 @@ source. When updating model assignments, update `models.yaml` first, then audit 
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
-| **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Orchestrator** | claude-sonnet-5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
 | **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
 | **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
@@ -56,8 +56,8 @@ source. When updating model assignments, update `models.yaml` first, then audit 
 ### Cost Tiers
 
 ```
-Tier 1 — Cheap (haiku-4.5):   Orchestrator + Engineer        → $0.03–0.05/task
-Tier 2 — Medium (sonnet-5):   Model Eng + QE + Lead + Senior → ~$0.12/task
+Tier 1 — Cheap (haiku-4.5):   Engineer                       → $0.03–0.05/task
+Tier 2 — Medium (sonnet-5):   Orchestrator + Model Eng + QE + Lead + Senior → ~$0.12/task
 Tier 3 — Premium (opus-5):    Principal                      → ~$0.18/task
 Tier 3 — Premium (fable-5):   Security                       → ~$0.36/task
 ```
@@ -77,7 +77,7 @@ scaling old token counts.
 
 ```
 User request / External trigger
-  └─► Orchestrator (haiku — cheap routing)
+  └─► Orchestrator (sonnet — routing)
         ├─► Issues DELEGATE to the correct specialist
         ├─► Specialist performs work and returns HANDBACK
         └─► Orchestrator interprets result and coordinates next steps
@@ -161,7 +161,7 @@ For detailed guidance, decision trees, and examples, see [SPEC.md > Model Select
 
 ```
 User / External Trigger
-  └─► Orchestrator  (haiku — cheap routing)
+  └─► Orchestrator  (sonnet — routing)
         ├─► Engineer               ← well-scoped tasks with full plans
         ├─► Senior Engineer        ← unscoped or multi-file work
         │     ├─► Lead Engineer    ← architecture decisions, code review
