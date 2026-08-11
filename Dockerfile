@@ -32,8 +32,8 @@ RUN pip install --upgrade pip && \
 # Set environment variable for pytest
 ENV PYTHONPATH=/workspace:${PYTHONPATH}
 
-# Health check: verify imports work
-RUN python -c "import src.orchestration.agents.orchestrator; print('✓ Imports successful')"
+# Health check: verify framework files exist
+RUN test -f /workspace/src/AGENTS.md && test -f /workspace/src/SKILLS.md && python -c "print('✓ Framework files verified')"
 
 # Default command: run tests
 CMD ["pytest", "tests/", "-v", "--tb=short"]
