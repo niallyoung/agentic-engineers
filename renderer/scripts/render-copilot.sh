@@ -116,7 +116,7 @@ case "$MODE" in
 			elif [ ! -f "$dst/$MARKER" ]; then
 				echo "  ⚠️  $name (exists but not managed by us)"
 				foreign=$((foreign + 1))
-			elif diff -rq "$src" "$dst" --exclude="$MARKER" --exclude=".DS_Store" --exclude=".git" >/dev/null 2>&1; then
+			elif diff -rq "$src" "$dst" --exclude="$MARKER" --exclude=".DS_Store" --exclude=".git" --exclude='tests' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' >/dev/null 2>&1; then
 				echo "  ✅ $name"
 				ok=$((ok + 1))
 			else
@@ -168,7 +168,7 @@ case "$MODE" in
 			# For non-streaming mode, use standard rsync
 			if [ "$STREAM_MODE" = "human" ]; then
 				rsync -a --delete --progress \
-					--exclude='.DS_Store' --exclude='.git' \
+					--exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
 					"$src/" "$dst/" || {
 					_stream_emit "$STREAM_MODE" "error" "$name" \
 						"{\"message\":\"rsync failed with exit $?\"}"
@@ -176,7 +176,7 @@ case "$MODE" in
 					continue
 				}
 			else
-				rsync -a --delete --exclude='.DS_Store' --exclude='.git' \
+				rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
 					"$src/" "$dst/" || {
 					echo "  ❌ $name — rsync failed" >&2
 					continue

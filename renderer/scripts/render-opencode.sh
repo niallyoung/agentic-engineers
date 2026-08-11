@@ -536,7 +536,7 @@ case "$MODE" in
 			src="$SRC_SKILLS/$name"; dst="$DST_SKILLS/$name"
 			if [ ! -d "$dst" ]; then echo "  ❌ skill $name (not installed)"; missing=$((missing + 1))
 			elif [ ! -f "$dst/$SKILL_MARKER" ]; then echo "  ⚠️  skill $name (foreign)"; foreign=$((foreign + 1))
-			elif diff -rq "$src" "$dst" --exclude="$SKILL_MARKER" --exclude=".DS_Store" --exclude=".git" >/dev/null 2>&1; then echo "  ✅ skill $name"; ok=$((ok + 1))
+			elif diff -rq "$src" "$dst" --exclude="$SKILL_MARKER" --exclude=".DS_Store" --exclude=".git" --exclude='tests' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' >/dev/null 2>&1; then echo "  ✅ skill $name"; ok=$((ok + 1))
 			else echo "  🔄 skill $name (drift)"; drift=$((drift + 1)); fi
 		done
 		echo "  skills: $ok ok / $drift drift / $missing missing / $foreign foreign"
@@ -573,7 +573,7 @@ case "$MODE" in
 				echo "  ⚠️  skipping skill $name — foreign"
 				continue
 			fi
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			count_s=$((count_s + 1))
 		done

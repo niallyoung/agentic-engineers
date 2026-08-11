@@ -1,7 +1,8 @@
 """Tests for the queue-query skill (QueueQuery + CLI).
 
 Covers state listing, sizing, orphan detection, done-summary, format-agnostic
-reads (json + yaml), session/harness isolation, and CLI dispatch.
+reads (json + yaml), session/harness isolation, path-traversal rejection, and
+CLI dispatch.
 """
 
 from __future__ import annotations
@@ -17,24 +18,30 @@ import pytest
 _SKILL_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(_SKILL_ROOT))
 
-from scripts.queue_query import QueueQuery, QueueQueryError, main  # noqa: E402
-
-# queue_isolation provides the canonical path math used by the fixtures.
-_QI_SCRIPTS = (
-    _SKILL_ROOT.parent / "_meta" / "queue-isolation" / "scripts"
+from scripts.queue_query import (  # noqa: E402
+    QueueQuery,
+    QueueQueryError,
+    get_queue_path,
+    main,
 )
-sys.path.insert(0, str(_QI_SCRIPTS))
-import queue_isolation as qi  # noqa: E402
 
 SESSION = "sess-queue-query"
 HARNESS = "local"
 
 
+def _init_queue(base_dir: Path) -> Path:
+    """Create the canonical incoming/processing/done/failed layout directly
+    (queue-query is read-only, so tests build fixtures without going through
+    the queue-management skill's enqueue())."""
+    root = get_queue_path(SESSION, HARNESS, base_dir=base_dir)
+    for state in ("incoming", "processing", "done", "failed"):
+        (root / state).mkdir(parents=True, exist_ok=True)
+    return root
+
+
 @pytest.fixture
 def queue_root(tmp_path):
-    """Initialise an empty canonical queue under a temp base dir."""
-    qi.init_queue_structure(SESSION, HARNESS, base_dir=tmp_path)
-    return qi.get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
+    return _init_queue(tmp_path)
 
 
 @pytest.fixture
@@ -58,8 +65,18 @@ def _write_yaml_task(queue_root: Path, state: str, task_id: str, body: str) -> P
 # --- construction / path resolution ---------------------------------------
 
 def test_uses_canonical_queue_path(query, tmp_path):
-    expected = qi.get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
+    expected = get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
     assert query.queue_path == expected
+
+
+def test_rejects_path_traversal_in_session_id(tmp_path):
+    with pytest.raises(QueueQueryError):
+        QueueQuery(session_id="../escape", harness=HARNESS, base_dir=tmp_path)
+
+
+def test_rejects_path_traversal_in_harness(tmp_path):
+    with pytest.raises(QueueQueryError):
+        QueueQuery(session_id=SESSION, harness="a/b", base_dir=tmp_path)
 
 
 # --- ls --------------------------------------------------------------------
@@ -76,9 +93,9 @@ def test_ls_incoming_returns_all_pending_tasks(query, queue_root):
 
 
 def test_ls_ignores_keepme_and_hidden(query, queue_root):
-    # init_queue_structure already dropped .keep.me files
     _write_json_task(queue_root, "incoming", "real-task", role="engineer")
     (queue_root / "incoming" / ".hidden.json").write_text("{}", encoding="utf-8")
+    (queue_root / "incoming" / ".keep.me").write_text("", encoding="utf-8")
     tasks = query.ls("incoming")
     assert [t["task_id"] for t in tasks] == ["real-task"]
 
@@ -187,7 +204,6 @@ def test_summary_empty_done(query):
 
 def test_session_isolation_scopes_queries(tmp_path, queue_root):
     _write_json_task(queue_root, "incoming", "mine")
-    # A different session sees an empty (uninitialised) queue.
     other = QueueQuery(session_id="other-session", harness=HARNESS, base_dir=tmp_path)
     assert other.count("incoming") == 0
 
@@ -195,8 +211,7 @@ def test_session_isolation_scopes_queries(tmp_path, queue_root):
 # --- CLI -------------------------------------------------------------------
 
 def _cli(tmp_path, *args):
-    return main(["--base-dir", str(tmp_path), "--session-id", SESSION,
-                 "--harness", HARNESS, *args])
+    return main(["--base-dir", str(tmp_path), "--session-id", SESSION, "--harness", HARNESS, *args])
 
 
 def test_cli_size_dispatch(tmp_path, queue_root, capsys):
@@ -239,7 +254,7 @@ def test_cli_summary_dispatch(tmp_path, queue_root, capsys):
 
 
 def test_cli_invalid_older_than_returns_2(tmp_path, queue_root, capsys):
-    """A negative --older-than raises QueueQueryError → clean exit code 2."""
+    """A negative --older-than raises QueueQueryError -> clean exit code 2."""
     rc = _cli(tmp_path, "orphans", "--older-than", "-5")
     assert rc == 2
     assert "error:" in capsys.readouterr().err
@@ -272,32 +287,3 @@ def test_corrupt_task_file_does_not_abort_query(query, queue_root):
     tasks = {t["task_id"]: t for t in query.ls("incoming")}
     assert "good" in tasks
     assert "_error" in tasks["broken"]
-
-
-# --- fallback (installed-harness) path-math parity --------------------------
-
-def test_fallback_used_when_queue_isolation_unavailable(tmp_path, monkeypatch):
-    """When queue_isolation cannot be imported, _import_queue_isolation returns a
-    drift-free fallback that yields the identical canonical layout-A path so the
-    skill still works once installed (where _meta/ is excluded)."""
-    import scripts.queue_query as qq
-
-    # Simulate the meta-skill being absent: poison the module so `import
-    # queue_isolation` raises ImportError inside _import_queue_isolation.
-    monkeypatch.setitem(sys.modules, "queue_isolation", None)
-    resolved = qq._import_queue_isolation()
-    assert isinstance(resolved, qq._FallbackQueueIsolation)
-
-    got = resolved.get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
-    expected = qi.get_queue_path(SESSION, HARNESS, base_dir=tmp_path)
-    assert got == expected
-
-
-def test_fallback_rejects_path_traversal(tmp_path):
-    """The fallback validates components, blocking traversal injection."""
-    from scripts.queue_query import _FallbackQueueIsolation
-
-    fb = _FallbackQueueIsolation()
-    with pytest.raises(QueueQueryError):
-        fb.get_queue_path("../escape", HARNESS, base_dir=tmp_path)
-

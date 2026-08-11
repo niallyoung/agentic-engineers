@@ -176,22 +176,28 @@ def audit_skill(skill_name: str) -> SkillAuditResult:
         result.errors.append(f"Directory not found: {skill_dir}")
         return result
 
-    # 2. Required files
-    for filename in REQUIRED_FILES:
+    # 2/3/4. Required files/dirs -- a skill with no scripts/ directory is
+    # PROSE-ONLY by design (the skills-first direction: a SKILL.md-only dir
+    # is valid and does not need scaffolded __init__.py/tests/). A skill that
+    # HAS a scripts/ dir is a Python skill and must have the full structure.
+    is_prose_only = not (skill_dir / "scripts").is_dir()
+    required_files = ["SKILL.md"] if is_prose_only else REQUIRED_FILES
+    required_dirs = [] if is_prose_only else REQUIRED_DIRS
+
+    for filename in required_files:
         if not (skill_dir / filename).exists():
             result.errors.append(f"Missing required file: {filename}")
 
-    # 3. Required directories
-    for dirname in REQUIRED_DIRS:
+    for dirname in required_dirs:
         if not (skill_dir / dirname).is_dir():
             result.errors.append(f"Missing required directory: {dirname}/")
 
-    # 4. At least one test file
-    tests_dir = skill_dir / "tests"
-    if tests_dir.is_dir():
-        test_files = list(tests_dir.glob("test_*.py"))
-        if not test_files:
-            result.errors.append("tests/ exists but contains no test_*.py files")
+    if not is_prose_only:
+        tests_dir = skill_dir / "tests"
+        if tests_dir.is_dir():
+            test_files = list(tests_dir.glob("test_*.py"))
+            if not test_files:
+                result.errors.append("tests/ exists but contains no test_*.py files")
 
     # 5. SKILL.md frontmatter
     skill_md = skill_dir / "SKILL.md"

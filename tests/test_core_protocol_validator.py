@@ -1,11 +1,21 @@
 """
-Tests for core_protocol_validator module.
+Tests for CoreProtocolValidator / ExtensionValidator.
 
 Covers CoreProtocolValidator (validate_delegate_core, validate_handback_core)
-and ExtensionValidator (validate_extensions, validate_handback_extensions).
+and ExtensionValidator (validate_extensions, validate_handback_extensions), as
+implemented by the protocol-validator skill (the single source of truth for
+DELEGATE/HANDBACK schema validation — see src/skills/protocol-validator/).
+
+Historical note: this file originally targeted a near-duplicate
+core_protocol_validator.py that lived in queue-management/scripts/. That
+module's unguarded import was a latent bug in installed harnesses and it was
+deleted as part of the framework slimdown (queue-management now consolidates
+to a single queue_ops.py); this file was retargeted to the surviving,
+canonical protocol_validator.py, whose CoreProtocolValidator/ExtensionValidator
+API is identical.
 
 TDD red-phase style: written to validate real behaviour of existing implementation.
-Target: >=90% branch coverage of core_protocol_validator.py
+Target: >=90% branch coverage of protocol_validator.py's core/extension validators.
 """
 import sys
 import time
@@ -13,14 +23,12 @@ from pathlib import Path
 import pytest
 
 # ── Path setup ─────────────────────────────────────────────────────────────
-# Add queue-management/scripts dir directly so core_protocol_validator is
-# importable without the 'scripts.' prefix (mirrors skill-internal test style).
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_QM_SCRIPTS = _REPO_ROOT / "src" / "skills" / "queue-management" / "scripts"
-if str(_QM_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_QM_SCRIPTS))
+_PV_SCRIPTS = _REPO_ROOT / "src" / "skills" / "protocol-validator" / "scripts"
+if str(_PV_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_PV_SCRIPTS))
 
-from core_protocol_validator import (
+from protocol_validator import (
     CoreProtocolValidator,
     ExtensionValidator,
     VALID_AGENTS,

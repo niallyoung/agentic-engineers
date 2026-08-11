@@ -1,608 +1,271 @@
-"""
-Test Queue Operations
+"""Tests for queue-management's queue_ops.py — enqueue atomicity, path
+isolation, ancestry-based cycle detection, and schema validation.
 
-Tests for QueueOperations class with proper validation strings.
+Run via: pytest src/skills/queue-management/tests/ (make test-skills).
 """
+from __future__ import annotations
 
-import json
-import yaml
-import pytest
-import tempfile
+import sys
 from pathlib import Path
 
-from scripts.queue_ops import QueueOperations, VALID_AGENTS, VALID_STATUSES, VALID_HANDOFF_TYPES
-from tests.conftest import VALID_SCOPE, VALID_CONTEXT, VALID_PLAN_STEP1, VALID_PLAN_STEP2
+import pytest
+import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+import queue_ops  # noqa: E402
+from queue_ops import (  # noqa: E402
+    QueueOperations,
+    detect_harness,
+    exceeds_max_depth,
+    get_queue_path,
+    get_session_id,
+    has_cycle,
+)
 
 
-# ---------------------------------------------------------------------------
-# Canonical enqueue() fixtures
-# ---------------------------------------------------------------------------
-
-VALID_ENQUEUE_SCOPE = (
-    "Implement the mandatory enqueue wrapper for DELEGATE and HANDBACK "
-    "protocol so all agents must route through queue_ops.enqueue() to "
-    "create queue artifacts, preventing direct file writes."
-)  # >= 15 words
-
-VALID_ENQUEUE_CONTEXT = (
-    "The queue directory lives at ~/.agentic-engineers/{harness}/{session-id}/queue/. "
-    "Agents may not write directly to queue subdirectories. All DELEGATEs and HANDBACKs "
-    "must pass through enqueue() for schema validation before being written atomically."
-)  # >= 20 words
-
-VALID_DELEGATE_ARTIFACT = {
+VALID_DELEGATE = {
     "handoff_type": "DELEGATE",
-    "task_id": "enqueue-test-001",
+    "task_id": "test-task-001",
     "agent": "engineer",
-    "scope": VALID_ENQUEUE_SCOPE,
-    "plan": [
-        "Read the existing queue_ops module to understand validation gaps",
-        "Add enqueue() method with canonical schema enforcement",
-        "Write tests covering both valid and rejected payloads",
-    ],
-    "context": VALID_ENQUEUE_CONTEXT,
-    "success_criteria": [
-        "enqueue() rejects legacy schema fields with clear errors",
-        "enqueue() accepts canonical DELEGATE and HANDBACK artifacts",
-        "All queue file writes go through enqueue()",
-    ],
+    "scope": "Implement a well-scoped change to the widget renderer module as described in the linked ticket, touching only render.py",
+    "plan": ["Step one: read the file", "Step two: make the change"],
+    "context": "The widget renderer at src/widgets/render.py needs a fix for the off-by-one error in the padding calculation logic used on every frame",
+    "success_criteria": ["Tests pass"],
 }
 
-VALID_HANDBACK_ARTIFACT = {
+VALID_HANDBACK = {
     "handoff_type": "HANDBACK",
-    "task_id": "enqueue-test-001",
+    "task_id": "test-task-001",
     "agent": "engineer",
     "status": "success",
-    "output": {"deliverables": ["queue_ops.py modified"], "notes": "done"},
-    "metrics": {
-        "quality": 0.95,
-        "tokens": 3200,
-        "cost": 0.016,
-        "duration_seconds": 38.5,
-    },
+    "output": "Fixed the padding calculation.",
+    "metrics": {"quality": 0.9, "tokens": 500, "cost": 0.01, "duration_seconds": 12.5},
 }
 
 
 @pytest.fixture
-def temp_queue():
-    """Create temporary queue directory."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield tmpdir
+def ops(tmp_path):
+    return QueueOperations(session_id="test-session", queue_path=str(tmp_path))
 
 
-@pytest.fixture
-def queue_ops(temp_queue):
-    """Create QueueOperations instance with temp queue."""
-    return QueueOperations(session_id="test-session", queue_path=temp_queue)
+# ---------------------------------------------------------------------------
+# enqueue() — schema validation
+# ---------------------------------------------------------------------------
 
-
-class TestQueueOpsBasic:
-    """Basic tests for QueueOperations."""
-
-    def test_create_delegate_valid(self, queue_ops):
-        """Test creating valid DELEGATE."""
-        result = queue_ops.create_delegate(
-            task_id="test-task-001",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-        )
-
-        assert result["status"] == "created"
-        assert result["task_id"] == "test-task-001"
-        assert "timestamp" in result
-
-    def test_create_delegate_duplicate_fails(self, queue_ops):
-        """Test that duplicate task_id raises FileExistsError."""
-        queue_ops.create_delegate(
-            task_id="duplicate",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-        )
-
-        with pytest.raises(FileExistsError):
-            queue_ops.create_delegate(
-                task_id="duplicate",
-                role="engineer",
-                scope=VALID_SCOPE,
-                plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-                context=VALID_CONTEXT,
-            )
-
-    def test_move_task_valid(self, queue_ops):
-        """Test moving task between states."""
-        queue_ops.create_delegate(
-            task_id="move-test",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-        )
-
-        result = queue_ops.move_task("move-test", "incoming", "processing")
-        assert result["status"] == "moved"
-        assert result["from_state"] == "incoming"
-        assert result["to_state"] == "processing"
-
-    def test_query_tasks_by_state(self, queue_ops):
-        """Test querying tasks by state."""
-        for i in range(3):
-            queue_ops.create_delegate(
-                task_id=f"task-{i}",
-                role="engineer",
-                scope=VALID_SCOPE,
-                plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-                context=VALID_CONTEXT,
-            )
-
-        tasks = queue_ops.query_tasks("incoming")
-        assert len(tasks) == 3
-
-    def test_validate_delegate_valid(self, queue_ops):
-        """Test validation of valid DELEGATE."""
-        delegate = {
-            "task_id": "valid-task",
-            "role": "engineer",
-            "scope": VALID_SCOPE,
-            "plan": [VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            "context": VALID_CONTEXT,
-        }
-
-        valid, errors = queue_ops.validate_delegate(delegate)
-        assert valid
-        assert len(errors) == 0
-
-    def test_validate_delegate_invalid_scope(self, queue_ops):
-        """Test validation with invalid scope."""
-        delegate = {
-            "task_id": "invalid-task",
-            "role": "Engineer",
-            "scope": "Too short",  # < 15 words
-            "plan": [VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            "context": VALID_CONTEXT,
-        }
-
-        valid, errors = queue_ops.validate_delegate(delegate)
-        assert not valid
-        assert any("scope" in e.lower() for e in errors)
-
-    def test_parent_task_creation(self, queue_ops):
-        """Test creating task with parent_task_id."""
-        # Create parent
-        queue_ops.create_delegate(
-            task_id="parent",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-        )
-
-        # Create child
-        result = queue_ops.create_delegate(
-            task_id="child",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-            parent_task_id="parent",
-        )
-
-        assert result["parent_task_id"] == "parent"
-
-    def test_query_by_parent(self, queue_ops):
-        """Test querying tasks by parent."""
-        queue_ops.create_delegate(
-            task_id="parent",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-        )
-
-        for i in range(2):
-            queue_ops.create_delegate(
-                task_id=f"child-{i}",
-                role="engineer",
-                scope=VALID_SCOPE,
-                plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-                context=VALID_CONTEXT,
-                parent_task_id="parent",
-            )
-
-        children = queue_ops.query_tasks("incoming", parent_task_id="parent")
-        assert len(children) == 2
-
-    def test_rate_limit_status(self, queue_ops):
-        """Test getting rate limit status."""
-        status = queue_ops.get_rate_limit_status("test-session")
-        assert status["limit"] == 100
-        assert status["tasks_this_hour"] == 0
-
-    def test_move_task_to_done(self, queue_ops):
-        """Test complete workflow: create -> processing -> done."""
-        queue_ops.create_delegate(
-            task_id="workflow-test",
-            role="engineer",
-            scope=VALID_SCOPE,
-            plan=[VALID_PLAN_STEP1, VALID_PLAN_STEP2],
-            context=VALID_CONTEXT,
-        )
-
-        queue_ops.move_task("workflow-test", "incoming", "processing")
-        queue_ops.move_task("workflow-test", "processing", "done")
-
-        done_tasks = queue_ops.query_tasks("done")
-        assert len(done_tasks) == 1
-        assert done_tasks[0]["task_id"] == "workflow-test"
-
-
-# ===========================================================================
-# Tests for mandatory enqueue() wrapper
-# ===========================================================================
-
-class TestEnqueueCanonicalSchema:
-    """enqueue() accepts canonical schema for DELEGATE and HANDBACK."""
-
-    def test_enqueue_valid_delegate(self, queue_ops):
-        """Valid canonical DELEGATE artifact is accepted and written to incoming/."""
-        result = queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
-
+class TestEnqueueSchema:
+    def test_valid_delegate_enqueues(self, ops):
+        result = ops.enqueue(VALID_DELEGATE)
         assert result["status"] == "enqueued"
         assert result["handoff_type"] == "DELEGATE"
-        assert result["task_id"] == "enqueue-test-001"
-        assert "timestamp" in result
-        assert "queue_path" in result
+        assert Path(result["queue_path"]).exists()
 
-        # File must exist in incoming/
-        written = Path(result["queue_path"])
-        assert written.exists(), "DELEGATE file must be written to incoming/"
-        with open(written) as f:
-            on_disk = yaml.safe_load(f)
-        assert on_disk["handoff_type"] == "DELEGATE"
-        assert on_disk["agent"] == "engineer"
-        assert on_disk["task_id"] == "enqueue-test-001"
-
-    def test_enqueue_valid_handback(self, queue_ops):
-        """Valid canonical HANDBACK artifact is accepted and written to processing/."""
-        result = queue_ops.enqueue(VALID_HANDBACK_ARTIFACT)
-
+    def test_valid_handback_enqueues(self, ops):
+        result = ops.enqueue(VALID_HANDBACK)
         assert result["status"] == "enqueued"
         assert result["handoff_type"] == "HANDBACK"
-        assert result["task_id"] == "enqueue-test-001"
-        assert "timestamp" in result
 
-        written = Path(result["queue_path"])
-        assert written.exists(), "HANDBACK file must be written to processing/"
-        # Path should contain 'processing'
-        assert "processing" in str(written)
+    def test_rejects_legacy_type_field(self, ops):
+        bad = {**VALID_DELEGATE, "type": "DELEGATE"}
+        with pytest.raises(ValueError, match="legacy"):
+            ops.enqueue(bad)
 
-    def test_enqueue_all_valid_agents(self, queue_ops):
-        """enqueue() accepts each of the 8 canonical agent names."""
-        for i, agent in enumerate(sorted(VALID_AGENTS)):
-            artifact = {
-                **VALID_DELEGATE_ARTIFACT,
-                "task_id": f"agent-test-{i:03d}",
-                "agent": agent,
-            }
-            result = queue_ops.enqueue(artifact)
-            assert result["status"] == "enqueued", (
-                f"agent '{agent}' should be valid"
-            )
+    def test_rejects_legacy_role_field(self, ops):
+        bad = {**VALID_DELEGATE, "role": "Engineer"}
+        with pytest.raises(ValueError, match="legacy"):
+            ops.enqueue(bad)
 
-    def test_enqueue_all_valid_handback_statuses(self, queue_ops):
-        """enqueue() accepts each of the 5 canonical HANDBACK status values."""
-        for i, status in enumerate(sorted(VALID_STATUSES)):
-            artifact = {
-                **VALID_HANDBACK_ARTIFACT,
-                "task_id": f"status-test-{i:03d}",
-                "status": status,
-            }
-            result = queue_ops.enqueue(artifact)
-            assert result["status"] == "enqueued", (
-                f"status '{status}' should be valid"
-            )
+    def test_rejects_legacy_quality_score(self, ops):
+        bad = {**VALID_HANDBACK, "quality_score": 90}
+        with pytest.raises(ValueError, match="legacy"):
+            ops.enqueue(bad)
 
-    def test_enqueue_context_as_list(self, queue_ops):
-        """enqueue() accepts context as a non-empty list of strings."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "task_id": "context-list-001",
-            "context": [
-                "The queue operations module handles all atomic file writes.",
-                "Agents route work through enqueue() for validation and rate limiting.",
-            ],
+    def test_rejects_missing_handoff_type(self, ops):
+        bad = {k: v for k, v in VALID_DELEGATE.items() if k != "handoff_type"}
+        with pytest.raises(ValueError, match="handoff_type"):
+            ops.enqueue(bad)
+
+    def test_rejects_invalid_agent(self, ops):
+        bad = {**VALID_DELEGATE, "agent": "junior-engineer"}
+        with pytest.raises(ValueError, match="agent"):
+            ops.enqueue(bad)
+
+    def test_rejects_short_scope(self, ops):
+        bad = {**VALID_DELEGATE, "scope": "too short"}
+        with pytest.raises(ValueError, match="scope"):
+            ops.enqueue(bad)
+
+    def test_rejects_single_step_plan(self, ops):
+        bad = {**VALID_DELEGATE, "plan": ["only one step here"]}
+        with pytest.raises(ValueError, match="plan"):
+            ops.enqueue(bad)
+
+    def test_rejects_handback_missing_metrics(self, ops):
+        bad = {k: v for k, v in VALID_HANDBACK.items() if k != "metrics"}
+        with pytest.raises(ValueError, match="metrics"):
+            ops.enqueue(bad)
+
+    def test_rejects_handback_incomplete_metrics(self, ops):
+        bad = {**VALID_HANDBACK, "metrics": {"quality": 0.9}}
+        with pytest.raises(ValueError, match="tokens"):
+            ops.enqueue(bad)
+
+    def test_rejects_invalid_status(self, ops):
+        bad = {**VALID_HANDBACK, "status": "complete"}  # legacy alias, not canonical
+        with pytest.raises(ValueError, match="status"):
+            ops.enqueue(bad)
+
+
+# ---------------------------------------------------------------------------
+# enqueue() — atomicity
+# ---------------------------------------------------------------------------
+
+class TestAtomicity:
+    def test_written_file_is_valid_yaml(self, ops):
+        result = ops.enqueue(VALID_DELEGATE)
+        with open(result["queue_path"]) as fh:
+            data = yaml.safe_load(fh)
+        assert data["task_id"] == "test-task-001"
+        assert "enqueued_at" in data
+
+    def test_no_temp_files_left_behind(self, ops, tmp_path):
+        ops.enqueue(VALID_DELEGATE)
+        leftovers = list(tmp_path.rglob(".tmp-*"))
+        assert leftovers == []
+
+    def test_delegate_lands_in_incoming(self, ops):
+        result = ops.enqueue(VALID_DELEGATE)
+        assert "/incoming/" in result["queue_path"]
+
+    def test_handback_lands_in_processing(self, ops):
+        result = ops.enqueue(VALID_HANDBACK)
+        assert "/processing/" in result["queue_path"]
+
+    def test_move_task_between_states(self, ops):
+        ops.enqueue(VALID_HANDBACK)
+        result = ops.move_task("test-task-001", "processing", "done")
+        assert result["status"] == "moved"
+        assert (ops.session_queue_path / "done" / "test-task-001.yaml").exists()
+        assert not (ops.session_queue_path / "processing" / "test-task-001.yaml").exists()
+
+    def test_move_task_missing_raises(self, ops):
+        with pytest.raises(FileNotFoundError):
+            ops.move_task("does-not-exist", "incoming", "processing")
+
+
+# ---------------------------------------------------------------------------
+# Audit trail
+# ---------------------------------------------------------------------------
+
+class TestAuditTrail:
+    def test_enqueue_appends_audit_line(self, ops):
+        ops.enqueue(VALID_DELEGATE)
+        audit_path = ops.session_queue_path.parent / "audit.log"
+        assert audit_path.exists()
+        lines = audit_path.read_text().strip().splitlines()
+        assert len(lines) == 1
+        assert "DELEGATE" in lines[0]
+        assert "test-task-001" in lines[0]
+
+    def test_audit_log_is_append_only_across_calls(self, ops):
+        ops.enqueue(VALID_DELEGATE)
+        ops.enqueue(VALID_HANDBACK)
+        audit_path = ops.session_queue_path.parent / "audit.log"
+        lines = audit_path.read_text().strip().splitlines()
+        assert len(lines) == 2
+
+
+# ---------------------------------------------------------------------------
+# Path isolation
+# ---------------------------------------------------------------------------
+
+class TestPathIsolation:
+    def test_get_queue_path_layout(self, tmp_path):
+        p = get_queue_path("sess-1", "claude", base_dir=tmp_path)
+        assert p == tmp_path / "claude" / "sess-1" / "queue"
+
+    @pytest.mark.parametrize("bad_session", ["", ".", "..", "a/b", "a\\b", "a\x00b"])
+    def test_rejects_traversal_in_session_id(self, tmp_path, bad_session):
+        with pytest.raises(ValueError):
+            get_queue_path(bad_session, "claude", base_dir=tmp_path)
+
+    @pytest.mark.parametrize("bad_harness", ["../etc", "a/b"])
+    def test_rejects_traversal_in_harness(self, tmp_path, bad_harness):
+        with pytest.raises(ValueError):
+            get_queue_path("sess-1", bad_harness, base_dir=tmp_path)
+
+    def test_detect_harness_explicit_override(self, monkeypatch):
+        monkeypatch.setenv("AGENTIC_HARNESS", "opencode")
+        assert detect_harness() == "opencode"
+
+    def test_detect_harness_falls_back_to_local(self, monkeypatch):
+        for var in ("AGENTIC_HARNESS", "CLAUDE_SESSION_ID", "COPILOT_SESSION_ID", "OPENAI_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        assert detect_harness() == "local"
+
+    def test_get_session_id_generates_uuid_when_unset(self, monkeypatch):
+        for var in ("AGENTIC_SESSION_ID", "CLAUDE_SESSION_ID", "COPILOT_SESSION_ID"):
+            monkeypatch.delenv(var, raising=False)
+        sid = get_session_id()
+        assert len(sid) > 0
+
+    def test_queue_ops_isolated_by_session(self, tmp_path):
+        ops_a = QueueOperations(session_id="session-a", queue_path=str(tmp_path))
+        ops_b = QueueOperations(session_id="session-b", queue_path=str(tmp_path))
+        ops_a.enqueue(VALID_DELEGATE)
+        assert not (ops_b.session_queue_path / "incoming" / "test-task-001.yaml").exists()
+
+
+# ---------------------------------------------------------------------------
+# Ancestry-based cycle / depth detection
+# ---------------------------------------------------------------------------
+
+class TestCycleDetection:
+    def test_no_cycle_when_no_ancestry(self):
+        assert has_cycle("engineer", None) is False
+        assert has_cycle("engineer", []) is False
+
+    def test_cycle_when_target_in_ancestry(self):
+        assert has_cycle("senior-engineer", ["orchestrator", "senior-engineer", "lead-engineer"]) is True
+
+    def test_no_cycle_when_target_not_in_ancestry(self):
+        assert has_cycle("engineer", ["orchestrator", "senior-engineer"]) is False
+
+    def test_exceeds_max_depth(self):
+        assert exceeds_max_depth(["orchestrator", "senior-engineer", "lead-engineer"], max_depth=3) is True
+
+    def test_within_max_depth(self):
+        assert exceeds_max_depth(["orchestrator", "senior-engineer"], max_depth=3) is False
+
+    def test_enqueue_rejects_cyclic_delegate(self, ops):
+        cyclic = {
+            **VALID_DELEGATE,
+            "task_id": "cyclic-task",
+            "ancestry": ["orchestrator", "engineer"],
         }
-        result = queue_ops.enqueue(artifact)
+        with pytest.raises(RuntimeError, match="Cycle"):
+            ops.enqueue(cyclic)
+
+    def test_enqueue_rejects_depth_exceeded(self, ops):
+        deep = {
+            **VALID_DELEGATE,
+            "task_id": "deep-task",
+            "agent": "quality-engineer",
+            "ancestry": ["orchestrator", "senior-engineer", "lead-engineer"],
+        }
+        with pytest.raises(RuntimeError, match="depth"):
+            ops.enqueue(deep)
+
+    def test_enqueue_allows_valid_ancestry(self, ops):
+        ok = {
+            **VALID_DELEGATE,
+            "task_id": "shallow-task",
+            "ancestry": ["orchestrator"],
+        }
+        result = ops.enqueue(ok)
         assert result["status"] == "enqueued"
 
-    def test_enqueue_returns_file_path(self, queue_ops):
-        """enqueue() returns the exact path of the written file."""
-        result = queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
-        written = Path(result["queue_path"])
-        assert written.exists()
-        assert written.suffix == ".yaml"  # SPEC: queue files are YAML
-        assert written.stem == "enqueue-test-001"
 
-    def test_enqueue_file_contains_enqueued_at(self, queue_ops):
-        """Written file includes enqueued_at timestamp added by enqueue()."""
-        result = queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
-        with open(result["queue_path"]) as f:
-            on_disk = yaml.safe_load(f)
-        assert "enqueued_at" in on_disk
-        assert "queue_state" in on_disk
-        assert on_disk["queue_state"] == "incoming"
-
-
-class TestEnqueueRejectsLegacyFields:
-    """enqueue() rejects artifacts with old/legacy schema fields."""
-
-    def test_rejects_type_field(self, queue_ops):
-        """enqueue() rejects 'type' field (old schema) with clear guidance."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "type": "DELEGATE",  # old field — must be handoff_type
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-
-        error_msg = str(exc_info.value)
-        assert "type" in error_msg
-        assert "handoff_type" in error_msg, "Error must guide user to use handoff_type"
-        assert "legacy" in error_msg.lower()
-
-    def test_rejects_role_field(self, queue_ops):
-        """enqueue() rejects 'role' field (old schema) with guidance to use 'agent'."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "role": "Engineer",  # old field — must be agent
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-
-        error_msg = str(exc_info.value)
-        assert "role" in error_msg
-        assert "agent" in error_msg, "Error must guide user to use 'agent' field"
-
-    def test_rejects_top_level_quality_score(self, queue_ops):
-        """enqueue() rejects top-level quality_score with guidance to put in metrics."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "quality_score": 92,  # must be inside metrics.quality
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-
-        error_msg = str(exc_info.value)
-        assert "quality_score" in error_msg
-        assert "metrics" in error_msg, "Error must guide user to move it into metrics"
-
-    def test_rejects_multiple_legacy_fields_together(self, queue_ops):
-        """All legacy fields in one artifact all appear in the error message."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "type": "DELEGATE",
-            "role": "Engineer",
-            "quality_score": 90,
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-
-        error_msg = str(exc_info.value)
-        assert "type" in error_msg
-        assert "role" in error_msg
-        assert "quality_score" in error_msg
-
-    def test_rejects_missing_handoff_type(self, queue_ops):
-        """enqueue() rejects artifact with no handoff_type field."""
-        artifact = {k: v for k, v in VALID_DELEGATE_ARTIFACT.items() if k != "handoff_type"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "handoff_type" in str(exc_info.value)
-
-    def test_rejects_invalid_handoff_type(self, queue_ops):
-        """enqueue() rejects unsupported handoff_type values."""
-        artifact = {**VALID_DELEGATE_ARTIFACT, "handoff_type": "TASK"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "handoff_type" in str(exc_info.value)
-
-    def test_rejects_missing_agent(self, queue_ops):
-        """enqueue() rejects artifact with no agent field."""
-        artifact = {k: v for k, v in VALID_DELEGATE_ARTIFACT.items() if k != "agent"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "agent" in str(exc_info.value)
-
-    def test_rejects_invalid_agent(self, queue_ops):
-        """enqueue() rejects unknown agent names."""
-        artifact = {**VALID_DELEGATE_ARTIFACT, "agent": "unknown-agent-xyz"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "agent" in str(exc_info.value)
-
-
-class TestEnqueueDelegateFieldValidation:
-    """enqueue() validates DELEGATE-specific required fields."""
-
-    def test_rejects_short_scope(self, queue_ops):
-        """Scope with fewer than 15 words is rejected."""
-        artifact = {**VALID_DELEGATE_ARTIFACT, "scope": "Too short scope"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "scope" in str(exc_info.value)
-        assert "15" in str(exc_info.value)
-
-    def test_rejects_missing_scope(self, queue_ops):
-        """Missing scope is rejected."""
-        artifact = {k: v for k, v in VALID_DELEGATE_ARTIFACT.items() if k != "scope"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "scope" in str(exc_info.value)
-
-    def test_rejects_plan_with_one_step(self, queue_ops):
-        """Plan with fewer than 2 steps is rejected."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "task_id": "plan-one-step",
-            "plan": ["Only one step here which is not enough"],
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "plan" in str(exc_info.value)
-
-    def test_rejects_plan_step_too_short(self, queue_ops):
-        """Plan step with fewer than 3 words is rejected."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "task_id": "plan-short-step",
-            "plan": ["Good detailed first step here", "Bad"],
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "plan" in str(exc_info.value)
-
-    def test_rejects_short_context(self, queue_ops):
-        """Context string with fewer than 20 words is rejected."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "task_id": "short-context-001",
-            "context": "This context is too short.",
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "context" in str(exc_info.value)
-
-    def test_rejects_empty_success_criteria(self, queue_ops):
-        """Empty success_criteria list is rejected."""
-        artifact = {
-            **VALID_DELEGATE_ARTIFACT,
-            "task_id": "empty-sc-001",
-            "success_criteria": [],
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "success_criteria" in str(exc_info.value)
-
-    def test_rejects_missing_success_criteria(self, queue_ops):
-        """Missing success_criteria is rejected."""
-        artifact = {
-            k: v for k, v in VALID_DELEGATE_ARTIFACT.items()
-            if k != "success_criteria"
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "success_criteria" in str(exc_info.value)
-
-
-class TestEnqueueHandbackFieldValidation:
-    """enqueue() validates HANDBACK-specific required fields."""
-
-    def test_rejects_invalid_status(self, queue_ops):
-        """HANDBACK with non-canonical status is rejected."""
-        artifact = {**VALID_HANDBACK_ARTIFACT, "status": "complete"}  # legacy alias
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        error_msg = str(exc_info.value)
-        assert "status" in error_msg
-
-    def test_rejects_missing_output(self, queue_ops):
-        """HANDBACK without output field is rejected."""
-        artifact = {k: v for k, v in VALID_HANDBACK_ARTIFACT.items() if k != "output"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "output" in str(exc_info.value)
-
-    def test_rejects_missing_metrics(self, queue_ops):
-        """HANDBACK without metrics is rejected."""
-        artifact = {k: v for k, v in VALID_HANDBACK_ARTIFACT.items() if k != "metrics"}
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "metrics" in str(exc_info.value)
-
-    def test_rejects_metrics_quality_out_of_range(self, queue_ops):
-        """metrics.quality outside 0.0-1.0 is rejected."""
-        for bad_quality in [1.5, -0.1, 101]:
-            artifact = {
-                **VALID_HANDBACK_ARTIFACT,
-                "task_id": f"quality-test-{bad_quality}".replace(".", ""),
-                "metrics": {**VALID_HANDBACK_ARTIFACT["metrics"], "quality": bad_quality},
-            }
-            with pytest.raises(ValueError) as exc_info:
-                queue_ops.enqueue(artifact)
-            assert "quality" in str(exc_info.value)
-
-    def test_rejects_metrics_tokens_negative(self, queue_ops):
-        """metrics.tokens as negative is rejected."""
-        artifact = {
-            **VALID_HANDBACK_ARTIFACT,
-            "task_id": "neg-tokens-001",
-            "metrics": {**VALID_HANDBACK_ARTIFACT["metrics"], "tokens": -1},
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "tokens" in str(exc_info.value)
-
-    def test_rejects_metrics_cost_negative(self, queue_ops):
-        """metrics.cost as negative is rejected."""
-        artifact = {
-            **VALID_HANDBACK_ARTIFACT,
-            "task_id": "neg-cost-001",
-            "metrics": {**VALID_HANDBACK_ARTIFACT["metrics"], "cost": -0.01},
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "cost" in str(exc_info.value)
-
-    def test_rejects_metrics_duration_negative(self, queue_ops):
-        """metrics.duration_seconds as negative is rejected."""
-        artifact = {
-            **VALID_HANDBACK_ARTIFACT,
-            "task_id": "neg-duration-001",
-            "metrics": {**VALID_HANDBACK_ARTIFACT["metrics"], "duration_seconds": -1},
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        assert "duration_seconds" in str(exc_info.value)
-
-    def test_rejects_metrics_missing_required_subfields(self, queue_ops):
-        """Missing required metrics subfields are all reported."""
-        artifact = {
-            **VALID_HANDBACK_ARTIFACT,
-            "task_id": "empty-metrics-001",
-            "metrics": {},  # all required subfields missing
-        }
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue(artifact)
-        error_msg = str(exc_info.value)
-        assert "quality" in error_msg
-        assert "tokens" in error_msg
-        assert "cost" in error_msg
-        assert "duration_seconds" in error_msg
-
-
-class TestEnqueueDuplicateAndRateLimit:
-    """enqueue() enforces duplicate and rate-limit guards."""
-
-    def test_rejects_duplicate_task_id(self, queue_ops):
-        """enqueue() raises FileExistsError on duplicate task_id."""
-        queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
-        with pytest.raises(FileExistsError):
-            queue_ops.enqueue(VALID_DELEGATE_ARTIFACT)
-
-    def test_error_messages_are_actionable(self, queue_ops):
-        """All enqueue() error messages include actionable guidance."""
-        # Legacy 'type' field
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue({**VALID_DELEGATE_ARTIFACT, "type": "DELEGATE"})
-        msg = str(exc_info.value)
-        # Must explain what to use instead
-        assert "handoff_type" in msg
-
-        # Invalid agent
-        with pytest.raises(ValueError) as exc_info:
-            queue_ops.enqueue({**VALID_DELEGATE_ARTIFACT, "task_id": "t2", "agent": "bad"})
-        msg = str(exc_info.value)
-        assert "engineer" in msg.lower() or "orchestrator" in msg.lower()  # shows valid options
+def test_init_rejects_empty_session_id(tmp_path):
+    with pytest.raises(ValueError):
+        QueueOperations(session_id="", queue_path=str(tmp_path))

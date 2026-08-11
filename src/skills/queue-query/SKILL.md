@@ -14,11 +14,7 @@ metadata:
   role: orchestrator
   model: claude-haiku-4.5
   effort: medium
-  dependencies:
-    - skill: queue-isolation
-      optional: true
-    - skill: queue-management
-      optional: true
+  dependencies: []
 entry_points:
   - scripts/queue_query.py
 tests:
@@ -33,18 +29,16 @@ write/move operations in `queue-management`. Provides the visibility the
 orchestrator poll-loop does not expose: backlog sizing, stale-task (orphan)
 detection for resumption, and completed-task summaries.
 
-Path math is delegated to the canonical `queue-isolation` skill; this skill
-never builds queue paths by hand. When `queue-isolation` is unavailable (e.g. a
-rendered harness where `_meta/` is excluded from the install tree) it falls back
-to a drift-free internal copy of the canonical layout-A path math, so the skill
-remains functional once installed. Reads are **format-agnostic** so the whole
-queue is observable regardless of whether a task was written as `*.json`
-(QueueOperations) or `*.yaml` (orchestrator).
+Path isolation (session/harness detection, traversal-safe path construction) is
+self-contained — inlined the same way as `queue-management/scripts/queue_ops.py`,
+rather than imported from the deleted `_meta/queue-isolation` skill. Reads are
+**format-agnostic** so the whole queue is observable regardless of whether a
+task was written as `*.json` or `*.yaml`.
 
 ## Canonical queue layout
 
 ```
-~/.agentic-engineers/artifacts/<session_id>/<harness>/queue/
+~/.agentic-engineers/<harness>/<session_id>/queue/
   incoming/    processing/    done/    failed/
 ```
 

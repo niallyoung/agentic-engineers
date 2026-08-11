@@ -243,7 +243,7 @@ def copy_skill(src: Path, dst: Path) -> None:
         shutil.rmtree(dst)
 
     def ignore(_dir: str, names: list[str]) -> set[str]:
-        ignored = {".git", ".DS_Store", "__pycache__", ".coverage", ".pytest_cache"}
+        ignored = {".git", ".DS_Store", "__pycache__", ".coverage", ".pytest_cache", "tests"}
         return {name for name in names if name in ignored or name.endswith(".pyc")}
 
     shutil.copytree(src, dst, ignore=ignore)

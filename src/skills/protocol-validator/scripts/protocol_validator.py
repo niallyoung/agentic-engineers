@@ -626,27 +626,51 @@ class ProtocolValidator:
     Performance: <5ms total (core <1ms, extensions <2ms).
     """
 
-    def __init__(self, spec_path: str = "docs/specs/protocol-core-v1.0.yaml"):
+    # Render-time artifact: the skill ships its own copy of the schema so
+    # resolution works when installed into a harness (e.g.
+    # ~/.claude/skills/protocol-validator/...), where a repo-root-relative
+    # lookup like docs/specs/... points outside the installed tree entirely.
+    # docs/specs/protocol-core-v1.0.yaml remains the canonical, EDITABLE
+    # source; keep this copy in sync with it (see SKILL.md).
+    _SKILL_LOCAL_SPEC = Path(__file__).resolve().parent.parent / "schema" / "protocol-core-v1.0.yaml"
+
+    def __init__(self, spec_path: Optional[str] = None):
         """
         Initialize validator with spec file.
-        
+
+        Resolution order when ``spec_path`` is omitted:
+          1. Skill-local copy: ``<skill>/schema/protocol-core-v1.0.yaml`` --
+             always present alongside this script in an installed harness.
+          2. Repo-root canonical source: ``docs/specs/protocol-core-v1.0.yaml``
+             -- fallback for in-repo use if the skill-local copy is missing.
+
         Args:
-            spec_path: Path to protocol spec YAML (relative to repo root)
-        
+            spec_path: Explicit override path to a protocol spec YAML. A
+                relative value is resolved against the repo root (in-repo use
+                only -- do not rely on this in an installed harness). Absolute
+                paths are used as-is. Omit to use the resolution order above.
+
         Raises:
-            FileNotFoundError: If spec file not found
-            yaml.YAMLError: If spec YAML is malformed
+            FileNotFoundError: If no spec file can be resolved.
+            yaml.YAMLError: If spec YAML is malformed.
         """
-        self.spec_path = Path(spec_path)
-        
-        # Find spec relative to repo root if path is relative
-        if not self.spec_path.is_absolute():
-            repo_root = Path(__file__).resolve().parents[4]  # src/skills/protocol-validator/scripts/script.py -> repo root
-            self.spec_path = repo_root / spec_path
-        
+        if spec_path is not None:
+            candidate = Path(spec_path)
+            if not candidate.is_absolute():
+                repo_root = Path(__file__).resolve().parents[4]  # src/skills/protocol-validator/scripts/script.py -> repo root
+                candidate = repo_root / spec_path
+            self.spec_path = candidate
+        elif self._SKILL_LOCAL_SPEC.exists():
+            self.spec_path = self._SKILL_LOCAL_SPEC
+        else:
+            self.spec_path = Path(__file__).resolve().parents[4] / "docs" / "specs" / "protocol-core-v1.0.yaml"
+
         if not self.spec_path.exists():
-            raise FileNotFoundError(f"Protocol spec not found: {self.spec_path}")
-        
+            raise FileNotFoundError(
+                f"Protocol spec not found: {self.spec_path} "
+                f"(checked skill-local schema/ and repo-root docs/specs/)"
+            )
+
         # Load and cache spec
         with open(self.spec_path, 'r') as f:
             self.spec = yaml.safe_load(f)
@@ -801,8 +825,8 @@ def main():
     )
     parser.add_argument(
         '--spec',
-        default='docs/specs/protocol-core-v1.0.yaml',
-        help='Path to protocol spec YAML (default: docs/specs/protocol-core-v1.0.yaml)'
+        default=None,
+        help='Path to protocol spec YAML (default: skill-local schema/, falling back to repo-root docs/specs/)'
     )
     parser.add_argument(
         '--json',
