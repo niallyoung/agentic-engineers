@@ -76,6 +76,17 @@ _QUEUE_SUBDIRS = ("incoming", "processing", "done", "failed")
 # hops from the root DELEGATE; a depth-3 agent must not itself spawn.
 MAX_DELEGATION_DEPTH = 3
 
+# LOCKED spec requirement (docs/SPEC.md > Queue Architecture & Paths > Enforcement Rules):
+# Error message MUST mention canonical path and list all unsupported legacy paths.
+# Source: SPEC-2026-008 (2026-08-13), referencing the Unsupported Legacy Paths table.
+CANONICAL_QUEUE_TEMPLATE = "~/.agentic-engineers/{harness}/{session-id}/queue/"  # legacy-path-deny-list
+
+UNSUPPORTED_LEGACY_PATHS = [
+    "~/.copilot/queue/",  # legacy-path-deny-list
+    "~/.claude/queue/",  # legacy-path-deny-list
+    "artifacts/queue/",  # legacy-path-deny-list
+]
+
 
 # ---------------------------------------------------------------------------
 # Path isolation (inlined from the now-deleted src/skills/_meta/queue-isolation
@@ -133,10 +144,28 @@ def get_session_id() -> str:
 
 
 def get_queue_path(session_id: str, harness: str, *, base_dir: Optional[Path] = None) -> Path:
-    """Canonical queue path: <base_dir>/<harness>/<session_id>/queue/."""
+    """Canonical queue path: <base_dir>/<harness>/<session_id>/queue/.
+
+    Raises:
+        ValueError: If session_id or harness contains invalid characters or path separators.
+                   Error message cites the canonical path template and lists unsupported
+                   legacy paths per SPEC-2026-008 (docs/SPEC.md > Queue Architecture & Paths).
+    """
     base = Path(base_dir) if base_dir is not None else Path.home() / ".agentic-engineers"
-    safe_session = _validate_path_component(session_id, field="session_id")
-    safe_harness = _validate_path_component(harness, field="harness")
+    try:
+        safe_session = _validate_path_component(session_id, field="session_id")
+        safe_harness = _validate_path_component(harness, field="harness")
+    except ValueError as e:
+        # Re-raise with enriched message that cites canonical path and legacy paths
+        # (LOCKED spec requirement: SPEC-2026-008, docs/SPEC.md > Enforcement Rules)
+        enriched_msg = (
+            f"{e}\n\n"
+            f"Canonical queue path template: {CANONICAL_QUEUE_TEMPLATE}\n"
+            f"Unsupported legacy paths (must not be used):\n"
+        )
+        for legacy_path in UNSUPPORTED_LEGACY_PATHS:
+            enriched_msg += f"  - {legacy_path}\n"
+        raise ValueError(enriched_msg) from e
     return base / safe_harness / safe_session / "queue"
 
 

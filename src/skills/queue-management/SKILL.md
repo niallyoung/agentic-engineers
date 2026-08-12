@@ -94,7 +94,7 @@ Orchestrator's own root-level DELEGATEs) skip this check entirely.
 ## API Surface
 
 `src/skills/queue-management/scripts/queue_ops.py` is the entire implementation
-(~440 LOC, no other scripts in this skill):
+(~460 LOC, no other scripts in this skill):
 
 - `QueueOperations(session_id, queue_path=..., harness=...)` — constructor; ensures
   `incoming/processing/done/failed/` exist.
@@ -102,6 +102,12 @@ Orchestrator's own root-level DELEGATEs) skip this check entirely.
 - `.move_task(task_id, from_state, to_state) -> dict` — atomic state transition.
 - `detect_harness()`, `get_session_id()`, `get_queue_path()` — path isolation helpers,
   also usable standalone by `queue-query` and other read-only inspection skills.
+  **Error behavior:** `get_queue_path()` raises `ValueError` if `session_id` or `harness`
+  contains invalid characters or path separators. Per the LOCKED spec
+  (SPEC-2026-008, `docs/SPEC.md` > Queue Architecture & Paths > Enforcement Rules),
+  the error message cites the canonical path template
+  (`~/.agentic-engineers/{harness}/{session-id}/queue/`) and lists all unsupported
+  legacy paths (`~/.copilot/queue/`, `~/.claude/queue/`, `artifacts/queue/`). <!-- legacy-path-deny-list -->
 - `has_cycle(target_role, ancestry)`, `exceeds_max_depth(ancestry)` — the cycle/depth
   predicates `enqueue()` uses internally, exposed for reuse.
 

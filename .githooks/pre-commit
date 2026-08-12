@@ -621,6 +621,13 @@ echo "✅ Source file integrity check passed"
 # - Block: ~/.claude/queue (DEPRECATED)
 # - Block: artifacts/queue (DEPRECATED)
 #
+# EXEMPTION MARKERS (per-line, narrowly scoped):
+# When a line legitimately names a legacy path (e.g., in a deny-list constant
+# or documentation explaining what paths are forbidden), mark it with:
+#   - Python/code: '# legacy-path-deny-list' at end of line
+#   - Markdown/docs: '<!-- legacy-path-deny-list -->' on same or previous line
+# This allows the hook to distinguish USING a path from DENOUNCING it.
+#
 # (No source-tree exceptions currently apply — the compat/archive paths this
 # section once exempted were deleted in the SPEC-2026-005 framework slimdown.)
 #
@@ -709,40 +716,59 @@ STAGED_QUEUE_FILES="$STAGED_QUEUE_FILES $STAGED_MD_FILES"
 
 for file in $STAGED_QUEUE_FILES; do
     [ -f "$file" ] || continue
-    
+
     # Skip exceptions: queue_compat.py, _archive/, and tests/
     if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]] || [[ "$file" == *"queue-path-validator"* ]]; then
         continue
     fi
-    
+
     # Check for legacy queue paths in staged content
-    
-    # Block: ~/.copilot/queue (except exceptions)
-    if git show ":$file" 2>/dev/null | grep -q "\.copilot/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
-            fail "Legacy queue path found in $file: ~/.copilot/queue"
-            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+    # Lines with explicit exemption markers are allowed (deny-list constants/docs)
+
+    file_content=$(git show ":$file" 2>/dev/null)
+
+    # Helper: check if a line has exemption marker (for code: '# legacy-path-deny-list', for docs: '<!-- legacy-path-deny-list -->')
+    has_exemption() {
+        local line="$1"
+        # Simple string matching (avoids regex escaping issues)
+        [[ "$line" == *"legacy-path-deny-list"* ]]
+    }
+
+    # Block: ~/.copilot/queue (unless line has exemption marker)
+    while IFS= read -r line; do
+        if [[ "$line" == *".copilot/queue"* ]]; then
+            if ! has_exemption "$line"; then
+                fail "Legacy queue path found in $file: ~/.copilot/queue"
+                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
+                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+            fi
         fi
-    fi
-    
-    # Block: ~/.claude/queue (except exceptions)
-    if git show ":$file" 2>/dev/null | grep -q "\.claude/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
-            fail "Legacy queue path found in $file: ~/.claude/queue"
-            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+    done <<< "$file_content"
+
+    # Block: ~/.claude/queue (unless line has exemption marker)
+    while IFS= read -r line; do
+        if [[ "$line" == *".claude/queue"* ]]; then
+            if ! has_exemption "$line"; then
+                fail "Legacy queue path found in $file: ~/.claude/queue"
+                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
+                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+            fi
         fi
-    fi
-    
-    # Block: artifacts/queue (except queue_compat.py and _archive/)
-    if git show ":$file" 2>/dev/null | grep -q "artifacts/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
-            fail "Legacy queue path found in $file: artifacts/queue"
-            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+    done <<< "$file_content"
+
+    # Block: artifacts/queue (unless line has exemption marker)
+    while IFS= read -r line; do
+        if [[ "$line" == *"artifacts/queue"* ]]; then
+            if ! has_exemption "$line"; then
+                fail "Legacy queue path found in $file: artifacts/queue"
+                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
+                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+            fi
         fi
-    fi
+    done <<< "$file_content"
 done
 
 if [ "$QUEUE_ERRORS" -gt 0 ]; then

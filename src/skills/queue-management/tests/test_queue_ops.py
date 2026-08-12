@@ -215,6 +215,32 @@ class TestPathIsolation:
         ops_a.enqueue(VALID_DELEGATE)
         assert not (ops_b.session_queue_path / "incoming" / "test-task-001.yaml").exists()
 
+    def test_enriched_error_mentions_canonical_path_on_invalid_session(self, tmp_path):
+        """AC1: rejected queue-path operation cites the canonical template."""
+        with pytest.raises(ValueError) as exc_info:
+            get_queue_path("bad/session", "claude", base_dir=tmp_path)
+        error_msg = str(exc_info.value)
+        assert "~/.agentic-engineers/{harness}/{session-id}/queue/" in error_msg
+
+    def test_enriched_error_lists_legacy_paths_on_invalid_harness(self, tmp_path):
+        """AC1: rejected queue-path operation lists all unsupported legacy paths."""
+        with pytest.raises(ValueError) as exc_info:
+            get_queue_path("sess-1", "bad/harness", base_dir=tmp_path)
+        error_msg = str(exc_info.value)
+        # Verify all legacy paths are listed
+        assert "~/.copilot/queue/" in error_msg
+        assert "~/.claude/queue/" in error_msg
+        assert "artifacts/queue/" in error_msg
+
+    def test_enriched_error_on_empty_session_id(self, tmp_path):
+        """AC1: enriched message on path validation failure."""
+        with pytest.raises(ValueError) as exc_info:
+            get_queue_path("", "claude", base_dir=tmp_path)
+        error_msg = str(exc_info.value)
+        # Should contain both canonical template and legacy paths
+        assert "~/.agentic-engineers/{harness}/{session-id}/queue/" in error_msg
+        assert "~/.copilot/queue/" in error_msg
+
 
 # ---------------------------------------------------------------------------
 # Ancestry-based cycle / depth detection
