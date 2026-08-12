@@ -533,5 +533,4 @@ When multiple configuration sources exist, they are applied in this order:
 
 - [Claude Code Harness Setup](./harness-setup/claude.md)
 - [Troubleshooting Guide](../HARNESS-CLAUDE-TROUBLESHOOTING.md)
-- [Harness Integration Reference](../src/harnesses/claude_code/INTEGRATION.md)
 - [Complete Harness Comparison](./harness-setup/README.md)

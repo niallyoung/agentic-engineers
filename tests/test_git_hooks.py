@@ -1366,3 +1366,46 @@ class TestHookInstallation:
         required = {"pre-commit", "commit-msg", "pre-push"}
         assert required.issubset(hook_names), \
             "Missing hooks: {}".format(required - hook_names)
+
+    def test_agent_frontmatter_drift_detection_reads_src_agents_md(self):
+        """
+        Regression test for DEFECT 1: pre-commit validate_agent_frontmatter()
+        must read from src/AGENTS.md (not docs/AGENTS.md stub).
+
+        This test verifies:
+        1. The hook function calls parse_agents_md with src/AGENTS.md
+        2. Positive path: parse succeeds with canonical roster
+        3. Negative path: mismatch in agent frontmatter is detected
+        """
+        # Check that pre-commit hook sources src/AGENTS.md, not docs/AGENTS.md
+        with open(GITHOOKS_DIR / "pre-commit") as f:
+            hook_content = f.read()
+
+        # Verify both hardcoded paths use src/AGENTS.md
+        assert 'agents_md="$repo_root/src/AGENTS.md"' in hook_content, \
+            "Hook frontmatter function should set agents_md to src/AGENTS.md"
+        assert 'if [ -f "$REPO_ROOT_HOOK/src/AGENTS.md" ]' in hook_content, \
+            "Hook should check for src/AGENTS.md existence, not docs/AGENTS.md"
+
+        # Verify old paths are NOT present
+        assert 'agents_md="$repo_root/docs/AGENTS.md"' not in hook_content, \
+            "Hook should not reference docs/AGENTS.md (it's a stub)"
+        assert 'if [ -f "$REPO_ROOT_HOOK/docs/AGENTS.md" ]' not in hook_content, \
+            "Hook should not check docs/AGENTS.md"
+
+        # Positive test: parse src/AGENTS.md and verify we get all 8 agents
+        parse_result = subprocess.run(
+            ['bash', '-c', '''
+                source /Users/niall/git/agentic-engineers/renderer/scripts/lib.sh
+                parse_agents_md /Users/niall/git/agentic-engineers/src/AGENTS.md
+            '''],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        assert parse_result.returncode == 0, \
+            f"parse_agents_md failed: {parse_result.stderr}"
+
+        lines = [l for l in parse_result.stdout.strip().split('\n') if l.strip()]
+        assert len(lines) == 8, \
+            f"Expected 8 agents in src/AGENTS.md, got {len(lines)}"

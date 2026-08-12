@@ -1,135 +1,77 @@
-# Agent & Integration Renderers
+# Agent & Skill Renderers
 
-Renders agentic-engineers configurations for different tools:
-- **Copilot CLI** (`~/.copilot/agents/`)
-- **π.dev Harness** (`~/.pi/agent/`)
-- **Codex** (`~/.codex/agents/`, `~/.codex/skills/`)
+Renders agentic-engineers' canonical `src/agents/` + `src/skills/` sources into
+per-tool target formats. Each harness gets a provider-specific rendering because
+frontmatter schemas, model-id formats, and directory layouts differ.
 
-## Quick Start
+## Supported harnesses
 
-### For π.dev (Recommended)
+| Harness | Render script | Install target | Output |
+|---|---|---|---|
+| Claude Code | `renderer/scripts/render-claude.sh` | `make install-claude` | `~/.claude/` |
+| Copilot CLI | `renderer/scripts/render-copilot.sh` + `render-copilot-agents.sh` | `make install-copilot` | `~/.copilot/` |
+| OpenCode | `renderer/scripts/render-opencode.sh` | `make install-opencode` | `~/.config/opencode/` |
+| Codex | `renderer/scripts/render-codex.py` | `make install-codex` | `~/.codex/` |
 
-```bash
-python3 renderer/scripts/render-pi-dev.py
-```
+Specs (SPEC.md + orchestration YAML) render separately via
+`renderer/scripts/render-specs.sh` → `make render-specs`.
 
-Renders agentic-engineers system prompt and agent roles into `~/.pi/agent/`. Then:
+## Quick start
 
-```bash
-cd /your/project
-pi
-# Now running with agentic-engineers identity & agent roles
-```
-
-See [PI-DEV-RENDERER.md](./PI-DEV-RENDERER.md) for full documentation.
-
-### For Copilot CLI (Legacy)
+From the repo root:
 
 ```bash
-python3 renderer/scripts/render-copilot-agents.py
+make render-all      # generate dist/{claude,copilot,opencode,codex,specs}/
+make install         # render + install the default harness set (marker-aware)
 ```
 
-Renders agentic-engineers agent definitions into `~/.copilot/agents/`.
+Or render/install a single harness, e.g.:
+
+```bash
+make render-claude    # generate dist/claude/
+make install-claude   # render fresh + install → ~/.claude/
+```
+
+All install targets are marker-aware: they never overwrite a user's own
+agents, skills, or config files. `make status` reports drift between `dist/`
+and each installed target.
 
 ## Structure
 
 ```
 renderer/
-├── pi-dev-src/                      — π.dev config sources
-│   ├── SYSTEM.md                    — System prompt (replaces π.dev default)
-│   ├── AGENTS.md                    — Agent role definitions
-│   └── settings.json                — Model/UI defaults
-│
 ├── scripts/
-│   ├── render-pi-dev.py             — π.dev renderer (NEW)
+│   ├── render-claude.sh             — Claude Code renderer
+│   ├── render-copilot.sh            — Copilot CLI skills + docs renderer
+│   ├── render-copilot-agents.sh/py  — Copilot CLI agent renderer
+│   ├── render-opencode.sh           — OpenCode renderer
 │   ├── render-codex.py              — Codex renderer
-│   └── render-copilot-agents.py     — Copilot CLI renderer
-│
-├── PI-DEV-RENDERER.md               — π.dev integration guide
-├── instructions/                    — Global instructions
-├── hooks/                           — Enforcement hooks
-└── README.md                        — This file
+│   ├── render-specs.sh              — SPEC.md + orchestration YAML renderer
+│   ├── unified-install.sh           — shared backup + install flow (all harnesses)
+│   ├── validate_renders.py          — dist/ vs src/skills/ sync check
+│   ├── check_test_regression.py     — pytest collection-count regression gate
+│   ├── claude-delegate-guard.py     — Claude PreToolUse hook enforcing DELEGATE protocol
+│   └── lib.sh                       — shared shell helpers
+├── lib/                             — shared Python rendering helpers
+├── validate_agents.py               — src/agents/ frontmatter + registration validator
+├── validate_skills.py               — src/skills/ frontmatter + registry validator
+└── README.md                        — this file
 ```
-
-## Renderers
-
-### π.dev Renderer
-
-**What**: Renders agentic-engineers into π.dev harness
-**How**: `python3 renderer/scripts/render-pi-dev.py`
-**Where**: `renderer/pi-dev-src/` → `~/.pi/agent/`
-**Docs**: [PI-DEV-RENDERER.md](./PI-DEV-RENDERER.md)
-
-**Key features**:
-- 100% system prompt control from bootstrap
-- No π.dev forking required
-- Works with standard `pi` binary (v0.74.0+)
-- SYSTEM.md completely replaces π.dev default
-
-**Files generated**:
-- `~/.pi/agent/SYSTEM.md` — Master system prompt
-- `~/.pi/agent/AGENTS.md` — Agent role context
-- `~/.pi/agent/settings.json` — Model defaults
-
-### Copilot CLI Renderer
-
-**What**: Renders agentic-engineers agents for Copilot CLI
-**How**: `python3 renderer/scripts/render-copilot-agents.py`
-**Docs**: See script documentation
-
-### Codex Renderer
-
-**What**: Renders agentic-engineers custom agents, skills, and config for Codex
-**How**: `make render-codex` for `dist/codex/`, or `make install-codex` for the explicit Codex install path
-**Where**: `src/agents/` → `~/.codex/agents/`; `src/skills/` → `~/.codex/skills/`
-
-Codex custom agents are TOML files and are spawned only when explicitly
-requested by the user/session. The renderer installs a concise `AGENTS.md`
-that preserves the Orchestrator-first DELEGATE/HANDBACK workflow.
 
 ## Maintenance
 
-### Source Files
+All source files (`src/agents/`, `src/skills/`) are committed; rendered
+output under `dist/` and installed copies under `~/.claude/`, `~/.copilot/`,
+etc. are regenerable and not committed (`dist/` is gitignored).
 
-All source files are committed:
-```bash
-git log renderer/pi-dev-src/        # View history
-git log renderer/scripts/render-*.py # View renderer history
-```
+Update workflow:
 
-### Rendered Output
-
-Rendered files in `~/.pi/`, `~/.copilot/` are **local only** (not committed).
-
-### Update Workflow
-
-1. **Modify** source files in `renderer/pi-dev-src/` (or `src/agents/`)
-2. **Render** with the appropriate renderer script
-3. **Test** with pi or copilot CLI
-4. **Commit** source file changes to git
-
-Example:
-```bash
-# Edit system prompt
-vim renderer/pi-dev-src/SYSTEM.md
-
-# Render to ~/.pi/agent/
-python3 renderer/scripts/render-pi-dev.py
-
-# Test
-pi "What can you do?"
-
-# Commit source changes
-git add renderer/pi-dev-src/SYSTEM.md
-git commit -m "Update agentic-engineers system prompt"
-```
-
-## Integration Timeline
-
-- **π.dev** (May 2026): Primary integration, full system prompt control
-- **Copilot CLI** (ongoing): Agent definitions, custom agents
+1. Edit source files under `src/agents/` or `src/skills/`.
+2. Re-render: `make render-all` (or the single-harness target).
+3. Validate: `make validate-renders && make validate-agents && make validate-skills`.
+4. Commit the source changes — never the rendered `dist/` output.
 
 ## See Also
 
-- [PI-DEV-RENDERER.md](./PI-DEV-RENDERER.md) — π.dev integration guide
-- [Global Enforcement Infrastructure](../setup/) — Copilot CLI enforcement hooks
+- `src/AGENTS.md` — canonical roster, roles, and models.
+- `docs/RENDERING.md` — full rendering pipeline documentation.

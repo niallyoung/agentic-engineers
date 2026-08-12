@@ -21,7 +21,7 @@ for the canonical description.
 **Practical consequence:** there is no standalone background service to install,
 run under systemd, containerize, or scale horizontally. "Deploying agentic-engineers"
 today means installing the framework's agent/skill definitions into a harness
-(Claude Code, OpenCode, Copilot CLI, Codex, π.dev) and invoking that harness's
+(Claude Code, OpenCode, Copilot CLI, Codex) and invoking that harness's
 Orchestrator agent interactively — see the sections below.
 
 ---
@@ -40,7 +40,6 @@ make install-opencode      # OpenCode CLI
 make install-copilot       # Copilot CLI
 make install-claude        # Claude Code
 make install-codex         # Codex CLI/IDE
-make install-pi            # π.dev (experimental)
 ```
 
 By default this installs under your home directory. For an isolated/sandboxed
@@ -125,7 +124,7 @@ that produced it.
 **Periodically:**
 - Prune old per-session queue partitions under `~/.agentic-engineers/{harness}/` if
   disk usage matters to you — each is just DELEGATE/HANDBACK YAML plus artifacts.
-- Keep the harness CLI itself (Claude Code / OpenCode / Copilot CLI / Codex / π.dev)
+- Keep the harness CLI itself (Claude Code / OpenCode / Copilot CLI / Codex)
   up to date per its own release process; agentic-engineers has no dependencies of its
   own to patch beyond what `make install` renders.
 

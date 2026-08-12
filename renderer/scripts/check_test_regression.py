@@ -2,28 +2,29 @@
 """
 Regression gate: enforce minimum test counts per harness and overall.
 
-INTERIM STATE (SPEC-2026-005, framework slimdown, WP-0 — 2026-08-11):
-The Wave 2 per-harness and full-suite baselines below have been set
-PERMISSIVE (floors of 0) for the duration of the multi-package slimdown
-(~165k LOC across src/orchestration, src/harnesses, src/examples,
-src/internal, src/harness, src/claude, src/copilot, src/evals,
-src/standardization, src/audit, src/config, src/opencode, most of docs/,
-17 auxiliary skills, and ~67k LOC of tests). A volume-based floor cannot
-gate a deliberate mass deletion. The three per-harness baselines
-(opencode/claude_code/copilot-cli) have been dropped entirely: those test
-directories cover src/harnesses/ modules with zero production callers and
-are deleted as part of this slimdown.
+FINAL STATE (SPEC-2026-005, framework slimdown, WP-5 — 2026-08-12):
+WP-0 through WP-4 of the slimdown deleted ~165k LOC across src/orchestration,
+src/harnesses, src/examples, src/internal, src/harness, src/claude,
+src/copilot, src/evals, src/standardization, src/audit, src/config,
+src/opencode, most of docs/, 17 auxiliary skills, and ~67k LOC of tests. A
+volume-based floor could not gate that deliberate mass deletion, so the gate
+ran permissive (floor 0) for the duration. The three per-harness baselines
+(opencode/claude_code/copilot-cli) were dropped entirely: those test
+directories covered src/harnesses/ modules with zero production callers and
+were deleted as part of the slimdown.
 
-WP-5 of the slimdown re-baselines this gate from measured post-deletion
-actuals and restores real (non-zero) floors. Until then this gate is a
-no-op that exists only so CI keeps a "Gate 5" step to re-populate later.
+WP-5 re-baselines this gate from the measured post-deletion actual: a plain
+`python3 -m pytest tests/ --collect-only -q` on the fully-slimmed tree (8
+skills, 8 agents, 4 harnesses — no pi) collected 940 tests. The floor below
+is ~95% of that actual, giving headroom for small legitimate future removals
+without re-permitting a silent mass regression.
 
-Prior baselines (from harness-compatibility-baseline.md, 2026-06-14, now
+Prior baselines (from harness-compatibility-baseline.md, 2026-06-14, long
 retired — kept here for historical reference only):
   - OpenCode harness tests:    94  (tests/harnesses/opencode/)   [removed]
   - Claude Code harness tests: 103 (tests/harnesses/claude_code/) [removed]
   - Copilot CLI harness tests:  71 (tests/harnesses/copilot-cli/) [removed]
-  - Full test suite:          4925 (total passing, excluding skipped/xfailed)
+  - Full test suite (pre-slimdown): 4925 (total passing, excluding skipped/xfailed)
 
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
@@ -34,11 +35,12 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Interim permissive floor during SPEC-2026-005 slimdown; WP-5 restores real minimums.
+# Re-baselined in WP-5 (2026-08-12) from the measured post-slimdown actual of
+# 940 collected tests; floor is ~95% of that actual (940 * 0.95 = 893).
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 0,
+        "minimum": 893,
         "label": "Full test suite",
     },
 }
@@ -82,7 +84,7 @@ def count_collected(test_path: str) -> int:
 
 def main() -> int:
     failures = []
-    print("Regression Gate — interim permissive baseline (SPEC-2026-005)")
+    print("Regression Gate — post-slimdown baseline (SPEC-2026-005, WP-5)")
     print("=" * 60)
 
     for key, spec in BASELINES.items():

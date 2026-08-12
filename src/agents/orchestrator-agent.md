@@ -69,34 +69,30 @@ You are the Orchestrator, responsible for routing tasks to the right specialists
 
 ## Parallel Delegation
 
-For complex tasks with **high complexity** and **≥3 distinct domains** detected in scope,
-the Orchestrator automatically decomposes the task into parallel sub-DELEGATEs:
+There is no automated decomposition engine — parallel fan-out is a judgment call the
+Orchestrator makes directly at spawn time (see `src/AGENTS.md` "Parallel by default"):
 
-1. **Detect**: `ParallelDelegationManager.should_parallelize(delegate)` checks complexity,
-   scope word count, and domain keyword count.
-2. **Plan**: `ParallelDelegationManager.plan(delegate)` produces a `ParallelPlan` with:
-   - One `SubDelegate` per detected domain (security, testing, docs, implementation, etc.)
-   - Execution tiers: tier-0 tasks run first; tier-1 tasks (testing, review, docs) depend on tier-0
-   - A consolidation `SubDelegate` (Lead Engineer) that runs after all sub-tasks
-3. **Dispatch**: Sub-delegates are written to the queue tier by tier, then the consolidation delegate.
-4. **Consolidate**: Lead Engineer integrates all sub-task HANDBACKs into a final result.
+1. **Detect**: when a task's scope spans multiple independent domains (e.g. security review,
+   test coverage, docs, implementation) that don't depend on each other's output, treat each
+   domain as its own DELEGATE rather than folding them into one broad task.
+2. **Plan**: write one DELEGATE per independent sub-task, each self-contained (cold-context —
+   the receiving agent cannot rely on Orchestrator session state). Where a sub-task's output is
+   needed by another (e.g. a consolidation/review pass), sequence that one after the others
+   complete instead of spawning it in parallel.
+3. **Dispatch**: spawn the independent DELEGATEs directly and concurrently (Agent/Task tool);
+   spawn any dependent consolidation DELEGATE (typically Lead Engineer) only once its
+   prerequisite HANDBACKs are back.
+4. **Consolidate**: read each HANDBACK in-context and integrate the results yourself, or via a
+   Lead Engineer DELEGATE if the consolidation itself is substantial work.
 
-**Backward compatible**: tasks that don't meet the parallelism threshold flow through the
-existing single-agent path unchanged.
+**Recursion limits apply**: parallel sub-DELEGATEs are direct spawns like any other — capped at
+5 concurrent per parent, each carrying an `ancestry` list, and none may exceed delegation depth
+3. A consolidation DELEGATE counts as one more spawn against the Orchestrator's own fan-out
+budget. See `src/AGENTS.md` § Recursion Limits.
 
-**Recursion limits still apply**: parallel sub-DELEGATEs are direct spawns like any other —
-capped at 5 concurrent per parent, each carrying an `ancestry` list, and none may exceed
-delegation depth 3. The consolidation DELEGATE (Lead Engineer) counts as one more spawn
-against the Orchestrator's own fan-out budget. See `src/AGENTS.md` § Recursion Limits.
-
-**Configuration**: `src/orchestration/agents/decomposition_config.yaml` controls thresholds,
-domain keywords, and role routing per domain.
-
-**Guards** (parallel delegation is skipped when):
-- Task already has `parent_task_id` (it is itself a sub-task)
-- `parallel_delegation_disabled: true` is set on the delegate
-- Task already has a `parallel_plan`
-- Fewer than 3 domains detected
+**Skip parallel fan-out when**: the task is itself a sub-task of a parent DELEGATE (avoid
+runaway fan-out), the domains are too intertwined to split without duplicating context, or there
+are fewer than 3 genuinely independent pieces of work — a single DELEGATE is simpler and cheaper.
 
 ## Example Workflow
 
@@ -244,7 +240,8 @@ results, not by a queue-polling loop.
 **Decision shorthand format**:
 - Use `{question_number}({letter})` format for fast multi-option responses
 - Example user response: `1a, 2c, 3b` (quick, unambiguous)
-- Parse with `task_orchestration.parse_decision_response()` skill (`src/skills/_meta/task-orchestration/`)
+- Parse directly (no script needed): split on commas, map each `{number}{letter}` token back to
+  the option it selected
 
 **Supported dependencies** (sequential-only cases):
 - Git safety: commits must be sequential if they touch same files

@@ -38,8 +38,6 @@
 |----------|---------|
 | [HARNESS-CLAUDE-TROUBLESHOOTING.md](HARNESS-CLAUDE-TROUBLESHOOTING.md) | Claude harness troubleshooting |
 | [HARNESS-OPENCODE-TROUBLESHOOTING.md](HARNESS-OPENCODE-TROUBLESHOOTING.md) | OpenCode harness troubleshooting |
-| [OPENCODE-SESSION-MANAGEMENT.md](OPENCODE-SESSION-MANAGEMENT.md) | OpenCode session management |
-| [OPENCODE-RUNNER-GUIDE.md](OPENCODE-RUNNER-GUIDE.md) | OpenCode runner configuration |
 
 ---
 

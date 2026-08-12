@@ -328,4 +328,3 @@ with open(os.path.expanduser('~/.claude/config/claude.jsonc')) as f:
 - [Harness Setup Overview](README.md)
 - [Claude Code Extension Guide](../claude-harness-extension.md)
 - [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md)
-- [Harness Integration Reference](../../src/harnesses/claude_code/INTEGRATION.md)

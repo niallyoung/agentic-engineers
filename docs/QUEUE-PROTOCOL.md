@@ -294,7 +294,7 @@ Each harness's Orchestrator only drains and processes its own queue partition. N
 **Current:** All harnesses now use the canonical path:
 - `~/.agentic-engineers/{harness}/{session-id}/queue/` ✅ REQUIRED
 
-If you encounter legacy path references, ensure the queue-isolation skill is properly initialized. See `src/skills/_meta/queue-isolation/SKILL.md` for configuration details.
+All harnesses now use the canonical queue path structure with no additional configuration needed.
 
 ---
 

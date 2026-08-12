@@ -70,7 +70,7 @@ Every SKILL.md ends with a `## Self-Improvement` section (before any version
 history). The template is in this skill's body above. Replace `[skill-name]`
 with the actual kebab-case skill name.
 
-High-traffic skills (orchestrator, agent-creator, session-analyzer,
+High-traffic skills (orchestrator, queue-management, spec-validator,
 spec-management) add this opening line before the template:
 
 > We aim for [skill-name] to feel like a knowledgeable colleague rather than

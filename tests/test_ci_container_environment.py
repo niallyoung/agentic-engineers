@@ -160,14 +160,12 @@ class TestContainerFilePaths:
 
     def test_python_path_validation(self):
         """Verify PYTHONPATH is correctly set in container."""
-        # Check that src can be imported
-        try:
-            import src.orchestration.agents.orchestrator
-            assert True, "src.orchestration.agents.orchestrator imported successfully"
-        except ImportError as e:
-            # In container, this should work if PYTHONPATH=/workspace:${PYTHONPATH}
-            # In local tests, it depends on setup
-            pass  # Allow for local test environment variance
+        # Check that src-rooted paths resolve (src/ has no importable dotted
+        # packages post-slimdown — skill dirs are hyphenated — so this checks
+        # a real framework file rather than a Python import).
+        assert Path("src/AGENTS.md").exists() or Path("/workspace/src/AGENTS.md").exists(), (
+            "src/AGENTS.md not resolvable — PYTHONPATH/WORKDIR may be misconfigured"
+        )
 
 
 class TestContainerFilePermissions:
@@ -262,7 +260,7 @@ class TestPython311Compatibility:
 
     def test_match_available(self):
         """Verify pathlib.Path.match() method (3.11+)."""
-        test_path = Path("src/orchestration/agents/orchestrator.py")
+        test_path = Path("src/skills/queue-management/scripts/queue_ops.py")
         # match() should work in 3.11+
         assert test_path.match("*.py"), "pathlib.Path.match() not working"
 
@@ -347,10 +345,12 @@ class TestDockerfileBuild:
         assert "WORKDIR" in content, "Dockerfile doesn't set WORKDIR"
 
     def test_dockerfile_has_healthcheck(self):
-        """Verify Dockerfile has import verification step."""
+        """Verify Dockerfile has a framework-file verification step."""
         dockerfile = Path("Dockerfile")
         content = dockerfile.read_text()
-        assert "import src.orchestration" in content, "Dockerfile missing import verification"
+        assert "src/AGENTS.md" in content and "src/SKILLS.md" in content, (
+            "Dockerfile missing framework file verification"
+        )
 
     def test_dockerfile_installs_dependencies(self):
         """Verify Dockerfile installs required dependencies."""
@@ -434,7 +434,7 @@ class TestPlatformDetection:
 
     def test_path_separator_handling(self):
         """Verify path separator handling is correct."""
-        test_path = Path("src") / "orchestration" / "agents"
+        test_path = Path("src") / "skills" / "queue-management"
         # Path should handle separators correctly regardless of platform
         parts = test_path.parts
         assert "src" in parts, "Path parts incorrect"
@@ -449,9 +449,16 @@ class TestContainerIntegration:
     """Integration tests that validate complete container setup."""
 
     def test_imports_work(self):
-        """Verify core imports work (requires PYTHONPATH set correctly)."""
+        """Verify core queue_ops import works (requires sys.path set correctly)."""
+        import sys as _sys
+
+        qm_scripts = Path("src/skills/queue-management/scripts")
+        if not qm_scripts.exists():
+            qm_scripts = Path("/workspace/src/skills/queue-management/scripts")
         try:
-            import src.orchestration.agents.orchestrator
+            if str(qm_scripts) not in _sys.path:
+                _sys.path.insert(0, str(qm_scripts))
+            import queue_ops  # noqa: F401
             assert True, "Core imports successful"
         except ImportError:
             # Allow for test environment variance

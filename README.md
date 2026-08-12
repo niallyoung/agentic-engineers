@@ -3,7 +3,7 @@
 A **multi-agent orchestration framework** for coordinating specialized AI agents
 through structured handoffs, quality gates, and cost-aware model selection.
 Designed for integration with coding CLIs: **OpenCode**, **Copilot**, **Claude**,
-**Codex**, **π.dev**.
+**Codex**.
 
 ## What It Is
 
@@ -24,7 +24,7 @@ spawning**, not queue polling:
 
 The framework is built to be **minimal, portable, and self-reducing**:
 
-- **Small AGENTS + SKILLS mechanisms** — a portable orchestration layer that works across harnesses (Claude, Copilot, OpenCode, Codex, π.dev) without proprietary integrations
+- **Small AGENTS + SKILLS mechanisms** — a portable orchestration layer that works across harnesses (Claude, Copilot, OpenCode, Codex) without proprietary integrations
 - **Framework self-reduction** — as base and frontier models improve, LOC and complexity are meant to decrease, not grow
 - **Eventual redundancy** — when harnesses compose and delegate work well by default, this coordination layer should fade into standard practice
 - **Harness comparative analysis** — the `src/ → make render → dist/ → make install → ~/.<harness>` pipeline lets the same agent/skill roster be compared across harnesses for feature parity and quality trade-offs
@@ -42,7 +42,7 @@ definitions, routing rules, and escalation paths live in
 ## Quick Start
 
 ```bash
-# Install the default harness set (OpenCode, Copilot, Claude, π.dev)
+# Install the default harness set (OpenCode, Copilot, Claude)
 make install
 
 # Or a single harness:
@@ -55,7 +55,6 @@ make render-claude
 make render-copilot
 make render-opencode
 make render-codex
-make render-pi
 make render-all      # every harness + dist/specs/
 ```
 
@@ -117,7 +116,6 @@ validates queue-protocol conformance. Run the full local suite with `make test`.
 | [Claude Code](docs/guides/harness-setup/claude.md) | Stable |
 | GitHub Copilot | Stable |
 | [Codex](docs/guides/harness-setup/codex.md) | Supported, opt-in install |
-| π.dev | Beta |
 
 ## Contributing
 

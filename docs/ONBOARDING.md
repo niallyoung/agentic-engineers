@@ -19,10 +19,10 @@
 
 ## HANDBACK Understanding
 
-- [ ] Read `orchestration/ORCHESTRATION-PROTOCOL.md` Sections 3–5
-- [ ] Understand all 12 required HANDBACK fields (task_id, handoff_type, status, deliverables, tests, quality_score, effort_actual, tokens_in, tokens_out, duration_minutes, notes, agent)
-- [ ] Know quality score routing: `90-100` = proceed ✅, `80-89` = proceed ✅, `70-79` = Lead Engineer review ⚠️, `60-69` = auto-rework 🔄, `<60` = escalate 🚨
-- [ ] Know that the **validator-computed score is authoritative** — agent self-reported `quality_score` is for calibration only
+- [ ] Read `docs/PROTOCOL.md` sections on HANDBACK structure and quality gates
+- [ ] Understand required HANDBACK fields (task_id, handoff_type, status, output, metrics {quality, tokens, cost, duration_seconds}, effort_actual, notes, agent)
+- [ ] Know quality score routing: `0.9-1.0` = proceed ✅, `0.8-0.89` = proceed ✅, `0.7-0.79` = Lead Engineer review ⚠️, `0.6-0.69` = auto-rework 🔄, `<0.6` = escalate 🚨
+- [ ] Know that quality metrics are authoritative — metrics.quality is the canonical score (0.0-1.0 float)
 - [ ] Understand `MAX_RETRIES = 2` hard cap; exceeding 2 retries escalates automatically to Principal Engineer
 - [ ] Understand the `retry_context` block required on all re-work DELEGATEs (previous score, failure reasons, specific failures)
 - [ ] Know task_id retry suffix convention: `-retry-1`, `-retry-2`, `-escalated`
@@ -31,9 +31,9 @@
 
 ## Metrics Understanding
 
-- [ ] Read `orchestration/ORCHESTRATION-PROTOCOL.md` Section 7
-- [ ] Know metrics are collected automatically per HANDBACK to `artifacts/metrics/YYYY-MM-DD-{task_id}-metrics.yaml`
-- [ ] Understand what `efficiency_score` measures: `quality_score_validator / (tokens_total / 1000)`
+- [ ] Read `docs/PROTOCOL.md` section on metrics collection
+- [ ] Know metrics are collected automatically per HANDBACK: quality (0.0-1.0), tokens (int), cost (USD), duration_seconds (float)
+- [ ] Understand cost-quality tradeoffs via Model Engineer's optimization recommendations
 - [ ] Understand what `rework_cost_ratio` measures: `tokens_total_all_attempts / tokens_total`
 - [ ] Know metrics enable Model Engineer to optimize routing and lower cost over time
 - [ ] Know `flag_for_model_engineer: true` triggers when `cost_overrun_pct > 50` or `re_work_count >= 2`

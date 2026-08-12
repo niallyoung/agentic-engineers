@@ -44,7 +44,6 @@ After `make install`, the framework automatically:
 ✅ **Directory Structure Created**
 - `~/.copilot/` — Copilot CLI agents + skills
 - `~/.claude/` — Claude Code agents
-- `~/.pi/` — π.dev experimental config
 - `~/.config/opencode/` — OpenCode agents + skills
 - ✅ **Automatic:** Created by `make install-*` targets
 
@@ -233,8 +232,7 @@ agentic-engineers/
 ├── dist/                # ← Generated build artifacts
 │   ├── claude/skills/   # Rendered for Claude CLI
 │   ├── copilot/skills/  # Rendered for Copilot CLI
-│   ├── opencode/skills/ # Rendered for OpenCode
-│   └── pi/skills/       # Rendered for π.dev
+│   └── opencode/skills/ # Rendered for OpenCode
 ├── ~/.claude/skills/    # ← User installation (auto-generated, don't edit)
 ├── ~/.copilot/skills/   # ← User installation (auto-generated, don't edit)
 └── ~/.config/opencode/skills/ # ← User installation (auto-generated, don't edit)
@@ -273,32 +271,20 @@ consistent prefixes so related skills group together and are easy to discover.
 
 | Prefix | Domain | Existing members |
 |--------|--------|------------------|
-| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query, queue-todo-sync |
-| `harness-*` | Harness-specific integration | harness-integration-tracker, harness-opencode-feature-sync |
-| `spec-*` | SPEC.md governance | spec-validator, spec-management, spec-extract |
-| `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator *(single source of truth)* |
-| `model-*` | Model routing / cost-quality | model-engineer, model-selection |
-| `cost-*` | Token / cost tracking | cost-aggregation, cost-budgeting |
-| `agent-*` / `skill-*` | Scaffolding | agent-creator / skill-creator |
+| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query |
+| `spec-*` | SPEC.md governance | spec-validator, spec-management |
+| `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator |
+| `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup, skill-improvement-feedback |
 
-**Internal vs. user-facing:** framework-internal "meta" skills live in
-`src/skills/_meta/` and are *not* part of the public skill catalog. Put plumbing
-(orchestration enforcement, queue isolation, eval harness) there; put
-agent-invokable capabilities directly under `src/skills/`.
+All skills are part of the public skill catalog in `src/skills/`.
 
-### Phase 3 Consolidation Summary
+### Framework Slimdown (2026-08-11)
 
-Four skills changed identity during consolidation:
-
-| Old name | New name / status | Change |
-|----------|-------------------|--------|
-| `todo-maintenance` | `queue-todo-sync` | Rename |
-| `opencode-feature-sync` | `harness-opencode-feature-sync` | Rename |
-| `protocol-validation` | merged into `protocol-validator` | Merge (single source of truth) |
-| `voice-notify` | *(removed)* | Deletion — use HANDBACK status + logging |
-
-Note: `queue-todo-sync` is itself removed as of the 2026-08-11 framework slimdown
-(SPEC-2026-005) — the surviving skill roster is documented in `src/SKILLS.md`.
+As part of SPEC-2026-005, the framework was consolidated to focus on core capabilities.
+The surviving skill roster is documented in `src/SKILLS.md`. Deleted skills include:
+queue-todo-sync, metrics-etl, tokenadvisor, agent-creator, consistency-checker,
+cost-aggregation, cost-budgeting, doc-quality-monitor, file-sync, harness-integration-tracker,
+local-model-runtime, model-selection, session-analyzer, testing, usage-tracking, and workflow-review.
 
 ---
 
@@ -314,7 +300,7 @@ authoritative; everything downstream is regenerated, never hand-edited.
      SKILL.md             tests/      ───►     → dist/claude/   ───►  → ~/.claude/skills/
      scripts/           tests/ (cross-skill)   → dist/copilot/        → ~/.copilot/skills/
      references/        make verify            → dist/opencode/       → ~/.config/opencode/skills/
-     tests/             pytest tests/ -q       → dist/pi/             (+ π.dev)
+     tests/             pytest tests/ -q       → (run via test harness)
 ```
 
 1. **Create** — Author the skill in `src/skills/<name>/` with a `SKILL.md`
@@ -587,7 +573,7 @@ python scripts/detect_circular_imports.py
 make test
 
 # 5. Harness render (if you touched skills or agents)
-make render-copilot render-claude render-opencode render-pi render-specs
+make render-copilot render-claude render-opencode render-codex render-specs
 
 # 6. Verify manifest
 make verify
@@ -773,7 +759,7 @@ Different harnesses have incompatible model format requirements:
 | Copilot CLI | `claude-opus-4.8`, `claude-opus-4.6` (multi-model) | Dots in version |
 | OpenCode | `claude-opus-4.7` | Hyphens in version (limitation) |
 | Claude Code | `opus` | Short alias |
-| π.dev | `claude-opus-4.6`, `claude-opus-4.8` | Anthropic API format (dots) |
+| Codex | `claude-opus-5` | Codex custom format |
 
 Note: Principal and Security Engineer roles support multi-model selection. Orchestrator chooses the appropriate opus variant (4.6, 4.7, or 4.8) at DELEGATE-creation time based on task complexity. See SPEC.md > Model Selection Architecture.
 

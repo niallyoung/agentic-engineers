@@ -77,17 +77,14 @@ python3 renderer/scripts/render-claude.sh
 ```
 
 **Core skills expected:**
-- consistency-checker
-- cost-aggregation
-- cost-budgeting
-- model-selection
-- orchestrator/task-routing
+- orchestrator
+- spec-management
+- skill-improvement-feedback
+- codex-agent-cleanup
 - protocol-validator
 - queue-management
 - queue-query
-- spec-management
-- tokenadvisor
-- usage-tracking
+- spec-validator
 
 ---
 
@@ -196,8 +193,8 @@ EOF
 grep -A 5 "required_fields:" ~/.claude/config/schemas/handback-schema.yaml
 
 # If schemas missing or invalid, regenerate from repo
-cp src/orchestration/handback-schema.yaml ~/.claude/config/schemas/
-cp src/orchestration/delegate-schema.yaml ~/.claude/config/schemas/
+cp docs/specs/handback-schema.yaml ~/.claude/config/schemas/
+cp docs/specs/delegate-schema.yaml ~/.claude/config/schemas/
 
 # Then verify protocols
 make install-claude
@@ -532,7 +529,7 @@ python3 -m src.harness.harness_checker --harness claude
 ## Further Reading
 
 - [`~/.claude/config/AGENTS.md`](docs/guides/harness-setup/claude.md) — Claude Code agent setup
-- [`src/orchestration/delegate-schema.yaml`](src/orchestration/delegate-schema.yaml) — DELEGATE block schema
-- [`src/orchestration/handback-schema.yaml`](src/orchestration/handback-schema.yaml) — HANDBACK block schema
+- [`docs/specs/delegate-schema.yaml`](docs/specs/delegate-schema.yaml) — DELEGATE block schema
+- [`docs/specs/handback-schema.yaml`](docs/specs/handback-schema.yaml) — HANDBACK block schema
 - [`docs/guides/harness-setup/README.md`](docs/guides/harness-setup/README.md) — Harness comparison
 - [`docs/guides/claude-harness-extension.md`](docs/guides/claude-harness-extension.md) — Extension guide

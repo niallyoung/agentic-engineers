@@ -459,8 +459,8 @@ enters the system.
 
 ## Task Orchestration: Parallelization & Decision Protocol
 
-All agents default to the autonomous execution pattern in
-`src/skills/_meta/task-orchestration/SKILL.md`: **maximize throughput by parallelizing
+All agents default to the reduced autonomy pattern specified in
+`src/AGENTS.md` (Direct Sub-Agent Spawn Execution Model / Pause Condition): **maximize throughput by parallelizing
 all independent tasks; pause only for genuine decisions, never for task sequencing.**
 
 | Type | Definition | Agent action |

@@ -40,7 +40,7 @@ For harness-specific installation/rendering problems, see:
 - [docs/HARNESS-CLAUDE-TROUBLESHOOTING.md](../HARNESS-CLAUDE-TROUBLESHOOTING.md)
 - [docs/HARNESS-OPENCODE-TROUBLESHOOTING.md](../HARNESS-OPENCODE-TROUBLESHOOTING.md)
 
-(Copilot CLI, Codex, and π.dev do not yet have dedicated troubleshooting docs; if you
+(Copilot CLI and Codex do not yet have dedicated troubleshooting docs; if you
 hit a harness-specific problem there, treat the general sections below as your
 starting point.)
 

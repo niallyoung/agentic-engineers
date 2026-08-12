@@ -79,24 +79,6 @@ _STATUS_REGISTRY: List[Dict[str, Any]] = [
         "expected": VALID_STATUSES,
         "allows_legacy": False,
     },
-    {
-        "path": "src/skills/queue-management/scripts/validators.py",
-        "name": "CANONICAL_HANDBACK_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": True,  # deliberately adds legacy aliases
-    },
-    {
-        "path": "src/orchestration/protocol/validation.py",
-        "name": "valid_statuses (inline list)",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
-    {
-        "path": "src/orchestration/agents/quality_validator.py",
-        "name": "VALID_HANDBACK_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
 ]
 
 
@@ -308,8 +290,12 @@ def scan_protocol_divergence(repo_root: Optional[Path] = None) -> ProtocolDiverg
         (r"class.*EscalationHandler", "Custom escalation handler class (should use orchestrator)"),
     ]
 
+    # NOTE: src/orchestration/ (the original scan target) was deleted in the
+    # framework slimdown; src/agents/ is prose-only (*.md, never *.py), so
+    # this scan is currently a structural no-op. Left in place — rglob("*.py")
+    # over src/skills/ would self-match this file's own escalation-shaped
+    # helper names, which is worse than doing nothing.
     orchestrator_paths = [
-        repo_root / "src/orchestration",
         repo_root / "src/agents",
     ]
 

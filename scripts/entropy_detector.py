@@ -4,14 +4,11 @@ Entropy Detector — Credential detection using entropy analysis and pattern mat
 Identifies high-entropy strings that likely represent secrets (API keys, tokens,
 database passwords, etc.) to prevent credential leakage in commits.
 
-NOTE (SPEC-2026-005 framework slimdown, WP-0): this is a stdlib-only copy of
-src/orchestration/security/entropy_detector.py, rescued here so that
-.github/workflows/security-gate.yml's entropy-based credential scan keeps
-working after src/orchestration/ is deleted (later WP). Kept as a copy rather
-than a move so the original package (and its existing test coverage in
-tests/test_security_core.py) is undisturbed until that deletion actually
-happens. Once src/orchestration/ is removed, this file becomes the sole
-surviving copy and this note can be deleted.
+NOTE (SPEC-2026-005 framework slimdown, WP-0/WP-5): this is a stdlib-only copy
+of the former src/orchestration/security/entropy_detector.py, rescued here so
+that .github/workflows/security-gate.yml's entropy-based credential scan keeps
+working. src/orchestration/ was deleted in WP-1/WP-5 — this is now the sole
+surviving copy.
 """
 
 import re

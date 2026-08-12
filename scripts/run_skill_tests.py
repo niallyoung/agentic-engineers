@@ -4,9 +4,12 @@ run_skill_tests.py — Execute every src/skills/**/tests/ suite in CI.
 
 ## Why this exists (C6)
 
-`pytest.ini` sets `testpaths = tests`, so the ~1,200 tests living under
-`src/skills/*/tests/` (and `src/skills/_meta/*/tests/`) were never collected
-by `make test` / CI — 36 skills' worth of test files had zero CI visibility.
+`pytest.ini` sets `testpaths = tests`, so tests living under `src/skills/*/tests/`
+are never collected by `make test` / CI on their own — each surviving skill's
+test files need their own CI visibility via this runner. (Historical note:
+before the SPEC-2026-005 framework slimdown this covered ~1,200 tests across
+36 skills; post-slimdown there are 8 skills, 5 of which are script-backed and
+carry tests/ — see MIN_EXPECTED_TESTS below.)
 
 The obvious fix — add `src/skills` to `testpaths` and run one big `pytest`
 session — does NOT work correctly here: many skills use the identical
@@ -49,7 +52,14 @@ SKILLS_ROOT = REPO_ROOT / "src" / "skills"
 # Below this many total collected tests, something regressed (a skill's
 # tests dir went missing, got excluded, etc.) — fail loudly rather than
 # silently reporting a shrinking number.
-MIN_EXPECTED_TESTS = 1100
+#
+# Re-baselined in WP-5 of the SPEC-2026-005 framework slimdown from the
+# measured actual (250 tests across 5 script-backed skills: protocol-validator,
+# queue-management, queue-query, skill-improvement-feedback, spec-validator).
+# Floor is ~95% of that actual, matching the same headroom convention used by
+# renderer/scripts/check_test_regression.py. Update only alongside a real
+# skill addition/removal.
+MIN_EXPECTED_TESTS = 237
 
 # Some skill suites (file-sync in particular) exercise the real repository
 # tree end-to-end rather than an isolated fixture, so they run considerably

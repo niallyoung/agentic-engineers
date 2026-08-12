@@ -275,12 +275,12 @@ fi
 
 # ─── Section: Agent frontmatter consistency check ───────────────────────────
 # Validate that src/agents/*-agent.md frontmatter model/effort fields
-# match the canonical values in docs/AGENTS.md.
+# match the canonical values in src/AGENTS.md.
 # This prevents silent drift between source files and the canonical table.
 
 validate_agent_frontmatter() {
 	local repo_root="$1"
-	local agents_md="$repo_root/docs/AGENTS.md"
+	local agents_md="$repo_root/src/AGENTS.md"
 	local src_agents="$repo_root/src/agents"
 	local errors=0
 	
@@ -330,28 +330,28 @@ validate_agent_frontmatter() {
 		# Get canonical values
 		canonical=$(lookup_agent_metadata "$agent_name" "$agents_map")
 		if [ -z "$canonical" ]; then
-			# Agent not in docs/AGENTS.md — skip (may be a new agent being added)
+			# Agent not in src/AGENTS.md — skip (may be a new agent being added)
 			continue
 		fi
-		
-		docs_model=$(echo "$canonical" | cut -d'|' -f1)
-		docs_effort=$(echo "$canonical" | cut -d'|' -f2)
-		
+
+		canonical_model=$(echo "$canonical" | cut -d'|' -f1)
+		canonical_effort=$(echo "$canonical" | cut -d'|' -f2)
+
 		# Compare model
-		if [ -n "$fm_model" ] && [ "$fm_model" != "$docs_model" ]; then
+		if [ -n "$fm_model" ] && [ "$fm_model" != "$canonical_model" ]; then
 			echo "❌ pre-commit: $agent_file model mismatch" >&2
 			echo "   frontmatter: model: $fm_model" >&2
-			echo "   docs/AGENTS.md: model: $docs_model" >&2
-			echo "   Fix: update frontmatter or docs/AGENTS.md to match" >&2
+			echo "   src/AGENTS.md: model: $canonical_model" >&2
+			echo "   Fix: update frontmatter or src/AGENTS.md to match" >&2
 			errors=$((errors + 1))
 		fi
-		
+
 		# Compare effort
-		if [ -n "$fm_effort" ] && [ "$fm_effort" != "$docs_effort" ]; then
+		if [ -n "$fm_effort" ] && [ "$fm_effort" != "$canonical_effort" ]; then
 			echo "❌ pre-commit: $agent_file effort mismatch" >&2
 			echo "   frontmatter: effort: $fm_effort" >&2
-			echo "   docs/AGENTS.md: effort: $docs_effort" >&2
-			echo "   Fix: update frontmatter or docs/AGENTS.md to match" >&2
+			echo "   src/AGENTS.md: effort: $canonical_effort" >&2
+			echo "   Fix: update frontmatter or src/AGENTS.md to match" >&2
 			errors=$((errors + 1))
 		fi
 	done
@@ -359,9 +359,9 @@ validate_agent_frontmatter() {
 	return $errors
 }
 
-# Run validation (only if docs/AGENTS.md and src/agents/ exist)
+# Run validation (only if src/AGENTS.md and src/agents/ exist)
 REPO_ROOT_HOOK=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-if [ -f "$REPO_ROOT_HOOK/docs/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]; then
+if [ -f "$REPO_ROOT_HOOK/src/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]; then
 	if ! validate_agent_frontmatter "$REPO_ROOT_HOOK"; then
 		echo "" >&2
 		echo "💡 To bypass this check (emergency only): BYPASS_HOOK_VALIDATION=true git commit" >&2
@@ -621,7 +621,8 @@ echo "✅ Source file integrity check passed"
 # - Block: ~/.claude/queue (DEPRECATED)
 # - Block: artifacts/queue (DEPRECATED)
 #
-# Exceptions: Allow in src/orchestration/queue_compat.py and _archive/ directories
+# (No source-tree exceptions currently apply — the compat/archive paths this
+# section once exempted were deleted in the SPEC-2026-005 framework slimdown.)
 #
 
 echo ""

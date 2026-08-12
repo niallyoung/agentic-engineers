@@ -78,8 +78,14 @@ _stream_emit() {
 				summary)  : ;;  # handled by main echo
 			esac
 		fi
+	elif [ "$mode" = "json" ]; then
+		# Native JSON-lines emission (no external helper — the deleted
+		# src/harnesses/copilot_cli/streaming.py this used to exec is gone).
+		local json_data="$data"
+		[ -z "$json_data" ] && json_data="{}"
+		printf '{"ts":"%s","type":"%s","skill":"%s","data":%s}\n' \
+			"$ts" "$type" "$skill" "$json_data"
 	fi
-	# json mode is handled by Python helper (exec'd above)
 }
 
 
@@ -138,9 +144,6 @@ case "$MODE" in
 			STREAM_MODE="human"
 		elif [ "$MODE" = "--stream=json" ]; then
 			STREAM_MODE="json"
-			# Delegate entirely to Python helper
-			exec python3 "$(dirname "$0")/../../src/harnesses/copilot_cli/streaming.py" \
-				"$SRC_SKILLS" "$DST_SKILLS" "$MARKER"
 		fi
 
 		echo "📦 Rendering skills → $DST_SKILLS/..."

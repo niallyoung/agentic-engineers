@@ -3,8 +3,8 @@ from __future__ import annotations
 
 """validate_skills.py - SKILL.md frontmatter compliance gate (Phase 5.1+).
 
-Validates every active skill in src/skills/ against the canonical template
-defined in src/skills/_meta/skill-template/SKILL.md.
+Validates every active skill in src/skills/ against the required frontmatter
+schema defined below (REQUIRED_TOP_LEVEL / REQUIRED_METADATA).
 
 Exit codes:
     0 -- All active skills pass validation
@@ -34,7 +34,7 @@ from typing import Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "src" / "skills"
 
-# Skills listed in docs/SKILLS-AVAILABLE.md as active.
+# Skills listed in src/SKILLS.md as active.
 # Update this list whenever a skill is added or deprecated.
 #
 # SPEC-2026-005 framework slimdown, WP-0 (2026-08-11): pruned from 14 to the

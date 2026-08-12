@@ -8,7 +8,6 @@ architecture, and role reference, start at [docs/INDEX.md](../INDEX.md) or
 
 | File | Purpose |
 |------|---------|
-| [agent-creation.md](agent-creation.md) | How to create a new agent role |
 | [skill-creation.md](skill-creation.md) | How to create a new skill |
 | [claude-harness-extension.md](claude-harness-extension.md) | Extending the Claude Code harness |
 | [deployment.md](deployment.md) | Deploying/installing the framework into a harness |

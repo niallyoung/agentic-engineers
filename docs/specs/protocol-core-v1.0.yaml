@@ -6,7 +6,7 @@
 #
 # It is loaded at runtime by:
 #   - src/skills/protocol-validator/scripts/protocol_validator.py
-#   - src/skills/consistency-checker/scripts/consistency_checker.py
+#   - scripts/check_protocol_compliance.py (CI gate)
 #
 # The runtime validators (core_protocol_validator.py CoreProtocolValidator /
 # ExtensionValidator) are the prescriptive authority for *enforcement*. This

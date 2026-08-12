@@ -5,8 +5,8 @@ Guarantees that `make render-all` produces a complete, well-formed distribution
 for every harness:
 
   - all 8 specialist agents are rendered per harness (claude/copilot/opencode)
-  - all 27 user-facing skills are rendered per harness
-  - generated framework docs (CLAUDE.md, AGENTS.md, opencode.jsonc, pi SYSTEM.md)
+  - all user-facing skills are rendered per harness
+  - generated framework docs (CLAUDE.md, AGENTS.md, opencode.jsonc)
     are present in dist/ after render
   - every rendered agent carries a non-empty model and description (never "—")
 
@@ -85,10 +85,10 @@ def _render_all():
     yield
 
 
-def test_source_has_exactly_25_user_skills():
+def test_source_has_exactly_8_user_skills():
     names = _source_skill_names()
-    assert len(names) == 25, (
-        f"Expected 25 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 8, (
+        f"Expected 8 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 
@@ -126,7 +126,7 @@ def test_harness_renders_all_8_agents(harness):
 
 
 @pytest.mark.parametrize("harness", PER_FILE_AGENT_HARNESSES)
-def test_harness_renders_all_25_skills(harness):
+def test_harness_renders_all_skills(harness):
     skills_dir = DIST / harness / "skills"
     assert skills_dir.is_dir(), f"dist/{harness}/skills/ missing after render"
 
@@ -139,8 +139,8 @@ def test_harness_renders_all_25_skills(harness):
         f"dist/{harness}/skills/ is missing rendered skills (with SKILL.md): "
         f"{sorted(missing)}"
     )
-    assert len(rendered) >= 23, (
-        f"dist/{harness}/skills/ rendered only {len(rendered)} skills; expected >= 23"
+    assert len(rendered) == len(source), (
+        f"dist/{harness}/skills/ rendered {len(rendered)} skills; expected {len(source)}"
     )
 
 
@@ -157,14 +157,6 @@ def test_harness_renders_framework_docs(harness, docs):
         path = DIST / harness / doc
         assert path.is_file(), f"dist/{harness}/{doc} not produced by render"
         assert path.stat().st_size > 0, f"dist/{harness}/{doc} is empty"
-
-
-def test_pi_renders_system_and_config():
-    agent_dir = DIST / "pi" / "agent"
-    for doc in ("SYSTEM.md", "pi.yml", "AGENTS.md"):
-        path = agent_dir / doc
-        assert path.is_file(), f"dist/pi/agent/{doc} not produced by render"
-        assert path.stat().st_size > 0, f"dist/pi/agent/{doc} is empty"
 
 
 @pytest.mark.parametrize("harness", PER_FILE_AGENT_HARNESSES)

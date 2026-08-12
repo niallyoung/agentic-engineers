@@ -27,7 +27,7 @@ src/agents/*.md    ──►  opencode/agents/        ~/.config/opencode/  loade
 src/skills/*/      ──►  opencode/skills/        ~/.config/opencode/  loaded on demand
 ```
 
-The install/runtime roots are `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.codex/`, and `~/.pi/` (with Codex also honoring project-scoped `.codex/` when present).
+The install/runtime roots are `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, and `~/.codex/` (with Codex also honoring project-scoped `.codex/` when present).
 
 ---
 
@@ -63,7 +63,7 @@ agents:
 
 ### Phase 2: Build-Time Rendering (`make render-*`)
 
-**Trigger:** `make render-opencode`, `make render-copilot`, `make render-claude`, `make render-codex`, `make render-pi`, `make render-specs`, or `make render-all`
+**Trigger:** `make render-opencode`, `make render-copilot`, `make render-claude`, `make render-codex`, `make render-specs`, or `make render-all`
 **Output:** `dist/<harness>/`  
 **Scripts:** `renderer/scripts/render-*.sh`  
 **Shared library:** `renderer/lib/render-lib.sh` (via `renderer/scripts/lib.sh` shim)  
@@ -120,8 +120,6 @@ renderer/
     ├── render-claude.sh        # renders agents + skills → dist/claude/
     ├── render-opencode.sh      # renders agents + skills + opencode.jsonc → dist/opencode/
     ├── render-codex.py         # renders Codex custom agents + skills + config → dist/codex/
-    ├── render-pi.sh            # renders pi.dev config → dist/pi/
-    ├── render-pi-dev.py        # Python pi.dev config renderer
     ├── render-specs.sh         # renders SPEC.md + config YAMLs → dist/specs/
     └── validate_renders.py     # validates dist/ sync with src/
 ```
@@ -132,9 +130,9 @@ renderer/
 
 ### Phase 3: Install-Time Deployment (`make install-*`)
 
-**Trigger:** `make install-opencode`, `make install-copilot`, `make install-claude`, `make install-codex`, `make install-pi`, or `make install`
+**Trigger:** `make install-opencode`, `make install-copilot`, `make install-claude`, `make install-codex`, or `make install`
 **Source:** `dist/<harness>/`  
-**Destination:** `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.codex/`, `~/.pi/`
+**Destination:** `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.codex/`
 **Method:** `rsync -a` with `.DS_Store` and `.git` exclusions  
 
 **Note:** `dist/specs/` is **not** deployed to a harness home directory — specs are a local reference layer only (used by validation, QA, and consistency checks). They live in `dist/specs/` and `config/` as source-of-truth files.
@@ -147,14 +145,13 @@ renderer/
 | Copilot CLI | `*.agent.md` (YAML frontmatter) | `skills/<name>/SKILL.md` | `queue/` structure |
 | Claude Code | `agents/<name>.md` | `skills/<name>/SKILL.md` | – |
 | Codex | `agents/<name>.toml` | `~/.codex/skills/<name>/SKILL.md` | `config.toml`, `AGENTS.md` |
-| π.dev | `agent/SYSTEM.md` | – | `agent/settings.json`, `pi.yml` |
 
 ---
 
 ### Phase 4: Runtime Loading (AI Harness)
 
 **Trigger:** AI harness session start / user invokes skill tool  
-**Source:** `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.codex/`, `~/.pi/` (installed copies)
+**Source:** `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.codex/` (installed copies)
 
 #### Loading behavior by entity type:
 
@@ -163,7 +160,6 @@ renderer/
 - Claude Code: reads `agents/*.md` on session start; subagents available via `@name` references
 - OpenCode: reads `agents/*.md`; subagents available via `@name` in chat
 - Codex: reads custom agents from `~/.codex/agents/*.toml` or project `.codex/agents/*.toml`; subagents spawn only when explicitly requested
-- π.dev: reads `~/.pi/agent/SYSTEM.md`, `AGENTS.md`, and `settings.json` at startup
 
 **Skills** (loaded on demand, not at session start):
 - All harnesses: skill directories discovered lazily when `skill` tool is invoked
@@ -181,7 +177,7 @@ renderer/
 ```
 Session Start
    │
-   ├─► Load AGENTS.md (global rules)           ← installed at ~/.config/opencode/AGENTS.md, ~/.copilot/AGENTS.md, ~/.claude/AGENTS.md, ~/.codex/AGENTS.md, ~/.pi/agent/AGENTS.md
+   ├─► Load AGENTS.md (global rules)           ← installed at ~/.config/opencode/AGENTS.md, ~/.copilot/AGENTS.md, ~/.claude/AGENTS.md, ~/.codex/AGENTS.md
    ├─► Discover agents/*.agent.md (Copilot)    ← available immediately as @agent
    ├─► Discover agents/*.md (Claude/OpenCode)  ← available immediately as @agent
    │
@@ -204,7 +200,6 @@ User invokes skill tool
 | `make render-copilot` | Copilot CLI agents + skills | `dist/copilot/` |
 | `make render-claude` | Claude Code agents + skills | `dist/claude/` |
 | `make render-codex` | Codex custom agents + skills + config | `dist/codex/` |
-| `make render-pi` | π.dev harness config | `dist/pi/` |
 | `make render-specs` | Spec + orchestration YAMLs | `dist/specs/` |
 | `make render-all` | All of the above | all dist/ subdirs |
 
@@ -216,7 +211,6 @@ User invokes skill tool
 | `make install-copilot` | Copilot agents + skills | `~/.copilot/` |
 | `make install-claude` | Claude Code agents + skills | `~/.claude/` |
 | `make install-codex` | Codex agents/config + skills | `~/.codex/` and `~/.codex/skills/` |
-| `make install-pi` | π.dev config | `~/.pi/` |
 | `make install` | Default harness set | default harness homes |
 
 ### Validation targets

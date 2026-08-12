@@ -168,7 +168,7 @@ head -30 dist/opencode/agents/orchestrator.md
 This means DELEGATE/HANDBACK schema files are missing or invalid.
 
 **Causes:**
-- `src/orchestration/` directory doesn't exist
+- Schema files missing from docs/specs/
 - `delegate-schema.yaml` or `handback-schema.yaml` missing
 - Schema files don't contain `required_fields` section
 - YAML is malformed
@@ -176,12 +176,12 @@ This means DELEGATE/HANDBACK schema files are missing or invalid.
 **Fix:**
 ```bash
 # Verify schemas exist
-ls -la src/orchestration/{delegate,handback}-schema.yaml
+ls -la docs/specs/{delegate,handback}-schema.yaml
 
 # Validate YAML syntax
 python3 << 'EOF'
 import yaml
-for schema_file in ["src/orchestration/delegate-schema.yaml", "src/orchestration/handback-schema.yaml"]:
+for schema_file in ["docs/specs/delegate-schema.yaml", "docs/specs/handback-schema.yaml"]:
     with open(schema_file) as f:
         try:
             data = yaml.safe_load(f)
@@ -255,7 +255,7 @@ If multiple checks are failing, the repository may be corrupted:
 
 # Restore to known-good state
 git status  # Check for uncommitted changes
-git restore src/AGENTS.md src/orchestration/
+git restore src/AGENTS.md src/SKILLS.md
 ```
 
 ### Manual Harness Initialization
@@ -331,6 +331,6 @@ The harness validator is designed to run quickly at startup:
 ## Further Reading
 
 - [`src/AGENTS.md`](../src/AGENTS.md) — Agent roster and protocol specification
-- [`src/orchestration/delegate-schema.yaml`](../src/orchestration/delegate-schema.yaml) — DELEGATE block schema
-- [`src/orchestration/handback-schema.yaml`](../src/orchestration/handback-schema.yaml) — HANDBACK block schema
+- [`docs/specs/delegate-schema.yaml`](../docs/specs/delegate-schema.yaml) — DELEGATE block schema
+- [`docs/specs/handback-schema.yaml`](../docs/specs/handback-schema.yaml) — HANDBACK block schema
 - [`dist/opencode/AGENTS.md`](../dist/opencode/AGENTS.md) — OpenCode-specific agent rules

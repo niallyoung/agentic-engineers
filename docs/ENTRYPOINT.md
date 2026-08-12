@@ -48,7 +48,7 @@ delegate: Fix the race condition in span capture (see ISSUE #42)
 ```
 
 The Orchestrator:
-1. Builds a DELEGATE block from your request (`agent`, `model`, `effort`, `scope`, `context`, `plan`, `success_criteria` — see `orchestration/HANDOFF.md` for the full format)
+1. Builds a DELEGATE block from your request (`agent`, `model`, `effort`, `scope`, `context`, `plan`, `success_criteria` — see `src/AGENTS.md` for the full format)
 2. Spawns the target role directly (Agent/Task tool), passing the DELEGATE as the sub-agent's prompt
 3. Records the DELEGATE to the queue via `enqueue()` (audit trail) at or immediately after the spawn call
 4. Reads the HANDBACK back as the result of the spawn call itself — no polling, no wait loop
@@ -69,7 +69,7 @@ scope: |
   Clear, one-sentence description of what the task is.
   What's in scope, what's out of scope.
 context:
-  - Key files: orchestration/AGENTS.md, orchestration/SKILLS.md
+  - Key files: src/AGENTS.md, src/SKILLS.md
   - Related: Any prior commits or context
 plan:
   - 1. First step
@@ -80,7 +80,7 @@ success_criteria:
 
 You pass this to the Orchestrator directly — as your prompt, or as the payload of a
 re-delegation it issues itself — rather than dropping it into `queue/incoming/` for a
-poller to notice. See `orchestration/HANDOFF.md` for the complete DELEGATE format.
+poller to notice. See `src/AGENTS.md` for the complete DELEGATE format.
 
 ### 3. Orchestrator handles everything
 
@@ -184,7 +184,7 @@ spawn next:
 | **Model Engineer** | Sonnet (strong) | Cost-quality tradeoffs, recommendations |
 | **Orchestrator** | All models | Routing, direct spawn dispatch, observability, audit-trail management |
 
-See `orchestration/AGENTS.md` for full decision tree.
+See `src/AGENTS.md` for full decision tree.
 
 ---
 
@@ -313,10 +313,9 @@ See `docs/SPEC.md` for full architectural constraints.
 
 ## 📚 Reference
 
-- **orchestration/AGENTS.md** — Full agent definitions, routing rules
-- **orchestration/SKILLS.md** — How each agent executes their role
-- **orchestration/HANDOFF.md** — DELEGATE/HANDBACK/FEEDBACK formats
-- **orchestration/QUEUE-PROTOCOL.md** — Queue mechanics (note: this reference document is locked/out of scope for this update and may still describe queue polling as canonical dispatch; treat `src/AGENTS.md > Direct Sub-Agent Spawn Execution Model` as authoritative for how dispatch actually works)
+- **src/AGENTS.md** — Full agent definitions, routing rules
+- **src/SKILLS.md** — How each agent executes their role
+- **docs/SPEC.md** — Canonical system specification with DELEGATE/HANDBACK/FEEDBACK formats
 - **docs/SPEC.md** — Complete specification & constraints
 
 ---

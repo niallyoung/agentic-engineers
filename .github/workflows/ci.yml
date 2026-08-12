@@ -101,18 +101,17 @@ jobs:
           make render-copilot
           make render-claude
           make render-opencode
-          make render-pi
+          make render-codex
           make render-specs
 
       - name: Test
         run: make test
 
-      - name: "Gate 5: Harness regression check (interim permissive — SPEC-2026-005)"
-        # INTERIM (framework slimdown, WP-0): floor set to 0 so the gate cannot
-        # block the deliberate mass deletion in progress. Per-harness floors
-        # (opencode/claude_code/copilot-cli) were dropped entirely — those test
-        # dirs are being deleted along with src/harnesses/. WP-5 restores real,
-        # non-zero baselines from measured post-deletion actuals.
+      - name: "Gate 5: Harness regression check (SPEC-2026-005, WP-5 baseline)"
+        # Floor re-baselined in WP-5 from the measured post-slimdown actual
+        # (940 collected tests; floor is ~95% = 893). Per-harness floors
+        # (opencode/claude_code/copilot-cli) are retired permanently — those
+        # test dirs were deleted along with src/harnesses/.
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
         run: python renderer/scripts/check_test_regression.py
 

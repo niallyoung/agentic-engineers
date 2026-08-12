@@ -161,8 +161,8 @@ tests:
   failed: 0
   coverage: 92.5
   framework: pytest
-
-quality_score: 94
+metrics:
+  quality: 0.94
 
 notes: "Skill created with 4 files. All tests passing with 92.5% coverage. Committed to git with SHA a1b2c3d4. Ready for review."
 

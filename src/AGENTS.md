@@ -481,7 +481,7 @@ obligation, not a side effect:
 - **At spawn:** the spawning agent MUST `enqueue()` the DELEGATE to `.../queue/incoming/TASK-NNN.yaml`.
 - **At completion:** the spawning agent MUST `enqueue()` the HANDBACK to `.../queue/done/TASK-NNN-handback.yaml`.
 - **At Quality Engineer verdict:** its `status` is recorded so the audit trail distinguishes
-  "work happened" from "work was verified" — read by `session-analyzer` and similar
+  "work happened" from "work was verified" — read by `queue-management` and similar
   monitoring skills to reconstruct what actually ran.
 
 If a DELEGATE or HANDBACK is not enqueued, it did not happen as far as audit, cost

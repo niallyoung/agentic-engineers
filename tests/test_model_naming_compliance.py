@@ -8,7 +8,6 @@ Validates that all agent model definitions use LOCKED Claude models by choice:
   - Copilot CLI: Pass-through (dots) → claude-opus-4.7
   - OpenCode: Transform to hyphens → claude-opus-4-7
   - Claude Code: Transform to short alias → opus
-  - Pi.dev: Uses hyphens (Anthropic API format)
 
 Philosophy: POSITIVE ENFORCEMENT
 - We CHOSE these Claude models (not "GPT forbidden")
@@ -26,7 +25,6 @@ Official sources:
 - Anthropic: https://docs.anthropic.com/claude/docs/models-overview (canonical format)
 - Copilot CLI: https://docs.github.com/en/copilot/reference/ai-models/supported-models (dots required)
 - OpenCode: GitHub issues & investigation (hyphens required)
-- Pi.dev: Anthropic API compatibility (hyphens)
 """
 
 import pytest
@@ -298,22 +296,6 @@ class TestModelNamingCompliance:
                         f"dist/opencode/{agent_file.name}: Model '{model}' uses dots"
                     )
 
-    def test_pi_harness_uses_correct_format(self):
-        """Pi.dev harness must use hyphens (and possibly dated versions)."""
-        pi_config = self.REPO_ROOT / "dist" / "pi" / "agent" / "pi.yml"
-        if not pi_config.exists():
-            pytest.skip("dist/pi not present")
-
-        content = pi_config.read_text()
-        model_refs = re.findall(r'claude-[a-z0-9-]+', content, re.IGNORECASE)
-
-        for model in model_refs:
-            # Pi may use dated models (claude-haiku-4.5-20251001) or standard
-            # But no dots allowed
-            assert "." not in model, (
-                f"dist/pi/pi.yml: Model '{model}' uses dots"
-            )
-
     def test_no_dots_in_agent_frontmatter(self):
         """CRITICAL: Agent frontmatter must use dot-format for Copilot CLI compatibility."""
         agent_files = list(self.REPO_ROOT.glob("src/agents/*-agent.md"))
@@ -451,7 +433,6 @@ class TestModelNamingConsistency:
             self.REPO_ROOT / "dist" / "copilot" / "agents",
             self.REPO_ROOT / "dist" / "claude" / "agents",
             self.REPO_ROOT / "dist" / "opencode" / "agents",
-            self.REPO_ROOT / "dist" / "pi" / "agent",
         ]
 
         for path in search_paths:
@@ -502,7 +483,6 @@ class TestModelNamingConsistency:
             self.REPO_ROOT / "renderer" / "scripts" / "render-copilot-agents.py",
             self.REPO_ROOT / "renderer" / "scripts" / "render-copilot-agents.sh",
             self.REPO_ROOT / "renderer" / "scripts" / "render-opencode.sh",
-            self.REPO_ROOT / "renderer" / "scripts" / "render-pi-dev.py",
         ]
 
         for renderer_file in renderer_files:

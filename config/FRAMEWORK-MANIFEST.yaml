@@ -97,10 +97,26 @@ agents:
     last_deployed: "2026-08-11"
 
 skills:
+  codex-agent-cleanup:
+    name: codex-agent-cleanup
+    status: active
+    description: "Routine maintenance for Codex sessions: monitor queue state, close completed sub-agents, resume/escalate active work"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
   orchestrator:
     name: orchestrator
     status: active
     description: "In-harness queue orchestration: DELEGATE/HANDBACK lifecycle, direct sub-agent spawn dispatch, HANDBACK correlation, crash recovery, idle detection. Queue is a durable audit trail only — no polling."
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
+  protocol-validator:
+    name: protocol-validator
+    status: active
+    description: "Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1.0.yaml"
     created: "2026-02-01"
     required_by:
       - orchestrator
@@ -121,22 +137,13 @@ skills:
     required_by:
       - orchestrator
 
-  protocol-validator:
-    name: protocol-validator
+  skill-improvement-feedback:
+    name: skill-improvement-feedback
     status: active
-    description: "Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1.0.yaml"
+    description: "Canonical pattern for the skill self-improvement feedback loop: structured skill_feedback in HANDBACKs, accumulation into improvement tasks"
     created: "2026-02-01"
     required_by:
       - orchestrator
-
-  spec-validator:
-    name: spec-validator
-    status: active
-    description: "Validates implementation compliance with docs/SPEC.md; detects violations and rollbacks; pre-merge/post-merge gate"
-    created: "2026-02-01"
-    required_by:
-      - lead-engineer
-      - principal-engineer
 
   spec-management:
     name: spec-management
@@ -148,18 +155,11 @@ skills:
       - principal-engineer
       - security-engineer
 
-  skill-improvement-feedback:
-    name: skill-improvement-feedback
+  spec-validator:
+    name: spec-validator
     status: active
-    description: "Canonical pattern for the skill self-improvement feedback loop: structured skill_feedback in HANDBACKs, accumulation into improvement tasks"
+    description: "Validates implementation compliance with docs/SPEC.md; detects violations and rollbacks; pre-merge/post-merge gate"
     created: "2026-02-01"
     required_by:
-      - orchestrator
-
-  codex-agent-cleanup:
-    name: codex-agent-cleanup
-    status: active
-    description: "Routine maintenance for Codex sessions: monitor queue state, close completed sub-agents, resume/escalate active work"
-    created: "2026-02-01"
-    required_by:
-      - orchestrator
+      - lead-engineer
+      - principal-engineer

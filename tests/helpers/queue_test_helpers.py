@@ -11,12 +11,17 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch
 from typing import Generator, Tuple
-import importlib
 
-# Handle hyphenated skill directory name (queue-isolation -> queue_isolation)
-queue_isolation_path = Path(__file__).parent.parent.parent / "src" / "skills" / "_meta" / "queue-isolation" / "scripts"
-sys.path.insert(0, str(queue_isolation_path))
-import queue_isolation
+# Path isolation is now inlined in queue-management's queue_ops.py (the
+# now-deleted src/skills/_meta/queue-isolation skill's QueueIsolation class
+# was consolidated there — see src/skills/queue-management/scripts/queue_ops.py
+# "Path isolation (inlined from the now-deleted ... queue-isolation skill)").
+_QM_SCRIPTS = Path(__file__).parent.parent.parent / "src" / "skills" / "queue-management" / "scripts"
+if str(_QM_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_QM_SCRIPTS))
+from queue_ops import get_queue_path  # noqa: E402
+
+_QUEUE_SUBDIRS = ("incoming", "processing", "done", "failed")
 
 
 def setup_isolated_queue(
@@ -35,13 +40,10 @@ def setup_isolated_queue(
     Returns:
         Path to the queue root: tmp_path/.agentic-engineers/{harness}/{session}/queue/
     """
-    qi = queue_isolation.QueueIsolation(
-        session_id=session_id,
-        harness=harness,
-        base_dir=tmp_path / ".agentic-engineers",
-    )
-    qi.initialise()
-    return qi.queue_path
+    queue_path = get_queue_path(session_id, harness, base_dir=tmp_path / ".agentic-engineers")
+    for subdir in _QUEUE_SUBDIRS:
+        (queue_path / subdir).mkdir(parents=True, exist_ok=True)
+    return queue_path
 
 
 def setup_legacy_queue(

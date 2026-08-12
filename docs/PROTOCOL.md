@@ -5,14 +5,10 @@ status: APPROVED
 created: 2026-05-09
 owner: Lead Engineer
 references:
-  - orchestration/AGENTS.md
-  - archive/DELEGATE-HANDBACK-QUALITY-GATES.md (archived)
+  - src/AGENTS.md
   - docs/specs/delegate-schema.yaml
   - docs/specs/handback-schema.yaml
-  - orchestration/agents/quality_validator.py
-  - orchestration/agents/decision_engine.py
-  - orchestration/agents/delegate_validator.py
-  - orchestration/agents/metrics_writer.py
+  - Orchestrator agent prose specification
 ---
 
 # Orchestration Protocol — Master Reference
@@ -254,14 +250,14 @@ Verified by Decision Engine against the original DELEGATE's `success_criteria`:
 
 | Score | Action | Who Decides |
 |-------|--------|-------------|
-| **90–100** | ✅ Accept immediately | Automated |
-| **80–89** | ✅ Accept with notes (no re-work) | Automated |
-| **70–79** | ⚠️ Manual review — Lead Engineer decides | Lead Engineer |
-| **60–69** | 🔄 Auto rework triggered (max 2 retries) | Decision Engine |
-| **<60** | 🚨 Escalate to Principal Engineer | Principal Engineer |
+| **0.9–1.0** | ✅ Accept immediately | Automated |
+| **0.8–0.89** | ✅ Accept with notes (no re-work) | Automated |
+| **0.7–0.79** | ⚠️ Manual review — Lead Engineer decides | Lead Engineer |
+| **0.6–0.69** | 🔄 Auto rework triggered (max 2 retries) | Decision Engine |
+| **<0.6** | 🚨 Escalate to Principal Engineer | Principal Engineer |
 | **Critical finding** | 🚨 Escalate immediately (any score) | Principal Engineer |
 
-### 3.5 Accepted HANDBACK Example (Score 87)
+### 3.5 Accepted HANDBACK Example (Score 0.87)
 
 ```yaml
 handoff_type: HANDBACK
@@ -277,18 +273,12 @@ tests:
   coverage: 91.2
   framework: pytest
   notes: "All JWT branches covered; grace period boundary tests included"
-quality_score: 87
+metrics:
+  quality: 0.87
+  tokens: 4300
+  cost: 0.14
 effort_actual: medium
-tokens_in: 3200
-tokens_out: 1100
-token_usage:
-  input: 3200
-  output: 1100
-  cached: 400
-  total: 4300
-  billable_total: 3900
-  source: api_usage
-duration_minutes: 24
+duration_seconds: 1440
 notes: |
   Implemented validate_jwt() with configurable GRACE_PERIOD_SECS=30 constant.
   Added 12 new tests covering: valid token, expired token (>30s rejected),
@@ -296,13 +286,16 @@ notes: |
   Coverage 91.2% on middleware.py. All 34 tests pass.
 ```
 
-### 3.6 Gray-Zone HANDBACK Example (Score 74, Conditional)
+### 3.6 Gray-Zone HANDBACK Example (Score 0.74, Conditional)
 
 ```yaml
-# Score 74: Routed to Lead Engineer for manual review
+# Score 0.74: Routed to Lead Engineer for manual review
 # Lead Engineer assessment: accept with required follow-up
 # Conditional approval: merge now; file coverage issue as P2 task
-quality_score: 74
+metrics:
+  quality: 0.74
+  tokens: 3100
+  cost: 0.10
 tests:
   passed: 22
   failed: 0
@@ -310,11 +303,14 @@ tests:
 notes: "Implementation complete but coverage fell short of 70% threshold"
 ```
 
-### 3.7 Failed HANDBACK Example (Score 55, Escalated)
+### 3.7 Failed HANDBACK Example (Score 0.55, Escalated)
 
 ```yaml
-# Score 55: Escalated to Principal Engineer after 2 retries
-quality_score: 55
+# Score 0.55: Escalated to Principal Engineer after 2 retries
+metrics:
+  quality: 0.55
+  tokens: 5200
+  cost: 0.17
 status: partial
 tests:
   passed: 18
@@ -469,7 +465,7 @@ Escalated:  2026-05-09-add-jwt-validation-escalated
 retry_context:
   original_task_id: 2026-05-09-add-jwt-validation
   retry_count: 1                    # 1-based
-  previous_quality_score: 65
+  previous_quality_score: 0.65
   failure_reasons:
     - "Test coverage 62% < 70% threshold"
     - "success_criteria 'all endpoints tested' not met"
@@ -602,13 +598,13 @@ internally. This is a second line of defense beyond the pre-commit hook.
 ```yaml
 escalation_notice:
   task_id: 2026-05-09-add-jwt-validation
-  escalation_reason: "Quality score 58/100 after 2 retries"
+  escalation_reason: "Quality score 0.58 after 2 retries"
   retry_history:
     - attempt: 1
-      quality_score: 65
+      quality_score: 0.65
       failure_reasons: ["coverage 62% < 70%", "3 tests failing"]
     - attempt: 2
-      quality_score: 58
+      quality_score: 0.58
       failure_reasons: ["coverage 59% < 70%", "root cause unclear"]
   total_tokens_consumed: 9200
   original_estimate_tokens: 3200

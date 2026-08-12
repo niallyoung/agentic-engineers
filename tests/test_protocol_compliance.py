@@ -116,12 +116,6 @@ def test_agent_bodies_have_no_legacy_queue_paths(harness):
             )
 
 
-def test_pi_system_embeds_protocol():
-    body = (DIST / "pi" / "agent" / "SYSTEM.md").read_text(encoding="utf-8")
-    assert "DELEGATE" in body, "pi SYSTEM.md missing DELEGATE protocol context"
-    assert "HANDBACK" in body, "pi SYSTEM.md missing HANDBACK protocol context"
-
-
 @pytest.mark.parametrize("harness", ["claude", "copilot"])
 def test_rendered_agents_md_uses_canonical_queue_path(harness):
     agents_md = (DIST / harness / "AGENTS.md").read_text(encoding="utf-8")

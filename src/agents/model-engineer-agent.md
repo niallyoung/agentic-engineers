@@ -46,15 +46,14 @@ Model Engineer). Orchestrator now uses claude-sonnet-5 for improved routing anal
    scored poorly is not "efficient," it under-delivered — don't recommend a downgrade
    on that basis.
 4. Build one recommendation per role (`model`, `confidence`, `reasoning`), append it to
-   `~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl`,
-   and write the same summary to `src/TOKEN_METRICS.md`.
+   `~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl`.
 5. Return the recommendations in the HANDBACK's `recommendation` block with a
    `next_suggested_models` map. Model Engineer never applies a recommendation itself —
    see Boundaries below.
 
 **Recommendations are advisory only.** The live model assignment is the static per-role
-table in `src/AGENTS.md` (Agent Roster) and `src/config/models.yaml`; nothing currently
-reads this agent's output and applies it automatically to future routing.
+table in `src/AGENTS.md` (Agent Roster); nothing currently reads this agent's output and
+applies it automatically to future routing.
 
 ## Execution Model
 

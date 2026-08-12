@@ -6,8 +6,8 @@ Ensures the repo root and src/skills paths are on sys.path so that:
   - from queue-management.scripts.queue_ops import QueueOperations  # from skill
 works when running tests from the repo root or any subdirectory.
 
-Key insight: Skills with hyphenated names (queue-management, file-sync, etc.) 
-are importable via importlib when src/skills/ is in sys.path. We use 
+Key insight: Skills with hyphenated names (queue-management, spec-validator, etc.)
+are importable via importlib when src/skills/ is in sys.path. We use
 importlib.import_module('queue-management.scripts.queue_ops') rather than
 direct imports to handle Python's inability to import modules with hyphens.
 """
