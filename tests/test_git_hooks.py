@@ -1394,10 +1394,14 @@ class TestHookInstallation:
             "Hook should not check docs/AGENTS.md"
 
         # Positive test: parse src/AGENTS.md and verify we get all 8 agents
+        # Use REPO_ROOT to derive paths dynamically (not hardcoded)
+        lib_sh_path = REPO_ROOT / "renderer" / "scripts" / "lib.sh"
+        agents_md_path = REPO_ROOT / "src" / "AGENTS.md"
+
         parse_result = subprocess.run(
-            ['bash', '-c', '''
-                source /Users/niall/git/agentic-engineers/renderer/scripts/lib.sh
-                parse_agents_md /Users/niall/git/agentic-engineers/src/AGENTS.md
+            ['bash', '-c', f'''
+                source {lib_sh_path}
+                parse_agents_md {agents_md_path}
             '''],
             capture_output=True,
             text=True,
