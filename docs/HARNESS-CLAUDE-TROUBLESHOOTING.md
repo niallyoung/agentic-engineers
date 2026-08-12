@@ -172,15 +172,14 @@ make install-claude
 
 **Fix:**
 ```bash
-# Verify schema files exist
+# Verify the canonical schema exists (single normative source — see docs/PROTOCOL.md §2)
 ls -la ~/.claude/config/schemas/
-ls ~/.claude/config/schemas/{delegate,handback}-schema.yaml
+ls ~/.claude/config/schemas/protocol-core-v1.0.yaml
 
 # Validate schema YAML syntax
 python3 << 'EOF'
 import yaml
-for schema in ['~/.claude/config/schemas/delegate-schema.yaml', 
-               '~/.claude/config/schemas/handback-schema.yaml']:
+for schema in ['~/.claude/config/schemas/protocol-core-v1.0.yaml']:
     try:
         with open(os.path.expanduser(schema)) as f:
             yaml.safe_load(f)
@@ -189,12 +188,11 @@ for schema in ['~/.claude/config/schemas/delegate-schema.yaml',
         print(f"❌ {schema} error: {e}")
 EOF
 
-# Check schema content (should have required_fields section)
-grep -A 5 "required_fields:" ~/.claude/config/schemas/handback-schema.yaml
+# Check schema content (should have top-level delegate: / handback: keys)
+grep -A 5 "^handback:" ~/.claude/config/schemas/protocol-core-v1.0.yaml
 
-# If schemas missing or invalid, regenerate from repo
-cp docs/specs/handback-schema.yaml ~/.claude/config/schemas/
-cp docs/specs/delegate-schema.yaml ~/.claude/config/schemas/
+# If schema missing or invalid, regenerate from repo
+cp docs/specs/protocol-core-v1.0.yaml ~/.claude/config/schemas/
 
 # Then verify protocols
 make install-claude
@@ -305,22 +303,22 @@ cat ~/.claude/sessions/{session-id}/config.jsonc
 # Verify protocol schemas exist
 ls -la ~/.claude/config/schemas/
 
-# Check DELEGATE schema for required fields
+# Check the canonical schema for required DELEGATE fields
 python3 << 'EOF'
 import yaml
-with open(os.path.expanduser('~/.claude/config/schemas/delegate-schema.yaml')) as f:
+with open(os.path.expanduser('~/.claude/config/schemas/protocol-core-v1.0.yaml')) as f:
     schema = yaml.safe_load(f)
     print("Required DELEGATE fields:")
-    for field, spec in schema['required_fields'].items():
-        print(f"  - {field}: {spec.get('type', 'unknown')}")
+    for field in schema['delegate']['required']:
+        print(f"  - {field}")
 EOF
 
 # Verify your DELEGATE blocks contain all required fields:
 # - handoff_type: "DELEGATE"
-# - task_id: format YYYY-MM-DD-kebab-case
+# - task_id: kebab-case, 3-50 chars (no date prefix required)
 # - agent: agent role (engineer, orchestrator, etc.)
 # - scope: description (≥15 words)
-# - plan: list of steps
+# - plan: list of steps (≥2, each ≥3 words)
 # - success_criteria: list of acceptance criteria
 
 # Check recent HANDBACKs for protocol compliance
@@ -529,7 +527,6 @@ python3 -m src.harness.harness_checker --harness claude
 ## Further Reading
 
 - [`~/.claude/config/AGENTS.md`](docs/guides/harness-setup/claude.md) — Claude Code agent setup
-- [`docs/specs/delegate-schema.yaml`](docs/specs/delegate-schema.yaml) — DELEGATE block schema
-- [`docs/specs/handback-schema.yaml`](docs/specs/handback-schema.yaml) — HANDBACK block schema
+- [`docs/specs/protocol-core-v1.0.yaml`](docs/specs/protocol-core-v1.0.yaml) — canonical DELEGATE/HANDBACK schema
 - [`docs/guides/harness-setup/README.md`](docs/guides/harness-setup/README.md) — Harness comparison
 - [`docs/guides/claude-harness-extension.md`](docs/guides/claude-harness-extension.md) — Extension guide

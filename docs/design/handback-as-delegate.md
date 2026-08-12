@@ -11,8 +11,20 @@
 > architecture and is retained as historical context for the options analysis; the
 > "30–60s polling interval" and poll-cycle latency arguments no longer apply to Option 0.
 > The schema paths below have also moved: `src/orchestration/{delegate,handback}-schema.yaml`
-> is now `docs/specs/{delegate,handback}-schema.yaml`. The core question (should an
+> was `docs/specs/{delegate,handback}-schema.yaml`. The core question (should an
 > escalation HANDBACK formally embed the next DELEGATE) remains open and undecided.
+>
+> **2026-08-12 note:** `docs/specs/delegate-schema.yaml` and
+> `docs/specs/handback-schema.yaml` (referenced throughout this note) have since been
+> deleted — their content contradicted the canonical schema (underscored role names,
+> a 0–100 `quality_score`, a date-prefixed `task_id` format, fields like
+> `estimated_hours`/`model_verification_sha` that were never part of the live protocol)
+> and nothing outside documentation loaded them. `docs/specs/protocol-core-v1.0.yaml`
+> is now the single normative DELEGATE/HANDBACK schema; the current ESCALATION packet
+> format (embedded in a HANDBACK's `escalation:` key, not a bare `status: escalate` +
+> `output.escalate_to`) is defined in `src/AGENTS.md`. Open Question 1 below
+> (status-enum drift) is resolved as a side effect: the canonical status enum is
+> `success | failure | partial | blocked | escalate`, full stop.
 
 ---
 

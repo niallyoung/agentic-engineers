@@ -79,7 +79,10 @@ spec-management) add this opening line before the template:
 
 ## Integration Points
 
-- `handback-schema.yaml` — defines the `skill_feedback` optional field
+- `protocol_validator.py`'s `KNOWN_HANDBACK_RUNTIME_FIELDS` — accepts `skill_feedback`
+  as a forward-compatible HANDBACK extension field (its shape is defined by this
+  skill, the pattern's root definition, rather than by `protocol-core-v1.0.yaml`
+  directly — see `docs/PROTOCOL.md` §2.2)
 - `protocol_validator.py` — warns on malformed items; never errors on unknown sub-fields
 - `session_analyzer.py` — `_harvest_skill_feedback()` aggregates per session
 - `orchestrator_skill.py` — `_route_skill_feedback()` checks threshold and spawns DELEGATEs

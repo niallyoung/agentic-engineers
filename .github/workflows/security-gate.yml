@@ -109,12 +109,18 @@ jobs:
           python3 << 'EOF'
           import yaml
           from pathlib import Path
-          
+
+          # docs/specs/protocol-core-v1.0.yaml is the single normative
+          # DELEGATE/HANDBACK schema (see its header comment for the
+          # precedence chain). Its skill-local copy must stay byte-identical
+          # — that invariant is asserted by
+          # tests/test_protocol_schema_copy_identity.py, not here; this gate
+          # only confirms both files still parse as valid YAML.
           yaml_files = [
-              'docs/specs/delegate-schema.yaml',
-              'docs/specs/handback-schema.yaml',
+              'docs/specs/protocol-core-v1.0.yaml',
+              'src/skills/protocol-validator/schema/protocol-core-v1.0.yaml',
           ]
-          
+
           for yml_file in yaml_files:
               try:
                   Path(yml_file).read_text()
@@ -122,7 +128,7 @@ jobs:
               except Exception as e:
                   print(f"❌ Invalid YAML in {yml_file}: {e}")
                   exit(1)
-          
+
           print("✅ Security: All YAML schemas valid")
           EOF
 

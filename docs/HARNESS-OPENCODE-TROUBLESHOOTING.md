@@ -165,49 +165,56 @@ head -30 dist/opencode/agents/orchestrator.md
 
 **Problem:** `check_schemas` failed
 
-This means DELEGATE/HANDBACK schema files are missing or invalid.
+This means the canonical DELEGATE/HANDBACK schema file is missing or invalid (see
+[`docs/PROTOCOL.md` §2](PROTOCOL.md#2-canonical-schema) for the single normative
+schema).
 
 **Causes:**
-- Schema files missing from docs/specs/
-- `delegate-schema.yaml` or `handback-schema.yaml` missing
-- Schema files don't contain `required_fields` section
+- `docs/specs/protocol-core-v1.0.yaml` missing
+- The skill-local copy at `src/skills/protocol-validator/schema/protocol-core-v1.0.yaml`
+  has drifted from it (guarded by `tests/test_protocol_schema_copy_identity.py`)
+- Schema file doesn't contain the top-level `delegate:`/`handback:` keys
 - YAML is malformed
 
 **Fix:**
 ```bash
-# Verify schemas exist
-ls -la docs/specs/{delegate,handback}-schema.yaml
+# Verify the schema exists
+ls -la docs/specs/protocol-core-v1.0.yaml
 
-# Validate YAML syntax
+# Validate YAML syntax and structure
 python3 << 'EOF'
 import yaml
-for schema_file in ["docs/specs/delegate-schema.yaml", "docs/specs/handback-schema.yaml"]:
-    with open(schema_file) as f:
-        try:
-            data = yaml.safe_load(f)
-            print(f"✅ {schema_file} is valid YAML")
-            if "required_fields" in data:
-                print(f"   - Has required_fields section with {len(data['required_fields'])} fields")
+schema_file = "docs/specs/protocol-core-v1.0.yaml"
+with open(schema_file) as f:
+    try:
+        data = yaml.safe_load(f)
+        print(f"✅ {schema_file} is valid YAML")
+        for key in ("delegate", "handback"):
+            if key in data:
+                print(f"   - Has '{key}' section")
             else:
-                print(f"   ⚠️  Missing required_fields section")
-        except yaml.YAMLError as e:
-            print(f"❌ {schema_file} has YAML errors: {e}")
+                print(f"   ⚠️  Missing '{key}' section")
+    except yaml.YAMLError as e:
+        print(f"❌ {schema_file} has YAML errors: {e}")
 EOF
+
+# If the skill-local copy has drifted, resync it from the canonical source:
+cp docs/specs/protocol-core-v1.0.yaml src/skills/protocol-validator/schema/protocol-core-v1.0.yaml
 ```
 
-**Expected schema structure:**
+**Expected schema structure** (see `docs/specs/protocol-core-v1.0.yaml` in full):
 ```yaml
-required_fields:
-  task_id:
-    type: string
-    pattern: ...
-    description: ...
-  role:
-    type: string
-    enum: [...]
-  model:
-    type: string
-  # ... more fields
+delegate:
+  core_fields:
+    task_id: {...}
+    agent: {...}
+    # ... more required fields
+handback:
+  core_fields:
+    task_id: {...}
+    status: {...}
+    metrics: {...}
+    # ... more required fields
 ```
 
 ---
@@ -331,6 +338,5 @@ The harness validator is designed to run quickly at startup:
 ## Further Reading
 
 - [`src/AGENTS.md`](../src/AGENTS.md) — Agent roster and protocol specification
-- [`docs/specs/delegate-schema.yaml`](../docs/specs/delegate-schema.yaml) — DELEGATE block schema
-- [`docs/specs/handback-schema.yaml`](../docs/specs/handback-schema.yaml) — HANDBACK block schema
+- [`docs/specs/protocol-core-v1.0.yaml`](../docs/specs/protocol-core-v1.0.yaml) — canonical DELEGATE/HANDBACK schema
 - [`dist/opencode/AGENTS.md`](../dist/opencode/AGENTS.md) — OpenCode-specific agent rules
