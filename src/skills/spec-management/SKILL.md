@@ -80,6 +80,41 @@ Approval is recorded by the approving role co-authoring the changelog entry (ste
 — there is no separate approval artifact; the changelog entry itself IS the audit
 record of who proposed and who approved.
 
+### 3a. Self-Authorized Narrow Follow-Up (alternative to peer approval)
+
+**When it applies:** the proposal is a narrow, surgical correction (string swaps, stale
+references, defect fixes) routed to the proposer by an explicit DELEGATE from the
+Orchestrator (or another routing authority), the proposer is Lead/Principal/Security
+Engineer, and no LOCKED-section *semantics* change — only accuracy of already-settled
+content. Recurring pattern in this repo's own history: SPEC-2026-002 (queue-path-order
+residuals), SPEC-2026-005 (framework-slimdown rewrite, sanctioned-edit-only within LOCKED
+sections), SPEC-2026-006 (stale harness enumeration). The issuing DELEGATE — not a peer
+reviewer — is the authorization: its `task_id` and `ancestry` are already an audited,
+routed grant of authority for exactly this scope.
+
+**What replaces the `approval_chain`:** two proposal fields instead of a peer-approval
+table:
+
+```yaml
+approved_by: lead-engineer          # the proposer's own role — no second approver role
+authorization_note: |
+  Authorized by routing DELEGATE task-2026-08-12-followup-spec006-queue-harnesses, issued
+  by the orchestrator with ancestry back to task-2026-08-11-framework-slimdown-root. No
+  separate principal-engineer/security-engineer approval_chain is recorded for this
+  change, matching the precedent set by SPEC-2026-002 and SPEC-2026-005.
+```
+
+The changelog entry (step 4) is written exactly as in the peer-approval path, e.g.
+`[SPEC-2026-006 — lead-engineer, framework slimdown follow-up C]` — there is no
+`approved by <role>` clause because none applies; the bracket names only the proposer.
+
+**When it does NOT apply:** any change to a LOCKED invariant's *meaning* — model list
+membership, the naming rule itself, queue path templates, recursion/depth limits, the
+`.githooks/LOCKED_MODELS.sh` single-source-of-truth clause, or anything that changes what
+a reader or validator must do differently. Those still require the full peer
+`approval_chain` from step 3, regardless of how narrow the diff looks — narrowness of the
+*edit* is not the same as narrowness of its *consequence*.
+
 ### 4. Apply + Changelog (the audit trail)
 
 Once approved: edit `docs/SPEC.md` to make the described change, then append one line
