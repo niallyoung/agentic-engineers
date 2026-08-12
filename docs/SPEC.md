@@ -429,9 +429,9 @@ metrics:
 sonnet_would_be_better | opus_required), `confidence` (0.0-1.0), `retry_count`,
 `model_used`, `effort_actual`, `children_created`, `children_results`, `flags`, `error`.
 
-Canonical machine-readable schemas: [docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml),
-[docs/specs/delegate-schema.yaml](specs/delegate-schema.yaml),
-[docs/specs/handback-schema.yaml](specs/handback-schema.yaml).
+Canonical machine-readable schema: [docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml)
+— the sole normative DELEGATE/HANDBACK schema (the former per-block schema files were
+consolidated into it and removed).
 
 ---
 
