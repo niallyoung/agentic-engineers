@@ -6,27 +6,26 @@ Enforces the DELEGATE/HANDBACK protocol at the one place it was previously
 unenforced: the moment a live Claude Code session spawns one of the
 agentic-engineers framework specialist agents via the Agent/Task tool.
 
-Root cause this closes: DELEGATE validation logic already exists in this
-repo (src/skills/protocol-validator/scripts/protocol_validator.py and
-src/orchestration/agents/delegate_validator.py), but both were written for
-the *simulated* Python orchestration pipeline, not the live harness. When a
-real Claude Code session uses the Agent tool to spawn e.g. "senior-engineer",
-nothing on the Claude Code side ever calls either validator — a plain
-English prompt sails straight through. This script is the missing
-mechanical gate for that exact path.
+Root cause this closes: DELEGATE validation logic exists in this repo
+(src/skills/protocol-validator/scripts/protocol_validator.py), but was
+written for the *simulated* Python orchestration pipeline, not the live
+harness. When a real Claude Code session uses the Agent tool to spawn e.g.
+"senior-engineer", nothing on the Claude Code side ever calls the
+validator — a plain English prompt sails straight through. This script is
+the missing mechanical gate for that exact path.
 
-Deliberately NOT a thin wrapper around the two existing validators:
+Deliberately NOT a thin wrapper around the existing protocol_validator.py:
   - protocol_validator.py additionally requires "skill" and "context" core
     fields and imports PyYAML. This hook only enforces the field subset the
     installing DELEGATE specified (handoff_type, agent, task_id, scope,
     plan, success_criteria) and avoids a hard PyYAML dependency, because it
     runs as a subprocess under whatever bare `python3` is first on PATH at
     hook-execution time — not necessarily the repo's own virtualenv.
-  - delegate_validator.py's DelegateValidator uses underscored role names
-    (`senior_engineer`) inherited from an earlier convention; the live
-    harness (agent frontmatter, src/AGENTS.md, rendered ~/.claude/agents/)
-    uses hyphenated names throughout. Reusing it as-is would silently
-    mismatch every role name it checks.
+  - Historical note: delegate_validator.py (deleted after framework slimdown)
+    used underscored role names (`senior_engineer`) inherited from an earlier
+    convention; the live harness (agent frontmatter, src/AGENTS.md, rendered
+    ~/.claude/agents/) uses hyphenated names throughout, which this hook
+    enforces correctly.
 
 Contract (Claude Code PreToolUse hooks):
   stdin:  JSON with at least {"tool_name": ..., "tool_input": {...}}
@@ -44,10 +43,10 @@ import re
 import sys
 
 # The 8 framework specialist roles this hook governs. Sourced from
-# src/AGENTS.md "Valid agents" list / VALID_AGENTS in protocol_validator.py.
-# Generic/utility agents (Explore, Plan, general-purpose, claude,
-# statusline-setup, ...) are intentionally out of scope: they never accept:
-# [DELEGATE] in their frontmatter and are not bound by the protocol.
+# src/AGENTS.md "Valid agents" list. Generic/utility agents (Explore, Plan,
+# general-purpose, claude, statusline-setup, ...) are intentionally out of
+# scope: they never accept [DELEGATE] in their frontmatter and are not bound
+# by the protocol.
 #
 # Deliberately a hardcoded literal, NOT parsed from src/AGENTS.md at runtime:
 # this script is stdlib-only (no PyYAML) and runs as a Claude Code PreToolUse

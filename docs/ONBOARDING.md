@@ -1,13 +1,13 @@
 # Agent Onboarding: Protocol Compliance Checklist
 
 > All agents must complete this checklist before assuming an operational role in
-> agentic-engineers. Reference: [ORCHESTRATION-PROTOCOL.md](ORCHESTRATION-PROTOCOL.md)
+> agentic-engineers. Reference: [PROTOCOL.md](PROTOCOL.md)
 
 ---
 
 ## DELEGATE Understanding
 
-- [ ] Read `orchestration/ORCHESTRATION-PROTOCOL.md` Sections 2–3
+- [ ] Read `docs/PROTOCOL.md` sections on DELEGATE structure
 - [ ] Understand all required DELEGATE fields (task_id, role, model, effort, estimated_hours, scope, success_criteria, plan, context)
 - [ ] Know effort bands: `low` (1-4h), `medium` (5-16h), `high` (17-48h), `max` (49-120h), `epic` (121h+)
 - [ ] Can write measurable success_criteria — testable in 30s without reading the implementation (not "good code")

@@ -75,19 +75,13 @@ Run `make install` for the default harness set, or use individual `make install-
 
 ## Troubleshooting
 
-See the [Troubleshooting Guide](../troubleshooting.md) for common issues and fixes.
-
 ### Common Issues by Harness
 
 | Issue | Harness | Fix |
 |-------|---------|-----|
 | Queue directories not found | OpenCode | `mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}` |
 | Model not recognized | Copilot CLI | Verify `copilot --version` is ≥2.0.0 |
-| Agent not found | Claude Code | Run `make install-claude` or see [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md) |
-
-**Harness-Specific Guides:**
-- [OpenCode Troubleshooting](../../HARNESS-OPENCODE-TROUBLESHOOTING.md)
-- [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md)
+| Agent not found | Claude Code | Run `make install-claude` |
 
 ## Quality Gates
 
@@ -130,12 +124,11 @@ Harness and model compatibility is continuously tested via the **EVALS-001 frame
 - Model regressions detected immediately
 - ≥95% pass rate required before production deployment
 
-**Status:** EVALS-001 framework in active development (target completion: June 2026).  
-**Reference:** See [TODO.md § Harness Compatibility & Evaluation Testing](../../../TODO.md#harness-compatibility--evaluation-testing)
+**Status:** EVALS-001 framework in active development.
 
 ## Next Steps
 
 Choose your harness and follow the detailed setup guide:
 - [OpenCode Setup](opencode.md)
 - [Codex Setup](codex.md)
-- GitHub Copilot and Claude Code are summarized in the top-level [README](../../README.md#supported-harnesses).
+- GitHub Copilot and Claude Code are summarized in the top-level [README](../../../README.md).

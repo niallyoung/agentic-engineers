@@ -397,12 +397,12 @@ Routing Decision Tree:
 
 ---
 
-## Integration with docs/SKILLS.md
+## Integration with src/SKILLS.md
 
 Each agent role (Engineer, Senior Engineer, etc.) has a section in
-[`docs/SKILLS.md`](SKILLS.md) covering how to execute their role, quality
+[`src/SKILLS.md`](../src/SKILLS.md) covering how to execute their role, quality
 standards, escalation triggers, and specific workflows (e.g. Red-Green TDD for
-Engineer). An agent consults `docs/SKILLS.md` when receiving a DELEGATE, ensuring
+Engineer). An agent consults `src/SKILLS.md` when receiving a DELEGATE, ensuring
 consistent execution.
 
 ---
@@ -458,6 +458,6 @@ Benefits:
 
 See `src/AGENTS.md` for routing rules (Delegation Model & Routing Rules), role
 escalation triggers (Role Definitions), and the full execution model (Direct
-Sub-Agent Spawn Execution Model); see `docs/SKILLS.md` for per-role execution
+Sub-Agent Spawn Execution Model); see `src/SKILLS.md` for per-role execution
 detail.
 

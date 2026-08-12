@@ -152,7 +152,7 @@ This speeds up iteration without installing all 4 harnesses.
 - **Code review?** Use the `Lead Engineer` agent for architectural guidance.
 - **Complex planning?** Use the `Senior Engineer` agent to plan unscoped work.
 
-All framework extensions run through the validation pipeline automatically. See [`src/AGENTS.md`](src/AGENTS.md) and [`src/SKILLS.md`](src/SKILLS.md) for the complete roster.
+All framework extensions run through the validation pipeline automatically. See [`src/AGENTS.md`](../../src/AGENTS.md) and [`src/SKILLS.md`](../../src/SKILLS.md) for the complete roster.
 
 ---
 
@@ -813,17 +813,17 @@ Note: Principal and Security Engineer roles support multi-model selection. Orche
 
 ### See Also
 
-- **Lock rationale:** [`.githooks/LOCKED_MODELS_RATIONALE.md`](./.githooks/LOCKED_MODELS_RATIONALE.md)
-- **Locked models:** [`.githooks/LOCKED_MODELS.sh`](./.githooks/LOCKED_MODELS.sh)
-- **Full architecture:** [`docs/SPEC.md`](docs/SPEC.md) — "Approved Claude Models" section
-- **Tests:** [`tests/test_model_naming_compliance.py`](tests/test_model_naming_compliance.py) — compliance verification
-- **Agent registry:** [`docs/AGENTS.md`](docs/AGENTS.md) — model assignments by role
+- **Lock rationale:** [`.githooks/LOCKED_MODELS_RATIONALE.md`](../../.githooks/LOCKED_MODELS_RATIONALE.md)
+- **Locked models:** [`.githooks/LOCKED_MODELS.sh`](../../.githooks/LOCKED_MODELS.sh)
+- **Full architecture:** [`docs/SPEC.md`](../SPEC.md) — "Approved Claude Models" section
+- **Tests:** [`tests/test_model_naming_compliance.py`](../../tests/test_model_naming_compliance.py) — compliance verification
+- **Agent registry:** [`src/AGENTS.md`](../../src/AGENTS.md) — model assignments by role
 
 ---
 
 ## Automation Roadmap (Phase 4–6)
 
-This section consolidates opportunities to automate manual workflows and reduce human churn. See [`docs/automation-analysis.md`](../automation-analysis.md) for full analysis (session artifact).
+This section consolidates opportunities to automate manual workflows and reduce human churn.
 
 ### Phase 4: Git Hooks Enforcement (HIGH PRIORITY)
 
@@ -882,8 +882,6 @@ This section consolidates opportunities to automate manual workflows and reduce 
 ---
 
 ### Phase 6: Extended Memory & Observability (FUTURE)
-
-See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness checklist (session artifact).
 
 **Current Status:** Code ready for merge (all CI checks passing, no regressions).
 
@@ -986,16 +984,16 @@ quality-engineer, and model-engineer are meant to be leaves.
 
 ## References
 
-- **Agent Roster & Routing:** [`src/AGENTS.md`](src/AGENTS.md) — all roles, responsibilities, routing decision tree, and tool-access model
-- **Skills Matrix:** [`src/SKILLS.md`](src/SKILLS.md) — available skills and capabilities
-- **Specification:** [`docs/SPEC.md`](docs/SPEC.md) — protocol, queue architecture, and model assignments
+- **Agent Roster & Routing:** [`src/AGENTS.md`](../../src/AGENTS.md) — all roles, responsibilities, routing decision tree, and tool-access model
+- **Skills Matrix:** [`src/SKILLS.md`](../../src/SKILLS.md) — available skills and capabilities
+- **Specification:** [`docs/SPEC.md`](../SPEC.md) — protocol, queue architecture, and model assignments
 
 ---
 
 ## FAQ
 
-- **How do I add an agent?** Use `agent-creator` skill or read [`src/AGENTS.md`](src/AGENTS.md)
-- **How do I add a skill?** Use `skill-creator` skill or read [`src/SKILLS.md`](src/SKILLS.md)
+- **How do I add an agent?** Use `agent-creator` skill or read [`src/AGENTS.md`](../../src/AGENTS.md)
+- **How do I add a skill?** Use `skill-creator` skill or read [`src/SKILLS.md`](../../src/SKILLS.md)
 - **What if CI fails?** Run `make verify` locally — it checks everything
 - **Need help?** Check the references above or open an issue
 

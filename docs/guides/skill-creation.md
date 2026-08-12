@@ -399,4 +399,3 @@ def send_notification(channel: str, message: str) -> Dict[str, Any]:
 ## Next Steps
 
 - [Harness Setup](harness-setup/)
-- [Testing Guide](troubleshooting.md)

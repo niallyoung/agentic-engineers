@@ -130,12 +130,6 @@ that produced it.
 
 ---
 
-## Troubleshooting
-
-See [docs/guides/troubleshooting.md](troubleshooting.md).
-
----
-
 **Document Version**: 2.0
 **Last Updated**: 2026-08-09
 **Status**: Reflects the Direct Sub-Agent Spawn Execution Model; supersedes the

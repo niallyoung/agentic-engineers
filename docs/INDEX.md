@@ -11,7 +11,6 @@
 | [README.md](../README.md) | Project overview, quick start |
 | [ONBOARDING.md](ONBOARDING.md) | New developer onboarding |
 | [AGENTS.md](AGENTS.md) | Pointer to the canonical roster/routing at [`src/AGENTS.md`](../src/AGENTS.md) |
-| [SKILLS.md](SKILLS.md) | Role-specific execution details; pointer to the current skill roster at [`src/SKILLS.md`](../src/SKILLS.md) |
 
 ---
 
@@ -27,17 +26,7 @@
 | [WORKFLOW.md](WORKFLOW.md) | SDLC lifecycle and enforcement gates |
 | [RENDERING.md](RENDERING.md) | Framework render/install pipeline |
 | [REGRESSION-GATE-POLICY.md](REGRESSION-GATE-POLICY.md) | Regression testing gate (interim permissive, WP-0/WP-5) |
-| [config-standard.md](config-standard.md) | Configuration standards |
 | [BACKGROUND-AGENT-COMMIT-PROTOCOL.md](BACKGROUND-AGENT-COMMIT-PROTOCOL.md) | Background agent commit protocol |
-
----
-
-## Harness Operations
-
-| Document | Purpose |
-|----------|---------|
-| [HARNESS-CLAUDE-TROUBLESHOOTING.md](HARNESS-CLAUDE-TROUBLESHOOTING.md) | Claude harness troubleshooting |
-| [HARNESS-OPENCODE-TROUBLESHOOTING.md](HARNESS-OPENCODE-TROUBLESHOOTING.md) | OpenCode harness troubleshooting |
 
 ---
 

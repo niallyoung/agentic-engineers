@@ -159,5 +159,3 @@ quality_engineer: "Tom"   # System voice for QE
 ## Next Steps
 
 - [Harness Setup Overview](README.md)
-- [Advanced Delegation Guide](../advanced-delegation.md)
-- [Troubleshooting](../troubleshooting.md)
