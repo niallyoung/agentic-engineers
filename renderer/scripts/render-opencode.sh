@@ -197,34 +197,43 @@ effort_to_variant() {
 
 # Parse src/AGENTS.md primary roster table for a given role's (model, effort, description).
 # Output: tab-separated "model<TAB>effort<TAB>description"; empty if not found.
-# Role lookup is by kebab-case agent name (matches AGENT_ROLE_MAPPING from old python renderer).
+# Role lookup is by kebab-case agent name.
+#
+# Thin wrapper around the canonical bash parser (parse_agents_md +
+# lookup_agent_metadata, defined in renderer/lib/render-lib.sh and sourced
+# via lib.sh above) rather than a private awk implementation. parse_agents_md
+# derives the kebab-case role key straight from the table's Role column
+# (lowercase + spaces->hyphens), so no separate kebab->"Title Case" alias
+# table is needed here — every src/agents/*-agent.md base name already
+# matches a table role directly (e.g. "security-engineer" -> "Security
+# Engineer" -> "security-engineer"). This wrapper also inherits
+# parse_agents_md's protection of the Multi-Model? column's escaped pipe
+# (e.g. "opus-5 (default) \| 4.8 (fallback)") from being mis-split into the
+# description field — the prior hand-rolled awk here did not protect against
+# that and silently truncated the Principal/Security Engineer descriptions
+# to a fragment of the fallback-model text (see renderer/lib/agents_table.py's
+# docstring for the Python-renderer twin of this same historical bug/fix).
+#
+# The parsed map is memoized in $_AGENTS_TABLE_MAP (built once, on first
+# call) since this is invoked once per agent in the render loop.
+_AGENTS_TABLE_MAP=""
 docs_lookup_role() {
 	local kebab="$1"
-	local role
-	case "$kebab" in
-		orchestrator)      role="Orchestrator" ;;
-		engineer)          role="Engineer" ;;
-		senior-engineer)   role="Senior Engineer" ;;
-		lead-engineer)     role="Lead Engineer" ;;
-		quality-engineer)  role="Quality Engineer" ;;
-		principal-engineer) role="Principal Engineer" ;;
-		security|security-engineer) role="Security Engineer" ;;
-		model-engineer)    role="Model Engineer" ;;
-		*) return 0 ;;
-	esac
 	[ -f "$SRC_AGENTS_MD" ] || return 0
-	awk -v role="$role" -F'|' '
-		$0 ~ "\\| \\*\\*"role"\\*\\*" {
-			# fields: 1=empty 2=role 3=model 4=effort 5=cost 6=use_when 7=trailing
-			model=$3; effort=$4; desc=$6
-			gsub(/^[ \t]+|[ \t]+$/, "", model)
-			gsub(/^[ \t]+|[ \t]+$/, "", effort)
-			gsub(/^[ \t]+|[ \t]+$/, "", desc)
-			gsub(/\*\*/, "", model)
-			print model "\t" effort "\t" desc
-			exit
-		}
-	' "$SRC_AGENTS_MD"
+	if [ -z "$_AGENTS_TABLE_MAP" ]; then
+		_AGENTS_TABLE_MAP=$(mktemp)
+		trap 'rm -f "$_AGENTS_TABLE_MAP"' EXIT INT TERM
+		parse_agents_md "$SRC_AGENTS_MD" > "$_AGENTS_TABLE_MAP"
+	fi
+	local row model effort desc
+	row=$(lookup_agent_metadata "$kebab" "$_AGENTS_TABLE_MAP")
+	[ -n "$row" ] || return 0
+	# row is "model|effort|description" (canonical pipe-joined shape) —
+	# convert to this function's tab-separated output contract.
+	model=$(echo "$row" | cut -d'|' -f1)
+	effort=$(echo "$row" | cut -d'|' -f2)
+	desc=$(echo "$row" | cut -d'|' -f3-)
+	printf '%s\t%s\t%s\n' "$model" "$effort" "$desc"
 }
 
 # JSON-escape a string for embedding inside double quotes.

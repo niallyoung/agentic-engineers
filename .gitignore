@@ -16,7 +16,14 @@ eggs/
 .eggs/
 lib/
 lib64/
-!renderer/lib/  # Exception: renderer/lib/ is committed as source code
+# Exception: renderer/lib/ is committed as source code. Both the directory
+# entry and a recursive "**" re-inclusion are needed: a bare "!renderer/lib/"
+# only re-includes the directory node itself, not files added under it later
+# (a known gitignore gotcha where the broader "lib/" exclusion above still
+# shadows individual files unless the negation is recursive).
+!renderer/lib/
+!renderer/lib/**
+renderer/lib/__pycache__/
 parts/
 sdist/
 var/

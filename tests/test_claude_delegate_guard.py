@@ -17,6 +17,7 @@ that file — claude-delegate-guard.py is a different implementation with a
 different (hook) contract; see the module's own docstring for why it is
 deliberately not a thin wrapper around any of the older validators.
 """
+import importlib.util
 import json
 import subprocess
 import sys
@@ -26,6 +27,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GUARD = REPO_ROOT / "renderer" / "scripts" / "claude-delegate-guard.py"
+AGENTS_MD = REPO_ROOT / "src" / "AGENTS.md"
 
 VALID_DELEGATE_PROMPT = """\
 handoff_type: DELEGATE
@@ -144,3 +146,46 @@ class TestFailsOpen:
         )
         assert result.returncode == 0
         assert result.stdout.strip() == ""
+
+
+class TestFrameworkRolesMatchRoster:
+    """FRAMEWORK_ROLES in claude-delegate-guard.py is a hardcoded literal by
+    design (see the module's own comment: the guard is stdlib-only and runs
+    outside the repo as a Claude Code hook, so it deliberately does not parse
+    src/AGENTS.md at runtime). That means it can silently drift from the
+    canonical roster if a role is ever added, renamed, or removed in
+    src/AGENTS.md without updating the hook. This test is the repo-side
+    tripwire for that drift: it parses the live roster with the canonical
+    Python parser (renderer/lib/agents_table.py — the same one
+    render-codex.py uses, pinned to the bash parser by
+    tests/test_agents_table_parity.py) and asserts the role sets match
+    exactly.
+    """
+
+    @staticmethod
+    def _load_guard_module():
+        spec = importlib.util.spec_from_file_location("claude_delegate_guard", GUARD)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    @staticmethod
+    def _roster_roles():
+        lib_dir = REPO_ROOT / "renderer" / "lib"
+        if str(lib_dir) not in sys.path:
+            sys.path.insert(0, str(lib_dir))
+        from agents_table import parse_agents_table
+
+        return {row["role"] for row in parse_agents_table(AGENTS_MD)}
+
+    def test_framework_roles_equals_live_roster_roles(self):
+        guard = self._load_guard_module()
+        roster_roles = self._roster_roles()
+        assert guard.FRAMEWORK_ROLES == roster_roles, (
+            "renderer/scripts/claude-delegate-guard.py's hardcoded FRAMEWORK_ROLES "
+            "has drifted from src/AGENTS.md's Agent Roster table. Update "
+            "FRAMEWORK_ROLES to match (it must stay a hardcoded literal — see the "
+            "guard's module docstring for why it doesn't parse AGENTS.md at "
+            f"runtime).\nFRAMEWORK_ROLES: {sorted(guard.FRAMEWORK_ROLES)}\n"
+            f"roster roles:    {sorted(roster_roles)}"
+        )

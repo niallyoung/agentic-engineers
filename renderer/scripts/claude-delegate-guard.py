@@ -48,6 +48,16 @@ import sys
 # Generic/utility agents (Explore, Plan, general-purpose, claude,
 # statusline-setup, ...) are intentionally out of scope: they never accept:
 # [DELEGATE] in their frontmatter and are not bound by the protocol.
+#
+# Deliberately a hardcoded literal, NOT parsed from src/AGENTS.md at runtime:
+# this script is stdlib-only (no PyYAML) and runs as a Claude Code PreToolUse
+# hook subprocess outside the repo's own environment (see module docstring),
+# so it cannot assume the repo — or even src/AGENTS.md — is reachable at
+# hook-execution time. Roster drift between this literal and the canonical
+# src/AGENTS.md table is instead caught repo-side by
+# tests/test_claude_delegate_guard.py::TestFrameworkRolesMatchRoster, which
+# parses the live roster with renderer/lib/agents_table.py and asserts the
+# two sets are identical.
 FRAMEWORK_ROLES = {
     "orchestrator",
     "engineer",
