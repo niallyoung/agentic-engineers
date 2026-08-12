@@ -258,7 +258,7 @@ Queue directory structure (**harness first, then session-id**) — identical sha
 under each of the four harness directories:
 ```
 ~/.agentic-engineers/
-└── copilot/                            # or claude/, opencode/, pi/ — identical below
+└── copilot/                            # or claude/, opencode/, codex/ — identical below
     └── {session-id}/                   # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
         ├── queue/
         │   ├── incoming/               # New DELEGATEs waiting for routing
@@ -272,7 +272,7 @@ under each of the four harness directories:
 - **copilot**: Uses `~/.agentic-engineers/copilot/{session-id}/queue/`
 - **claude**: Uses `~/.agentic-engineers/claude/{session-id}/queue/`
 - **opencode**: Uses `~/.agentic-engineers/opencode/{session-id}/queue/`
-- **pi**: Uses `~/.agentic-engineers/pi/{session-id}/queue/`
+- **codex**: Uses `~/.agentic-engineers/codex/{session-id}/queue/`
 
 **CRITICAL:** There are NO EXCEPTIONS. All four harnesses use the same `~/.agentic-engineers/` base directory. No harness may use its own legacy path.
 
@@ -287,7 +287,7 @@ All queue directories MUST contain four standard subdirectories:
 | **done/** | Completed work | Final decisions ready for human action |
 | **failed/** | Failed work (optional) | HANDBACKs with status=failed or blocked beyond recovery |
 
-All subdirectories exist across all four harnesses (copilot, claude, opencode, pi).
+All subdirectories exist across all four harnesses (copilot, claude, opencode, codex).
 
 ### Unsupported Legacy Paths (DEPRECATED)
 
@@ -318,7 +318,7 @@ The following paths are **DEPRECATED and MUST NOT be used**:
 - Orchestrator MUST NOT implement conditional logic for different harnesses; all use same base
 
 **3. Harness Renderers (Build-Time Compliance)** — all harness configuration renderers
-(copilot, claude, opencode, pi) MUST output `QUEUE_PATH=~/.agentic-engineers/{harness}/{session-id}/queue/`;
+(copilot, claude, opencode, codex) MUST output `QUEUE_PATH=~/.agentic-engineers/{harness}/{session-id}/queue/`;
 build-time validation checks correct path; pre-commit hooks validate no legacy paths in
 harness code.
 
@@ -692,6 +692,7 @@ into `dist/<harness>/` and installed to each harness's home directory.
 - **2026-06-13:** [SPEC-2026-003 — principal-engineer, approved by security-engineer] Replaced a stale `AutomationController` reference (removed in the 2026-05-17 daemon-removal refactor) with a description of harness-initiated idle-loop polling as the then-current mechanism. Superseded by SPEC-2026-004 below.
 - **2026-08-09:** [SPEC-2026-004 — principal-engineer, approved by security-engineer + lead-engineer] Execution Model redesign: replaced queue-polling dispatch (never functional — a 2026-08-09 sweep of 16 live session partitions found zero tasks ever traversed the queue that way) with direct sub-agent spawn as the canonical ORCHESTRATOR-FIRST mechanism. Queue paths (LOCKED section) unchanged; the queue's role narrows to durable inbox + audit substrate. Governance-only; no code changed by the proposal itself.
 - **2026-08-11:** [SPEC-2026-005 — lead-engineer, framework slimdown WP-4] Consolidated rewrite, 2,035 → ~650 lines. LOCKED sections carried over near-verbatim with exactly two sanctioned edits: (a) Queue Architecture & Paths — "MUST initialize queue polling ONLY from" → "MUST read and write queue records ONLY from" (path unchanged); (b) Model Naming & Harness Compatibility — Orchestrator's assigned model changed from `claude-haiku-4.5` to `claude-sonnet-5` (commit 2b6e268). Deleted sections describing subsystems removed elsewhere in this slimdown: Phase 5.10 Span Capture & Indexing, Observability & Monitoring, Model Selection Architecture (opus-variant facts folded into a short non-LOCKED context note ahead of the LOCKED model section), Phase 3 Token Visibility, Optimization Feedback Loop, Agent Implementations, the Option-1a Dual-Layer Orchestrator Architecture and pre-direct-spawn Queue-Based Delegation Mechanics sections, Legacy Tiers, Next Steps (Phase 6), a duplicated vestigial tail, and a duplicate second SDLC-hooks section. Rewrote Repository Structure as an accurate ~20-line tree and COMPLETE SCRIPT INVENTORY from the actual surviving `scripts/` + `renderer/scripts/`. Authorizes the interim permissive floor in `renderer/scripts/check_test_regression.py` for the duration of the slimdown (WP-5 re-baselines from measured actuals). See `docs/spec-proposals/SPEC-2026-005.yaml`.
+- **2026-08-12:** [SPEC-2026-006 — lead-engineer, framework slimdown follow-up C] Corrected the harness enumeration in the LOCKED "Queue Architecture & Paths" section, which still listed `pi` (the pi harness was dropped elsewhere in the 2026-08-11 slimdown; `renderer/scripts/render-pi*.py` and its dist output no longer exist) and omitted `codex` (a supported render target since commit 1361afa, 2026-06-17 — added after this section's 2026-05-26 lock date, so its earlier absence here was accurate at the time, not an oversight). Four surgical string replacements only — the harness-directory tree comment, the "Supported Harnesses" bullet list, the subdirectory-coverage sentence, and the harness-renderers compliance sentence — each swapping the literal `pi` for `codex` in place, preserving position, count ("four harnesses"), and every other word. Path template, ordering rules, state-dir list, and the Unsupported Legacy Paths migration table are byte-identical to SPEC-2026-005. The sibling LOCKED "Model Naming & Harness Compatibility" section (which also still references `pi`/`pi.dev`) is explicitly out of scope for this proposal — see `docs/spec-proposals/SPEC-2026-006.yaml`.
 
 ---
 
