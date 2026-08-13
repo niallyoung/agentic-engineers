@@ -45,6 +45,46 @@ Re-baseline history (each ~95% of the measured actual at that point):
     contributed 0 collected tests, so it does not appear in the count below.
     Measured actual: 828 collected (874 - 46) -> floor 786 (828 * 0.95 =
     786.6 -> 786).
+  - Round 3 batch 1, WP-R3-04 (2026-08-13, OUT-OF-BAND -- see WP-R3-11 entry
+    below): protocol-validator's dead enum-drift/protocol-divergence scanners
+    were removed along with the 52 tests that pinned them (TestEnumDrift-
+    Detection, TestProtocolDivergenceDetection). This measured 734 collected
+    in tests/ and dropped the floor 786 -> 697 (734 * 0.95 = 697.3 -> 697).
+    The change was made unilaterally by that work package's engineer, outside
+    WP-R3-11's governance authority (which owns this file) -- flagged in
+    commit 0aca2a0's message for lead-engineer review.
+  - Round 3 batch 3, WP-R3-11 governed re-baseline (2026-08-13, task_id
+    task-2026-08-13-r3-wp11-spec-floor): reviewed the WP-R3-04 deviation
+    above. Between WP-R3-04 and this review, round-3 batch 2 added tests
+    (parseability suite, round-trip proofs), so the honest current actual is
+    higher than 734. Re-measured with this script's own methodology
+    (`pytest tests/ --collect-only`, the same explicit path CI's `make test`
+    passes -- NOT a bare `pytest --collect-only`, which is a different,
+    larger number): 766 collected in tests/ -> floor 727 (766 * 0.95 = 727.7
+    -> 727). The WP-R3-04 697 floor is reviewed and superseded by this
+    governed re-baseline.
+    SCOPE CLARIFICATION (the source of a planning-time arithmetic error this
+    review caught): WP-R3-04 also expanded `pytest.ini`'s `testpaths` to
+    include 3 skill-local test dirs (protocol-validator, spec-validator,
+    skill-improvement-feedback), so a bare `pytest --collect-only` with no
+    path argument now collects 935 (766 tests/ + 169 skill-local), and
+    WP-R3-04's commit message quoted "903 total" at that time on the same
+    basis. That 935/903-style figure is NOT what this gate measures or
+    guards: `count_collected()` below always passes an explicit `test_path`,
+    which overrides `testpaths` in pytest.ini, and CI's `make test` likewise
+    invokes `pytest tests/ ...` explicitly (see Makefile `test:` target) --
+    both scope the same 766-count population this file's BASELINES track.
+    The 169 skill-local tests are gated separately, by
+    `scripts/run_skill_tests.py`'s own `MIN_EXPECTED_TESTS` floor, run via
+    `make test-skills` in its own subprocess per skill. Do not conflate the
+    two floors or re-baseline this file against the bare-pytest number.
+    FORWARD NOTE: round-3 batch 4 (WP-R3-05) is planned to remove tests
+    duplicated across layers. Per this policy's own convention (every prior
+    entry above re-baselines from a *measured* actual, never a forecast),
+    this review deliberately does NOT pre-set a floor for that not-yet-landed
+    change. When WP-R3-05 lands, re-measure `pytest tests/ --collect-only`
+    honestly at that time and re-baseline again with QE sign-off -- do not
+    reuse any pre-computed number from this task's planning context.
 
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
@@ -55,16 +95,20 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Re-baselined 2026-08-13 (WP-R3-04: protocol-validator scanners removed) from
-# the measured actual of 734 collected tests in tests/ (original ~786 - 52 deleted).
-# Floor is ~95% (734 * 0.95 = 697.3 -> 697). Note: this deletion is intentional
-# as part of removing dead enum-drift and protocol-divergence scanners; the 52
-# deleted tests correspond to TestEnumDriftDetection and TestProtocolDivergenceDetection
-# which tested those now-removed scanners.
+# Re-baselined 2026-08-13 (WP-R3-11, task_id task-2026-08-13-r3-wp11-spec-floor,
+# QE-signed-off governed re-baseline) from the measured actual of 766 collected
+# tests in tests/ (734 at WP-R3-04's out-of-band change + tests added by round-3
+# batch 2). Floor is ~95% (766 * 0.95 = 727.7 -> 727). This supersedes WP-R3-04's
+# unilateral 697 floor (flagged in commit 0aca2a0 for review) -- see this file's
+# module docstring "Round 3 batch 3, WP-R3-11" entry for the full trajectory,
+# the scope clarification (this floor tracks `pytest tests/`, NOT the larger
+# bare-`pytest` count that also pulls in skill-local test dirs), and why the
+# not-yet-landed WP-R3-05 duplicate-test removal is deliberately NOT
+# pre-baselined here.
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 697,
+        "minimum": 727,
         "label": "Full test suite",
     },
 }

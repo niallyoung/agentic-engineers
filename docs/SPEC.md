@@ -219,71 +219,23 @@ Orchestrator runs on Sonnet-tier; see Update Log SPEC-2026-005.)
 
 ## Routing Decision Tree (Orchestrator)
 
-When the Orchestrator receives a task (a user request, or work drained from the durable
-inbox at context start):
-
-1. **Security-scoped?** (auth, crypto, data protection, vulnerability) → **Security
-   Engineer** (blocks all other routes)
-2. **Cross-service architecture?** (affects >2 repos, service boundaries) → **Principal
-   Engineer**
-3. **Complex coding WITHOUT a pre-written plan?** → **Senior Engineer** (writes the plan
-   first; returns HANDBACK with a plan, not code)
-4. **Code review or quality verification?** → **Lead Engineer** or **Quality Engineer**
-5. **Well-scoped with a pre-written plan, low-medium complexity?** → **Engineer** (Red-Green
-   TDD for code changes)
-6. **Otherwise** → escalate to a human (unclear scope)
+The routing decision tree (security-scoped → Security Engineer; cross-service
+architecture → Principal Engineer; unscoped complex coding → Senior Engineer;
+review/quality verification → Lead Engineer or Quality Engineer; well-scoped
+with a plan → Engineer; otherwise → escalate to a human) is canonical in
+[`src/AGENTS.md`](../src/AGENTS.md) § Delegation Model & Routing Rules — not
+duplicated here.
 
 ---
 
 ## DELEGATE/HANDBACK Protocol
 
-### DELEGATE Format (Orchestrator → Agent)
-
-```yaml
----
-handoff_type: DELEGATE
-task_id: {unique_id}
-role: Engineer | Senior Engineer | Lead Engineer | Quality Engineer | ...
-model: claude-haiku-4.5 | claude-sonnet-5 | claude-opus-5 | claude-fable-5
-effort: low | medium | high | max
-depth: {int, 0 at Orchestrator}
-ancestry: [ordered ancestor task_ids from the root]
-scope: "Clear one-sentence scope + explicit out-of-scope boundaries (>=15 words)"
-context: [relevant files, error messages, root cause analysis]
-success_criteria: [measurable criteria; tests must pass, coverage maintained, etc.]
-plan: [required for Engineer; step-by-step concrete steps; include Red-Green TDD phases for code changes]
----
-```
-
-### HANDBACK Format (Agent → Orchestrator)
-
-```yaml
----
-handoff_type: HANDBACK
-task_id: {matching_delegate_task_id}
-status: success | failure | partial | blocked | escalate
-# success  — all success_criteria met
-# failure  — attempted but could not be completed
-# partial  — some success_criteria met, work remains
-# blocked  — cannot proceed; external dependency or decision required
-# escalate — requires higher-tier agent or human intervention
-output: "Summary of what was delivered (any value; key must be present)"
-metrics:
-  quality: {0.0-1.0}
-  tokens: {non-negative integer}
-  cost: {non-negative USD}
-  duration_seconds: {non-negative}
----
-```
-
-**Optional extension fields** (loosely validated, forward-compatible):
-`deliverables`, `tests`, `escalations`, `model_assessment` (haiku_suitable |
-sonnet_would_be_better | opus_required), `confidence` (0.0-1.0), `retry_count`,
-`model_used`, `effort_actual`, `children_created`, `children_results`, `flags`, `error`.
-
-Canonical machine-readable schema: [docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml)
-— the sole normative DELEGATE/HANDBACK schema (the former per-block schema files were
-consolidated into it and removed).
+The DELEGATE and HANDBACK message formats — required/optional fields, examples,
+and the canonical machine-readable schema
+([docs/specs/protocol-core-v1.0.yaml](specs/protocol-core-v1.0.yaml)) — are
+defined in [`docs/PROTOCOL.md`](PROTOCOL.md) § 2 (Canonical Schema) and
+[`src/AGENTS.md`](../src/AGENTS.md) § Handover Packet Protocol — not duplicated
+here.
 
 ---
 
@@ -588,6 +540,24 @@ into `dist/<harness>/` and installed to each harness's home directory.
   load-bearing via pre-push and `ci.yml`) and every other row are unchanged. Per the
   spec-management "3a. Self-Authorized Narrow Follow-Up" pattern; this Update Log entry
   is the record (no separate proposal file).
+- **2026-08-13:** [lead-engineer, task-2026-08-13-r3-wp11-spec-floor, authorized_by:
+  user-directive (round-3 planning, ancestry: [task-2026-08-13-queue-removal-root,
+  task-2026-08-13-plan-round3-value])] Deduplicated the "Routing Decision Tree" and
+  "DELEGATE/HANDBACK Protocol" sections, which restated content already canonical in
+  `src/AGENTS.md` (§ Delegation Model & Routing Rules, § Handover Packet Protocol) and
+  `docs/PROTOCOL.md` (§ 2 Canonical Schema) — replaced with one-line normative
+  cross-references, the same pattern `docs/WORKFLOW.md`'s 2026-08-13 condensation
+  already uses. Verified no test or CI gate parses these sections' literal content
+  (`grep -rn SPEC tests/ .githooks/ .github/workflows/`); the strings the
+  security-gate workflow and pre-push hook do assert on (`# Agentic Engineers
+  Implementation Specification`, `ORCHESTRATOR-FIRST EXECUTION MODEL`, the
+  frontmatter `version:` field, and the top-level `# ` heading) are outside the
+  edited range and unchanged; the LOCKED "Model Naming & Harness Compatibility"
+  section is untouched. Companion package to the same task's regression-floor
+  governance review (see `renderer/scripts/check_test_regression.py` and
+  `docs/REGRESSION-GATE-POLICY.md`, updated in the same task but not a SPEC.md
+  change). Per the spec-management "3a. Self-Authorized Narrow Follow-Up" pattern;
+  this Update Log entry is the record (no separate proposal file).
 
 ---
 
