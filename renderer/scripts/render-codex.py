@@ -273,12 +273,8 @@ class CodexRenderer:
     def metadata_for(self, agent: AgentSource) -> dict[str, str]:
         docs_meta = self.canonical.get(agent.name, {})
         role = AGENT_NAME_TO_REGISTRY_ROLE.get(agent.name, agent.name.replace("-", "_"))
-        effort = docs_meta.get("effort") or str(agent.frontmatter.get("effort") or "medium")
-        description = (
-            docs_meta.get("description")
-            or str(agent.frontmatter.get("description") or "")
-            or agent.body.strip().splitlines()[0]
-        )
+        effort = docs_meta.get("effort", "medium")
+        description = docs_meta.get("description", "")
         return {
             "role": role,
             "effort": effort,
@@ -471,9 +467,6 @@ network_access = false
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
-
-# Polling-based queue automation has been removed (2026-08-09).
-# Orchestration now uses direct sub-agent spawning per SPEC-2026-004.
 """,
             encoding="utf-8",
         )
@@ -505,11 +498,6 @@ network_access = false
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
-
-# Polling-based queue automation has been removed (2026-08-09).
-# Orchestration now uses direct sub-agent spawning per SPEC-2026-004.
-watch_enabled = true
-watch_poll_seconds = 0.5
 
 # Autopilot-style self-tests can use:
 #   codex exec --sandbox workspace-write --ask-for-approval never "<task>"
@@ -639,8 +627,6 @@ watch_poll_seconds = 0.5
             for field in ("name =", "description =", "model =", "model_reasoning_effort =", "developer_instructions ="):
                 if field not in text:
                     errors.append(f"{path.name} missing {field}")
-            if "gpt-5.2" in text or "gpt-5.3-codex" in text:
-                errors.append(f"{path.name} uses deprecated Codex model")
         if not (self.codex_home / "AGENTS.md").is_file():
             errors.append("missing AGENTS.md")
         else:
@@ -689,8 +675,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Render agentic-engineers for Codex")
     parser.add_argument("repo_root", nargs="?", help="Repository root")
     parser.add_argument("codex_home", nargs="?", help="Codex home/output directory")
-    parser.add_argument("--repo-root", dest="repo_root_flag")
-    parser.add_argument("--dest", dest="codex_home_flag")
     parser.add_argument("--skills-root", dest="skills_root")
     parser.add_argument("--uninstall", action="store_true")
     parser.add_argument("--status", action="store_true")
@@ -700,8 +684,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
-    repo_root = Path(args.repo_root_flag or args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
-    codex_home = Path(args.codex_home_flag or args.codex_home or Path.home() / ".codex").expanduser().resolve()
+    repo_root = Path(args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
+    codex_home = Path(args.codex_home or Path.home() / ".codex").expanduser().resolve()
     skills_root = (
         Path(args.skills_root).expanduser().resolve()
         if args.skills_root

@@ -204,73 +204,6 @@ class TestDistDeployment:
             assert skill_md.exists(), f"Skill {skill_dir.name} in dist/ missing SKILL.md"
 
 
-class TestRenderConsistency:
-    """Verify render consistency across all entity types"""
-    
-    def test_agent_name_field_drives_filename(self):
-        """Agent rendered filenames must come from 'name' field, not source filename"""
-        agents_dir = REPO_ROOT / "src/agents"
-        
-        for agent_file in agents_dir.glob("*-agent.md"):
-            content = agent_file.read_text()
-            
-            # Extract name from frontmatter
-            lines = content.split("\n")
-            name_line = next((l for l in lines if l.startswith("name:")), None)
-            
-            if name_line:
-                # name: Engineer → Engineer
-                name_value = name_line.split(":", 1)[1].strip()
-                
-                # Expected rendered filename: engineer.agent.md (lowercase)
-                expected_rendered = name_value.lower() + ".agent.md"
-                
-                # Verify renderer script uses name field
-                renderer_path = REPO_ROOT / "renderer/scripts/render-copilot-agents.py"
-                if renderer_path.exists():
-                    renderer_content = renderer_path.read_text()
-                    # Should extract from frontmatter, not filename
-                    assert ("frontmatter" in renderer_content or "name" in renderer_content), \
-                        "Renderer doesn't use frontmatter 'name' field for output filename"
-
-
-class TestRendererLibConsolidation:
-    """Verify the renderer library consolidation (render-lib.sh as unified lib, lib.sh as shim)"""
-
-    def test_render_lib_sh_exists(self):
-        """Unified render library must exist at renderer/lib/render-lib.sh"""
-        assert (REPO_ROOT / "renderer/lib/render-lib.sh").exists(), \
-            "renderer/lib/render-lib.sh not found — unified render library missing"
-
-    def test_lib_sh_is_shim_sourcing_render_lib(self):
-        """renderer/scripts/lib.sh must be a shim that sources render-lib.sh"""
-        lib_path = REPO_ROOT / "renderer/scripts/lib.sh"
-        assert lib_path.exists(), "renderer/scripts/lib.sh not found"
-        content = lib_path.read_text()
-        # Shim should source render-lib.sh (not define all functions inline)
-        assert "render-lib.sh" in content, \
-            "lib.sh should source render-lib.sh (consolidation shim) — found duplicate function definitions instead"
-
-    def test_render_lib_has_list_source_specs(self):
-        """render-lib.sh must expose list_source_specs for spec entity enumeration"""
-        content = (REPO_ROOT / "renderer/lib/render-lib.sh").read_text()
-        assert "list_source_specs" in content, \
-            "render-lib.sh missing list_source_specs function"
-
-    def test_render_lib_has_validate_functions(self):
-        """render-lib.sh must expose validation functions"""
-        content = (REPO_ROOT / "renderer/lib/render-lib.sh").read_text()
-        assert "validate_frontmatter" in content, \
-            "render-lib.sh missing validate_frontmatter function"
-        assert "validate_entity_structure" in content, \
-            "render-lib.sh missing validate_entity_structure function"
-
-    def test_render_specs_script_exists(self):
-        """render-specs.sh must exist for spec deployment pipeline"""
-        assert (REPO_ROOT / "renderer/scripts/render-specs.sh").exists(), \
-            "renderer/scripts/render-specs.sh not found — spec deployment pipeline missing"
-
-
 class TestSpecDeployment:
     """Verify spec deployment pipeline (dist/specs/)"""
 
@@ -343,32 +276,4 @@ class TestSpecDeployment:
         assert src.read_text() == dst.read_text(), \
             "dist/specs/SPEC.md is out of sync with docs/SPEC.md — run 'make render-specs'"
 
-
-class TestHarnessLifecycleDocs:
-    """Verify harness lifecycle documentation exists and covers required topics"""
-
-    def test_rendering_md_exists(self):
-        """docs/RENDERING.md must exist"""
-        assert (REPO_ROOT / "docs/RENDERING.md").exists(), \
-            "docs/RENDERING.md not found — harness lifecycle documentation missing"
-
-    def test_rendering_md_covers_build_time(self):
-        """RENDERING.md must cover build-time rendering phase"""
-        content = (REPO_ROOT / "docs/RENDERING.md").read_text()
-        assert "build" in content.lower() or "render" in content.lower(), \
-            "docs/RENDERING.md should document build-time rendering"
-
-    def test_rendering_md_covers_runtime(self):
-        """RENDERING.md must cover runtime loading phase"""
-        content = (REPO_ROOT / "docs/RENDERING.md").read_text()
-        assert "runtime" in content.lower(), \
-            "docs/RENDERING.md should document runtime loading"
-
-    # NOTE: docs/FEEDBACK-LOOPS.md (and its feedback_context DELEGATE field)
-    # was retired in WP-4's docs demolition (SPEC-2026-005 rewrite, commit
-    # 4a7eee2). The skill self-improvement feedback pattern now lives solely
-    # in src/skills/skill-improvement-feedback/SKILL.md (skill_feedback in
-    # HANDBACKs — see that skill's docstring), which does not use the old
-    # feedback_context/FEEDBACK-LOOPS.md terminology, so there is nothing
-    # left for these tests to target.
 

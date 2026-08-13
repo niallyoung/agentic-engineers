@@ -89,6 +89,7 @@ chain, used for cycle/depth detection; see [§5](#5-escalation)).
 
 ```yaml
 handoff_type: DELEGATE
+spec_version: "1.0"
 task_id: add-jwt-validation
 skill: senior-engineer
 agent: senior-engineer
@@ -133,6 +134,7 @@ for its shape.
 
 ```yaml
 handoff_type: HANDBACK
+spec_version: "1.0"
 task_id: add-jwt-validation
 status: success
 output: |
@@ -176,18 +178,34 @@ deliberately — no single layer is a complete gate on its own.
 | **`.githooks/pre-commit`** DELEGATE/HANDBACK section | Regex-based core-field presence/format checks (task_id pattern, agent enum, status enum, metrics sub-fields, secret-pattern scan) on staged `.yaml`/`.yml` files that look like a DELEGATE or HANDBACK | `git commit` | Files about to be committed |
 | **PreToolUse hook** (`renderer/scripts/claude-delegate-guard.py`) | Deliberately not a thin wrapper around the validator above (documented in its own docstring) — checks that a live Claude Code Agent-tool spawn targeting one of the eight framework roles carries a well-formed DELEGATE block in its prompt | Every Agent/Task-tool spawn in a Claude Code session | The one path the other two layers cannot see: an in-session spawn that never touches disk |
 
+### 3.1 Per-Layer Field Coverage
+
+The three enforcement layers cover different fields and operate at different times; no layer enforces all fields:
+
+| Core Field | `protocol-validator` | `.githooks/pre-commit` | `PreToolUse` hook | Coverage |
+|---|---|---|---|---|
+| `handoff_type` | ✅ | ✅ | ✅ | All three |
+| `task_id` format | ✅ | ✅ | ✅ | All three |
+| `agent` enum | ✅ | ✅ | ✅ | All three |
+| `scope` >=15 words | ✅ | — | ✅ | Skill + PreToolUse |
+| `spec_version` | ✅ | — | — | Skill only |
+| `skill` exists | ✅ | — | — | Skill only |
+| `status` enum | ✅ | ✅ | — | Skill + pre-commit |
+| `metrics` sub-fields | ✅ | ✅ | — | Skill + pre-commit |
+| Secret patterns | — | ✅ | — | pre-commit only |
+
+**Reality:** The `protocol-validator` skill is authoritative for *completeness* (all required fields); `.githooks/pre-commit` is a fast gate for committed files; `PreToolUse` guard is the gate for in-session Agent-tool spawns. An agent may also *self-enforce* its role's `spawn` recursion limits (depth, fan-out) before issuing a DELEGATE to a sub-agent — that is not a validator responsibility.
+
 None of these layers enforces the *calling* agent's role, ancestry, spawn depth, or
 fan-out count — that is the spawning agent's own judgment call per
 [Recursion Limits](../src/AGENTS.md#recursion-limits) in `src/AGENTS.md`.
 
 There is no filesystem queue and no `enqueue()` gateway — the durable audit record is
 the harness session transcript itself (every DELEGATE as a spawn prompt, every HANDBACK
-as that spawn's result), not a separately-written file. `scripts/check_protocol_compliance.py`,
-the CI gate that used to run the validator above over a directory of queue YAML files,
-was deleted along with the queue itself (SPEC-2026-009) — the `protocol-validator` skill
-above remains the way to validate a DELEGATE/HANDBACK dict or file on demand, in-process.
+as that spawn's result), not a separately-written file. The `protocol-validator` skill
+remains the way to validate a DELEGATE/HANDBACK dict or file on demand, in-process.
 
-### 3.1 Common Mistakes
+### 3.2 Common Mistakes
 
 ```
 ❌ scope: "Fix the bug"                    → Add file:line, root cause, expected behavior (>=15 words)

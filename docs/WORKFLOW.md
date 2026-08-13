@@ -38,7 +38,7 @@ targets follow each role's "Escalates to" in `src/AGENTS.md` Role Definitions).
 | 1 | User Request | Task described | Scope bounded, success measurable, context sufficient | Orchestrator | Ask for clarification |
 | 2 | Orchestrator Routing | Gate 1 passed | AGENTS.md routing tree applied; agent/model/effort selected | DELEGATE built | Escalate to human |
 | 3 | DELEGATE Validation | DELEGATE constructed | Required fields present & valid (AGENTS.md DELEGATE Block Format) | Agent spawned | Fix and resubmit |
-| 4 | Agent Execution | Agent spawned | Plan executed, tests run, quality baseline met | HANDBACK returned | `blocked`/`failed` → rework or escalate |
+| 4 | Agent Execution | Agent spawned | Plan executed, tests run, quality baseline met | HANDBACK returned | `blocked`/`failure` → rework or escalate |
 | 5 | HANDBACK Validation | HANDBACK returned | Composite score (formula below) | Merge / Lead review / Rework / Escalate | — |
 | 6 | Pre-Commit | `git commit` | `.githooks/pre-commit` checks | Commit created | Commit blocked |
 | 7 | Pre-Push | `git push` | `.githooks/pre-push` checks | Push proceeds | Push blocked |
@@ -89,23 +89,17 @@ agent reports `status: blocked`; scope creep is documented in the HANDBACK.
 
 ### Gate 5: HANDBACK Validation
 
-Validates the HANDBACK against `src/AGENTS.md`'s required fields, then scores it:
+Validates the HANDBACK against the required-fields schema, and reviews the result by convention:
 
-**Quality scoring formula:**
-- Format (40%) — YAML valid, required fields present
-- Content (35%) — deliverables match scope, tests passing
-- Quality (25%) — code quality, coverage, confidence
-- Composite = (Format × 0.4) + (Content × 0.35) + (Quality × 0.25)
-
-**Routing by score:**
-
-| Score | Decision | Next step |
-|-------|----------|-----------|
-| 0.9–1.0 | MERGE | Ready for production |
-| 0.8–0.89 | MERGE | With notes |
-| 0.7–0.79 | LEAD REVIEW | Manual verification by Lead Engineer |
-| 0.6–0.69 | REWORK | New DELEGATE with feedback (max 2 retries, then escalate) |
-| <0.6 | ESCALATE | Principal Engineer reviews |
+**Quality assessment (by convention, not by automated formula):**
+1. Agent self-reports `metrics.quality` (0.0–1.0)
+2. Quality Engineer MAY spawn after the HANDBACK to verify `success_criteria` against actual
+   delivered work, run lint/test/build, and adjust `metrics.quality` if the self-report was
+   over- or under-optimistic
+3. Routing follows the agent's `status` field:
+   - `success` → done, merge
+   - `partial` → new DELEGATE for remainder
+   - `blocked` or `escalate` → surface to Orchestrator for further action
 
 **On failure:** an invalid HANDBACK is rejected back to the agent for a fix and resubmit.
 **Output:** HANDBACK returned in-context as the spawn call's result; metrics recorded for Model
@@ -163,14 +157,13 @@ Condensed pointer table — full duties, boundaries, and escalation targets are 
 
 ## Metrics Collected
 
-| Gate | Metrics |
+By convention (not auto-collected by the harness), these metrics are tracked where they matter:
+
+| Gate | Metrics (convention) |
 |---|---|
-| 1 | `task_id`, `request_timestamp`, `scope_clarity`, `success_criteria_measurable` |
 | 2 | `routing_decision`, `effort_level`, `model_assigned`, `tokens_estimate` |
-| 4 | `tokens_used`, `duration_minutes`, `tests_passed`/`tests_failed`, `code_coverage`, `quality`, `confidence` |
-| 5 | `quality_composite`, `routing_decision`, `lead_review_required`, `rework_count` |
-| 6 | `commit_timestamp`, `files_changed`, `spec_violations`, `secrets_detected`, `yaml_errors` |
-| 7 | `push_timestamp`, `tests_passing`, `documentation_valid`, `protocol_compliant` |
+| 4 | `tokens_used`, `duration_seconds`, `tests_passed`/`tests_failed`, `code_coverage`, `quality`, `confidence` |
+| 5 | `quality_composite`, `routing_decision`, `rework_count` |
 
 ---
 

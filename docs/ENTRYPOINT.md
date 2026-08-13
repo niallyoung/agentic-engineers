@@ -152,34 +152,9 @@ anything to decide what to spawn next.
 
 ---
 
-## 🤖 Key Agents (See AGENTS.md for full details)
+## 🤖 Agent Reference
 
-| Role | Model | When to Use |
-|------|-------|------------|
-| **Engineer** | Haiku (fast) | Well-scoped work with a plan (code, docs, fixes) |
-| **Senior Engineer** | Sonnet (strong) | Complex work, research, design, spec extraction |
-| **Lead Engineer** | Sonnet (strong) | Code review, validation, quality gates |
-| **Principal Engineer** | Opus (premium) | Cross-service architecture, major decisions |
-| **Security Engineer** | Opus (premium) | Security reviews, auth, crypto, compliance |
-| **Quality Engineer** | Sonnet (strong) | Test quality, coverage, best practices |
-| **Model Engineer** | Sonnet (strong) | Cost-quality tradeoffs, recommendations |
-| **Orchestrator** | All models | Routing, direct spawn dispatch, observability, audit-trail management |
-
-See `src/AGENTS.md` for full decision tree.
-
----
-
-## 📊 Observability & Metrics
-
-After tasks complete, Orchestrator generates:
-
-**SPAN files** (Structured span records):
-```
-artifacts/2026-05-02/
-├── SPAN-2026-05-02T10:20:00Z-Engineer.yaml
-├── SPAN-2026-05-02T10:25:00Z-Senior\ Engineer.yaml
-└── SPAN-2026-05-02T10:30:00Z-Lead\ Engineer.yaml
-```
+See `src/AGENTS.md` for the full agent roster, routing decision tree, and role definitions.
 
 
 ---
@@ -190,9 +165,6 @@ artifacts/2026-05-02/
 - Dispatch: direct sub-agent spawn — there is no poll interval to configure
 - Max concurrent spawns: 5 per parent (see [src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits))
 - Max delegation depth: 3 (root DELEGATE = depth 0)
-- Retry limit: 3 attempts before escalate
-- Span capture: Enabled by default
-- Index generation: After each HANDBACK
 
 **Note on enforcement:** the depth/fan-out limits above are a documented contract each
 agent's own definition observes (via its `tools:` frontmatter grant — see
@@ -227,8 +199,7 @@ See `docs/SPEC.md` for full architectural constraints.
 
 - **src/AGENTS.md** — Full agent definitions, routing rules
 - **src/SKILLS.md** — How each agent executes their role
-- **docs/SPEC.md** — Canonical system specification with DELEGATE/HANDBACK/FEEDBACK formats
-- **docs/SPEC.md** — Complete specification & constraints
+- **docs/SPEC.md** — Canonical system specification with DELEGATE/HANDBACK formats
 
 ---
 

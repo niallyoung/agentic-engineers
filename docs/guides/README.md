@@ -13,4 +13,3 @@ architecture, and role reference, start at [docs/INDEX.md](../INDEX.md) or
 | [thinking-modes-and-cost-quality-trade-offs.md](thinking-modes-and-cost-quality-trade-offs.md) | When to enable extended thinking, and its cost impact |
 | [harness-setup/](harness-setup/) | Per-harness setup instructions |
 
-See [INDEX.md](INDEX.md) for the same list with one-line descriptions.

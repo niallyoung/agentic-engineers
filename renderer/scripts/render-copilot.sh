@@ -3,7 +3,7 @@
 #
 # Inputs:  $1 = REPO_ROOT (agentic-engineers repo root)
 #          $2 = COPILOT root (e.g., $HOME/.copilot)
-#          $3 = optional: --uninstall | --status | --stream | --stream=json
+#          $3 = optional: --uninstall | --status
 #
 # Behavior: copies any directory under $REPO_ROOT/skills/ that contains a SKILL.md
 # into $COPILOT/skills/<name>/. Top-level loose .md files in skills/ are skipped
@@ -12,10 +12,6 @@
 #
 # A marker file (.agentic-engine-copilot) is written to each managed skill so
 # uninstall can identify what to remove.
-#
-# Streaming modes:
-#   --stream      : Human-readable progress with per-skill timing (ANSI colors if TTY)
-#   --stream=json : Structured JSON-lines output for CI/CD pipelines (delegates to Python helper)
 
 set -euo pipefail
 
@@ -58,35 +54,6 @@ write_agents_md() {
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-
-# Helper function for streaming output
-_stream_emit() {
-	local mode="$1" type="$2" skill="$3" data="$4"
-	[ -z "$mode" ] && return 0  # No-op in default mode
-
-	local ts
-	ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-	if [ "$mode" = "human" ]; then
-		# ANSI progress indicator (suppressed if not a TTY)
-		if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-			case "$type" in
-				start)    printf "\r  ⏳ %-30s" "$skill" ;;
-				complete) printf "\r  ✅ %-30s\n" "$skill" ;;
-				skip)     printf "\r  ⚠️  %-30s\n" "$skill" ;;
-				error)    printf "\r  ❌ %-30s\n" "$skill" ;;
-				summary)  : ;;  # handled by main echo
-			esac
-		fi
-	elif [ "$mode" = "json" ]; then
-		# Native JSON-lines emission (no external helper — the deleted
-		# src/harnesses/copilot_cli/streaming.py this used to exec is gone).
-		local json_data="$data"
-		[ -z "$json_data" ] && json_data="{}"
-		printf '{"ts":"%s","type":"%s","skill":"%s","data":%s}\n' \
-			"$ts" "$type" "$skill" "$json_data"
-	fi
-}
 
 
 case "$MODE" in
@@ -141,15 +108,7 @@ case "$MODE" in
 		else echo "  ⚠️  AGENTS.md (foreign — not managed by us)"; fi
 		;;
 
-	install|""|--stream|--stream=json)
-		# Determine output mode
-		STREAM_MODE=""
-		if [ "$MODE" = "--stream" ]; then
-			STREAM_MODE="human"
-		elif [ "$MODE" = "--stream=json" ]; then
-			STREAM_MODE="json"
-		fi
-
+	install|"")
 		echo "📦 Rendering skills → $DST_SKILLS/..."
 		mkdir -p "$DST_SKILLS"
 		count=0
@@ -162,33 +121,17 @@ case "$MODE" in
 
 			# Foreign skill protection (unchanged)
 			if [ -d "$dst" ] && [ ! -f "$dst/$MARKER" ]; then
-				_stream_emit "$STREAM_MODE" "skip" "$name" "{}"
 				echo "  ⚠️  skipping $name — exists at $dst and is not managed by us"
 				continue
 			fi
 
-			# Emit start event
+			# Render skill via rsync
 			skill_start=$(date +%s)
-			_stream_emit "$STREAM_MODE" "start" "$name" "{\"src\":\"$src\"}"
-
-			# Streaming rsync: use --progress for human mode (more compatible than --info=progress2)
-			# For non-streaming mode, use standard rsync
-			if [ "$STREAM_MODE" = "human" ]; then
-				rsync -a --delete --progress \
-					--exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
-					"$src/" "$dst/" || {
-					_stream_emit "$STREAM_MODE" "error" "$name" \
-						"{\"message\":\"rsync failed with exit $?\"}"
-					echo "  ❌ $name — rsync failed" >&2
-					continue
-				}
-			else
-				rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
-					"$src/" "$dst/" || {
-					echo "  ❌ $name — rsync failed" >&2
-					continue
-				}
-			fi
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
+				"$src/" "$dst/" || {
+				echo "  ❌ $name — rsync failed" >&2
+				continue
+			}
 
 			# Write marker only after successful rsync
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$MARKER"
@@ -199,16 +142,12 @@ case "$MODE" in
 			skill_bytes=$(du -sk "$dst" 2>/dev/null | cut -f1 || echo 0)
 			total_bytes=$(( total_bytes + skill_bytes ))
 
-			_stream_emit "$STREAM_MODE" "complete" "$name" \
-				"{\"duration_s\":$skill_duration,\"kb\":$skill_bytes}"
 			echo "  rendered $name (${skill_duration}s)"
 			count=$((count + 1))
 		done
 
 		install_end=$(date +%s)
 		install_duration=$(( install_end - install_start ))
-		_stream_emit "$STREAM_MODE" "summary" "" \
-			"{\"count\":$count,\"total_kb\":$total_bytes,\"duration_s\":$install_duration}"
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
 		# 2. Copilot agents: render agents from src/agents/ via Python renderer
@@ -231,16 +170,42 @@ case "$MODE" in
 
 		# 2b. settings.json — harness session model configuration. Written for
 		# both dist rendering and home install so the installed tree matches
-		# dist exactly. Polling-based execution has been removed (2026-08-09);
-		# orchestration uses direct sub-agent spawning.
+		# dist exactly.
 		echo "⚙️  Writing settings.json → $COPILOT/settings.json ..."
-		cat > "$COPILOT/settings.json" <<'EOF'
+
+		# Derive model from orchestrator row in canonical AGENTS.md
+		orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
+		if [ -n "$orchestrator_meta" ]; then
+			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
+			orchestrator_model=$(map_model "$orchestrator_model_raw")
+			if [ -n "$orchestrator_model" ]; then
+				cat > "$COPILOT/settings.json" <<EOF
 {
-  "model": "claude-haiku-4-5",
+  "model": "$orchestrator_model",
   "harness": "copilot"
 }
 EOF
-		echo "  ✅ settings.json (session model configuration)"
+				echo "  ✅ settings.json (session model → $orchestrator_model from orchestrator)"
+			else
+				# Fallback if model mapping fails
+				cat > "$COPILOT/settings.json" <<'EOF'
+{
+  "model": "sonnet",
+  "harness": "copilot"
+}
+EOF
+				echo "  ✅ settings.json (fallback: sonnet)"
+			fi
+		else
+			# Fallback if lookup fails
+			cat > "$COPILOT/settings.json" <<'EOF'
+{
+  "model": "sonnet",
+  "harness": "copilot"
+}
+EOF
+			echo "  ✅ settings.json (fallback: sonnet — orchestrator not found in roster)"
+		fi
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.

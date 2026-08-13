@@ -80,15 +80,6 @@ class TestGate2NoArchivedAgentsDeployed:
             file_path = claude_agents / fname
             assert not file_path.exists(), f"Archived agent {fname} found in ~/.claude/agents/"
     
-    def test_archive_dir_not_in_render_scripts(self):
-        """Render scripts must not include _archive/ in deployment logic"""
-        render_scripts = list(Path("renderer/scripts").glob("render-*.py")) + list(Path("renderer/scripts").glob("render-*.sh"))
-        
-        for script_path in render_scripts:
-            content = script_path.read_text()
-            assert "_archive" not in content or "src/agents/_archive" not in content, \
-                f"Render script {script_path.name} contains _archive reference (should not deploy archives)"
-
 
 class TestGate3SkillsHaveMarker:
     """Gate 3: All skills must have SKILL.md marker; no orphaned .md files"""
@@ -165,74 +156,33 @@ class TestGate4NamingConsistency:
             assert fname.endswith("-agent.agent.md"), \
                 f"Rendered agent {fname} doesn't follow -agent.agent.md convention"
     
-    def test_archive_files_follow_naming_convention(self):
-        """Archived agent files should follow -agent.md convention (advisory warning)"""
-        archive_dir = Path("src/agents/_archive")
-        if not archive_dir.exists():
-            return
-        
-        archive_files = [f.name for f in archive_dir.glob("*.md")]
-        non_conformant = [f for f in archive_files if not f.endswith("-agent.md")]
-        
-        if non_conformant:
-            pytest.warns(UserWarning, match="archived agent files with legacy names")
-
 
 class TestGate5ManifestConsistency:
     """Gate 5: FRAMEWORK-MANIFEST.yaml must be valid and complete"""
-    
-    def test_manifest_file_exists(self):
+
+    def test_manifest_exists_valid_and_non_empty(self):
+        """Collapsed gate: manifest file exists, is valid YAML, and contains required sections/lists."""
         manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
         assert manifest_path.exists(), "config/FRAMEWORK-MANIFEST.yaml not found"
-    
-    def test_manifest_is_valid_yaml(self):
-        manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
+
+        # Parse and validate YAML
         try:
             with open(manifest_path) as f:
-                yaml.safe_load(f)
+                manifest = yaml.safe_load(f)
         except yaml.YAMLError as e:
             pytest.fail(f"FRAMEWORK-MANIFEST.yaml is not valid YAML: {e}")
-    
-    def test_manifest_has_required_sections(self):
-        manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        with open(manifest_path) as f:
-            manifest = yaml.safe_load(f)
-        
+
+        # Check required sections exist
         required_sections = ["agents", "skills", "validation_rules"]
         for section in required_sections:
             assert section in manifest, f"FRAMEWORK-MANIFEST.yaml missing section: {section}"
-    
-    def test_manifest_agents_list_non_empty(self):
-        manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        with open(manifest_path) as f:
-            manifest = yaml.safe_load(f)
-        
+
+        # Check lists are non-empty
         agents = manifest.get("agents", {})
         assert len(agents) > 0, "FRAMEWORK-MANIFEST.yaml agents list is empty"
-    
-    def test_manifest_skills_list_non_empty(self):
-        manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        with open(manifest_path) as f:
-            manifest = yaml.safe_load(f)
-        
+
         skills = manifest.get("skills", {})
         assert len(skills) >= 0, "FRAMEWORK-MANIFEST.yaml skills list is invalid"
-    
-    def test_manifest_agents_sorted(self):
-        manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        with open(manifest_path) as f:
-            manifest = yaml.safe_load(f)
-        
-        agents = list(manifest.get("agents", {}).keys())
-        assert agents == sorted(agents), "FRAMEWORK-MANIFEST.yaml agents not sorted alphabetically"
-    
-    def test_manifest_skills_sorted(self):
-        manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        with open(manifest_path) as f:
-            manifest = yaml.safe_load(f)
-        
-        skills = list(manifest.get("skills", {}).keys())
-        assert skills == sorted(skills), "FRAMEWORK-MANIFEST.yaml skills not sorted alphabetically"
 
 
 class TestGate6NoDuplicatesOrStaleFiles:

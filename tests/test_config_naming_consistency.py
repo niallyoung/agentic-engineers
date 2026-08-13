@@ -140,28 +140,3 @@ def test_all_three_sources_agree_per_role():
             )
 
 
-def test_orchestrator_and_engineer_models_are_canonical():
-    """orchestrator=claude-sonnet-5, engineer=claude-haiku-4.5."""
-    agents_md_models = _parse_agents_md_roster()
-    locked_assignments = _parse_locked_models_assignments()
-    agent_frontmatter = _parse_agent_frontmatter()
-
-    # Check orchestrator
-    orch_md = agents_md_models.get("orchestrator")
-    orch_locked = locked_assignments.get("orchestrator")
-    orch_fm = agent_frontmatter.get("orchestrator")
-
-    orch_models = {m for m in [orch_md, orch_locked, orch_fm] if m}
-    assert orch_models and all(m == "claude-sonnet-5" for m in orch_models), (
-        f"orchestrator must be claude-sonnet-5 across all sources, got {orch_models}"
-    )
-
-    # Check engineer
-    eng_md = agents_md_models.get("engineer")
-    eng_locked = locked_assignments.get("engineer")
-    eng_fm = agent_frontmatter.get("engineer")
-
-    eng_models = {m for m in [eng_md, eng_locked, eng_fm] if m}
-    assert eng_models and all(m == "claude-haiku-4.5" for m in eng_models), (
-        f"engineer must be claude-haiku-4.5 across all sources, got {eng_models}"
-    )

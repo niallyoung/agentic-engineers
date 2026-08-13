@@ -50,7 +50,7 @@
 
 | Location | Contents |
 |----------|----------|
-| [guides/](guides/) | Agent/skill creation, harness extension, deployment, troubleshooting — see [guides/INDEX.md](guides/INDEX.md) |
+| [guides/](guides/) | Agent/skill creation, harness extension, deployment, troubleshooting — see [guides/README.md](guides/README.md) |
 
 ---
 

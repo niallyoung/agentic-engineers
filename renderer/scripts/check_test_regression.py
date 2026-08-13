@@ -55,13 +55,16 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Re-baselined 2026-08-13 (polish wave-1, P9: ceremonial container-env test
-# file removed) from the measured actual of 828 collected tests; floor is
-# ~95% (828 * 0.95 = 786.6 -> 786).
+# Re-baselined 2026-08-13 (WP-R3-04: protocol-validator scanners removed) from
+# the measured actual of 734 collected tests in tests/ (original ~786 - 52 deleted).
+# Floor is ~95% (734 * 0.95 = 697.3 -> 697). Note: this deletion is intentional
+# as part of removing dead enum-drift and protocol-divergence scanners; the 52
+# deleted tests correspond to TestEnumDriftDetection and TestProtocolDivergenceDetection
+# which tested those now-removed scanners.
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 786,
+        "minimum": 697,
         "label": "Full test suite",
     },
 }

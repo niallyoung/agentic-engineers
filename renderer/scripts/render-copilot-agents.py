@@ -10,6 +10,8 @@ import re
 from pathlib import Path
 from typing import Dict, Tuple
 
+import yaml
+
 class CopilotAgentRenderer:
     """Renders source agent definitions to Copilot CLI agent profiles"""
     
@@ -45,50 +47,14 @@ class CopilotAgentRenderer:
         match = re.match(r'^---\n(.*?)\n---\n(.*)', content, re.DOTALL)
         if not match:
             raise ValueError("File must start with YAML frontmatter (---)")
-        
+
         yaml_block = match.group(1)
         body = match.group(2)
 
-        # Parse YAML manually. Supports `key: value` scalars and block lists:
-        #   key:
-        #     - item1
-        #     - item2
-        # Block-list values are stored as Python lists; scalars as strings.
-        frontmatter = {}
-        lines = yaml_block.split('\n')
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            stripped = line.strip()
-            # Skip blank lines and comments at column 0.
-            if not stripped or stripped.startswith('#'):
-                i += 1
-                continue
-            # Only treat column-0 `key:` lines as new keys.
-            if re.match(r'^[A-Za-z0-9_]+:', line) and ':' in line:
-                key, value = line.split(':', 1)
-                key = key.strip()
-                value = value.strip()
-                if value:
-                    frontmatter[key] = value
-                else:
-                    # Possible block list — collect following `  - item` lines.
-                    items = []
-                    j = i + 1
-                    while j < len(lines):
-                        nxt = lines[j]
-                        m = re.match(r'^[ \t]+-[ \t]*(.*)$', nxt)
-                        if m:
-                            items.append(m.group(1).strip())
-                            j += 1
-                        elif nxt.strip() == '':
-                            j += 1
-                        else:
-                            break
-                    frontmatter[key] = items if items else ''
-                    i = j
-                    continue
-            i += 1
+        # Parse YAML using yaml.safe_load (supports folded scalars and complex types)
+        frontmatter = yaml.safe_load(yaml_block) or {}
+        if not isinstance(frontmatter, dict):
+            raise ValueError("Frontmatter must be a YAML mapping")
 
         return frontmatter, body
     
@@ -147,10 +113,11 @@ class CopilotAgentRenderer:
         protocol_lines.append(f"role: {role_val}")
         protocol_block = "\n".join(protocol_lines)
 
-        # Rebuild with clean frontmatter (spec-compliant)
+        # Rebuild with clean frontmatter (spec-compliant). Quote description to handle folded scalars.
+        description = frontmatter.get('description', '')
         output = f"""---
 name: {frontmatter['name']}
-description: {frontmatter['description']}
+description: {yaml.dump(description).strip()}
 model: {frontmatter['model']}
 {protocol_block}
 ---
@@ -171,9 +138,8 @@ model: {frontmatter['model']}
             print(f"❌ Source directory not found: {self.src_dir}")
             return 1
         
-        # Get all .md files except README files
-        all_files = list(self.src_dir.glob('*.md'))
-        agent_files = [f for f in all_files if f.name != 'README.md' and not f.name.endswith('README.md')]
+        # Get all .md agent definition files
+        agent_files = list(self.src_dir.glob('*.md'))
         if not agent_files:
             print(f"❌ No agent definitions found in {self.src_dir}")
             return 1
@@ -242,13 +208,8 @@ def main():
     args = [a for a in sys.argv[1:] if a != "--uninstall"]
     uninstall = "--uninstall" in sys.argv[1:]
 
-    if len(args) < 1:
-        # Default: operate on ~/.copilot/agents
-        src_dir = 'src/agents'
-        dest_dir = os.path.expanduser('~/.copilot/agents')
-    else:
-        src_dir = args[0]
-        dest_dir = args[1] if len(args) > 1 else os.path.expanduser('~/.copilot/agents')
+    src_dir = args[0]
+    dest_dir = args[1] if len(args) > 1 else os.path.expanduser('~/.copilot/agents')
 
     # Get absolute paths
     repo_root = Path(__file__).parent.parent.parent  # ../../ from scripts/
