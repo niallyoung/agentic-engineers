@@ -33,8 +33,9 @@ spec-management governs changes *to* SPEC.md itself.
 ### 1. Proposal
 
 Write a proposal file at `docs/spec-proposals/SPEC-YYYY-NNN.yaml` (next sequential
-number for the year) with this schema — see any existing file under
-`docs/spec-proposals/` for worked examples:
+number for the year) with this schema. Historical proposal files have been archived
+(see docs/SPEC.md Update Log for the full amendment record); this template remains
+the canonical format for future SPEC.md changes:
 
 ```yaml
 change_id: SPEC-2026-NNN

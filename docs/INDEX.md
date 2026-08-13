@@ -33,10 +33,8 @@
 
 | Location | Contents |
 |----------|----------|
-| [design/](design/) | Active design notes (spawn-sub-agent pattern, HANDBACK-as-DELEGATE) |
-| [decisions/](decisions/) | Architecture Decision Records (historical) |
+| [decisions/](decisions/) | Architecture Decision Records (model centralization, repository structure) |
 | [specs/](specs/) | Machine-readable protocol schemas (delegate/handback/protocol-core) |
-| [spec-proposals/](spec-proposals/) | SPEC change proposals (spec-management audit trail) |
 
 ---
 

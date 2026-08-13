@@ -10,6 +10,5 @@ instead — this page only catalogs the `docs/guides/` directory.
 | [deployment.md](deployment.md) | Deploying/installing the framework into a harness |
 | [thinking-modes-and-cost-quality-trade-offs.md](thinking-modes-and-cost-quality-trade-offs.md) | When to enable extended thinking, and its cost impact |
 | [harness-setup/](harness-setup/) | Per-harness setup instructions (Claude, Codex, OpenCode, etc.) |
-| [examples/](examples/) | Real DELEGATE/HANDBACK examples |
 
 See also [docs/guides/README.md](README.md) for a shorter orientation to this directory.
