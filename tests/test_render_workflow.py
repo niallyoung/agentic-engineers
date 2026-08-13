@@ -217,7 +217,7 @@ class TestDistStructure:
 class TestInstallValidation:
     """Verify that install targets refuse to run when dist/ is absent."""
 
-    @pytest.mark.parametrize("target", ["install-claude", "install-copilot", "install-opencode"])
+    @pytest.mark.parametrize("target", ["install-claude", "install-copilot", "install-opencode", "install-codex"])
     def test_install_fails_gracefully_without_dist(self, repo_root, target, tmp_path):
         """
         install-* should fail with a clear error message when dist/<harness>/ is absent.

@@ -34,7 +34,6 @@ from validate_agents import (
     ValidationError,
     REQUIRED_FIELDS,
     KNOWN_MODELS,
-    FILENAME_EXCEPTIONS,
 )
 
 
@@ -653,11 +652,6 @@ model: sonnet
     
     if should_match:
         assert len(filename_errors) == 0, f"Filename {expected_filename} should match name {agent_name}"
-    else:
-        # For non-matching names, we should get an error
-        # unless the file is in FILENAME_EXCEPTIONS
-        if expected_filename not in FILENAME_EXCEPTIONS:
-            pass  # May or may not have error depending on implementation
 
 
 # ============================================================================

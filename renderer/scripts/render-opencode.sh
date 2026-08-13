@@ -141,25 +141,23 @@ PY
 
 	# Offline fallback: synthesize from the family token using the provider's known format.
 	if [ -z "${id:-}" ]; then
+		# Helper: convert family (hyphenated) to dotted format for github-copilot/openrouter.
+		# Single-part-version families (fable-5) keep their hyphen.
+		_to_dotted_format() {
+			case "$1" in
+				fable*) echo "claude-$1" ;;
+				*) printf '%s' "claude-$(echo "$1" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
+			esac
+		}
+
 		case "$provider" in
 			github-copilot)
 				# GitHub Copilot registry uses dotted version: claude-haiku-4.5.
-				# Single-part-version families (fable-5) keep their hyphen — the
-				# dot transform applies only to {major}-{minor} version pairs.
-				case "$family" in
-					fable*) id="claude-$family" ;;
-					*) id="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
-				esac
+				id=$(_to_dotted_format "$family")
 				;;
 			openrouter)
 				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash).
-				# Same single-part-version exemption as github-copilot above.
-				local dotted
-				case "$family" in
-					fable*) dotted="claude-$family" ;;
-					*) dotted="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
-				esac
-				id="anthropic/$dotted"
+				id="anthropic/$(_to_dotted_format "$family")"
 				;;
 			*)
 				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-4-5
@@ -234,13 +232,6 @@ docs_lookup_role() {
 	effort=$(echo "$row" | cut -d'|' -f2)
 	desc=$(echo "$row" | cut -d'|' -f3-)
 	printf '%s\t%s\t%s\n' "$model" "$effort" "$desc"
-}
-
-# JSON-escape a string for embedding inside double quotes.
-json_escape() {
-	# Escape backslash, double-quote, and control chars; collapse newlines to spaces.
-	python3 -c 'import json,sys; sys.stdout.write(json.dumps(sys.stdin.read())[1:-1])' 2>/dev/null \
-		|| sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e ':a;N;$!ba;s/\n/ /g'
 }
 
 # yaml_escape_inline() is defined in lib.sh (sourced above)
@@ -410,68 +401,9 @@ DELEGATE/HANDBACK protocol, dispatched by direct sub-agent spawn.
 
 ### Role-specific rules
 - **Security Engineer** is invoked ONLY for security-scoped tasks.
-- **Engineer** MUST NOT receive a task without a pre-written \`plan\` in the
-  DELEGATE (except trivial fixes); blocked tasks escalate to Senior Engineer.
-- **Quality Engineer** provides \`model_assessment\` feedback in every HANDBACK
-  (consumed by the Model Engineer feedback loop).
-- **Lead/Senior Engineer** unblock or redirect Engineer when blocked.
-- Each role has specialised skills under \`skills/\` (see \`docs/SKILLS.md\`).
-
-## Protocol Protection (Critical)
-
-### SPEC.md — Immutable Protocol Document
-
-The SPEC.md file defines the agentic-engineers protocol and is protected from direct modification.
-
-**Why**: SPEC.md is the source of truth for our multi-agent coordination protocol. Unauthorized changes could break protocol compliance.
-
-**Who Can Modify?**
-- **Principal Engineer**: Full access via \`spec-management\` skill
-- **All other agents**: Denied (OpenCode will block direct edits)
-
-**How to Modify SPEC.md?**
-1. Use the \`spec-management\` skill (loads structured proposal interface)
-2. Propose changes via SPEC_CHANGE_PROPOSAL.md
-3. Principal Engineer reviews and approves
-4. Changes applied with audit trail maintained automatically
-5. All modifications tracked in SPEC_CHANGELOG.md
-
-### Protected Files
-
-The following files are protected from unintended modifications:
-- \`SPEC.md\` — Core protocol definition (Principal Engineer only)
-- \`docs/SPEC.md\` — Protocol documentation (Principal Engineer only)
-- \`.githooks/**\` — Git hooks infrastructure (Security Engineer only)
-- \`opencode.jsonc\` — OpenCode configuration (Principal Engineer / Security Engineer only)
-- \`SPEC-*.md\` — Protocol extensions (Principal Engineer only)
-
-### Per-Agent Permissions
-
-All agents use uniform **allow-all** permissions:
-
-| Permission | Allowed |
-|-----------|---------|
-| Bash execution | ✓ Yes (all bash commands allowed) |
-| File edits | ✓ Yes (can edit any file) |
-| Tool usage | ✓ Yes (access to all tools) |
-
-OpenCode's enforcement layer is minimal—the core constraint model is social (shared responsibility, code review, audit trails) rather than technical restrictions. All agents operate with equivalent access levels. Security and coordination are enforced via:
-- The DELEGATE/HANDBACK protocol (direct sub-agent spawn routing)
-- Role-specific constraints in \`src/AGENTS.md\` (decision tree, escalation paths)
-- Code review and audit trails (per-agent action logging)
-- SPEC.md protection via \`spec-management\` skill (only Principal Engineer can propose changes)
-
-### Important Notes
-
-The following patterns require careful handling due to their destructive nature, but they are not blocked at the agent level (all agents have equivalent access):
-- \`rm -rf /\` — System destruction
-- \`rm -rf ~\` — Home directory destruction
-- \`rm -rf .git\` — Repository destruction
-- \`git push --force\` or \`git push -f\` — Force pushes (breaks history)
-- \`git reset --hard HEAD~\` — Destructive resets
-- \`sudo rm\` — Privileged destruction
-
-These operations are governed by **human oversight and protocol discipline**, not technical blocks. Always use code review, test thoroughly, and prefer reversible operations.
+- **Engineer** MUST NOT receive a task without a pre-written \`plan\` in the DELEGATE (except trivial fixes).
+- **Quality Engineer** provides feedback in every HANDBACK.
+- Each role has specialised skills under \`skills/\`.
 
 ## Layout in this install
 - \`agents/\` — 8 subagents; invoke via \`opencode --agent <agent-name>\` or the task tool
@@ -589,6 +521,12 @@ case "$MODE" in
 			count_s=$((count_s + 1))
 		done
 
+		# 2. Parse canonical agent definitions from src/AGENTS.md (once before agent loop)
+		AGENTS_MD="$SRC_AGENTS_MD"
+		AGENTS_MAP=$(mktemp)
+		trap 'rm -f "$AGENTS_MAP"' EXIT INT TERM
+		parse_agents_md "$AGENTS_MD" > "$AGENTS_MAP"
+
 		# 2. Agents: hybrid frontmatter merge (src/AGENTS.md + src frontmatter), write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
 		: > "$AGENT_MANIFEST.tmp"
@@ -609,12 +547,13 @@ case "$MODE" in
 
 			# Hybrid metadata: src/AGENTS.md is authoritative for model+effort+description.
 			# Source frontmatter is the fallback and may carry richer per-agent description.
-			docs_row=$(docs_lookup_role "$name" || true)
+			docs_row=$(lookup_agent_metadata "$name" "$AGENTS_MAP" || true)
 			docs_model=""; docs_effort=""; docs_desc=""
 			if [ -n "$docs_row" ]; then
-				docs_model=$(printf '%s' "$docs_row" | awk -F'\t' '{print $1}')
-				docs_effort=$(printf '%s' "$docs_row" | awk -F'\t' '{print $2}')
-				docs_desc=$(printf '%s' "$docs_row" | awk -F'\t' '{print $3}')
+				# docs_row is "model|effort|description" (pipe-joined format from lookup_agent_metadata)
+				docs_model=$(echo "$docs_row" | cut -d'|' -f1)
+				docs_effort=$(echo "$docs_row" | cut -d'|' -f2)
+				docs_desc=$(echo "$docs_row" | cut -d'|' -f3-)
 			fi
 			fm_desc=$(extract_fm "$src_file" "description" || true)
 			fm_model=$(extract_fm "$src_file" "model" || true)

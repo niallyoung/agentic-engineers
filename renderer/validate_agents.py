@@ -31,41 +31,6 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Canonical protocol validation (delegated to the protocol-validator skill)
-# ---------------------------------------------------------------------------
-# Runtime HANDBACK dict validation is owned by the protocol-validator skill —
-# the single source of truth shared with the eval framework and the renderer.
-# We import its validate_handback() rather than re-implementing the rules here.
-
-_PV_SCRIPTS = Path(__file__).resolve().parent.parent / "src" / "skills" / "protocol-validator" / "scripts"
-if str(_PV_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_PV_SCRIPTS))
-
-try:
-    from protocol_validator import validate_handback as _skill_validate_handback  # type: ignore
-    _PV_SKILL_AVAILABLE = True
-except ImportError:
-    _skill_validate_handback = None  # type: ignore
-    _PV_SKILL_AVAILABLE = False
-
-
-def validate_handback(handback: dict[str, Any]) -> tuple[bool, list[str]]:
-    """Validate a runtime HANDBACK dict via the protocol-validator skill.
-
-    This is the canonical entry point for validating an actual HANDBACK block
-    (as opposed to validate_handback_schema(), which checks that AGENTS.md
-    *documents* the protocol). Delegates to the protocol-validator skill so
-    the renderer and eval framework enforce identical rules.
-
-    Returns (valid, errors). If the skill cannot be imported, returns
-    (True, []) so the renderer degrades gracefully rather than hard-failing.
-    """
-    if not _PV_SKILL_AVAILABLE or _skill_validate_handback is None:
-        return True, []
-    return _skill_validate_handback(handback)
-
-
-# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
@@ -122,9 +87,6 @@ KNOWN_MODELS = {
 }
 
 REQUIRED_FIELDS = {"name", "description", "model"}
-
-# Agents that don't follow the <name>-agent.md convention (allowlist)
-FILENAME_EXCEPTIONS: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +186,7 @@ def validate_agent_file(
 
     # 4. Filename convention: <name>-agent.md
     agent_name = fm.get("name", "")
-    if agent_name and path.name not in FILENAME_EXCEPTIONS:
+    if agent_name:
         expected_filename = f"{agent_name}-agent.md"
         if path.name != expected_filename:
             errors.append(ValidationError(

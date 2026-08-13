@@ -109,15 +109,5 @@ PAUSE. Does not invent new work. This is reduced autonomy by design.
 
 ## Self-Improvement
 
-This skill participates in the framework's continuous improvement cycle (see
-[`skill-improvement-feedback`](../skill-improvement-feedback/SKILL.md)). Include a
-`skill_feedback` entry in your HANDBACK when you use `orchestrator`:
-
-```yaml
-skill_feedback:
-  - skill_name: orchestrator
-    effectiveness_score: 0.85        # required: 0.0-1.0
-    coverage_gaps: []
-    improvement_suggestions: []
-    usage_context: "One sentence on how you used this skill"
-```
+See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
+Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

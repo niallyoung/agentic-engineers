@@ -25,7 +25,6 @@ _use_color() { [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; }
 _green()  { _use_color && printf '\033[32m%s\033[0m' "$1" || printf '%s' "$1"; }
 _yellow() { _use_color && printf '\033[33m%s\033[0m' "$1" || printf '%s' "$1"; }
 _red()    { _use_color && printf '\033[31m%s\033[0m' "$1" || printf '%s' "$1"; }
-_dim()    { _use_color && printf '\033[2m%s\033[0m'  "$1" || printf '%s' "$1"; }
 
 SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
@@ -58,6 +57,13 @@ source "$(dirname "$0")/lib.sh"
 # them to the latest available version in that tier — inherently version-agnostic.
 # Unknown tiers: emit the full hyphenated model ID so the agent still gets a model
 # rather than silently inheriting the session default.
+#
+# NOTE: This intentionally shadows the map_model helper in render-lib.sh:380.
+# render-claude.sh declares its own tier-alias logic rather than delegating to lib.sh
+# because Claude Code's short-alias resolution (haiku→latest haiku) differs from
+# OpenCode/Copilot, which require fully-qualified model IDs. Keeping both definitions
+# prevents accidental cross-harness incompatibility if either logic needs to drift
+# in the future.
 map_model() {
 	local raw="$1"
 	case "$raw" in
@@ -74,31 +80,82 @@ map_model() {
 	esac
 }
 
-# inject_settings_model SETTINGS_FILE MODEL_ALIAS
-# Merges {"model": MODEL_ALIAS} into the JSON settings file using Python.
-# Creates the file if absent; preserves all other keys.
-#
-# When the file is absent (fresh install/render), it is seeded with the canonical
-# harness defaults (currently empty — see DEFAULT_SETTINGS below). This keeps a
-# freshly-rendered dist/claude/settings.json byte-identical to a fresh install.
-# Existing user keys are always preserved (only ``model`` is overwritten).
-inject_settings_model() {
-	local settings="$1" model_alias="$2"
-	python3 - "$settings" "$model_alias" <<'PY'
+# _settings_edit SETTINGS_FILE OPERATION [ARGS...]
+# Unified helper for all settings.json edits. Operation is a Python function name;
+# ARGS are passed as positional arguments to that function.
+_settings_edit() {
+	local settings="$1" operation="$2"; shift 2
+	python3 - "$settings" "$operation" "$@" <<'PY'
 import json, sys, os
-settings_file, model_alias = sys.argv[1], sys.argv[2]
-
-# Canonical defaults seeded only when no settings.json exists yet.
-# Polling-based execution has been removed (2026-08-09) per SPEC-2026-004.
-# Orchestration now uses direct sub-agent spawning.
-DEFAULT_SETTINGS = {}
+settings_file = sys.argv[1]
+operation = sys.argv[2]
+args = sys.argv[3:]
 
 try:
 	with open(settings_file) as f:
 		data = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
-	data = dict(DEFAULT_SETTINGS)
-data["model"] = model_alias
+	data = {}
+
+def set_model(model_alias):
+	data["model"] = model_alias
+
+def remove_model():
+	data.pop("model", None)
+
+def inject_hook(hook_path, hook_name):
+	command = "python3 %s" % hook_path
+	entry = {
+		"matcher": "Task|Agent",
+		"hooks": [
+			{"type": "command", "command": command, "timeout": 10}
+		],
+	}
+	hooks = data.setdefault("hooks", {})
+	pre_tool_use = hooks.setdefault("PreToolUse", [])
+	replaced = False
+	for existing in pre_tool_use:
+		for inner in existing.get("hooks", []):
+			if hook_name in inner.get("command", ""):
+				existing["matcher"] = entry["matcher"]
+				existing["hooks"] = entry["hooks"]
+				replaced = True
+				break
+		if replaced:
+			break
+	if not replaced:
+		pre_tool_use.append(entry)
+
+def remove_hook(hook_name):
+	hooks = data.get("hooks")
+	if not isinstance(hooks, dict):
+		return
+	pre_tool_use = hooks.get("PreToolUse")
+	if isinstance(pre_tool_use, list):
+		kept = []
+		for existing in pre_tool_use:
+			inner_hooks = existing.get("hooks", [])
+			is_ours = any(hook_name in inner.get("command", "") for inner in inner_hooks)
+			if not is_ours:
+				kept.append(existing)
+		if kept:
+			hooks["PreToolUse"] = kept
+		else:
+			hooks.pop("PreToolUse", None)
+	if not hooks:
+		data.pop("hooks", None)
+
+# Dispatch to the operation
+if operation == "set_model":
+	set_model(args[0])
+elif operation == "remove_model":
+	remove_model()
+elif operation == "inject_hook":
+	inject_hook(args[0], args[1])
+elif operation == "remove_hook":
+	remove_hook(args[0])
+
+# Write back
 tmp = settings_file + ".tmp"
 with open(tmp, "w") as f:
 	json.dump(data, f, indent=2)
@@ -107,26 +164,21 @@ os.replace(tmp, settings_file)
 PY
 }
 
+# inject_settings_model SETTINGS_FILE MODEL_ALIAS
+# Merges {"model": MODEL_ALIAS} into the JSON settings file using Python.
+# Creates the file if absent; preserves all other keys.
+# Existing user keys are always preserved (only ``model`` is overwritten).
+inject_settings_model() {
+	local settings="$1" model_alias="$2"
+	_settings_edit "$settings" set_model "$model_alias"
+}
+
 # remove_settings_model SETTINGS_FILE
 # Removes the "model" key from the JSON settings file (used by --uninstall).
 remove_settings_model() {
 	local settings="$1"
 	[ -f "$settings" ] || return 0
-	python3 - "$settings" <<'PY'
-import json, sys, os
-settings_file = sys.argv[1]
-try:
-	with open(settings_file) as f:
-		data = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-	sys.exit(0)
-data.pop("model", None)
-tmp = settings_file + ".tmp"
-with open(tmp, "w") as f:
-	json.dump(data, f, indent=2)
-	f.write("\n")
-os.replace(tmp, settings_file)
-PY
+	_settings_edit "$settings" remove_model
 }
 
 # inject_settings_hook SETTINGS_FILE HOOK_SCRIPT_ABS_PATH
@@ -140,49 +192,7 @@ PY
 # basename so the entry survives CLAUDE root relocation between renders).
 inject_settings_hook() {
 	local settings="$1" hook_path="$2"
-	python3 - "$settings" "$hook_path" "$HOOK_SCRIPT_NAME" <<'PY'
-import json, sys, os
-
-settings_file, hook_path, hook_name = sys.argv[1], sys.argv[2], sys.argv[3]
-
-try:
-	with open(settings_file) as f:
-		data = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-	data = {}
-
-command = "python3 %s" % hook_path
-entry = {
-	"matcher": "Task|Agent",
-	"hooks": [
-		{"type": "command", "command": command, "timeout": 10}
-	],
-}
-
-hooks = data.setdefault("hooks", {})
-pre_tool_use = hooks.setdefault("PreToolUse", [])
-
-# Find our own previously-installed entry (identified by hook_name appearing
-# in any inner hook's command) and update it in place; otherwise append.
-replaced = False
-for existing in pre_tool_use:
-	for inner in existing.get("hooks", []):
-		if hook_name in inner.get("command", ""):
-			existing["matcher"] = entry["matcher"]
-			existing["hooks"] = entry["hooks"]
-			replaced = True
-			break
-	if replaced:
-		break
-if not replaced:
-	pre_tool_use.append(entry)
-
-tmp = settings_file + ".tmp"
-with open(tmp, "w") as f:
-	json.dump(data, f, indent=2)
-	f.write("\n")
-os.replace(tmp, settings_file)
-PY
+	_settings_edit "$settings" inject_hook "$hook_path" "$HOOK_SCRIPT_NAME"
 }
 
 # remove_settings_hook SETTINGS_FILE
@@ -194,43 +204,7 @@ PY
 remove_settings_hook() {
 	local settings="$1"
 	[ -f "$settings" ] || return 0
-	python3 - "$settings" "$HOOK_SCRIPT_NAME" <<'PY'
-import json, sys, os
-
-settings_file, hook_name = sys.argv[1], sys.argv[2]
-
-try:
-	with open(settings_file) as f:
-		data = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-	sys.exit(0)
-
-hooks = data.get("hooks")
-if not isinstance(hooks, dict):
-	sys.exit(0)
-
-pre_tool_use = hooks.get("PreToolUse")
-if isinstance(pre_tool_use, list):
-	kept = []
-	for existing in pre_tool_use:
-		inner_hooks = existing.get("hooks", [])
-		is_ours = any(hook_name in inner.get("command", "") for inner in inner_hooks)
-		if not is_ours:
-			kept.append(existing)
-	if kept:
-		hooks["PreToolUse"] = kept
-	else:
-		hooks.pop("PreToolUse", None)
-
-if not hooks:
-	data.pop("hooks", None)
-
-tmp = settings_file + ".tmp"
-with open(tmp, "w") as f:
-	json.dump(data, f, indent=2)
-	f.write("\n")
-os.replace(tmp, settings_file)
-PY
+	_settings_edit "$settings" remove_hook "$HOOK_SCRIPT_NAME"
 }
 
 # parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
@@ -439,41 +413,48 @@ case "$MODE" in
 			elif head -n1 "$doc" | grep -q "$DOC_SENTINEL"; then echo "  ✅ $label"
 			else echo "  ⚠️  $label (foreign)"; fi
 		done
-		# settings.json model
-		settings_model=$(python3 -c "import json,sys; d=json.load(open('$CLAUDE/settings.json')); print(d.get('model',''))" 2>/dev/null || true)
-		if [ -n "$settings_model" ]; then
-			echo "  ✅ settings.json model: $settings_model"
-		else
-			echo "  ❌ settings.json model: not set (session will use Anthropic default)"
-		fi
-		# DELEGATE/HANDBACK protocol guard hook
-		if [ ! -f "$DST_HOOK" ]; then
-			echo "  ❌ hook claude-delegate-guard.py (not installed)"
-		elif [ ! -f "$HOOK_MARKER" ]; then
-			echo "  ⚠️  hook claude-delegate-guard.py (foreign)"
-		elif cmp -s "$SRC_HOOK" "$DST_HOOK"; then
-			echo "  ✅ hook claude-delegate-guard.py"
-		else
-			echo "  🔄 hook claude-delegate-guard.py (drift)"
-		fi
-		hook_wired=$(python3 -c "
-import json
+		# settings.json status (single python3 pass)
+		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" <<'PY'
+import json, sys, os, filecmp
+
+settings_file, src_hook, dst_hook, hook_name = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+
+# settings.json model
 try:
-    d = json.load(open('$CLAUDE/settings.json'))
+	d = json.load(open(settings_file))
+	model = d.get('model', '')
 except Exception:
-    d = {}
+	model = ''
+
+if model:
+	print(f"  ✅ settings.json model: {model}")
+else:
+	print("  ❌ settings.json model: not set (session will use Anthropic default)")
+
+# Hook file status
+if not os.path.exists(dst_hook):
+	print("  ❌ hook claude-delegate-guard.py (not installed)")
+elif not os.path.exists(src_hook + ".marker"):
+	print("  ⚠️  hook claude-delegate-guard.py (foreign)")
+elif filecmp.cmp(src_hook, dst_hook, shallow=False):
+	print("  ✅ hook claude-delegate-guard.py")
+else:
+	print("  🔄 hook claude-delegate-guard.py (drift)")
+
+# Hook wiring status
+try:
+	d = json.load(open(settings_file))
+except Exception:
+	d = {}
+
 entries = d.get('hooks', {}).get('PreToolUse', [])
-wired = any(
-    '$HOOK_SCRIPT_NAME' in inner.get('command', '')
-    for e in entries for inner in e.get('hooks', [])
-)
-print('yes' if wired else 'no')
-" 2>/dev/null || echo "no")
-		if [ "$hook_wired" = "yes" ]; then
-			echo "  ✅ settings.json PreToolUse hook: wired"
-		else
-			echo "  ❌ settings.json PreToolUse hook: not wired"
-		fi
+wired = any(hook_name in inner.get('command', '') for e in entries for inner in e.get('hooks', []))
+
+if wired:
+	print("  ✅ settings.json PreToolUse hook: wired")
+else:
+	print("  ❌ settings.json PreToolUse hook: not wired")
+PY
 		;;
 
 	install|"")

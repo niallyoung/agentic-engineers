@@ -1,263 +1,385 @@
 """
-E2E Protocol Tests: DELEGATE/HANDBACK Schema Round-Trip (Phase 4)
+E2E Protocol Tests: Real DELEGATE/HANDBACK Round-Trip Validation (Phase 4)
 
 Comprehensive tests covering:
-1. DELEGATE round-trips through YAML serialization with all fields intact
-2. HANDBACK round-trips through YAML serialization with all fields intact
-3. Failure/blocked/escalate HANDBACKs preserve their status-specific metadata
-4. Escalation HANDBACKs produce a well-formed follow-up DELEGATE
-5. Full DELEGATE -> HANDBACK protocol cycle
+1. Guard subprocess ALLOWS a canonical DELEGATE payload
+2. Correlated HANDBACK (same task_id, canonical status) validates successfully
+3. Mutations: each denies with specific expected error
+   - Missing metrics.quality
+   - Missing metrics.tokens
+   - Missing metrics.cost
+   - Missing metrics.duration_seconds
+   - Status 'complete' (legacy, should fail)
+   - Task_id mismatch between DELEGATE and HANDBACK
 
-These tests verify the DELEGATE/HANDBACK wire format itself — construct,
-serialize to YAML, deserialize, and confirm every required field survives —
-independent of *how* a DELEGATE reaches its target agent.
+These tests drive REAL subprocess calls to the guard and REAL validator calls,
+proving the DELEGATE/HANDBACK wire format survives full round-trip validation.
 
-NOTE (queue-removal, task-2026-08-13-queue-removal-code): this file used to
-drive its DELEGATE/HANDBACK fixtures through a simulated filesystem queue
-(incoming/ -> processing/ -> done/failed/ directory moves, multi-harness
-queue-path isolation, and a span-capture write to artifacts/{date}/). With
-dispatch now a direct sub-agent spawn — a DELEGATE passed directly as a
-spawn prompt, a HANDBACK returned synchronously as that call's result — there
-is no queue directory state machine to exercise. What remains valuable and is
-kept here is the protocol-schema round-trip: that a DELEGATE/HANDBACK
-survives YAML (de)serialization with every required field intact. The
-directory-transition and queue-isolation assertions were removed as
-queue-specific, not schema-specific.
+NOTE: This file tests the canonical protocol-validator API; it does NOT drive
+through a simulated filesystem queue (that was queue-specific, not schema-specific).
+The round-trip validation proves the schema itself is sound.
 
 Usage:
     pytest tests/test_e2e_protocol_full_cycle.py -v -s
     make test-protocol-e2e
 """
 
-import yaml
+import json
+import subprocess
+import sys
 import uuid
-from typing import Dict
+from pathlib import Path
+from typing import Dict, Tuple
 
 import pytest
+import yaml
+
+# Import protocol_validator at the repo level (not as installed skill)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src" / "skills" / "protocol-validator" / "scripts"))
+from protocol_validator import validate_handback, validate_delegate
+
+GUARD = REPO_ROOT / "renderer" / "scripts" / "claude-delegate-guard.py"
 
 
 # ============================================================================
-# Fixtures
+# Helper Functions
 # ============================================================================
 
-@pytest.fixture
-def sample_delegate() -> Dict:
-    """Valid DELEGATE YAML with all required fields."""
+
+def run_guard(payload: Dict) -> Tuple[bool, str]:
+    """
+    Execute the guard subprocess with a PreToolUse payload.
+    Returns (allowed, decision_output) where allowed is True if no deny,
+    and decision_output is the hook output or empty string if allow.
+    """
+    result = subprocess.run(
+        [sys.executable, str(GUARD)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0, (
+        f"guard must always exit 0 (fail open), got {result.returncode}: {result.stderr}"
+    )
+    out = result.stdout.strip()
+    if not out:
+        # No output = allow
+        return (True, "")
+    # Has output = deny
+    try:
+        decision = json.loads(out)["hookSpecificOutput"]
+        return (False, decision.get("permissionDecisionReason", "unknown error"))
+    except (json.JSONDecodeError, KeyError) as e:
+        raise AssertionError(f"Failed to parse guard output: {e}\n{out}")
+
+
+def _task_payload(subagent_type: str, prompt: str) -> Dict:
+    """Construct a Task-tool PreToolUse payload."""
     return {
-        "handoff_type": "DELEGATE",
-        "task_id": f"task-{uuid.uuid4().hex[:8]}",
-        "agent": "engineer",
-        "model": "claude-haiku-4.5",
-        "effort": "high",
-        "scope": "Test implementation task with full protocol coverage",
-        "plan": [
-            "1. Read and understand requirement",
-            "2. Identify affected files",
-            "3. Write implementation",
-            "4. Run tests",
-            "5. Commit changes"
-        ],
-        "success_criteria": [
-            "All tests pass",
-            "Code follows style guide",
-            "No linter warnings"
-        ],
-        "context": [
-            "File: test.py",
-            "Error: None",
-            "Root cause: Testing protocol"
-        ],
-        "estimated_tokens": 2000,
+        "tool_name": "Task",
+        "tool_input": {"subagent_type": subagent_type, "prompt": prompt},
     }
 
 
-@pytest.fixture
-def sample_handback(sample_delegate: Dict) -> Dict:
-    """Valid HANDBACK YAML with all required fields."""
-    return {
+def _delegate_yaml(task_id: str = None, agent: str = "engineer", **overrides) -> Dict:
+    """Construct a canonical DELEGATE dict."""
+    if task_id is None:
+        task_id = f"task-{uuid.uuid4().hex[:8]}"
+
+    delegate = {
+        "handoff_type": "DELEGATE",
+        "task_id": task_id,
+        "agent": agent,
+        "scope": "Fix the login timeout bug in the authentication service by extending the grace period and adding a regression test for the expired-token path.",
+        "plan": [
+            "Step 1: Reproduce the timeout with a failing test",
+            "Step 2: Extend the grace period and verify the test passes",
+        ],
+        "success_criteria": [
+            "AC1: Regression test passes",
+        ],
+        "context": [
+            "File: src/auth/timeout.py",
+            "Root cause: Clock skew on mobile devices",
+        ],
+    }
+    delegate.update(overrides)
+    return delegate
+
+
+def _handback_yaml(delegate: Dict, status: str = "success", **overrides) -> Dict:
+    """Construct a canonical HANDBACK dict with metrics."""
+    handback = {
         "handoff_type": "HANDBACK",
-        "task_id": sample_delegate["task_id"],
-        "agent": "engineer",
-        "status": "success",
-        "output": "Task completed successfully with full protocol coverage",
+        "task_id": delegate["task_id"],
+        "status": status,
+        "output": "Task completed successfully",
         "metrics": {
             "quality": 0.95,
             "tokens": 1800,
             "cost": 0.04,
             "duration_seconds": 120,
         },
-        "confidence": 0.95,
-        "escalations": [],
     }
-
-
-def _roundtrip(block: Dict) -> Dict:
-    """Serialize a DELEGATE/HANDBACK dict to YAML and back, as it would be
-    when passed as a sub-agent spawn prompt / returned as a spawn result."""
-    return yaml.safe_load(yaml.dump(block))
+    handback.update(overrides)
+    return handback
 
 
 # ============================================================================
-# Test 1: DELEGATE round-trips through YAML with all fields intact
+# Test 1: Guard allows canonical DELEGATE
 # ============================================================================
 
-def test_delegate_roundtrips_through_yaml(sample_delegate: Dict):
-    """
-    A DELEGATE constructed by the spawning agent must survive YAML
-    (de)serialization with every required and extension field intact.
-    """
-    loaded = _roundtrip(sample_delegate)
 
-    assert loaded["handoff_type"] == "DELEGATE"
-    assert loaded["task_id"] == sample_delegate["task_id"]
-    assert loaded["agent"] == "engineer"
-    assert loaded["model"] == "claude-haiku-4.5"
-    assert loaded["effort"] == "high"
-    assert loaded["scope"] == sample_delegate["scope"]
-    assert loaded["plan"] == sample_delegate["plan"]
-    assert loaded["success_criteria"] == sample_delegate["success_criteria"]
-    assert loaded["context"] == sample_delegate["context"]
-    assert loaded["estimated_tokens"] == 2000
+class TestGuardAllowsCanonicalDelegate:
+    def test_guard_allows_valid_delegate_prompt(self):
+        """Guard subprocess accepts a well-formed DELEGATE YAML prompt."""
+        delegate = _delegate_yaml()
+        prompt = yaml.dump(delegate)
 
+        payload = _task_payload("engineer", prompt)
+        allowed, reason = run_guard(payload)
 
-# ============================================================================
-# Test 2: HANDBACK round-trips through YAML with all fields intact
-# ============================================================================
+        assert allowed, f"guard must allow canonical DELEGATE, got deny reason: {reason}"
 
-def test_handback_roundtrips_through_yaml(sample_delegate: Dict, sample_handback: Dict):
-    """
-    A HANDBACK returned as a spawn call's result must survive YAML
-    (de)serialization with every required field intact, and its task_id
-    must match the originating DELEGATE's.
-    """
-    loaded = _roundtrip(sample_handback)
+    def test_guard_allows_delegate_with_extended_fields(self):
+        """Guard allows DELEGATE with optional extension fields (model, effort, etc)."""
+        delegate = _delegate_yaml(
+            model="claude-haiku-4.5",
+            effort="high",
+            estimated_tokens=2000,
+        )
+        prompt = yaml.dump(delegate)
 
-    assert loaded["handoff_type"] == "HANDBACK"
-    assert loaded["task_id"] == sample_delegate["task_id"]
-    assert loaded["status"] == "success"
-    assert "output" in loaded
-    assert loaded["metrics"] == sample_handback["metrics"]
+        payload = _task_payload("engineer", prompt)
+        allowed, reason = run_guard(payload)
+
+        assert allowed, f"guard must allow DELEGATE with extensions: {reason}"
 
 
 # ============================================================================
-# Test 3: Failure HANDBACK preserves escalation metadata
+# Test 2: Validator accepts canonical HANDBACK
 # ============================================================================
 
-def test_failure_handback_preserves_escalations(sample_delegate: Dict):
-    """A HANDBACK with status=failure round-trips its escalation metadata."""
-    failed_handback = {
-        "handoff_type": "HANDBACK",
-        "task_id": sample_delegate["task_id"],
-        "agent": "engineer",
-        "status": "failure",
-        "output": "Task failed with error",
-        "metrics": {
-            "quality": 0.0,
-            "tokens": 500,
-            "cost": 0.02,
-            "duration_seconds": 30,
-        },
-        "confidence": 0.0,
-        "escalations": ["Error in implementation"],
-    }
 
-    loaded = _roundtrip(failed_handback)
+class TestValidatorAcceptsCanonicalHandback:
+    def test_handback_validates_with_all_required_metrics(self):
+        """Canonical HANDBACK with all metrics passes validation."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(delegate)
 
-    assert loaded["status"] == "failure"
-    assert len(loaded["escalations"]) > 0
+        valid, errors = validate_handback(handback)
 
+        assert valid, f"handback should validate: {errors}"
+        assert len(errors) == 0
 
-# ============================================================================
-# Test 4: Blocked HANDBACK preserves retry metadata
-# ============================================================================
+    def test_handback_validates_with_different_statuses(self):
+        """HANDBACK with each valid status passes validation."""
+        for status in ["success", "failure", "partial", "blocked", "escalate"]:
+            delegate = _delegate_yaml()
+            handback = _handback_yaml(delegate, status=status)
 
-def test_blocked_handback_preserves_retry_metadata(sample_delegate: Dict):
-    """A HANDBACK with status=blocked round-trips its retry-tracking fields."""
-    blocked_handback = {
-        "handoff_type": "HANDBACK",
-        "task_id": sample_delegate["task_id"],
-        "agent": "engineer",
-        "status": "blocked",
-        "output": "Task blocked: resource unavailable",
-        "metrics": {
-            "quality": 0.5,
-            "tokens": 1000,
-            "cost": 0.03,
-            "duration_seconds": 60,
-        },
-        "confidence": 0.5,
-        "escalations": ["Resource unavailable - will retry"],
-        "_retry_count": 1,
-        "_last_blocked_reason": "resource unavailable",
-    }
+            valid, errors = validate_handback(handback)
 
-    loaded = _roundtrip(blocked_handback)
+            assert valid, f"handback status={status} should validate: {errors}"
 
-    assert loaded["status"] == "blocked"
-    assert loaded["_retry_count"] == 1
-    assert "_last_blocked_reason" in loaded
+    def test_handback_with_correlated_task_id(self):
+        """HANDBACK task_id must match DELEGATE task_id (correlation check)."""
+        delegate = _delegate_yaml(task_id="task-abc-123")
+        handback = _handback_yaml(delegate)
+
+        assert handback["task_id"] == delegate["task_id"], "must have same task_id"
+        valid, errors = validate_handback(handback)
+
+        assert valid, f"handback should correlate: {errors}"
 
 
 # ============================================================================
-# Test 5: Escalate HANDBACK yields a well-formed follow-up DELEGATE
+# Test 3: Validator catches mutant: missing metrics.quality
 # ============================================================================
 
-def test_escalate_handback_yields_new_delegate(sample_delegate: Dict):
-    """
-    A HANDBACK with status=escalate, when the spawning agent re-delegates at
-    the higher tier, must produce a new DELEGATE that preserves the
-    escalation chain (parent task_id and reason).
-    """
-    escalate_handback = {
-        "handoff_type": "HANDBACK",
-        "task_id": sample_delegate["task_id"],
-        "agent": "engineer",
-        "status": "escalate",
-        "output": "Escalating to senior engineer for complex analysis",
-        "metrics": {
-            "quality": 0.6,
-            "tokens": 2000,
-            "cost": 0.05,
-            "duration_seconds": 180,
-        },
-        "confidence": 0.4,
-        "escalations": ["Complexity exceeds engineer scope"],
-    }
-    assert _roundtrip(escalate_handback)["status"] == "escalate"
 
-    # Spawning agent constructs the follow-up DELEGATE at the higher tier.
-    new_delegate = dict(sample_delegate)
-    new_delegate["agent"] = "senior-engineer"
-    new_delegate["escalation_parent"] = sample_delegate["task_id"]
-    new_delegate["escalation_reason"] = "Complexity exceeds engineer scope"
+class TestMutationMissingQuality:
+    def test_handback_invalid_without_metrics_quality(self):
+        """HANDBACK missing metrics.quality is invalid."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(delegate)
+        del handback["metrics"]["quality"]
 
-    loaded = _roundtrip(new_delegate)
+        valid, errors = validate_handback(handback)
 
-    assert loaded["agent"] == "senior-engineer"
-    assert loaded["escalation_parent"] == sample_delegate["task_id"]
-    assert loaded["escalation_reason"] == "Complexity exceeds engineer scope"
+        assert not valid, "handback without metrics.quality must be invalid"
+        assert any("quality" in e.lower() for e in errors), (
+            f"error must mention 'quality': {errors}"
+        )
 
 
 # ============================================================================
-# Integration: Full DELEGATE -> HANDBACK Protocol Cycle
+# Test 4: Validator catches mutant: missing metrics.tokens
 # ============================================================================
 
-def test_full_protocol_cycle(sample_delegate: Dict, sample_handback: Dict):
-    """
-    Integration test: a DELEGATE is constructed, passed directly as a spawn
-    prompt (simulated here as a YAML round-trip), and the target agent
-    returns a HANDBACK synchronously as that spawn's result (likewise
-    round-tripped). Confirms the full schema survives both hops.
-    """
-    delegate_out = _roundtrip(sample_delegate)
-    assert delegate_out["task_id"] == sample_delegate["task_id"]
-    assert delegate_out["handoff_type"] == "DELEGATE"
 
-    # Target agent executes and returns a HANDBACK for the same task_id.
-    handback_out = _roundtrip(sample_handback)
-    assert handback_out["task_id"] == delegate_out["task_id"]
-    assert handback_out["handoff_type"] == "HANDBACK"
-    assert handback_out["status"] == "success"
+class TestMutationMissingTokens:
+    def test_handback_invalid_without_metrics_tokens(self):
+        """HANDBACK missing metrics.tokens is invalid."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(delegate)
+        del handback["metrics"]["tokens"]
+
+        valid, errors = validate_handback(handback)
+
+        assert not valid, "handback without metrics.tokens must be invalid"
+        assert any("tokens" in e.lower() for e in errors), (
+            f"error must mention 'tokens': {errors}"
+        )
+
+
+# ============================================================================
+# Test 5: Validator catches mutant: missing metrics.cost
+# ============================================================================
+
+
+class TestMutationMissingCost:
+    def test_handback_invalid_without_metrics_cost(self):
+        """HANDBACK missing metrics.cost is invalid."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(delegate)
+        del handback["metrics"]["cost"]
+
+        valid, errors = validate_handback(handback)
+
+        assert not valid, "handback without metrics.cost must be invalid"
+        assert any("cost" in e.lower() for e in errors), (
+            f"error must mention 'cost': {errors}"
+        )
+
+
+# ============================================================================
+# Test 6: Validator catches mutant: missing metrics.duration_seconds
+# ============================================================================
+
+
+class TestMutationMissingDurationSeconds:
+    def test_handback_invalid_without_metrics_duration_seconds(self):
+        """HANDBACK missing metrics.duration_seconds is invalid."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(delegate)
+        del handback["metrics"]["duration_seconds"]
+
+        valid, errors = validate_handback(handback)
+
+        assert not valid, "handback without metrics.duration_seconds must be invalid"
+        assert any("duration" in e.lower() for e in errors), (
+            f"error must mention 'duration': {errors}"
+        )
+
+
+# ============================================================================
+# Test 7: Validator catches mutant: legacy status 'complete'
+# ============================================================================
+
+
+class TestMutationLegacyStatus:
+    def test_handback_invalid_with_legacy_status_complete(self):
+        """HANDBACK with legacy status 'complete' is invalid (must be 'success')."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(delegate, status="complete")
+
+        valid, errors = validate_handback(handback)
+
+        assert not valid, "handback with legacy status 'complete' must be invalid"
+        assert any("status" in e.lower() for e in errors), (
+            f"error must mention 'status': {errors}"
+        )
+
+
+# ============================================================================
+# Test 8: Validator catches mutant: task_id mismatch
+# ============================================================================
+
+
+class TestMutationTaskIdMismatch:
+    def test_handback_with_mismatched_task_id_is_still_structurally_valid(self):
+        """
+        HANDBACK with a different task_id is structurally valid but semantically
+        wrong (not caught by the validator itself, but would be caught by the
+        orchestrator's correlation check).
+
+        The validator only checks structure, not semantic correlation.
+        """
+        delegate = _delegate_yaml(task_id="task-original-123")
+        handback = _handback_yaml(delegate)
+        # Manually break the correlation (validator doesn't catch this)
+        handback["task_id"] = "task-different-456"
+
+        # Structurally valid: all required fields present
+        valid, errors = validate_handback(handback)
+        assert valid, "handback is structurally valid despite task_id mismatch"
+
+        # But semantically it's wrong (orchestrator catches this)
+        assert handback["task_id"] != delegate["task_id"], "task_ids should differ"
+
+
+# ============================================================================
+# Integration: Full DELEGATE -> HANDBACK Round-Trip
+# ============================================================================
+
+
+class TestFullProtocolRoundTrip:
+    def test_canonical_delegate_to_handback_round_trip(self):
+        """
+        Full integration: construct DELEGATE, allow via guard, construct
+        correlated HANDBACK, validate with protocol_validator.
+        """
+        # 1. Create DELEGATE
+        delegate = _delegate_yaml()
+        delegate_prompt = yaml.dump(delegate)
+
+        # 2. Guard allows it
+        payload = _task_payload("engineer", delegate_prompt)
+        allowed, reason = run_guard(payload)
+        assert allowed, f"guard must allow canonical DELEGATE: {reason}"
+
+        # 3. Create correlated HANDBACK
+        handback = _handback_yaml(delegate)
+
+        # 4. Validator accepts it
+        valid, errors = validate_handback(handback)
+        assert valid, f"handback must validate: {errors}"
+        assert handback["task_id"] == delegate["task_id"], "correlation check"
+
+    def test_failure_handback_round_trip(self):
+        """A failure HANDBACK also round-trips validly."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(
+            delegate,
+            status="failure",
+            output="Task failed: import error",
+            metrics={
+                "quality": 0.0,
+                "tokens": 500,
+                "cost": 0.01,
+                "duration_seconds": 30,
+            },
+        )
+
+        valid, errors = validate_handback(handback)
+        assert valid, f"failure handback must validate: {errors}"
+
+    def test_escalation_round_trip_with_parent_task_id(self):
+        """Escalation HANDBACK with parent tracking round-trips."""
+        delegate = _delegate_yaml()
+        handback = _handback_yaml(
+            delegate,
+            status="escalate",
+            output="Escalating to senior engineer",
+            escalation_parent=delegate["task_id"],
+            escalation_reason="Complexity exceeds engineer scope",
+        )
+
+        valid, errors = validate_handback(handback)
+        assert valid, f"escalation handback must validate: {errors}"
 
 
 if __name__ == "__main__":

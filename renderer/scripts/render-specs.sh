@@ -51,35 +51,9 @@ SPEC_FILES=(
     "$SRC_DOCS/SPEC.md:SPEC.md"
     "$SRC_CONFIG/FRAMEWORK-MANIFEST.yaml:FRAMEWORK-MANIFEST.yaml"
     "$SRC_CONFIG/orchestration.yaml:orchestration.yaml"
-    "$SRC_CONFIG/deployment.yaml:deployment.yaml"
-    "$SRC_CONFIG/token_budget.yaml:token_budget.yaml"
 )
 
 case "$MODE" in
-    --status)
-        echo "📋 Spec deployment status at $DST_SPECS/..."
-        ok=0; missing=0; drift=0
-        for entry in "${SPEC_FILES[@]}"; do
-            src="${entry%%:*}"
-            dst_name="${entry##*:}"
-            dst="$DST_SPECS/$dst_name"
-
-            [ -f "$src" ] || { echo "  ⚠️  source missing: $dst_name"; continue; }
-
-            if [ ! -f "$dst" ]; then
-                printf "  %s %s\n" "$(_red "❌")" "$dst_name (not deployed)"
-                missing=$((missing + 1))
-            elif diff -q "$src" "$dst" >/dev/null 2>&1; then
-                printf "  %s %s\n" "$(_green "✅")" "$dst_name"
-                ok=$((ok + 1))
-            else
-                printf "  %s %s\n" "$(_yellow "🔄")" "$dst_name (drift)"
-                drift=$((drift + 1))
-            fi
-        done
-        echo "  --- $ok in sync, $drift drift, $missing missing ---"
-        ;;
-
     --validate)
         echo "🔍 Validating deployed specs at $DST_SPECS/..."
         errors=0

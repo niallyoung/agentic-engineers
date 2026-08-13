@@ -87,8 +87,6 @@ agents:
    - `docs/SPEC.md` → `dist/specs/SPEC.md`
    - `config/FRAMEWORK-MANIFEST.yaml` → `dist/specs/FRAMEWORK-MANIFEST.yaml`
    - `config/orchestration.yaml` → `dist/specs/orchestration.yaml`
-   - `config/deployment.yaml` → `dist/specs/deployment.yaml`
-   - `config/token_budget.yaml` → `dist/specs/token_budget.yaml`
 
 4. **Marker files** — written to track managed files for safe uninstall:
    - Skills: `<skill_dir>/.agentic-engine-<harness>` (e.g. `.agentic-engine-claude`)

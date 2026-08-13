@@ -47,37 +47,11 @@ except ImportError:
 # Constants
 # ---------------------------------------------------------------------------
 
-KNOWN_ROLES = {
-    "orchestrator",
-    "engineer",
-    "model-engineer",
-    "quality-engineer",
-    "lead-engineer",
-    "senior-engineer",
-    "principal-engineer",
-    "security-engineer",
-    # Aliases sometimes used in skill files
-    "model_engineer",
-    "quality_engineer",
-    "lead_engineer",
-    "senior_engineer",
-    "principal_engineer",
-    "security_engineer",
-    # Healer variant
-    "healer-engineer",
-}
-
 REQUIRED_FIELDS = {"name", "description"}
 
 # Skill files that don't need frontmatter (reference docs, examples)
 FRONTMATTER_EXEMPT_PATTERNS = {
     "README.md",
-    "EXAMPLES.md",
-    "IMPLEMENTATION-SUMMARY.md",
-    "SKILLS-INDEX.md",
-    "QUICK-START.md",
-    "AGENT-INTEGRATION.md",
-    "SESSION-INIT.sh",
 }
 
 # ---------------------------------------------------------------------------
@@ -455,18 +429,6 @@ def validate_skill_file(path: Path, strict: bool = False) -> list[ValidationErro
                 errors.append(ValidationError(
                     path, "ERROR",
                     f"Missing required frontmatter field: '{field}'"
-                ))
-
-    # Roles validation (when frontmatter is present on any file)
-    roles = fm.get("roles", [])
-    if isinstance(roles, list):
-        for role in roles:
-            role_normalized = str(role).lower().replace("_", "-")
-            if role_normalized not in KNOWN_ROLES and role not in KNOWN_ROLES:
-                level = "ERROR" if strict else "WARNING"
-                errors.append(ValidationError(
-                    path, level,
-                    f"Unknown role '{role}' in frontmatter. Known roles: {', '.join(sorted(KNOWN_ROLES))}"
                 ))
 
     return errors

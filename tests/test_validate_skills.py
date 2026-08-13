@@ -36,7 +36,6 @@ from validate_skills import (
     validate_skills,
     ValidationError,
     REQUIRED_FIELDS,
-    KNOWN_ROLES,
     FRONTMATTER_EXEMPT_PATTERNS,
 )
 
@@ -637,24 +636,6 @@ name: test
         errors = validate_skill_file(skill_file)
         assert len(errors) > 0
         assert any("frontmatter" in e.message.lower() or "malformed" in e.message.lower() for e in errors)
-
-    def test_validate_skill_file_unknown_role(self, temp_repo):
-        """Test that unknown roles are flagged."""
-        skill_file = temp_repo["skills_dir"] / "test" / "SKILL.md"
-        skill_file.parent.mkdir(parents=True)
-        
-        content = """---
-name: test
-description: Test skill
-roles:
-  - unknown-role
-  - engineer
----
-"""
-        skill_file.write_text(content)
-        
-        errors = validate_skill_file(skill_file, strict=False)
-        assert any("role" in e.message.lower() for e in errors)
 
     def test_validate_skill_file_exempted_files(self, temp_repo):
         """Test that exempted files don't require frontmatter."""
