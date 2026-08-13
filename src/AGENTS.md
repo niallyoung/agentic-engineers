@@ -92,7 +92,7 @@ plan:
   - "Step 2: Implement feature"
 success_criteria:
   - "All tests pass"
-estimated_tokens: 1500
+tokens_estimate: 1500
 ---
 ```
 

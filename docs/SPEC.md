@@ -182,7 +182,6 @@ none owns dispatch, scheduling, or supervision:
 | `get_version.py` | Reads/reports framework version |
 | `validate_opencode_config.py` | OpenCode config generation gate |
 | `entropy_detector.py` | Entropy-based credential/secret detector (security gate) |
-| `opencode-safe.sh` | OpenCode guard wrapper |
 | `check-gitconfig-no-tokens.sh` | Pre-commit check for tokens leaking into gitconfig |
 
 ### ENFORCEMENT CLAUSE
@@ -578,6 +577,17 @@ into `dist/<harness>/` and installed to each harness's home directory.
   content in this Update Log entry or elsewhere in this proposal's scope changes. Folded
   into this entry rather than a new SPEC-2026-010 proposal, per the same
   authorized_by: user-directive covering the whole queue-removal effort.
+- **2026-08-13:** [lead-engineer, task-2026-08-13-polish-p8-opencode-safe,
+  authorized_by: user-directive (polish wave-1, ancestry:
+  [task-2026-08-13-queue-removal-root, task-2026-08-13-polish-plan-wave1])]
+  Deleted `scripts/opencode-safe.sh` (105 lines) — zero callers repo-wide (re-verified:
+  no references in `.githooks/`, `Makefile`, `src/`, `tests/`; the one hit outside this
+  section was a stale historical mention in `scripts/validate_opencode_config.py`'s
+  module docstring, not an executable call site). This section's COMPLETE SCRIPT
+  INVENTORY table is updated to drop that row; `check-gitconfig-no-tokens.sh` (still
+  load-bearing via pre-push and `ci.yml`) and every other row are unchanged. Per the
+  spec-management "3a. Self-Authorized Narrow Follow-Up" pattern; this Update Log entry
+  is the record (no separate proposal file).
 
 ---
 

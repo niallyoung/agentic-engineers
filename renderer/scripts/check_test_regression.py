@@ -30,6 +30,21 @@ Re-baseline history (each ~95% of the measured actual at that point):
     drop from their removal); 8 new tests were added covering the merged
     renderer/validate_skills.py compliance-audit logic. Measured actual: 874
     collected -> floor 830 (874 * 0.95 = 830.3).
+  - Polish wave-1, P9 (2026-08-13): tests/test_ci_container_environment.py
+    (520 lines / 46 tests) was deleted -- it statically mirrored Dockerfile/
+    Makefile text (e.g. asserting "FROM python:3.11" appears) and exercised
+    generic OS filesystem/permission behavior unrelated to CI; it ran in
+    ~1.2s with no docker daemon interaction (its one "docker" reference just
+    shells out to `docker --version` and passes either way). CI does not use
+    the Dockerfile -- all GitHub Actions workflows run via actions/setup-python
+    -- so this was a change-detector, not a gate ("gates meaningful not
+    ceremonial"). The Dockerfile itself and the test-ci/test-ci-force/
+    test-ci-shell Makefile targets are untouched and remain a documented
+    local CI-parity tool (see docs/CONTRIBUTING/README.md). tests/
+    test_pre_push_hook.py was also deleted in an earlier batch but
+    contributed 0 collected tests, so it does not appear in the count below.
+    Measured actual: 828 collected (874 - 46) -> floor 786 (828 * 0.95 =
+    786.6 -> 786).
 
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
@@ -40,12 +55,13 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Re-baselined 2026-08-13 (infra reduction round 2) from the measured actual
-# of 874 collected tests; floor is ~95% (874 * 0.95 = 830.3 -> 830).
+# Re-baselined 2026-08-13 (polish wave-1, P9: ceremonial container-env test
+# file removed) from the measured actual of 828 collected tests; floor is
+# ~95% (828 * 0.95 = 786.6 -> 786).
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 830,
+        "minimum": 786,
         "label": "Full test suite",
     },
 }

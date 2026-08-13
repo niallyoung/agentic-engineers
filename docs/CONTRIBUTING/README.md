@@ -15,9 +15,9 @@ You're ready to contribute.
 
 ### Python Version (Pinned: 3.11)
 
-This project targets **Python 3.11**. CI and the Docker container are the **source of truth** — all GitHub Actions workflows and the `Dockerfile` use Python 3.11, and `setup.py` requires `>=3.11`. A `.python-version` file pins 3.11 for pyenv/local tooling.
+This project targets **Python 3.11**. The GitHub Actions workflows are the **source of truth** — every workflow uses `actions/setup-python` pinned to 3.11 (none of them use the Dockerfile), and `setup.py` requires `>=3.11`. A `.python-version` file pins 3.11 for pyenv/local tooling. The `Dockerfile` and `test-ci*` Makefile targets below are a local CI-parity mirror, not what CI itself runs.
 
-To run the test suite under the exact CI Python version without installing 3.11 locally, use the container target:
+To run the test suite under a local approximation of the CI Python version without installing 3.11 locally, use the container target:
 
 ```bash
 make test-ci         # Run tests in the python:3.11 container (matches CI exactly)

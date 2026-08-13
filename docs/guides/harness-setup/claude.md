@@ -57,8 +57,8 @@ These directories are created automatically by `make install-claude`.
 Claude Code uses short model aliases in the UI (opus, sonnet, haiku) which are mapped internally to full Anthropic model names:
 
 - `haiku` → `claude-haiku-4.5`
-- `sonnet` → `claude-sonnet-4`
-- `opus` → `claude-opus-4`
+- `sonnet` → `claude-sonnet-5`
+- `opus` → `claude-opus-5`
 
 The renderer automatically handles these aliases during configuration rendering.
 

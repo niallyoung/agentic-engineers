@@ -57,11 +57,11 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 
 | Harness | Internal Format | Transformed Format | Reason |
 |---------|-----------------|-------------------|--------|
-| Source Agents | `claude-opus-4.8` (dots) | — | Canonical format in source |
-| OpenCode | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | CLI requirement |
-| Copilot CLI | `claude-opus-4.8` | `claude-opus-4.8` (pass-through) | Anthropic API format |
-| Claude Code | `claude-opus-4.8` | `opus` (short alias) | Web UI simplification |
-| Codex | `claude-opus-4.8` role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
+| Source Agents | `claude-haiku-4.5` (dots) | — | Canonical format in source |
+| OpenCode | `claude-haiku-4.5` | `claude-haiku-4-5` (hyphens) | CLI requirement |
+| Copilot CLI | `claude-haiku-4.5` | `claude-haiku-4.5` (pass-through) | Anthropic API format |
+| Claude Code | `claude-haiku-4.5` | `haiku` (short alias) | Web UI simplification |
+| Codex | `claude-haiku-4.5` role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
 
 ### Renderer Scripts
 
