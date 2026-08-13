@@ -233,8 +233,11 @@ EOF
 		if [ -d "$REPO_ROOT/.githooks" ]; then
 			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
 			git -C "$REPO_ROOT" config core.hooksPath .githooks
-			for hook in "$REPO_ROOT"/.githooks/*; do
-				[ -f "$hook" ] && chmod +x "$hook"
+			# chmod only the actual hook entry points — NOT .githooks/* wholesale,
+			# which kept re-adding exec bits to the .md docs in that directory and
+			# tripping pre-commit's own file-permissions check.
+			for hook in pre-commit pre-push commit-msg post-merge; do
+				[ -f "$REPO_ROOT/.githooks/$hook" ] && chmod +x "$REPO_ROOT/.githooks/$hook"
 			done
 			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
 		else

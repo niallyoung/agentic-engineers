@@ -176,7 +176,6 @@ none owns dispatch, scheduling, or supervision:
 
 | Script | Purpose |
 |--------|---------|
-| `check_protocol_compliance.py` | Validates DELEGATE/HANDBACK blocks against protocol schema |
 | `detect_circular_imports.py` | Static import-cycle detector (CI gate) |
 | `annotate_token_costs.py` | Advisory cost/token rollup formatting |
 | `format_skill_report.py` | Formats skill test/validation output |
@@ -574,6 +573,15 @@ into `dist/<harness>/` and installed to each harness's home directory.
   bypassed on the explicit, recorded authority of the repo owner rather than a
   Lead-Engineer self-authorization precedent like SPEC-2026-006/007/008. See
   `docs/spec-proposals/SPEC-2026-009.yaml`.
+  **Correction (same day, same authorization):** the concurrent `src/**`/`tests/**`
+  code package for this same user-directed queue removal has since been committed and
+  deleted `scripts/check_protocol_compliance.py` (the CI gate that ran the
+  protocol-validator over queue-directory YAML files), its `.github/workflows/ci.yml`
+  step, and its two test files — confirmed via `ls scripts/` returning no such file.
+  This section's COMPLETE SCRIPT INVENTORY table is updated to drop that row; no other
+  content in this Update Log entry or elsewhere in this proposal's scope changes. Folded
+  into this entry rather than a new SPEC-2026-010 proposal, per the same
+  authorized_by: user-directive covering the whole queue-removal effort.
 
 ---
 

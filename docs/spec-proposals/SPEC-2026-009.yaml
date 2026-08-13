@@ -119,12 +119,19 @@ proposed_changes:
     One wording fix: the `renderer/scripts/` exemption note dropped "or queue processing"
     from "never participate in runtime orchestration or queue processing" (now just
     "never participate in runtime orchestration"), since queue processing is no longer a
-    category of thing scripts could participate in. The script tables themselves are
-    unchanged — `scripts/check_protocol_compliance.py` still exists in the tree as of this
-    proposal (verified via `ls scripts/`) and is left listed; if a concurrent DELEGATE
-    deletes it, that is a follow-up correction for whichever proposal records that
-    deletion, not this one (this proposal's routing DELEGATE flagged this exact
-    reconciliation risk and instructed listing only what could be verified as surviving).
+    category of thing scripts could participate in.
+
+    ADDENDUM (2026-08-13, same day, same authorization): at proposal time,
+    `scripts/check_protocol_compliance.py` still existed in the tree (verified via
+    `ls scripts/`) and was left listed, with this proposal's `out_of_scope` flagging its
+    eventual deletion as unverified. The concurrent `src/**`/`tests/**` code package for
+    this same user-directed queue removal has since been committed and confirmed to
+    delete that script, its `.github/workflows/ci.yml` CI step, and its two test files
+    — it scanned queue-directory YAML files that no longer exist to scan. The
+    COMPLETE SCRIPT INVENTORY table row for it is now dropped from `docs/SPEC.md`
+    (recorded in that document's own Update Log as a same-entry correction, not a new
+    SPEC-2026-010 proposal), and the corresponding descriptions in `docs/PROTOCOL.md`
+    §3 and `docs/CONTRIBUTING/README.md`'s CI gates section are updated to match.
   "References": |
     Dropped the `docs/QUEUE-PROTOCOL.md` bullet (file deleted by this same effort).
     `docs/PROTOCOL.md`'s reference line was already describing itself correctly and is
@@ -165,13 +172,15 @@ out_of_scope:
       for SPEC-2026-004's queue-and-poll-to-direct-spawn change; this proposal adds a
       further note recording that the queue itself (not just polling) is now gone, without
       altering the historical analysis below the note.
-  - item: "scripts/check_protocol_compliance.py's actual deletion (if any)"
-    status: UNVERIFIED
+  - item: "scripts/check_protocol_compliance.py's actual deletion"
+    status: "CONFIRMED (2026-08-13, same day) — see the COMPLETE SCRIPT INVENTORY addendum above"
     note: |
-      Still present in the tree at proposal time (see COMPLETE SCRIPT INVENTORY entry
-      above). If a concurrent or later change removes it, docs/SPEC.md's script inventory
-      and docs/CONTRIBUTING/README.md's Gate 3 description will need a follow-up
-      correction this proposal does not attempt to predict.
+      Was UNVERIFIED at original proposal time (script still present in the tree). The
+      concurrent `src/**`/`tests/**` code package has since been committed and confirmed
+      to delete the script, its CI step, and its two test files. docs/SPEC.md's script
+      inventory, docs/PROTOCOL.md §3, and docs/CONTRIBUTING/README.md's CI gates section
+      were corrected the same day, under the same authorization, rather than via a new
+      proposal.
 
 impact:
   breaking_for_users: true

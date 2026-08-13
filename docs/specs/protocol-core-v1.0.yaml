@@ -6,9 +6,9 @@
 #
 # It is loaded at runtime by:
 #   - src/skills/protocol-validator/scripts/protocol_validator.py
-#   - scripts/check_protocol_compliance.py (CI gate)
+#     (invoked on demand by agents and by renderer/validate_agents.py)
 #
-# The runtime validators (core_protocol_validator.py CoreProtocolValidator /
+# The runtime validators (protocol_validator.py CoreProtocolValidator /
 # ExtensionValidator) are the prescriptive authority for *enforcement*. This
 # file documents and mirrors those rules in JSON-Schema (draft-07) form so the
 # spec, the validators, SPEC.md, and renderer/validate_agents.py all agree on

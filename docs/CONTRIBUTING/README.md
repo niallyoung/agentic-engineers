@@ -469,11 +469,17 @@ and how to satisfy it locally before pushing.
 | Lint | `make lint` | Hard fail | Phase 1 |
 | **SKILL.md compliance** | `scripts/validate_skills.py` | Hard fail on errors; warn on warnings | Phase 5.1 |
 | **Circular import detection** | `scripts/detect_circular_imports.py` | Hard fail | Phase 5.1 |
-| **Protocol compliance** | Inline (DELEGATE/HANDBACK YAML validation) | Hard fail if such files exist on disk | Phase 5.1 |
-| **Conformance report** | `scripts/validate_skills.py --json` | Non-failing (audit trail) | Phase 5.1 |
+| **Skill template conformance report** | `scripts/validate_skills.py --json` + `scripts/format_skill_report.py` | Non-failing (audit trail) | Phase 5.1 |
 | Test suite | `make test` | Hard fail | Phase 1 |
+| **Harness regression check** | `renderer/scripts/check_test_regression.py` | Hard fail | SPEC-2026-005 WP-5 |
 | Verify | `make verify` | Hard fail | Phase 1 |
 | Token cost annotation | Inline (reads `data/metrics/`) | Non-failing (audit only) | Phase 5.1 |
+
+**Removed (2026-08-13, part of the same user-directed queue removal as SPEC-2026-009):**
+the standalone "Protocol compliance" gate (`scripts/check_protocol_compliance.py`, which
+scanned queue YAML files for DELEGATE/HANDBACK schema conformance) and its two test
+files were deleted along with the filesystem queue itself — the gate had nothing left to
+scan once there was no queue directory, and no replacement gate was added in its place.
 
 ### Gate 1: SKILL.md Frontmatter Compliance
 
@@ -534,25 +540,32 @@ python scripts/detect_circular_imports.py --root src/skills  # skills only
 If a cycle is detected, restructure the imports to eliminate it (e.g., move
 shared types to a dedicated `_types.py` module that neither importer depends on).
 
-### Gate 3: Protocol Compliance
+### Gate 3: Skill Template Conformance Report (Audit Trail)
 
-Any DELEGATE/HANDBACK YAML files present on disk (e.g. under `docs/examples/`, or ad hoc
-exports) are validated against the protocol schema. There is no filesystem queue for this
-gate to scan by default — dispatch is direct sub-agent spawn, and the harness session
-transcript is the durable audit record — so this gate is a no-op unless such files exist
-elsewhere in the tree.
+This gate runs `validate_skills.py --json`, pipes it through
+`format_skill_report.py`, and writes the output to the GitHub Actions step summary
+(`.github/workflows/ci.yml`'s "Gate 3: Skill template conformance report" step). It is
+**non-failing** — it exists to create an audit trail of skill health over time. Check it
+in the "Summary" tab of any CI run.
 
 **Run locally:**
 ```bash
-# Validate an arbitrary DELEGATE/HANDBACK YAML file:
-python -c "from src.skills.protocol_validator.scripts import validate_file; print(validate_file('path/to/example.yaml'))"
+python scripts/validate_skills.py --json | python scripts/format_skill_report.py
 ```
 
-### Gate 4: Conformance Report (Audit Trail)
+> **Removed (2026-08-13):** the prior "Gate 3: Protocol Compliance" step, which
+> validated DELEGATE/HANDBACK YAML files found under a queue directory against the
+> protocol schema, was deleted along with `scripts/check_protocol_compliance.py`, its
+> two test files, and the filesystem queue itself (see SPEC-2026-009). CI's gate
+> numbering shifted up by one to fill the gap — this is now Gate 3.
 
-This gate runs `validate_skills.py --json` and writes the output to the GitHub
-Actions step summary. It is **non-failing** — it exists to create an audit trail
-of skill health over time. Check it in the "Summary" tab of any CI run.
+### Harness Regression Check
+
+`.github/workflows/ci.yml`'s "Gate 5: Harness regression check" step runs
+`renderer/scripts/check_test_regression.py` after `make render-*` and `make test`,
+enforcing the interim permissive test-count floor from SPEC-2026-005 WP-5. See
+[docs/REGRESSION-GATE-POLICY.md](../REGRESSION-GATE-POLICY.md) for the baseline and
+how to update it.
 
 ### Token Cost Annotation (Non-Failing)
 

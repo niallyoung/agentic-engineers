@@ -91,8 +91,8 @@ pre-push check; CI re-runs the same gate. Git hooks under `.githooks/` enforce
 protocol compliance at commit time — DELEGATE/HANDBACK structure, secret-leak
 checks, and SPEC.md drift (`scripts/validate-spec-constraints.py`). CI's
 security-gate workflow additionally runs `scripts/entropy_detector.py` for
-credential/secret entropy scanning, and `scripts/check_protocol_compliance.py`
-validates DELEGATE/HANDBACK protocol conformance. Run the full local suite with `make test`.
+credential/secret entropy scanning. DELEGATE/HANDBACK protocol conformance is
+validated on demand via the `protocol-validator` skill. Run the full local suite with `make test`.
 
 ## Documentation
 

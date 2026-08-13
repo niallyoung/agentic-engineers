@@ -36,11 +36,13 @@ import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
 # Re-baselined in WP-5 (2026-08-12) from the measured post-slimdown actual of
-# 940 collected tests; floor is ~95% of that actual (940 * 0.95 = 893).
+# 940 collected tests (floor 893), then again on 2026-08-13 after the
+# user-directed queue-layer removal (SPEC-2026-009) deleted the queue test
+# suites: measured actual 866 collected; floor is ~95% (866 * 0.95 = 822).
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 893,
+        "minimum": 822,
         "label": "Full test suite",
     },
 }

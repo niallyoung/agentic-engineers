@@ -167,15 +167,14 @@ fan-out is the spawning agent directly issuing multiple concurrent spawns.
 
 ## 3. Validation & Enforcement
 
-Four independent layers check DELEGATE/HANDBACK compliance. They overlap
+Three independent layers check DELEGATE/HANDBACK compliance. They overlap
 deliberately — no single layer is a complete gate on its own.
 
 | Layer | What it checks | When it runs | Scope |
 |---|---|---|---|
 | **`protocol-validator` skill** (`src/skills/protocol-validator/scripts/protocol_validator.py`) | Full core + extension field validation against `protocol-core-v1.0.yaml`, <5ms | On demand, by any agent or script that imports it | Any DELEGATE/HANDBACK dict |
-| **`scripts/check_protocol_compliance.py`** | Same validator, run over a directory of DELEGATE/HANDBACK YAML files | CI gate (invoked explicitly; no-op if no such files are present) | Files on disk (e.g. `docs/examples/`, ad hoc exports) |
 | **`.githooks/pre-commit`** DELEGATE/HANDBACK section | Regex-based core-field presence/format checks (task_id pattern, agent enum, status enum, metrics sub-fields, secret-pattern scan) on staged `.yaml`/`.yml` files that look like a DELEGATE or HANDBACK | `git commit` | Files about to be committed |
-| **PreToolUse hook** (`renderer/scripts/claude-delegate-guard.py`) | Deliberately not a thin wrapper around the validator above (documented in its own docstring) — checks that a live Claude Code Agent-tool spawn targeting one of the eight framework roles carries a well-formed DELEGATE block in its prompt | Every Agent/Task-tool spawn in a Claude Code session | The one path the other three layers cannot see: an in-session spawn that never touches disk |
+| **PreToolUse hook** (`renderer/scripts/claude-delegate-guard.py`) | Deliberately not a thin wrapper around the validator above (documented in its own docstring) — checks that a live Claude Code Agent-tool spawn targeting one of the eight framework roles carries a well-formed DELEGATE block in its prompt | Every Agent/Task-tool spawn in a Claude Code session | The one path the other two layers cannot see: an in-session spawn that never touches disk |
 
 None of these layers enforces the *calling* agent's role, ancestry, spawn depth, or
 fan-out count — that is the spawning agent's own judgment call per
@@ -183,10 +182,10 @@ fan-out count — that is the spawning agent's own judgment call per
 
 There is no filesystem queue and no `enqueue()` gateway — the durable audit record is
 the harness session transcript itself (every DELEGATE as a spawn prompt, every HANDBACK
-as that spawn's result), not a separately-written file. `check_protocol_compliance.py`
-and the schema tooling above remain useful for validating DELEGATE/HANDBACK YAML
-wherever it appears on disk (examples, exports, ad hoc authoring) — they no longer have
-a queue directory to scan by default.
+as that spawn's result), not a separately-written file. `scripts/check_protocol_compliance.py`,
+the CI gate that used to run the validator above over a directory of queue YAML files,
+was deleted along with the queue itself (SPEC-2026-009) — the `protocol-validator` skill
+above remains the way to validate a DELEGATE/HANDBACK dict or file on demand, in-process.
 
 ### 3.1 Common Mistakes
 
