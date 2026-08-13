@@ -38,6 +38,14 @@
 
 ---
 
+## Reference & Analysis
+
+| Document | Purpose |
+|----------|---------|
+| [LANDSCAPE.md](LANDSCAPE.md) | Multi-agent orchestration ecosystem (2026); competitor landscape; standards alignment; positioning |
+
+---
+
 ## Guides
 
 | Location | Contents |

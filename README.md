@@ -29,6 +29,10 @@ The framework is built to be **minimal, portable, and self-reducing**:
 - **Eventual redundancy** — when harnesses compose and delegate work well by default, this coordination layer should fade into standard practice
 - **Harness comparative analysis** — the `src/ → make render → dist/ → make install → ~/.<harness>` pipeline lets the same agent/skill roster be compared across harnesses for feature parity and quality trade-offs
 
+## Positioning
+
+Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy frameworks** (LangGraph, CrewAI) handle durable distributed runtime; **light SDKs** (OpenAI Agents, PydanticAI) offer minimal abstraction; **markdown-first harness** (ours) routes and coordinates work across coding CLIs (Claude, Copilot, Codex, Gemini). Unlike content marketplaces (wshobson/agents, obra/superpowers), we ship a **routing protocol with structured handoff and metrics** — not just agent/skill definitions. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) for the full ecosystem mapping, standards alignment, and why harnesses are commoditizing the layers beneath us.
+
 ## The Roster
 
 Eight roles: **Orchestrator** (routing, `claude-sonnet-5`), **Engineer** (well-scoped
