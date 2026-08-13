@@ -5,7 +5,7 @@ This guide explains how to create new skills in the Agentic Engineers framework.
 ## Overview
 
 Skills are reusable capabilities that agents can invoke to accomplish specific tasks. Skills can be:
-- **Operational tools** (queue management, file operations)
+- **Operational tools** (protocol validation, file operations)
 - **Analysis capabilities** (code review, metrics aggregation)
 - **Integrations** (API clients, external services)
 - **Utilities** (formatters, validators)
@@ -218,7 +218,7 @@ def test_migration_status(tmp_path):
 
 | Category | Purpose | Examples |
 |----------|---------|----------|
-| **orchestration** | Task routing and coordination | queue-management, delegation |
+| **orchestration** | Task routing and coordination | orchestrator, protocol-validator |
 | **quality** | Code review and validation | spec-validator, test-sync |
 | **cost** | Cost tracking and optimization | usage-tracking, tokenadvisor |
 | **infrastructure** | System operations | file-sync, cicd-monitor |
@@ -231,9 +231,8 @@ Skills can depend on other skills. Declare dependencies in `SKILL.md`:
 
 ```yaml
 ---
-name: advanced-queue-ops
+name: advanced-protocol-ops
 dependencies:
-  - queue-management  # Core queue operations
   - protocol-validator  # DELEGATE/HANDBACK validation
 ---
 ```
@@ -296,7 +295,7 @@ Agents can invoke skills via the `skill` tool. Example in agent system prompt:
 ## Available Skills
 
 - `database-migration` — Manages schema migrations
-- `queue-management` — Queue operations (DELEGATE/HANDBACK)
+- `protocol-validator` — DELEGATE/HANDBACK schema validation
 - `usage-tracking` — Token usage capture and analysis
 
 ## Usage

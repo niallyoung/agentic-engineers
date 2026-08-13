@@ -142,7 +142,7 @@ renderer/
 | Harness | Agent format | Skill format | Config files |
 |---------|-------------|-------------|--------------|
 | OpenCode | `agents/<name>.md` (mode/model/temp) | `skills/<name>/SKILL.md` | `opencode.jsonc`, `AGENTS.md` |
-| Copilot CLI | `*.agent.md` (YAML frontmatter) | `skills/<name>/SKILL.md` | `queue/` structure |
+| Copilot CLI | `*.agent.md` (YAML frontmatter) | `skills/<name>/SKILL.md` | – |
 | Claude Code | `agents/<name>.md` | `skills/<name>/SKILL.md` | – |
 | Codex | `agents/<name>.toml` | `~/.codex/skills/<name>/SKILL.md` | `config.toml`, `AGENTS.md` |
 

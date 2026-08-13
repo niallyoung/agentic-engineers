@@ -12,7 +12,7 @@ agent: quality-engineer
 scope: Add optional retry_count field to HANDBACK extensions for improved retry tracking and failure diagnostics across all agent types and task types
 success_criteria:
   - New field 'retry_count' added to specs/protocol-core-v1.0.yaml under handback.extensions
-  - consistency-checker run against existing queue reports pass_rate >= 95%
+  - consistency-checker run against a sample of recent DELEGATE/HANDBACK records reports pass_rate >= 95%
   - No violations related to new field (may have pre-existing issues)
   - All Phase 1-3 HANDBACKs still validate successfully
   - Test coverage >= 95% with new field validation
@@ -20,7 +20,7 @@ plan:
   - Define retry_count field in protocol spec (integer, >=0, optional)
   - Update protocol-validator extension validation rules
   - Create proposed spec at specs/protocol-core-v1.0-retry-count.yaml
-  - Run consistency-checker with proposed spec against existing queue
+  - Run consistency-checker with proposed spec against a sample of recent DELEGATE/HANDBACK records
   - Generate impact report and verify pass_rate >= 95%
   - If approved, merge proposed spec into protocol-core-v1.0.yaml
   - Update protocol-validator tests to cover new field

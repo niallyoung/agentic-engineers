@@ -18,7 +18,7 @@ success_criteria:
   - No regression in validation performance (still <5ms per task)
 plan:
   - Analyze current protocol-validator implementation for skill checking
-  - Review existing queue to identify invalid skill references (if any)
+  - Review recent DELEGATE/HANDBACK records to identify invalid skill references (if any)
   - Update core_protocol_validator.py to enforce skill existence check
   - Run consistency-checker with updated validator
   - Generate impact report identifying affected tasks
@@ -33,7 +33,7 @@ context: |
   - Return False (and error message) if neither exists
   
   Risk: Medium because only affects already-invalid DELEGATEs with typos in skill names.
-  Example: "task-management" skill doesn't exist (should be "queue-management")
+  Example: "spec-validation" skill doesn't exist (should be "spec-validator")
   
   Current behavior: Logs warning, allows task through
   New behavior: Rejects task immediately
@@ -49,7 +49,7 @@ parent_task_id: null
 
 _proposed_changes:
   change_type: "VALIDATION RULE TIGHTENING"
-  file: "skills/queue-management/scripts/core_protocol_validator.py"
+  file: "src/skills/protocol-validator/scripts/protocol_validator.py"
   location: "_skill_exists() function"
   modification: |
     def _skill_exists(skill: str) -> bool:

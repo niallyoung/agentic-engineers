@@ -79,7 +79,6 @@ Run `make install` for the default harness set, or use individual `make install-
 
 | Issue | Harness | Fix |
 |-------|---------|-----|
-| Queue directories not found | OpenCode | `mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}` |
 | Model not recognized | Copilot CLI | Verify `copilot --version` is ≥2.0.0 |
 | Agent not found | Claude Code | Run `make install-claude` |
 

@@ -1,16 +1,16 @@
 ---
 name: Agentic Engineers Implementation Specification
-description: Current state of the agent orchestration system, queue mechanics, and operational constraints
+description: Current state of the agent orchestration system and operational constraints
 version: 2.0
-updated: 2026-08-11
-phase: Post-slimdown (SPEC-2026-005)
+updated: 2026-08-13
+phase: Post-slimdown (SPEC-2026-005), queue removed (SPEC-2026-009)
 status: Current
 type: specification
 ---
 
 # Agentic Engineers Implementation Specification
 
-**Last Updated:** 2026-08-11
+**Last Updated:** 2026-08-13
 **Constraint:** No external scripts/tools own orchestration — all runtime work flows through AGENTS via DELEGATE/HANDBACK; Python is advisory only (see below).
 
 ---
@@ -22,9 +22,9 @@ Engineer, Senior Engineer, Quality Engineer, Lead Engineer, Principal Engineer, 
 Engineer, Model Engineer — via the DELEGATE/HANDBACK protocol. The Orchestrator is the
 single entry point: it builds a DELEGATE and dispatches it by directly spawning a
 sub-agent with the DELEGATE as the prompt, then reads the HANDBACK from that spawn's
-result. There is no polling loop, timer, or daemon. The queue at
-`~/.agentic-engineers/{harness}/{session-id}/queue/` remains a durable inbox and audit
-substrate (LOCKED paths, unchanged) — not the dispatch mechanism.
+result. There is no polling loop, timer, or daemon, and no filesystem queue — the
+harness session transcript itself (every DELEGATE as a spawn prompt, every HANDBACK as
+that spawn's result) is the durable audit record.
 
 ---
 
@@ -52,12 +52,15 @@ Orchestrator's own agent context, not in a Python process polling a directory on
    the agent. They MUST NOT own the control loop, decide what runs next, or spawn/supervise
    agents. If removing a helper would halt the system rather than degrade its advice, it
    is control flow and is prohibited here.
-4. **The Queue is a Durable Inbox and Audit Substrate, Not the Dispatch Mechanism.** The
-   canonical paths in the LOCKED "Queue Architecture & Paths" section remain authoritative
-   and unchanged. The queue's role is narrowed to: (a) accepting work submitted while no
-   Orchestrator context is live, and (b) holding durable DELEGATE/HANDBACK records for
-   audit and resumption after a context ends. A live Orchestrator drains the inbox at
-   start and after each task completes — it does not wake on a timer to check it.
+4. **The Harness Session Transcript is the Durable Audit Record; There Is No Filesystem
+   Queue.** Dispatch and results are exchanged entirely in-context: the spawning agent
+   passes a DELEGATE as a sub-agent spawn's prompt and reads the HANDBACK back as that
+   same spawn call's result. That spawn/result pair, as it appears in the harness's own
+   session transcript, *is* the durable record — nothing is separately written to or
+   read from disk to make a DELEGATE or HANDBACK "count." There is no inbox, no
+   session-partitioned directory tree, and no `enqueue()` step. A task submitted while no
+   Orchestrator context is live has no durable holding area under this model; it is
+   handed to the Orchestrator directly the next time one is invoked.
 5. **Recursion, Depth and Fan-Out Limits (MANDATORY).** Depth limit 3 — the Orchestrator
    is depth 0; a specialist it spawns is depth 1; a task at depth 3 MUST NOT spawn further
    sub-agents, it completes the work itself or returns `status: blocked`. Fan-out limit 5
@@ -163,7 +166,7 @@ must be removed or converted to an Agent SKILL within 30 days of discovery.
 
 Rendering and installation tooling (agent/skill/spec rendering per harness, config
 validation, backup/install helpers). Exempt because these run at build/setup time only
-and never participate in runtime orchestration or queue processing. See
+and never participate in runtime orchestration. See
 [RENDERING.md](RENDERING.md) for the full pipeline and per-file descriptions.
 
 ### COMPLIANT: Root `scripts/` — Advisory & Compliance Tooling
@@ -234,157 +237,6 @@ inbox at context start):
 5. **Well-scoped with a pre-written plan, low-medium complexity?** → **Engineer** (Red-Green
    TDD for code changes)
 6. **Otherwise** → escalate to a human (unclear scope)
-
----
-
-## Queue Architecture & Paths (LOCKED SPEC)
-
-**⚠️ SPECIFICATION LOCKED as of 2026-05-26 — path order revised 2026-06-11**
-
-This section defines the canonical queue path architecture for all harnesses. Changes to
-queue paths require approval via the `spec-management` skill.
-
-> **2026-06-11 change:** the path order is now **`{harness}/{session-id}`**, the
-> reverse of the original `{session-id}/{harness}`. Rationale: humans and
-> operators browse the tree by harness name, not by opaque session UUID, and
-> session IDs cannot collide across harnesses when harness is the top level.
-> `setup/migrate-queue-paths.sh` migrates existing installs to the new order.
-
-### Canonical Queue Path
-
-**All harnesses MUST use: `~/.agentic-engineers/`**
-
-Queue directory structure (**harness first, then session-id**) — identical shape repeats
-under each of the four harness directories:
-```
-~/.agentic-engineers/
-└── copilot/                            # or claude/, opencode/, codex/ — identical below
-    └── {session-id}/                   # UUID: 54744939-4acb-430c-b2c4-3b8322289d0b
-        ├── queue/
-        │   ├── incoming/               # New DELEGATEs waiting for routing
-        │   ├── processing/             # Work assigned to agents, HANDBACKs awaiting review
-        │   ├── done/                   # Completed work
-        │   └── failed/                 # Failed work (optional, for archival)
-        └── session-state/
-```
-
-**Supported Harnesses (ALL REQUIRE SAME BASE):**
-- **copilot**: Uses `~/.agentic-engineers/copilot/{session-id}/queue/`
-- **claude**: Uses `~/.agentic-engineers/claude/{session-id}/queue/`
-- **opencode**: Uses `~/.agentic-engineers/opencode/{session-id}/queue/`
-- **codex**: Uses `~/.agentic-engineers/codex/{session-id}/queue/`
-
-**CRITICAL:** There are NO EXCEPTIONS. All four harnesses use the same `~/.agentic-engineers/` base directory. No harness may use its own legacy path.
-
-### Queue Subdirectories (Standard)
-
-All queue directories MUST contain four standard subdirectories:
-
-| Directory | Purpose | Contents |
-|-----------|---------|----------|
-| **incoming/** | New work waiting for routing | DELEGATE blocks from humans or Orchestrator |
-| **processing/** | Work assigned to agents | HANDBACKs awaiting review by Quality Engineer |
-| **done/** | Completed work | Final decisions ready for human action |
-| **failed/** | Failed work (optional) | HANDBACKs with status=failed or blocked beyond recovery |
-
-All subdirectories exist across all four harnesses (copilot, claude, opencode, codex).
-
-### Unsupported Legacy Paths (DEPRECATED)
-
-The following paths are **DEPRECATED and MUST NOT be used**:
-
-| Legacy Path | Status | Migration |
-|-------------|--------|-----------|
-| `~/.copilot/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/copilot/{session-id}/queue/` |
-| `~/.claude/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/claude/{session-id}/queue/` |
-| `artifacts/queue/` | ❌ DEPRECATED | Migrated to `~/.agentic-engineers/*/{session-id}/queue/` |
-
-**Migration Completed:** 2026-05-26
-
-**Effect of Using Legacy Paths:** Using any legacy path will cause a `RuntimeError` from the queue isolation layer (queue-isolation skill) because those paths are no longer monitored by the Orchestrator or harness renderers.
-
-### Enforcement Rules
-
-**1. Queue-Isolation REQUIRED (No Fallback Logic)**
-- Every queue write MUST resolve its target path through session/harness path-isolation
-  validation that confines it to the canonical
-  `~/.agentic-engineers/{harness}/{session-id}/queue/` root (enforced by
-  `src/skills/queue-management/scripts/queue_ops.py`, the surviving inlined isolation logic)
-- If a queue path cannot be validated as confined to that canonical root, the write MUST
-  fail immediately with a hard error before any directory or file is touched — the
-  operation MUST NOT proceed on an unvalidated path
-- Error message MUST mention canonical path and list all unsupported legacy paths
-- NO fallback to legacy paths; NO conditional logic to support old paths
-
-**2. Orchestrator Hard Constraint**
-- Orchestrator MUST read and write queue records ONLY from `~/.agentic-engineers/{harness}/{session-id}/queue/`
-- Orchestrator detects session-id from COPILOT_SESSION_ID or CLAUDE_SESSION_ID environment variables
-- Orchestrator MUST NOT check for legacy paths (e.g., `~/.copilot/queue/`)
-- Orchestrator MUST NOT implement conditional logic for different harnesses; all use same base
-
-**3. Harness Renderers (Build-Time Compliance)** — all harness configuration renderers
-(copilot, claude, opencode, codex) MUST output `QUEUE_PATH=~/.agentic-engineers/{harness}/{session-id}/queue/`;
-build-time validation checks correct path; pre-commit hooks validate no legacy paths in
-harness code.
-
-**4. Pre-Commit Hooks (Enforcement Gate)** — git hooks MUST block commits introducing
-legacy paths (`~/.copilot/queue`, `~/.claude/queue`, `artifacts/queue`), erroring with
-`"Legacy queue paths found in {file} — use ~/.agentic-engineers/ instead"`. Exception:
-allowed in `src/orchestration/queue_compat.py` (marked DEPRECATED) and `_archive/`.
-
-**5. Testing Validation (CI Gate)** — `tests/test_queue_path_centralization.py` (8+
-tests) validates the Orchestrator initializes ONLY from the canonical path, all 4
-harnesses use the same base, and no legacy paths exist in active source code.
-
-### Validation Procedures
-
-**Pre-Merge Gate (automated):** grep `src/` for `\.copilot/queue`, `\.claude/queue`, and
-`artifacts/queue` (must return 0 matches outside `_archive/`/`queue_compat.py`); verify
-every harness config emits the canonical `QUEUE_PATH`; run
-`pytest tests/test_queue_path_centralization.py -v` (all 8+ tests, covering isolation-skill
-requirement, canonical-path-only checks, cross-harness consistency, and pre-commit
-enforcement); the same suite runs in CI on every push and blocks merge on failure.
-
----
-
-## Queue SLA & Governance
-
-Queue health is enforced when a live Orchestrator drains the inbox (no daemon, no cron,
-no timer). Detection resolution is bounded below by how often an Orchestrator context is
-active; SLA targets shorter than that are aspirational, not precisely enforceable.
-
-### SLA Thresholds
-
-| Transition | Target | Warn | Breach | On breach |
-|------------|--------|------|--------|-----------|
-| incoming -> processing (claim) | 30s | 180s | 600s | Escalate to operator (no live Orchestrator) |
-| processing -> done/failed (normal) | - | 300s | 600s | Orphan -> crash recovery |
-| processing -> done/failed (effort: high\|max) | - | 600s | 900s | Orphan -> crash recovery |
-| failed -> retry (per attempt) | - | - | backoff curve | Re-enqueue to retry-pending/ |
-| retry attempts exhausted | - | - | 3 attempts | Move to failed/, escalate to Lead Engineer |
-
-### Retry & Backoff
-- `retry_max_attempts = 3`. Delay before attempt *n*: `min(retry_base_sec * 2^(n-1), retry_max_delay_sec)` with +/-20% jitter (base 60s, cap 600s → ~60s, 120s, 240s).
-- A task whose `retry_count >= retry_max_attempts` is terminal-failed and escalated.
-
-### Orphan / Stall Detection
-- A `processing/` task is stalled when `now - claimed_at > deadline_for(effort)`, where
-  `claimed_at` is read from `{task_id}.meta.json`. There is no mid-task heartbeat;
-  `claimed_at + deadline` is the canonical liveness proxy. Stalled tasks enter crash
-  recovery (increment retry_count, route to retry-pending/ or failed/).
-
-### Escalation Routing
-| Condition | Escalate to |
-|-----------|-------------|
-| Incoming starvation (no claim within breach) | Operator / human |
-| Task stalled, retries remain | (auto) retry-pending/, same agent |
-| Retries exhausted | Lead Engineer (unblock) |
-| HANDBACK status: escalate | Model Engineer -> role promotion |
-
-### Source of Truth
-All thresholds live in `config/queue-sla.yaml`. Orchestrator and audit/monitoring skills
-MUST read values from that file; they MUST NOT hardcode SLA constants. Changes are
-governed by the `spec-management` skill.
 
 ---
 
@@ -659,11 +511,10 @@ agentic-engineers/
 │   ├── SKILLS.md                  # canonical skill roster & role workflows
 │   ├── TODO.md.template
 │   ├── agents/                    # 8 role definitions: *-agent.md
-│   └── skills/                    # 8 surviving skills (each a SKILL.md dir):
-│       orchestrator, queue-management, queue-query, protocol-validator,
-│       spec-validator, spec-management, skill-improvement-feedback,
-│       codex-agent-cleanup
-├── docs/                          # SPEC.md (this file), PROTOCOL.md, QUEUE-PROTOCOL.md,
+│   └── skills/                    # 6 surviving skills (each a SKILL.md dir):
+│       orchestrator, protocol-validator, spec-validator, spec-management,
+│       skill-improvement-feedback, codex-agent-cleanup
+├── docs/                          # SPEC.md (this file), PROTOCOL.md,
 │                                   # specs/, spec-proposals/, design/, decisions/, guides/
 ├── renderer/                      # build-time render/install pipeline (scripts/, lib/)
 ├── scripts/                       # advisory/compliance tooling (see COMPLETE SCRIPT INVENTORY)
@@ -680,7 +531,7 @@ into `dist/<harness>/` and installed to each harness's home directory.
 ## References
 
 - **`src/AGENTS.md`** — canonical agent roster, routing decision tree, recursion limits, tools-frontmatter permission model; **`src/SKILLS.md`** — canonical skill roster and role workflows
-- **[QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md)** — queue mechanics, DELEGATE/HANDBACK storage; **[PROTOCOL.md](PROTOCOL.md)** — validation, scoring, escalation reference
+- **[PROTOCOL.md](PROTOCOL.md)** — DELEGATE/HANDBACK validation, scoring, escalation reference
 - **[RENDERING.md](RENDERING.md)** — render/install pipeline
 - **[ONBOARDING.md](ONBOARDING.md)**, **[CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md)** — developer/agent onboarding
 
@@ -702,6 +553,27 @@ into `dist/<harness>/` and installed to each harness's home directory.
 - **2026-08-12:** [SPEC-2026-006 — lead-engineer, framework slimdown follow-up C] Corrected the harness enumeration in the LOCKED "Queue Architecture & Paths" section, which still listed `pi` (the pi harness was dropped elsewhere in the 2026-08-11 slimdown; `renderer/scripts/render-pi*.py` and its dist output no longer exist) and omitted `codex` (a supported render target since commit 1361afa, 2026-06-17 — added after this section's 2026-05-26 lock date, so its earlier absence here was accurate at the time, not an oversight). Four surgical string replacements only — the harness-directory tree comment, the "Supported Harnesses" bullet list, the subdirectory-coverage sentence, and the harness-renderers compliance sentence — each swapping the literal `pi` for `codex` in place, preserving position, count ("four harnesses"), and every other word. Path template, ordering rules, state-dir list, and the Unsupported Legacy Paths migration table are byte-identical to SPEC-2026-005. The sibling LOCKED "Model Naming & Harness Compatibility" section (which also still references `pi`/`pi.dev`) is explicitly out of scope for this proposal — see `docs/spec-proposals/SPEC-2026-006.yaml`.
 - **2026-08-12:** [SPEC-2026-007 — lead-engineer] Corrected the remaining `pi`/`pi.dev` references in the LOCKED "Model Naming & Harness Compatibility" section, left explicitly out of scope by SPEC-2026-006. The Harness-Specific Model Format table's `Pi (pi.dev)` row is replaced with a `Codex` row — not a like-for-like swap, since Codex does not carry the canonical Claude ID forward at all: it substitutes its own GPT-family model per agent-role tier (`gpt-5.4-mini` for Orchestrator/Engineer, `gpt-5.5` for all other roles) via `CODEX_MODEL_BY_ROLE` in `renderer/scripts/render-codex.py`, confirmed against rendered `dist/codex/agents/*.toml`. The Validation & Enforcement hyphen-format check's harness list drops `pi` and does NOT add `codex` in its place (`tests/test_model_naming_compliance.py` checks only `dist/{copilot,claude,opencode}/`; Codex output was never `claude-*` IDs to check), with a one-clause note explaining the exclusion. Model list, naming invariant, `.githooks/LOCKED_MODELS.sh` single-source-of-truth clause, and Model Switch Process are byte-identical. See `docs/spec-proposals/SPEC-2026-007.yaml`.
 - **2026-08-13:** [SPEC-2026-008 — lead-engineer] Corrected the LOCKED "Queue Architecture & Paths" section's Enforcement Rules, which still mandated implementation details of code deleted by the 2026-08-11 slimdown — a `QueueManager` class and a standalone `queue-isolation` skill, neither of which exists anymore (path isolation is inlined into `src/skills/queue-management/scripts/queue_ops.py`). The two bullets are restated implementation-neutrally, preserving the same invariant (queue writes MUST be confined to the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/` root; a write that cannot be validated as isolated MUST fail immediately, never fall back) while naming the surviving enforcement point instead of the deleted class/skill names. Verified `queue_ops.py`'s `get_queue_path()`/`_validate_path_component()` actually raise before any write on an invalid `session_id`/`harness` — the invariant is enforced by the surviving code, not weakened to match it. The other two bullets in the same rule, and the rest of the LOCKED section, are byte-identical. See `docs/spec-proposals/SPEC-2026-008.yaml`.
+- **2026-08-13:** [SPEC-2026-009 — lead-engineer, authorized_by: user-directive
+  (task-2026-08-13-queue-removal-spec-docs, ancestry:
+  [task-2026-08-13-queue-removal-root])] **Removed the filesystem queue entirely.** The
+  repo owner directed, in the DELEGATE that authorized this proposal, that dispatch is
+  direct sub-agent spawn only and the durable audit record is the harness session
+  transcript — no `~/.agentic-engineers/{harness}/{session-id}/queue/` directory tree,
+  no `enqueue()`, no `incoming/`/`processing/`/`done/`/`failed/` state machine. This
+  removes the LOCKED "Queue Architecture & Paths" section outright (previously
+  carried over byte-identical, with only surgical corrections, through
+  SPEC-2026-005/006/008) and the "Queue SLA & Governance" section that depended on it
+  (its `config/queue-sla.yaml` source-of-truth file never existed in the tree — a
+  pre-existing drift this deletion also resolves). ORCHESTRATOR-FIRST clause 4 is
+  rewritten from "The Queue is a Durable Inbox and Audit Substrate" to state the new
+  ground truth plainly. Repository Structure's skill list drops `queue-management` and
+  `queue-query` (deleted in the same effort, src/side) — 8 surviving skills become 6.
+  References and the script/doc cross-link list drop `docs/QUEUE-PROTOCOL.md` (deleted).
+  This is the first proposal in this class to remove rather than restate a LOCKED
+  section; ordinary spec-management authorization (principal/security peer review) was
+  bypassed on the explicit, recorded authority of the repo owner rather than a
+  Lead-Engineer self-authorization precedent like SPEC-2026-006/007/008. See
+  `docs/spec-proposals/SPEC-2026-009.yaml`.
 
 ---
 

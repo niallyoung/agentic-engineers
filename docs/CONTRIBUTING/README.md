@@ -271,7 +271,6 @@ consistent prefixes so related skills group together and are easy to discover.
 
 | Prefix | Domain | Existing members |
 |--------|--------|------------------|
-| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query |
 | `spec-*` | SPEC.md governance | spec-validator, spec-management |
 | `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator |
 | `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup, skill-improvement-feedback |
@@ -285,6 +284,11 @@ The surviving skill roster is documented in `src/SKILLS.md`. Deleted skills incl
 queue-todo-sync, metrics-etl, tokenadvisor, agent-creator, consistency-checker,
 cost-aggregation, cost-budgeting, doc-quality-monitor, file-sync, harness-integration-tracker,
 local-model-runtime, model-selection, session-analyzer, testing, usage-tracking, and workflow-review.
+
+**Follow-up (2026-08-13, SPEC-2026-009):** the filesystem queue itself was removed
+(dispatch is direct sub-agent spawn only; the harness session transcript is the durable
+audit record). `queue-management` and `queue-query` — the two skills that implemented
+and exposed that queue — were deleted in the same effort.
 
 ---
 
@@ -465,7 +469,7 @@ and how to satisfy it locally before pushing.
 | Lint | `make lint` | Hard fail | Phase 1 |
 | **SKILL.md compliance** | `scripts/validate_skills.py` | Hard fail on errors; warn on warnings | Phase 5.1 |
 | **Circular import detection** | `scripts/detect_circular_imports.py` | Hard fail | Phase 5.1 |
-| **Protocol compliance** | Inline (queue YAML validation) | Hard fail if queue files exist | Phase 5.1 |
+| **Protocol compliance** | Inline (DELEGATE/HANDBACK YAML validation) | Hard fail if such files exist on disk | Phase 5.1 |
 | **Conformance report** | `scripts/validate_skills.py --json` | Non-failing (audit trail) | Phase 5.1 |
 | Test suite | `make test` | Hard fail | Phase 1 |
 | Verify | `make verify` | Hard fail | Phase 1 |
@@ -480,7 +484,7 @@ must have a `SKILL.md` with all required frontmatter fields.
 ```bash
 python scripts/validate_skills.py           # errors cause CI failure
 python scripts/validate_skills.py --strict  # warnings also cause failure (use for Phase 5.2)
-python scripts/validate_skills.py --skill queue-management  # check a single skill
+python scripts/validate_skills.py --skill protocol-validator  # check a single skill
 python scripts/validate_skills.py --json    # machine-readable output
 ```
 
@@ -532,13 +536,16 @@ shared types to a dedicated `_types.py` module that neither importer depends on)
 
 ### Gate 3: Protocol Compliance
 
-Any YAML files in the `queue/` directory (if present) are validated against the
-DELEGATE/HANDBACK protocol schema. This gate is a no-op on repos with no queue files.
+Any DELEGATE/HANDBACK YAML files present on disk (e.g. under `docs/examples/`, or ad hoc
+exports) are validated against the protocol schema. There is no filesystem queue for this
+gate to scan by default — dispatch is direct sub-agent spawn, and the harness session
+transcript is the durable audit record — so this gate is a no-op unless such files exist
+elsewhere in the tree.
 
 **Run locally:**
 ```bash
-# If you have queue files:
-python -c "from src.skills.protocol_validator.scripts import validate_file; print(validate_file('queue/incoming/example.yaml'))"
+# Validate an arbitrary DELEGATE/HANDBACK YAML file:
+python -c "from src.skills.protocol_validator.scripts import validate_file; print(validate_file('path/to/example.yaml'))"
 ```
 
 ### Gate 4: Conformance Report (Audit Trail)
@@ -620,16 +627,18 @@ read an empty file that was still being written by a writer thread.
 as part of the move to the
 [Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model):
 a spawned sub-agent's HANDBACK is now returned directly as the result of the Agent/Task
-tool call, in-context, with no separate file poller reading it. The `enqueue()` calls
-that still record DELEGATE/HANDBACK to the queue for audit purposes are a distinct code
-path from that removed subprocess seam and are not what this test class covered.
+tool call, in-context, with no separate file poller reading it. As of SPEC-2026-009
+(2026-08-13) the filesystem queue itself — and the `enqueue()` calls that used to record
+DELEGATE/HANDBACK to it for audit purposes — no longer exist either; the harness session
+transcript is the sole durable audit record. Neither the removed subprocess seam nor the
+removed queue write path is what this test class covered.
 
 **RESOLVED:** the `test-concurrent` Makefile target and its `quality-gate`
 prerequisite, and the equivalent inline check in `.githooks/pre-push`
 ("6b. RUN CONCURRENT TESTS"), have been removed rather than repointed —
-there is no surviving mechanism (subprocess spawn + file-poll race) for a
-replacement test to guard. If concurrent `enqueue()` audit-write coverage
-under the new model is wanted, that is new test coverage to design, not a
+there is no surviving mechanism (subprocess spawn + file-poll race, or — since
+SPEC-2026-009 — a queue write) for a replacement test to guard. If concurrent-spawn
+coverage under the new model is wanted, that is new test coverage to design, not a
 repoint of this guard.
 
 ---
@@ -986,7 +995,7 @@ quality-engineer, and model-engineer are meant to be leaves.
 
 - **Agent Roster & Routing:** [`src/AGENTS.md`](../../src/AGENTS.md) — all roles, responsibilities, routing decision tree, and tool-access model
 - **Skills Matrix:** [`src/SKILLS.md`](../../src/SKILLS.md) — available skills and capabilities
-- **Specification:** [`docs/SPEC.md`](../SPEC.md) — protocol, queue architecture, and model assignments
+- **Specification:** [`docs/SPEC.md`](../SPEC.md) — protocol and model assignments
 
 ---
 

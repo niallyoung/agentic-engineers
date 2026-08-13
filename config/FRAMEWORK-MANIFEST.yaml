@@ -6,7 +6,7 @@
 
 version: "1.0"
 created: "2026-05-24"
-last_updated: "2026-08-11"
+last_updated: "2026-08-13"
 
 validation_rules:
   - "All source files must be listed in their respective sections"
@@ -108,7 +108,7 @@ skills:
   orchestrator:
     name: orchestrator
     status: active
-    description: "In-harness queue orchestration: DELEGATE/HANDBACK lifecycle, direct sub-agent spawn dispatch, HANDBACK correlation, crash recovery, idle detection. Queue is a durable audit trail only — no polling."
+    description: "In-harness orchestration: DELEGATE/HANDBACK lifecycle, direct sub-agent spawn dispatch, HANDBACK correlation. No filesystem queue — the harness session transcript is the durable audit record."
     created: "2026-02-01"
     required_by:
       - orchestrator
@@ -117,22 +117,6 @@ skills:
     name: protocol-validator
     status: active
     description: "Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1.0.yaml"
-    created: "2026-02-01"
-    required_by:
-      - orchestrator
-
-  queue-management:
-    name: queue-management
-    status: active
-    description: "Atomic queue operations for DELEGATE/HANDBACK lifecycle with cycle detection, rate limiting, and validation"
-    created: "2026-02-01"
-    required_by:
-      - orchestrator
-
-  queue-query:
-    name: queue-query
-    status: active
-    description: "Local-queue visibility: query/inspect the per-session, per-harness filesystem queue by state (incoming, processing, done)"
     created: "2026-02-01"
     required_by:
       - orchestrator

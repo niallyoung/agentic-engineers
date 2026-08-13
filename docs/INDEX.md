@@ -20,7 +20,6 @@
 |----------|---------|
 | [SPEC.md](SPEC.md) | **Source of truth** — implementation specification |
 | [PROTOCOL.md](PROTOCOL.md) | DELEGATE/HANDBACK validation, scoring, and escalation reference |
-| [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) | Queue mechanics + state machine (durable inbox/audit substrate) |
 | [CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md) | 30-minute protocol quick start |
 | [ENTRYPOINT.md](ENTRYPOINT.md) | Standard execution model |
 | [WORKFLOW.md](WORKFLOW.md) | SDLC lifecycle and enforcement gates |

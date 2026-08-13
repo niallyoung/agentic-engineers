@@ -39,13 +39,13 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 │  Input: Task description, scope, context                                   │
 │  Validation: Is scope clear? Is it bounded? Is success measurable?         │
 │  Decision: ACCEPT → Orchestrator | REJECT → Ask for clarification         │
-│  Output: Task ID (YYYY-MM-DD-kebab-case), queue entry                     │
+│  Output: Task ID (YYYY-MM-DD-kebab-case), DELEGATE accepted                     │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                      ORCHESTRATOR GATE (GATE 2)                             │
 │                                                                             │
-│  Input: Task from queue                                                    │
+│  Input: Task from the user or a re-delegation                                                    │
 │  Process:                                                                   │
 │    1. Apply AGENTS.md routing decision tree                                │
 │    2. Select appropriate agent (Engineer, Senior Engineer, etc.)           │
@@ -115,7 +115,7 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 │    0.7-0.79: LEAD REVIEW (manual verification)                             │
 │    0.6-0.69: REWORK (max 2 retries, then escalate)                        │
 │    <0.6:   ESCALATE (to Principal Engineer)                                │
-│  Output: HANDBACK stored in ~/.agentic-engineers/{harness}/{session-id}/queue/processing/      │
+│  Output: HANDBACK returned in-context as the spawn call's result           │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -191,7 +191,7 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 Is scope clear and bounded?
 ├─ YES → Is success measurable?
 │        ├─ YES → Is context sufficient?
-│        │        ├─ YES → ACCEPT (create queue entry)
+│        │        ├─ YES → ACCEPT (proceed to Orchestrator)
 │        │        └─ NO → ASK FOR CONTEXT
 │        └─ NO → ASK FOR MEASURABLE CRITERIA
 └─ NO → ASK FOR SCOPE CLARIFICATION
@@ -201,17 +201,17 @@ Is scope clear and bounded?
 - Ask user to clarify scope
 - Request measurable success criteria
 - Provide context template if needed
-- Do NOT create queue entry until scope is clear
+- Do NOT proceed to Orchestrator routing until scope is clear
 
 **Output:**
 - Task ID: `YYYY-MM-DD-kebab-case`
-- Queue entry in `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.yaml`
+- Task accepted, ready for Orchestrator routing (no separate queue write)
 
 ---
 
 ### Gate 2: Orchestrator Routing
 
-**Input:** Task from queue
+**Input:** Task accepted at Gate 1
 
 **Routing Decision Tree (from AGENTS.md):**
 
@@ -298,7 +298,7 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
 
 **Output:**
 - DELEGATE stored in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
-- Task moved to `~/.agentic-engineers/{harness}/{session-id}/queue/processing/`
+- Task dispatched by direct sub-agent spawn
 
 ---
 
@@ -418,9 +418,9 @@ notes: |                             # ✓ Required, summary
 - If escalation needed → Route to Principal Engineer
 
 **Output:**
-- HANDBACK stored in `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}-HANDBACK.yaml`
+- HANDBACK returned in-context as the spawn call's result
 - Metrics recorded for Model Engineer
-- Task moved to `~/.agentic-engineers/{harness}/{session-id}/queue/done/` after QE review
+- Task marked done after QE review
 
 ---
 
@@ -716,8 +716,8 @@ START
   │  ├─ NO → ASK: "Provide relevant context"
   │  └─ YES ↓
   │
-  └─ ACCEPT: Create queue entry
-     └─ Output: Task ID, queue entry
+  └─ ACCEPT: Proceed to Orchestrator
+     └─ Output: Task ID, DELEGATE accepted
 ```
 
 ### Gate 2: Which Agent Should Handle This?

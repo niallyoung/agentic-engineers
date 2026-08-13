@@ -14,6 +14,17 @@
 > was `docs/specs/{delegate,handback}-schema.yaml`. The core question (should an
 > escalation HANDBACK formally embed the next DELEGATE) remains open and undecided.
 >
+> **2026-08-13 note (SPEC-2026-009):** the filesystem queue itself has since been removed
+> entirely (dispatch is direct sub-agent spawn only; the harness session transcript is
+> the durable audit record). Every reference below to `docs/QUEUE-PROTOCOL.md`, the
+> `~/.agentic-engineers/{harness}/{session-id}/queue/` directory tree, `incoming/` /
+> `processing/` / `done/` / `failed/`, and the `queue-management` skill's `enqueue()`
+> describes infrastructure that no longer exists, on top of the pre-SPEC-2026-004
+> queue-and-poll framing the 2026-08-11 note below already flagged as historical. The
+> options analysis (Option 0/A/B) and open questions are retained as historical context
+> only; none of the file paths or code references below resolve to anything in the
+> current tree.
+>
 > **2026-08-12 note:** `docs/specs/delegate-schema.yaml` and
 > `docs/specs/handback-schema.yaml` (referenced throughout this note) have since been
 > deleted — their content contradicted the canonical schema (underscored role names,

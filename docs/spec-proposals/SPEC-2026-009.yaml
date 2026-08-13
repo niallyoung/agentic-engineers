@@ -1,0 +1,252 @@
+---
+proposal_type: SPEC
+change_id: SPEC-2026-009
+proposer: lead-engineer
+proposer_role: lead-engineer
+timestamp: "2026-08-13T00:00:00Z"
+title: "Remove the filesystem queue entirely — delete the LOCKED 'Queue Architecture & Paths' section; the harness session transcript is now the sole durable audit record"
+
+scope: queue-layer-removal
+priority: high
+blocking: null
+
+affected_sections:
+  - "Executive Summary"
+  - "ORCHESTRATOR-FIRST EXECUTION MODEL (MANDATORY) — clause 4"
+  - "(deleted) Queue Architecture & Paths (LOCKED SPEC)"
+  - "(deleted) Queue SLA & Governance"
+  - "COMPLETE SCRIPT INVENTORY"
+  - "References"
+  - "Repository Structure"
+  - "Update Log"
+
+# ---------------------------------------------------------------------------
+# SUMMARY
+# ---------------------------------------------------------------------------
+summary: |
+  Removes the filesystem queue from the framework entirely, per an explicit directive
+  from the repository owner (relayed via the routing DELEGATE that authorizes this
+  proposal — see Approval below). Dispatch is direct sub-agent spawn only; there is no
+  `~/.agentic-engineers/{harness}/{session-id}/queue/` directory tree, no `enqueue()`,
+  no `incoming/`/`processing/`/`done/`/`failed/` state machine, and no audit-trail write
+  step separate from the spawn itself. The durable audit record is the harness session
+  transcript: every DELEGATE, as it appears verbatim as a sub-agent spawn's prompt, and
+  every HANDBACK, as it appears verbatim as that spawn call's result, together constitute
+  the record of what happened — nothing else needs to be written for a delegation to be
+  auditable.
+
+  This proposal removes the LOCKED "Queue Architecture & Paths" section outright (it was
+  previously carried over byte-identical, receiving only narrow surgical corrections,
+  through SPEC-2026-005, SPEC-2026-006, and SPEC-2026-008) and the "Queue SLA & Governance"
+  section that depended on it. ORCHESTRATOR-FIRST clause 4 — "The Queue is a Durable Inbox
+  and Audit Substrate, Not the Dispatch Mechanism" — is rewritten to state the new ground
+  truth: there is no queue, inbox, or substrate; the transcript is the record. Every other
+  queue mention in docs/SPEC.md, the companion docs tree, README.md, and config/ is swept:
+  fixed where the surrounding content survives, or removed along with content describing
+  now-deleted subsystems. `docs/QUEUE-PROTOCOL.md` is deleted outright.
+
+# ---------------------------------------------------------------------------
+# JUSTIFICATION (evidence-based)
+# ---------------------------------------------------------------------------
+rationale: |
+  EVIDENCE 1 - explicit, recorded user authorization for a LOCKED-section removal.
+  The routing DELEGATE for this work (task_id: task-2026-08-13-queue-removal-spec-docs,
+  ancestry: [task-2026-08-13-queue-removal-root]) states verbatim: "USER DIRECTIVE (this
+  is your authorization — record it): the filesystem queue is removed entirely; dispatch
+  is direct sub-agent spawn; the durable audit record is the harness session transcript."
+  The spec-management protocol's normal authorization matrix (Principal/Security/Lead
+  Engineer proposal + peer approval_chain) governs ordinary LOCKED-section edits; a LOCKED
+  section's outright *removal* is treated here as requiring elevated authorization, which
+  the repo owner supplied directly rather than through the peer-approval chain. This
+  proposal records that authorization plainly (see Approval below) rather than fabricating
+  a peer approval_chain that did not occur.
+
+  EVIDENCE 2 - the queue was already narrowed to audit-only bookkeeping by SPEC-2026-004
+  (2026-08-09), which replaced queue-and-poll dispatch with direct sub-agent spawn after
+  an audit of 16 live session partitions found zero tasks ever traversed the queue as a
+  dispatch mechanism. Since that change, the queue's only remaining role was recording a
+  copy of a DELEGATE/HANDBACK exchange that had already happened synchronously in-context.
+  This proposal completes that trajectory: if the record already exists in the harness
+  session transcript at the moment of dispatch, a second, file-based copy of the same
+  information is redundant bookkeeping, not a distinct source of truth.
+
+  EVIDENCE 3 - the underlying skills are gone. `src/skills/queue-management/` and
+  `src/skills/queue-query/` are deleted in the same effort (concurrent senior-engineer
+  DELEGATE, src/**-scoped; verified via `git status` showing both directories staged as
+  `D` before this proposal was authored). `enqueue()`, `QueueOperations`, and
+  `get_queue_path()` — the only sanctioned writers/readers of the queue per the (now
+  deleted) "Runtime Enforcement: enqueue() is the Mandatory Gateway" section of
+  `docs/QUEUE-PROTOCOL.md` — no longer exist in the tree. A SPEC section mandating paths,
+  subdirectories, and enforcement rules for code that does not exist would describe
+  nothing real.
+
+  EVIDENCE 4 - the "Queue SLA & Governance" section's own source-of-truth file never
+  existed. It named `config/queue-sla.yaml` as authoritative for every threshold in its
+  tables; `config/` contains only `deployment.yaml`, `FRAMEWORK-MANIFEST.yaml`,
+  `orchestration.yaml`, and `token_budget.yaml` — `queue-sla.yaml` was never created.
+  That section documented thresholds enforced by nothing, for a file that was never
+  written, describing a directory structure that is now also gone. Its removal fixes a
+  pre-existing accuracy gap, not just a queue-removal consequence.
+
+proposed_changes:
+  "Executive Summary": |
+    Replaced the paragraph describing the queue as "a durable inbox and audit substrate
+    (LOCKED paths, unchanged)" with one stating plainly that there is no filesystem queue
+    and that the harness session transcript (spawn prompt + spawn result) is the durable
+    audit record.
+  "ORCHESTRATOR-FIRST EXECUTION MODEL — clause 4": |
+    Retitled from "The Queue is a Durable Inbox and Audit Substrate, Not the Dispatch
+    Mechanism" to "The Harness Session Transcript is the Durable Audit Record; There Is No
+    Filesystem Queue." Body rewritten to state that dispatch and results are exchanged
+    entirely in-context, that spawn/result pair as it appears in the transcript is the
+    record, and that there is no inbox, no session-partitioned directory tree, and no
+    `enqueue()` step. A task submitted while no Orchestrator context is live has no durable
+    holding area under this model — it reaches the Orchestrator directly the next time one
+    is invoked, rather than waiting in an `incoming/` directory. Clauses 1-3 and 5-8 of the
+    same section are untouched (they describe dispatch mechanics, recursion limits, tools
+    frontmatter, the append-only JSONL audit log, and the no-external-scripts constraint —
+    none of which named the filesystem queue as their subject).
+  "Queue Architecture & Paths (LOCKED SPEC)": |
+    Section deleted in full — the path template, Supported Harnesses list, Queue
+    Subdirectories table, Unsupported Legacy Paths migration table, all five Enforcement
+    Rules, and Validation Procedures. Nothing is retained or restated; there is no
+    replacement path scheme because there is no queue to have a path.
+  "Queue SLA & Governance": |
+    Section deleted in full — SLA Thresholds table, Retry & Backoff, Orphan/Stall
+    Detection, Escalation Routing table, and the Source of Truth pointer to the
+    never-created `config/queue-sla.yaml`.
+  "COMPLETE SCRIPT INVENTORY": |
+    One wording fix: the `renderer/scripts/` exemption note dropped "or queue processing"
+    from "never participate in runtime orchestration or queue processing" (now just
+    "never participate in runtime orchestration"), since queue processing is no longer a
+    category of thing scripts could participate in. The script tables themselves are
+    unchanged — `scripts/check_protocol_compliance.py` still exists in the tree as of this
+    proposal (verified via `ls scripts/`) and is left listed; if a concurrent DELEGATE
+    deletes it, that is a follow-up correction for whichever proposal records that
+    deletion, not this one (this proposal's routing DELEGATE flagged this exact
+    reconciliation risk and instructed listing only what could be verified as surviving).
+  "References": |
+    Dropped the `docs/QUEUE-PROTOCOL.md` bullet (file deleted by this same effort).
+    `docs/PROTOCOL.md`'s reference line was already describing itself correctly and is
+    unchanged.
+  "Repository Structure": |
+    Skill list under `src/skills/` drops `queue-management` and `queue-query`; "8
+    surviving skills" becomes "6 surviving skills" (orchestrator, protocol-validator,
+    spec-validator, spec-management, skill-improvement-feedback, codex-agent-cleanup).
+    The `docs/` line drops the `QUEUE-PROTOCOL.md` filename mention.
+  "Update Log": |
+    This entry.
+  "Frontmatter / header": |
+    `description` dropped "queue mechanics"; `updated` and the body's "Last Updated" line
+    advanced to 2026-08-13; `phase` appends ", queue removed (SPEC-2026-009)" alongside
+    the existing "Post-slimdown (SPEC-2026-005)" marker. `version` is unchanged (2.0),
+    consistent with SPEC-2026-006/007/008 treating this as an amendment within the current
+    major version rather than a version bump.
+
+out_of_scope:
+  - item: "src/AGENTS.md, src/SKILLS.md, src/agents/*.md, src/skills/**, tests/**, renderer/**, .githooks/**, .github/**, Makefile"
+    status: OUT_OF_SCOPE
+    note: |
+      Owned by a concurrent senior-engineer DELEGATE in the same root effort
+      (task-2026-08-13-queue-removal-root). This proposal covers docs/**, README.md,
+      config/** only, per its own routing DELEGATE's explicit ownership split. Confirmed
+      via `git diff src/AGENTS.md` that the concurrent work already uses the same
+      "harness session transcript is the durable audit record" / "transcript-as-audit"
+      language this proposal adopts for docs/SPEC.md — the two sides of the effort are
+      terminologically consistent without coordination beyond the shared DELEGATE.
+  - item: "docs/spec-proposals/SPEC-2026-001.yaml through SPEC-2026-008.yaml"
+    status: OUT_OF_SCOPE
+    note: "Historical records. Their queue mentions describe what was true when each was written and are left untouched, per the routing DELEGATE's explicit instruction not to edit history."
+  - item: "docs/design/handback-as-delegate.md, docs/design/spawn-sub-agent-pattern.md"
+    status: PARTIALLY_ADDRESSED
+    note: |
+      Historical design drafts. Per the routing DELEGATE, these get a dated supersession
+      note appended rather than a rewrite — both already carried prior supersession notes
+      for SPEC-2026-004's queue-and-poll-to-direct-spawn change; this proposal adds a
+      further note recording that the queue itself (not just polling) is now gone, without
+      altering the historical analysis below the note.
+  - item: "scripts/check_protocol_compliance.py's actual deletion (if any)"
+    status: UNVERIFIED
+    note: |
+      Still present in the tree at proposal time (see COMPLETE SCRIPT INVENTORY entry
+      above). If a concurrent or later change removes it, docs/SPEC.md's script inventory
+      and docs/CONTRIBUTING/README.md's Gate 3 description will need a follow-up
+      correction this proposal does not attempt to predict.
+
+impact:
+  breaking_for_users: true
+  user_impact: |
+    Any tooling, script, or documentation that reads or writes
+    `~/.agentic-engineers/{harness}/{session-id}/queue/` no longer has a SPEC-sanctioned
+    target — that tree is not written by any surviving code path (queue-management and
+    queue-query are deleted in the same effort). Users relying on queue files as an
+    external audit log or integration point must instead read the harness's own session
+    transcript/history mechanism, if their harness exposes one. This is a deliberate,
+    user-directed breaking change, not an oversight.
+  code_impact: |
+    None from this proposal directly (documentation only); it ratifies deletions executed
+    by the concurrent src/**-scoped DELEGATE in the same root effort.
+  observability_impact: |
+    The append-only JSONL audit log described in ORCHESTRATOR-FIRST clause 7
+    (`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`) is
+    unaffected by this proposal — it was already a distinct mechanism from the queue
+    directory tree (different path, different purpose: structured lifecycle events vs.
+    DELEGATE/HANDBACK record copies) and clause 7 is untouched.
+  integrity_impact: |
+    Removes a LOCKED section describing infrastructure that no longer exists, rather than
+    leaving the SPEC internally contradictory (a LOCKED section mandating paths and
+    enforcement for deleted code) the way SPEC-2026-008 found and fixed a smaller instance
+    of the same problem one proposal ago.
+  risk: |
+    Medium. This is the first proposal in this LOCKED-section-correction lineage to
+    remove rather than restate a LOCKED section, and it does so under a non-standard
+    authorization path (user directive, not principal/security peer review). The risk is
+    process precedent, not technical risk — the code this section described is already
+    gone regardless of what this proposal does.
+
+compatibility_notes: |
+  Not backward compatible with any consumer of the queue directory tree. Backward
+  compatible with the DELEGATE/HANDBACK message schema itself (`task_id`, `handoff_type`,
+  `scope`, `plan`, `success_criteria`, `status`, `output`, `metrics`, etc.) — none of that
+  changes; only its storage/audit mechanism does.
+
+breaking_change: true
+migration_path: |
+  None provided by this proposal. No migration script writes or reads the old queue path;
+  users who need historical queue records from before this change should recover them
+  from their own backups of `~/.agentic-engineers/` (ordinary filesystem state, not
+  managed by any tool this proposal touches) — see `docs/guides/deployment.md`'s prior
+  backup guidance, itself updated by this same effort to describe transcript-based audit
+  instead.
+
+# ---------------------------------------------------------------------------
+# APPROVAL
+# ---------------------------------------------------------------------------
+# LOCKED-section removal, authorized by explicit user directive rather than the ordinary
+# spec-management principal/security peer-review chain. The routing DELEGATE
+# (task-2026-08-13-queue-removal-spec-docs, ancestry:
+# [task-2026-08-13-queue-removal-root]) states: "USER DIRECTIVE (this is your
+# authorization — record it): the filesystem queue is removed entirely; dispatch is
+# direct sub-agent spawn; the durable audit record is the harness session transcript."
+# The repo owner outranks the standard approval matrix; this is that authorization,
+# recorded plainly rather than fabricating a peer approval_chain that did not occur.
+approved_by: user-directive
+authorization_note: |
+  Authorized by explicit repo-owner directive, relayed via routing DELEGATE
+  task-2026-08-13-queue-removal-spec-docs (ancestry:
+  [task-2026-08-13-queue-removal-root]), and authored by the Lead Engineer named in that
+  DELEGATE. This departs from the SPEC-2026-006/007/008 precedent of Lead-Engineer
+  self-authorization for narrow LOCKED-section corrections: this proposal removes a
+  LOCKED section outright, which this proposal treats as requiring authorization above
+  ordinary Lead Engineer spec-management authority. No principal-engineer or
+  security-engineer approval_chain entry is recorded because none was sought — the user
+  directive is the authorization of record for this specific, named change.
+
+references:
+  - "docs/SPEC.md — Queue Architecture & Paths (LOCKED SPEC) and Queue SLA & Governance sections, both deleted; ORCHESTRATOR-FIRST clause 4, rewritten"
+  - "docs/QUEUE-PROTOCOL.md — deleted by this same effort"
+  - "docs/spec-proposals/SPEC-2026-004.yaml — replaced queue-and-poll dispatch with direct sub-agent spawn, narrowing the queue to audit-only; this proposal completes that trajectory"
+  - "docs/spec-proposals/SPEC-2026-005.yaml, SPEC-2026-006.yaml, SPEC-2026-008.yaml — prior corrections to the same LOCKED section this proposal now removes"
+  - "src/AGENTS.md (concurrent diff) — 'the harness session transcript is the durable audit record' / 'Transcript-as-audit', same terminology adopted here"
+  - "git status — src/skills/queue-management/**, src/skills/queue-query/** staged as deleted (D) at proposal time"
+  - "task-2026-08-13-queue-removal-spec-docs — routing DELEGATE, ancestry: [task-2026-08-13-queue-removal-root]"

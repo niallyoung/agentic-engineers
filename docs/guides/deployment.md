@@ -94,36 +94,26 @@ someone who has verified a real path end to end.
 
 ---
 
-## The Audit-Trail Queue Directory
+## The Audit Trail: Harness Session Transcript
 
-Dispatch is direct, but every DELEGATE and HANDBACK is still recorded to
-`~/.agentic-engineers/{harness}/{session-id}/queue/` for audit purposes (see
-[src/AGENTS.md > Audit-Trail Strategy](../../src/AGENTS.md#audit-trail-strategy)).
-That directory is ordinary state on disk, so ordinary backup practices apply if you
-want to retain it beyond a session:
+Dispatch is direct, and there is no filesystem queue to back up. Every DELEGATE and
+HANDBACK is recorded in the harness session transcript itself — the DELEGATE as a
+sub-agent spawn's prompt, the HANDBACK as that spawn call's result. There is no
+`~/.agentic-engineers/{harness}/{session-id}/queue/` directory, so there is nothing
+under that path to `tar` up, restore, or prune. If you need to retain a record of a
+session's work beyond the session itself, use your harness's own session-history or
+transcript-export mechanism, if it offers one — agentic-engineers does not write a
+separate copy of its own.
 
-```bash
-# Back up one session's audit trail
-tar -czf queue-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
-  ~/.agentic-engineers/<harness>/<session-id>/queue/
-
-# Back up everything under agentic-engineers' work directory
-tar -czf agentic-engineers-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
-  ~/.agentic-engineers/
-```
-
-There is no separate "restore and restart a service" procedure to document — restoring
-the directory simply restores the audit trail; it does not resume or replay any
-dispatch, since dispatch already completed synchronously within the harness session
-that produced it.
+There is no "restore and restart a service" procedure to document — dispatch already
+completes synchronously within the harness session that produced it, and there is no
+queue state to resume from.
 
 ---
 
 ## Maintenance
 
 **Periodically:**
-- Prune old per-session queue partitions under `~/.agentic-engineers/{harness}/` if
-  disk usage matters to you — each is just DELEGATE/HANDBACK YAML plus artifacts.
 - Keep the harness CLI itself (Claude Code / OpenCode / Copilot CLI / Codex)
   up to date per its own release process; agentic-engineers has no dependencies of its
   own to patch beyond what `make install` renders.

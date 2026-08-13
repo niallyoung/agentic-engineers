@@ -2,12 +2,11 @@
 title: Orchestration Protocol — Master Reference
 version: 2.0.0
 status: APPROVED
-updated: 2026-08-12
+updated: 2026-08-13
 owner: Lead Engineer
 references:
   - src/AGENTS.md
   - docs/specs/protocol-core-v1.0.yaml
-  - docs/QUEUE-PROTOCOL.md
 ---
 
 # Orchestration Protocol — Master Reference
@@ -35,11 +34,12 @@ The canonical execution model is **direct sub-agent spawn**, not queue-and-poll:
 the spawning agent constructs a DELEGATE block and passes it directly as the
 prompt of a sub-agent spawn (the harness's Agent/Task tool); the HANDBACK returns
 synchronously as that spawn call's result, in-context. There is no polling
-interval and no dispatch-by-file-write. Every DELEGATE and HANDBACK is *also*
-durably recorded to the filesystem queue via `enqueue()` — this is an **audit
-trail**, not the transport. See [`src/AGENTS.md` > Direct Sub-Agent Spawn
-Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the
-full flow, and [`docs/QUEUE-PROTOCOL.md`](QUEUE-PROTOCOL.md) for queue mechanics.
+interval, no dispatch-by-file-write, and no filesystem queue at all — the
+harness session transcript itself (every DELEGATE as a spawn prompt, every
+HANDBACK as that spawn's result) is the durable audit record. See
+[`src/AGENTS.md` > Direct Sub-Agent Spawn Execution
+Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the full
+flow.
 
 ### Why It Matters
 
@@ -152,16 +152,16 @@ confidence: 0.9
 
 ### 2.3 Sub-Task / Parent-Child Fields
 
-Any agent may decompose its task into child tasks via the `queue-management`
-skill's `enqueue(..., parent_task_id=...)`, which enforces cycle detection,
-per-parent rate limits, and a `task_tier` depth cap (max 5) at write time. A
-parent's HANDBACK may report the results via the extension fields
-`children_created` (task_ids), `children_results` (per-child status/output/quality,
-keyed by task_id), and `criteria_results` (per-success-criterion evidence). There
-is no separate `parallel_plan` execution runtime beyond the DELEGATE extension
-field of the same name — parallel fan-out is the spawning agent directly issuing
-multiple concurrent spawns (see [Recursion Limits](../src/AGENTS.md#recursion-limits)
-in `src/AGENTS.md`).
+Any agent may decompose its task into child tasks by directly spawning multiple
+sub-agents with a shared `parent_task_id`, subject to ancestry-based cycle detection
+and the max-depth-3/max-fan-out-5 limits the spawning agent self-enforces (see
+[Recursion Limits](../src/AGENTS.md#recursion-limits) in `src/AGENTS.md`) — there is no
+separate queue-write step that performs this checking on the agent's behalf. A parent's
+HANDBACK may report the results via the extension fields `children_created` (task_ids),
+`children_results` (per-child status/output/quality, keyed by task_id), and
+`criteria_results` (per-success-criterion evidence). There is no separate `parallel_plan`
+execution runtime beyond the DELEGATE extension field of the same name — parallel
+fan-out is the spawning agent directly issuing multiple concurrent spawns.
 
 ---
 
@@ -173,7 +173,7 @@ deliberately — no single layer is a complete gate on its own.
 | Layer | What it checks | When it runs | Scope |
 |---|---|---|---|
 | **`protocol-validator` skill** (`src/skills/protocol-validator/scripts/protocol_validator.py`) | Full core + extension field validation against `protocol-core-v1.0.yaml`, <5ms | On demand, by any agent or script that imports it | Any DELEGATE/HANDBACK dict |
-| **`scripts/check_protocol_compliance.py`** | Same validator, run over every YAML file in a queue directory | CI gate (invoked explicitly; no-op if no queue files) | Files on disk |
+| **`scripts/check_protocol_compliance.py`** | Same validator, run over a directory of DELEGATE/HANDBACK YAML files | CI gate (invoked explicitly; no-op if no such files are present) | Files on disk (e.g. `docs/examples/`, ad hoc exports) |
 | **`.githooks/pre-commit`** DELEGATE/HANDBACK section | Regex-based core-field presence/format checks (task_id pattern, agent enum, status enum, metrics sub-fields, secret-pattern scan) on staged `.yaml`/`.yml` files that look like a DELEGATE or HANDBACK | `git commit` | Files about to be committed |
 | **PreToolUse hook** (`renderer/scripts/claude-delegate-guard.py`) | Deliberately not a thin wrapper around the validator above (documented in its own docstring) — checks that a live Claude Code Agent-tool spawn targeting one of the eight framework roles carries a well-formed DELEGATE block in its prompt | Every Agent/Task-tool spawn in a Claude Code session | The one path the other three layers cannot see: an in-session spawn that never touches disk |
 
@@ -181,11 +181,12 @@ None of these layers enforces the *calling* agent's role, ancestry, spawn depth,
 fan-out count — that is the spawning agent's own judgment call per
 [Recursion Limits](../src/AGENTS.md#recursion-limits) in `src/AGENTS.md`.
 
-`enqueue()` (`src/skills/queue-management/scripts/queue_ops.py`) is a fifth,
-narrower gate: it is the *only* sanctioned way to write a DELEGATE/HANDBACK into
-the audit-trail queue, and independently re-validates the canonical schema
-(rejecting legacy fields like `type:`, `role:`, top-level `quality_score:`) before
-any write. See [`docs/QUEUE-PROTOCOL.md`](QUEUE-PROTOCOL.md) for its contract.
+There is no filesystem queue and no `enqueue()` gateway — the durable audit record is
+the harness session transcript itself (every DELEGATE as a spawn prompt, every HANDBACK
+as that spawn's result), not a separately-written file. `check_protocol_compliance.py`
+and the schema tooling above remain useful for validating DELEGATE/HANDBACK YAML
+wherever it appears on disk (examples, exports, ad hoc authoring) — they no longer have
+a queue directory to scan by default.
 
 ### 3.1 Common Mistakes
 
@@ -270,7 +271,7 @@ Limits](../src/AGENTS.md#recursion-limits); this document does not duplicate the
 | **DELEGATE** | Structured message transferring a task from a spawning agent to a specialist agent |
 | **HANDBACK** | Structured result message returned by a specialist agent, in-context, as its spawn call's result |
 | **ESCALATION packet** | Block embedded in a HANDBACK's `escalation:` key when `status: escalate`, naming the target role and carrying findings-so-far |
-| **Audit trail** | The `~/.agentic-engineers/{harness}/{session-id}/queue/` filesystem record written via `enqueue()`; describes what happened, does not drive dispatch |
+| **Audit trail** | The harness session transcript itself — every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result; there is no separate filesystem record |
 | **`ancestry`** | Root-to-parent role chain on a DELEGATE, used for cycle detection and max-depth enforcement |
 | **`metrics.quality`** | Self-reported (and optionally QE-reviewed) delivery quality, 0.0–1.0 |
 | **Core fields** | Required DELEGATE/HANDBACK fields, strictly validated |
@@ -281,10 +282,7 @@ Limits](../src/AGENTS.md#recursion-limits); this document does not duplicate the
 ## 7. See Also
 
 - [`src/AGENTS.md`](../src/AGENTS.md) — agent roster, routing decision tree, role
-  definitions, Direct Sub-Agent Spawn Execution Model, Recursion Limits,
-  Audit-Trail Strategy, ACK Protocol
-- [`docs/QUEUE-PROTOCOL.md`](QUEUE-PROTOCOL.md) — queue directory structure,
-  `enqueue()` contract, session-id partitioning
+  definitions, Direct Sub-Agent Spawn Execution Model, Recursion Limits, ACK Protocol
 - [`docs/specs/protocol-core-v1.0.yaml`](specs/protocol-core-v1.0.yaml) — the
   normative schema
 - [`docs/CORE-PROTOCOL-QUICKSTART.md`](CORE-PROTOCOL-QUICKSTART.md) — a 30-minute

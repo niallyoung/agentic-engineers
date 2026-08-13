@@ -15,9 +15,9 @@ proportional to task complexity — without spaghetti code or a polling daemon?
 spawning**, not queue polling:
 
 1. Work is expressed as a DELEGATE task (structured YAML: scope, context, plan, success criteria)
-2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result — no polling loop, no timer, no daemon
+2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result — no polling loop, no timer, no daemon, no filesystem queue
 3. The specialist executes and returns a HANDBACK with results + metrics
-4. Every DELEGATE and HANDBACK is durably recorded to the per-session queue as an audit trail (inbox only — nothing reads it via polling)
+4. The harness session transcript itself — every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result — is the durable audit record
 5. Metrics feed back into model selection and routing for future tasks
 
 ## Goals
@@ -92,7 +92,7 @@ protocol compliance at commit time — DELEGATE/HANDBACK structure, secret-leak
 checks, and SPEC.md drift (`scripts/validate-spec-constraints.py`). CI's
 security-gate workflow additionally runs `scripts/entropy_detector.py` for
 credential/secret entropy scanning, and `scripts/check_protocol_compliance.py`
-validates queue-protocol conformance. Run the full local suite with `make test`.
+validates DELEGATE/HANDBACK protocol conformance. Run the full local suite with `make test`.
 
 ## Documentation
 
@@ -102,7 +102,6 @@ validates queue-protocol conformance. Run the full local suite with `make test`.
 | Skills catalog | [src/SKILLS.md](src/SKILLS.md) |
 | Specification | [docs/SPEC.md](docs/SPEC.md) |
 | Protocol (DELEGATE/HANDBACK) | [docs/PROTOCOL.md](docs/PROTOCOL.md) |
-| Queue protocol | [docs/QUEUE-PROTOCOL.md](docs/QUEUE-PROTOCOL.md) |
 | Onboarding | [docs/ONBOARDING.md](docs/ONBOARDING.md) |
 | Docs index | [docs/INDEX.md](docs/INDEX.md) |
 | Guides (agent/skill creation, harness setup, troubleshooting) | [docs/guides/](docs/guides/) |

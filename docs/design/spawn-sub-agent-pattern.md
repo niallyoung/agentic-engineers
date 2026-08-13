@@ -4,6 +4,17 @@
 [Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
 **Last Updated**: 2026-08-09
 
+> **2026-08-13 note (SPEC-2026-009):** the filesystem queue this document repeatedly
+> refers to as "the audit trail" (`enqueue()`, `queue-management` skill,
+> `~/.agentic-engineers/{harness}/{session-id}/queue/`, `orchestrator_skill.py`'s
+> `poll_queue()`/`claim_task()`/incoming-processing-done state machine) has since been
+> removed entirely. Dispatch is direct sub-agent spawn only; the harness session
+> transcript itself — not a separate queue write — is the durable audit record. The
+> code paths this document cites (`src/skills/orchestrator/scripts/orchestrator_skill.py`,
+> `src/orchestration/agents/orchestrator.py`, `src/skills/queue-management/`) describe
+> what existed at the time this document was written and are retained below as historical
+> record of why direct spawn was adopted; they should not be treated as current.
+
 `OrchestratorSkill.spawn_sub_agent()` (the Python method) is not implemented —
 and that is intentional. Real Orchestrator→sub-agent invocation is a
 harness-runtime behaviour ("AGENTS-with-SKILLS", e.g. Claude Code's Agent/Task

@@ -6,12 +6,13 @@
 # (token_budget.yaml and deployment.yaml remain as standalone files
 #  for backward compatibility; this file adds a unified view.)
 #
-# Dispatch model (post framework-slimdown): the Orchestrator spawns specialist
-# sub-agents directly (Agent/Task tool) and reads the HANDBACK back as the
-# spawn call's result. The queue below is a durable inbox/audit trail only —
-# nothing polls it. The "Orchestrator Polling" section further down is
-# retained only as legacy config surface; idle_timeout_seconds and
-# poll_interval_seconds are not read by any polling loop, because none exists.
+# Dispatch model (post framework-slimdown, queue removed per SPEC-2026-009): the
+# Orchestrator spawns specialist sub-agents directly (Agent/Task tool) and reads the
+# HANDBACK back as the spawn call's result. There is no filesystem queue — the harness
+# session transcript is the durable audit record. The "Orchestrator Polling" section
+# further down is retained only as legacy config surface; idle_timeout_seconds and
+# poll_interval_seconds are not read by any polling loop, because none exists and no
+# queue exists for one to poll.
 
 # ---------------------------------------------------------------------------
 # Token Budget (previously config/token_budget.yaml)
@@ -94,10 +95,10 @@ deployment:
 orchestrator:
   model: claude-sonnet-5
 
-  # Seconds of queue inactivity before the polling loop exits (legacy; unused)
+  # Seconds of inactivity before the (nonexistent) polling loop would exit (legacy; unused)
   idle_timeout_seconds: 60
 
-  # Polling interval when queue is empty (seconds) (legacy; unused)
+  # Polling interval for the (nonexistent) polling loop, seconds (legacy; unused)
   poll_interval_seconds: 10
 
   # Maximum task retries before escalation to Principal Engineer
