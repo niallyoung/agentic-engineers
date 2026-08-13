@@ -69,9 +69,9 @@ it issues so a cycle back to one of its own ancestors is refused rather than fol
 a limit is hit, Lead Engineer MUST stop and return `status: blocked` or `status:
 escalate` rather than proceeding — see `src/AGENTS.md` § Recursion Limits.
 
-Every DELEGATE this agent issues and every HANDBACK it receives is recorded to the
-durable queue via `enqueue()` as an audit trail; the queue is written to, never polled,
-for this agent's own control flow.
+Every DELEGATE this agent issues and every HANDBACK it receives is durably recorded as
+part of the harness session transcript itself — the audit trail for this agent's own
+control flow, with no separate write step.
 
 ---
 

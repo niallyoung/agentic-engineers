@@ -49,12 +49,12 @@ class TestSkillFeedbackValidation:
         handback = valid_handback_base.copy()
         handback['skill_feedback'] = [
             {
-                'skill_name': 'queue-management',
+                'skill_name': 'spec-validator',
                 'effectiveness_score': 0.85,
                 'clarity_score': 0.90,
                 'coverage_gaps': ['Scenario A not covered'],
                 'improvement_suggestions': ['Add parameter X'],
-                'usage_context': 'Used to enqueue 3 parallel tasks',
+                'usage_context': 'Used to validate 3 parallel DELEGATE payloads',
                 'tone_note': 'MUST language in section B felt prescriptive'
             }
         ]
@@ -90,7 +90,7 @@ class TestSkillFeedbackValidation:
         handback = valid_handback_base.copy()
         handback['skill_feedback'] = [
             {
-                'skill_name': 'queue-management',
+                'skill_name': 'spec-validator',
                 'effectiveness_score': 1.5,  # Out of range: should be 0.0-1.0
             }
         ]
@@ -108,7 +108,7 @@ class TestSkillFeedbackValidation:
         handback = valid_handback_base.copy()
         handback['skill_feedback'] = [
             {
-                'skill_name': 'queue-management',
+                'skill_name': 'spec-validator',
                 'effectiveness_score': 0.85,
             },
             {

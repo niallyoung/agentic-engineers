@@ -15,7 +15,7 @@ Usage:
     python scripts/validate_skills.py
     python scripts/validate_skills.py --strict        # treat warnings as errors
     python scripts/validate_skills.py --json          # machine-readable output
-    python scripts/validate_skills.py --skill queue-management  # single skill
+    python scripts/validate_skills.py --skill spec-validator    # single skill
 """
 
 import argparse
@@ -44,10 +44,13 @@ SKILLS_DIR = REPO_ROOT / "src" / "skills"
 # agent-creator, usage-tracking, file-sync, queue-todo-sync, model-engineer
 # (all deleted in a later WP). Added: orchestrator, codex-agent-cleanup
 # (both already active but were missing from this list).
+#
+# queue-removal (task-2026-08-13-queue-removal-code): with dispatch now a
+# direct sub-agent spawn, the filesystem queue is legacy — queue-management
+# and queue-query are deleted. The durable audit record is the harness
+# session transcript itself. 8 -> 6 skills.
 ACTIVE_SKILLS: List[str] = [
     "orchestrator",
-    "queue-management",
-    "queue-query",
     "protocol-validator",
     "spec-validator",
     "spec-management",
@@ -85,7 +88,7 @@ ALLOWED_ROLES = {
 ALLOWED_EFFORTS = {"low", "medium", "high"}
 ALLOWED_CATEGORIES = {
     "orchestration", "validation", "monitoring", "optimization", "observability",
-    "scaffolding", "integration", "queue", "metrics", "maintenance",
+    "scaffolding", "integration", "metrics", "maintenance",
     "hygiene", "management", "security", "task-management", "meta-skill",
 }
 

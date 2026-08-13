@@ -214,11 +214,10 @@ case "$MODE" in
 		echo "📖 Writing AGENTS.md → $DST_RULES ..."
 		write_agents_md
 
-		# 2b. settings.json — harness session model + Phase G queue auto-polling
-		# (idle_loop: exponential backoff + file-watch). Written for both dist
-		# rendering and home install so the installed tree matches dist exactly
-		# and the harness ships with auto-polling enabled.
-		# See docs/guides/harness-queue-polling.md.
+		# 2b. settings.json — harness session model configuration. Written for
+		# both dist rendering and home install so the installed tree matches
+		# dist exactly. Polling-based execution has been removed (2026-08-09);
+		# orchestration uses direct sub-agent spawning.
 		echo "⚙️  Writing settings.json → $COPILOT/settings.json ..."
 		cat > "$COPILOT/settings.json" <<'EOF'
 {

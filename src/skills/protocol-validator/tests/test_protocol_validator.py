@@ -41,7 +41,7 @@ def valid_delegate():
     """A fully valid DELEGATE."""
     return {
         'task_id': 'feature-x-001',
-        'skill': 'queue-management',
+        'skill': 'spec-validator',
         'agent': 'senior-engineer',
         'scope': 'Implement feature X with comprehensive testing and documentation across all modules and components for production readiness',
         'success_criteria': [
@@ -443,7 +443,7 @@ class TestBackwardCompatibility:
         # Typical Phase 3 format
         delegate = {
             'task_id': 'implement-auth-001',
-            'skill': 'queue-management',
+            'skill': 'spec-validator',
             'agent': 'senior-engineer',
             'scope': 'Implement JWT authentication with comprehensive refresh tokens and role-based access control for all API endpoints',
             'success_criteria': [
@@ -472,7 +472,7 @@ class TestBackwardCompatibility:
         """Delegate from future Phase with unknown field should still validate"""
         delegate = {
             'task_id': 'future-task-001',
-            'skill': 'queue-management',
+            'skill': 'spec-validator',
             'agent': 'engineer',
             'scope': 'Do something meaningful and important in the future with new capabilities and features for system improvement',
             'success_criteria': ['Success criterion'],
@@ -618,7 +618,7 @@ class TestEnumDriftDetection:
     def test_enum_drift_report_to_text_dirty(self):
         """Dirty report names the drifted file and missing values."""
         finding = EnumDriftFinding(
-            path="src/skills/queue-management/scripts/queue_ops.py",
+            path="src/skills/example-skill/scripts/example.py",
             name="VALID_HANDBACK_STATUSES",
             found={"complete", "failed", "partial", "blocked", "escalate"},
             expected=VALID_STATUSES,
@@ -631,7 +631,7 @@ class TestEnumDriftDetection:
             findings=[finding],
         )
         text = report.to_text()
-        assert "queue_ops" in text
+        assert "example.py" in text
         assert "success" in text or "failure" in text
 
     def test_extract_status_set_simple_set_literal(self):

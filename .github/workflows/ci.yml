@@ -84,12 +84,7 @@ jobs:
         # Circular imports cause runtime ImportError and slow startup.
         run: python scripts/detect_circular_imports.py
 
-      - name: "Gate 3: Protocol compliance check"
-        # Validates that all DELEGATE/HANDBACK YAML files in the queue
-        # conform to the core protocol schema. No-op if no queue files exist.
-        run: python scripts/check_protocol_compliance.py
-
-      - name: "Gate 4: Skill template conformance report"
+      - name: "Gate 3: Skill template conformance report"
         # Generate a non-failing annotated report for the PR review audit trail.
         # The report is emitted as a GitHub step summary for visibility.
         run: python scripts/validate_skills.py --json | python scripts/format_skill_report.py >> "$GITHUB_STEP_SUMMARY" || true

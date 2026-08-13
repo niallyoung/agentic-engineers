@@ -34,7 +34,7 @@ except ImportError:
 # Canonical protocol validation (delegated to the protocol-validator skill)
 # ---------------------------------------------------------------------------
 # Runtime HANDBACK dict validation is owned by the protocol-validator skill —
-# the single source of truth shared with the eval framework and queue system.
+# the single source of truth shared with the eval framework and the renderer.
 # We import its validate_handback() rather than re-implementing the rules here.
 
 _PV_SCRIPTS = Path(__file__).resolve().parent.parent / "src" / "skills" / "protocol-validator" / "scripts"
@@ -55,7 +55,7 @@ def validate_handback(handback: dict[str, Any]) -> tuple[bool, list[str]]:
     This is the canonical entry point for validating an actual HANDBACK block
     (as opposed to validate_handback_schema(), which checks that AGENTS.md
     *documents* the protocol). Delegates to the protocol-validator skill so
-    the renderer, eval framework, and queue system all enforce identical rules.
+    the renderer and eval framework enforce identical rules.
 
     Returns (valid, errors). If the skill cannot be imported, returns
     (True, []) so the renderer degrades gracefully rather than hard-failing.

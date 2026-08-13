@@ -12,7 +12,6 @@ metadata:
   effort: high
   thinking: false
   dependencies:
-    - queue-management (for CoreProtocolValidator)
     - PyYAML (for spec loading)
 ---
 
@@ -58,7 +57,7 @@ validator = ProtocolValidator(spec_path="docs/specs/protocol-core-v1.0.yaml")
 # Validate DELEGATE
 delegate = {
     "task_id": "feature-x-001",
-    "skill": "queue-management",
+    "skill": "spec-validator",
     "agent": "senior-engineer",
     "scope": "Implement feature X with comprehensive testing and documentation across all modules",
     "success_criteria": ["All tests pass", "Code reviewed and approved"],
@@ -186,23 +185,21 @@ The validator is designed to support schema evolution:
 
 ## Integration
 
-### With Queue-Management
+### With Direct Sub-Agent Spawn Dispatch
 
 ```python
-from skills.queue_management.scripts import QueueOperations
 from skills.protocol_validator.scripts import ProtocolValidator
 
-queue = QueueOperations(session_id="my-session")
 validator = ProtocolValidator()
 
-# Validate before queueing
+# Validate before spawning the target agent
 delegate = {...}
 result = validator.validate_delegate(delegate)
 if not result.valid:
     print(f"Validation failed: {result.errors}")
     raise ValueError("Invalid DELEGATE")
 
-queue.create_delegate(**delegate)
+handback = spawn_agent(agent=delegate["agent"], prompt=delegate)  # direct spawn
 ```
 
 ### With Orchestrator
@@ -212,14 +209,6 @@ The Orchestrator should:
 2. Call `validator.validate_delegate()` before routing
 3. Call `validator.validate_handback()` before accepting completion
 4. Log validation results (valid DELEGATEs don't need logging; failures logged with context)
-
-### With CI Compliance Checking
-
-The check_protocol_compliance.py script uses protocol-validator to check queue integrity:
-1. Load all DELEGATEs from queue
-2. Run `validator.validate_delegate()` on each
-3. Aggregate results: count passes/failures/warnings
-4. Report: schema compliance percentage, unknown fields, deprecated patterns
 
 ---
 
@@ -294,7 +283,6 @@ Warnings are informational:
 ## References
 
 - `docs/specs/protocol-core-v1.0.yaml` — Canonical protocol specification
-- `skills/queue-management/` — CoreProtocolValidator reference impl
 - `docs/CORE-PROTOCOL-QUICKSTART.md` — Protocol 101
 - `docs/PROTOCOL-MIGRATION-GUIDE.md` — Migration from older versions
 

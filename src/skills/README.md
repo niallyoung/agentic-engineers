@@ -11,7 +11,12 @@ Each harness renderer (`renderer/scripts/render-*.sh|py`) copies every skill
 into that harness's install location verbatim, so a skill written once works
 identically across Claude Code, Copilot CLI, OpenCode, and Codex.
 
-## The 8 skills
+## The 6 skills
+
+The filesystem queue (`~/.agentic-engineers/{harness}/{session-id}/queue/`) was
+removed in the queue-removal work: dispatch is a direct sub-agent spawn, and
+the durable DELEGATE/HANDBACK audit record is the harness session transcript
+itself, so `queue-management` and `queue-query` no longer exist.
 
 | Skill | Kind | Purpose |
 |---|---|---|
@@ -20,8 +25,6 @@ identically across Claude Code, Copilot CLI, OpenCode, and Codex.
 | `skill-improvement-feedback` | prose-only | Canonical pattern for `skill_feedback` in HANDBACKs |
 | `codex-agent-cleanup` | prose-only | Routine maintenance for Codex sessions |
 | `protocol-validator` | script-backed | Runtime DELEGATE/HANDBACK schema validation |
-| `queue-management` | script-backed | Atomic `enqueue()` — the one sanctioned queue write path |
-| `queue-query` | script-backed | Read-only queue inspection (incoming/processing/done/failed) |
 | `spec-validator` | script-backed | Post-hoc compliance checking of a diff against `docs/SPEC.md` |
 
 "Prose-only" skills carry their entire behavior in `SKILL.md` instructions —

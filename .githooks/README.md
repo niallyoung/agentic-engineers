@@ -64,7 +64,6 @@ This command:
 - **YAML/JSON Validation:** Well-formedness checks
 - **Bypass Markers:** Warns if --no-verify or SKIP_HOOKS=1 in committed code
 - **Orphaned Bytecode:** Detects .pyc without .py source
-- **Queue Path Centralization:** Enforces ~/.agentic-engineers/ (blocks legacy paths)
 - **Model Naming:** Enforces locked model set (from .githooks/LOCKED_MODELS.sh)
 - **OpenCode Config:** Validates opencode.jsonc structure
 

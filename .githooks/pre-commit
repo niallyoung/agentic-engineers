@@ -15,7 +15,6 @@
 #   - YAML/JSON well-formedness
 #   - No --no-verify bypass markers in committed files
 #   - Source file integrity (no orphaned bytecode)
-#   - Queue path centralization
 #   - Model naming compliance
 #
 # Install: git config core.hooksPath .githooks
@@ -270,7 +269,7 @@ if git diff --cached --name-only | grep -qE '^orchestration/scripts/.*\.(py|sh)$
 fi
 
 if git diff --cached --name-only | grep -qE '^orchestration/config/.*\.cron$'; then
-  fail "VIOLATION: Cron files in orchestration/config/ — use queue-based delegation instead (docs/SPEC.md)"
+  fail "VIOLATION: Cron files in orchestration/config/ — use DELEGATE/HANDBACK direct sub-agent spawn instead (docs/SPEC.md)"
 fi
 
 # ─── Section: Agent frontmatter consistency check ───────────────────────────
@@ -613,28 +612,6 @@ echo "✅ Source file integrity check passed"
 
 # ─── End: Orphaned Bytecode Check ──────────────────────────────────────────────
 
-# ─── Section: Queue Path Centralization Enforcement ──────────────────────────────
-# SPEC locked: 2026-05-26 (docs/SPEC.md - Queue Architecture & Paths)
-#
-# Enforcement: All harnesses MUST use ~/.agentic-engineers/ (NO EXCEPTIONS)
-# - Block: ~/.copilot/queue (DEPRECATED)
-# - Block: ~/.claude/queue (DEPRECATED)
-# - Block: artifacts/queue (DEPRECATED)
-#
-# EXEMPTION MARKERS (per-line, narrowly scoped):
-# When a line legitimately names a legacy path (e.g., in a deny-list constant
-# or documentation explaining what paths are forbidden), mark it with:
-#   - Python/code: '# legacy-path-deny-list' at end of line
-#   - Markdown/docs: '<!-- legacy-path-deny-list -->' on same or previous line
-# This allows the hook to distinguish USING a path from DENOUNCING it.
-#
-# (No source-tree exceptions currently apply — the compat/archive paths this
-# section once exempted were deleted in the SPEC-2026-005 framework slimdown.)
-#
-
-echo ""
-echo "🔒 Validating queue path centralization..."
-
 # ─── Section: Model Naming Compliance Enforcement ────────────────────────────────
 # SPEC locked: 2026-05-26 (docs/SPEC.md - Model Naming Architecture)
 #
@@ -704,80 +681,6 @@ if declare -f is_model_locked >/dev/null 2>&1; then
 fi
 
 # ─── End: Model Naming Compliance Enforcement ────────────────────────────────
-
-QUEUE_ERRORS=0
-
-# Get all staged files (Python, JSON, YAML, and markdown under src/)
-STAGED_QUEUE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|json|yaml|yml|jsonc)$' || true)
-# Also scan markdown files under src/
-STAGED_MD_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^src/.*\.md$' || true)
-# Combine all files to check
-STAGED_QUEUE_FILES="$STAGED_QUEUE_FILES $STAGED_MD_FILES"
-
-for file in $STAGED_QUEUE_FILES; do
-    [ -f "$file" ] || continue
-
-    # Skip exceptions: queue_compat.py, _archive/, and tests/
-    if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]] || [[ "$file" == *"queue-path-validator"* ]]; then
-        continue
-    fi
-
-    # Check for legacy queue paths in staged content
-    # Lines with explicit exemption markers are allowed (deny-list constants/docs)
-
-    file_content=$(git show ":$file" 2>/dev/null)
-
-    # Helper: check if a line has exemption marker (for code: '# legacy-path-deny-list', for docs: '<!-- legacy-path-deny-list -->')
-    has_exemption() {
-        local line="$1"
-        # Simple string matching (avoids regex escaping issues)
-        [[ "$line" == *"legacy-path-deny-list"* ]]
-    }
-
-    # Block: ~/.copilot/queue (unless line has exemption marker)
-    while IFS= read -r line; do
-        if [[ "$line" == *".copilot/queue"* ]]; then
-            if ! has_exemption "$line"; then
-                fail "Legacy queue path found in $file: ~/.copilot/queue"
-                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
-                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
-            fi
-        fi
-    done <<< "$file_content"
-
-    # Block: ~/.claude/queue (unless line has exemption marker)
-    while IFS= read -r line; do
-        if [[ "$line" == *".claude/queue"* ]]; then
-            if ! has_exemption "$line"; then
-                fail "Legacy queue path found in $file: ~/.claude/queue"
-                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
-                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
-            fi
-        fi
-    done <<< "$file_content"
-
-    # Block: artifacts/queue (unless line has exemption marker)
-    while IFS= read -r line; do
-        if [[ "$line" == *"artifacts/queue"* ]]; then
-            if ! has_exemption "$line"; then
-                fail "Legacy queue path found in $file: artifacts/queue"
-                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
-                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
-            fi
-        fi
-    done <<< "$file_content"
-done
-
-if [ "$QUEUE_ERRORS" -gt 0 ]; then
-    echo ""
-    echo "❌ pre-commit: $QUEUE_ERRORS queue path violation(s) found"
-    ERRORS=$((ERRORS + QUEUE_ERRORS))
-fi
-
-# ─── End: Queue Path Centralization Enforcement ────────────────────────────────
 
 # ─── DELEGATE/HANDBACK Protocol Validation ─────────────────────────────────────
 # Validates DELEGATE and HANDBACK YAML files committed to ensure protocol compliance.

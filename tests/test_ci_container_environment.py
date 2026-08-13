@@ -260,7 +260,7 @@ class TestPython311Compatibility:
 
     def test_match_available(self):
         """Verify pathlib.Path.match() method (3.11+)."""
-        test_path = Path("src/skills/queue-management/scripts/queue_ops.py")
+        test_path = Path("src/skills/protocol-validator/scripts/protocol_validator.py")
         # match() should work in 3.11+
         assert test_path.match("*.py"), "pathlib.Path.match() not working"
 
@@ -434,7 +434,7 @@ class TestPlatformDetection:
 
     def test_path_separator_handling(self):
         """Verify path separator handling is correct."""
-        test_path = Path("src") / "skills" / "queue-management"
+        test_path = Path("src") / "skills" / "protocol-validator"
         # Path should handle separators correctly regardless of platform
         parts = test_path.parts
         assert "src" in parts, "Path parts incorrect"
@@ -449,16 +449,16 @@ class TestContainerIntegration:
     """Integration tests that validate complete container setup."""
 
     def test_imports_work(self):
-        """Verify core queue_ops import works (requires sys.path set correctly)."""
+        """Verify core protocol_validator import works (requires sys.path set correctly)."""
         import sys as _sys
 
-        qm_scripts = Path("src/skills/queue-management/scripts")
-        if not qm_scripts.exists():
-            qm_scripts = Path("/workspace/src/skills/queue-management/scripts")
+        pv_scripts = Path("src/skills/protocol-validator/scripts")
+        if not pv_scripts.exists():
+            pv_scripts = Path("/workspace/src/skills/protocol-validator/scripts")
         try:
-            if str(qm_scripts) not in _sys.path:
-                _sys.path.insert(0, str(qm_scripts))
-            import queue_ops  # noqa: F401
+            if str(pv_scripts) not in _sys.path:
+                _sys.path.insert(0, str(pv_scripts))
+            import protocol_validator  # noqa: F401
             assert True, "Core imports successful"
         except ImportError:
             # Allow for test environment variance

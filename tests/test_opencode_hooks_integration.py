@@ -73,7 +73,6 @@ class TestOpenCodeConfiguration:
         assert '"command"' in content, "Config should declare commands"
         assert '"sdlc-check"' in content, "Should have sdlc-check command"
         assert '"hooks-install"' in content, "Should have hooks-install command"
-        assert '"queue-status"' in content, "Should have queue-status command"
 
     def test_opencode_config_has_hooks_path_reference(self):
         """Verify config references .githooks"""

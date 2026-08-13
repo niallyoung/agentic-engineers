@@ -56,8 +56,8 @@ ROLE_ROUTING_TABLE = """- orchestrator: intake, routing, task management, synthe
 
 STRICT_ORCHESTRATOR_MODE = """- The root Codex session is an orchestrator only; it does not implement user tasks itself.
 - Convert every substantive user request into one or more DELEGATE YAML blocks and hand them to subagents.
-- If the queue is empty, do not invent work; report idle or ask for the next task.
-- Root-thread work is limited to intake, routing, queue coordination, Git coordination, final verification, and synthesis of HANDBACKs.
+- If there is no pending or in-flight delegated work, do not invent work; report idle or ask for the next task.
+- Root-thread work is limited to intake, routing, dispatch coordination, Git coordination, final verification, and synthesis of HANDBACKs.
 - Never resolve a user task in the root session when a specialist role exists."""
 
 
@@ -66,11 +66,11 @@ DELEGATE_GRAMMAR = """When the user starts a message with `delegate:` or `DELEGA
 Parse the text after the prefix as semicolon-separated tasks; also accept newline bullets or numbered lists as task separators. For each task:
 1. Assign a stable task_id such as `codex-001`, `codex-002`, preserving user wording in `scope`.
 2. Choose the narrowest appropriate custom agent using the routing table.
-3. Build a canonical DELEGATE payload with the queue-management fields needed for validation: `handoff_type: DELEGATE`, `task_id`, `agent`, `skill`, `model`, `effort`, `scope`, `context`, `plan`, and `success_criteria`.
+3. Build a canonical DELEGATE payload with the fields needed for protocol validation: `handoff_type: DELEGATE`, `task_id`, `agent`, `skill`, `model`, `effort`, `scope`, `context`, `plan`, and `success_criteria`.
 4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict; keep same-file edits coordinated.
 5. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
 
-If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If the queue is empty, do not invent work."""
+If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If there is no pending or in-flight delegated work, do not invent work."""
 
 
 HANDBACK_CONTRACT = """Return results in this shape whenever you were spawned with a DELEGATE:
@@ -303,7 +303,7 @@ You are a Codex custom subagent rendered from agentic-engineers.
 - The Orchestrator does not do implementation work itself; it decomposes tasks and delegates them.
 - Never bypass the Orchestrator for root-thread task execution.
 - When spawned with a DELEGATE, execute only that scope and return the HANDBACK YAML shape below.
-- Do not invent queue work when the queue is empty.
+- Do not invent work when there is nothing pending or in flight.
 - When independent work can be parallelized, summarize what can safely fan out and what must remain sequential.
 - You are not alone in the codebase. Preserve user changes and other agents' changes; never revert work you did not make.
 
@@ -376,7 +376,7 @@ codex --profile {ORCHESTRATOR_PROFILE} --sandbox workspace-write --ask-for-appro
 - Cheap-first routing: Orchestrator and Engineer use `{CHEAP_CODEX_MODEL}`; planning,
   review, security, quality, and model optimization use `{STRONG_CODEX_MODEL}`.
 - Parallelize independent work, but keep git history, migrations, and same-file edits coordinated.
-- Pause for genuine product/security decisions. Do not invent work when the queue is empty.
+- Pause for genuine product/security decisions. Do not invent work when there is nothing pending or in flight.
 {STRICT_ORCHESTRATOR_MODE}
 
 ## Codex Usage
@@ -400,11 +400,12 @@ the generated custom-agent HANDBACK contract; update docs for the new launch flo
 
 {HANDBACK_CONTRACT}
 
-## Queue Convention
+## Dispatch Model
 
-Use `~/.agentic-engineers/codex/{{session-id}}/queue/` for Codex queue partitions
-with `incoming/`, `processing/`, `done/`, and `failed/` states. Queue writes must
-go through the queue-management skill when available.
+Every DELEGATE is passed directly as a spawned subagent's prompt; the HANDBACK
+returns synchronously as that spawn's result, in-context. There is no queue to
+poll or write — the Codex session transcript is the durable record of every
+DELEGATE/HANDBACK pair.
 """,
             encoding="utf-8",
         )
@@ -648,7 +649,7 @@ watch_poll_seconds = 0.5
                 "Agentic Engineers Framework - Codex Integration",
                 "Orchestrator-only",
                 "Delegate Prefix",
-                "~/.agentic-engineers/codex/{session-id}/queue/",
+                "Dispatch Model",
             ):
                 if required not in agents_doc:
                     errors.append(f"AGENTS.md missing {required}")

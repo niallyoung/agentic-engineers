@@ -73,12 +73,6 @@ _STATUS_REGISTRY: List[Dict[str, Any]] = [
         "expected": VALID_STATUSES,
         "allows_legacy": False,
     },
-    {
-        "path": "src/skills/queue-management/scripts/queue_ops.py",
-        "name": "VALID_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
 ]
 
 
@@ -274,7 +268,7 @@ def scan_protocol_divergence(repo_root: Optional[Path] = None) -> ProtocolDiverg
     that should be unified. For example:
     - Multiple separate escalation handlers when one central handler should be used
     - Custom HANDBACK validators that duplicate the canonical protocol-validator
-    - Conflicting queue-state enums across different modules
+    - Conflicting status enums across different modules
 
     Returns a :class:`ProtocolDivergenceReport` listing all divergence issues.
     """

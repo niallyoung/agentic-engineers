@@ -53,13 +53,16 @@ SKILLS_ROOT = REPO_ROOT / "src" / "skills"
 # tests dir went missing, got excluded, etc.) — fail loudly rather than
 # silently reporting a shrinking number.
 #
-# Re-baselined in WP-5 of the SPEC-2026-005 framework slimdown from the
-# measured actual (250 tests across 5 script-backed skills: protocol-validator,
-# queue-management, queue-query, skill-improvement-feedback, spec-validator).
-# Floor is ~95% of that actual, matching the same headroom convention used by
+# Re-baselined in the queue-removal (task-2026-08-13-queue-removal-code) from
+# the measured actual (178 tests across 3 script-backed skills:
+# protocol-validator, skill-improvement-feedback, spec-validator) after
+# deleting queue-management and queue-query — the filesystem queue is gone
+# now that dispatch is direct sub-agent spawn and the harness session
+# transcript is the durable audit record. Floor is ~95% of that actual,
+# matching the same headroom convention used by
 # renderer/scripts/check_test_regression.py. Update only alongside a real
 # skill addition/removal.
-MIN_EXPECTED_TESTS = 237
+MIN_EXPECTED_TESTS = 169
 
 # Some skill suites (file-sync in particular) exercise the real repository
 # tree end-to-end rather than an isolated fixture, so they run considerably

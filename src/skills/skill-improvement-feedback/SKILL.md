@@ -61,8 +61,8 @@ skill_feedback:
 - `OrchestratorSkill._route_skill_feedback()` checks accumulation counts
 - **Threshold:** ≥ 3 items for one skill → spawn DELEGATE to senior-engineer
   (effort: low, model: claude-sonnet-4.6)
-- **Deduplication:** if an improvement task for that skill is already in
-  `incoming/` or `processing/`, skip spawning
+- **Deduplication:** if an improvement task for that skill is already pending
+  or in flight in the current session, skip spawning
 
 ## Adding `## Self-Improvement` to a Skill
 
@@ -70,7 +70,7 @@ Every SKILL.md ends with a `## Self-Improvement` section (before any version
 history). The template is in this skill's body above. Replace `[skill-name]`
 with the actual kebab-case skill name.
 
-High-traffic skills (orchestrator, queue-management, spec-validator,
+High-traffic skills (orchestrator, protocol-validator, spec-validator,
 spec-management) add this opening line before the template:
 
 > We aim for [skill-name] to feel like a knowledgeable colleague rather than

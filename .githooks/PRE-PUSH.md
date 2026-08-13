@@ -40,10 +40,8 @@ make install
 
 ### 4. **DELEGATE/HANDBACK Protocol Validation**
 - Validates DELEGATE files in `artifacts/delegates/`
-- Validates HANDBACK files in `artifacts/queue/processing/`
 - Checks for required fields:
   - DELEGATE: `handoff_type`, `task_id`, `role`, `model`
-  - HANDBACK: `handoff_type`, `task_id`, `status`
 - Ensures valid YAML syntax
 
 ### 5. **SPEC Compliance**
@@ -182,7 +180,7 @@ The pre-push hook runs locally before pushing. It complements CI/CD checks by:
 
 1. **Early Feedback**: Developers get immediate feedback before pushing
 2. **Reduced CI Load**: Prevents invalid commits from reaching CI
-3. **Protocol Compliance**: Ensures DELEGATE/HANDBACK files are valid before queue processing
+3. **Protocol Compliance**: Ensures DELEGATE/HANDBACK files committed to the repo are schema-valid
 4. **Documentation Sync**: Keeps documentation in sync with code changes
 
 ## Troubleshooting

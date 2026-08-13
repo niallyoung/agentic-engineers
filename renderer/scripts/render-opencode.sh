@@ -387,16 +387,18 @@ write_rules() {
 
 This OpenCode install is managed by the [agentic-engineers framework]($docs_url).
 Eight specialised subagents (in \`agents/\`) collaborate via a structured
-DELEGATE/HANDBACK protocol on a queue-based work pipeline.
+DELEGATE/HANDBACK protocol, dispatched by direct sub-agent spawn.
 
 ## Mandatory Constraints
 
-### Queue-based routing
-- ALL work flows through \`~/.agentic-engineers/{session-id}/opencode/queue/incoming/ → processing/ → done/\`.
-- The Orchestrator polls the queue and routes per the decision tree in
-  \`src/AGENTS.md\`. No direct delegation from external sources.
-- DELEGATEs are written to the queue's \`incoming/\` directory; HANDBACKs are written to
-  \`processing/\` and moved to \`done/\` after Quality Engineer review.
+### Direct sub-agent spawn routing
+- ALL work is delegated by constructing a DELEGATE block and passing it directly
+  as the prompt of a sub-agent spawn (the task tool). The Orchestrator routes
+  per the decision tree in \`src/AGENTS.md\`. No direct delegation from external
+  sources.
+- The HANDBACK returns synchronously as that spawn call's result, in-context.
+  The harness session transcript is the durable audit record of every
+  DELEGATE/HANDBACK pair — there is no separate queue to poll or write.
 
 ### Orchestrator constraints
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
@@ -454,7 +456,7 @@ All agents use uniform **allow-all** permissions:
 | Tool usage | ✓ Yes (access to all tools) |
 
 OpenCode's enforcement layer is minimal—the core constraint model is social (shared responsibility, code review, audit trails) rather than technical restrictions. All agents operate with equivalent access levels. Security and coordination are enforced via:
-- The DELEGATE/HANDBACK protocol (queue-based routing)
+- The DELEGATE/HANDBACK protocol (direct sub-agent spawn routing)
 - Role-specific constraints in \`src/AGENTS.md\` (decision tree, escalation paths)
 - Code review and audit trails (per-agent action logging)
 - SPEC.md protection via \`spec-management\` skill (only Principal Engineer can propose changes)
@@ -490,7 +492,7 @@ These operations are governed by **human oversight and protocol discipline**, no
 
 ## Full specification
 See [\`src/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
-[\`docs/QUEUE-PROTOCOL.md\`]($docs_url), and [\`docs/SKILLS.md\`]($docs_url)
+and [\`docs/SKILLS.md\`]($docs_url)
 in the source repository for the authoritative protocol.
 EOF
 }

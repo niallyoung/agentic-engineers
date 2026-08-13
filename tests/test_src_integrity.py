@@ -173,9 +173,12 @@ def test_agents_md_table_effort_never_blank():
 USER_SKILL_FILES = sorted(SRC_SKILLS.glob("*/SKILL.md"))
 
 
-def test_8_user_skill_files_present():
-    assert len(USER_SKILL_FILES) == 8, (
-        f"Expected 8 user-facing src/skills/*/SKILL.md, found "
+def test_6_user_skill_files_present():
+    # 8 -> 6 in the queue-removal work (task-2026-08-13-queue-removal-code):
+    # queue-management and queue-query were deleted along with the
+    # filesystem queue now that dispatch is a direct sub-agent spawn.
+    assert len(USER_SKILL_FILES) == 6, (
+        f"Expected 6 user-facing src/skills/*/SKILL.md, found "
         f"{len(USER_SKILL_FILES)}: {[p.parent.name for p in USER_SKILL_FILES]}"
     )
 

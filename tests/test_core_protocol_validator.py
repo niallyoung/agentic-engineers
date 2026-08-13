@@ -9,10 +9,12 @@ DELEGATE/HANDBACK schema validation — see src/skills/protocol-validator/).
 Historical note: this file originally targeted a near-duplicate
 core_protocol_validator.py that lived in queue-management/scripts/. That
 module's unguarded import was a latent bug in installed harnesses and it was
-deleted as part of the framework slimdown (queue-management now consolidates
-to a single queue_ops.py); this file was retargeted to the surviving,
-canonical protocol_validator.py, whose CoreProtocolValidator/ExtensionValidator
-API is identical.
+deleted as part of the framework slimdown; this file was retargeted to the
+surviving, canonical protocol_validator.py, whose
+CoreProtocolValidator/ExtensionValidator API is identical. queue-management
+itself was later deleted entirely (queue-removal, task-2026-08-13-queue-removal-code)
+now that dispatch is a direct sub-agent spawn and the harness session
+transcript is the durable audit record.
 
 TDD red-phase style: written to validate real behaviour of existing implementation.
 Target: >=90% branch coverage of protocol_validator.py's core/extension validators.
@@ -61,7 +63,7 @@ def valid_delegate():
     """Return a minimal valid DELEGATE for core validation."""
     return {
         "task_id": "valid-task-01",
-        "skill": "queue-management",
+        "skill": "protocol-validator",
         "agent": "engineer",
         "scope": (
             "Implement the feature with proper testing and documentation "
@@ -130,7 +132,7 @@ class TestSkillExists:
 
     def test_known_skill_exists(self):
         """A skill directory that exists returns True."""
-        assert _skill_exists("queue-management") is True
+        assert _skill_exists("protocol-validator") is True
 
     def test_empty_string_returns_false(self):
         """Empty string returns False."""

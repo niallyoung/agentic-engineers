@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Direct sub-agent spawn DELEGATE/HANDBACK lifecycle for the entry-point Orchestrator role: constructs a DELEGATE, spawns the target specialist directly via the harness's Agent/Task tool, receives the HANDBACK synchronously as that call's result, applies the routing decision tree, and records both to the durable audit-trail queue via enqueue(). Never implements; never polls."
+description: "Direct sub-agent spawn DELEGATE/HANDBACK lifecycle for the entry-point Orchestrator role: constructs a DELEGATE, spawns the target specialist directly via the harness's Agent/Task tool, receives the HANDBACK synchronously as that call's result, and applies the routing decision tree. The harness session transcript is the durable audit record. Never implements; never polls."
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+
 metadata:
@@ -27,11 +27,11 @@ the Orchestrator drives, and no subprocess correlation: dispatch IS the spawn ca
 2. **Route** — apply the routing decision tree below to pick the target role
 3. **Spawn directly** — pass the DELEGATE block as the target agent's prompt via the
    harness's Agent/Task tool; fan out up to 5 concurrent spawns for independent work
-4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result
-5. **Record** both the DELEGATE (at spawn) and the HANDBACK (at completion) to the
-   audit-trail queue via `QueueOperations.enqueue()` (`queue-management` skill)
-6. **Apply the routing decision** on the HANDBACK's `status` (success/partial/blocked/escalate)
-7. **Pause** when no DELEGATEs are pending and no spawns are outstanding
+4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result — the
+   session transcript already durably records both the DELEGATE and the HANDBACK, so
+   there is no separate bookkeeping step
+5. **Apply the routing decision** on the HANDBACK's `status` (success/partial/blocked/escalate)
+6. **Pause** when no DELEGATEs are pending and no spawns are outstanding
 
 ## Routing Decision Tree
 
@@ -53,22 +53,20 @@ DELEGATE to the spawning parent, inclusive.
 - **Max fan-out: 5** concurrent sub-agent spawns per parent. A 6th independent task
   waits for one of the first 5 to resolve, or is grouped into a consolidating DELEGATE.
 - **Cycle detection:** before spawning, check whether the target role already appears
-  in `ancestry`. If it does, refuse the spawn — `queue-management`'s `enqueue()` also
-  enforces this at record time via `has_cycle()`/`exceeds_max_depth()`, so a violation
-  is caught even if the pre-spawn check is skipped.
+  in `ancestry`. If it does, refuse the spawn. No runtime code enforces this today —
+  it is a self-enforced convention (see `src/AGENTS.md` § Recursion Limits).
 
 When a limit is hit: stop, do not invent a workaround, and return `status: blocked`
 (procedural — resolvable by restructuring the fan-out) or `status: escalate` (a
 genuine cycle or a task that structurally needs more than 3 hops).
 
-## Audit-Trail Duty (enqueue())
+## Audit Trail
 
-Dispatch already happened via the spawn call — `enqueue()` is bookkeeping written
-*after*, never a precondition for the spawn:
+Dispatch happens via the spawn call, and the harness session transcript already
+durably records it — the DELEGATE as the spawn prompt, the HANDBACK as that call's
+result. There is no separate write step:
 
 ```python
-from skills.queue_management.scripts.queue_ops import QueueOperations
-
 delegate_block = {
     "handoff_type": "DELEGATE",
     "task_id": "my-task-001",
@@ -79,14 +77,8 @@ delegate_block = {
     "success_criteria": ["criterion 1"],
 }
 handback = spawn_agent(agent="engineer", prompt=delegate_block)  # direct spawn = dispatch
-
-ops = QueueOperations(session_id=session_id)
-ops.enqueue(delegate_block)   # audit record of the DELEGATE, written after dispatch
-ops.enqueue(handback)         # audit record of the HANDBACK, written after completion
+# handback is now available in-context; the transcript is the audit record.
 ```
-
-**FORBIDDEN:** writing directly to any `incoming/`/`processing/`/`done/`/`failed/`
-queue file. `enqueue()` is the only sanctioned write path — see `queue-management`.
 
 ## Applying the HANDBACK
 
@@ -107,8 +99,7 @@ skill's user issues that DELEGATE.
 Orchestrator MUST NOT:
 - Write code, edit files, or run tests
 - Make architecture or security decisions
-- Hold state across sessions (use `TODO.md` and the queue's audit trail)
-- Write queue files directly (always via `enqueue()`)
+- Hold state across sessions (use `TODO.md`; the session transcript is the audit trail)
 - Spawn beyond the recursion/fan-out limits above
 
 ## Pause Condition

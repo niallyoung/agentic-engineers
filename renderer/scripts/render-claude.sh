@@ -79,11 +79,9 @@ map_model() {
 # Creates the file if absent; preserves all other keys.
 #
 # When the file is absent (fresh install/render), it is seeded with the canonical
-# harness defaults — currently the Phase G ``idle_loop`` block (queue auto-polling
-# with exponential backoff + file-watch). This keeps a freshly-rendered
-# dist/claude/settings.json byte-identical to a fresh install, and ensures the
-# harness ships with auto-polling enabled. Existing user keys are always
-# preserved (only ``model`` is overwritten).
+# harness defaults (currently empty — see DEFAULT_SETTINGS below). This keeps a
+# freshly-rendered dist/claude/settings.json byte-identical to a fresh install.
+# Existing user keys are always preserved (only ``model`` is overwritten).
 inject_settings_model() {
 	local settings="$1" model_alias="$2"
 	python3 - "$settings" "$model_alias" <<'PY'
@@ -251,9 +249,9 @@ render_claude_agent_body() {
 ## Integration
 
 This agent is spawned directly via the Agent/Task tool as part of the
-agentic-engineers DELEGATE/HANDBACK protocol. Every DELEGATE and HANDBACK is
-also recorded to `~/.agentic-engineers/{harness}/{session-id}/queue/` as a
-durable audit trail via `enqueue()` — see `~/.claude/AGENTS.md`.
+agentic-engineers DELEGATE/HANDBACK protocol. The harness session transcript
+is the durable audit record of every DELEGATE and HANDBACK — see
+`~/.claude/AGENTS.md`.
 EOF
 }
 
@@ -307,7 +305,7 @@ auditability, and the DELEGATE/HANDBACK coordination layer.
 
 ## Why protocol-first matters
 
-- **Auditability** — every task is meant to be a DELEGATE block in the queue; every result a HANDBACK (in practice this recording is a known gap — see `~/.claude/AGENTS.md` § Audit-Trail Strategy)
+- **Auditability** — every task is tracked as a DELEGATE/HANDBACK pair in the harness session transcript itself — see `~/.claude/AGENTS.md`
 - **Consistency** — routing rules and escalation triggers are documented once and followed by every role
 - **Cost discipline** — each role has a fixed, cost-appropriate model; a low-quality HANDBACK reroutes to a higher tier rather than upgrading the model mid-task
 - **Coordination** — independent tasks are fanned out in parallel; escalation chains are tracked

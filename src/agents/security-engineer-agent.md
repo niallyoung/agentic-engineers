@@ -54,9 +54,9 @@ defensive-only scope constraint (see model_guidance above) is independent of and
 additional to this spawn authority — it bounds *what* Security Engineer may work on, not
 whether it may delegate.
 
-Every DELEGATE this agent issues and every HANDBACK it receives is recorded to the
-durable queue via `enqueue()` as an audit trail; the queue is written to, never polled,
-for this agent's own control flow.
+Every DELEGATE this agent issues and every HANDBACK it receives is durably recorded as
+part of the harness session transcript itself — the audit trail for this agent's own
+control flow, with no separate write step.
 
 ## Your Responsibilities
 

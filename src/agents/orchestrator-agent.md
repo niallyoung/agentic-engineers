@@ -182,8 +182,8 @@ Concretely:
    a sub-agent spawn (Agent/Task tool) for the routed specialist.
 2. The specialist's HANDBACK comes back as that spawn call's result, in-context — the
    Orchestrator reads it immediately, with no file to poll and no wait loop.
-3. The Orchestrator records both the DELEGATE and the HANDBACK to the durable queue via
-   `enqueue()`, as an audit trail — this happens *after* dispatch and does not gate it.
+3. Both the DELEGATE and the HANDBACK are already durably recorded — the harness session
+   transcript itself is the audit trail, with no separate write step to gate or follow.
 4. For independent tasks the Orchestrator fans out multiple spawns in parallel, up to 5
    concurrent (see `src/AGENTS.md` § Recursion Limits), and issues `ancestry`-tagged
    DELEGATEs so downstream re-delegation can detect cycles and depth violations.
@@ -217,7 +217,7 @@ Unlike other agents, the Orchestrator's autonomy is about **continuous routing**
 single task boundary. It keeps spawning and re-delegating while there is HANDBACK-driven
 follow-on work, but pauses once nothing is pending or in flight. This is automatic
 behavior, not a conscious decision per task — and it is now driven by direct spawn
-results, not by a queue-polling loop.
+results, not by a polling loop.
 
 ## Autonomous Task Execution (All Agents)
 
@@ -262,7 +262,5 @@ copilot --allow-all --autopilot --agent orchestrator "Your task"
 ```
 
 Spawns sub-agents directly (Agent/Task tool) in harness mode — no polling loop. Every
-DELEGATE and HANDBACK is still recorded to
-`~/.agentic-engineers/{harness}/{session-id}/queue/` as an audit trail via `enqueue()`.
-All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure
-for that audit trail.
+DELEGATE and HANDBACK is durably recorded as part of the harness session transcript
+itself, the audit trail for all harnesses (Claude, Copilot, GPT, Local) alike.

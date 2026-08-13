@@ -85,10 +85,13 @@ def _render_all():
     yield
 
 
-def test_source_has_exactly_8_user_skills():
+def test_source_has_exactly_6_user_skills():
+    # 8 -> 6 in the queue-removal work (task-2026-08-13-queue-removal-code):
+    # queue-management and queue-query were deleted along with the
+    # filesystem queue now that dispatch is a direct sub-agent spawn.
     names = _source_skill_names()
-    assert len(names) == 8, (
-        f"Expected 8 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 6, (
+        f"Expected 6 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 

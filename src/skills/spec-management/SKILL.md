@@ -52,8 +52,8 @@ rationale: |
   Why this change is needed: what's wrong, drifted, or missing today, and
   what problem the change solves.
 compatibility_notes: |
-  What does NOT change — queue paths, protocol fields, model IDs, LOCKED
-  sections. Breaking changes must be called out explicitly, not implied.
+  What does NOT change — protocol fields, model IDs, LOCKED sections.
+  Breaking changes must be called out explicitly, not implied.
 breaking_change: false
 ```
 
@@ -109,7 +109,7 @@ The changelog entry (step 4) is written exactly as in the peer-approval path, e.
 `approved by <role>` clause because none applies; the bracket names only the proposer.
 
 **When it does NOT apply:** any change to a LOCKED invariant's *meaning* — model list
-membership, the naming rule itself, queue path templates, recursion/depth limits, the
+membership, the naming rule itself, recursion/depth limits, the
 `.githooks/LOCKED_MODELS.sh` single-source-of-truth clause, or anything that changes what
 a reader or validator must do differently. Those still require the full peer
 `approval_chain` from step 3, regardless of how narrow the diff looks — narrowness of the

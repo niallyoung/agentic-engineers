@@ -19,18 +19,6 @@ import shutil
 from pathlib import Path
 from typing import Dict, Optional
 
-# Import queue test helpers (fixtures for isolated/legacy queues)
-from tests.helpers.queue_test_helpers import (
-    isolated_queue_env,
-    isolated_queue_copilot,
-    isolated_queue_claude,
-    legacy_queue_env,
-    queue_test_env,
-    assert_queue_path_is_isolated,
-    assert_queue_path_is_legacy,
-    assert_queue_subdirs_exist,
-)
-
 
 # ---------------------------------------------------------------------------
 # Test Source Audit (Solution 3: Prevent bytecode cache loading)
@@ -236,18 +224,6 @@ def low_quality_handback() -> Dict:
 def gray_zone_handback() -> Dict:
     """HANDBACK with gray-zone quality score (70-79), triggers MANUAL_REVIEW."""
     return make_handback(quality_score=74)
-
-
-@pytest.fixture
-def tmp_queue(tmp_path: Path) -> Path:
-    """
-    Temporary queue directory with incoming/processing/done subdirectories.
-
-    Returns the base queue path. Subdirectories are pre-created.
-    """
-    for subdir in ("incoming", "processing", "done"):
-        (tmp_path / subdir).mkdir(parents=True)
-    return tmp_path
 
 
 # ---------------------------------------------------------------------------

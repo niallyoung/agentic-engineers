@@ -1,7 +1,7 @@
 .PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-opencode fresh-install-codex \
         install-copilot install-claude install-opencode install-codex \
         uninstall-copilot uninstall-claude uninstall-all uninstall-opencode uninstall-codex \
-        setup status harness-toggle migrate-queue-paths create-test-session test-protocol-e2e \
+        setup status harness-toggle test-protocol-e2e \
         verify verify-harness-sync validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-opencode render-codex render-specs render-all \
         lint test test-skills test-ci test-ci-force test-ci-shell quality-gate
@@ -78,8 +78,7 @@ help:
 	@echo "  validate-specs      Verify dist/specs/ is deployed and valid"
 	@echo "  clean               Remove build artifacts"
 	@echo ""
-	@echo "Queue & Testing:"
-	@echo "  create-test-session Create test session + sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)"
+	@echo "Protocol Testing:"
 	@echo "  test-protocol-e2e   Run end-to-end protocol tests (DELEGATE → HANDBACK)"
 	@echo ""
 	@echo "Quality & Testing:"
@@ -117,12 +116,6 @@ setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "📖 Hook documentation: .githooks/README.md"
 	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
-migrate-queue-paths: ## Migrate queue sessions from old paths (artifacts/) to canonical paths
-	@bash "$(REPO_ROOT)/setup/migrate-queue-paths.sh"
-
-create-test-session: ## Create test session with sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)
-	@bash "$(REPO_ROOT)/setup/create-test-session.sh"
-
 test-protocol-e2e: ## Run end-to-end protocol tests (DELEGATE → HANDBACK)
 	@echo "🧪 Running end-to-end protocol tests (Phase 4)..."
 	@echo "Testing: DELEGATE → processing → HANDBACK → done/failed/escalation"
@@ -136,7 +129,6 @@ install: render-all ## Install default harness set (auto-backup, non-interactive
 	@echo "✅ Installation complete!"
 	@echo ""
 	@echo "Next: copilot --autopilot --agent orchestrator 'Your task'"
-	@echo "Or: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
 
 clean-install: render-all ## Interactive: Install default harness set (prompt for each)
 	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot claude opencode codex
@@ -219,7 +211,7 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 	@echo "   ✓ Claude docs (CLAUDE.md + AGENTS.md) validated"
 	@echo "✅ Claude rendering complete (see dist/claude/)"
 
-verify: ## Verify framework structure and tests (agents, skills, dependencies, queue)
+verify: ## Verify framework structure and tests (agents, skills, dependencies)
 	@echo "🔍 Verifying framework structure..."
 	@echo ""
 	@echo "1️⃣  Checking directory structure..."
@@ -243,20 +235,13 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 	@test -f "$(REPO_ROOT)/renderer/scripts/render-codex.py" || (echo "❌ render-codex.py missing" && exit 1)
 	@echo "   ✓ Installation scripts verified"
 	@echo ""
-	@echo "4️⃣  Checking queue infrastructure..."
-	@if [ -d "$(HOME)/.copilot/queue" ]; then \
-		echo "   ✓ Queue infrastructure exists (Copilot)"; \
-	else \
-		echo "   ⚠️  Queue not installed (run 'make install-copilot')"; \
-	fi
-	@echo ""
-	@echo "5️⃣  Validating agent definitions (src/agents/)..."
+	@echo "4️⃣  Validating agent definitions (src/agents/)..."
 	@python3 "$(REPO_ROOT)/renderer/validate_agents.py" 2>&1 || echo "   ⚠️  Agent validation skipped (validator error)"
 	@echo ""
-	@echo "6️⃣  Validating skill definitions (src/skills/)..."
+	@echo "5️⃣  Validating skill definitions (src/skills/)..."
 	@python3 "$(REPO_ROOT)/renderer/validate_skills.py" 2>&1 || echo "   ⚠️  Skill validation skipped (validator error)"
 	@echo ""
-	@echo "7️⃣  Checking protocol documents present..."
+	@echo "6️⃣  Checking protocol documents present..."
 	@test -f "$(REPO_ROOT)/src/AGENTS.md" || (echo "❌ src/AGENTS.md missing" && exit 1)
 	@test -f "$(REPO_ROOT)/src/SKILLS.md" || (echo "❌ src/SKILLS.md missing" && exit 1)
 	@test -f "$(REPO_ROOT)/src/TODO.md.template" || (echo "❌ src/TODO.md.template missing" && exit 1)

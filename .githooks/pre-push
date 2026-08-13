@@ -13,7 +13,6 @@
 #   - Main/master push warnings
 #   - DELEGATE/HANDBACK protocol compliance
 #   - Render pipeline completion
-#   - Queue path validation
 #   - Agent definition verification
 #
 # Install: git config core.hooksPath .githooks
@@ -234,28 +233,6 @@ if command -v python3 >/dev/null 2>&1; then
     done
   fi
   
-  # Check artifacts/queue/processing/ for HANDBACK files
-  if [ -d "artifacts/queue/processing" ]; then
-    for f in artifacts/queue/processing/*.yaml artifacts/queue/processing/*.yml; do
-      [ -f "$f" ] || continue
-      
-      # Validate YAML syntax
-      if ! python3 -c "import sys,yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
-        fail "Invalid YAML in HANDBACK: $f"
-        PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        continue
-      fi
-      
-      # Check for required HANDBACK fields
-      for field in "handoff_type" "task_id" "status"; do
-        if ! grep -q "^$field:" "$f"; then
-          fail "Missing required field '$field' in HANDBACK: $f"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-      done
-    done
-  fi
-  
   if [ "$PROTOCOL_ERRORS" -eq 0 ]; then
     pass "DELEGATE/HANDBACK protocol valid"
   fi
@@ -394,7 +371,7 @@ echo "🔐 Verifying agent definitions (FIX #3 — model downgrade protection)..
 # preserves the existing no-op behavior in repos/fixtures that don't have a
 # src/AGENTS.md at all (see tests/test_git_hooks.py make_minimal_repo_with_docs).
 if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ]; then
-  # Verify model_verification_sha in all queue files
+  # Verify .agents_verification_sha matches the committed src/AGENTS.md
   AGENT_VERIFY_ERRORS=0
 
   # Check .agents_verification_sha exists
