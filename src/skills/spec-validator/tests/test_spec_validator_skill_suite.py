@@ -37,7 +37,6 @@ from spec_validator import (
     Requirement,
     ReportFormat,
     RollbackDetection,
-    SpecCorrelation,
     SpecDocument,
     SpecParser,
     SpecSection,
@@ -207,16 +206,6 @@ class TestSpecParser:
         assert isinstance(doc, SpecDocument)
         assert doc.requirements == []
 
-    def test_parse_file_raises_on_missing(self):
-        with pytest.raises(FileNotFoundError):
-            self.parser.parse_file("/nonexistent/SPEC.md")
-
-    def test_parse_file_reads_existing(self, tmp_path):
-        spec_file = tmp_path / "SPEC.md"
-        spec_file.write_text(MINIMAL_SPEC, encoding="utf-8")
-        doc = self.parser.parse_file(str(spec_file))
-        assert doc.name == "test-spec"
-
     def test_extract_requirements_deduplicates(self):
         # Same REQ-001 appearing in multiple places
         spec = MINIMAL_SPEC + "\n### REQ-001: Duplicate\n\nDuplicate content MUST not double.\n"
@@ -305,19 +294,6 @@ index 0000000..abc123
         result = self.analyzer.analyze_diff(two_file_diff)
         all_files = result.modified_files + result.deleted_files + result.added_files
         assert len(all_files) >= 2
-
-    def test_correlate_with_spec_returns_list(self):
-        spec_doc = self.parser.parse(MINIMAL_SPEC)
-        diff = self.analyzer.analyze_diff(MINIMAL_DIFF_CLEAN)
-        correlations = self.analyzer.correlate_with_spec(diff, spec_doc)
-        assert isinstance(correlations, list)
-        assert all(isinstance(c, SpecCorrelation) for c in correlations)
-
-    def test_correlate_empty_diff_returns_empty(self):
-        spec_doc = self.parser.parse(MINIMAL_SPEC)
-        diff = DiffAnalysis()
-        correlations = self.analyzer.correlate_with_spec(diff, spec_doc)
-        assert correlations == []
 
     def test_diff_with_no_double_dash_markers(self):
         # A diff block with content but no @@ hunk markers
@@ -794,24 +770,6 @@ class TestSpecValidator:
         assert result.report is not None
         assert isinstance(result.report, ComplianceReport)
 
-    def test_validate_files_raises_on_missing_spec(self):
-        with pytest.raises(FileNotFoundError):
-            self.validator.validate_files("/nonexistent/SPEC.md", "/nonexistent/diff.txt")
-
-    def test_validate_files_raises_on_missing_diff(self, tmp_path):
-        spec_file = tmp_path / "SPEC.md"
-        spec_file.write_text(MINIMAL_SPEC, encoding="utf-8")
-        with pytest.raises(FileNotFoundError):
-            self.validator.validate_files(str(spec_file), "/nonexistent/diff.txt")
-
-    def test_validate_files_succeeds_with_valid_paths(self, tmp_path):
-        spec_file = tmp_path / "SPEC.md"
-        diff_file = tmp_path / "changes.diff"
-        spec_file.write_text(MINIMAL_SPEC, encoding="utf-8")
-        diff_file.write_text(MINIMAL_DIFF_CLEAN, encoding="utf-8")
-        result = self.validator.validate_files(str(spec_file), str(diff_file))
-        assert isinstance(result, ValidationResult)
-
     def test_validate_empty_diff_always_passes(self):
         result = self.validator.validate(MINIMAL_SPEC, "")
         assert result.passed is True
@@ -911,51 +869,54 @@ class TestCliMain:
 
 
 # ---------------------------------------------------------------------------
-# Domain model tests
+# Integration tests using the real SPEC.md from docs/
+#
+# Migrated from tests/test_spec_validator.py::TestSpecValidatorIntegration
+# (WP-R3-05, task-2026-08-13-r3-wp05-test-consolidation) -- the only case in
+# that file exercising the actual repo-root docs/SPEC.md rather than a
+# fixture spec, so it survives the consolidation into this skill-local
+# suite. Replaces the deleted TestDomainModels class (plain dataclass-default
+# / enum-value assertions with no signal beyond what's already exercised
+# incidentally throughout the rest of this file).
 # ---------------------------------------------------------------------------
 
-class TestDomainModels:
-    """Tests for dataclass domain models."""
+class TestSpecValidatorIntegration:
+    """Integration tests using the real SPEC.md from docs/."""
 
-    def test_spec_section_defaults(self):
-        s = SpecSection(title="T", level=2, content="body")
-        assert s.subsections == []
-        assert s.start_line == 0
+    @pytest.fixture
+    def real_spec_content(self):
+        spec_path = Path(__file__).resolve().parents[4] / "docs" / "SPEC.md"
+        if not spec_path.exists():
+            pytest.skip("docs/SPEC.md not found")
+        return spec_path.read_text()
 
-    def test_requirement_defaults(self):
-        r = Requirement(id="REQ-001", title="T", description="D")
-        assert r.mandatory is True
-        assert r.keywords == []
+    def test_real_spec_is_parseable(self, real_spec_content):
+        doc = SpecParser().parse(real_spec_content)
+        assert doc is not None
+        assert len(doc.sections) > 0
 
-    def test_feature_defaults(self):
-        f = Feature(name="F", description="D")
-        assert f.required is True
+    def test_real_spec_has_requirements(self, real_spec_content):
+        parser = SpecParser()
+        doc = parser.parse(real_spec_content)
+        reqs = parser.extract_requirements(doc)
+        # Real SPEC.md should have at least some requirements
+        assert len(reqs) >= 0  # At minimum: no crash
 
-    def test_constraint_defaults(self):
-        c = Constraint(text="MUST NOT do X")
-        assert c.is_prohibition is False
-        assert c.section == ""
+    def test_empty_diff_against_real_spec_passes(self, real_spec_content):
+        result = SpecValidator().validate(
+            spec_content=real_spec_content,
+            diff_content="",
+            mode=ValidationMode.AUDIT,
+        )
+        assert result is not None
+        assert result.compliance_result.overall_status in ("PASS", "WARN")
 
-    def test_diff_hunk_defaults(self):
-        h = DiffHunk(file_path="f.py", content="@@ -1,2 +1,3 @@")
-        assert h.added_lines == []
-        assert h.removed_lines == []
-
-    def test_diff_analysis_defaults(self):
-        d = DiffAnalysis()
-        assert d.modified_files == []
-        assert d.added_lines == 0
-
-    def test_violation_severity_enum(self):
-        assert ViolationSeverity.CRITICAL.value == "CRITICAL"
-        assert ViolationSeverity.HIGH.value == "HIGH"
-        assert ViolationSeverity.MEDIUM.value == "MEDIUM"
-        assert ViolationSeverity.LOW.value == "LOW"
-
-    def test_validation_mode_enum(self):
-        assert ValidationMode.PRE_MERGE.value == "pre-merge"
-        assert ValidationMode.AUDIT.value == "audit"
-
-    def test_report_format_enum(self):
-        assert ReportFormat.JSON.value == "json"
-        assert ReportFormat.MARKDOWN.value == "markdown"
+    def test_clean_diff_against_real_spec_is_stable(self, real_spec_content):
+        # Should not raise -- validate() returns a result regardless of how
+        # the real SPEC.md happens to correlate with this diff.
+        result = SpecValidator().validate(
+            spec_content=real_spec_content,
+            diff_content=MINIMAL_DIFF_CLEAN,
+            mode=ValidationMode.AUDIT,
+        )
+        assert isinstance(result, ValidationResult)

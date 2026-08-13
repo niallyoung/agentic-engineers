@@ -293,13 +293,6 @@ class SpecParser:
 
         return doc
 
-    def parse_file(self, spec_path: str) -> SpecDocument:
-        """Parse a SPEC.md from a filesystem path."""
-        path = Path(spec_path)
-        if not path.exists():
-            raise FileNotFoundError(f"SPEC.md not found: {spec_path}")
-        return self.parse(path.read_text(encoding="utf-8"))
-
     def extract_requirements(self, doc: SpecDocument) -> List[Requirement]:
         """Extract all REQ-NNN requirements from the parsed document."""
         requirements: List[Requirement] = []
@@ -555,67 +548,6 @@ class DiffAnalyzer:
                 analysis.removed_lines += len(hunk.removed_lines)
 
         return analysis
-
-    def correlate_with_spec(
-        self, diff: DiffAnalysis, spec_doc: SpecDocument
-    ) -> List[SpecCorrelation]:
-        """Correlate each diff hunk with relevant SPEC requirements."""
-        correlations: List[SpecCorrelation] = []
-
-        for hunk in diff.hunks:
-            hunk_text = hunk.content.lower()
-            matched_req_id: Optional[str] = None
-            matched_section: Optional[str] = None
-            keyword_matches: List[str] = []
-
-            # Collect all tokens from the hunk
-            hunk_tokens = set(re.findall(r"\b\w+\b", hunk_text))
-
-            # Try to match against each requirement
-            for req in spec_doc.requirements:
-                req_tokens = set(re.findall(r"\b\w+\b", req.description.lower()))
-                # Find meaningful overlap (excluding stop words)
-                stop_words = {
-                    "the", "a", "an", "is", "are", "be", "to", "of", "and",
-                    "or", "in", "for", "with", "that", "this", "by", "on",
-                    "at", "it", "its", "as", "all", "from", "not", "must",
-                    "should", "will", "may", "can", "shall", "have", "has",
-                    "via", "per", "any", "each", "using", "when", "if",
-                    "than", "more", "less", "return", "returns", "request",
-                    "requests", "http", "api", "endpoint",
-                }
-                req_meaningful = req_tokens - stop_words
-                overlap = hunk_tokens & req_meaningful
-                if len(overlap) >= 2:
-                    matched_req_id = req.id
-                    matched_section = req.section
-                    keyword_matches = list(overlap)
-                    break
-
-            # Also check domain keyword mapping
-            if not matched_req_id:
-                for domain, code_kws in self._DOMAIN_KEYWORDS.items():
-                    if any(kw in hunk_text for kw in code_kws):
-                        # Find requirement whose description mentions this domain
-                        for req in spec_doc.requirements:
-                            if domain.lower() in req.description.lower():
-                                matched_req_id = req.id
-                                matched_section = req.section
-                                keyword_matches = [
-                                    kw for kw in code_kws if kw in hunk_text
-                                ]
-                                break
-                    if matched_req_id:
-                        break
-
-            correlations.append(SpecCorrelation(
-                hunk=hunk,
-                requirement_id=matched_req_id,
-                section_title=matched_section,
-                keyword_matches=keyword_matches,
-            ))
-
-        return correlations
 
     # ----------------------------------------------------------------- private
 
@@ -1405,31 +1337,6 @@ class SpecValidator:
             rollbacks=rollbacks,
             report=report,
             mode=mode.value,
-        )
-
-    def validate_files(
-        self,
-        spec_path: str,
-        diff_path: str,
-        mode: ValidationMode = ValidationMode.AUDIT,
-    ) -> ValidationResult:
-        """
-        Validate using file paths.
-
-        Raises FileNotFoundError if either file does not exist.
-        """
-        spec_p = Path(spec_path)
-        diff_p = Path(diff_path)
-
-        if not spec_p.exists():
-            raise FileNotFoundError(f"SPEC file not found: {spec_path}")
-        if not diff_p.exists():
-            raise FileNotFoundError(f"Diff file not found: {diff_path}")
-
-        return self.validate(
-            spec_content=spec_p.read_text(encoding="utf-8"),
-            diff_content=diff_p.read_text(encoding="utf-8"),
-            mode=mode,
         )
 
 

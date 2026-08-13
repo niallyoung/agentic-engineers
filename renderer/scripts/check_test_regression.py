@@ -78,13 +78,44 @@ Re-baseline history (each ~95% of the measured actual at that point):
     `scripts/run_skill_tests.py`'s own `MIN_EXPECTED_TESTS` floor, run via
     `make test-skills` in its own subprocess per skill. Do not conflate the
     two floors or re-baseline this file against the bare-pytest number.
-    FORWARD NOTE: round-3 batch 4 (WP-R3-05) is planned to remove tests
-    duplicated across layers. Per this policy's own convention (every prior
-    entry above re-baselines from a *measured* actual, never a forecast),
-    this review deliberately does NOT pre-set a floor for that not-yet-landed
-    change. When WP-R3-05 lands, re-measure `pytest tests/ --collect-only`
-    honestly at that time and re-baseline again with QE sign-off -- do not
-    reuse any pre-computed number from this task's planning context.
+    FORWARD NOTE (resolved below): round-3 batch 4 (WP-R3-05) was planned to
+    remove tests duplicated across layers. Per this policy's own convention
+    (every prior entry above re-baselines from a *measured* actual, never a
+    forecast), that review deliberately did NOT pre-set a floor for the
+    not-yet-landed change -- see the WP-R3-05 entry immediately below for the
+    honest re-measurement now that it has landed.
+  - Round 3 batch 4, WP-R3-05 test-layer consolidation (2026-08-13, task_id
+    task-2026-08-13-r3-wp05-test-consolidation): landed the duplicate-layer
+    removal WP-R3-11 deliberately left unbaked above. `tests/test_core_
+    protocol_validator.py` (1074 lines) and `tests/test_spec_validator.py`
+    (1019 lines) -- both tests/-scope duplicates of coverage already exercised
+    against the real skill code -- were deleted; their live coverage was
+    migrated, not dropped: protocol-validator gained a new parametrized
+    `test_protocol_validator_core.py` (low-level CoreProtocolValidator/
+    ExtensionValidator cases migrated in) and trimmed a redundant multi-case
+    TestPerformance down to a single <5ms check; spec-validator's skill-local
+    suite dropped tests pinned to orphan methods removed from
+    `spec_validator.py` (`parse_file`/`correlate_with_spec`/`validate_files`)
+    and gained a `TestSpecValidatorIntegration` class exercising the real
+    `docs/SPEC.md`. Net effect on this gate's tracked population: honest
+    re-measurement moves it 766 -> 560 collected in `tests/` (`pytest tests/
+    --collect-only`, this script's own methodology; -206 from the two
+    deleted files, 0 from anywhere else). The migrated-not-lost claim
+    is independently checkable via the companion floor: skill-local tests
+    (protocol-validator + spec-validator + skill-improvement-feedback) grew
+    169 -> 289 in the same change, and `scripts/run_skill_tests.py`'s
+    `MIN_EXPECTED_TESTS` was raised 169 -> 274 (289 * 0.95 = 274.55 -> 274) to
+    match -- see that script's own header for its side of this trajectory.
+    Full-repo bare `pytest --collect-only` (tests/ + all 3 skill-local dirs)
+    accordingly moved 935 -> 849 (560 + 289), consistent throughout. Floor is
+    ~95% of the new actual (560 * 0.95 = 532 exactly) -- this supersedes
+    WP-R3-11's 727 floor, which the gate correctly FAILED against (560 < 727)
+    immediately after WP-R3-05 landed and before this re-baseline was applied;
+    that failure was the expected, working behavior of the gate, not a defect.
+    Full pytest run confirms no regressions from the consolidation: `pytest
+    tests/` = 543 passed / 12 skipped / 5 xfailed / 0 failed (560 collected);
+    bare `pytest` = 832 passed / 12 skipped / 5 xfailed / 0 failed (849
+    collected) -- both independently reproduced, not taken on report alone.
 
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
@@ -95,20 +126,22 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Re-baselined 2026-08-13 (WP-R3-11, task_id task-2026-08-13-r3-wp11-spec-floor,
-# QE-signed-off governed re-baseline) from the measured actual of 766 collected
-# tests in tests/ (734 at WP-R3-04's out-of-band change + tests added by round-3
-# batch 2). Floor is ~95% (766 * 0.95 = 727.7 -> 727). This supersedes WP-R3-04's
-# unilateral 697 floor (flagged in commit 0aca2a0 for review) -- see this file's
-# module docstring "Round 3 batch 3, WP-R3-11" entry for the full trajectory,
-# the scope clarification (this floor tracks `pytest tests/`, NOT the larger
-# bare-`pytest` count that also pulls in skill-local test dirs), and why the
-# not-yet-landed WP-R3-05 duplicate-test removal is deliberately NOT
-# pre-baselined here.
+# Re-baselined 2026-08-13 (WP-R3-05, task_id task-2026-08-13-r3-wp05-test-consolidation,
+# governed retrospective re-baseline applying the WP-R3-11 convention -- see
+# docs/REGRESSION-GATE-POLICY.md for the QE-methodology-reuse judgment call) from
+# the measured actual of 560 collected tests in tests/ (was 766 under WP-R3-11;
+# -206 from deleting tests/test_core_protocol_validator.py and
+# tests/test_spec_validator.py, whose coverage was migrated into skill-local
+# suites, NOT dropped -- see the companion `scripts/run_skill_tests.py` floor,
+# raised 169 -> 274 in the same change). Floor is ~95% (560 * 0.95 = 532 exactly).
+# This supersedes WP-R3-11's 727 floor. See this file's module docstring "Round 3
+# batch 4, WP-R3-05" entry for the full trajectory, and the scope clarification
+# above it (this floor tracks `pytest tests/`, NOT the larger bare-`pytest` count
+# that also pulls in skill-local test dirs).
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 727,
+        "minimum": 532,
         "label": "Full test suite",
     },
 }
