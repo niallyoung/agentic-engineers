@@ -2,15 +2,15 @@
 name: SDLC Workflow with Enforcement Points
 description: Complete lifecycle from user request to production, with enforcement gates at each stage
 version: 1.0
-updated: 2026-05-16
+updated: 2026-08-13
 status: Production Ready
 ---
 
 # SDLC Workflow with Enforcement Points
 
-**Last Updated:** 2026-05-16  
-**Scope:** Complete SDLC lifecycle from user request through production deployment  
-**Status:** Production Ready — All enforcement points implemented and tested
+**Scope:** Complete SDLC lifecycle from user request through production deployment
+**Status:** Production Ready — all enforcement gates implemented and tested
+**Roster, DELEGATE/HANDBACK schema, routing rules, role definitions:** see `src/AGENTS.md` — not repeated here.
 
 ---
 
@@ -26,785 +26,166 @@ The agentic-engineers SDLC enforces quality and compliance at **7 critical gates
 6. **Pre-Commit Gate** — SPEC compliance, secrets, format
 7. **Pre-Push Gate** — Final quality verification
 
-Each gate has clear decision rules, what happens on failure, and escalation paths.
+Each gate has clear decision rules, a defined failure path, and an escalation path (escalation
+targets follow each role's "Escalates to" in `src/AGENTS.md` Role Definitions).
 
 ---
 
-## Complete SDLC Lifecycle
+## Gate Flow
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         USER REQUEST (GATE 1)                               │
-│                                                                             │
-│  Input: Task description, scope, context                                   │
-│  Validation: Is scope clear? Is it bounded? Is success measurable?         │
-│  Decision: ACCEPT → Orchestrator | REJECT → Ask for clarification         │
-│  Output: Task ID (YYYY-MM-DD-kebab-case), DELEGATE accepted                     │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      ORCHESTRATOR GATE (GATE 2)                             │
-│                                                                             │
-│  Input: Task from the user or a re-delegation                                                    │
-│  Process:                                                                   │
-│    1. Apply AGENTS.md routing decision tree                                │
-│    2. Select appropriate agent (Engineer, Senior Engineer, etc.)           │
-│    3. Determine effort level (low, medium, high, max)                      │
-│    4. Assign model (Haiku, Sonnet, Opus)                                   │
-│  Decision: Route to {Agent} | Escalate if unclear                          │
-│  Output: DELEGATE block with routing decision                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       DELEGATE GATE (GATE 3)                                │
-│                                                                             │
-│  Input: DELEGATE block from Orchestrator                                   │
-│  Validation:                                                                │
-│    ✓ All required fields present (task_id, role, scope, plan, etc.)       │
-│    ✓ YAML syntax valid                                                     │
-│    ✓ Task ID format correct (YYYY-MM-DD-kebab-case)                       │
-│    ✓ Role is valid (Engineer, Senior Engineer, etc.)                       │
-│    ✓ Effort level is valid (low, medium, high, max)                        │
-│    ✓ Plan is concrete and numbered (required for Engineer)                 │
-│    ✓ Success criteria are testable                                         │
-│    ✓ No secrets in DELEGATE block                                          │
-│  Decision: ACCEPT → Agent Work | REJECT → Orchestrator fixes              │
-│  Output: DELEGATE passed as sub-agent spawn prompt (session transcript is  │
-│          the audit record)                                                  │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      AGENT EXECUTION (GATE 4)                               │
-│                                                                             │
-│  Input: DELEGATE block                                                     │
-│  Execution:                                                                 │
-│    1. Read DELEGATE and understand scope                                   │
-│    2. Execute plan step-by-step                                            │
-│    3. Run tests/verification                                               │
-│    4. Measure quality metrics                                              │
-│    5. Capture token usage                                                  │
-│  Quality Baseline:                                                          │
-│    ✓ All tests passing                                                     │
-│    ✓ Code coverage maintained (≥85% for critical code)                     │
-│    ✓ No regressions                                                        │
-│    ✓ Confidence score ≥80%                                                 │
-│  Decision: COMPLETE → HANDBACK | BLOCKED → Escalate | FAILED → Rework    │
-│  Output: HANDBACK block with results and metrics                           │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        HANDBACK GATE (GATE 5)                               │
-│                                                                             │
-│  Input: HANDBACK block from Agent                                          │
-│  Validation:                                                                │
-│    ✓ All required fields present (task_id, status, deliverables, etc.)    │
-│    ✓ YAML syntax valid                                                     │
-│    ✓ Status is valid (complete, failed, partial, blocked)                  │
-│    ✓ Deliverables match DELEGATE scope                                     │
-│    ✓ Tests documented with pass/fail counts                                │
-│    ✓ Quality score is honest (0.0-1.0)                                     │
-│    ✓ Token usage documented                                                │
-│    ✓ No scope creep (work stayed in DELEGATE bounds)                       │
-│  Quality Scoring:                                                           │
-│    Format (40%): YAML valid, required fields present                       │
-│    Content (35%): Deliverables match scope, tests passing                  │
-│    Quality (25%): Code quality, coverage, confidence                       │
-│    Composite: 0.0-1.0 score                                               │
-│  Decision:                                                                  │
-│    0.9-1.0: MERGE (immediate)                                              │
-│    0.8-0.89: MERGE (with notes)                                            │
-│    0.7-0.79: LEAD REVIEW (manual verification)                             │
-│    0.6-0.69: REWORK (max 2 retries, then escalate)                        │
-│    <0.6:   ESCALATE (to Principal Engineer)                                │
-│  Output: HANDBACK returned in-context as the spawn call's result           │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                   PRE-COMMIT GATE (GATE 6)                                  │
-│                                                                             │
-│  Trigger: git commit                                                        │
-│  Validation:                                                                │
-│    ✓ SPEC.md compliance (no external scripts, cron files, etc.)            │
-│    ✓ Secret detection (API keys, passwords, tokens)                        │
-│    ✓ YAML/JSON syntax valid                                                │
-│    ✓ File format (line endings, trailing whitespace)                       │
-│    ✓ Code style (flake8, shellcheck if available)                          │
-│    ✓ No bypass markers in code                                             │
-│    ✓ DELEGATE/HANDBACK blocks have required fields (if present)            │
-│  Decision:                                                                  │
-│    ✓ All checks pass → Commit created                                      │
-│    ✗ Errors found → BLOCK commit, show errors                              │
-│    ⚠ Warnings only → Proceed (non-blocking)                                │
-│  Bypass: SKIP_HOOKS=1 git commit (requires documented reason)              │
-│  Output: Commit created and ready to push                                  │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    PRE-PUSH GATE (GATE 7)                                   │
-│                                                                             │
-│  Trigger: git push                                                          │
-│  Validation:                                                                │
-│    ✓ Agent YAML frontmatter valid (src/agents/*.md)                        │
-│    ✓ Workflow files valid (.github/workflows/*.yml)                        │
-│    ✓ Documentation consistency (SPEC.md, AGENTS.md, README.md)             │
-│    ✓ DELEGATE/HANDBACK protocol compliance (session transcript)             │
-│    ✓ Test suite passing (pytest if available)                              │
-│    ✓ SPEC compliance (no external scripts, cron files)                     │
-│  Decision:                                                                  │
-│    ✓ All checks pass → Push proceeds                                       │
-│    ✗ Errors found → BLOCK push, show errors                                │
-│    ⚠ Warnings only → Proceed (non-blocking)                                │
-│  Bypass: SKIP_HOOKS=1 git push (requires documented reason)                │
-│  Output: Code pushed to remote, ready for merge                            │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      MERGE TO MAIN (FINAL)                                  │
-│                                                                             │
-│  Requirement: Pull request approved by Lead Engineer or above              │
-│  Quality Engineer review: Complete (quality_score documented)              │
-│  All gates passed: Yes (pre-commit, pre-push)                              │
-│  Tests: All passing                                                        │
-│  CI/CD: Green                                                              │
-│  Decision: MERGE → Code in production                                      │
-│  Output: Metrics recorded, feedback to Model Engineer                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| # | Gate | Trigger | Key Check | Pass → | Fail → |
+|---|------|---------|-----------|--------|--------|
+| 1 | User Request | Task described | Scope bounded, success measurable, context sufficient | Orchestrator | Ask for clarification |
+| 2 | Orchestrator Routing | Gate 1 passed | AGENTS.md routing tree applied; agent/model/effort selected | DELEGATE built | Escalate to human |
+| 3 | DELEGATE Validation | DELEGATE constructed | Required fields present & valid (AGENTS.md DELEGATE Block Format) | Agent spawned | Fix and resubmit |
+| 4 | Agent Execution | Agent spawned | Plan executed, tests run, quality baseline met | HANDBACK returned | `blocked`/`failed` → rework or escalate |
+| 5 | HANDBACK Validation | HANDBACK returned | Composite score (formula below) | Merge / Lead review / Rework / Escalate | — |
+| 6 | Pre-Commit | `git commit` | `.githooks/pre-commit` checks | Commit created | Commit blocked |
+| 7 | Pre-Push | `git push` | `.githooks/pre-push` checks | Push proceeds | Push blocked |
+
+**Merge to main** (final step, not a numbered gate): requires PR approval by Lead Engineer or
+above, a completed Quality Engineer review, Gates 6–7 both passed, and green CI. On merge,
+metrics are recorded and fed to the Model Engineer.
 
 ---
 
-## Gate Details & Decision Trees
+## Gate Details
 
 ### Gate 1: User Request
 
-**Input:** Task description from user
+**Checklist:** scope clear and bounded (not "improve everything") · success criteria measurable
+(not "make it better") · context provided (files, errors, background) · rough effort estimate ·
+no blocking external dependencies.
 
-**Validation Checklist:**
-- [ ] Scope is clear and bounded (not "improve everything")
-- [ ] Success criteria are measurable (not "make it better")
-- [ ] Context is provided (relevant files, errors, background)
-- [ ] Effort estimate is reasonable (not "unknown")
-- [ ] No external dependencies blocking work
-
-**Decision Tree:**
-
-```
-Is scope clear and bounded?
-├─ YES → Is success measurable?
-│        ├─ YES → Is context sufficient?
-│        │        ├─ YES → ACCEPT (proceed to Orchestrator)
-│        │        └─ NO → ASK FOR CONTEXT
-│        └─ NO → ASK FOR MEASURABLE CRITERIA
-└─ NO → ASK FOR SCOPE CLARIFICATION
-```
-
-**What Happens on Failure:**
-- Ask user to clarify scope
-- Request measurable success criteria
-- Provide context template if needed
-- Do NOT proceed to Orchestrator routing until scope is clear
-
-**Output:**
-- Task ID: `YYYY-MM-DD-kebab-case`
-- Task accepted, ready for Orchestrator routing (no separate queue write)
-
----
+**On failure:** ask for scope/criteria/context; do not proceed to Gate 2 until clear.
+**Output:** Task ID (`YYYY-MM-DD-kebab-case`), ready for Orchestrator routing.
 
 ### Gate 2: Orchestrator Routing
 
-**Input:** Task accepted at Gate 1
-
-**Routing Decision Tree (from AGENTS.md):**
-
-```
-Is task security-scoped?
-├─ YES → Route to Security Engineer (Opus 4.7, max effort)
-└─ NO → Is task cross-service architecture (affects >2 repos)?
-        ├─ YES → Route to Principal Engineer (Opus 4.6, high effort)
-        └─ NO → Is task complex coding WITHOUT pre-written plan?
-                ├─ YES → Route to Senior Engineer (Sonnet, high effort)
-                │        [Senior Engineer writes plan first]
-                └─ NO → Is task code review or quality verification?
-                        ├─ YES → Route to Lead Engineer or Quality Engineer (Sonnet)
-                        └─ NO → Is task well-planned, low-medium complexity?
-                                ├─ YES → Route to Engineer (Haiku, high effort)
-                                └─ NO → Escalate to human (unclear scope)
-```
-
-**What Happens on Failure:**
-- If routing is unclear → Escalate to human for clarification
-- If task is blocked → Document blocker and notify requester
-- If effort estimate is wrong → Adjust and re-route
-
-**Output:**
-- DELEGATE block with:
-  - `agent`: {engineer|senior-engineer|lead-engineer|...}
-  - `model`: {claude-haiku-4.5|claude-sonnet-5|claude-opus-5|claude-fable-5}
-  - `effort`: {low|medium|high|max}
-  - `scope`: Clear description of work
-  - `context`: Background information
-  - `plan`: Numbered steps (required for Engineer)
-  - `success_criteria`: Testable acceptance criteria
-  - `tokens_estimate`: Budget estimate
-
----
+Applies the routing decision tree in `src/AGENTS.md` § Delegation Model & Routing Rules — not
+repeated here. **On failure:** unclear routing escalates to a human; a wrong effort estimate is
+adjusted and re-routed. **Output:** a DELEGATE block per the canonical schema in `src/AGENTS.md`.
 
 ### Gate 3: DELEGATE Validation
 
-**Input:** DELEGATE block from Orchestrator
-
-**Validation Checklist:**
-
-```yaml
-handoff_type: DELEGATE              # ✓ Required, must be "DELEGATE"
-task_id: YYYY-MM-DD-kebab-case      # ✓ Required, correct format
-agent: engineer                      # ✓ Required, valid agent
-model: claude-haiku-4.5              # ✓ Required, valid model
-effort: high                         # ✓ Required, valid level
-scope: |                             # ✓ Required, ≥15 words, clear
-  Clear description of work
-context:                             # ✓ Required, relevant background
-  - Key files: path/to/files
-  - Related issues: #123
-plan:                                # ✓ Required for Engineer, numbered
-  1. First step
-  2. Second step
-success_criteria:                    # ✓ Required, testable
-  - All tests passing
-  - Coverage ≥85%
-tokens_estimate: 1500                # ✓ Required, reasonable estimate
-```
-
-**Validation Rules:**
-
-| Field | Rule | Error |
-|-------|------|-------|
-| `handoff_type` | Must be "DELEGATE" | `Invalid handoff_type` |
-| `task_id` | Format: YYYY-MM-DD-kebab-case | `Invalid task_id format` |
-| `agent` | Must be valid agent | `Invalid agent` |
-| `model` | Must be valid model | `Invalid model` |
-| `effort` | Must be low/medium/high/max | `Invalid effort level` |
-| `scope` | ≥15 words, clear | `Scope too vague` |
-| `context` | Relevant background | `Insufficient context` |
-| `plan` | Numbered steps (for Engineer) | `Plan missing or not numbered` |
-| `success_criteria` | Testable, measurable | `Criteria not testable` |
-| `tokens_estimate` | Reasonable for effort | `Token estimate unrealistic` |
-| YAML syntax | Valid YAML | `Invalid YAML syntax` |
-| No secrets | No API keys, passwords | `Secrets detected` |
-
-**What Happens on Failure:**
-- If validation fails → Reject DELEGATE, return to Orchestrator
-- Orchestrator fixes issues and re-submits
-- If issues persist → Escalate to Senior Engineer
-
-**Output:**
-- DELEGATE delivered as the spawn prompt; the session transcript is the durable audit record
-- Task dispatched by direct sub-agent spawn
-
----
+Validates the DELEGATE against the required-fields table in `src/AGENTS.md` § Handover Packet
+Protocol (`task_id`, `handoff_type`, `agent`, `scope` ≥15 words, `plan`, `success_criteria`,
+`context`, valid YAML, no secrets). **On failure:** reject and return to the spawning agent for a
+fix and resubmit; persistent issues escalate to Senior Engineer. **Output:** DELEGATE dispatched
+as the sub-agent spawn prompt — the session transcript is the audit record (no separate queue
+write).
 
 ### Gate 4: Agent Execution
 
-**Input:** DELEGATE block
+**Process:** read & validate the DELEGATE → execute the plan step-by-step → run
+tests/verification → measure quality → capture metrics (tokens, duration, quality, confidence).
 
-**Execution Process:**
+**Quality baseline:** all tests passing · code coverage maintained (≥85% for critical code) · no
+regressions · confidence ≥80%.
 
-```
-1. READ & VALIDATE DELEGATE
-   ├─ Verify all required fields present
-   ├─ Verify scope is clear
-   ├─ Verify plan is concrete (for Engineer)
-   └─ If issues found → Report status: blocked
-
-2. EXECUTE PLAN (step-by-step)
-   ├─ For each step:
-   │  ├─ Perform action
-   │  ├─ Capture result
-   │  ├─ Check: Does this align with success criteria?
-   │  └─ If blocked: Document blocker, continue
-   └─ All steps complete
-
-3. RUN TESTS/VERIFICATION
-   ├─ Execute success criteria checks
-   ├─ Run test suite (make verify or pytest)
-   ├─ Measure code coverage
-   └─ Confirm deliverables complete
-
-4. MEASURE QUALITY
-   ├─ Tests passing: Y/N
-   ├─ Coverage: X%
-   ├─ Confidence: 0.0-1.0
-   ├─ Any shortcuts taken: Y/N
-   └─ Edge cases missed: None/Some/Many
-
-5. CAPTURE METRICS
-   ├─ Tokens used: {actual}
-   ├─ Tokens estimated: {from DELEGATE}
-   ├─ Duration: {minutes}
-   ├─ Quality score: {0.0-1.0}
-   └─ Confidence: {0.0-1.0}
-```
-
-**Quality Baseline:**
-- ✅ All tests passing
-- ✅ Code coverage maintained (≥85% for critical code)
-- ✅ No regressions
-- ✅ Confidence ≥80%
-
-**What Happens on Failure:**
-- If tests fail → Fix and re-run
-- If coverage drops → Add tests
-- If blocked → Report `status: blocked` in HANDBACK
-- If scope creep → Document in HANDBACK notes
-
-**Output:**
-- HANDBACK block with:
-  - `task_id`: Same as DELEGATE
-  - `status`: complete|failed|partial|blocked
-  - `deliverables`: List of files changed
-  - `tests`: Test results with pass/fail counts
-  - `metrics`: Canonical block with quality/tokens/cost/duration_seconds
-  - `confidence`: 0.0-1.0
-  - `notes`: What went well, what was hard
-
----
+**On failure:** failing tests are fixed and re-run; a dropped coverage gets new tests; a blocked
+agent reports `status: blocked`; scope creep is documented in the HANDBACK.
+**Output:** a HANDBACK block per the canonical schema in `src/AGENTS.md`.
 
 ### Gate 5: HANDBACK Validation
 
-**Input:** HANDBACK block from Agent
+Validates the HANDBACK against `src/AGENTS.md`'s required fields, then scores it:
 
-**Validation Checklist:**
+**Quality scoring formula:**
+- Format (40%) — YAML valid, required fields present
+- Content (35%) — deliverables match scope, tests passing
+- Quality (25%) — code quality, coverage, confidence
+- Composite = (Format × 0.4) + (Content × 0.35) + (Quality × 0.25)
 
-```yaml
-handoff_type: HANDBACK               # ✓ Required, must be "HANDBACK"
-task_id: YYYY-MM-DD-kebab-case       # ✓ Required, matches DELEGATE
-status: success                      # ✓ Required, valid status
-output: "Summary of work completed"  # ✓ Required
-metrics:                             # ✓ Required, canonical block
-  quality: 0.95
-  tokens: 1200
-  cost: 0.04
-  duration_seconds: 1080
-confidence: 0.95                     # ✓ Required, 0.0-1.0
-deliverables:                        # Optional
-  - Modified: src/file.py
-  - Added: tests/test_file.py
-```
+**Routing by score:**
 
-**Quality Scoring Formula:**
-- **Format (40%):** YAML valid, required fields present
-- **Content (35%):** Deliverables match scope, tests passing
-- **Quality (25%):** Code quality, coverage, confidence
-- **Composite:** (Format × 0.4) + (Content × 0.35) + (Quality × 0.25)
-
-**Routing by Score:**
-
-| Score | Decision | Next Step |
+| Score | Decision | Next step |
 |-------|----------|-----------|
-| 0.9-1.0 | MERGE | Move to done/, ready for production |
-| 0.8-0.89 | MERGE | Move to done/, with notes |
-| 0.7-0.79 | LEAD REVIEW | Manual verification by Lead Engineer |
-| 0.6-0.69 | REWORK | Create new DELEGATE with feedback (max 2 retries) |
-| <0.6 | ESCALATE | Principal Engineer reviews, decides next step |
+| 0.9–1.0 | MERGE | Ready for production |
+| 0.8–0.89 | MERGE | With notes |
+| 0.7–0.79 | LEAD REVIEW | Manual verification by Lead Engineer |
+| 0.6–0.69 | REWORK | New DELEGATE with feedback (max 2 retries, then escalate) |
+| <0.6 | ESCALATE | Principal Engineer reviews |
 
-**What Happens on Failure:**
-- If validation fails → Reject HANDBACK, return to Agent
-- Agent fixes issues and re-submits
-- If rework needed → Create new DELEGATE with feedback
-- If escalation needed → Route to Principal Engineer
-
-**Output:**
-- HANDBACK returned in-context as the spawn call's result
-- Metrics recorded for Model Engineer
-- Task marked done after QE review
-
----
-
-### Gate 6: Pre-Commit (SPEC & Quality)
-
-**Trigger:** `git commit`
-
-**Validation Checklist:**
-
-```
-SPEC.md Compliance
-├─ No .py/.sh in orchestration/scripts/
-├─ No .cron in orchestration/config/
-├─ No subprocess/os.system/exec in agent code
-└─ No external scripts (except renderer/)
-
-Secret Detection
-├─ No API keys (api_key, secret_key, private_key)
-├─ No AWS keys (AKIA[0-9A-Z]{16})
-├─ No GitHub tokens (ghp_*)
-├─ No private key headers (BEGIN RSA PRIVATE KEY)
-├─ No hardcoded database credentials
-└─ No hardcoded HTTP authentication
-
-YAML/JSON Validity
-├─ All .yaml/.yml files parse as valid YAML
-├─ All .json/.jsonc files parse as valid JSON
-└─ JSONC comments properly stripped
-
-File Format
-├─ No DOS line endings (CRLF)
-└─ No trailing whitespace
-
-Code Style (warnings only)
-├─ flake8 checks (if installed)
-└─ shellcheck checks (if installed)
-
-Security Integration
-├─ No hardcoded database URLs
-├─ No hardcoded API endpoints with auth
-├─ No dangerous shell patterns (eval, set +e)
-└─ No bypass markers in code
-
-DELEGATE/HANDBACK Validation (if present)
-├─ YAML syntax valid
-├─ Required fields present
-├─ Task ID format correct
-└─ Status values valid
-```
-
-**Decision:**
-- ✓ All checks pass → Commit created
-- ✗ Errors found → BLOCK commit
-- ⚠ Warnings only → Proceed (non-blocking)
-
-**Bypass:**
-```bash
-SKIP_HOOKS=1 git commit -m "emergency: reason"
-BYPASS_HOOK_VALIDATION=true git commit -m "message"
-```
-
-**Output:**
-- Commit created and ready to push
-
----
-
-### Gate 7: Pre-Push (Final Quality Gate)
-
-**Trigger:** `git push`
-
-**Validation Checklist:**
-
-```
-Protected Branch Detection
-└─ Warn if pushing to main/master
-
-Agent YAML Frontmatter (src/agents/*.md)
-├─ Valid YAML syntax
-├─ Required fields: name, role, model, effort
-└─ All agent definitions valid
-
-Workflow Files (.github/workflows/*.yml)
-├─ Valid YAML syntax
-├─ Required fields: name, on (trigger)
-└─ All workflows valid
-
-Documentation Consistency
-├─ docs/SPEC.md exists with version field
-├─ docs/AGENTS.md exists with top-level heading
-└─ README.md exists
-
-DELEGATE/HANDBACK Protocol Compliance
-├─ DELEGATE/HANDBACK blocks use canonical formats (session transcript audit)
-├─ All required fields present and valid
-├─ Task IDs properly formatted
-└─ No protocol violations
-
-Test Suite (warnings only)
-├─ pytest tests/ passes (if pytest available)
-└─ All tests passing
-
-SPEC Compliance
-├─ No external scripts in orchestration/scripts/
-├─ No cron files in orchestration/config/
-└─ Makefile doesn't invoke external scripts
-```
-
-**Decision:**
-- ✓ All checks pass → Push proceeds
-- ✗ Errors found → BLOCK push
-- ⚠ Warnings only → Proceed (non-blocking)
-
-**Bypass:**
-```bash
-SKIP_HOOKS=1 git push
-```
-
-**Output:**
-- Code pushed to remote, ready for merge
-
----
-
-## Role Responsibilities at Each Stage
-
-### User
-
-**Gate 1: User Request**
-- [ ] Provide clear, bounded scope
-- [ ] Define measurable success criteria
-- [ ] Provide relevant context (files, errors, background)
-- [ ] Estimate effort level (rough)
-
-### Orchestrator
-
-**Gate 2: Orchestrator Routing**
-- [ ] Apply AGENTS.md decision tree
-- [ ] Select appropriate agent
-- [ ] Determine effort level
-- [ ] Create DELEGATE block with all required fields
-
-**Gate 5: HANDBACK Validation**
-- [ ] Score HANDBACK using formula
-- [ ] Route based on score (merge/review/rework/escalate)
-- [ ] Move to done/ or create rework DELEGATE
-- [ ] Record metrics for Model Engineer
-
-### Agent (Engineer, Senior Engineer, etc.)
-
-**Gate 4: Agent Execution**
-- [ ] Read and validate DELEGATE
-- [ ] Execute plan step-by-step
-- [ ] Run tests and verification
-- [ ] Measure quality metrics
-- [ ] Create HANDBACK with honest quality score
-- [ ] Report blockers if encountered
-
-### Quality Engineer
-
-**Gate 5: HANDBACK Validation**
-- [ ] Validate HANDBACK structure
-- [ ] Verify deliverables match scope
-- [ ] Check test results
-- [ ] Assess code quality
-- [ ] Score using formula
-- [ ] Provide model assessment feedback
-
-### Lead Engineer
-
-**Gate 5: HANDBACK Validation (0.7-0.79 scores)**
-- [ ] Manual code review
-- [ ] Verify quality baseline met
-- [ ] Approve/reject/conditional approve
-- [ ] Document decision
-
-### Developer
-
-**Gate 6: Pre-Commit**
-- [ ] Ensure SPEC compliance
-- [ ] No secrets in code
-- [ ] Valid YAML/JSON
-- [ ] Descriptive commit message
-
-**Gate 7: Pre-Push**
-- [ ] All tests passing
-- [ ] Documentation updated
-- [ ] DELEGATE/HANDBACK valid
-- [ ] Ready for merge
-
----
-
-## Metrics Collected at Each Stage
-
-### Gate 1: User Request
-- `request_id`: Task ID
-- `request_timestamp`: When submitted
-- `scope_clarity`: Clear/Unclear
-- `success_criteria_measurable`: Yes/No
-
-### Gate 2: Orchestrator Routing
-- `routing_decision`: Which agent selected
-- `effort_level`: low/medium/high/max
-- `model_assigned`: Which model
-- `tokens_estimate`: Budget estimate
-
-### Gate 4: Agent Execution
-- `tokens_used`: Actual token count
-- `duration_minutes`: Wall clock time
-- `tests_passed`: Count
-- `tests_failed`: Count
-- `code_coverage`: Percentage
-- `quality`: 0.0-1.0
-- `confidence`: 0.0-1.0
-
-### Gate 5: HANDBACK Validation
-- `quality_composite`: 0.0-1.0
-- `routing_decision`: merge/review/rework/escalate
-- `lead_review_required`: Yes/No
-- `rework_count`: 0/1/2/escalate
+**On failure:** an invalid HANDBACK is rejected back to the agent for a fix and resubmit.
+**Output:** HANDBACK returned in-context as the spawn call's result; metrics recorded for Model
+Engineer.
 
 ### Gate 6: Pre-Commit
-- `commit_timestamp`: When committed
-- `files_changed`: Count
-- `spec_violations`: Count
-- `secrets_detected`: Count
-- `yaml_errors`: Count
+
+**Trigger:** `git commit`. Enforced by `.githooks/pre-commit` (staged files only, fast):
+
+1. Syntax validation — Python `py_compile`, `bash -n`, optional shellcheck
+2. Secrets detection — API keys, AWS keys, literal-valued sensitive env vars
+3. File permissions — no executable bits on `.md`/`.yaml`/`.txt`/`.json`/`.jsonc`
+
+Plus: SPEC constraints (no external scripts/cron in `orchestration/`), agent frontmatter
+consistency (model/effort match `src/AGENTS.md`), YAML/JSON well-formedness, `opencode.jsonc`
+schema validation, bypass-marker detection (warning only), source file integrity (no orphaned
+bytecode, no missing test sources), LOCKED model naming compliance, and DELEGATE/HANDBACK
+protocol validation.
+
+**Decision:** errors block the commit; warnings are non-blocking.
+**Bypass (emergency only, must be documented):** `SKIP_HOOKS=1 git commit` (skips everything) or
+`BYPASS_HOOK_VALIDATION=true git commit` (skips only the frontmatter/opencode/DELEGATE checks).
 
 ### Gate 7: Pre-Push
-- `push_timestamp`: When pushed
-- `tests_passing`: Yes/No
-- `documentation_valid`: Yes/No
-- `protocol_compliant`: Yes/No
+
+**Trigger:** `git push`. Enforced by `.githooks/pre-push`: warns on push to `main`/`master`;
+validates agent YAML frontmatter (`src/agents/*.md`) and workflow YAML
+(`.github/workflows/*.yml`); checks documentation presence (`SPEC.md`, `AGENTS.md`,
+`README.md`); checks SPEC architectural compliance; verifies `.agents_verification_sha`
+integrity against `src/AGENTS.md`; and guards against embedded credentials in `~/.gitconfig`.
+
+Deliberately does **not** re-run the full test suite or a render pass — `ci.yml` already does
+both, as the real blocking gate, within minutes of the push.
+
+**Decision:** errors block the push; warnings are non-blocking.
+**Bypass (emergency only, must be documented):** `SKIP_HOOKS=1 git push`.
 
 ---
 
-## Escalation Paths
+## Role Responsibilities by Gate
 
-### From Gate 1 (User Request)
-- **Unclear scope** → Ask user for clarification
-- **Unmeasurable criteria** → Request measurable criteria
-- **Insufficient context** → Provide template, ask for details
+Condensed pointer table — full duties, boundaries, and escalation targets are in `src/AGENTS.md`
+§ Role Definitions.
 
-### From Gate 2 (Orchestrator Routing)
-- **Unclear routing** → Escalate to human
-- **Complex task** → Route to Senior Engineer first (for planning)
-- **Security task** → Route to Security Engineer
-
-### From Gate 3 (DELEGATE Validation)
-- **Invalid DELEGATE** → Return to Orchestrator, fix and resubmit
-- **Persistent issues** → Escalate to Senior Engineer
-
-### From Gate 4 (Agent Execution)
-- **Blocked task** → Report `status: blocked` in HANDBACK
-- **Blocked task** → Orchestrator escalates to Senior Engineer
-- **Failed task** → Orchestrator creates rework DELEGATE
-
-### From Gate 5 (HANDBACK Validation)
-- **Score 0.7-0.79** → Lead Engineer manual review
-- **Score 0.6-0.69** → Create rework DELEGATE (max 2 retries)
-- **Score <0.6** → Escalate to Principal Engineer
-- **Persistent failures** → Escalate to Principal Engineer
-
-### From Gate 6 (Pre-Commit)
-- **SPEC violation** → Fix and re-commit
-- **Secrets detected** → Remove and re-commit
-- **Emergency** → Use bypass with documentation
-
-### From Gate 7 (Pre-Push)
-- **Tests failing** → Fix tests and re-push
-- **Documentation missing** → Add documentation and re-push
-- **Protocol violation** → Fix DELEGATE/HANDBACK and re-push
-- **Emergency** → Use bypass with documentation
+| Gate(s) | Role | Responsibility here |
+|---|---|---|
+| 1 | User | Provide bounded scope, measurable criteria, context |
+| 2, 5 | Orchestrator | Apply routing tree; score and route each HANDBACK; re-delegate on rework/escalate |
+| 4 | Agent (Engineer, Senior Engineer, etc.) | Execute the plan, run tests, self-score honestly, report blockers |
+| 5 | Quality Engineer | Validate HANDBACK, verify deliverables against criteria, score, feed Model Engineer |
+| 5 (0.7–0.79) | Lead Engineer | Manual review; approve, conditionally approve, or reject |
+| 6, 7 | Developer | Keep commits SPEC/secret/format clean; keep pushes tested, documented, protocol-compliant |
 
 ---
 
-## Decision Trees by Gate
+## Metrics Collected
 
-### Gate 1: Should We Accept This Request?
-
-```
-START
-  │
-  ├─ Is scope clear and bounded?
-  │  ├─ NO → ASK: "Please clarify scope"
-  │  └─ YES ↓
-  │
-  ├─ Are success criteria measurable?
-  │  ├─ NO → ASK: "Define measurable success criteria"
-  │  └─ YES ↓
-  │
-  ├─ Is context sufficient?
-  │  ├─ NO → ASK: "Provide relevant context"
-  │  └─ YES ↓
-  │
-  └─ ACCEPT: Proceed to Orchestrator
-     └─ Output: Task ID, DELEGATE accepted
-```
-
-### Gate 2: Which Agent Should Handle This?
-
-```
-START
-  │
-  ├─ Is task security-scoped?
-  │  ├─ YES → Route to Security Engineer (Opus 4.7, max)
-  │  └─ NO ↓
-  │
-  ├─ Does task affect >2 repos (cross-service)?
-  │  ├─ YES → Route to Principal Engineer (Opus 4.6, high)
-  │  └─ NO ↓
-  │
-  ├─ Is task complex coding WITHOUT pre-written plan?
-  │  ├─ YES → Route to Senior Engineer (Sonnet, high)
-  │  │        [Senior Engineer writes plan first]
-  │  └─ NO ↓
-  │
-  ├─ Is task code review or quality verification?
-  │  ├─ YES → Route to Lead Engineer or QE (Sonnet)
-  │  └─ NO ↓
-  │
-  ├─ Is task well-planned, low-medium complexity?
-  │  ├─ YES → Route to Engineer (Haiku, high)
-  │  └─ NO ↓
-  │
-  └─ Escalate to human (unclear scope)
-```
-
-### Gate 5: What Do We Do With This HANDBACK?
-
-```
-START
-  │
-  ├─ Is HANDBACK valid (YAML, required fields)?
-  │  ├─ NO → REJECT: Return to agent, fix and resubmit
-  │  └─ YES ↓
-  │
-  ├─ Calculate quality score (format + content + quality)
-  │  │
-  │  ├─ Score 0.9-1.0?
-  │  │  ├─ YES → MERGE: Move to done/, ready for production
-  │  │  └─ NO ↓
-  │  │
-  │  ├─ Score 0.8-0.89?
-  │  │  ├─ YES → MERGE: Move to done/, with notes
-  │  │  └─ NO ↓
-  │  │
-  │  ├─ Score 0.7-0.79?
-  │  │  ├─ YES → LEAD REVIEW: Manual verification required
-  │  │  └─ NO ↓
-  │  │
-  │  ├─ Score 0.6-0.69?
-  │  │  ├─ YES → REWORK: Create new DELEGATE with feedback
-  │  │  │        (max 2 retries, then escalate)
-  │  │  └─ NO ↓
-  │  │
-  │  └─ Score <0.6?
-  │     └─ ESCALATE: Principal Engineer reviews
-  │
-  └─ Output: Routing decision, metrics recorded
-```
-
----
-
-## FAQ
-
-**Q: What if a task fails at Gate 3 (DELEGATE validation)?**  
-A: Orchestrator fixes the DELEGATE and resubmits. If issues persist, escalate to Senior Engineer.
-
-**Q: What if an agent gets blocked at Gate 4?**  
-A: Agent reports `status: blocked` in HANDBACK. Orchestrator escalates to Senior Engineer or Lead Engineer for unblocking.
-
-**Q: What if HANDBACK scores 0.7-0.79?**  
-A: Lead Engineer does manual code review. They can approve, conditionally approve, or request rework.
-
-**Q: What if we need to bypass pre-commit hook?**  
-A: Use `SKIP_HOOKS=1 git commit` with documented reason. Document in commit message why bypass was necessary.
-
-**Q: Can we skip the pre-push gate?**  
-A: Only in emergencies with `SKIP_HOOKS=1 git push`. Document reason and create follow-up task to fix root cause.
-
-**Q: What happens if tests fail on pre-push?**  
-A: It's a warning only — push proceeds. But fix tests before merging to main.
-
-**Q: Who can authorize a bypass?**  
-A: Lead Engineer or above. Document authorization in commit message.
+| Gate | Metrics |
+|---|---|
+| 1 | `task_id`, `request_timestamp`, `scope_clarity`, `success_criteria_measurable` |
+| 2 | `routing_decision`, `effort_level`, `model_assigned`, `tokens_estimate` |
+| 4 | `tokens_used`, `duration_minutes`, `tests_passed`/`tests_failed`, `code_coverage`, `quality`, `confidence` |
+| 5 | `quality_composite`, `routing_decision`, `lead_review_required`, `rework_count` |
+| 6 | `commit_timestamp`, `files_changed`, `spec_violations`, `secrets_detected`, `yaml_errors` |
+| 7 | `push_timestamp`, `tests_passing`, `documentation_valid`, `protocol_compliant` |
 
 ---
 
 ## Update Log
 
-- **2026-08-13:** Align with direct-spawn DELEGATE/HANDBACK model: remove artifact file references, update field names (role→agent, estimated_tokens→tokens_estimate), standardize HANDBACK metrics block (quality/tokens/cost/duration_seconds).
-- **2026-05-16:** Initial comprehensive workflow documentation with 7 gates, decision trees, escalation paths, and metrics collection.
+- **2026-08-13:** Structural condensation (810 → 191 lines). Deduplicated against `src/AGENTS.md`
+  (roster, DELEGATE/HANDBACK schema, routing rules, role definitions — replaced with one-line
+  cross-references); collapsed the redundant box-diagram, "Decision Trees by Gate", and
+  "Escalation Paths" sections (each restated content already covered by the Gate Details and
+  Gate Flow table) into a single Gate Flow table; condensed Role Responsibilities and Metrics
+  Collected into compact tables; re-verified the Gate 6/7 checklists against the current
+  `.githooks/pre-commit` and `.githooks/pre-push` (dropped a stale `flake8` reference; the hook
+  never ran it). No gate structure, decision rule, or scoring formula changed.
+- **2026-08-13 (earlier):** Aligned with direct-spawn DELEGATE/HANDBACK model: removed artifact
+  file references, updated field names (role→agent, estimated_tokens→tokens_estimate),
+  standardized the HANDBACK metrics block (quality/tokens/cost/duration_seconds).
+- **2026-05-16:** Initial comprehensive workflow documentation with 7 gates, decision trees,
+  escalation paths, and metrics collection.
