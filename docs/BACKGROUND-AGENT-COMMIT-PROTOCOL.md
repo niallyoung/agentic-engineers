@@ -344,4 +344,6 @@ echo "✅ Ready to report HANDBACK with commit_sha=$COMMIT_SHA"
 - `.githooks/pre-commit` — Pre-commit hook validates source integrity
 - `docs/CONTRIBUTING.md` — General contribution guidelines
 - `tests/conftest.py` — Pytest fixtures (includes test source audit)
-- `.github/workflows/validate-sources.yml` — CI/CD source integrity checks
+- `.github/workflows/ci.yml` — CI/CD source integrity checks (orphaned bytecode
+  gate; folded in from the former `validate-sources.yml` in the 2026-08-13
+  infra consolidation)

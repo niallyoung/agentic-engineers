@@ -455,7 +455,7 @@ git commit --amend
 
 ---
 
-## CI/CD Requirements (Phase 5.1+)
+## CI/CD Requirements
 
 All contributions pass through a multi-gate CI pipeline defined in
 `.github/workflows/ci.yml`. This section documents each gate, what it checks,
@@ -463,35 +463,48 @@ and how to satisfy it locally before pushing.
 
 ### Gates Overview
 
-| Gate | Script | Failing Exit | When Added |
-|------|--------|-------------|------------|
-| Credential scan | `scripts/check-gitconfig-no-tokens.sh` | Hard fail | Phase 1 |
-| Lint | `make lint` | Hard fail | Phase 1 |
-| **SKILL.md compliance** | `scripts/validate_skills.py` | Hard fail on errors; warn on warnings | Phase 5.1 |
-| **Circular import detection** | `scripts/detect_circular_imports.py` | Hard fail | Phase 5.1 |
-| **Skill template conformance report** | `scripts/validate_skills.py --json` + `scripts/format_skill_report.py` | Non-failing (audit trail) | Phase 5.1 |
-| Test suite | `make test` | Hard fail | Phase 1 |
-| **Harness regression check** | `renderer/scripts/check_test_regression.py` | Hard fail | SPEC-2026-005 WP-5 |
-| Verify | `make verify` | Hard fail | Phase 1 |
-| Token cost annotation | Inline (reads `data/metrics/`) | Non-failing (audit only) | Phase 5.1 |
+| Gate | Script | Failing Exit |
+|------|--------|-------------|
+| Credential scan | `scripts/check-gitconfig-no-tokens.sh` | Hard fail |
+| Lint | `make lint` | Hard fail |
+| **SKILL.md frontmatter + registry + compliance** | `renderer/validate_skills.py` | Hard fail on errors; warn on warnings |
+| **Skill template conformance report** | `renderer/validate_skills.py --json` + `scripts/format_skill_report.py` | Non-failing (audit trail) |
+| **Orphaned bytecode check** | Inline (folded in from the former `validate-sources.yml`) | Hard fail |
+| Render agents + skills | `make render-*` | Hard fail |
+| Test suite | `make test` | Hard fail |
+| **Harness regression check** | `renderer/scripts/check_test_regression.py` | Hard fail |
+| Verify | `make verify` | Hard fail |
 
-**Removed (2026-08-13, part of the same user-directed queue removal as SPEC-2026-009):**
-the standalone "Protocol compliance" gate (`scripts/check_protocol_compliance.py`, which
-scanned queue YAML files for DELEGATE/HANDBACK schema conformance) and its two test
-files were deleted along with the filesystem queue itself — the gate had nothing left to
-scan once there was no queue directory, and no replacement gate was added in its place.
+**Removed (2026-08-13 infra consolidation):** the standalone circular-import gate
+(`scripts/detect_circular_imports.py` scanned `src/` for `src.*`-style intra-package
+imports, but no code in this repo uses that import style — skills use `sys.path`-based
+imports — so it always scanned 0 modules and could never fail); the token-cost
+annotation step (`scripts/annotate_token_costs.py` read `data/metrics/`, which nothing
+in this repo writes); and the separate `scripts/validate_skills.py`, whose
+ACTIVE_SKILLS compliance-schema checks were merged into `renderer/validate_skills.py`
+so there is a single validator. `validate-sources.yml`'s `verify-test-sources` and
+`check-skill-integrity` jobs were also dropped (the former duplicated `make test`'s own
+collection step; the latter scanned a top-level `skills/` directory that no longer
+exists post-slimdown and was therefore vacuous) — its one substantive job (orphaned
+bytecode) was folded into `ci.yml` above.
 
-### Gate 1: SKILL.md Frontmatter Compliance
+### Gate: SKILL.md Frontmatter, Registry, and Compliance
 
-Every active skill listed in `ACTIVE_SKILLS` inside `scripts/validate_skills.py`
-must have a `SKILL.md` with all required frontmatter fields.
+`renderer/validate_skills.py` runs two passes:
+
+1. **Frontmatter + registry** (every `SKILL.md` under `src/skills/`): required
+   `name`/`description` fields, known `roles`, and two-way completeness against
+   `src/SKILLS.md`.
+2. **ACTIVE_SKILLS compliance audit** (only the skills listed in `ACTIVE_SKILLS`
+   inside `renderer/validate_skills.py`): required frontmatter metadata keys,
+   required directory structure, and presence of a `## Self-Improvement` section.
 
 **Run locally:**
 ```bash
-python scripts/validate_skills.py           # errors cause CI failure
-python scripts/validate_skills.py --strict  # warnings also cause failure (use for Phase 5.2)
-python scripts/validate_skills.py --skill protocol-validator  # check a single skill
-python scripts/validate_skills.py --json    # machine-readable output
+python renderer/validate_skills.py           # errors cause CI failure
+python renderer/validate_skills.py --strict  # warnings also cause failure
+python renderer/validate_skills.py --skill protocol-validator  # audit a single skill
+python renderer/validate_skills.py --json    # ACTIVE_SKILLS compliance audit, machine-readable
 ```
 
 **Required frontmatter fields:**
@@ -526,52 +539,25 @@ src/skills/<skill-name>/
 Use the `skill-creator` skill (or `agent-creator` for agents) to scaffold a
 conformant skill/agent directly — see `src/SKILLS.md` / `src/AGENTS.md`.
 
-### Gate 2: Circular Import Detection
+### Gate: Skill Template Conformance Report (Audit Trail)
 
-Static AST analysis over `src/` detects any circular import chains.
-
-**Run locally:**
-```bash
-python scripts/detect_circular_imports.py
-python scripts/detect_circular_imports.py --verbose  # print full import graph
-python scripts/detect_circular_imports.py --root src/skills  # skills only
-```
-
-If a cycle is detected, restructure the imports to eliminate it (e.g., move
-shared types to a dedicated `_types.py` module that neither importer depends on).
-
-### Gate 3: Skill Template Conformance Report (Audit Trail)
-
-This gate runs `validate_skills.py --json`, pipes it through
-`format_skill_report.py`, and writes the output to the GitHub Actions step summary
-(`.github/workflows/ci.yml`'s "Gate 3: Skill template conformance report" step). It is
-**non-failing** — it exists to create an audit trail of skill health over time. Check it
-in the "Summary" tab of any CI run.
+This gate runs `renderer/validate_skills.py --json`, pipes it through
+`scripts/format_skill_report.py`, and writes the output to the GitHub Actions step
+summary. It is **non-failing** — it exists to create an audit trail of skill health
+over time. Check it in the "Summary" tab of any CI run.
 
 **Run locally:**
 ```bash
-python scripts/validate_skills.py --json | python scripts/format_skill_report.py
+python renderer/validate_skills.py --json | python scripts/format_skill_report.py
 ```
-
-> **Removed (2026-08-13):** the prior "Gate 3: Protocol Compliance" step, which
-> validated DELEGATE/HANDBACK YAML files found under a queue directory against the
-> protocol schema, was deleted along with `scripts/check_protocol_compliance.py`, its
-> two test files, and the filesystem queue itself (see SPEC-2026-009). CI's gate
-> numbering shifted up by one to fill the gap — this is now Gate 3.
 
 ### Harness Regression Check
 
-`.github/workflows/ci.yml`'s "Gate 5: Harness regression check" step runs
+`.github/workflows/ci.yml`'s "Gate 4: Harness regression check" step runs
 `renderer/scripts/check_test_regression.py` after `make render-*` and `make test`,
-enforcing the interim permissive test-count floor from SPEC-2026-005 WP-5. See
+enforcing a minimum collected-test-count floor. See
 [docs/REGRESSION-GATE-POLICY.md](../REGRESSION-GATE-POLICY.md) for the baseline and
 how to update it.
-
-### Token Cost Annotation (Non-Failing)
-
-If `data/metrics/` contains JSON files with token usage data, the CI run
-annotates the step summary with the token cost of that commit. This is non-failing
-and informational only. Phase 5.2 will add a hard cost budget gate.
 
 ---
 
@@ -584,23 +570,24 @@ Before pushing to a feature branch:
 make lint
 
 # 2. Skill compliance (if you touched any skill)
-python scripts/validate_skills.py
+python renderer/validate_skills.py
 
-# 3. Circular imports
-python scripts/detect_circular_imports.py
-
-# 4. Full test suite
+# 3. Full test suite
 make test
 
-# 5. Harness render (if you touched skills or agents)
+# 4. Harness render (if you touched skills or agents)
 make render-copilot render-claude render-opencode render-codex render-specs
 
-# 6. Verify manifest
+# 5. Verify manifest
 make verify
 ```
 
-The pre-push git hook runs the full test suite automatically — do not bypass
-with `SKIP_HOOKS=1` except in documented emergencies.
+The pre-push git hook validates agent/workflow YAML, SPEC/AGENTS/README
+presence, SPEC architectural constraints, and the `.agents_verification_sha`
+integrity hash — it does **not** re-run the full test suite or a render pass
+(both are redundant with CI, which runs them minutes later); run `make test`
+yourself before pushing. Do not bypass hooks with `SKIP_HOOKS=1` except in
+documented emergencies.
 
 ---
 

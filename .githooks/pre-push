@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
 # .githooks/pre-push — SDLC pre-push quality gate
 #
-# Enforces (3 checks):
-#   1. Full test suite: `make test` (all tests must pass)
-#   2. Spec compliance: `make validate-spec` (no SPEC.md drift)
-#   3. No linting errors in committed code
+# Deliberately does NOT re-run the full test suite or a render pass — both
+# duplicate ci.yml, which runs them (as the real, blocking gate) within
+# minutes of every push. This hook stays fast and covers what only makes
+# sense to check locally before the push leaves the machine:
+#   - Main/master push warning
+#   - Agent YAML frontmatter validation (src/agents/*.md)
+#   - Workflow YAML validation (.github/workflows/*.yml)
+#   - Documentation consistency (SPEC.md, AGENTS.md, README.md presence)
+#   - SPEC architectural compliance (no external scripts/cron in
+#     orchestration/ paths; scripts/validate-spec-constraints.py)
+#   - Agent definition verification (.agents_verification_sha integrity)
+#   - Gitconfig credential guard (no embedded tokens)
 #
-# Additional validations:
-#   - Agent YAML validation (agents/*.md frontmatter)
-#   - Documentation consistency (SPEC.md, AGENTS.md, etc.)
-#   - Workflow validation (GitHub Actions YAML)
-#   - Main/master push warnings
-#   - DELEGATE/HANDBACK protocol compliance
-#   - Render pipeline completion
-#   - Agent definition verification
+# 2026-08-13 infra consolidation: removed the DELEGATE/HANDBACK artifact scan
+# (scanned a filesystem-queue path — artifacts/delegates/ — that has never
+# existed since dispatch became direct sub-agent spawn; always a no-op), the
+# render-pipeline step (referenced a Makefile target, render-pi, that no
+# longer exists — always failed and only ever warned), and the full test-
+# suite run (warn-only; could never actually block a push, and cost up to
+# 180s for that). See inline NOTEs at each removal site.
 #
 # Install: git config core.hooksPath .githooks
 # Bypass (emergency only): SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push
@@ -27,6 +34,8 @@ fi
 
 REMOTE="$1"
 URL="$2"
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 ERRORS=0
 WARNINGS=0
@@ -204,102 +213,35 @@ if [ "$DOC_ERRORS" -eq 0 ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. VALIDATE DELEGATE/HANDBACK PROTOCOL COMPLIANCE
+# 5. (removed) VALIDATE DELEGATE/HANDBACK PROTOCOL COMPLIANCE
 # ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "📦 Validating DELEGATE/HANDBACK protocol..."
-
-PROTOCOL_ERRORS=0
-if command -v python3 >/dev/null 2>&1; then
-  # Check artifacts/delegates/ for DELEGATE files
-  if [ -d "artifacts/delegates" ]; then
-    for f in artifacts/delegates/*/*.yaml artifacts/delegates/*/*.yml; do
-      [ -f "$f" ] || continue
-      
-      # Validate YAML syntax
-      if ! python3 -c "import sys,yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
-        fail "Invalid YAML in DELEGATE: $f"
-        PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        continue
-      fi
-      
-      # Check for required DELEGATE fields
-      for field in "handoff_type" "task_id" "role" "model"; do
-        if ! grep -q "^$field:" "$f"; then
-          fail "Missing required field '$field' in DELEGATE: $f"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-      done
-    done
-  fi
-  
-  if [ "$PROTOCOL_ERRORS" -eq 0 ]; then
-    pass "DELEGATE/HANDBACK protocol valid"
-  fi
-fi
+# This step used to scan artifacts/delegates/*/*.yaml — a path from the old
+# filesystem-queue architecture. That directory has never existed in this
+# repo since dispatch became a direct sub-agent spawn (the harness session
+# transcript is the durable audit record instead), so the loop's glob never
+# matched and the step always reported "pass" unconditionally. Removed as a
+# vacuous check (2026-08-13 infra consolidation).
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. GENERATE DIST/ ARTIFACTS (RENDER PIPELINE)
+# 6. (removed) GENERATE DIST/ ARTIFACTS (RENDER PIPELINE)
 # ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔨 Rendering dist/ artifacts..."
-
-RENDER_ERRORS=0
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-
-if command -v make >/dev/null 2>&1; then
-  # Render all harnesses (copilot, claude, opencode, pi, specs)
-  # These are generated artifacts required by tests
-  if make render-copilot render-claude render-opencode render-pi render-specs >/dev/null 2>&1; then
-    pass "Render pipeline complete"
-  else
-    warn "Render pipeline encountered issues — review before pushing"
-    RENDER_ERRORS=$((RENDER_ERRORS + 1))
-  fi
-else
-  warn "make not found — skipping render pipeline"
-fi
+# This step ran `make render-copilot render-claude render-opencode render-pi
+# render-specs` — but no `render-pi` Makefile target has existed for some
+# time, so the command always failed and the step always printed "Render
+# pipeline encountered issues" (a warning, non-blocking). It also fully
+# duplicated ci.yml's own "Render agents and skills" step, which runs
+# minutes later on push. Removed rather than fixed, per the push-time
+# philosophy below: CI is the render gate; pre-push stays fast.
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. RUN TEST SUITE
+# 7. (removed) RUN TEST SUITE
 # ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🧪 Running test suite..."
-
-TEST_ERRORS=0
-# Skip pytest if SKIP_PYTEST is set (for testing the hook itself)
-if [ "${SKIP_PYTEST:-}" != "1" ] && command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
-  # Run pytest with quiet output and timeout
-  # Skip test_git_hooks.py as it can hang during hook execution
-  if timeout 180 pytest tests/ -q --tb=line --ignore=tests/test_git_hooks.py 2>/dev/null; then
-    pass "All tests passed"
-  else
-    PYTEST_EXIT=$?
-    if [ "$PYTEST_EXIT" -eq 124 ]; then
-      warn "Test suite timed out (>180s) — review before pushing"
-    else
-      warn "Some tests failed — review before pushing to shared branches"
-    fi
-    TEST_ERRORS=$((TEST_ERRORS + 1))
-  fi
-elif [ -d "tests" ]; then
-  warn "pytest not found or skipped — skipping test execution"
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 6b. (removed) RUN CONCURRENT TESTS (race condition guard)
-# ─────────────────────────────────────────────────────────────────────────────
-#
-# This step used to run TestConcurrentInvocations::test_concurrent_invocations_independent_files,
-# which guarded a TOCTOU race between invoke_agent.py's subprocess HANDBACK
-# file poller and the writer thread. That subprocess/file-poll mechanism
-# (invoke_agent.py, AgentInvoker) has been removed as part of the move to
-# direct sub-agent spawning — the HANDBACK is now returned directly as the
-# Agent/Task tool call result, in-context, with no separate file poller to
-# race against. There is no surviving mechanism for this check to guard, so
-# the step has been removed rather than pointed at a deleted test file.
-#
+# This step ran the full `pytest tests/` suite (up to 180s) at push time, but
+# TEST_ERRORS was never added to $ERRORS — a failing suite could only ever
+# warn, never block the push. That combination (CI-length runtime, zero
+# gating power) is pure cost with no benefit; ci.yml's "Test" step is the
+# real, blocking gate and runs within minutes of every push. Removed
+# (2026-08-13 infra consolidation) — run `make test` yourself before pushing.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. VALIDATE SPEC COMPLIANCE (No external scripts except renderer/)

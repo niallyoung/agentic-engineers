@@ -13,18 +13,23 @@ ran permissive (floor 0) for the duration. The three per-harness baselines
 directories covered src/harnesses/ modules with zero production callers and
 were deleted as part of the slimdown.
 
-WP-5 re-baselines this gate from the measured post-deletion actual: a plain
-`python3 -m pytest tests/ --collect-only -q` on the fully-slimmed tree (8
-skills, 8 agents, 4 harnesses — no pi) collected 940 tests. The floor below
-is ~95% of that actual, giving headroom for small legitimate future removals
-without re-permitting a silent mass regression.
-
 Prior baselines (from harness-compatibility-baseline.md, 2026-06-14, long
 retired — kept here for historical reference only):
   - OpenCode harness tests:    94  (tests/harnesses/opencode/)   [removed]
   - Claude Code harness tests: 103 (tests/harnesses/claude_code/) [removed]
   - Copilot CLI harness tests:  71 (tests/harnesses/copilot-cli/) [removed]
   - Full test suite (pre-slimdown): 4925 (total passing, excluding skipped/xfailed)
+
+Re-baseline history (each ~95% of the measured actual at that point):
+  - WP-5 (2026-08-12): 940 collected -> floor 893
+  - Queue-layer removal, SPEC-2026-009 (2026-08-13): 866 collected -> floor 822
+  - Infra reduction, round 2 (2026-08-13): scripts/detect_circular_imports.py,
+    scripts/annotate_token_costs.py, scripts/validate_skills.py (merged into
+    renderer/validate_skills.py), and run_pytest.sh were deleted as dead/
+    vacuous infra (no test files covered them, so collected count did not
+    drop from their removal); 8 new tests were added covering the merged
+    renderer/validate_skills.py compliance-audit logic. Measured actual: 874
+    collected -> floor 830 (874 * 0.95 = 830.3).
 
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
@@ -35,14 +40,12 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Re-baselined in WP-5 (2026-08-12) from the measured post-slimdown actual of
-# 940 collected tests (floor 893), then again on 2026-08-13 after the
-# user-directed queue-layer removal (SPEC-2026-009) deleted the queue test
-# suites: measured actual 866 collected; floor is ~95% (866 * 0.95 = 822).
+# Re-baselined 2026-08-13 (infra reduction round 2) from the measured actual
+# of 874 collected tests; floor is ~95% (874 * 0.95 = 830.3 -> 830).
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 822,
+        "minimum": 830,
         "label": "Full test suite",
     },
 }
@@ -86,7 +89,7 @@ def count_collected(test_path: str) -> int:
 
 def main() -> int:
     failures = []
-    print("Regression Gate — post-slimdown baseline (SPEC-2026-005, WP-5)")
+    print("Regression Gate — minimum collected-test-count floor")
     print("=" * 60)
 
     for key, spec in BASELINES.items():

@@ -48,7 +48,7 @@ Create a new directory with a `SKILL.md` (YAML frontmatter: `name`,
 `scripts/` + `tests/` pair. Then validate it:
 
 ```bash
-python3 scripts/validate_skills.py     # frontmatter + registry completeness
-make validate-skills                   # same check via the renderer entry point
+python3 renderer/validate_skills.py    # frontmatter + registry completeness + compliance
+make validate-skills                   # same check via the Makefile entry point
 make render-all && make validate-renders   # confirm it renders to every harness
 ```

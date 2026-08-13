@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 # .githooks/pre-commit — SDLC enforcement for agentic-engineers
 #
-# Enforces (6 checks):
-#   1. Syntax validation (Python -m py_compile, shellcheck)
-#   2. Linting (pylint, basic style checks)
-#   3. Type checking (mypy --strict on modified files only)
-#   4. Secrets detection (detect-secrets, API keys, credentials)
-#   5. Contract validation (function signatures match decorators)
-#   6. File permissions (no executable bits on .md/.yaml/.txt)
+# Enforces (staged files only, fast, commit-time-valuable checks):
+#   1. Syntax validation (Python -m py_compile, bash -n, optional shellcheck)
+#   2. Secrets detection (API keys, AWS keys, literal-valued sensitive env vars)
+#   3. File permissions (no executable bits on .md/.yaml/.txt/.json/.jsonc)
 #
 # Additional validations:
-#   - SPEC constraints (no external scripts in protected paths)
-#   - Agent frontmatter consistency
+#   - SPEC constraints (no external scripts/cron in orchestration/ paths)
+#   - Agent frontmatter consistency (model/effort match src/AGENTS.md)
 #   - YAML/JSON well-formedness
-#   - No --no-verify bypass markers in committed files
-#   - Source file integrity (no orphaned bytecode)
-#   - Model naming compliance
+#   - opencode.jsonc schema validation (when staged)
+#   - No --no-verify / SKIP_HOOKS=1 bypass markers in committed code (warning only)
+#   - Source file integrity (no orphaned bytecode, no missing test sources)
+#   - Model naming compliance (LOCKED models)
+#   - DELEGATE/HANDBACK protocol validation
+#
+# 2026-08-13 infra consolidation: dropped the former pylint/mypy/contract-
+# validation checks (all three were optional and warn-only — they could never
+# block a commit, so removing them changes no observable enforcement) and a
+# duplicate secret-detection block. See inline NOTEs at each removal site.
 #
 # Install: git config core.hooksPath .githooks
 # Bypass (emergency only): SKIP_HOOKS=1 git commit
@@ -48,7 +52,7 @@ warn() {
 }
 
 # ════════════════════════════════════════════════════════════════════════════════
-# SECTION: 6 CORE VALIDATION CHECKS
+# SECTION: 3 CORE VALIDATION CHECKS
 # ════════════════════════════════════════════════════════════════════════════════
 
 # ── CHECK 1: SYNTAX VALIDATION (Python, Shell) ─────────────────────────────────
@@ -97,64 +101,17 @@ else
   echo "❌ Syntax validation found $SYNTAX_ERRORS error(s)"
 fi
 
-# ── CHECK 2: LINTING (pylint, basic style) ────────────────────────────────────
+# NOTE (2026-08-13 infra consolidation): the former CHECK 2 (pylint) and
+# CHECK 3 (mypy) sections are removed. Both were optional (skipped entirely
+# when the tool wasn't installed) and warn-only even when they ran — neither
+# `warn()` call ever touched $ERRORS, so they could never block a commit.
+# They added real wall-clock cost (mypy in particular) for zero enforcement
+# value, and duplicated `make lint` conceptually. See docs/CONTRIBUTING for
+# the current lint story.
+
+# ── CHECK 2: SECRETS DETECTION ─────────────────────────────────────────────────
 echo ""
-echo "🔍 CHECK 2: Linting (Python style)..."
-
-LINT_ERRORS=0
-
-# Basic linting with pylint if available (optional, non-blocking)
-if command -v pylint >/dev/null 2>&1 && [ -n "$STAGED_PYTHON" ]; then
-  # Run pylint on staged Python files, but only fail on critical issues
-  # Suppress some warnings that are too strict for this project
-  PYLINT_ARGS="--disable=missing-docstring,line-too-long,too-many-arguments,too-many-locals,broad-except,fixme"
-  
-  for pyfile in $STAGED_PYTHON; do
-    [ -f "$pyfile" ] || continue
-    # Only check if file doesn't contain test_ or skip linting
-    if [[ "$pyfile" != *"test_"* ]]; then
-      pylint_output=$(pylint $PYLINT_ARGS "$pyfile" 2>&1 || true)
-      if echo "$pylint_output" | grep -qE "^(E|F)"; then
-        warn "Pylint issues in: $pyfile (review recommended)"
-      fi
-    fi
-  done
-else
-  # Pylint not available — that's OK, optional check
-  [ -z "$STAGED_PYTHON" ] || warn "pylint not installed — skipping linting (optional)"
-fi
-
-echo "✅ Linting check complete"
-
-# ── CHECK 3: TYPE CHECKING (mypy --strict on modified files) ──────────────────
-echo ""
-echo "🔍 CHECK 3: Type checking (mypy)..."
-
-TYPE_ERRORS=0
-
-# Type checking with mypy if available (optional, non-blocking)
-if command -v mypy >/dev/null 2>&1 && [ -n "$STAGED_PYTHON" ]; then
-  # Run mypy on staged Python files
-  # Limit to actual source files (not tests or vendor code)
-  SOURCE_PYTHON=$(echo "$STAGED_PYTHON" | grep -v -E "test_|__pycache__|\.egg-info" || true)
-  
-  if [ -n "$SOURCE_PYTHON" ]; then
-    # Run mypy (with lenient settings to avoid false positives)
-    mypy_output=$(mypy --ignore-missing-imports --no-error-summary $SOURCE_PYTHON 2>&1 || true)
-    if echo "$mypy_output" | grep -qE "error:"; then
-      warn "Type checking issues found (review recommended)"
-      # Don't treat as hard error for now — mypy can be noisy
-    fi
-  fi
-else
-  [ -z "$STAGED_PYTHON" ] || warn "mypy not installed — skipping type checking (optional)"
-fi
-
-echo "✅ Type checking complete"
-
-# ── CHECK 4: SECRETS DETECTION ─────────────────────────────────────────────────
-echo ""
-echo "🔍 CHECK 4: Secrets detection..."
+echo "🔍 CHECK 2: Secrets detection..."
 
 SECRETS_ERRORS=0
 
@@ -198,42 +155,14 @@ else
   echo "❌ Secrets detection found $SECRETS_ERRORS issue(s)"
 fi
 
-# ── CHECK 5: CONTRACT VALIDATION (function signatures match decorators) ────────
+# NOTE (2026-08-13 infra consolidation): the former CHECK 5 (contract
+# validation) is removed — a narrow grep heuristic for @property/@staticmethod
+# decorator mismatches that was warn-only ($CONTRACT_ERRORS was never added
+# to $ERRORS) and never blocked a commit.
+
+# ── CHECK 3: FILE PERMISSIONS (no executable bits on .md/.yaml/.txt) ──────────
 echo ""
-echo "🔍 CHECK 5: Contract validation..."
-
-CONTRACT_ERRORS=0
-
-# Verify that decorated functions have matching signatures
-# This is a basic check for common patterns (skip if not applicable)
-if [ -n "$STAGED_PYTHON" ]; then
-  for pyfile in $STAGED_PYTHON; do
-    [ -f "$pyfile" ] || continue
-    
-    # Check for decorator mismatches (basic patterns)
-    # e.g., @property on a function with parameters besides self
-    if grep -A2 "@property" "$pyfile" 2>/dev/null | grep -q "def.*([^)]*,"; then
-      warn "Potential decorator mismatch in $pyfile: @property with parameters"
-      CONTRACT_ERRORS=$((CONTRACT_ERRORS + 1))
-    fi
-    
-    # Check for @staticmethod/@classmethod with self/cls parameter issues
-    if grep -A2 "@staticmethod" "$pyfile" 2>/dev/null | grep -q "def.*self"; then
-      warn "Potential decorator mismatch in $pyfile: @staticmethod with self parameter"
-      CONTRACT_ERRORS=$((CONTRACT_ERRORS + 1))
-    fi
-  done
-fi
-
-if [ "$CONTRACT_ERRORS" -eq 0 ]; then
-  echo "✅ Contract validation passed"
-else
-  echo "⚠️  Contract validation found $CONTRACT_ERRORS warning(s) — review recommended"
-fi
-
-# ── CHECK 6: FILE PERMISSIONS (no executable bits on .md/.yaml/.txt) ──────────
-echo ""
-echo "🔍 CHECK 6: File permissions..."
+echo "🔍 CHECK 3: File permissions..."
 
 PERMS_ERRORS=0
 
@@ -369,25 +298,11 @@ if [ -f "$REPO_ROOT_HOOK/src/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]
 fi
 # ─── End: Agent frontmatter consistency check ────────────────────────────────
 
-# ── 2. Secret detection ────────────────────────────────────────────────────────
-# Scan staged files for common secret patterns
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
-
-for f in $STAGED_FILES; do
-  [ -f "$f" ] || continue
-  # Skip binary files
-  if file "$f" 2>/dev/null | grep -qE '(binary|image|executable)'; then continue; fi
-
-  # Check for common secret patterns
-  if git show ":$f" 2>/dev/null | grep -qiE '(api_key|secret_key|private_key|password|token)\s*[:=]\s*["\x27]?[A-Za-z0-9/+]{20,}'; then
-    fail "Possible secret detected in $f — review before committing"
-  fi
-
-  # Check for AWS keys
-  if git show ":$f" 2>/dev/null | grep -qE 'AKIA[0-9A-Z]{16}'; then
-    fail "AWS access key pattern detected in $f"
-  fi
-done
+# NOTE (2026-08-13 infra consolidation): a duplicate secret-detection block
+# used to live here — the exact same api_key/secret_key/AWS-key patterns as
+# CHECK 2 above, re-run against the same staged files. CHECK 2 is a superset
+# (it also catches literal-valued sensitive env vars), so the duplicate is
+# removed rather than merged.
 
 # ── 3. YAML well-formedness ────────────────────────────────────────────────────
 if command -v python3 >/dev/null 2>&1; then
@@ -449,65 +364,11 @@ for f in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|sh|b
   fi
 done
 
-# ─── Section: Version manager — DISABLED (CI/CD-driven versioning) ──────────────
-# 
-# NOTE: version-manager is DISABLED for the following reasons:
-# 
-# 1. VERSIONING STRATEGY: Project uses CI/CD-driven semantic versioning
-#    - Git tags are created automatically by CI/CD pipeline
-#    - Semantic version calculated by mathieudutour/github-tag-action
-#    - GitHub Release created automatically from tags
-#    - See VERSIONING.md for full strategy
-#
-# 2. DESIGN MISMATCH: version-manager was designed for LOCAL versioning workflows
-#    - Designed to maintain [Unreleased] sections on every commit
-#    - Intended for projects where developers manually tag releases
-#    - Contradicts CI/CD-driven approach where tags are auto-created
-#
-# 3. SOLUTION: Keep CHANGELOG clean (only released versions)
-#    - No [Unreleased] sections (git tags are source of truth)
-#    - Developers commit normally without version tracking burden
-#    - CHANGELOG stays simple and consistent
-#
-# The version-manager skill still exists in src/skills/version-manager/ and can be
-# invoked manually if needed in future, but should NOT run automatically on commits.
-#
-# See: CHANGELOG-FIX-PLAN.md for detailed analysis
-#      VERSIONING.md for versioning strategy
-#      src/skills/version-manager/SKILL.md for version-manager design
-
-# if [ ! -f ".git/hooks/skip-version-manager" ] && command -v python3 >/dev/null 2>&1; then
-#   REPO_ROOT_VERSION=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-#   
-#   # Check if update-changelog.py exists
-#   if [ -f "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" ]; then
-#     # Run version-manager to auto-update CHANGELOG
-#     if python3 "$REPO_ROOT_VERSION/skills/version-manager/scripts/update-changelog.py" --auto 2>/dev/null; then
-#       # If CHANGELOG was updated, stage it for commit
-#       if git diff --name-only | grep -q "^CHANGELOG.md$"; then
-#         git add CHANGELOG.md
-#         echo "📋 version-manager: Updated CHANGELOG.md [Unreleased] section"
-#       fi
-#     else
-#       # Script error, but non-blocking (continue with commit)
-#       warn "version-manager: Could not update CHANGELOG (continuing anyway)"
-#     fi
-#     
-#     # Check if substantive code files were modified but CHANGELOG wasn't updated
-#     # (This is advisory, not blocking, to allow flexibility for docs-only or test-only changes)
-#     STAGED_CODE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(src/|skills/|tests/)' | grep -v CHANGELOG || true)
-#     CHANGELOG_UPDATED=$(git diff --cached --name-only | grep -q "^CHANGELOG.md$" && echo "yes" || echo "no")
-#     
-#     if [ -n "$STAGED_CODE_FILES" ] && [ "$CHANGELOG_UPDATED" = "no" ]; then
-#       # Code changed but CHANGELOG not in staged files
-#       warn "⚠️  Code files changed but CHANGELOG not staged. Run:"
-#       warn "    python3 skills/version-manager/scripts/update-changelog.py --verbose"
-#       warn "    git add CHANGELOG.md"
-#       warn "    git commit --amend (or make a new commit)"
-#     fi
-#   fi
-# fi
-# ─── End: Version manager section (DISABLED) ──────────────────────────────────────
+# NOTE: versioning is CI/CD-driven (git tags auto-created by
+# mathieudutour/github-tag-action on merge to main) — there is no
+# version-manager step in this hook. (2026-08-13: removed a ~60-line inert
+# commented-out block that referenced a version-manager skill deleted well
+# before this repo's current skill roster.)
 
 # ─── Section: Orphaned Bytecode Check ──────────────────────────────────────
 # CRITICAL for file loss prevention: Reject commits with orphaned .pyc files

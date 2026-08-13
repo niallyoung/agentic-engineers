@@ -180,11 +180,6 @@ validate_harness() {
     esac
 }
 
-# Get render target
-get_render_target() {
-    echo "render-$1"
-}
-
 # Get install target
 get_install_target() {
     echo "install-$1"
@@ -364,22 +359,15 @@ install_harness() {
         fi
     fi
     
-    # Step 3: Render
-    log_info "Rendering $harness..."
-    local render_target
-    render_target=$(get_render_target "$harness")
-    # NOTE: must group cd+make in a subshell. Writing `if ! cd X && make ...`
-    # binds `!` to `cd` only, so a successful cd short-circuits the `&&` and
-    # `make` is never run nor its exit status checked (render failures would be
-    # silently swallowed and rollback would never fire). Run in a subshell so the
-    # cd does not leak into the next harness iteration either.
-    if ! ( cd "$REPO_ROOT" && make "$render_target" > /dev/null 2>&1 ); then
-        log_error "$harness: Failed to render"
-        rollback_harness_dir "$harness_dir" "$LAST_BACKUP_DIR"
-        return 1
-    fi
-
-    # Step 4: Install
+    # Step 3: Install
+    # NOTE (2026-08-13 infra consolidation): this used to be preceded by a
+    # "Step 3: Render" that ran `make render-$harness` (rendering to dist/
+    # $harness/) before installing. That render pass was pure decoy work —
+    # `make install-$harness` below renders straight to $DEST_ROOT via each
+    # render-*.sh script's own DEST_ROOT argument, and never reads from
+    # dist/. Removed; render failures now surface as install failures below
+    # (install-$harness renders internally, so a render error still aborts
+    # the harness with the same rollback behavior).
     log_info "Installing $harness..."
     local install_target
     install_target=$(get_install_target "$harness")

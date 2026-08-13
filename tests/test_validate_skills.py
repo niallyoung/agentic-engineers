@@ -941,5 +941,140 @@ roles:
     assert len(role_errors) == 0, f"Role {role} should be known"
 
 
+# ============================================================================
+# Compliance audit (merged from the former scripts/validate_skills.py,
+# 2026-08-13 infra consolidation — single validate_skills implementation)
+# ============================================================================
+
+from validate_skills import (
+    ACTIVE_SKILLS,
+    COMPLIANCE_REQUIRED_TOP_LEVEL,
+    COMPLIANCE_REQUIRED_METADATA,
+    SkillComplianceResult,
+    audit_skill_compliance,
+    run_compliance_audit,
+)
+
+
+def _write_compliant_skill(skills_dir: Path, name: str, *, prose_only: bool = False) -> None:
+    skill_dir = skills_dir / name
+    skill_dir.mkdir(parents=True)
+    skill_dir.joinpath("SKILL.md").write_text(f"""---
+name: {name}
+description: A compliant test skill
+license: Proprietary
+compatibility: ">=1.0"
+metadata:
+  author: test
+  version: "1.0.0"
+  category: validation
+  role: engineer
+  model: claude-sonnet-5
+  effort: low
+---
+
+## Self-Improvement
+
+None yet.
+""")
+    if not prose_only:
+        (skill_dir / "scripts").mkdir()
+        (skill_dir / "scripts" / "__init__.py").write_text("")
+        (skill_dir / "__init__.py").write_text("")
+        tests_dir = skill_dir / "tests"
+        tests_dir.mkdir()
+        tests_dir.joinpath("test_smoke.py").write_text("def test_smoke():\n    assert True\n")
+
+
+class TestComplianceAudit:
+    """Tests for the ACTIVE_SKILLS compliance audit merged from scripts/validate_skills.py."""
+
+    def test_missing_skill_directory_is_error(self, temp_repo):
+        result = audit_skill_compliance("does-not-exist", temp_repo["skills_dir"])
+        assert not result.passed
+        assert any("not found" in e.lower() for e in result.errors)
+
+    def test_prose_only_skill_needs_only_skill_md(self, temp_repo):
+        _write_compliant_skill(temp_repo["skills_dir"], "prose-skill", prose_only=True)
+        result = audit_skill_compliance("prose-skill", temp_repo["skills_dir"])
+        assert result.passed, result.errors
+
+    def test_script_backed_skill_missing_structure_is_error(self, temp_repo):
+        skill_dir = temp_repo["skills_dir"] / "half-baked"
+        skill_dir.mkdir(parents=True)
+        skill_dir.joinpath("SKILL.md").write_text("""---
+name: half-baked
+description: incomplete
+license: Proprietary
+compatibility: ">=1.0"
+metadata:
+  author: test
+  version: "1.0.0"
+  category: validation
+  role: engineer
+  model: claude-sonnet-5
+  effort: low
+---
+""")
+        (skill_dir / "scripts").mkdir()  # marks it script-backed, but no tests/ or __init__.py
+        result = audit_skill_compliance("half-baked", temp_repo["skills_dir"])
+        assert not result.passed
+        assert any("__init__.py" in e or "tests/" in e for e in result.errors)
+
+    def test_missing_required_metadata_key_is_error(self, temp_repo):
+        skill_dir = temp_repo["skills_dir"] / "no-effort"
+        skill_dir.mkdir(parents=True)
+        skill_dir.joinpath("SKILL.md").write_text("""---
+name: no-effort
+description: missing metadata.effort
+license: Proprietary
+compatibility: ">=1.0"
+metadata:
+  author: test
+  version: "1.0.0"
+  category: validation
+  role: engineer
+  model: claude-sonnet-5
+---
+""")
+        result = audit_skill_compliance("no-effort", temp_repo["skills_dir"])
+        assert not result.passed
+        assert any("metadata.effort" in e for e in result.errors)
+
+    def test_missing_self_improvement_section_is_warning_not_error(self, temp_repo):
+        _write_compliant_skill(temp_repo["skills_dir"], "no-self-improve")
+        skill_md = temp_repo["skills_dir"] / "no-self-improve" / "SKILL.md"
+        skill_md.write_text(skill_md.read_text().replace("## Self-Improvement\n\nNone yet.\n", ""))
+        result = audit_skill_compliance("no-self-improve", temp_repo["skills_dir"])
+        assert result.passed  # warnings don't fail
+        assert any("Self-Improvement" in w for w in result.warnings)
+
+    def test_run_compliance_audit_covers_requested_names(self, temp_repo):
+        _write_compliant_skill(temp_repo["skills_dir"], "skill-a")
+        _write_compliant_skill(temp_repo["skills_dir"], "skill-b")
+        results = run_compliance_audit(temp_repo["skills_dir"], ["skill-a", "skill-b"])
+        assert set(results.keys()) == {"skill-a", "skill-b"}
+        assert all(isinstance(r, SkillComplianceResult) for r in results.values())
+        assert all(r.passed for r in results.values())
+
+    def test_active_skills_list_matches_repo_skills_dir(self):
+        """ACTIVE_SKILLS must stay in sync with the real src/skills/ directory
+        (the compliance audit only covers skills named in this list)."""
+        repo_skills_dir = Path(__file__).parent.parent / "src" / "skills"
+        on_disk = {p.name for p in repo_skills_dir.iterdir() if p.is_dir()}
+        assert set(ACTIVE_SKILLS) == on_disk, (
+            f"ACTIVE_SKILLS {sorted(ACTIVE_SKILLS)} does not match "
+            f"src/skills/ on disk {sorted(on_disk)}"
+        )
+
+    def test_real_active_skills_pass_compliance_audit(self):
+        """Every real ACTIVE_SKILLS entry in this repo must pass the audit —
+        this is the actual CI-blocking gate exercised end-to-end."""
+        repo_skills_dir = Path(__file__).parent.parent / "src" / "skills"
+        results = run_compliance_audit(repo_skills_dir, ACTIVE_SKILLS)
+        failing = {name: r.errors for name, r in results.items() if not r.passed}
+        assert not failing, f"Compliance audit failures: {failing}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=renderer.validate_skills"])

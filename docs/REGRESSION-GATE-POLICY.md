@@ -1,6 +1,6 @@
 # Regression Gate Policy
 
-**Status:** Final baseline restored (SPEC-2026-005 framework slimdown, WP-5, 2026-08-12)
+**Status:** Re-baselined (infra reduction round 2, 2026-08-13)
 **Gate implementation:** `renderer/scripts/check_test_regression.py`
 **CI enforcement:** `.github/workflows/ci.yml`
 
@@ -13,17 +13,21 @@ auxiliary skills. The three per-harness baselines are retired permanently —
 those test directories covered `src/harnesses/` modules with zero production
 callers and no longer exist.
 
-**WP-5 re-baselines this gate** from the measured post-deletion actual: a
-plain `python3 -m pytest tests/ --collect-only -q` on the fully-slimmed tree
-(8 skills, 8 agents, 4 harnesses — claude/copilot/opencode/codex, no pi)
-collected 940 tests. The gate's floor is now `893` (~95% of that actual),
-giving headroom for small legitimate future removals without silently
-re-permitting a mass regression.
+Re-baseline history (each floor is ~95% of the measured actual at that time):
 
-A companion floor, `scripts/run_skill_tests.py`'s `MIN_EXPECTED_TESTS`, was
-re-baselined the same way: 250 measured skill-local tests across the 5
-script-backed skills, floor `237` (~95%).
+| When | Event | Measured | Floor |
+|------|-------|---------:|------:|
+| WP-5 (2026-08-12) | Framework slimdown final state | 940 | 893 |
+| SPEC-2026-009 (2026-08-13) | Filesystem queue layer removed | 866 | 822 |
+| Infra reduction round 2 (2026-08-13) | Dead/vacuous CI+hook infra removed (`detect_circular_imports.py`, `annotate_token_costs.py`, duplicate `validate_skills.py` merged into `renderer/validate_skills.py`, `run_pytest.sh`); 8 tests added for the merged compliance-audit logic | 874 | 830 |
+
+A companion floor, `scripts/run_skill_tests.py`'s `MIN_EXPECTED_TESTS`, is
+unaffected by the round-2 infra reduction (no skill-local tests were touched):
+178 measured skill-local tests across the 3 script-backed skills, floor `169`.
 
 Update baselines only via a `spec-management` proposal + Quality Engineer
-sign-off. See `renderer/scripts/check_test_regression.py`'s header for the
-full historical baseline record and re-baselining rationale.
+sign-off — the round-2 update above was made directly under an explicit
+senior-engineer DELEGATE mandate to re-baseline honestly at the end of that
+task; it has not yet had a separate QE sign-off pass. See
+`renderer/scripts/check_test_regression.py`'s header for the full historical
+baseline record and re-baselining rationale.

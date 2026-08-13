@@ -176,11 +176,8 @@ none owns dispatch, scheduling, or supervision:
 
 | Script | Purpose |
 |--------|---------|
-| `detect_circular_imports.py` | Static import-cycle detector (CI gate) |
-| `annotate_token_costs.py` | Advisory cost/token rollup formatting |
 | `format_skill_report.py` | Formats skill test/validation output |
 | `run_skill_tests.py` | Test runner for skill scripts (invoked by CI/make, not autonomous) |
-| `validate_skills.py` | SKILL.md frontmatter + registry validation |
 | `validate-spec-constraints.py` | Pre-commit SPEC constraint checker |
 | `get_version.py` | Reads/reports framework version |
 | `validate_opencode_config.py` | OpenCode config generation gate |

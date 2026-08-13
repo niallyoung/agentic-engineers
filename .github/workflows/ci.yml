@@ -68,26 +68,52 @@ jobs:
       - name: Lint
         run: make lint
 
-      # ── Phase 5.1 Gates ──────────────────────────────────────────────────
+      # ── Skill/render gates ───────────────────────────────────────────────
 
-      - name: "Gate 1: SKILL.md frontmatter compliance"
-        # Validates every active skill has the required SKILL.md structure.
-        # Now also validates that ## Self-Improvement section is present.
+      - name: "Gate 1: SKILL.md frontmatter + registry + compliance"
+        # renderer/validate_skills.py validates every SKILL.md's frontmatter
+        # and registry completeness, plus a deeper ACTIVE_SKILLS compliance
+        # audit (required metadata, directory structure, ## Self-Improvement
+        # section). Single implementation as of the 2026-08-13 infra
+        # consolidation (formerly split across scripts/ and renderer/).
         # Warnings are reported but do not fail CI; only errors fail the build.
-        # Phase 5.2 will enforce --strict once non-conforming skills are fixed.
         run: |
-          python scripts/validate_skills.py
-          echo "::notice::Run 'python scripts/validate_skills.py --strict' locally to see warnings"
+          python renderer/validate_skills.py
+          echo "::notice::Run 'python renderer/validate_skills.py --strict' locally to see warnings"
 
-      - name: "Gate 2: Circular import detection"
-        # Detects circular import chains in src/ using static AST analysis.
-        # Circular imports cause runtime ImportError and slow startup.
-        run: python scripts/detect_circular_imports.py
-
-      - name: "Gate 3: Skill template conformance report"
+      - name: "Gate 2: Skill template conformance report"
         # Generate a non-failing annotated report for the PR review audit trail.
         # The report is emitted as a GitHub step summary for visibility.
-        run: python scripts/validate_skills.py --json | python scripts/format_skill_report.py >> "$GITHUB_STEP_SUMMARY" || true
+        run: python renderer/validate_skills.py --json | python scripts/format_skill_report.py >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: "Gate 3: Orphaned bytecode check"
+        # Folded in from the former validate-sources.yml (2026-08-13 infra
+        # consolidation) — fails if any .pyc is tracked in git or if
+        # __pycache__ contains bytecode with no corresponding source file.
+        run: |
+          ORPHANED=0
+          while IFS= read -r pyc_file; do
+            [ -n "$pyc_file" ] || continue
+            echo "::error::.pyc file tracked in git (should be gitignored): $pyc_file"
+            ORPHANED=$((ORPHANED + 1))
+          done < <(git ls-files '*.pyc' 2>/dev/null || true)
+          while IFS= read -r pyc_dir; do
+            [ -n "$pyc_dir" ] || continue
+            parent_dir=$(dirname "$pyc_dir")
+            for pyc in $(find "$pyc_dir" -name "*.pyc" 2>/dev/null); do
+              base_name=$(basename "$pyc" | sed 's/\.cpython-.*\.pyc/.py/')
+              py_path="$parent_dir/$base_name"
+              if [ ! -f "$py_path" ] && ! git ls-files "$py_path" > /dev/null 2>&1; then
+                echo "::error::Orphaned bytecode without source: $pyc (expected $py_path)"
+                ORPHANED=$((ORPHANED + 1))
+              fi
+            done
+          done < <(find . -type d -name __pycache__ -not -path "*/.git/*" 2>/dev/null)
+          if [ "$ORPHANED" -gt 0 ]; then
+            echo "::error::Found $ORPHANED orphaned bytecode issue(s)"
+            exit 1
+          fi
+          echo "✅ No orphaned bytecode found"
 
       # ─────────────────────────────────────────────────────────────────────
 
@@ -102,23 +128,14 @@ jobs:
       - name: Test
         run: make test
 
-      - name: "Gate 5: Harness regression check (SPEC-2026-005, WP-5 baseline)"
-        # Floor re-baselined in WP-5 from the measured post-slimdown actual
-        # (940 collected tests; floor is ~95% = 893). Per-harness floors
-        # (opencode/claude_code/copilot-cli) are retired permanently — those
-        # test dirs were deleted along with src/harnesses/.
+      - name: "Gate 4: Harness regression check"
+        # Floor re-baselined periodically from the measured actual (see
+        # renderer/scripts/check_test_regression.py header for history).
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
         run: python renderer/scripts/check_test_regression.py
 
       - name: Verify
         run: make verify
-
-      - name: "Audit: Token spend annotation"
-        # Non-failing annotation of commit-level token costs.
-        # Reads from data/metrics/ if available and annotates the step summary.
-        # Phase 5.2 will wire this to a cost-tracking budget gate.
-        if: always()
-        run: python scripts/annotate_token_costs.py >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "_Token cost annotation skipped (no metrics data)_" >> "$GITHUB_STEP_SUMMARY"
 
   auto-tag:
     name: Auto-Tag (Semantic Versioning)

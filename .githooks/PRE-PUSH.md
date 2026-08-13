@@ -20,6 +20,10 @@ make install
 
 ## Features
 
+Deliberately does **not** run the test suite or a render pass — both
+duplicate `ci.yml`, which runs them as the real, blocking gate within
+minutes of every push. Run `make test` yourself before pushing.
+
 ### 1. **Agent YAML Validation**
 - Validates YAML frontmatter in `src/agents/*.md` files
 - Checks for required fields: `name`, `model`
@@ -38,27 +42,33 @@ make install
   - `README.md`
 - Checks for top-level headings in documentation
 
-### 4. **DELEGATE/HANDBACK Protocol Validation**
-- Validates DELEGATE files in `artifacts/delegates/`
-- Checks for required fields:
-  - DELEGATE: `handoff_type`, `task_id`, `role`, `model`
-- Ensures valid YAML syntax
-
-### 5. **SPEC Compliance**
+### 4. **SPEC Compliance**
 - Verifies no external scripts in `orchestration/scripts/`
 - Verifies no cron files in `orchestration/config/`
 - Checks Makefile for proper script invocation patterns
 - Allows `renderer/scripts/` as an exception for build-time operations
+- Runs `scripts/validate-spec-constraints.py` (declarative constraint framework)
 
-### 6. **Test Suite Execution**
-- Runs pytest on the `tests/` directory
-- Skips `test_git_hooks.py` to prevent timeout
-- Warns if tests fail (non-blocking)
-- Times out after 30 seconds to prevent hanging
+### 5. **Agent Definition Verification**
+- Verifies `.agents_verification_sha` exists and is well-formed
+- Compares the computed SHA-256 of `src/AGENTS.md` against the stored hash
+  (warns, does not block, on mismatch — legitimate edits regenerate the hash)
+
+### 6. **Gitconfig Credential Guard**
+- Runs `scripts/check-gitconfig-no-tokens.sh` to block a push if
+  `~/.gitconfig` or `~/.git-credentials` contains an embedded token
 
 ### 7. **Protected Branch Warnings**
 - Warns when pushing to `main` or `master` branches
 - Reminds developers to ensure Quality Engineer review
+
+> **Removed (2026-08-13 infra consolidation):** the DELEGATE/HANDBACK
+> artifact scan (`artifacts/delegates/`, a filesystem-queue path that has
+> never existed since dispatch became direct sub-agent spawn — always a
+> no-op), the render-pipeline step (referenced a `render-pi` Makefile target
+> that no longer exists — always failed, only ever warned), and the full
+> test-suite run (warn-only — `TEST_ERRORS` was never added to `$ERRORS`, so
+> it could never actually block a push, at a cost of up to 180s).
 
 ## Validation Output
 
@@ -76,20 +86,17 @@ The hook provides color-coded output with clear status indicators:
 📚 Validating documentation consistency...
 ✅ Documentation files present and valid
 
-📦 Validating DELEGATE/HANDBACK protocol...
-✅ DELEGATE/HANDBACK protocol valid
-
-🧪 Running test suite...
-✅ All tests passed
-
 🔐 Validating SPEC compliance...
 ✅ SPEC compliance verified
+
+🔐 Checking gitconfig for embedded tokens...
+✅ gitconfig clean (no embedded tokens)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 Pre-push validation summary:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Checks passed: 7
+  Checks passed: 6
   Checks failed: 0
   Errors:       0
   Warnings:     0
@@ -103,18 +110,20 @@ The hook provides color-coded output with clear status indicators:
 
 The following issues will block the push:
 
-1. **Invalid YAML**: Agent files, workflows, or protocol files with invalid YAML
-2. **Missing Required Fields**: SPEC.md, AGENTS.md, or protocol files missing required fields
+1. **Invalid YAML**: Agent files or workflow files with invalid YAML
+2. **Missing Required Fields**: SPEC.md, AGENTS.md missing required fields
 3. **SPEC Violations**: External scripts in orchestration/ or cron files
 4. **Missing Documentation**: Required documentation files not found
+5. **Embedded Credentials**: A token found in `~/.gitconfig` / `~/.git-credentials`
+6. **Missing `.agents_verification_sha`**: file absent or malformed
 
 ### Non-Blocking Warnings
 
 The following issues will warn but allow the push:
 
-1. **Test Failures**: Some tests failed (review before pushing to shared branches)
-2. **Protected Branch**: Pushing to main/master (ensure QE review)
-3. **Test Timeout**: Test suite timed out (>30s)
+1. **Protected Branch**: Pushing to main/master (ensure QE review)
+2. **AGENTS.md SHA Mismatch**: `src/AGENTS.md` changed since the stored hash
+   was generated (regenerate it if the change is intentional)
 
 ## Bypass
 
@@ -160,7 +169,7 @@ Tests verify:
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `SKIP_HOOKS` | Bypass all validations | `0` |
-| `SKIP_PYTEST` | Skip pytest execution | `0` |
+| `GIT_SKIP_HOOKS` | Alias for `SKIP_HOOKS` | `0` |
 
 ### Color Codes
 
@@ -171,17 +180,20 @@ Tests verify:
 
 ### Timeout Values
 
-- **Test Suite**: 30 seconds
-- **Hook Overall**: No timeout (but individual checks are fast)
+- **Hook Overall**: No explicit timeout — all checks are fast (no test run, no render pass)
 
 ## Integration with CI/CD
 
 The pre-push hook runs locally before pushing. It complements CI/CD checks by:
 
-1. **Early Feedback**: Developers get immediate feedback before pushing
-2. **Reduced CI Load**: Prevents invalid commits from reaching CI
-3. **Protocol Compliance**: Ensures DELEGATE/HANDBACK files committed to the repo are schema-valid
-4. **Documentation Sync**: Keeps documentation in sync with code changes
+1. **Early Feedback**: Developers get immediate feedback on cheap, local-only
+   checks (YAML validity, doc presence, SPEC constraints, credential hygiene)
+   before pushing
+2. **Reduced CI Load**: Catches malformed YAML/docs before they reach CI
+3. **Documentation Sync**: Keeps documentation in sync with code changes
+
+The test suite and render pass are intentionally left to CI (`ci.yml`), which
+runs them once per push rather than duplicating them locally on every push.
 
 ## Troubleshooting
 
@@ -204,23 +216,19 @@ The pre-push hook runs locally before pushing. It complements CI/CD checks by:
    git config core.hooksPath .githooks
    ```
 
-### Hook Timeout
+### Hook Slow or Hanging
 
-If the hook times out:
+The hook no longer runs the test suite or a render pass, so it should
+complete in a few seconds. If it hangs:
 
-1. Check for hanging pytest tests:
-   ```bash
-   pytest tests/ --timeout=5
-   ```
-
-2. Run tests individually:
-   ```bash
-   pytest tests/test_specific.py -v
-   ```
-
-3. Bypass temporarily:
+1. Bypass temporarily:
    ```bash
    SKIP_HOOKS=1 git push
+   ```
+
+2. Investigate which check is slow by running the hook directly:
+   ```bash
+   bash -x .githooks/pre-push origin <remote-url>
    ```
 
 ### YAML Validation Errors
