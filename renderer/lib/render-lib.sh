@@ -92,12 +92,17 @@ list_source_specs() {
 # ============================================================================
 
 # Extract a frontmatter field value: extract_fm <file> <key>
-# Returns the value of the given key from YAML frontmatter (between --- delimiters).
+# Returns the value of the given key from YAML frontmatter (the block between
+# the opening --- on line 1 and the FIRST closing ---). Deliberately does not
+# toggle on later --- lines: agent/skill bodies contain example YAML blocks
+# with their own --- delimiters, which previously re-entered "frontmatter"
+# state and caused false key matches (e.g. effort: inside an example DELEGATE).
 # Returns empty string if key not found.
 extract_fm() {
 	local file="$1" key="$2"
 	awk -v key="$key" '
-		/^---$/ { fm = !fm; next }
+		NR == 1 && /^---$/ { fm = 1; next }
+		fm && /^---$/ { exit }
 		fm && $0 ~ "^"key":" {
 			sub("^"key":[ \t]*", "", $0)
 			sub(/[ \t]+$/, "", $0)
@@ -434,10 +439,14 @@ parse_agents_md() {
 		/^\| \*\*[A-Za-z]/ {
 			gsub(/^\| /, "")
 			gsub(/ \|$/, "")
+			# Replace escaped pipes with placeholder to protect them from splitting
+			gsub(/\\\|/, "__ESCAPED_PIPE__")
 			n = split($0, fields, "|")
 			if (n < 5) next
 			for (i = 1; i <= n; i++) {
 				gsub(/^[ \t]+|[ \t]+$/, "", fields[i])
+				# Restore escaped pipes in each field
+				gsub(/__ESCAPED_PIPE__/, "|", fields[i])
 			}
 			# Table columns: Role | Model | Effort | Multi-Model? | Use When (description)
 			role = fields[1]; model = fields[2]; effort = fields[3]; description = fields[5]

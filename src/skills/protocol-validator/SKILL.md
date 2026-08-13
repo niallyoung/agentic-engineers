@@ -41,7 +41,7 @@ future fields.
 - **Runtime Spec Updates** — Protocol improvements via DELEGATE/HANDBACK loaded dynamically
 - **Unknown Field Handling** — Allows schema to evolve without breaking old code
 - **Traceability** — All validations logged with context (task_id, field, reason)
-- **Integration Ready** — Works with consistency-checker and orchestrator
+- **Integration Ready** — Works with check_protocol_compliance.py and orchestrator
 
 ---
 
@@ -180,7 +180,7 @@ The validator is designed to support schema evolution:
 1. **Unknown Fields** — Logged as warnings, don't cause validation failure
 2. **New Spec Versions** — Load new spec, validate against it (supports major version bumps)
 3. **Field Deprecation** — Old code validates against old spec, new code against new spec
-4. **Gradual Migration** — consistency-checker can report schema version mismatch
+4. **Gradual Migration** — validators can report schema version mismatch via check_protocol_compliance.py
 
 ---
 
@@ -213,9 +213,9 @@ The Orchestrator should:
 3. Call `validator.validate_handback()` before accepting completion
 4. Log validation results (valid DELEGATEs don't need logging; failures logged with context)
 
-### With Consistency-Checker
+### With CI Compliance Checking
 
-The consistency-checker uses protocol-validator to check queue integrity:
+The check_protocol_compliance.py script uses protocol-validator to check queue integrity:
 1. Load all DELEGATEs from queue
 2. Run `validator.validate_delegate()` on each
 3. Aggregate results: count passes/failures/warnings

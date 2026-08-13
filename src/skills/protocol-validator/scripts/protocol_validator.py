@@ -51,7 +51,7 @@ VALID_STATUSES = {'success', 'failure', 'partial', 'blocked', 'escalate'}
 # Files that accept *only* these without the canonical equivalents are drifted.
 LEGACY_STATUS_ALIASES = {'complete': 'success', 'failed': 'failure', 'escalated': 'escalate'}
 
-VALID_EFFORTS = {'low', 'medium', 'high'}
+VALID_EFFORTS = {'low', 'medium', 'high', 'max'}  # 'max' is Security Engineer's tier; 'epic' (seen in some legacy validators) is not canonical
 
 # Forward-compatible additions accepted at runtime before the canonical spec
 # update lands elsewhere in the repo.
@@ -76,30 +76,6 @@ _STATUS_REGISTRY: List[Dict[str, Any]] = [
     {
         "path": "src/skills/queue-management/scripts/queue_ops.py",
         "name": "VALID_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
-    {
-        "path": "src/skills/queue-management/scripts/validators.py",
-        "name": "CANONICAL_HANDBACK_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": True,  # deliberately adds legacy aliases
-    },
-    {
-        "path": "src/orchestration/protocol/validation.py",
-        "name": "valid_statuses (inline list)",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
-    {
-        "path": "src/orchestration/agents/quality_validator.py",
-        "name": "VALID_HANDBACK_STATUSES",
-        "expected": VALID_STATUSES,
-        "allows_legacy": False,
-    },
-    {
-        "path": "src/orchestration/agents/invoke_agent.py",
-        "name": "VALID_HANDBACK_STATUSES",
         "expected": VALID_STATUSES,
         "allows_legacy": False,
     },
@@ -314,8 +290,12 @@ def scan_protocol_divergence(repo_root: Optional[Path] = None) -> ProtocolDiverg
         (r"class.*EscalationHandler", "Custom escalation handler class (should use orchestrator)"),
     ]
 
+    # NOTE: src/orchestration/ (the original scan target) was deleted in the
+    # framework slimdown; src/agents/ is prose-only (*.md, never *.py), so
+    # this scan is currently a structural no-op. Left in place — rglob("*.py")
+    # over src/skills/ would self-match this file's own escalation-shaped
+    # helper names, which is worse than doing nothing.
     orchestrator_paths = [
-        repo_root / "src/orchestration",
         repo_root / "src/agents",
     ]
 
@@ -534,7 +514,7 @@ class ExtensionValidator:
 
         if 'effort' in delegate:
             if delegate['effort'] not in VALID_EFFORTS:
-                errors.append(f"effort: invalid value '{delegate['effort']}' (must be low|medium|high)")
+                errors.append(f"effort: invalid value '{delegate['effort']}' (must be low|medium|high|max)")
 
         if 'model' in delegate and not isinstance(delegate['model'], str):
             errors.append("model: must be a string")
@@ -576,7 +556,7 @@ class ExtensionValidator:
 
         if 'effort_actual' in handback:
             if handback['effort_actual'] not in VALID_EFFORTS:
-                errors.append("effort_actual: invalid value (must be low|medium|high)")
+                errors.append("effort_actual: invalid value (must be low|medium|high|max)")
 
         if 'flags' in handback:
             if not isinstance(handback['flags'], list):
@@ -632,27 +612,51 @@ class ProtocolValidator:
     Performance: <5ms total (core <1ms, extensions <2ms).
     """
 
-    def __init__(self, spec_path: str = "docs/specs/protocol-core-v1.0.yaml"):
+    # Render-time artifact: the skill ships its own copy of the schema so
+    # resolution works when installed into a harness (e.g.
+    # ~/.claude/skills/protocol-validator/...), where a repo-root-relative
+    # lookup like docs/specs/... points outside the installed tree entirely.
+    # docs/specs/protocol-core-v1.0.yaml remains the canonical, EDITABLE
+    # source; keep this copy in sync with it (see SKILL.md).
+    _SKILL_LOCAL_SPEC = Path(__file__).resolve().parent.parent / "schema" / "protocol-core-v1.0.yaml"
+
+    def __init__(self, spec_path: Optional[str] = None):
         """
         Initialize validator with spec file.
-        
+
+        Resolution order when ``spec_path`` is omitted:
+          1. Skill-local copy: ``<skill>/schema/protocol-core-v1.0.yaml`` --
+             always present alongside this script in an installed harness.
+          2. Repo-root canonical source: ``docs/specs/protocol-core-v1.0.yaml``
+             -- fallback for in-repo use if the skill-local copy is missing.
+
         Args:
-            spec_path: Path to protocol spec YAML (relative to repo root)
-        
+            spec_path: Explicit override path to a protocol spec YAML. A
+                relative value is resolved against the repo root (in-repo use
+                only -- do not rely on this in an installed harness). Absolute
+                paths are used as-is. Omit to use the resolution order above.
+
         Raises:
-            FileNotFoundError: If spec file not found
-            yaml.YAMLError: If spec YAML is malformed
+            FileNotFoundError: If no spec file can be resolved.
+            yaml.YAMLError: If spec YAML is malformed.
         """
-        self.spec_path = Path(spec_path)
-        
-        # Find spec relative to repo root if path is relative
-        if not self.spec_path.is_absolute():
-            repo_root = Path(__file__).resolve().parents[4]  # src/skills/protocol-validator/scripts/script.py -> repo root
-            self.spec_path = repo_root / spec_path
-        
+        if spec_path is not None:
+            candidate = Path(spec_path)
+            if not candidate.is_absolute():
+                repo_root = Path(__file__).resolve().parents[4]  # src/skills/protocol-validator/scripts/script.py -> repo root
+                candidate = repo_root / spec_path
+            self.spec_path = candidate
+        elif self._SKILL_LOCAL_SPEC.exists():
+            self.spec_path = self._SKILL_LOCAL_SPEC
+        else:
+            self.spec_path = Path(__file__).resolve().parents[4] / "docs" / "specs" / "protocol-core-v1.0.yaml"
+
         if not self.spec_path.exists():
-            raise FileNotFoundError(f"Protocol spec not found: {self.spec_path}")
-        
+            raise FileNotFoundError(
+                f"Protocol spec not found: {self.spec_path} "
+                f"(checked skill-local schema/ and repo-root docs/specs/)"
+            )
+
         # Load and cache spec
         with open(self.spec_path, 'r') as f:
             self.spec = yaml.safe_load(f)
@@ -807,8 +811,8 @@ def main():
     )
     parser.add_argument(
         '--spec',
-        default='docs/specs/protocol-core-v1.0.yaml',
-        help='Path to protocol spec YAML (default: docs/specs/protocol-core-v1.0.yaml)'
+        default=None,
+        help='Path to protocol spec YAML (default: skill-local schema/, falling back to repo-root docs/specs/)'
     )
     parser.add_argument(
         '--json',

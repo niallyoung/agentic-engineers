@@ -44,7 +44,6 @@ After `make install`, the framework automatically:
 ✅ **Directory Structure Created**
 - `~/.copilot/` — Copilot CLI agents + skills
 - `~/.claude/` — Claude Code agents
-- `~/.pi/` — π.dev experimental config
 - `~/.config/opencode/` — OpenCode agents + skills
 - ✅ **Automatic:** Created by `make install-*` targets
 
@@ -153,7 +152,7 @@ This speeds up iteration without installing all 4 harnesses.
 - **Code review?** Use the `Lead Engineer` agent for architectural guidance.
 - **Complex planning?** Use the `Senior Engineer` agent to plan unscoped work.
 
-All framework extensions run through the validation pipeline automatically. See [`src/AGENTS.md`](src/AGENTS.md) and [`src/SKILLS.md`](src/SKILLS.md) for the complete roster.
+All framework extensions run through the validation pipeline automatically. See [`src/AGENTS.md`](../../src/AGENTS.md) and [`src/SKILLS.md`](../../src/SKILLS.md) for the complete roster.
 
 ---
 
@@ -233,8 +232,7 @@ agentic-engineers/
 ├── dist/                # ← Generated build artifacts
 │   ├── claude/skills/   # Rendered for Claude CLI
 │   ├── copilot/skills/  # Rendered for Copilot CLI
-│   ├── opencode/skills/ # Rendered for OpenCode
-│   └── pi/skills/       # Rendered for π.dev
+│   └── opencode/skills/ # Rendered for OpenCode
 ├── ~/.claude/skills/    # ← User installation (auto-generated, don't edit)
 ├── ~/.copilot/skills/   # ← User installation (auto-generated, don't edit)
 └── ~/.config/opencode/skills/ # ← User installation (auto-generated, don't edit)
@@ -273,32 +271,20 @@ consistent prefixes so related skills group together and are easy to discover.
 
 | Prefix | Domain | Existing members |
 |--------|--------|------------------|
-| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query, queue-todo-sync |
-| `harness-*` | Harness-specific integration | harness-integration-tracker, harness-opencode-feature-sync |
-| `spec-*` | SPEC.md governance | spec-validator, spec-management, spec-extract |
-| `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator *(single source of truth)* |
-| `model-*` | Model routing / cost-quality | model-engineer, model-selection |
-| `cost-*` | Token / cost tracking | cost-aggregation, cost-budgeting |
-| `agent-*` / `skill-*` | Scaffolding | agent-creator / skill-creator |
+| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query |
+| `spec-*` | SPEC.md governance | spec-validator, spec-management |
+| `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator |
+| `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup, skill-improvement-feedback |
 
-**Internal vs. user-facing:** framework-internal "meta" skills live in
-`src/skills/_meta/` and are *not* part of the public skill catalog. Put plumbing
-(orchestration enforcement, queue isolation, eval harness) there; put
-agent-invokable capabilities directly under `src/skills/`.
+All skills are part of the public skill catalog in `src/skills/`.
 
-### Phase 3 Consolidation Summary
+### Framework Slimdown (2026-08-11)
 
-Four skills changed identity during consolidation. If you reference any old
-name, see [docs/MIGRATION-2026-06-06.md](../MIGRATION-2026-06-06.md):
-
-| Old name | New name / status | Change |
-|----------|-------------------|--------|
-| `todo-maintenance` | `queue-todo-sync` | Rename |
-| `opencode-feature-sync` | `harness-opencode-feature-sync` | Rename |
-| `protocol-validation` | merged into `protocol-validator` | Merge (single source of truth) |
-| `voice-notify` | *(removed)* | Deletion — use HANDBACK status + logging |
-
-Background and rationale: [docs/guides/ARCHITECTURE-CONSOLIDATION.md](../guides/ARCHITECTURE-CONSOLIDATION.md).
+As part of SPEC-2026-005, the framework was consolidated to focus on core capabilities.
+The surviving skill roster is documented in `src/SKILLS.md`. Deleted skills include:
+queue-todo-sync, metrics-etl, tokenadvisor, agent-creator, consistency-checker,
+cost-aggregation, cost-budgeting, doc-quality-monitor, file-sync, harness-integration-tracker,
+local-model-runtime, model-selection, session-analyzer, testing, usage-tracking, and workflow-review.
 
 ---
 
@@ -314,7 +300,7 @@ authoritative; everything downstream is regenerated, never hand-edited.
      SKILL.md             tests/      ───►     → dist/claude/   ───►  → ~/.claude/skills/
      scripts/           tests/ (cross-skill)   → dist/copilot/        → ~/.copilot/skills/
      references/        make verify            → dist/opencode/       → ~/.config/opencode/skills/
-     tests/             pytest tests/ -q       → dist/pi/             (+ π.dev)
+     tests/             pytest tests/ -q       → (run via test harness)
 ```
 
 1. **Create** — Author the skill in `src/skills/<name>/` with a `SKILL.md`
@@ -344,12 +330,11 @@ within cost targets.
 
 - **Per-task budgets** — A `DELEGATE` block carries a token budget; the
   executing agent should stay within it and report actuals in its `HANDBACK`.
-- **Budget enforcement & token limits** — see
-  [docs/BUDGET_MANAGEMENT.md](../BUDGET_MANAGEMENT.md) and
-  [docs/USAGE-BUDGET-MANAGER.md](../USAGE-BUDGET-MANAGER.md).
-- **Historical usage & trends** — see
-  [docs/TOKEN-USAGE-TRACKING.md](../TOKEN-USAGE-TRACKING.md); the `cost-*`
-  skills (`cost-aggregation`, `cost-budgeting`) aggregate spend across providers.
+- **Budget enforcement, token limits, and historical usage** — the standalone
+  budget/usage-tracking docs and the `cost-*` skills were removed in the 2026-08-11
+  framework slimdown (SPEC-2026-005); the surviving skill roster is `src/SKILLS.md`.
+  If you need this functionality, propose it via `spec-management` rather than
+  reviving the deleted docs.
 - **Model selection drives cost** — pick the cheapest model that meets the
   quality bar (see [Model Selection (Locked)](#model-selection-locked)); the
   `model-*` skills recommend cost-quality-optimal routing.
@@ -409,9 +394,7 @@ When using background agents (e.g., `skill-creator`, `agent-creator`) to create 
 - ✅ HANDBACK includes proof of commitment (commit SHA)
 - ✅ Orchestrator can validate files actually reached git
 
-**Read:** [`docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md`](docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md) for the detailed protocol agents must follow.
-
-**Read:** [`docs/FILE-LOSS-PREVENTION.md`](docs/FILE-LOSS-PREVENTION.md) for comprehensive prevention mechanisms and troubleshooting.
+**Read:** [`docs/BACKGROUND-AGENT-COMMIT-PROTOCOL.md`](../BACKGROUND-AGENT-COMMIT-PROTOCOL.md) for the detailed protocol agents must follow.
 
 ---
 
@@ -425,7 +408,6 @@ The framework automatically validates:
 4. **HANDBACK schema** — Requires `commit_sha` for file-creating agents
 
 **If you encounter issues with missing files:**
-- See [`docs/FILE-LOSS-PREVENTION.md#troubleshooting`](docs/FILE-LOSS-PREVENTION.md#troubleshooting)
 - Common cause: Agent didn't commit files before session ended
 - Fix: Recreate files or manually commit
 
@@ -531,8 +513,8 @@ src/skills/<skill-name>/
     └── test_<skill>.py   ← at least one test file required
 ```
 
-See [`src/skills/_meta/skill-template/QUICKSTART.md`](src/skills/_meta/skill-template/QUICKSTART.md)
-for the 5-step guide to creating a conformant skill.
+Use the `skill-creator` skill (or `agent-creator` for agents) to scaffold a
+conformant skill/agent directly — see `src/SKILLS.md` / `src/AGENTS.md`.
 
 ### Gate 2: Circular Import Detection
 
@@ -591,13 +573,13 @@ python scripts/detect_circular_imports.py
 make test
 
 # 5. Harness render (if you touched skills or agents)
-make render-copilot render-claude render-opencode render-pi render-specs
+make render-copilot render-claude render-opencode render-codex render-specs
 
 # 6. Verify manifest
 make verify
 ```
 
-The pre-push git hook runs `make test-concurrent` automatically — do not bypass
+The pre-push git hook runs the full test suite automatically — do not bypass
 with `SKIP_HOOKS=1` except in documented emergencies.
 
 ---
@@ -609,10 +591,7 @@ with `SKIP_HOOKS=1` except in documented emergencies.
 make test
 
 # Run specific test file
-pytest tests/test_invoke_agent.py -v
-
-# Run concurrent tests (required before push)
-make test-concurrent
+pytest tests/orchestration/test_orchestrator_integration.py -v
 ```
 
 All new code must have tests. CI enforces >85% coverage.
@@ -631,37 +610,27 @@ python3 -m pytest tests/ --cov=src --cov-report=term-missing -q
 
 ### Parallel & Concurrent Test Validation
 
-The `TestConcurrentInvocations` test class validates that concurrent agent
-invocations work correctly under thread concurrency. This test class guards
-against a class of **TOCTOU race conditions** where a HANDBACK file poller
-reads an empty file that is still being written by a writer thread.
+**Historical context:** the `TestConcurrentInvocations` test class validated that
+concurrent agent invocations were safe under thread concurrency in the old
+subprocess-based `invoke_agent.py` seam, which wrote and read HANDBACK files across
+threads. It guarded against a **TOCTOU race condition** where a HANDBACK file poller
+read an empty file that was still being written by a writer thread.
 
-**Run it before every push:**
+`src/orchestration/agents/invoke_agent.py` and its file poller have since been removed
+as part of the move to the
+[Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model):
+a spawned sub-agent's HANDBACK is now returned directly as the result of the Agent/Task
+tool call, in-context, with no separate file poller reading it. The `enqueue()` calls
+that still record DELEGATE/HANDBACK to the queue for audit purposes are a distinct code
+path from that removed subprocess seam and are not what this test class covered.
 
-```bash
-make test-concurrent
-```
-
-Or equivalently:
-
-```bash
-python3 -m pytest tests/test_invoke_agent.py::TestConcurrentInvocations -v --tb=short
-```
-
-The pre-push hook (`.githooks/pre-push`) runs this automatically. If it fails
-locally it **will** fail in CI — do not bypass with `SKIP_HOOKS=1` unless you
-have an unrelated emergency.
-
-**Root cause history:** CI builds were failing with
-`HandbackValidationError('HANDBACK file does not contain a YAML mapping (dict)')`
-because `open(path, 'w')` creates the file on disk before `yaml.dump()` writes
-its content. The poller saw `path.exists() == True`, read an empty file, and
-failed validation. The fix is:
-
-1. **Test helper** (`write_handback_after_delay`): atomic write via `os.replace`
-   after writing to a `.tmp` sibling file.
-2. **Production code** (`_read_and_validate_handback`): returns `None` for empty
-   files instead of raising, signalling the polling loop to continue retrying.
+**RESOLVED:** the `test-concurrent` Makefile target and its `quality-gate`
+prerequisite, and the equivalent inline check in `.githooks/pre-push`
+("6b. RUN CONCURRENT TESTS"), have been removed rather than repointed —
+there is no surviving mechanism (subprocess spawn + file-poll race) for a
+replacement test to guard. If concurrent `enqueue()` audit-write coverage
+under the new model is wanted, that is new test coverage to design, not a
+repoint of this guard.
 
 ---
 
@@ -676,9 +645,9 @@ Some Tier 3 (Opus) roles support **multi-model selection** within the opus famil
 - `claude-opus-4.7` — design decisions with cross-repo execution impact
 - `claude-opus-4.8` — security-critical design choices (auth, crypto, compliance)
 
-**Security Engineer** — always 4.8 (non-downgrade rule):
-- `claude-opus-4.8` — always; security analysis is non-negotiable
-- `claude-opus-4.7` — emergency fallback only if 4.8 is unavailable; document in HANDBACK
+**Security Engineer** — always fable-5 (unconditional default):
+- `claude-fable-5` — always; security analysis is non-negotiable (highest capability tier)
+- `claude-opus-4.8` — emergency fallback only if fable-5 is unavailable; document in HANDBACK
 - Never downgrade by choice
 
 ### How It Works
@@ -719,11 +688,9 @@ All changes are backward-compatible. Validators and tests require no updates for
 
 We have chosen these Claude models today for cost-quality alignment:
 - **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
-- **claude-sonnet-4.5** — model-engineer (analysis, cost-quality balance)
-- **claude-sonnet-4.6** — lead, quality, senior engineers (complex tasks)
-- **claude-opus-4.6** — principal-engineer default (pure planning tasks)
-- **claude-opus-4.7** — principal-engineer variant (design+execution tasks)
-- **claude-opus-4.8** — security-engineer (non-downgrade; all security tasks)
+- **claude-sonnet-5** — model-engineer, quality, lead, senior engineers (complex tasks)
+- **claude-opus-5** — principal-engineer (cross-service architecture)
+- **claude-fable-5** — security-engineer (unconditional; highest capability for security tasks)
 
 ### Why Locked Models?
 
@@ -792,7 +759,7 @@ Different harnesses have incompatible model format requirements:
 | Copilot CLI | `claude-opus-4.8`, `claude-opus-4.6` (multi-model) | Dots in version |
 | OpenCode | `claude-opus-4.7` | Hyphens in version (limitation) |
 | Claude Code | `opus` | Short alias |
-| π.dev | `claude-opus-4.6`, `claude-opus-4.8` | Anthropic API format (dots) |
+| Codex | `claude-opus-5` | Codex custom format |
 
 Note: Principal and Security Engineer roles support multi-model selection. Orchestrator chooses the appropriate opus variant (4.6, 4.7, or 4.8) at DELEGATE-creation time based on task complexity. See SPEC.md > Model Selection Architecture.
 
@@ -846,17 +813,17 @@ Note: Principal and Security Engineer roles support multi-model selection. Orche
 
 ### See Also
 
-- **Lock rationale:** [`.githooks/LOCKED_MODELS_RATIONALE.md`](./.githooks/LOCKED_MODELS_RATIONALE.md)
-- **Locked models:** [`.githooks/LOCKED_MODELS.sh`](./.githooks/LOCKED_MODELS.sh)
-- **Full architecture:** [`docs/SPEC.md`](docs/SPEC.md) — "Approved Claude Models" section
-- **Tests:** [`tests/test_model_naming_compliance.py`](tests/test_model_naming_compliance.py) — compliance verification
-- **Agent registry:** [`docs/AGENTS.md`](docs/AGENTS.md) — model assignments by role
+- **Lock rationale:** [`.githooks/LOCKED_MODELS_RATIONALE.md`](../../.githooks/LOCKED_MODELS_RATIONALE.md)
+- **Locked models:** [`.githooks/LOCKED_MODELS.sh`](../../.githooks/LOCKED_MODELS.sh)
+- **Full architecture:** [`docs/SPEC.md`](../SPEC.md) — "Approved Claude Models" section
+- **Tests:** [`tests/test_model_naming_compliance.py`](../../tests/test_model_naming_compliance.py) — compliance verification
+- **Agent registry:** [`src/AGENTS.md`](../../src/AGENTS.md) — model assignments by role
 
 ---
 
 ## Automation Roadmap (Phase 4–6)
 
-This section consolidates opportunities to automate manual workflows and reduce human churn. See [`docs/automation-analysis.md`](../automation-analysis.md) for full analysis (session artifact).
+This section consolidates opportunities to automate manual workflows and reduce human churn.
 
 ### Phase 4: Git Hooks Enforcement (HIGH PRIORITY)
 
@@ -916,8 +883,6 @@ This section consolidates opportunities to automate manual workflows and reduce 
 
 ### Phase 6: Extended Memory & Observability (FUTURE)
 
-See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness checklist (session artifact).
-
 **Current Status:** Code ready for merge (all CI checks passing, no regressions).
 
 **Deferred Phases:**
@@ -925,63 +890,110 @@ See [`docs/final-audit.md`](../final-audit.md) for full pre-merge readiness chec
 
 ---
 
-## OpenCode Renderer (Phase 4 Details) — IMPLEMENTED
+## OpenCode Renderer (Phase 4 Details) — PARTIALLY IMPLEMENTED
 
-The `renderer/scripts/render-opencode.sh` emits agent frontmatter for OpenCode integration. Two defects previously prevented correct reasoning emission and overstated permission enforcement. **Both are now fixed** (see `effort_to_variant()` and `emit_permission_block()` in the renderer). The same per-role least-privilege intent is also applied to the Claude renderer via per-role `tools:` allow-lists (`claude_tools_for_role()` in `render-claude.sh`).
+The `renderer/scripts/render-opencode.sh` emits agent frontmatter and `opencode.jsonc`
+for OpenCode integration. Two defects were originally identified: a no-op `thinking:`
+block, and overstated permission enforcement. **Only the first is fixed.** The second —
+per-role spawn/permission gating — is **not implemented**, and this section previously
+claimed otherwise. That was corrected here on 2026-08-09 after independent verification
+(see below); treat the "IMPLEMENTED"/"COMPLETE" language that used to be on this
+section as having been inaccurate.
 
 ### Defect 1: No-op `thinking:` Block — FIXED
 
 **Was:** Emitted a `thinking:` key, but OpenCode ignores it (not in `KNOWN_KEYS`), so extended thinking was never enabled for principal-engineer / security-engineer.
 **Fix (done):** The `thinking:` block was removed and replaced with the supported `variant:` key (`effort_to_variant`: medium→medium, high/max→high, low→omit). `variant` is in OpenCode `KNOWN_KEYS` and maps to Anthropic extended-thinking budgets. Protocol metadata (`role`/`accepts`/`returns`), which are also non-`KNOWN_KEYS`, were moved under the recognized `options:` block so they are preserved rather than silently swept away.
 
-### Defect 2: Uniform Permissions vs. Claimed Granularity
+### Defect 2: Uniform Permissions vs. Claimed Granularity — NOT IMPLEMENTED
 
-**Current:** Every agent gets identical `permission:` block (allow-all).
-**Was:** Every agent received an identical allow-all `permission:` block, so review roles (quality, lead, model-engineer) incorrectly had `edit`/`bash`.
-**Fix (done):** `emit_permission_block()` now emits a least-privilege block (baseline `"*": deny`, explicit allows per role) implementing the matrix below. The Claude renderer mirrors this with per-role `tools:` allow-lists.
+**Verified current behavior (2026-08-09):** `render-opencode.sh` (around lines 353-360)
+emits a single **global** `permission` block into `opencode.jsonc` — not a per-role
+one:
 
-### Per-Role Permission Matrix (IMPLEMENTED)
+```json
+"permission": {
+  "read": "allow",
+  "edit": "allow",
+  "bash": "allow",
+  "task": "allow",
+  "glob": "allow",
+  "grep": "allow",
+  "webfetch": "allow"
+}
+```
 
-| Role | read | glob | grep | webfetch | websearch | edit | bash | task |
+Every agent gets this same allow-all block, including `task` — the permission that
+gates spawning a sub-agent. The renderer's own generated `AGENTS.md` rules file says as
+much explicitly ("All agents use uniform **allow-all** permissions"). There is no
+`emit_permission_block()` function and no per-role permission lookup in the OpenCode
+renderer today — that was aspirational, not shipped.
+
+**What the real permission model is, and where it lives:** the intended least-privilege
+design — including which roles may spawn sub-agents — is the **tools-frontmatter
+permission model** defined per-role in `src/agents/*-agent.md` (`tools: [spawn_subagent]`
+vs. `tools: []`) and documented in
+[src/AGENTS.md > Tools-Frontmatter Permission Model](../../src/AGENTS.md#tools-frontmatter-permission-model).
+Per that document, spawn authority (`spawn_subagent`) is granted to **five** roles —
+orchestrator, senior-engineer, lead-engineer, principal-engineer, and security-engineer
+— not just orchestrator and senior-engineer as an earlier version of the matrix below
+implied. **No renderer currently propagates this model into any harness.** It is a
+contract each agent's own definition and prompt must self-enforce; nothing in
+OpenCode's (or any other harness's) generated config blocks or refuses an unauthorized
+or over-deep spawn. The same is true of the depth-3 / fan-out-5 / ancestry-tracking
+recursion limits (see
+[src/AGENTS.md > Recursion Limits](../../src/AGENTS.md#recursion-limits)): documented
+required behavior, not mechanically enforced behavior.
+
+### Per-Role Permission Matrix — INTENDED DESIGN, NOT YET IMPLEMENTED BY ANY RENDERER
+
+The table below reflects the *intended* least-privilege design (spawn authority per
+`src/AGENTS.md`'s Tools-Frontmatter Permission Model; other columns per this project's
+original least-privilege intent for OpenCode). None of it is live — every OpenCode
+agent currently gets the uniform allow-all block shown above instead.
+
+| Role | read | glob | grep | webfetch | websearch | edit | bash | task (spawn) |
 |------|:----:|:----:|:----:|:--------:|:---------:|:----:|:----:|:----:|
 | orchestrator      | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| principal-engineer| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| principal-engineer| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | senior-engineer   | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | engineer          | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| lead-engineer     | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| lead-engineer     | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | quality-engineer  | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| security-engineer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| security-engineer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | model-engineer    | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 
-**Rationale:** Orchestrator routes without direct edits. Review roles are read-only. Implementation roles get edit/bash. Only orchestrator and senior-engineer may spawn subagents.
+**Rationale (design intent, not current behavior):** Orchestrator routes without direct
+edits. Review roles are read-only. Implementation roles get edit/bash. Spawn authority
+(`task`) is intended for orchestrator, senior-engineer, lead-engineer,
+principal-engineer, and security-engineer per `src/AGENTS.md`; engineer,
+quality-engineer, and model-engineer are meant to be leaves.
 
-### Implementation Steps (Phase 4) — COMPLETE
+### Implementation Steps (Phase 4) — OUTSTANDING
 
 1. ✅ Removed the `thinking:` case from `render-opencode.sh`
 2. ✅ Added per-role reasoning `variant` emission (`effort_to_variant`)
 3. ✅ Provider blocks in `opencode.jsonc` declare `reasoning: true` per model
-4. ✅ Replaced uniform permission block with least-privilege per-role lookup (`emit_permission_block`)
-5. ✅ Gated `task` permission to orchestrator and senior-engineer only
-6. ✅ Added `websearch: allow` to research-capable roles
+4. ❌ **Not done:** replace the uniform global `permission` block with a least-privilege per-role lookup
+5. ❌ **Not done:** gate `task` permission to the five spawn-authorized roles per `src/AGENTS.md`
+6. ❌ **Not done:** differentiate `websearch` by role (currently uniform `allow`, bundled into the same global block)
 7. ✅ Moved no-op protocol keys (`role`/`accepts`/`returns`) under the recognized `options:` block
-8. ✅ Validated: `harness-opencode-feature-sync` reports "No drift detected"; tests green
+8. ❓ **Unverified:** whether `harness-opencode-feature-sync` reports drift for this gap — re-run it rather than trusting the old "No drift detected" claim, since that claim was made about a permission model that (per this correction) was never actually shipped
 
 ---
 
 ## References
 
-- **Agent Roster:** [`src/AGENTS.md`](src/AGENTS.md) — all roles and responsibilities
-- **Skills Matrix:** [`src/SKILLS.md`](src/SKILLS.md) — available skills and capabilities
-- **Routing Logic:** [`src/DECISION-MAKING.md`](src/DECISION-MAKING.md) — how agents are selected
-- **Protocol Spec:** [`src/CLI-PERMISSIONS.md`](src/CLI-PERMISSIONS.md) — tool access control
-- **Cost Model:** [`src/TOKEN_METRICS.md`](src/TOKEN_METRICS.md) — token spend specification
+- **Agent Roster & Routing:** [`src/AGENTS.md`](../../src/AGENTS.md) — all roles, responsibilities, routing decision tree, and tool-access model
+- **Skills Matrix:** [`src/SKILLS.md`](../../src/SKILLS.md) — available skills and capabilities
+- **Specification:** [`docs/SPEC.md`](../SPEC.md) — protocol, queue architecture, and model assignments
 
 ---
 
 ## FAQ
 
-- **How do I add an agent?** Use `agent-creator` skill or read [`src/AGENTS.md`](src/AGENTS.md)
-- **How do I add a skill?** Use `skill-creator` skill or read [`src/SKILLS.md`](src/SKILLS.md)
+- **How do I add an agent?** Use `agent-creator` skill or read [`src/AGENTS.md`](../../src/AGENTS.md)
+- **How do I add a skill?** Use `skill-creator` skill or read [`src/SKILLS.md`](../../src/SKILLS.md)
 - **What if CI fails?** Run `make verify` locally — it checks everything
 - **Need help?** Check the references above or open an issue
 
@@ -993,58 +1005,10 @@ The `renderer/scripts/render-opencode.sh` emits agent frontmatter for OpenCode i
 
 ## Cost & Budget Reports
 
-Phase 5.2 added per-role token budgets and a routing matrix. Use these tools
-to interpret cost behavior locally before opening a PR that changes routing,
-models, or budgets.
-
-### Per-role budgets
-
-Authoritative source: [`src/config/token-budgets.yaml`](src/config/token-budgets.yaml).
-Each role has a hard `budget` (tokens) and three thresholds:
-
-- **warn** (default 80%) — emits a warning; task continues.
-- **error** (default 100%) — budget exceeded; investigate.
-- **escalate** (default 120%) — escalate to Principal Engineer.
-
-Security has an `escalate_pct` override (150%) so threat analyses are never
-cut short for cost reasons.
-
-### Check a single task
-
-```bash
-python3 -m src.skills.cost-aggregation.scripts.monitor_budgets \
-    --role engineer --tokens 1300
-# → [WARN] engineer: 1300/1500 tokens (86.7% ≥ 80%) — approaching cap.
-```
-
-Exit code is non-zero only when at least one record hits `escalate`, which
-makes the script safe to wire into CI as a soft gate.
-
-### Roll up recent metrics
-
-```bash
-python3 -m src.skills.cost-aggregation.scripts.cost_dashboard \
-    --metrics artifacts/metrics.jsonl
-```
-
-The dashboard groups tasks by role and reports `tasks`, `avg_tok`, `budget`,
-`over` (count exceeding the error threshold), and `escalated`. Use `--json`
-for machine-readable output.
-
-### Routing decisions
-
-The canonical task → (role, model, effort, budget) matrix lives in
-[`src/orchestration/routing/model_router.py`](src/orchestration/routing/model_router.py).
-For the human-readable version and the cost/quality tradeoff rationale, see
-[`docs/COST-QUALITY-MATRIX.md`](docs/COST-QUALITY-MATRIX.md).
-
-### How to read a report
-
-1. **Sustained `escalate` for a role** → the budget is wrong, or the routing
-   rule is sending the wrong task class to that role. Open a routing-change
-   PR; do not silently raise the cap.
-2. **High `avg_tok` near the warn line on Haiku roles** → consider promoting
-   one task class to Sonnet (still cheaper than chronic rework).
-3. **Zero `over` for Sonnet/Opus roles with low `avg_tok`** → candidate for
-   downgrade to Haiku on the matching rule.
+The per-role token-budget config, routing matrix, and `cost-aggregation`/`cost-budgeting`
+tooling this section used to document were removed in the 2026-08-11 framework slimdown
+(SPEC-2026-005) along with the auxiliary skills that implemented them. Model/effort
+assignment per role is now documented directly in `docs/SPEC.md`'s Core Architecture and
+Model Naming & Harness Compatibility sections. If you need per-task cost reporting,
+propose it via the `spec-management` skill rather than reviving the deleted tooling.
 

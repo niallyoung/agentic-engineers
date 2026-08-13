@@ -364,20 +364,11 @@ class TestHarnessLifecycleDocs:
         assert "runtime" in content.lower(), \
             "docs/RENDERING.md should document runtime loading"
 
-    def test_feedback_loops_md_exists(self):
-        """docs/FEEDBACK-LOOPS.md must exist"""
-        assert (REPO_ROOT / "docs/FEEDBACK-LOOPS.md").exists(), \
-            "docs/FEEDBACK-LOOPS.md not found — post-merge feedback loop documentation missing"
-
-    def test_feedback_loops_md_covers_qe_findings(self):
-        """FEEDBACK-LOOPS.md must cover QE finding scenario"""
-        content = (REPO_ROOT / "docs/FEEDBACK-LOOPS.md").read_text()
-        assert "qe" in content.lower() or "quality" in content.lower(), \
-            "docs/FEEDBACK-LOOPS.md should cover QE finding feedback triggers"
-
-    def test_feedback_loops_md_has_delegate_schema(self):
-        """FEEDBACK-LOOPS.md must show feedback DELEGATE schema"""
-        content = (REPO_ROOT / "docs/FEEDBACK-LOOPS.md").read_text()
-        assert "feedback_context" in content, \
-            "docs/FEEDBACK-LOOPS.md should define the feedback_context DELEGATE field"
+    # NOTE: docs/FEEDBACK-LOOPS.md (and its feedback_context DELEGATE field)
+    # was retired in WP-4's docs demolition (SPEC-2026-005 rewrite, commit
+    # 4a7eee2). The skill self-improvement feedback pattern now lives solely
+    # in src/skills/skill-improvement-feedback/SKILL.md (skill_feedback in
+    # HANDBACKs — see that skill's docstring), which does not use the old
+    # feedback_context/FEEDBACK-LOOPS.md terminology, so there is nothing
+    # left for these tests to target.
 

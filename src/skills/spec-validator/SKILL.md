@@ -109,42 +109,19 @@ Unauthenticated requests MUST return HTTP 401.
 ```json
 {
   "overall_status": "FAIL",
-  "generated_at": "2025-01-01T12:00:00+00:00",
   "summary": "Violations: 1 (CRITICAL=1, HIGH=0, MEDIUM=0, LOW=0) | Gaps: 0 | Rollbacks: 0",
   "violations": [
-    {
-      "rule": "CONSTRAINT-MUST-NOT-STORE-PLAINTEX",
-      "description": "Constraint violated: MUST NOT store plaintext passwords.",
-      "severity": "CRITICAL",
-      "file_path": "src/users.py",
-      "evidence": "return self.db.insert(username=username, password=password)"
-    }
+    {"rule": "CONSTRAINT-MUST-NOT-STORE-PLAINTEX", "severity": "CRITICAL",
+     "file_path": "src/users.py", "evidence": "db.insert(password=password)"}
   ],
   "gaps": [],
   "rollbacks": []
 }
 ```
 
-### Markdown Report (human-readable)
-```markdown
-# Spec-Validator Compliance Report
-
-**Status:** ❌ **FAIL**
-**Generated:** 2025-01-01T12:00:00+00:00
-
-## Summary
-Violations: 1 (CRITICAL=1, HIGH=0, ...) | Gaps: 0 | Rollbacks: 0
-
-## Violations (1)
-
-### 🔴 [CRITICAL] CONSTRAINT-MUST-NOT-STORE-PLAINTEX
-**Description:** Constraint violated: MUST NOT store plaintext passwords.
-**File:** `src/users.py`
-**Evidence:**
-```
-return self.db.insert(username=username, password=password)
-```
-```
+A Markdown variant of the same report (`--format markdown`) renders the identical
+data as a human-readable table with a ✅/❌ status header and one section per
+violation/gap/rollback.
 
 ## Validation Modes
 
@@ -164,29 +141,18 @@ return self.db.insert(username=username, password=password)
 
 ## CI/CD Integration
 
-### GitHub Actions
 ```yaml
 - name: Spec Compliance Check
   run: |
     git diff ${{ github.event.before }}...${{ github.sha }} > /tmp/changes.diff
     python src/skills/spec-validator/scripts/spec_validator.py \
-      --spec docs/SPEC.md \
-      --diff /tmp/changes.diff \
-      --mode pre-merge \
-      --format json \
-      --output artifacts/spec-compliance.json
+      --spec docs/SPEC.md --diff /tmp/changes.diff --mode pre-merge \
+      --format json --output artifacts/spec-compliance.json
 ```
 
-### Pre-commit Hook
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-git diff --cached > /tmp/staged.diff
-python src/skills/spec-validator/scripts/spec_validator.py \
-  --spec docs/SPEC.md \
-  --diff /tmp/staged.diff \
-  --mode pre-merge
-```
+This is wired in `.github/workflows/continuous-compliance.yml` — treat this script's
+public CLI surface (`--spec`/`--diff`/`--stdin`/`--mode`/`--format`/`--output`) as
+stable; CI depends on it.
 
 ## Architecture
 

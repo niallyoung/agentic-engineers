@@ -1,11 +1,10 @@
 """
-Test suite for hooks rendering integration across all 4 harness renderers.
+Test suite for hooks rendering integration across harness renderers.
 
 Covers:
 - render-opencode.sh hooks installation
 - render-claude.sh hooks installation
 - render-copilot.sh hooks installation
-- render-pi-dev.py hooks installation
 - Hook executability verification
 - Git configuration validation
 - Harness-specific hook behavior
@@ -166,56 +165,6 @@ class TestRenderCopilotHooks:
             "render-copilot.sh missing .githooks reference"
 
 
-class TestRenderPiDevHooks:
-    """Test render-pi-dev.py hooks installation."""
-    
-    def test_render_pi_dev_script_exists(self):
-        """render-pi-dev.py should exist."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        assert script.exists(), f"Script not found: {script}"
-    
-    def test_render_pi_dev_script_executable(self):
-        """render-pi-dev.py should be executable."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        assert os.access(script, os.X_OK), f"Script not executable: {script}"
-    
-    def test_render_pi_dev_contains_hooks_installation(self):
-        """render-pi-dev.py should contain hooks installation code."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        
-        with open(script) as f:
-            content = f.read()
-        
-        # Check for hooks installation markers
-        assert '_install_git_hooks' in content, \
-            "render-pi-dev.py missing _install_git_hooks method"
-        assert 'core.hooksPath' in content, \
-            "render-pi-dev.py missing core.hooksPath configuration"
-        assert '.githooks' in content, \
-            "render-pi-dev.py missing .githooks reference"
-    
-    def test_render_pi_dev_has_install_git_hooks_method(self):
-        """render-pi-dev.py should have _install_git_hooks method."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        
-        with open(script) as f:
-            content = f.read()
-        
-        # Check for method definition
-        assert 'def _install_git_hooks' in content, \
-            "render-pi-dev.py missing _install_git_hooks method definition"
-        
-        # Check for subprocess call to git config
-        assert 'subprocess.run' in content, \
-            "render-pi-dev.py _install_git_hooks missing subprocess call"
-        assert 'git' in content and 'config' in content, \
-            "render-pi-dev.py _install_git_hooks missing git config call"
-
-
 class TestGitConfigurationValidation:
     """Test git configuration for hooks."""
     
@@ -278,19 +227,6 @@ class TestHarnessSpecificBehavior:
         assert 'REPO_ROOT' in content, \
             "Copilot renderer should use REPO_ROOT for hooks"
     
-    def test_pi_dev_hooks_repo_discovery(self):
-        """Pi.dev renderer should discover repo root for hooks."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        
-        with open(script) as f:
-            content = f.read()
-        
-        # Pi.dev should discover repo root
-        assert '.git' in content, \
-            "Pi.dev renderer should discover .git directory"
-
-
 class TestHookInstallationErrorHandling:
     """Test error handling in hook installation."""
     
@@ -330,21 +266,6 @@ class TestHookInstallationErrorHandling:
         assert 'if [ -d' in content and '.githooks' in content, \
             "render-copilot.sh should check if hooks directory exists"
     
-    def test_pi_dev_handles_missing_hooks_gracefully(self):
-        """render-pi-dev.py should handle missing hooks gracefully."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        
-        with open(script) as f:
-            content = f.read()
-        
-        # Should have error handling
-        assert 'try:' in content and 'except' in content, \
-            "render-pi-dev.py should have try/except for hook installation"
-        assert 'return False' in content or 'return True' in content, \
-            "render-pi-dev.py should return status for hook installation"
-
-
 class TestHookDocumentation:
     """Test documentation of hooks in renderers."""
     
@@ -381,17 +302,5 @@ class TestHookDocumentation:
         # Should have comments explaining hooks
         assert '#' in content, "Script should have comments"
     
-    def test_pi_dev_documents_hooks_installation(self):
-        """render-pi-dev.py should document hooks installation."""
-        repo_root = Path(__file__).parent.parent
-        script = repo_root / 'renderer' / 'scripts' / 'render-pi-dev.py'
-        
-        with open(script) as f:
-            content = f.read()
-        
-        # Should have docstring explaining hooks
-        assert '"""' in content or "'''" in content, "Script should have docstrings"
-
-
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

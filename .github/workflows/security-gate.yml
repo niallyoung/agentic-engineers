@@ -33,21 +33,39 @@ jobs:
         run: |
           python3 << 'EOF'
           import sys
-          from src.orchestration.security import EntropyDetector
+          from collections import Counter
+          from scripts.entropy_detector import EntropyDetector
           from pathlib import Path
-          
+
           detector = EntropyDetector()
           findings = []
-          
-          # Scan all Python files in src/
-          for py_file in Path('src').rglob('*.py'):
-              file_findings = detector.scan_file(py_file)
-              findings.extend(file_findings)
-          
+
+          # Scan the whole repo, not just src/**/*.py. Secrets land in YAML,
+          # JSON, .env and config far more often than in Python source.
+          # scan_directory() filters by extension and skips vendored/build dirs.
+          for root in ['src', 'renderer', 'scripts', '.github', 'docs', 'tests', 'config']:
+              path = Path(root)
+              if path.is_dir():
+                  findings.extend(detector.scan_directory(path))
+
+          # Top-level config/dotfiles that live outside those directories.
+          for path in Path('.').glob('*'):
+              if path.is_file() and detector.should_scan(path):
+                  findings.extend(detector.scan_file(path))
+
           if findings:
-              print("❌ Security: Credentials detected in code!")
-              for f in findings[:10]:  # Show first 10
-                  print(f"  {f['file']}:{f.get('line', '?')}: {f['reason']}")
+              max_sev = detector.max_severity(findings)
+              by_sev = Counter(f.get('severity', 'MEDIUM') for f in findings)
+              print(f"::error::Credentials detected — {len(findings)} finding(s), max severity {max_sev}")
+              print(f"Breakdown: {dict(by_sev)}")
+              for f in findings[:25]:
+                  print(f"  [{f.get('severity')}] {f['file']}:{f.get('line', '?')}: {f['reason']}")
+              if len(findings) > 25:
+                  print(f"  ... and {len(findings) - 25} more")
+              print("")
+              print("If a finding is a deliberate test fixture or documentation example,")
+              print("append '# pragma: allowlist secret' to that line.")
+              print("Otherwise: rotate the credential immediately, then remove it from history.")
               sys.exit(1)
           else:
               print("✅ Security: No credentials detected")
@@ -91,12 +109,18 @@ jobs:
           python3 << 'EOF'
           import yaml
           from pathlib import Path
-          
+
+          # docs/specs/protocol-core-v1.0.yaml is the single normative
+          # DELEGATE/HANDBACK schema (see its header comment for the
+          # precedence chain). Its skill-local copy must stay byte-identical
+          # — that invariant is asserted by
+          # tests/test_protocol_schema_copy_identity.py, not here; this gate
+          # only confirms both files still parse as valid YAML.
           yaml_files = [
-              'src/orchestration/delegate-schema.yaml',
-              'src/orchestration/handback-schema.yaml',
+              'docs/specs/protocol-core-v1.0.yaml',
+              'src/skills/protocol-validator/schema/protocol-core-v1.0.yaml',
           ]
-          
+
           for yml_file in yaml_files:
               try:
                   Path(yml_file).read_text()
@@ -104,7 +128,7 @@ jobs:
               except Exception as e:
                   print(f"❌ Invalid YAML in {yml_file}: {e}")
                   exit(1)
-          
+
           print("✅ Security: All YAML schemas valid")
           EOF
 

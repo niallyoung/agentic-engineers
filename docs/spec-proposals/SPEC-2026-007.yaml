@@ -1,0 +1,179 @@
+---
+proposal_type: SPEC
+change_id: SPEC-2026-007
+proposer: lead-engineer
+proposer_role: lead-engineer
+timestamp: "2026-08-12T00:00:00Z"
+title: "Correct pi/pi.dev references in the LOCKED Model Naming & Harness Compatibility section (Codex replaces Pi)"
+
+scope: framework-slimdown-followup-spec-backlog
+priority: medium
+blocking: null
+
+affected_sections:
+  - "Model Naming & Harness Compatibility (LOCKED SPEC)"
+
+# ---------------------------------------------------------------------------
+# SUMMARY
+# ---------------------------------------------------------------------------
+summary: |
+  The LOCKED "Model Naming & Harness Compatibility" section still references the pi
+  (pi.dev) harness in two places — the Harness-Specific Model Format table's "Pi (pi.dev)"
+  row, and the "Validation & Enforcement" hyphen-format check's harness enumeration
+  (`dist/{copilot,claude,opencode,pi}/agents/*`) — even though the pi harness was dropped
+  from the framework in the 2026-08-11 slimdown (SPEC-2026-005) and confirmed absent from
+  renderer/ and dist/ by SPEC-2026-006's evidence for the sibling Queue Architecture &
+  Paths section. SPEC-2026-006 explicitly left this section out of scope. This proposal
+  closes that gap with two corrections, NOT a mechanical pi->codex swap in both spots:
+
+  1. Harness-Specific Model Format table: the Pi row is replaced with a Codex row, but
+     with materially different content from the row it replaces — Codex does not
+     transform the canonical Claude ID at all. It substitutes its own GPT-family model
+     per agent-role tier, independent of which Claude model the role is canonically
+     assigned. The new row documents that behavior accurately instead of implying Codex
+     participates in the same dot/hyphen/prefix transformation as the other three
+     harnesses.
+  2. Validation & Enforcement hyphen-format check: `pi` is dropped from the harness
+     enumeration and Codex is deliberately NOT added in its place, because the check it
+     documents (dist output uses hyphen-format `claude-*` IDs) does not apply to Codex —
+     Codex's rendered output never contains a `claude-*` ID to check. A one-clause note is
+     added explaining the exclusion so a reader doesn't mistake the omission for a gap.
+
+# ---------------------------------------------------------------------------
+# JUSTIFICATION (evidence-based)
+# ---------------------------------------------------------------------------
+rationale: |
+  This is the second half of the pi/codex correction SPEC-2026-006 started for the sibling
+  LOCKED "Queue Architecture & Paths" section, and closes the backlog item SPEC-2026-006
+  itself flagged as out of scope: "The sibling LOCKED section 'Model Naming & Harness
+  Compatibility' also still references pi (the 'Pi (pi.dev)' row ..., and pi in the
+  rendered-output dist path list) and is NOT touched by this proposal — it needs its own
+  amendment via a separate proposal." (SPEC-2026-006.yaml, out_of_scope).
+
+  EVIDENCE 1 - pi is gone from the renderer and dist/ (same evidence base as SPEC-2026-006).
+  `renderer/scripts/` contains render-claude.sh, render-codex.py,
+  render-copilot-agents.py/.sh, render-copilot.sh, render-opencode.sh — no render-pi
+  script. `dist/` contains claude/, codex/, copilot/, opencode/, specs/ — no pi/.
+
+  EVIDENCE 2 - Codex is fundamentally NOT a like-for-like replacement for Pi in the
+  Harness-Specific Model Format table. Inspected `renderer/scripts/render-codex.py`
+  directly:
+    - `CHEAP_CODEX_MODEL = "gpt-5.4-mini"`, `STRONG_CODEX_MODEL = "gpt-5.5"` (lines 43-44).
+    - `CODEX_MODEL_BY_ROLE` (lines 112-120) maps `general_orchestrator` and `engineer` to
+      the cheap model, and every other role (senior_engineer, lead_engineer,
+      quality_engineer, principal_engineer, security_engineer, model_engineer) to the
+      strong model — a 2-tier role-based substitution with no reference to the canonical
+      Claude model ID the role is assigned in this SPEC's Model Assignment table.
+    - Confirmed against rendered output: `dist/codex/agents/orchestrator.toml` has
+      `model = "gpt-5.4-mini"`; `dist/codex/agents/security-engineer.toml` has
+      `model = "gpt-5.5"`. Neither file contains any `claude-*` string. This is categorically
+      different from Claude/Copilot/OpenCode, which all carry the *same* canonical Claude
+      model ID forward, differing only in surface formatting (tier alias, dot->hyphen,
+      `anthropic/` prefix). Writing a Codex row using the old row's "canonical ID -> same
+      ID, no transformation" pattern would be a factually incorrect claim, not a
+      corrected one.
+
+  EVIDENCE 3 - Codex is out of scope for the hyphen-format validation check, confirmed
+  from the test file, not inferred.
+  `grep -n -i 'codex\|dist/' tests/test_model_naming_compliance.py` shows the suite only
+  reads `dist/copilot`, `dist/claude`, and `dist/opencode` (three `pytest.skip(...)`/assert
+  blocks, one per harness, at lines ~219, ~248, ~272 respectively) — there is no
+  `dist/codex` block. This confirms `pi` should be dropped, not replaced with `codex`, in
+  the sentence enumerating harnesses covered by the hyphen-format check: Codex was never
+  covered (it renders GPT model names, not `claude-*` IDs) and still isn't.
+
+  EVIDENCE 4 - scope is confined to the two pi references in this section only.
+  No other content in the "Model Naming & Harness Compatibility" section references pi.
+  `grep -n -i '\bpi\b\|pi\.dev' docs/SPEC.md` after this change returns only two
+  Update-Log entries (2026-05-25's historical source citation and SPEC-2026-006's own
+  changelog line describing its own out-of-scope note) — both are prior append-only
+  changelog entries and are left byte-identical, per spec-management's "never edit or
+  remove a prior entry" rule.
+
+proposed_changes:
+  "Model Naming & Harness Compatibility (LOCKED SPEC)": |
+    Two edits, both in the Harness-Specific Model Format / Validation & Enforcement
+    subsections; everything else in the LOCKED section (Official Model Names table, the
+    CRITICAL RULE paragraph, Model Assignment by Agent Role, Model Governance: Locking &
+    Switching, and the rest of Validation & Enforcement) is byte-identical:
+
+    1. Harness-Specific Model Format table — replace the row
+       `| **Pi (pi.dev)** | \`claude-opus-5\` | \`claude-opus-5\` | No transformation (single-part) |`
+       with
+       `| **Codex** | *(not carried forward)* | \`gpt-5.4-mini\` (Orchestrator/Engineer) or \`gpt-5.5\` (all other roles) | Not a canonical-ID transform — Codex substitutes its own GPT-family model per agent-role tier (\`CODEX_MODEL_BY_ROLE\` in \`renderer/scripts/render-codex.py\`); it never emits a \`claude-*\` ID |`
+       Row stays in the same table position (after OpenCode). The other three rows
+       (Claude, Copilot CLI, OpenCode) are unchanged.
+    2. Validation & Enforcement, "Mandatory checks" bullet — change
+       "rendered output (`dist/{copilot,claude,opencode,pi}/agents/*` all use hyphen
+       format)"
+       to
+       "rendered output (`dist/{copilot,claude,opencode}/agents/*` all use hyphen format —
+       Codex is excluded from this check because it renders its own GPT-family models,
+       not a `claude-*` ID, per the Harness-Specific Model Format table above)".
+       `pi` is dropped and `codex` is deliberately NOT substituted in, per Evidence 3.
+
+out_of_scope:
+  - section: "Model Naming & Harness Compatibility (LOCKED SPEC)"
+    status: "Only the table-row replacement and the one enumeration edit above; Official Model Names table, CRITICAL RULE paragraph, Model Assignment by Agent Role, and Model Governance: Locking & Switching are byte-identical"
+  - item: "Update Log historical entries (2026-05-25, SPEC-2026-006's own 2026-08-12 entry)"
+    status: UNTOUCHED
+    note: "Both still mention pi/pi.dev as accurate historical record (an official source citation and a description of what a prior proposal left out of scope). Append-only changelog discipline — prior entries are never edited."
+  - item: "renderer/, docs/PROTOCOL.md, docs/specs/, other docs/ files"
+    status: OUT_OF_SCOPE
+    note: "Owned by a concurrently running sibling engineer per this proposal's routing DELEGATE (task-2026-08-12-backlog-spec007-model-naming); not touched here."
+
+impact:
+  breaking_for_users: false
+  user_impact: |
+    None. Documentation-only correction: Codex has rendered its own GPT-family models
+    (not Claude IDs) since it was added, and pi has already been removed from the
+    renderer and dist/ output. No model assignment, routing rule, or validator behavior
+    changes.
+  code_impact: none (documentation only; no renderer, test, or hook changes)
+  observability_impact: none
+  integrity_impact: |
+    Removes a stale/inaccurate harness reference in a LOCKED section and replaces it with
+    an accurate description of Codex's genuinely different (role-substitution, not
+    ID-transformation) model-rendering behavior, rather than papering over the difference
+    with a superficial pi->codex string swap.
+  risk: |
+    Minimal. Two edits confined to the Harness-Specific Model Format table and one
+    Validation & Enforcement sentence; every other clause of the LOCKED section — model
+    list, naming invariant, `.githooks/LOCKED_MODELS.sh` single-source-of-truth clause,
+    Model Switch Process — is untouched.
+
+compatibility_notes: |
+  Backward compatible. No model IDs, role assignments, or validator/test behavior change
+  — `tests/test_model_naming_compliance.py` already excluded Codex from the hyphen-format
+  check before this proposal; the SPEC text now says so explicitly instead of implying
+  (via the stale pi reference) that a fourth harness was covered.
+
+breaking_change: false
+migration_path: null
+
+# ---------------------------------------------------------------------------
+# APPROVAL
+# ---------------------------------------------------------------------------
+# This proposal is authored and applied under the authority of DELEGATE
+# task-2026-08-12-backlog-spec007-model-naming (ancestry:
+# task-2026-08-11-framework-slimdown-root), which routes spec-management authority to the
+# authoring Lead Engineer for this narrowly-scoped follow-up correction, consistent with
+# how SPEC-2026-006 (also lead-engineer-authored, also a framework-slimdown follow-up)
+# recorded its authorization: no external approval_chain entry, the routing DELEGATE
+# itself is the audit trail of authorization.
+approved_by: lead-engineer
+authorization_note: |
+  Authorized by routing DELEGATE task-2026-08-12-backlog-spec007-model-naming, issued by
+  the orchestrator with ancestry back to task-2026-08-11-framework-slimdown-root. No
+  separate principal-engineer/security-engineer approval_chain is recorded for this
+  change, matching the precedent set by SPEC-2026-002, SPEC-2026-005, and SPEC-2026-006
+  (all lead-engineer-authored corrections applied under an authorizing DELEGATE rather
+  than a peer-review approval_chain).
+
+references:
+  - "docs/SPEC.md — Model Naming & Harness Compatibility (LOCKED SPEC), section amended"
+  - "docs/spec-proposals/SPEC-2026-006.yaml — sibling correction to the Queue Architecture & Paths LOCKED section; explicitly left this section's pi references out of scope (see its out_of_scope block)"
+  - "renderer/scripts/render-codex.py:43-44,112-120 — CHEAP_CODEX_MODEL/STRONG_CODEX_MODEL and CODEX_MODEL_BY_ROLE, the role-based substitution table"
+  - "dist/codex/agents/orchestrator.toml, dist/codex/agents/security-engineer.toml — rendered output confirming gpt-5.4-mini/gpt-5.5, no claude-* IDs"
+  - "tests/test_model_naming_compliance.py — hyphen-format check reads dist/copilot, dist/claude, dist/opencode only; no dist/codex block"
+  - "task-2026-08-12-backlog-spec007-model-naming — routing DELEGATE, ancestry: [task-2026-08-11-framework-slimdown-root]"

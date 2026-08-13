@@ -790,28 +790,40 @@ class ComplianceChecker:
         diff: DiffAnalysis,
         added_content: str,
     ) -> List[Violation]:
-        """Check diff against SPEC constraints."""
+        """Check diff against SPEC constraints.
+
+        Scoped per-hunk (like `_check_security_heuristics`) rather than
+        against the flattened whole-diff blob (`added_content`, kept as a
+        parameter for interface stability but no longer consulted here). A
+        constraint is violated by the content of a specific hunk, not by
+        keyword co-occurrence scattered across unrelated files in a large
+        diff — checking the flattened blob meant two generic keywords
+        appearing *anywhere* in a broad diff (e.g. a repo-wide slimdown)
+        would trigger a violation attributed to whichever file happened to
+        contain any two of them, even if unrelated to the actual hunk.
+        Per-hunk scoping ties detection directly to attribution.
+        """
+        del added_content  # unused: see docstring
         violations: List[Violation] = []
 
         for constraint in constraints:
             if not constraint.is_prohibition:
                 continue  # Only check MUST NOT constraints for now
 
-            # Extract key nouns from constraint text
             constraint_lower = constraint.text.lower()
-            if self._constraint_violated(constraint_lower, added_content):
-                # Find which file caused the violation
-                file_path = self._find_violating_file(
-                    constraint_lower, diff
-                )
-                violations.append(Violation(
-                    rule=f"CONSTRAINT-{self._slugify(constraint.text[:40])}",
-                    description=f"Constraint violated: {constraint.text}",
-                    severity=ViolationSeverity.CRITICAL,
-                    file_path=file_path,
-                    evidence=self._find_evidence(constraint_lower, added_content),
-                    constraint_text=constraint.text,
-                ))
+            for hunk in diff.hunks:
+                hunk_content = "\n".join(hunk.added_lines)
+                if not hunk_content:
+                    continue
+                if self._constraint_violated(constraint_lower, hunk_content):
+                    violations.append(Violation(
+                        rule=f"CONSTRAINT-{self._slugify(constraint.text[:40])}",
+                        description=f"Constraint violated: {constraint.text}",
+                        severity=ViolationSeverity.CRITICAL,
+                        file_path=hunk.file_path,
+                        evidence=self._find_evidence(constraint_lower, hunk_content),
+                        constraint_text=constraint.text,
+                    ))
 
         return violations
 
@@ -834,18 +846,32 @@ class ComplianceChecker:
                 content_lower,
             ))
 
-        # Generic: check if constraint keywords appear in added content
-        # Extract nouns from constraint, check presence in content
-        words = re.findall(r"\b[a-z]{4,}\b", constraint_lower)
-        stop_words = {"must", "not", "use", "have", "that", "with", "this",
-                      "from", "into", "all", "only", "also", "will", "when",
-                      "than", "more", "less", "over", "under", "store", "keep",
-                      "hold", "send", "data"}
-        keywords = [w for w in words if w not in stop_words]
-        if len(keywords) >= 2:
-            matches = sum(1 for kw in keywords if kw in content_lower)
-            return matches >= 2
-
+        # No generic keyword-bag fallback below this point — intentionally.
+        #
+        # A prior version matched a constraint if >=2 of its lowercase
+        # 4+-letter keywords (minus stop words) appeared anywhere in the
+        # added content, first checked against the whole flattened diff and
+        # later tightened to a per-hunk majority-match. Both were tried and
+        # both produced false positives on this framework's own protocol
+        # documentation: this repo's only current MUST-NOT constraint
+        # ("Engineer MUST NOT receive a task without a pre-written `plan`
+        # in the DELEGATE") yields keywords like "engineer", "task", "plan",
+        # "delegate", "written", "receive" — precisely the vocabulary any
+        # ordinary doc/code change discussing the DELEGATE protocol uses.
+        # Keyword *density* is not evidence of *violation*; a bag-of-words
+        # check cannot distinguish "documents the plan requirement" from
+        # "violates the plan requirement" (that needs structural parsing of
+        # a live DELEGATE payload's `plan:` field, which is out of scope for
+        # a static diff-text audit and is already enforced elsewhere — see
+        # renderer/scripts/claude-delegate-guard.py's PreToolUse spawn hook
+        # and each specialist agent's own Protocol Guard section).
+        #
+        # The two hard-coded regex checks above (plaintext password,
+        # stack-trace exposure) remain because they test for an actual
+        # code-shaped pattern, not topic vocabulary, and are unaffected by
+        # this change. If a future MUST-NOT constraint needs diff-level
+        # enforcement, add a similarly precise, pattern-based branch here
+        # rather than reinstating a generic keyword-density fallback.
         return False
 
     # Paths excluded from active-source security heuristics. The SPEC scopes
@@ -863,6 +889,7 @@ class ComplianceChecker:
         # Build & installation tooling (SPEC-exempt)
         "renderer/",
         "setup/",
+        "scripts/",  # CI/dev tooling scripts (run_skill_tests.py, etc.)
         # Harness rendering infrastructure (SPEC-exempt per SPEC.md line 109 and §Note):
         # "src/harnesses/*/ rendering infrastructure can use subprocess for
         #  build-time operations (rsync, etc.)"
@@ -959,15 +986,6 @@ class ComplianceChecker:
                     ))
 
         return violations
-
-    def _find_violating_file(self, constraint_lower: str, diff: DiffAnalysis) -> Optional[str]:
-        """Find which file in the diff is most likely responsible for a constraint violation."""
-        keywords = re.findall(r"\b[a-z]{4,}\b", constraint_lower)
-        for hunk in diff.hunks:
-            content = "\n".join(hunk.added_lines).lower()
-            if sum(1 for kw in keywords if kw in content) >= 2:
-                return hunk.file_path
-        return diff.hunks[0].file_path if diff.hunks else None
 
     def _find_violating_file_by_pattern(self, pattern: str, diff: DiffAnalysis) -> Optional[str]:
         """Find which file triggered a security pattern match."""

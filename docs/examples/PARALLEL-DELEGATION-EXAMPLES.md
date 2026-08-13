@@ -971,7 +971,4 @@ Use parallel delegation for naturally decomposable work where wall-clock time ma
 
 ---
 
-**See also:**
-- [PARALLEL-DELEGATION-GUIDE.md](PARALLEL-DELEGATION-GUIDE.md)
-- [AGENTS.md — Parallel Delegation](AGENTS.md#parallel-delegation-phase-2-feature)
-- [HANDOFF.md — Parallel Protocol](HANDOFF.md#parallel-delegation-protocol-phase-2)
+For more information, see [`src/AGENTS.md`](../../src/AGENTS.md) for the full delegation model and [`docs/PROTOCOL.md`](../PROTOCOL.md) for the canonical protocol reference.

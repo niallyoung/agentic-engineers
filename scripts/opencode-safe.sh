@@ -52,7 +52,7 @@ fi
 
 # ── 2. Validator gate ────────────────────────────────────────────────────────
 cyan "🔒 Validating opencode.jsonc before launch…"
-if ! ( cd "${REPO_ROOT}" && python3 -m src.opencode.config_validator --quiet "${CONFIG}" ); then
+if ! ( cd "${REPO_ROOT}" && python3 scripts/validate_opencode_config.py --quiet "${CONFIG}" ); then
   red "❌ Config validation failed — refusing to launch opencode."
   red "   See errors above. Recover with: scripts/opencode-safe.sh --rollback"
   red "   Or read: docs/OPENCODE-CONFIG-RECOVERY.md"

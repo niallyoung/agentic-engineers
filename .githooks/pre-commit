@@ -275,12 +275,12 @@ fi
 
 # ─── Section: Agent frontmatter consistency check ───────────────────────────
 # Validate that src/agents/*-agent.md frontmatter model/effort fields
-# match the canonical values in docs/AGENTS.md.
+# match the canonical values in src/AGENTS.md.
 # This prevents silent drift between source files and the canonical table.
 
 validate_agent_frontmatter() {
 	local repo_root="$1"
-	local agents_md="$repo_root/docs/AGENTS.md"
+	local agents_md="$repo_root/src/AGENTS.md"
 	local src_agents="$repo_root/src/agents"
 	local errors=0
 	
@@ -330,28 +330,28 @@ validate_agent_frontmatter() {
 		# Get canonical values
 		canonical=$(lookup_agent_metadata "$agent_name" "$agents_map")
 		if [ -z "$canonical" ]; then
-			# Agent not in docs/AGENTS.md — skip (may be a new agent being added)
+			# Agent not in src/AGENTS.md — skip (may be a new agent being added)
 			continue
 		fi
-		
-		docs_model=$(echo "$canonical" | cut -d'|' -f1)
-		docs_effort=$(echo "$canonical" | cut -d'|' -f2)
-		
+
+		canonical_model=$(echo "$canonical" | cut -d'|' -f1)
+		canonical_effort=$(echo "$canonical" | cut -d'|' -f2)
+
 		# Compare model
-		if [ -n "$fm_model" ] && [ "$fm_model" != "$docs_model" ]; then
+		if [ -n "$fm_model" ] && [ "$fm_model" != "$canonical_model" ]; then
 			echo "❌ pre-commit: $agent_file model mismatch" >&2
 			echo "   frontmatter: model: $fm_model" >&2
-			echo "   docs/AGENTS.md: model: $docs_model" >&2
-			echo "   Fix: update frontmatter or docs/AGENTS.md to match" >&2
+			echo "   src/AGENTS.md: model: $canonical_model" >&2
+			echo "   Fix: update frontmatter or src/AGENTS.md to match" >&2
 			errors=$((errors + 1))
 		fi
-		
+
 		# Compare effort
-		if [ -n "$fm_effort" ] && [ "$fm_effort" != "$docs_effort" ]; then
+		if [ -n "$fm_effort" ] && [ "$fm_effort" != "$canonical_effort" ]; then
 			echo "❌ pre-commit: $agent_file effort mismatch" >&2
 			echo "   frontmatter: effort: $fm_effort" >&2
-			echo "   docs/AGENTS.md: effort: $docs_effort" >&2
-			echo "   Fix: update frontmatter or docs/AGENTS.md to match" >&2
+			echo "   src/AGENTS.md: effort: $canonical_effort" >&2
+			echo "   Fix: update frontmatter or src/AGENTS.md to match" >&2
 			errors=$((errors + 1))
 		fi
 	done
@@ -359,9 +359,9 @@ validate_agent_frontmatter() {
 	return $errors
 }
 
-# Run validation (only if docs/AGENTS.md and src/agents/ exist)
+# Run validation (only if src/AGENTS.md and src/agents/ exist)
 REPO_ROOT_HOOK=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-if [ -f "$REPO_ROOT_HOOK/docs/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]; then
+if [ -f "$REPO_ROOT_HOOK/src/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]; then
 	if ! validate_agent_frontmatter "$REPO_ROOT_HOOK"; then
 		echo "" >&2
 		echo "💡 To bypass this check (emergency only): BYPASS_HOOK_VALIDATION=true git commit" >&2
@@ -420,24 +420,24 @@ fi
 # ─── Section: OpenCode harness config validation ─────────────────────────────
 # Security-critical: opencode.jsonc errors have broken the OpenCode CLI twice
 # (see docs/OPENCODE-CONFIG-INVESTIGATION.md). When the file is staged, run
-# the full schema validator (src/opencode/config_validator.py) and BLOCK the
+# the full schema validator (scripts/validate_opencode_config.py) and BLOCK the
 # commit on any ERROR finding. Warnings are surfaced but do not block.
 #
 # Bypass: BYPASS_HOOK_VALIDATION=true git commit  (emergency only)
 if git diff --cached --name-only | grep -qE '^opencode\.jsonc$'; then
   if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
     warn "BYPASS_HOOK_VALIDATION=true — skipping opencode.jsonc validation"
-  elif [ -f "$REPO_ROOT_HOOK/src/opencode/config_validator.py" ] && command -v python3 >/dev/null 2>&1; then
+  elif [ -f "$REPO_ROOT_HOOK/scripts/validate_opencode_config.py" ] && command -v python3 >/dev/null 2>&1; then
     echo "🔒 Validating staged opencode.jsonc…"
     # Validate the STAGED content (not the working tree) so amendments are caught.
     staged_tmp="$(mktemp -t opencode.jsonc.staged.XXXXXX)"
     trap "rm -f '$staged_tmp'" EXIT
     git show ":opencode.jsonc" > "$staged_tmp" 2>/dev/null || true
-    if ! ( cd "$REPO_ROOT_HOOK" && python3 -m src.opencode.config_validator "$staged_tmp" ); then
+    if ! ( cd "$REPO_ROOT_HOOK" && python3 scripts/validate_opencode_config.py "$staged_tmp" ); then
       fail "opencode.jsonc validation failed — see errors above (see docs/OPENCODE-CONFIG-COMMON-MISTAKES.md)"
     fi
   else
-    warn "opencode.jsonc staged but validator not available — install src/opencode/config_validator.py"
+    warn "opencode.jsonc staged but validator not available — install scripts/validate_opencode_config.py"
   fi
 fi
 # ─── End: OpenCode harness config validation ─────────────────────────────────
@@ -621,7 +621,15 @@ echo "✅ Source file integrity check passed"
 # - Block: ~/.claude/queue (DEPRECATED)
 # - Block: artifacts/queue (DEPRECATED)
 #
-# Exceptions: Allow in src/orchestration/queue_compat.py and _archive/ directories
+# EXEMPTION MARKERS (per-line, narrowly scoped):
+# When a line legitimately names a legacy path (e.g., in a deny-list constant
+# or documentation explaining what paths are forbidden), mark it with:
+#   - Python/code: '# legacy-path-deny-list' at end of line
+#   - Markdown/docs: '<!-- legacy-path-deny-list -->' on same or previous line
+# This allows the hook to distinguish USING a path from DENOUNCING it.
+#
+# (No source-tree exceptions currently apply — the compat/archive paths this
+# section once exempted were deleted in the SPEC-2026-005 framework slimdown.)
 #
 
 echo ""
@@ -708,40 +716,59 @@ STAGED_QUEUE_FILES="$STAGED_QUEUE_FILES $STAGED_MD_FILES"
 
 for file in $STAGED_QUEUE_FILES; do
     [ -f "$file" ] || continue
-    
+
     # Skip exceptions: queue_compat.py, _archive/, and tests/
     if [[ "$file" == *"queue_compat.py"* ]] || [[ "$file" == *"_archive"* ]] || [[ "$file" == *"test_"* ]] || [[ "$file" == *"queue-path-validator"* ]]; then
         continue
     fi
-    
+
     # Check for legacy queue paths in staged content
-    
-    # Block: ~/.copilot/queue (except exceptions)
-    if git show ":$file" 2>/dev/null | grep -q "\.copilot/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
-            fail "Legacy queue path found in $file: ~/.copilot/queue"
-            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+    # Lines with explicit exemption markers are allowed (deny-list constants/docs)
+
+    file_content=$(git show ":$file" 2>/dev/null)
+
+    # Helper: check if a line has exemption marker (for code: '# legacy-path-deny-list', for docs: '<!-- legacy-path-deny-list -->')
+    has_exemption() {
+        local line="$1"
+        # Simple string matching (avoids regex escaping issues)
+        [[ "$line" == *"legacy-path-deny-list"* ]]
+    }
+
+    # Block: ~/.copilot/queue (unless line has exemption marker)
+    while IFS= read -r line; do
+        if [[ "$line" == *".copilot/queue"* ]]; then
+            if ! has_exemption "$line"; then
+                fail "Legacy queue path found in $file: ~/.copilot/queue"
+                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
+                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+            fi
         fi
-    fi
-    
-    # Block: ~/.claude/queue (except exceptions)
-    if git show ":$file" 2>/dev/null | grep -q "\.claude/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
-            fail "Legacy queue path found in $file: ~/.claude/queue"
-            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+    done <<< "$file_content"
+
+    # Block: ~/.claude/queue (unless line has exemption marker)
+    while IFS= read -r line; do
+        if [[ "$line" == *".claude/queue"* ]]; then
+            if ! has_exemption "$line"; then
+                fail "Legacy queue path found in $file: ~/.claude/queue"
+                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
+                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+            fi
         fi
-    fi
-    
-    # Block: artifacts/queue (except queue_compat.py and _archive/)
-    if git show ":$file" 2>/dev/null | grep -q "artifacts/queue"; then
-        if [[ "$file" != *"queue_compat.py"* ]] && [[ "$file" != *"_archive"* ]] && [[ "$file" != *"queue-path-validator"* ]]; then
-            fail "Legacy queue path found in $file: artifacts/queue"
-            fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
-            QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+    done <<< "$file_content"
+
+    # Block: artifacts/queue (unless line has exemption marker)
+    while IFS= read -r line; do
+        if [[ "$line" == *"artifacts/queue"* ]]; then
+            if ! has_exemption "$line"; then
+                fail "Legacy queue path found in $file: artifacts/queue"
+                fail "  → Use ~/.agentic-engineers/ instead (see docs/SPEC.md)"
+                fail "  → Deny-list constants/docs must mark lines with '# legacy-path-deny-list' (code) or '<!-- legacy-path-deny-list -->' (markdown)"
+                QUEUE_ERRORS=$((QUEUE_ERRORS + 1))
+            fi
         fi
-    fi
+    done <<< "$file_content"
 done
 
 if [ "$QUEUE_ERRORS" -gt 0 ]; then

@@ -78,8 +78,14 @@ _stream_emit() {
 				summary)  : ;;  # handled by main echo
 			esac
 		fi
+	elif [ "$mode" = "json" ]; then
+		# Native JSON-lines emission (no external helper — the deleted
+		# src/harnesses/copilot_cli/streaming.py this used to exec is gone).
+		local json_data="$data"
+		[ -z "$json_data" ] && json_data="{}"
+		printf '{"ts":"%s","type":"%s","skill":"%s","data":%s}\n' \
+			"$ts" "$type" "$skill" "$json_data"
 	fi
-	# json mode is handled by Python helper (exec'd above)
 }
 
 
@@ -116,7 +122,7 @@ case "$MODE" in
 			elif [ ! -f "$dst/$MARKER" ]; then
 				echo "  ⚠️  $name (exists but not managed by us)"
 				foreign=$((foreign + 1))
-			elif diff -rq "$src" "$dst" --exclude="$MARKER" --exclude=".DS_Store" --exclude=".git" >/dev/null 2>&1; then
+			elif diff -rq "$src" "$dst" --exclude="$MARKER" --exclude=".DS_Store" --exclude=".git" --exclude='tests' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' >/dev/null 2>&1; then
 				echo "  ✅ $name"
 				ok=$((ok + 1))
 			else
@@ -138,9 +144,6 @@ case "$MODE" in
 			STREAM_MODE="human"
 		elif [ "$MODE" = "--stream=json" ]; then
 			STREAM_MODE="json"
-			# Delegate entirely to Python helper
-			exec python3 "$(dirname "$0")/../../src/harnesses/copilot_cli/streaming.py" \
-				"$SRC_SKILLS" "$DST_SKILLS" "$MARKER"
 		fi
 
 		echo "📦 Rendering skills → $DST_SKILLS/..."
@@ -168,7 +171,7 @@ case "$MODE" in
 			# For non-streaming mode, use standard rsync
 			if [ "$STREAM_MODE" = "human" ]; then
 				rsync -a --delete --progress \
-					--exclude='.DS_Store' --exclude='.git' \
+					--exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
 					"$src/" "$dst/" || {
 					_stream_emit "$STREAM_MODE" "error" "$name" \
 						"{\"message\":\"rsync failed with exit $?\"}"
@@ -176,7 +179,7 @@ case "$MODE" in
 					continue
 				}
 			else
-				rsync -a --delete --exclude='.DS_Store' --exclude='.git' \
+				rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
 					"$src/" "$dst/" || {
 					echo "  ❌ $name — rsync failed" >&2
 					continue
@@ -220,20 +223,10 @@ case "$MODE" in
 		cat > "$COPILOT/settings.json" <<'EOF'
 {
   "model": "claude-haiku-4-5",
-  "harness": "copilot",
-  "idle_loop": {
-    "enabled": true,
-    "interval_seconds": 180,
-    "action": "invoke_skill",
-    "skill": "orchestrator-scheduler",
-    "args": ["--poll-once"],
-    "backoff_intervals": [5, 30, 180, 600],
-    "watch_enabled": true,
-    "watch_poll_seconds": 0.5
-  }
+  "harness": "copilot"
 }
 EOF
-		echo "  ✅ settings.json (session model + idle_loop auto-polling)"
+		echo "  ✅ settings.json (session model configuration)"
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.

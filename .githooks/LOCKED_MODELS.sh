@@ -27,13 +27,11 @@ LOCKED_MODELS=(
     "claude-haiku-4.5"
     "claude-sonnet-4.5"
     "claude-sonnet-4.6"
+    "claude-sonnet-5"
     "claude-opus-4.6"
     "claude-opus-4.7"
     "claude-opus-4.8"
-    # fable-5: Security Engineer defensive-only alternative (effort <= medium).
-    # Single-part version — canonical name matches the API alias exactly
-    # (claude-fable-5) in every harness; no dot/hyphen transformation applies.
-    # See docs/SPEC.md > Security Engineer: Multi-Model Strategy.
+    "claude-opus-5"
     "claude-fable-5"
 )
 
@@ -53,13 +51,13 @@ LOCKED_MODELS=(
 # Format: agent-name:model-choice (space-separated for portability)
 AGENT_MODEL_ASSIGNMENTS=(
     "engineer-agent:claude-haiku-4.5"
-    "orchestrator-agent:claude-haiku-4.5"
-    "lead-engineer-agent:claude-sonnet-4.6"
-    "quality-engineer-agent:claude-sonnet-4.6"
-    "senior-engineer-agent:claude-sonnet-4.5"
-    "model-engineer-agent:claude-sonnet-4.5"
-    "security-engineer-agent:claude-opus-4.8"
-    "principal-engineer-agent:claude-opus-4.6"
+    "orchestrator-agent:claude-sonnet-5"
+    "lead-engineer-agent:claude-sonnet-5"
+    "quality-engineer-agent:claude-sonnet-5"
+    "senior-engineer-agent:claude-sonnet-5"
+    "model-engineer-agent:claude-sonnet-5"
+    "security-engineer-agent:claude-fable-5"
+    "principal-engineer-agent:claude-opus-5"
 )
 
 # ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────

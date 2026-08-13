@@ -10,7 +10,6 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 | GitHub Copilot | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | [Claude Code](claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
 | [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Supported, opt-in install |
-| π.dev | Experimental harness with emerging features | Early adopters, experimentation | ⚠️ Beta |
 
 ## Quick Start
 
@@ -20,9 +19,9 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 make install
 ```
 
-This runs the default harness renderers (OpenCode, Copilot, Claude, and π.dev). Use `make install-codex` separately for Codex.
+This runs the default harness renderers (OpenCode, Copilot, and Claude). Use `make install-codex` separately for Codex.
 
-Each installer writes only to its own harness config root: `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, `~/.pi/`, or `~/.codex/` via `make install-codex`.
+Each installer writes only to its own harness config root: `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, or `~/.codex/` via `make install-codex`.
 
 ### Install Claude Code (Interactive Development)
 
@@ -48,9 +47,6 @@ make install-claude
 
 # Codex
 make install-codex
-
-# π.dev
-make install-pi
 ```
 
 ## Version Compatibility
@@ -66,7 +62,6 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 | Copilot CLI | `claude-opus-4.8` | `claude-opus-4.8` (pass-through) | Anthropic API format |
 | Claude Code | `claude-opus-4.8` | `opus` (short alias) | Web UI simplification |
 | Codex | `claude-opus-4.8` role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
-| π.dev | `claude-opus-4.8` | `claude-opus-4-8` (hyphens) | Anthropic API format |
 
 ### Renderer Scripts
 
@@ -74,14 +69,11 @@ Each harness uses a dedicated renderer script to handle these transformations:
 - `renderer/scripts/render-opencode.sh` — OpenCode configuration
 - `renderer/scripts/render-copilot.sh` — Copilot CLI configuration
 - `renderer/scripts/render-claude.sh` — Claude Code configuration
-- `renderer/scripts/render-pi-dev.py` — π.dev configuration
 - `renderer/scripts/render-codex.py` — Codex custom agents, config, and skills
 
 Run `make install` for the default harness set, or use individual `make install-{harness}` targets when you need a specific harness, including `make install-codex`.
 
 ## Troubleshooting
-
-See the [Troubleshooting Guide](../troubleshooting.md) for common issues and fixes.
 
 ### Common Issues by Harness
 
@@ -89,12 +81,7 @@ See the [Troubleshooting Guide](../troubleshooting.md) for common issues and fix
 |-------|---------|-----|
 | Queue directories not found | OpenCode | `mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}` |
 | Model not recognized | Copilot CLI | Verify `copilot --version` is ≥2.0.0 |
-| Agent not found | Claude Code | Run `make install-claude` or see [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md) |
-| Events not firing | π.dev | Check `~/.pi/agent/extensions/` for handler files |
-
-**Harness-Specific Guides:**
-- [OpenCode Troubleshooting](../../HARNESS-OPENCODE-TROUBLESHOOTING.md)
-- [Claude Code Troubleshooting](../../HARNESS-CLAUDE-TROUBLESHOOTING.md)
+| Agent not found | Claude Code | Run `make install-claude` |
 
 ## Quality Gates
 
@@ -137,12 +124,11 @@ Harness and model compatibility is continuously tested via the **EVALS-001 frame
 - Model regressions detected immediately
 - ≥95% pass rate required before production deployment
 
-**Status:** EVALS-001 framework in active development (target completion: June 2026).  
-**Reference:** See [TODO.md § Harness Compatibility & Evaluation Testing](../../../TODO.md#harness-compatibility--evaluation-testing)
+**Status:** EVALS-001 framework in active development.
 
 ## Next Steps
 
 Choose your harness and follow the detailed setup guide:
 - [OpenCode Setup](opencode.md)
 - [Codex Setup](codex.md)
-- GitHub Copilot, Claude Code, and π.dev are summarized in the top-level [README](../../README.md#supported-harnesses).
+- GitHub Copilot and Claude Code are summarized in the top-level [README](../../../README.md).

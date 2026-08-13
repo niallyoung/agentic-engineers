@@ -1,52 +1,60 @@
 # Agent Roster & Handover Packet Protocol
 
-> **Architecture:** Queue-based DELEGATE/HANDBACK — all work enters the queue; no direct agent-to-agent calls.  
-> **Autonomy mode:** Reduced — agents pause when the queue is empty rather than inventing new work.  
-> **Model selection:** Informed by the Model Engineer feedback loop; see [`src/skills/roles/model-engineer.md`](skills/roles/model-engineer.md).
+> **Architecture:** Direct sub-agent spawn DELEGATE/HANDBACK — the spawning agent (Orchestrator, or another role with spawn authority) constructs a DELEGATE block and passes it directly as the prompt of a sub-agent spawn (the harness's Agent/Task tool); the HANDBACK returns synchronously as that tool call's result, in-context. Every DELEGATE and HANDBACK is *also* durably recorded to the filesystem queue as an audit trail — the queue records what happened, it no longer drives dispatch. See [Direct Sub-Agent Spawn Execution Model](#direct-sub-agent-spawn-execution-model).
+> **Autonomy mode:** Reduced — agents pause when there is no pending or in-flight delegated work, rather than inventing new work.
+> **Model selection:** Informed by the Model Engineer feedback loop; see the Model Engineer role below.
 
 ---
 
 ## Philosophy
 
-- **Queue-first** — every task enters `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` as a DELEGATE block; no ad-hoc delegation
-- **enqueue() is mandatory** — ALL DELEGATEs and HANDBACKs MUST be created via `QueueOperations.enqueue()` (the `queue-management` skill). Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
+- **Direct spawn, not ad-hoc** — every task is delegated by constructing a DELEGATE block and passing it directly as the prompt of a sub-agent spawn (the harness's Agent/Task tool); there is no free-form delegation outside this mechanism, and only agents whose frontmatter grants `spawn_subagent` may do it (see [Tools-Frontmatter Permission Model](#tools-frontmatter-permission-model))
+- **Audit-first, not dispatch-first** — every DELEGATE (at spawn) and every HANDBACK (at completion) MUST be durably recorded via `QueueOperations.enqueue()` (the `queue-management` skill) to `~/.agentic-engineers/{harness}/{session-id}/queue/`. This is bookkeeping written *after* the spawn already happened directly — nothing polls these directories to trigger work. Direct file writes to any queue subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) are forbidden and bypass schema validation.
 - **Reduced autonomy** — agents pause when the queue is empty; they do NOT invent work
-- **Start cheap, escalate deliberately** — route to the cheapest capable model; upgrade only when blocked
+- **Start cheap, escalate deliberately** — each role's default model is the cheapest tier capable of that role's job (see the Agent Roster table); a low-quality HANDBACK triggers rework or reroutes to a higher-tier role, not a live mid-task model upgrade
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
 - **Cold-context agents** — every DELEGATE is self-contained; the receiving agent cannot rely on session state
 - **Parallel by default** — the Orchestrator fans out multiple DELEGATEs simultaneously when tasks are independent
-- **Delegate fan-out** — Codex `delegate:` / `DELEGATE:` requests may contain semicolon-separated tasks; split them into separate DELEGATEs, parallelize the independent ones, and keep same-file edits coordinated
 - **Token-conscious** — cite line numbers, suppress verbose output, trust tool confirmations; measure with Model Engineer
 
 ---
 
 ## Agent Roster
 
-**MODEL NAMING (LOCKED):** All models use canonical format with DOTS: `claude-{variant}-{major}.{minor}`
-(e.g., `claude-haiku-4.5`, `claude-sonnet-4.6`, `claude-opus-4.8`). See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
+**MODEL NAMING (LOCKED):** Models use canonical format with a DOT version separator,
+`claude-{variant}-{major}.{minor}` (e.g. `claude-haiku-4.5`, `claude-opus-4.8`). Current-generation
+models carry a **single-part version** and therefore have no separator at all:
+`claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. The invariant is "never a hyphen as the
+version separator" (`claude-opus-4-7` is a per-harness render, never source).
+See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
+
+**SINGLE SOURCE OF TRUTH:** Model assignments are defined in `.githooks/LOCKED_MODELS.sh`
+(`LOCKED_MODELS` + `AGENT_MODEL_ASSIGNMENTS`). All hooks, validators, and this table must
+stay synchronized with it — see [SPEC.md > Model Governance](../docs/SPEC.md) for the
+switch process.
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
-| **Orchestrator** | claude-haiku-4.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Orchestrator** | claude-sonnet-5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-4.6 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-4.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-4.6 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-4.6 | high | 4.6/4.7/4.8 | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-opus-4.8 | max | 4.8 (pinned) \| fable-5 (defensive-only) | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-4.5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+| **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Lead Engineer** | claude-sonnet-5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Principal Engineer** | claude-opus-5 | high | opus-5 (default) \| 4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
+| **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Model Engineer** | claude-sonnet-5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
-**Multi-Model column notes:**
-- Principal Engineer: 4.6 (default/pure planning), 4.7 (design+execution), 4.8 (security-critical design). Orchestrator selects variant at DELEGATE-creation time. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
-- Security Engineer: 4.8 (default, pinned) | fable-5 (defensive-only alternative at effort:medium). 4.7 only as emergency fallback if 4.8 unavailable; document in HANDBACK. Fable-5 restricted to defensive analysis (vulnerability assessment, threat modelling, compliance review). See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
+> **This table is load-bearing, not documentation.** `renderer/lib/render-lib.sh:parse_agents_md()`
+> reads the Model and Effort columns to render the Claude Code and OpenCode harnesses. Editing an
+> agent's frontmatter without editing this row ships the *old* model to those two harnesses.
 
-### Cost Tiers
-
-```
-Tier 1 — Cheap (Haiku):   Orchestrator + Engineer          → $0.03–0.05/task
-Tier 2 — Medium (Sonnet): Model Eng + QE + Lead + Senior   → $0.09/task
-Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
-```
+**Multi-Model column notes:** Principal Engineer uses `claude-opus-5` for all planning and
+cross-repo design; `claude-opus-4.8` is an emergency fallback only (opus-5 unavailable),
+documented in HANDBACK. Security Engineer uses `claude-fable-5` unconditionally;
+`claude-opus-4.8` is an emergency fallback only. The defensive-only scope constraint
+applies on **every** model, not just fable-5 — restricted-topic work is out of scope
+framework-wide and is rejected by the Orchestrator's DelegateValidator C5 gate rather
+than re-routed. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
 
@@ -54,31 +62,22 @@ Tier 3 — Premium (Opus):  Principal + Security             → $0.15/task
 
 ## Orchestrator Entry Point
 
-**All work flows through the Orchestrator.** The Orchestrator is your default handler and never performs implementation work itself—it routes, coordinates, and applies Model Engineer recommendations.
-
-```
-User request / External trigger
-  └─► Orchestrator (haiku — cheap routing)
-        ├─► Issues DELEGATE to the correct specialist
-        ├─► Specialist performs work and returns HANDBACK
-        └─► Orchestrator interprets result and coordinates next steps
-```
-
-**Why Orchestrator-first?**
-- **Auditability** — all work is tracked as DELEGATE/HANDBACK blocks in the queue
-- **Cost discipline** — starts cheap (Haiku), escalates only when needed
-- **Protocol enforcement** — routing rules and model selection are consistent
-- **Parallel execution** — independent tasks fan out simultaneously
-
-Direct `@agent-name` invocation is available as an advanced escape hatch but skips protocol enforcement and audit trails. The canonical flow always goes through Orchestrator.
+**All work flows through the Orchestrator** — your default handler, which never performs
+implementation work itself: it routes, coordinates, and applies Model Engineer
+recommendations. Why Orchestrator-first: auditability (all work tracked as DELEGATE/
+HANDBACK in the queue), cost discipline (each role has a fixed, cost-appropriate model; a
+low-quality HANDBACK reroutes to a higher tier rather than upgrading mid-task), protocol
+enforcement, and parallel execution of independent work. Direct `@agent-name` invocation
+is an advanced escape hatch that skips protocol enforcement and audit trails — the
+canonical flow always goes through Orchestrator. See
+[Delegation Model & Routing Rules](#delegation-model--routing-rules) for the full chain.
 
 ---
 
 ## Canonical DELEGATE/HANDBACK Schema
 
-All work follows the DELEGATE/HANDBACK protocol. DELEGATEs are enqueued by the Orchestrator, processed by specialist agents, and HANDBACKs are returned with metrics.
-
-### DELEGATE Format (Request)
+Quick reference — see [Handover Packet Protocol](#handover-packet-protocol) below for the
+full annotated format including ESCALATION and extension fields.
 
 ```yaml
 ---
@@ -88,61 +87,38 @@ task_id: unique-identifier
 scope: "Clear, bounded description of what will be done (≥15 words)"
 context:
   - "Relevant file: src/module.py (lines 45-67)"
-  - "Error message or requirement summary"
 plan:
   - "Step 1: Read and understand requirement"
-  - "Step 2: Identify affected files"
-  - "Step 3: Implement feature"
-  - "Step 4: Run tests"
+  - "Step 2: Implement feature"
 success_criteria:
   - "All tests pass"
-  - "Code follows style guide"
-  - "No linter warnings"
 estimated_tokens: 1500
 ---
 ```
-
-### HANDBACK Format (Response)
 
 ```yaml
 ---
 handoff_type: HANDBACK
 task_id: unique-identifier
 status: success                    # success | failure | partial | blocked | escalate
-
 output: |
-  Modified src/module.py to implement feature. Added tests/test_feature.py
-  with 100% coverage. All unit tests pass (47 tests). Code coverage: 92%.
-
+  Modified src/module.py to implement feature. All unit tests pass (47 tests).
 metrics:
   quality: 0.95                    # 0.0-1.0 float
   tokens: 1200                     # total input + output
   cost: 0.019                      # USD
   duration_seconds: 42             # wall-clock time
-
 confidence: 0.95                   # 0.0-1.0 float
 ---
 ```
 
 ---
 
-## Multi-Model Selection (Tier 3)
-
-Principal Engineer and Security Engineer support model variant selection based on task complexity.
-
-**Decision criteria:**
-- Principal Engineer: Use `claude-opus-4.6` for pure planning; `claude-opus-4.7` for cross-repo execution impact; `claude-opus-4.8` for security-critical design
-- Security Engineer: Use `claude-opus-4.8` (default, pinned) | `claude-fable-5` with adaptive thinking at effort:medium (defensive analysis only; see SPEC.md constraint)
-
-For detailed guidance, decision trees, and examples, see [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
-
----
-
-## Delegation Model
+## Delegation Model & Routing Rules
 
 ```
 User / External Trigger
-  └─► Orchestrator  (haiku — cheap routing)
+  └─► Orchestrator  (sonnet-5 — routing)
         ├─► Engineer               ← well-scoped tasks with full plans
         ├─► Senior Engineer        ← unscoped or multi-file work
         │     ├─► Lead Engineer    ← architecture decisions, code review
@@ -151,8 +127,6 @@ User / External Trigger
         ├─► Quality Engineer       ← post-implementation validation (always)
         └─► Model Engineer         ← after QE HANDBACK, analyses metrics
 ```
-
-### Routing Rules
 
 1. **Security-scoped** → Security Engineer (always, no exceptions)
 2. **Cross-service / architecture** → Principal Engineer
@@ -167,247 +141,117 @@ User / External Trigger
 
 Detailed capabilities, boundaries, and escalation triggers for each role.
 
----
-
 ### 1. Orchestrator
 
-**Model:** `claude-haiku-4.5`  **Tier:** Cheap  **Skill:** `src/skills/orchestration/task-routing.md`
-
-**Purpose:** Entry point for all user requests. Routes work via the decision tree. Never implements.
-
-**Capabilities:**
-- Parse incoming requests and create DELEGATE blocks **via `queue-management` skill (`enqueue()`)**
-- Route tasks to the correct role using routing rules above
-- Fan out parallel DELEGATEs when tasks are independent
-- Poll `~/.agentic-engineers/{harness}/{session-id}/queue/done/` for HANDBACKs and update `TODO.md`
-- Re-delegate ESCALATION packets at the higher tier
-- Summarise squad status as tables (not prose)
-
-**MANDATORY — Creating DELEGATEs:**
-All DELEGATEs MUST be created via `QueueOperations.enqueue()` from the `queue-management` skill.  
-Direct file writes to queue directories are forbidden and bypass schema validation.
-
-```python
-# Correct — use enqueue() via queue-management skill
-from skills.queue_management.scripts.queue_ops import QueueOperations
-ops = QueueOperations(session_id=session_id)
-ops.enqueue({
-    "handoff_type": "DELEGATE",
-    "task_id": "my-task-001",
-    "agent": "engineer",         # NOT "role": "Engineer"
-    "scope": "...",
-    "plan": ["step 1 ...", "step 2 ..."],
-    "context": "...",
-    "success_criteria": ["criterion 1"],
-})
-
-# FORBIDDEN — never write directly to queue dirs
-# open("~/.agentic-engineers/.../incoming/my-task.json", "w")  # NO
-```
-
-**Boundaries — Orchestrator MUST NOT:**
-- Write code, edit files, or run tests
-- Make architecture or security decisions
-- Hold state across sessions (use `TODO.md` and the queue)
-- Write DELEGATE or HANDBACK files directly to the queue directory (always use `enqueue()`)
-
-**Escalation triggers:** None — the Orchestrator is the top of the routing chain. If the user's request requires human input (security/compliance critical, budget exceeded), pause and surface to the user.
-
-**Pause condition:** Queue empty → Orchestrator PAUSES. Does not invent new work.
-
----
+**Model:** `claude-sonnet-5`, effort `low`. Entry point for all user requests; routes via
+the decision tree above; never implements. Parses requests into DELEGATE blocks, spawns
+the target agent directly (Agent/Task tool), fans out up to 5 concurrent spawns for
+independent work, receives each HANDBACK in-context, and `enqueue()`s both for audit —
+after dispatch, never instead of it. Re-delegates ESCALATION packets at the higher tier.
+**MUST NOT:** write code, make architecture/security decisions, hold cross-session state,
+write queue files directly, or spawn beyond the recursion/fan-out limits (see
+[Recursion Limits](#recursion-limits)). **Escalates to:** nobody — top of the chain; pause
+and surface to the user if human input is required. **Pauses when:** no pending DELEGATEs
+and no outstanding spawns.
 
 ### 2. Engineer
 
-**Model:** `claude-haiku-4.5`  **Tier:** Cheap  **Skill:** `src/skills/roles/engineer.md`
-
-**Purpose:** Execute well-scoped tasks at known file:line addresses. Cheapest implementation role.
-
-**Capabilities:**
-- Single-file edits, straightforward multi-file edits (≤ 3 files, same package)
-- Unit test writing (given a clear spec)
-- Documentation updates at known locations
-- Dependency version bumps
-- Simple bug fixes with a clear root cause
-
-**Boundaries — Engineer MUST NOT:**
-- Read multiple related files to understand context before implementing
-- Make architectural decisions or design choices
-- Modify public API contracts without explicit instruction
-
-**Escalation triggers:**
-- Change touches > 3 files across different packages → **Senior Engineer**
-- Requires reading multiple related files to understand context → **Senior Engineer**
-- Test failures after 2 fix attempts → **Senior Engineer**
-- Architecture or API design decision required → **Lead Engineer**
-- Auth, crypto, secrets, or security implications discovered → **Security Engineer**
-
----
+**Model:** `claude-haiku-4.5`, effort `high`. Executes well-scoped tasks at known
+file:line addresses — the cheapest implementation role. Single-file or straightforward
+multi-file edits (≤3 files, same package), unit tests to a clear spec, documentation
+updates, dependency bumps, simple bug fixes with a clear root cause. **MUST NOT:**
+explore multiple files to build context, make architectural/API decisions, or modify
+public contracts without instruction. **Escalates to Senior Engineer** when touching >3
+files/packages, needing multi-file context, or 2 failed test-fix attempts; **to Lead
+Engineer** for architecture/API decisions; **to Security Engineer** if auth/crypto/secrets
+surface.
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/senior-engineer.md`
-
-**Purpose:** Plans unscoped work; handles multi-file implementations requiring architectural awareness.
-
-**Capabilities:**
-- Read related files to understand context before implementing
-- Multi-file refactoring and moderate-complexity implementations
-- CI/CD pipeline changes
-- Breaking dependency updates
-- Code review of Engineer outputs when flagged by Quality Engineer
-
-**Boundaries — Senior MUST NOT:**
-- Make cross-repo API contract decisions
-- Resolve architectural disagreements between services
-- Conduct formal security audits
-
-**Escalation triggers:**
-- Architecture or API contract decisions required → **Lead Engineer**
-- Cross-service or cross-repo coordination needed → **Lead Engineer**
-- Debugging root cause spans > 2 services → **Principal Engineer**
-- Hard problem with > 2 failed fix attempts → **Principal Engineer**
-- Auth, crypto, token handling, or compliance implications → **Security Engineer**
-
----
+**Model:** `claude-sonnet-5`, effort `high`. Plans unscoped work; handles multi-file
+implementations requiring architectural awareness — reads related files first,
+moderate-complexity refactors, CI/CD changes, breaking dependency updates, reviews
+Engineer output when QE flags it. **MUST NOT:** make cross-repo API contract decisions,
+resolve inter-service architectural disputes, or conduct formal security audits.
+**Escalates to Lead Engineer** for architecture/API contract or cross-repo coordination;
+**to Principal Engineer** for root causes spanning >2 services or >2 failed attempts;
+**to Security Engineer** for auth/crypto/compliance implications.
 
 ### 4. Lead Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/lead-engineer.md`
-
-**Purpose:** Architecture decisions, 8-point code review, API contract design, conflict resolution.
-
-**Capabilities:**
-- Make architecture decisions authoritatively (API contracts, domain boundaries, data models)
-- Conduct 8-point code review (correctness, safety, patterns, performance, security surface, maintainability, test coverage, documentation)
-- Resolve conflicts between competing design approaches
-- Coordinate cross-repo work — ensure consistency across services
-- Produce DELEGATE blocks for Engineer/Senior to implement decisions
-
-**Boundaries — Lead MUST NOT:**
-- Conduct formal threat modelling or vulnerability assessment
-- Implement code changes (produce implementation DELEGATEs instead)
-
-**Escalation triggers:**
-- Fundamentally hard architectural problem with no clear solution → **Principal Engineer**
-- Security-critical design decisions (auth flows, crypto selection) → **Security Engineer**
-- Cross-repo coordination at a scale requiring principal-level analysis → **Principal Engineer**
-
----
+**Model:** `claude-sonnet-5`, effort `high`. Makes architecture decisions authoritatively
+(API contracts, domain boundaries, data models), conducts 8-point code review
+(correctness, safety, patterns, performance, security surface, maintainability, test
+coverage, documentation), resolves competing-design conflicts, coordinates cross-repo
+consistency, and produces implementation DELEGATEs. **MUST NOT:** conduct formal threat
+modelling or implement code changes directly. **Escalates to Principal Engineer** for
+fundamentally hard architectural problems; **to Security Engineer** for security-critical
+design decisions (auth flows, crypto selection).
 
 ### 5. Quality Engineer
 
-**Model:** `claude-sonnet-4.6`  **Tier:** Medium  **Skill:** `src/skills/roles/quality-engineer.md`
-
-**Purpose:** Post-implementation validation. Verifies HANDBACK correctness and assesses model suitability.
-
-**Capabilities:**
-- Validate acceptance criteria against delivered changes
-- Run `CONFIG=dev make lint && make test && make build` and report results
-- Assess whether the model/effort tier was appropriate for the task
-- Populate `metrics.quality` in the HANDBACK (0.0–1.0 float)
-- Flag regressions, missing tests, or inadequate implementation
-
-**Boundaries — QE MUST NOT:**
-- Implement fixes for discovered issues (produce DELEGATE blocks instead)
-- Make architecture decisions
-
-**Escalation triggers:**
-- Persistent build/lint failures after 2 re-run attempts → **Lead Engineer**
-- Security-related failure patterns discovered → **Security Engineer**
-- Systemic failure pattern across multiple tasks → **Principal Engineer**
-
----
+**Model:** `claude-sonnet-5`, effort `medium`. Post-implementation validation: verifies
+acceptance criteria against delivered changes, runs `CONFIG=dev make lint && make test &&
+make build`, assesses whether the model/effort tier was appropriate, populates
+`metrics.quality` in the HANDBACK, and flags regressions/missing tests. **MUST NOT:**
+implement fixes for issues it finds (produce a DELEGATE instead) or make architecture
+decisions. **Escalates to Lead Engineer** after 2 persistent build/lint-failure re-runs;
+**to Security Engineer** for security-related failure patterns; **to Principal Engineer**
+for a systemic pattern across multiple tasks.
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-4.5`  **Tier:** Medium  **Skill:** `src/skills/roles/model-engineer.md`
-
-**Purpose:** Analyse HANDBACK efficiency metrics; recommend model or effort tier adjustments.
-
-**Capabilities:**
-- Parse HANDBACK `metrics` blocks (tokens, cost, quality, duration_seconds)
-- Compare actual vs. estimated token usage across task history
-- Recommend model downgrade (cost saving) or upgrade (quality improvement)
-- Identify effort-level mismatches (task was too small/large for the assigned tier)
-- Write recommendations to `src/TOKEN_METRICS.md` in standardised format
-
-**Boundaries — Model Engineer MUST NOT:**
-- Implement code changes
-- Approve or reject tasks — recommendations only
-
-**Escalation triggers:**
-- System-level quality regression spanning multiple roles → **Principal Engineer**
-- Contested metrics recommendation → **Lead Engineer**
-
----
+**Model:** `claude-sonnet-5`, effort `high`. Analyses HANDBACK `metrics` blocks (tokens,
+cost, quality, duration_seconds) across task history, compares actual vs. estimated token
+usage, recommends model/effort adjustments, identifies mismatches, and writes
+recommendations. **MUST NOT:** implement code changes, or approve/reject tasks —
+recommendations only. **Escalates to Principal Engineer** for a system-level quality
+regression spanning multiple roles; **to Lead Engineer** for a contested recommendation.
 
 ### 7. Principal Engineer
 
-**Model:** `claude-opus-4-6`  **Tier:** Premium  **Skill:** `src/skills/roles/principal-engineer.md`
-
-**Purpose:** Cross-service architecture, hard debugging, critical design decisions. Escalation only.
-
-**Capabilities:**
-- Root cause analysis spanning deep stack traces or multiple services
-- Complex architectural analysis (data flow, race conditions, distributed system semantics)
-- Hard debugging where Senior has made ≥ 2 failed attempts
-- Critical design decisions that Lead cannot resolve
-- Produce structured findings with exact file:line references
-- Generate DELEGATE blocks for Engineer/Senior to implement findings
-
-**Boundaries — Principal MUST NOT:**
-- Implement fixes (findings → DELEGATEs for cheaper tiers)
-- Conduct formal security audits (→ Security Engineer)
-
-**Escalation triggers:**
-- Security-critical design decisions (auth, encryption, key management) → **Security Engineer**
-- Principal is the top of the non-security chain; if blocked, surface to user
-
----
+**Model:** `claude-opus-5` (fallback `claude-opus-4.8`), effort `high`. Cross-service
+architecture, hard debugging, critical design decisions — escalation only. Root-cause
+analysis across deep stack traces or multiple services, complex architectural analysis
+(data flow, race conditions, distributed semantics), takes over after Senior has ≥2 failed
+attempts, produces structured findings with exact file:line references and DELEGATEs for
+cheaper tiers to implement. **MUST NOT:** implement fixes directly or conduct formal
+security audits. **Escalates to Security Engineer** for security-critical design
+decisions; otherwise top of the non-security chain — surface to the user if blocked.
 
 ### 8. Security Engineer
 
-**Model:** `claude-opus-4.8` (pinned) | `claude-fable-5` (defensive-only alternative)  **Tier:** Premium  **Skill:** `src/skills/roles/security-engineer.md`
-
-**Purpose:** Threat modelling, vulnerability assessment, compliance review. Always assigned for security-scoped work.
-
-**Capabilities:**
-- Formal threat modelling (STRIDE, attack surface analysis)
-- Vulnerability assessment (OWASP Top 10, injection, broken auth, secrets exposure)
-- Compliance review (OAuth 2.0, zero-trust, secrets handling, GDPR surface)
-- CLI permission policy review
-- Produce findings table (severity, file:line, description, recommendation)
-- Generate DELEGATE blocks for Engineer/Senior to implement fixes
-
-**Boundaries — Security Engineer MUST NOT:**
-- Implement fixes (findings → DELEGATEs for cheaper tiers)
-- Be skipped for any auth/crypto/secrets/compliance task
-
-**Escalation triggers:**
-- Security Engineer is the top of the security chain. Surface to user if findings require
-  executive decision or external compliance sign-off.
+**Model:** `claude-fable-5` (unconditional default; fallback `claude-opus-4.8`), effort
+`max`. Threat modelling (STRIDE, attack surface), vulnerability assessment (OWASP Top 10,
+injection, broken auth, secrets exposure), compliance review (OAuth 2.0, zero-trust, GDPR
+surface), CLI permission policy review — always assigned for security-scoped work.
+Produces a findings table (severity, file:line, description, recommendation) and
+implementation DELEGATEs for cheaper tiers. **MUST NOT:** implement fixes directly, or be
+skipped for any auth/crypto/secrets/compliance task. **Escalates to:** nobody — top of the
+security chain; surface to the user for findings requiring executive/compliance sign-off.
 
 ---
 
 ## Handover Packet Protocol
 
-All work is delegated via a **DELEGATE block** written to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml`.  
-On completion, agents return a **HANDBACK block** to `~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml`.
+All work is delegated via a **DELEGATE block** — constructed by the spawning agent and passed directly as the prompt of a sub-agent spawn call (the harness's Agent/Task tool). On completion, the receiving agent returns a **HANDBACK block** directly as that spawn call's result, in-context; the spawning agent never polls or reads a file to get it.
+
+Every DELEGATE and HANDBACK is *also* durably recorded to the filesystem queue as an audit trail (`~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml` and `.../queue/done/TASK-NNN-handback.yaml` respectively) — this is bookkeeping for audit and crash-recovery, not the transport. Nothing polls these paths to trigger work; see [Audit-Trail Strategy](#audit-trail-strategy).
 
 ### DELEGATE Block Format
 
-> **Canonical schema:** `docs/specs/protocol-core-v1.0.yaml` (single source of truth)  
-> **Deprecated:** `type: DELEGATE` — use `handoff_type: DELEGATE` instead. Files using `type:` will pass with a deprecation warning; the field will become an error in the next major version.
+> **Canonical schema:** `docs/specs/protocol-core-v1.0.yaml` (single source of truth)
+> **Deprecated:** `type: DELEGATE` — use `handoff_type: DELEGATE` instead.
 
 ```yaml
-# File: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
+# Passed directly as the sub-agent spawn prompt (dispatch).
+# Audit copy also written to: ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
 ---
 task_id: my-task-identifier    # kebab-case, 3-50 chars (^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$)
 handoff_type: DELEGATE         # canonical discriminator (NOT type:)
 agent: senior-engineer         # hyphenated role name — see VALID_AGENTS below
 skill: senior-engineer         # skill name resolving to src/skills/<skill>/
-model: claude-sonnet-4.6       # must be explicit — no implicit defaults
+model: claude-sonnet-5         # must be explicit — no implicit defaults
 effort: high                   # low | medium | high
 
 scope: |
@@ -428,32 +272,37 @@ plan:
 success_criteria:
   - "AC1: describe what done looks like"
   - "AC2: describe measurable outcome"
-  - "AC3: repro command passes with no failures"
 
 # --- Optional extension fields (forward-compatible) ---
 tokens_estimate: 8000          # estimated max tokens for this task
 budget: 0.09                   # $ ceiling based on model + estimate
 priority: 5                    # 1 (lowest) - 10 (highest)
-deadline: "2026-06-08T18:00:00Z"
 dependencies: []               # task_ids that must complete first
+ancestry: [orchestrator]       # chain of agent roles from root to this DELEGATE's
+                                # spawning parent, inclusive. REQUIRED whenever the
+                                # spawning agent was itself spawned (depth > 0) — used
+                                # to enforce max delegation depth and detect cycles.
+                                # See Recursion Limits.
 ```
 
 > **Required core fields:** `task_id`, `handoff_type`, `agent`, `skill`, `scope` (>=15 words),
-> `plan` (>=2 steps, each >=3 words), `success_criteria` (>=1 item), `context` (>=20 words or non-empty array).  
+> `plan` (>=2 steps, each >=3 words), `success_criteria` (>=1 item), `context` (>=20 words or non-empty array).
+> `ancestry` is an additive, forward-compatible extension field, not a redesign of the required core.
 >
 > **Valid agents:** `orchestrator`, `engineer`, `senior-engineer`, `lead-engineer`,
 > `principal-engineer`, `security-engineer`, `quality-engineer`, `model-engineer`
-> (hyphens only — `senior_engineer` with underscores is invalid).
+> (hyphens only).
 
 ### HANDBACK Block Format
 
 Canonical schema: [`docs/specs/protocol-core-v1.0.yaml`](../docs/specs/protocol-core-v1.0.yaml).
 Required core fields: `task_id`, `status`, `output`, `metrics` (with `quality`, `tokens`, `cost`, `duration_seconds`).
 
-> **Deprecated:** `type: HANDBACK` — use `handoff_type: HANDBACK` instead (same migration as DELEGATE).
+> **Deprecated:** `type: HANDBACK` — use `handoff_type: HANDBACK` instead.
 
 ```yaml
-# File: ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
+# Returned directly as the spawn call's result (dispatch), in-context.
+# Audit copy also written to: ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
 ---
 task_id: my-task-identifier    # must match the originating DELEGATE's task_id
 handoff_type: HANDBACK         # canonical discriminator (NOT type:)
@@ -461,8 +310,6 @@ status: success                # success | failure | partial | blocked | escalat
 
 output: |
   One-paragraph summary of what was done, files changed, and key decisions.
-  e.g. "Modified path/to/file.py (lines 45-67) and path/to/other.ts (12-30);
-  AC1-AC3 PASS via make verify."
 
 metrics:                       # ALL four sub-fields are REQUIRED
   quality: 0.88                # float 0.0–1.0, self-assessed delivery quality
@@ -471,10 +318,9 @@ metrics:                       # ALL four sub-fields are REQUIRED
   duration_seconds: 42         # non-negative float, wall-clock execution seconds
 
 # --- Optional extension fields (forward-compatible) ---
-model_used: claude-sonnet-4.6
+model_used: claude-sonnet-5
 effort_actual: medium
 confidence: 0.9                # 0.0–1.0
-escalations: 0
 flags: []                      # advisory flags / anomalies
 error: null                    # error detail when status is failure or blocked
 escalation: null               # or ESCALATION block (see below) if status: escalate
@@ -482,21 +328,14 @@ escalation: null               # or ESCALATION block (see below) if status: esca
 
 > **Status values:** `success` (all criteria met), `failure` (criteria not met),
 > `partial` (some criteria met), `blocked` (external dependency needed),
-> `escalate` (requires higher-tier agent or human decision).  
-> **Invalid statuses:** `complete` and `failed` are NOT valid — use `success` and `failure`.  
->
-> **metrics sub-fields** (all required — no omissions accepted):  
-> - `quality`: float 0.0–1.0 (self-assessed quality of delivered work)  
-> - `tokens`: non-negative integer (total input + output tokens consumed)  
-> - `cost`: non-negative float (USD monetary cost)  
-> - `duration_seconds`: non-negative float (wall-clock execution time)
+> `escalate` (requires higher-tier agent or human decision). `complete`/`failed` are NOT valid.
 
 ### ESCALATION Packet Format
 
 When an agent hits an escalation trigger, it MUST stop implementation work and emit:
 
 ```yaml
-# Embedded in HANDBACK under the `escalation:` key, or as a standalone file
+# Embedded in HANDBACK under the `escalation:` key
 ---
 task_id: my-task-identifier
 type: ESCALATION              # ESCALATION packets retain type: (not a DELEGATE/HANDBACK)
@@ -505,19 +344,18 @@ to_role: principal-engineer
 reason: |
   Root cause spans multiple services — requires cross-service analysis
   beyond Senior's authority. Specifically: [details of what was tried and why it failed]
-
 findings_so_far: |
   Summary of what was discovered before escalation, so the receiving
   agent starts with full context and does not re-investigate the same ground.
-
 recommended_focus:
-  - Specific area 1 to investigate
-  - Specific area 2 to investigate
+  - Specific area to investigate
 ```
 
-The Orchestrator reads this ESCALATION block from the HANDBACK, creates a new DELEGATE block
-targeting `to_role` (using `handoff_type: DELEGATE` and `agent: principal-engineer`) with the
-escalation content inlined in `context`.
+The agent that receives this HANDBACK (the Orchestrator, or whichever role spawned the
+escalating agent) reads the ESCALATION block in-context, constructs a new DELEGATE block
+targeting `to_role` with the escalation content inlined in `context` and its own role
+appended to `ancestry`, and spawns `to_role` directly — subject to the same
+depth/fan-out/cycle checks as any other spawn.
 
 ---
 
@@ -525,369 +363,181 @@ escalation content inlined in `context`.
 
 Every agent MUST emit an ACK as its **first output** before performing any work.
 
-### Standard ACK
-
 ```
-✅ [Role Name] ACK — [TASK-ID]
-```
+✅ [Role Name] ACK — [TASK-ID]                              # Standard
 
-### Blocked ACK (missing context)
-
-```
-⚠️ [Role Name] BLOCKED — [TASK-ID]
+⚠️ [Role Name] BLOCKED — [TASK-ID]                           # Missing context
 Missing: [list of what's missing or unclear]
 Request: [what information is needed to proceed]
-```
 
-### Model Mismatch
-
-If the agent detects it is running on a different model than specified in the DELEGATE `model:` field:
-
-```
-❌ MODEL_MISMATCH — expected claude-sonnet-4.6, got claude-haiku-4.5
+❌ MODEL_MISMATCH — expected claude-sonnet-5, got claude-haiku-4.5   # Wrong model
 Stopping. Orchestrator must re-delegate with the correct model.
 ```
 
-### Completion Footer
-
-Every agent MUST include in its final output:
+Every agent MUST include in its final output a completion footer:
 
 ```
-MODEL_USED: claude-sonnet-4.6   # actual model used (not the requested model)
+MODEL_USED: claude-sonnet-5   # actual model used (not the requested model)
 ```
 
 ---
 
-## Queue-Based Execution Model
+## Direct Sub-Agent Spawn Execution Model
+
+> **Why this changed:** the framework previously specified an Orchestrator that polled a
+> filesystem queue, claimed tasks, and spawned agents as subprocesses correlated by
+> HANDBACK files. An audit of 16 live session partitions found **zero tasks** ever
+> traversed the queue that way — every real delegation happened via a direct sub-agent
+> spawn instead. This section documents the model that was actually running; the queue
+> stays as a durable record (see [Audit-Trail Strategy](#audit-trail-strategy)), not a
+> dispatch mechanism, satisfying `docs/SPEC.md`'s "NO Python scripts for queue management".
 
 ### Full Flow
 
 ```
-1.  User drops DELEGATE into ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml
-    (or Orchestrator generates DELEGATE from a user request)
-
-2.  Orchestrator polls queue → reads TASK-NNN.yaml → applies routing rules
-
-3.  Orchestrator fans out DELEGATEs for independent tasks in parallel
-
-4.  Each agent:
-      a. ACKs the task (first output)
-      b. Loads its skill file from skill_refs
-      c. Performs work
-      d. Writes HANDBACK to ~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml
-
-5.  Quality Engineer validates the HANDBACK:
-      - Checks acceptance_criteria are met
-      - Runs repro command to verify
-      - Populates metrics.quality (0.0–1.0) in the HANDBACK
-
-6.  Model Engineer analyses HANDBACK metrics:
-      - Compares tokens used vs. estimated across task history
-      - Emits model/effort recommendation if drift detected
-
-7.  Orchestrator reads HANDBACK status:
-      - COMPLETE   → mark TASK-NNN done in TODO.md
-      - PARTIAL    → re-delegate remaining work
-      - BLOCKED    → surface to user with blocker detail
-      - ESCALATE   → re-delegate ESCALATION block at higher tier
-
-8.  If queue empty → Orchestrator PAUSES
+1.  User request arrives, or the current agent generates a DELEGATE from prior
+    HANDBACK output (e.g. re-delegating remaining work, or an ESCALATION)
+2.  The spawning agent applies routing rules and selects the target role
+3.  The spawning agent SPAWNS the target agent directly (Agent/Task tool),
+    passing the DELEGATE block as the sub-agent's prompt. For independent
+    tasks, it fans out multiple spawns in parallel — up to 5 concurrent per
+    parent (see Recursion Limits)
+4.  Each spawned agent ACKs, loads its skill, performs work (and MAY itself
+    spawn further sub-agents if its frontmatter grants `spawn_subagent`,
+    subject to the same depth/fan-out/cycle checks), and returns a HANDBACK
+    directly as the spawn call's result — nothing to poll for this to complete
+5.  Convention, not automatic: the spawning agent MAY spawn Quality Engineer
+    to validate the HANDBACK against success_criteria and populate metrics.quality
+6.  Convention, not automatic: likewise it MAY spawn Model Engineer afterward
+    to analyse metrics and recommend model/effort adjustments
+7.  The spawning agent reads the HANDBACK in-context and applies the routing
+    decision (success/partial/blocked/escalate — see Applying the HANDBACK below)
+8.  Every DELEGATE (at spawn) and every HANDBACK (at completion) is durably
+    recorded to the queue via enqueue() — the audit trail. No step above
+    depends on a file existing in incoming/, processing/, or done/
+9.  If no pending DELEGATEs and no outstanding spawns remain → the
+    Orchestrator PAUSES
 ```
+
+**Applying the HANDBACK:** `success` → mark done in `TODO.md`; `partial` → re-delegate the
+remainder (direct spawn); `blocked` → surface to the user with the blocker; `escalate` →
+re-delegate the ESCALATION block at the higher tier (direct spawn).
+
+### Recursion Limits
+
+Direct spawn removes the natural throttling a polling loop provided. These limits are the
+framework's convention for bounding recursion. **No runtime code counts depth, counts
+fan-out, or detects cycles at spawn time today** — see [Tools-Frontmatter Permission
+Model](#tools-frontmatter-permission-model) below. `queue-management`'s `enqueue()` DOES
+enforce ancestry-based cycle/depth checks at record time (`has_cycle()`,
+`exceeds_max_depth()`), so a violation is caught there even if a pre-spawn check is
+skipped. Every agent is expected to self-enforce:
+
+- **Max delegation depth: 3.** Depth is measured in spawn hops from the root DELEGATE
+  (depth 0 = the Orchestrator's own top-level DELEGATE). An agent at depth 3 MUST NOT
+  itself spawn — it executes or refuses. This is why Engineer and Quality Engineer never
+  need `spawn_subagent`: every routing path reaches them at the final hop.
+- **Max fan-out: 5** concurrent sub-agents per parent. Additional independent work waits
+  for one of the first 5 to complete, or is grouped into a consolidating DELEGATE.
+- **Ancestry tracking (cycle detection).** Every DELEGATE issued by an agent spawned at
+  depth > 0 MUST set the `ancestry` extension field (root-to-parent role chain,
+  inclusive). Before spawning, check whether the target role already appears in
+  `ancestry` — if so, refuse (e.g. Senior Engineer escalates to Lead Engineer, and Lead's
+  implementation DELEGATE incorrectly targets `senior-engineer` again for the same task).
+
+**When a limit is hit:** stop; do not silently proceed or drop the work. Return a
+HANDBACK with `status: blocked` (procedural — likely resolvable by restructuring the
+fan-out) or `status: escalate` (a genuine cycle, or a task needing more than 3 hops),
+stating which limit was hit and why. The receiving agent decides how to proceed.
+
+### Tools-Frontmatter Permission Model
+
+The `tools:` key in each agent's source frontmatter (`src/agents/<name>-agent.md`) states
+which roles are *meant* to spawn sub-agents — a convention, not an enforced permission.
+Neither harness renderer enforces it: Claude Code's `render-claude.sh` drops `tools:`
+entirely (every rendered sub-agent gets full default tool access); OpenCode's
+`render-opencode.sh` uses uniform allow-all permissions by design (social constraint
+model, not technical). The PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`)
+only checks that a spawn call carries a well-formed DELEGATE block — not the calling
+agent's role, ancestry, depth, or fan-out. Compliance below is the spawning agent's own
+judgment call.
+
+| Role | Spawns sub-agents? | Why |
+|---|---|---|
+| Orchestrator | Yes | Root of every delegation chain; routes to any specialist |
+| Senior Engineer | Yes | Delegates to Engineer, or escalates to Lead/Principal/Security |
+| Lead Engineer | Yes | Produces implementation DELEGATEs after an architecture decision |
+| Principal Engineer | Yes | Produces implementation DELEGATEs after a cross-service finding |
+| Security Engineer | Yes | Produces implementation DELEGATEs for each audit finding |
+| Model Engineer | No | Recommendations only — returns findings in its own HANDBACK |
+| Engineer | No | Leaf by design — escalates via HANDBACK `status: escalate` |
+| Quality Engineer | No | Leaf by design — issues go in QE's own HANDBACK |
+
+### Audit-Trail Strategy
+
+Dispatch no longer touches the filesystem queue, so the audit trail is an explicit
+obligation, not a side effect:
+
+- **At spawn:** the spawning agent MUST `enqueue()` the DELEGATE to `.../queue/incoming/TASK-NNN.yaml`.
+- **At completion:** the spawning agent MUST `enqueue()` the HANDBACK to `.../queue/done/TASK-NNN-handback.yaml`.
+- **At Quality Engineer verdict:** its `status` is recorded so the audit trail distinguishes
+  "work happened" from "work was verified" — read by `queue-management` and similar
+  monitoring skills to reconstruct what actually ran.
+
+If a DELEGATE or HANDBACK is not enqueued, it did not happen as far as audit, cost
+tracking, and crash-recovery tooling are concerned — even though the work itself
+completed in-context. Treat `enqueue()` as part of the spawn, not optional cleanup after.
 
 ### Pause Condition
 
-The Orchestrator **pauses** when `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` is empty.  
-It does NOT invent new work. This is by design — reduced autonomy prevents runaway scope.
-
-To resume: write a new DELEGATE block to the queue, or add a task to `TODO.md`.
-
----
-
-## Example Workflows
-
-### Example 1 — Simple File Edit (Engineer)
-
-```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-101.yaml
----
-task_id: task-101-postal-validation
-handoff_type: DELEGATE
-agent: engineer
-skill: engineer
-model: claude-haiku-4.5
-effort: low
-
-scope: |
-  Add AU PostalCode validation rule to address validator in src/validation/postal.py.
-  PostalCode is optional but when present must be exactly 4 digits. Out of scope:
-  any changes to the validator public interface or other validation rules.
-
-context:
-  - "File: src/validation/postal.py (lines 12-34) — add 4-digit AU postcode regex rule"
-  - "File: tests/test_postal.py — add unit tests for valid and invalid postcodes"
-  - "Repo: github.com/niallyoung/payments-service, branch: feature/postal-validation"
-
-plan:
-  - "Step 1: Read src/validation/postal.py (lines 12-34) to understand existing rule structure"
-  - "Step 2: Add AU_POSTCODE_REGEX and PostalCodeValidator at line 15 (4 digits only)"
-  - "Step 3: Write tests for valid ('2000', '0800') and invalid ('ABC', '123', '12345') cases"
-  - "Step 4: Run make test FILTER=test_postal and verify 0 failures"
-
-success_criteria:
-  - "AC1: PostalCode '2000' and '0800' pass validation"
-  - "AC2: PostalCode 'ABC', '123', '12345' are rejected with a clear error message"
-  - "AC3: make test FILTER=test_postal passes with no failures"
-
-tokens_estimate: 2000
-budget: 0.03
-```
-
-**Agent output:**
-
-```
-✅ Engineer ACK — TASK-101
-
-[implements postal.py and test_postal.py changes]
-
-Changes:
-- src/validation/postal.py:15 — added AU_POSTCODE_REGEX and PostalCodeValidator rule
-- tests/test_postal.py:1-28 — added tests for valid/invalid AU postcodes
-
-CI: PASS — make test FILTER=test_postal: 6 passed
-MODEL_USED: claude-haiku-4.5
-```
+The Orchestrator **pauses** when it has no pending DELEGATEs to issue and no outstanding
+sub-agent spawns awaiting a HANDBACK. It does NOT invent new work — reduced autonomy
+prevents runaway scope. To resume: give the Orchestrator a new request, or add a task to
+`TODO.md`.
 
 ---
 
-### Example 2 — Escalation Chain (Engineer → Senior → Lead)
+## Example Workflow — Escalation Chain (Engineer → Senior → Lead)
 
-**Step 1: Engineer hits escalation trigger**
+**Step 1: Engineer hits an escalation trigger** and returns a HANDBACK with
+`status: escalate`, embedding an ESCALATION block (`from_role: engineer`,
+`to_role: senior-engineer`, `reason`, `findings_so_far`, `recommended_focus`) — e.g. a
+payment refactor touching 5 files across 2 packages exceeds Engineer's 3-file boundary
+and needs an API-contract decision.
 
-```yaml
-# HANDBACK from Engineer
----
-task_id: task-202-payment-refactor
-handoff_type: HANDBACK
-status: escalate
+**Step 2: Orchestrator reads the HANDBACK, spawns Senior Engineer directly** with a new
+DELEGATE (`task_id: task-202-senior-payment-arch`, `agent: senior-engineer`,
+`ancestry: [orchestrator]`) whose `scope`/`context` inline the escalation's findings so
+Senior does not re-investigate. Both the original HANDBACK and this new DELEGATE are
+`enqueue()`d for audit.
 
-output: |
-  Payment refactor requires changes to 5 files across payment/ and checkout/ packages.
-  This exceeds the 3-file boundary for Engineer. API contract between the two domains
-  needs a decision before implementation.
+**Step 3: Senior Engineer determines the decision exceeds its own authority** (a
+cross-package API contract) and escalates again — HANDBACK with `status: escalate`,
+`ancestry: [orchestrator, senior-engineer]`, targeting `lead-engineer`.
 
-metrics:
-  quality: 0.0
-  tokens: 1200
-  cost: 0.02
-  duration_seconds: 18
+**Step 4: Lead Engineer makes the architecture decision** and produces two implementation
+DELEGATEs — one to Senior Engineer for the new type, one to Engineer for the call-site
+update — each spawned directly and `enqueue()`d.
 
-escalation:
-  task_id: task-202-payment-refactor
-  type: ESCALATION
-  from_role: engineer
-  to_role: senior-engineer
-  reason: |
-    Change touches 5 files in 2 packages (payment/, checkout/).
-    Architectural boundary between payment and checkout domains needs
-    clarification before implementation can proceed.
-  findings_so_far: |
-    payment/processor.py:45-67 needs new checkout_id param.
-    checkout/domain.py:12-30 needs a PaymentRef type.
-    Both changes affect the public API contract.
-  recommended_focus:
-    - Define PaymentRef type boundary (checkout-owned vs payment-owned)
-    - Confirm API contract for processor.create_payment(checkout_id)
-```
-
-**Step 2: Orchestrator re-delegates to Senior Engineer**
-
-```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-202-senior.yaml
----
-task_id: task-202-senior-payment-arch
-handoff_type: DELEGATE
-agent: senior-engineer
-skill: senior-engineer
-model: claude-sonnet-4.6
-effort: high
-
-scope: |
-  Determine PaymentRef type ownership (checkout/ vs payment/ package) and define the
-  processor.create_payment(checkout_id) API contract. Engineer escalated TASK-202 because
-  the refactor touches 5 files across two domain packages. Out of scope: implementation
-  (produce DELEGATE blocks for Engineer to implement the decided design).
-
-context:
-  - "Escalation from task-202-payment-refactor: payment refactor touches 5 files in 2 packages"
-  - "File: src/payment/processor.py (lines 45-67) — needs new checkout_id param"
-  - "File: src/checkout/domain.py (lines 12-30) — needs a PaymentRef type"
-  - "Repo: github.com/niallyoung/payments-service, branch: feature/payment-refactor"
-  - "Root cause: Both changes affect the public API contract; domain boundary unclear"
-
-plan:
-  - "Step 1: Read payment/processor.py:45-67 and checkout/domain.py:12-30 to understand current boundaries"
-  - "Step 2: Determine if PaymentRef belongs in checkout/ (checkout-owned) or payment/ (payment-owned)"
-  - "Step 3: Define the processor.create_payment(checkout_id) API contract"
-  - "Step 4: Produce DELEGATE blocks for Engineer to implement the decided contract"
-  - "Step 5: Escalate to Lead Engineer if API contract decision exceeds Senior's authority"
-
-success_criteria:
-  - "AC1: PaymentRef type ownership is decided and documented"
-  - "AC2: processor.create_payment API contract is defined with the checkout_id parameter"
-  - "AC3: Implementation DELEGATEs produced for Engineer (or escalated to Lead)"
-
-tokens_estimate: 8000
-budget: 0.09
-```
-
-**Step 3: Senior hits arch escalation trigger → escalates to Lead**
-
-Senior reads related files, determines the PaymentRef type crosses a domain boundary that
-requires an explicit API contract decision, and emits a HANDBACK with `status: escalate`
-targeting Lead Engineer — including its analysis as `findings_so_far`.
-
-**Step 4: Lead makes the decision, produces implementation DELEGATEs**
-
-Lead Engineer emits an architecture decision document and two DELEGATE blocks:
-one targeting Senior to implement the `PaymentRef` type, one targeting Engineer for
-the updated `processor.py` call site.
-
----
-
-### Example 3 — Security Audit (Security Engineer)
-
-```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-303.yaml
----
-task_id: task-303-jwt-refresh-audit
-handoff_type: DELEGATE
-agent: security-engineer
-skill: security-engineer
-model: claude-opus-4.8
-effort: high
-
-scope: |
-  Audit the JWT refresh token flow in auth-service for vulnerabilities before shipping.
-  The feature introduces sliding-window refresh: access tokens are transparently reissued
-  within a 15-minute window. Audit replay attacks, missing expiry checks, and insecure
-  token storage patterns. Out of scope: implementing fixes (produce DELEGATE blocks instead).
-
-context:
-  - "File: src/auth/middleware.py (lines 45-89) — token validation middleware"
-  - "File: src/auth/tokens.py (lines 10-60) — token issuance and expiry logic"
-  - "File: src/auth/handlers.py (lines 120-175) — refresh token redemption handler"
-  - "Repo: github.com/niallyoung/auth-service, branch: feature/jwt-refresh"
-  - "Concern: replay attacks on the sliding-window refresh window; missing exp validation; localStorage storage"
-
-plan:
-  - "Step 1: Read middleware.py:45-89, tokens.py:10-60, handlers.py:120-175"
-  - "Step 2: Identify replay attack vectors in the sliding-window refresh flow"
-  - "Step 3: Check that exp claim is validated at every token issuance and redemption path"
-  - "Step 4: Review token storage patterns for secrets exposure (httpOnly cookie vs localStorage)"
-  - "Step 5: Produce findings table (severity, file:line, description, recommendation)"
-  - "Step 6: Produce DELEGATE blocks for Engineer/Senior to implement each finding"
-
-success_criteria:
-  - "AC1: Findings table produced (severity, file:line, description, recommendation)"
-  - "AC2: DELEGATE blocks produced for each finding requiring a fix"
-  - "AC3: No CRITICAL or HIGH findings left without an implementation DELEGATE"
-
-tokens_estimate: 12000
-budget: 0.15
-```
-
-**Expected output format:**
-
-```
-✅ Security Engineer ACK — TASK-303
-
-## Findings
-
-| Severity | File:Line | Issue | Recommendation |
-|----------|-----------|-------|----------------|
-| CRITICAL | src/auth/tokens.py:34 | exp claim not validated on refresh | Validate exp before issuing new token |
-| HIGH     | src/auth/handlers.py:142 | refresh token not invalidated after use | Add jti blacklist on redemption |
-| MEDIUM   | src/auth/middleware.py:61 | token stored in localStorage | Move to httpOnly cookie |
-
-## Implementation DELEGATEs
-
-[DELEGATE block for Engineer — fix exp validation at tokens.py:34]
-[DELEGATE block for Senior — implement jti blacklist in handlers.py]
-[DELEGATE block for Engineer — update token storage in middleware.py]
-
-MODEL_USED: claude-opus-4.8
-```
-
----
-
-### Example 4 — Post-Implementation Validation (Quality Engineer)
-
-```yaml
-# ~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-404-qe.yaml
----
-task_id: task-404-qe-address-validation
-handoff_type: DELEGATE
-agent: quality-engineer
-skill: quality-engineer
-model: claude-sonnet-4.6
-effort: medium
-
-scope: |
-  Validate the HANDBACK from task-404 (Senior Engineer refactored address validation
-  module: 3 files, 87 lines changed). Verify all acceptance criteria are met, run the
-  test suite, and assess whether the assigned model was appropriate for the task.
-  Out of scope: implementing fixes — produce DELEGATE blocks if issues are found.
-
-context:
-  - "HANDBACK to validate: task-404 (Senior Engineer, address validation refactor)"
-  - "Files changed: src/validation/address.py, src/validation/postal.py, tests/test_address.py"
-  - "Repo: github.com/niallyoung/validation-service, branch: feature/address-refactor"
-  - "Repro command: CONFIG=dev make lint && CONFIG=dev make test && CONFIG=dev make build"
-
-plan:
-  - "Step 1: Run CONFIG=dev make lint — verify 0 errors"
-  - "Step 2: Run CONFIG=dev make test — verify all address tests green"
-  - "Step 3: Run CONFIG=dev make build — verify successful build"
-  - "Step 4: Verify each AC from task-404 against delivered changes"
-  - "Step 5: Assess model suitability (was claude-sonnet-4.6 appropriate or would haiku suffice?)"
-  - "Step 6: Populate metrics block in HANDBACK with quality score and assessment"
-
-success_criteria:
-  - "AC1: make lint passes with no errors"
-  - "AC2: make test passes, all address tests green"
-  - "AC3: make build succeeds"
-  - "AC4: metrics block in HANDBACK populated with quality (0.0-1.0), tokens, cost, duration_seconds"
-
-tokens_estimate: 4000
-budget: 0.09
-```
+This is the general escalation pattern for every role pair in the routing chain: the
+receiving agent never re-investigates ground the escalating agent already covered, and
+`ancestry` grows by exactly one role per hop so cycle detection stays accurate.
 
 ---
 
 ## Role Summary Table
 
-| Role | Skill File | When to Use | Escalates To |
-|------|-----------|-------------|--------------|
-| Orchestrator | `src/skills/orchestration/task-routing.md` | All task entry points | User (for critical decisions) |
-| Engineer | `src/skills/roles/engineer.md` | Scoped tasks, file edits, tests | Senior / Lead / Security |
-| Senior Engineer | `src/skills/roles/senior-engineer.md` | Planning, multi-file changes | Lead / Principal / Security |
-| Lead Engineer | `src/skills/roles/lead-engineer.md` | Code review, arch guidance | Principal / Security |
-| Quality Engineer | `src/skills/roles/quality-engineer.md` | Post-implementation validation | Lead / Security / Principal |
-| Model Engineer | `src/skills/roles/model-engineer.md` | After QE HANDBACK with metrics | Lead / Principal |
-| Principal Engineer | `src/skills/roles/principal-engineer.md` | Hard bugs, cross-service design | Security / User |
-| Security Engineer | `src/skills/roles/security-engineer.md` | All security-scoped work | User |
+| Role | When to Use | Escalates To |
+|------|-------------|--------------|
+| Orchestrator | All task entry points | User (for critical decisions) |
+| Engineer | Scoped tasks, file edits, tests | Senior / Lead / Security |
+| Senior Engineer | Planning, multi-file changes | Lead / Principal / Security |
+| Lead Engineer | Code review, arch guidance | Principal / Security |
+| Quality Engineer | Post-implementation validation | Lead / Security / Principal |
+| Model Engineer | After QE HANDBACK with metrics | Lead / Principal |
+| Principal Engineer | Hard bugs, cross-service design | Security / User |
+| Security Engineer | All security-scoped work | User |
 
----
-
-## Token Burn Reduction
-
-- **Summarise, don't recap** — post findings as tables, not prose
-- **Stay thin** — Orchestrator reads HANDBACK summaries only, not full outputs
-- **No context spillover** — each DELEGATE is self-contained; receiving agent has no session state
-- **Cite line numbers** — engineers work at the addresses given; no exploring
-- **Chain bash commands** — use `&&` to combine related operations
-- **Trust tool confirmations** — never re-read a file you just edited
-- **Grep before view** — find exact lines first, then `view_range` only that section
-- **Model Engineer feedback loop** — use token usage trends to downgrade over-provisioned roles
-
-> For full cost tracking spec, see [`src/TOKEN_METRICS.md`](TOKEN_METRICS.md).
+Each role's full definition (capabilities, boundaries, escalation triggers) is in
+[Role Definitions](#role-definitions) above; source frontmatter lives at
+`src/agents/<name>-agent.md`.

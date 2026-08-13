@@ -100,21 +100,25 @@ def validate_handback(handback: dict[str, Any]) -> tuple[bool, list[str]]:
 KNOWN_MODELS = {
     # Versioned Claude models (canonical source format)
     # SOURCE: https://docs.anthropic.com/claude/docs/models-overview
-    # Format: claude-{variant}-{major}.{minor}
+    # Format: claude-{variant}-{major}.{minor} or claude-{variant}-{major} (for single-part versions)
     "claude-haiku-4.5",
     "claude-haiku-4.6",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
+    "claude-sonnet-5",
     "claude-opus-4.5",
     "claude-opus-4.6",
     "claude-opus-4.7",
     "claude-opus-4.8",
-    
+    "claude-opus-5",
+    "claude-fable-5",
+
     # Short aliases (Claude Code harness only, NO DOTS)
     # Used in dist/claude/agents/ after transformation from canonical format
     "haiku",
     "sonnet",
     "opus",
+    "fable",
 }
 
 REQUIRED_FIELDS = {"name", "description", "model"}

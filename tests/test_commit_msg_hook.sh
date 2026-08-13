@@ -366,7 +366,7 @@ token: ghp_1234567890"
 
 test_case "Message with private_key keyword" 1 "feat: add encryption
 
-private_key: -----BEGIN PRIVATE KEY-----"
+private_key: -----BEGIN PRIVATE KEY-----"  # pragma: allowlist secret
 
 test_case "Message with aws_secret keyword" 1 "feat: add AWS integration
 

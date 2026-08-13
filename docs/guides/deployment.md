@@ -1,516 +1,136 @@
-# Production Deployment Guide: Continuous Polling Loop Automation
+# Deployment Guide: Agentic Engineers
 
 ## Overview
 
-This guide provides complete instructions for deploying the **Continuous Polling Loop Automation** system to production. The system continuously polls a task queue, reads DELEGATE files, spawns agents, and collects metrics.
+**This guide previously described deploying a "Continuous Polling Loop Automation"
+system** — a background process (`bin/run-automation-controller.sh`) that
+continuously polled a task queue, read DELEGATE files, and spawned agents as
+subprocesses, packaged as a systemd service / Docker container / Kubernetes
+deployment.
 
-**Key Components:**
-- `Orchestrator`: Task orchestration and delegation with polling loop
-- `QueueManager`: Queue state management
-- Entrypoint script: Production-ready startup wrapper
+That script, the polling loop it wrapped, and the architecture doc it linked to
+(`docs/architecture/continuous-polling.md`) no longer exist. An audit of live sessions
+found that dispatch never actually went through that polling path in practice — every
+real delegation happened via a direct sub-agent spawn instead. The framework has been
+updated to match the model that was actually running: the Orchestrator builds a
+DELEGATE and spawns the target agent directly (Agent/Task tool) within the harness
+session, reading the HANDBACK back as the tool result. See
+[src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
+for the canonical description.
 
-**Architecture:** [See docs/architecture/continuous-polling.md](../architecture/continuous-polling.md)
-
----
-
-## Prerequisites
-
-### System Requirements
-- **OS**: Linux (Ubuntu 20.04+ recommended) or macOS 10.15+
-- **Python**: 3.8 or higher
-- **Disk Space**: Minimum 2GB for queue and logs
-- **Memory**: Minimum 512MB (1GB+ recommended)
-- **CPU**: Single core minimum (multi-core for high throughput)
-
-### Software Dependencies
-```bash
-# Verify Python 3.8+
-python3 --version
-
-# Verify pip
-pip3 --version
-
-# Install required packages (if not already installed)
-pip3 install pyyaml  # For YAML parsing
-pip3 install pytest  # For testing
-```
-
-### Project Setup
-```bash
-# Clone repository
-git clone <repo-url> /opt/orchestrator
-cd /opt/orchestrator
-
-# Verify structure
-ls -la
-# Should see: bin/, orchestration/, data/, docs/, etc.
-
-# Set project root environment variable
-export PROJECT_ROOT=/opt/orchestrator
-```
+**Practical consequence:** there is no standalone background service to install,
+run under systemd, containerize, or scale horizontally. "Deploying agentic-engineers"
+today means installing the framework's agent/skill definitions into a harness
+(Claude Code, OpenCode, Copilot CLI, Codex) and invoking that harness's
+Orchestrator agent interactively — see the sections below.
 
 ---
 
-## Installation
-
-### 1. Copy Project Files
+## Installing the Framework
 
 ```bash
-# Copy application to production location
-sudo cp -r /path/to/agentic-engineers /opt/orchestrator
+git clone <repo-url> agentic-engineers
+cd agentic-engineers
 
-# Set permissions
-sudo chown -R orchestrator:orchestrator /opt/orchestrator
-sudo chmod -R 755 /opt/orchestrator
-sudo chmod +x /opt/orchestrator/bin/run-automation-controller.sh
+# Install into all default harnesses
+make install
+
+# Or install a specific harness
+make install-opencode      # OpenCode CLI
+make install-copilot       # Copilot CLI
+make install-claude        # Claude Code
+make install-codex         # Codex CLI/IDE
 ```
 
-### 2. Create Required Directories
+By default this installs under your home directory. For an isolated/sandboxed
+install (e.g. for testing this guide), set `DESTDIR`:
 
 ```bash
-# Create queue directories
-mkdir -p /opt/orchestrator/data/queue/{incoming,done}
-mkdir -p /opt/orchestrator/logs
-
-# Set permissions
-chmod 755 /opt/orchestrator/data/queue/{incoming,done}
-chmod 755 /opt/orchestrator/logs
+DESTDIR=/tmp/test-install make install-opencode
 ```
 
-### 3. Configure Environment
-
-```bash
-# Copy production configuration
-cp /opt/orchestrator/.env.production /opt/orchestrator/.env
-
-# Edit configuration for your environment
-vim /opt/orchestrator/.env
-```
-
-Key configuration options:
-- `POLL_INTERVAL_SECONDS`: Adjust based on expected task frequency
-- `LOG_LEVEL`: Set to `INFO` for production
-- `AUTOMATION_DAEMON_MODE`: Set to `true` for continuous running
-- `METRICS_FILE`: Point to your metrics collection system
-
-### 4. Test Installation
-
-```bash
-# Test entrypoint script
-cd /opt/orchestrator
-./bin/run-automation-controller.sh --help
-
-# Run a test cycle with max_cycles limit
-AUTOMATION_MAX_CYCLES=5 ./bin/run-automation-controller.sh
-```
+See the main [README.md](../../README.md#quick-start) for the full installation
+matrix and [docs/ENTRYPOINT.md](../ENTRYPOINT.md) for how to invoke the Orchestrator
+once installed.
 
 ---
 
-## Deployment Scenarios
+## Running the Orchestrator
 
-### Scenario 1: Standalone Server
-
-**Best for:** Single-node deployments with moderate load
-
-```bash
-# 1. SSH to production server
-ssh orchestrator@prod-server.example.com
-
-# 2. Navigate to project
-cd /opt/orchestrator
-
-# 3. Source environment
-source .env
-
-# 4. Run in background with nohup
-nohup ./bin/run-automation-controller.sh > /tmp/automation.log 2>&1 &
-echo $! > /tmp/automation.pid
-
-# 5. Monitor
-tail -f /tmp/automation.log
-```
-
-### Scenario 2: Systemd Service
-
-**Best for:** Production systems with service management
+The Orchestrator runs **inside** a harness session — it is not a separate process you
+start and leave running:
 
 ```bash
-# 1. Create systemd service file
-sudo tee /etc/systemd/system/orchestrator-automation.service << EOF
-[Unit]
-Description=Orchestrator Continuous Polling Automation
-After=network.target
+# Claude Code
+claude --agent orchestrator
 
-[Service]
-Type=simple
-User=orchestrator
-WorkingDirectory=/opt/orchestrator
-EnvironmentFile=/opt/orchestrator/.env
-ExecStart=/opt/orchestrator/bin/run-automation-controller.sh
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
+# OpenCode CLI
+opencode --agent orchestrator
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# 2. Enable and start service
-sudo systemctl daemon-reload
-sudo systemctl enable orchestrator-automation.service
-sudo systemctl start orchestrator-automation.service
-
-# 3. Check status
-sudo systemctl status orchestrator-automation.service
-
-# 4. View logs
-sudo journalctl -u orchestrator-automation.service -f
+# Copilot CLI
+copilot --agent orchestrator
 ```
 
-### Scenario 3: Docker Container
-
-**Best for:** Containerized/Kubernetes deployments
-
-```dockerfile
-# Dockerfile
-FROM python:3.9-slim
-
-WORKDIR /opt/orchestrator
-
-# Copy application
-COPY . .
-
-# Install dependencies
-RUN pip install pyyaml
-
-# Create non-root user
-RUN useradd -m orchestrator
-RUN chown -R orchestrator:orchestrator /opt/orchestrator
-
-USER orchestrator
-
-# Set entrypoint
-ENTRYPOINT ["/opt/orchestrator/bin/run-automation-controller.sh"]
-
-# Health check (monitors log output)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD test -n "$(find /opt/orchestrator/logs -name 'automation-*.log' -mmin -1)" || exit 1
-```
-
-Build and run:
-```bash
-# Build image
-docker build -t orchestrator-automation:latest .
-
-# Run container
-docker run -d \
-  --name orchestrator-automation \
-  -v /opt/queue:/opt/orchestrator/data/queue \
-  -v /opt/logs:/opt/orchestrator/logs \
-  -e POLL_INTERVAL_SECONDS=5 \
-  -e LOG_LEVEL=INFO \
-  orchestrator-automation:latest
-
-# Check logs
-docker logs -f orchestrator-automation
-```
-
-### Scenario 4: Kubernetes Deployment
-
-**Best for:** Cloud-native/orchestrated environments
-
-```yaml
-# k8s-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: orchestrator-automation
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: orchestrator-automation
-  template:
-    metadata:
-      labels:
-        app: orchestrator-automation
-    spec:
-      containers:
-      - name: automation
-        image: orchestrator-automation:latest
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: POLL_INTERVAL_SECONDS
-          value: "5"
-        - name: LOG_LEVEL
-          value: "INFO"
-        - name: AUTOMATION_DAEMON_MODE
-          value: "true"
-        volumeMounts:
-        - name: queue
-          mountPath: /opt/orchestrator/data/queue
-        - name: logs
-          mountPath: /opt/orchestrator/logs
-        resources:
-          limits:
-            memory: "1Gi"
-            cpu: "1"
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-      volumes:
-      - name: queue
-        hostPath:
-          path: /mnt/queue
-      - name: logs
-        hostPath:
-          path: /mnt/logs
-```
-
-Deploy:
-```bash
-kubectl apply -f k8s-deployment.yaml
-```
+Then give it work directly (`delegate: ...`). It spawns the appropriate specialist
+agent(s), reads their HANDBACKs back in-context, and pauses when there is no pending
+DELEGATE and no outstanding spawn (see
+[src/AGENTS.md > Pause Condition](../../src/AGENTS.md#pause-condition)). To resume,
+give it a new request or add a task to `TODO.md`.
 
 ---
 
-## Configuration Tuning
+## Unattended / Long-Running Operation
 
-### Performance Tuning
-
-#### For High-Throughput Environments
-```bash
-# Reduce polling interval to check queue more frequently
-POLL_INTERVAL_SECONDS=2
-
-# Increase log level to reduce I/O
-LOG_LEVEL=WARNING
-```
-
-#### For Low-Resource Environments
-```bash
-# Increase polling interval to reduce CPU usage
-POLL_INTERVAL_SECONDS=10
-
-# Enable structured logging for efficient parsing
-STRUCTURED_LOGGING=true
-```
-
-#### For Debug/Testing
-```bash
-# Short intervals and debug logging
-POLL_INTERVAL_SECONDS=1
-LOG_LEVEL=DEBUG
-AUTOMATION_MAX_CYCLES=100  # For testing
-```
+**UNRESOLVED:** the old guide's systemd/Docker/Kubernetes scenarios all wrapped
+`bin/run-automation-controller.sh`, which does not exist in this repository (there is
+no `bin/` directory at all as of this writing) and predates the direct-spawn model in
+any case. This framework does not currently ship a supported "always-on production
+server" deployment target for the Orchestrator. If you need genuinely unattended,
+long-lived operation, check whether your harness offers its own headless/scheduled
+invocation mechanism (for example, a harness-native scheduled-agent or background-run
+feature) — agentic-engineers itself does not provide one, and this guide should not be
+treated as a source of a working command for that use case until it's rewritten by
+someone who has verified a real path end to end.
 
 ---
 
-## Monitoring & Observability
+## The Audit-Trail Queue Directory
 
-### Health Check Endpoint
-
-The entrypoint script provides health monitoring capabilities:
-
-```bash
-# Check health status via logs
-tail -f /opt/orchestrator/logs/automation-*.log
-```
-
-### Logging
-
-Logs are written to:
-- **Console**: Real-time visibility
-- **File**: `/opt/orchestrator/logs/automation-{timestamp}.log`
-
-Monitor logs in real-time:
-```bash
-# Tail logs
-tail -f /opt/orchestrator/logs/automation-*.log
-
-# Search for errors
-grep ERROR /opt/orchestrator/logs/automation-*.log
-
-# Follow log file as it grows
-tail -f /opt/orchestrator/logs/automation-*.log | grep -E "ERROR|WARN"
-```
-
-### Metrics Collection
-
-Metrics are collected and stored for analysis:
-- **Directory**: `/opt/orchestrator/metrics/` (for local backup and analysis)
-
-View logs for metrics tracking:
-```bash
-# Monitor metrics via logs
-tail -f /opt/orchestrator/logs/automation-*.log | grep -i metric
-```
-
----
-
-## Backup & Recovery
-
-### Queue Backup
+Dispatch is direct, but every DELEGATE and HANDBACK is still recorded to
+`~/.agentic-engineers/{harness}/{session-id}/queue/` for audit purposes (see
+[src/AGENTS.md > Audit-Trail Strategy](../../src/AGENTS.md#audit-trail-strategy)).
+That directory is ordinary state on disk, so ordinary backup practices apply if you
+want to retain it beyond a session:
 
 ```bash
-# Backup queue directories
-tar -czf /backups/queue-$(date +%Y%m%d-%H%M%S).tar.gz \
-  /opt/orchestrator/data/queue/
+# Back up one session's audit trail
+tar -czf queue-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+  ~/.agentic-engineers/<harness>/<session-id>/queue/
 
-# Backup logs
-tar -czf /backups/logs-$(date +%Y%m%d-%H%M%S).tar.gz \
-  /opt/orchestrator/logs/
-
-# Backup metrics
-tar -czf /backups/metrics-$(date +%Y%m%d-%H%M%S).tar.gz \
-  /opt/orchestrator/metrics/
+# Back up everything under agentic-engineers' work directory
+tar -czf agentic-engineers-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+  ~/.agentic-engineers/
 ```
 
-### Recovery Procedure
-
-```bash
-# 1. Stop the automation controller
-sudo systemctl stop orchestrator-automation.service
-
-# 2. Restore from backup
-tar -xzf /backups/queue-YYYYMMDD-HHMMSS.tar.gz -C /
-
-# 3. Verify restored files
-ls -la /opt/orchestrator/data/queue/
-
-# 4. Restart the service
-sudo systemctl start orchestrator-automation.service
-
-# 5. Monitor recovery
-sudo journalctl -u orchestrator-automation.service -f
-```
-
----
-
-## Scaling Considerations
-
-### Single Instance
-- Simple to manage
-- No distributed coordination needed
-- Sufficient for moderate task volumes (< 1000 tasks/day)
-
-### Multiple Instances (Recommended)
-- Use shared NFS or S3 for queue directory
-- Implement distributed locking to prevent duplicate processing
-- Load balance incoming DELEGATE files
-- Monitor for task duplication
-
-```bash
-# Example: Multiple instances with NFS
-# /opt/orchestrator/data/queue -> NFS mount
-# ORCHESTRATOR_QUEUE_DIR=/mnt/nfs/queue
-
-# Each instance reads from same queue
-# Requires file locking to prevent race conditions
-```
+There is no separate "restore and restart a service" procedure to document — restoring
+the directory simply restores the audit trail; it does not resume or replay any
+dispatch, since dispatch already completed synchronously within the harness session
+that produced it.
 
 ---
 
 ## Maintenance
 
-### Regular Tasks
-
-**Daily:**
-- Monitor logs for errors
-- Check disk space
-- Review metrics for anomalies
-
-**Weekly:**
-- Archive old logs
-- Review performance metrics
-- Test recovery procedures
-
-**Monthly:**
-- Review and optimize configuration
-- Update dependencies
-- Full system backup
-
-### Log Rotation
-
-```bash
-# Setup logrotate for automatic rotation
-sudo tee /etc/logrotate.d/orchestrator << EOF
-/opt/orchestrator/logs/*.log {
-    daily
-    rotate 30
-    compress
-    delaycompress
-    notifempty
-    create 0640 orchestrator orchestrator
-    sharedscripts
-}
-EOF
-```
-
-### Dependency Updates
-
-```bash
-# Check for updates
-pip3 list --outdated
-
-# Update dependencies carefully in test environment first
-pip3 install --upgrade pyyaml
-```
+**Periodically:**
+- Prune old per-session queue partitions under `~/.agentic-engineers/{harness}/` if
+  disk usage matters to you — each is just DELEGATE/HANDBACK YAML plus artifacts.
+- Keep the harness CLI itself (Claude Code / OpenCode / Copilot CLI / Codex)
+  up to date per its own release process; agentic-engineers has no dependencies of its
+  own to patch beyond what `make install` renders.
 
 ---
 
-## Troubleshooting
-
-For common issues and solutions, see: **[docs/troubleshooting-continuous-polling.md](troubleshooting-continuous-polling.md)**
-
----
-
-## Support
-
-For issues or questions:
-1. Check troubleshooting guide
-2. Review logs with debug logging enabled
-3. Verify configuration against this guide
-4. Contact infrastructure team
-
----
-
-## Appendix: Quick Reference
-
-```bash
-# Start automation (systemd)
-sudo systemctl start orchestrator-automation.service
-
-# Stop automation (graceful shutdown)
-sudo systemctl stop orchestrator-automation.service
-
-# Restart automation
-sudo systemctl restart orchestrator-automation.service
-
-# Check status
-sudo systemctl status orchestrator-automation.service
-
-# View logs
-sudo journalctl -u orchestrator-automation.service -f
-
-# Manual run (useful for debugging)
-cd /opt/orchestrator
-source .env
-./bin/run-automation-controller.sh
-
-# Run with debug logging
-LOG_LEVEL=DEBUG ./bin/run-automation-controller.sh
-
-# Run with max cycles (for testing)
-AUTOMATION_MAX_CYCLES=10 ./bin/run-automation-controller.sh
-
-# Find latest metrics
-ls -lt /opt/orchestrator/metrics/ | head -5
-```
-
----
-
-**Document Version**: 1.0
-**Last Updated**: 2024-05-03
-**Status**: Production Ready
+**Document Version**: 2.0
+**Last Updated**: 2026-08-09
+**Status**: Reflects the Direct Sub-Agent Spawn Execution Model; supersedes the
+Continuous Polling Loop Automation deployment guide.

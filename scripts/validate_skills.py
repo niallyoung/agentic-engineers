@@ -3,8 +3,8 @@ from __future__ import annotations
 
 """validate_skills.py - SKILL.md frontmatter compliance gate (Phase 5.1+).
 
-Validates every active skill in src/skills/ against the canonical template
-defined in src/skills/_meta/skill-template/SKILL.md.
+Validates every active skill in src/skills/ against the required frontmatter
+schema defined below (REQUIRED_TOP_LEVEL / REQUIRED_METADATA).
 
 Exit codes:
     0 -- All active skills pass validation
@@ -34,23 +34,25 @@ from typing import Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "src" / "skills"
 
-# Skills listed in docs/SKILLS-AVAILABLE.md as active.
+# Skills listed in src/SKILLS.md as active.
 # Update this list whenever a skill is added or deprecated.
+#
+# SPEC-2026-005 framework slimdown, WP-0 (2026-08-11): pruned from 14 to the
+# 8 skills that survive the slimdown (principal-engineer design authority:
+# task-2026-08-11-framework-slimdown-design HANDBACK). Removed:
+# harness-integration-tracker, consistency-checker, workflow-review,
+# agent-creator, usage-tracking, file-sync, queue-todo-sync, model-engineer
+# (all deleted in a later WP). Added: orchestrator, codex-agent-cleanup
+# (both already active but were missing from this list).
 ACTIVE_SKILLS: List[str] = [
-    "harness-integration-tracker",
-    "consistency-checker",
+    "orchestrator",
+    "queue-management",
+    "queue-query",
     "protocol-validator",
     "spec-validator",
     "spec-management",
-    "workflow-review",
-    "agent-creator",
-    "queue-management",
-    "queue-query",
-    "usage-tracking",
-    "file-sync",
-    "queue-todo-sync",
-    "model-engineer",
     "skill-improvement-feedback",
+    "codex-agent-cleanup",
 ]
 
 # Required top-level frontmatter keys
@@ -174,22 +176,28 @@ def audit_skill(skill_name: str) -> SkillAuditResult:
         result.errors.append(f"Directory not found: {skill_dir}")
         return result
 
-    # 2. Required files
-    for filename in REQUIRED_FILES:
+    # 2/3/4. Required files/dirs -- a skill with no scripts/ directory is
+    # PROSE-ONLY by design (the skills-first direction: a SKILL.md-only dir
+    # is valid and does not need scaffolded __init__.py/tests/). A skill that
+    # HAS a scripts/ dir is a Python skill and must have the full structure.
+    is_prose_only = not (skill_dir / "scripts").is_dir()
+    required_files = ["SKILL.md"] if is_prose_only else REQUIRED_FILES
+    required_dirs = [] if is_prose_only else REQUIRED_DIRS
+
+    for filename in required_files:
         if not (skill_dir / filename).exists():
             result.errors.append(f"Missing required file: {filename}")
 
-    # 3. Required directories
-    for dirname in REQUIRED_DIRS:
+    for dirname in required_dirs:
         if not (skill_dir / dirname).is_dir():
             result.errors.append(f"Missing required directory: {dirname}/")
 
-    # 4. At least one test file
-    tests_dir = skill_dir / "tests"
-    if tests_dir.is_dir():
-        test_files = list(tests_dir.glob("test_*.py"))
-        if not test_files:
-            result.errors.append("tests/ exists but contains no test_*.py files")
+    if not is_prose_only:
+        tests_dir = skill_dir / "tests"
+        if tests_dir.is_dir():
+            test_files = list(tests_dir.glob("test_*.py"))
+            if not test_files:
+                result.errors.append("tests/ exists but contains no test_*.py files")
 
     # 5. SKILL.md frontmatter
     skill_md = skill_dir / "SKILL.md"

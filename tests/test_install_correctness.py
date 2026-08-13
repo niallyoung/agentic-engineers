@@ -27,15 +27,16 @@ HARNESS_LAYOUT = {
     "claude": ("claude", ".claude", ".agentic-engine-claude"),
     "copilot": ("copilot", ".copilot", ".agentic-engine-copilot"),
     "opencode": ("opencode", ".config/opencode", ".agentic-engine-opencode"),
-    "pi": ("pi", ".pi", ".agentic-engine-pi"),
 }
 
-# Files that legitimately differ between dist/ and installed/ (marker timestamps).
+# Files that legitimately differ between dist/ and installed/ (marker
+# timestamps, and settings.json, whose claude-delegate-guard.py hook command
+# embeds the DESTDIR-specific absolute install path rather than dist/'s).
 IGNORED_NAMES = {
     ".agentic-engine-claude",
     ".agentic-engine-copilot",
     ".agentic-engine-opencode",
-    ".agentic-engine-pi",
+    "settings.json",
 }
 
 
@@ -100,8 +101,8 @@ def test_managed_marker_written(installed, harness):
     _dist_sub, install_sub, marker = HARNESS_LAYOUT[harness]
     install_dir = installed / install_sub
 
-    # The marker lives in the agents dir for the per-agent harnesses, and in the
-    # pi agent dir for pi. Search for it anywhere under the install root.
+    # The marker lives in the agents dir for the per-agent harnesses. Search
+    # for it anywhere under the install root.
     markers = list(install_dir.rglob(marker))
     assert markers, (
         f"{harness}: managed-files marker '{marker}' not written anywhere under "
@@ -128,15 +129,15 @@ def test_all_8_agents_installed(installed, harness):
     "harness",
     ["claude", "copilot", "opencode"],
 )
-def test_all_24_skills_installed(installed, harness):
+def test_all_8_skills_installed(installed, harness):
     _dist_sub, install_sub, _marker = HARNESS_LAYOUT[harness]
     skills_dir = installed / install_sub / "skills"
     assert skills_dir.is_dir(), f"{harness}: skills/ not installed"
     installed_skills = [
         p for p in skills_dir.iterdir() if p.is_dir() and (p / "SKILL.md").exists()
     ]
-    assert len(installed_skills) >= 23, (
-        f"{harness}: expected >= 23 installed skills, found "
+    assert len(installed_skills) == 8, (
+        f"{harness}: expected 8 installed skills, found "
         f"{len(installed_skills)}"
     )
 
@@ -186,4 +187,3 @@ def test_install_honors_destdir_does_not_touch_home(installed):
     assert (installed / ".claude").exists()
     assert (installed / ".copilot").exists()
     assert (installed / ".config" / "opencode").exists()
-    assert (installed / ".pi").exists()

@@ -618,7 +618,7 @@ class TestEnumDriftDetection:
     def test_enum_drift_report_to_text_dirty(self):
         """Dirty report names the drifted file and missing values."""
         finding = EnumDriftFinding(
-            path="src/orchestration/agents/quality_validator.py",
+            path="src/skills/queue-management/scripts/queue_ops.py",
             name="VALID_HANDBACK_STATUSES",
             found={"complete", "failed", "partial", "blocked", "escalate"},
             expected=VALID_STATUSES,
@@ -631,7 +631,7 @@ class TestEnumDriftDetection:
             findings=[finding],
         )
         text = report.to_text()
-        assert "quality_validator" in text
+        assert "queue_ops" in text
         assert "success" in text or "failure" in text
 
     def test_extract_status_set_simple_set_literal(self):

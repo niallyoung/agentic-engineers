@@ -15,6 +15,7 @@ The protocol has two parts:
 ## DELEGATE (send work to an agent)
 
 ```yaml
+handoff_type: DELEGATE               # protocol identifier
 task_id: my-task-2026-05-13          # kebab-case, 3-50 chars
 skill: code-review                    # skill name from skills/
 agent: engineer                       # who handles it
@@ -79,6 +80,5 @@ budget: 5.0
 - ✅ Extensions with unknown fields are ignored by core validation
 
 ## See Also
-- `specs/protocol-core-v1.0.yaml` — full schema definition
-- `docs/PROTOCOL-MIGRATION-GUIDE.md` — migrating from old protocol
+- `docs/specs/protocol-core-v1.0.yaml` — full schema definition
 - `docs/PROTOCOL.md` — full reference

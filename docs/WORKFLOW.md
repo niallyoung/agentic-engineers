@@ -101,20 +101,20 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 │    ✓ Status is valid (complete, failed, partial, blocked)                  │
 │    ✓ Deliverables match DELEGATE scope                                     │
 │    ✓ Tests documented with pass/fail counts                                │
-│    ✓ Quality score is honest (0-100)                                       │
+│    ✓ Quality score is honest (0.0-1.0)                                     │
 │    ✓ Token usage documented                                                │
 │    ✓ No scope creep (work stayed in DELEGATE bounds)                       │
 │  Quality Scoring:                                                           │
 │    Format (40%): YAML valid, required fields present                       │
 │    Content (35%): Deliverables match scope, tests passing                  │
 │    Quality (25%): Code quality, coverage, confidence                       │
-│    Composite: 0-100 score                                                  │
+│    Composite: 0.0-1.0 score                                               │
 │  Decision:                                                                  │
-│    90-100: MERGE (immediate)                                               │
-│    80-89:  MERGE (with notes)                                              │
-│    70-79:  LEAD REVIEW (manual verification)                               │
-│    60-69:  REWORK (max 2 retries, then escalate)                           │
-│    <60:   ESCALATE (to Principal Engineer)                                 │
+│    0.9-1.0: MERGE (immediate)                                              │
+│    0.8-0.89: MERGE (with notes)                                            │
+│    0.7-0.79: LEAD REVIEW (manual verification)                             │
+│    0.6-0.69: REWORK (max 2 retries, then escalate)                        │
+│    <0.6:   ESCALATE (to Principal Engineer)                                │
 │  Output: HANDBACK stored in ~/.agentic-engineers/{harness}/{session-id}/queue/processing/      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
@@ -340,7 +340,7 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
    ├─ Tokens used: {actual}
    ├─ Tokens estimated: {from DELEGATE}
    ├─ Duration: {minutes}
-   ├─ Quality score: {0-100}
+   ├─ Quality score: {0.0-1.0}
    └─ Confidence: {0.0-1.0}
 ```
 
@@ -364,7 +364,7 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
   - `tests`: Test results with pass/fail counts
   - `tokens_used`: Actual token count
   - `tokens_estimated`: From DELEGATE
-  - `quality_score`: 0-100
+  - `quality_score`: 0.0-1.0
   - `confidence`: 0.0-1.0
   - `notes`: What went well, what was hard
 
@@ -386,7 +386,7 @@ deliverables:                        # ✓ Required, list of changes
 tests:                               # ✓ Required, test results
   - pytest: PASS (47 tests)
   - coverage: 87%
-quality_score: 95                    # ✓ Required, 0-100
+quality: 0.95                        # ✓ Required, 0.0-1.0 float
 tokens_used: 1200                    # ✓ Required, actual count
 tokens_estimated: 1500               # ✓ Required, from DELEGATE
 duration_minutes: 18                 # ✓ Required, wall clock time
@@ -405,11 +405,11 @@ notes: |                             # ✓ Required, summary
 
 | Score | Decision | Next Step |
 |-------|----------|-----------|
-| 90-100 | MERGE | Move to done/, ready for production |
-| 80-89 | MERGE | Move to done/, with notes |
-| 70-79 | LEAD REVIEW | Manual verification by Lead Engineer |
-| 60-69 | REWORK | Create new DELEGATE with feedback (max 2 retries) |
-| <60 | ESCALATE | Principal Engineer reviews, decides next step |
+| 0.9-1.0 | MERGE | Move to done/, ready for production |
+| 0.8-0.89 | MERGE | Move to done/, with notes |
+| 0.7-0.79 | LEAD REVIEW | Manual verification by Lead Engineer |
+| 0.6-0.69 | REWORK | Create new DELEGATE with feedback (max 2 retries) |
+| <0.6 | ESCALATE | Principal Engineer reviews, decides next step |
 
 **What Happens on Failure:**
 - If validation fails → Reject HANDBACK, return to Agent
@@ -591,7 +591,7 @@ SKIP_HOOKS=1 git push
 
 ### Lead Engineer
 
-**Gate 5: HANDBACK Validation (70-79 scores)**
+**Gate 5: HANDBACK Validation (0.7-0.79 scores)**
 - [ ] Manual code review
 - [ ] Verify quality baseline met
 - [ ] Approve/reject/conditional approve
@@ -633,11 +633,11 @@ SKIP_HOOKS=1 git push
 - `tests_passed`: Count
 - `tests_failed`: Count
 - `code_coverage`: Percentage
-- `quality_score`: 0-100
+- `quality`: 0.0-1.0
 - `confidence`: 0.0-1.0
 
 ### Gate 5: HANDBACK Validation
-- `quality_score_composite`: 0-100
+- `quality_composite`: 0.0-1.0
 - `routing_decision`: merge/review/rework/escalate
 - `lead_review_required`: Yes/No
 - `rework_count`: 0/1/2/escalate
@@ -679,9 +679,9 @@ SKIP_HOOKS=1 git push
 - **Failed task** → Orchestrator creates rework DELEGATE
 
 ### From Gate 5 (HANDBACK Validation)
-- **Score 70-79** → Lead Engineer manual review
-- **Score 60-69** → Create rework DELEGATE (max 2 retries)
-- **Score <60** → Escalate to Principal Engineer
+- **Score 0.7-0.79** → Lead Engineer manual review
+- **Score 0.6-0.69** → Create rework DELEGATE (max 2 retries)
+- **Score <0.6** → Escalate to Principal Engineer
 - **Persistent failures** → Escalate to Principal Engineer
 
 ### From Gate 6 (Pre-Commit)
@@ -760,24 +760,24 @@ START
   │
   ├─ Calculate quality score (format + content + quality)
   │  │
-  │  ├─ Score 90-100?
+  │  ├─ Score 0.9-1.0?
   │  │  ├─ YES → MERGE: Move to done/, ready for production
   │  │  └─ NO ↓
   │  │
-  │  ├─ Score 80-89?
+  │  ├─ Score 0.8-0.89?
   │  │  ├─ YES → MERGE: Move to done/, with notes
   │  │  └─ NO ↓
   │  │
-  │  ├─ Score 70-79?
+  │  ├─ Score 0.7-0.79?
   │  │  ├─ YES → LEAD REVIEW: Manual verification required
   │  │  └─ NO ↓
   │  │
-  │  ├─ Score 60-69?
+  │  ├─ Score 0.6-0.69?
   │  │  ├─ YES → REWORK: Create new DELEGATE with feedback
   │  │  │        (max 2 retries, then escalate)
   │  │  └─ NO ↓
   │  │
-  │  └─ Score <60?
+  │  └─ Score <0.6?
   │     └─ ESCALATE: Principal Engineer reviews
   │
   └─ Output: Routing decision, metrics recorded
@@ -793,7 +793,7 @@ A: Orchestrator fixes the DELEGATE and resubmits. If issues persist, escalate to
 **Q: What if an agent gets blocked at Gate 4?**  
 A: Agent reports `status: blocked` in HANDBACK. Orchestrator escalates to Senior Engineer or Lead Engineer for unblocking.
 
-**Q: What if HANDBACK scores 70-79?**  
+**Q: What if HANDBACK scores 0.7-0.79?**  
 A: Lead Engineer does manual code review. They can approve, conditionally approve, or request rework.
 
 **Q: What if we need to bypass pre-commit hook?**  

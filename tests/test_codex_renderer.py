@@ -48,8 +48,19 @@ def toml_scalar(text: str, key: str) -> str:
 
 
 def load_model_registry() -> dict:
-    models_path = REPO_ROOT / "src" / "config" / "models.yaml"
-    return yaml.safe_load(models_path.read_text(encoding="utf-8"))
+    """Load the codex role->model mapping straight from the renderer.
+
+    There is no standalone models.yaml registry (src/config/ was removed in
+    the framework slimdown) — CODEX_MODEL_BY_ROLE in render-codex.py is now
+    the single source of truth for Codex model assignment.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("render_codex", RENDERER)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["render_codex"] = module  # dataclass annotation resolution needs this
+    spec.loader.exec_module(module)
+    return module.CODEX_MODEL_BY_ROLE
 
 
 def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
@@ -130,8 +141,7 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
 
 
 def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
-    registry = load_model_registry()
-    role_models = registry["role_models"]
+    role_models = load_model_registry()
 
     orchestrator_profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(
         encoding="utf-8"
@@ -141,9 +151,9 @@ def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
         encoding="utf-8"
     )
 
-    assert f'model = "{role_models["general_orchestrator"]["providers"]["codex"]}"' in orchestrator_profile
-    assert f'model = "{role_models["engineer"]["providers"]["codex"]}"' in engineer_agent
-    assert f'model = "{role_models["security_engineer"]["providers"]["codex"]}"' in security_agent
+    assert f'model = "{role_models["general_orchestrator"]}"' in orchestrator_profile
+    assert f'model = "{role_models["engineer"]}"' in engineer_agent
+    assert f'model = "{role_models["security_engineer"]}"' in security_agent
 
 
 def test_render_codex_validate_checks_agents_contract(rendered_codex):

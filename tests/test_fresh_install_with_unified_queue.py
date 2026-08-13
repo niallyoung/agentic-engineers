@@ -16,20 +16,31 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 import tempfile
 
-# Add queue-isolation scripts to path for imports
-_qi_scripts = Path(__file__).parent / "src" / "skills" / "_meta" / "queue-isolation" / "scripts"
-if not _qi_scripts.exists():
-    _qi_scripts = Path(__file__).parent.parent / "src" / "skills" / "_meta" / "queue-isolation" / "scripts"
-if str(_qi_scripts) not in sys.path:
-    sys.path.insert(0, str(_qi_scripts))
+# Path isolation now lives in queue-management's queue_ops.py (the deleted
+# src/skills/_meta/queue-isolation skill's QueueIsolation class was
+# consolidated there).
+_qm_scripts = Path(__file__).parent.parent / "src" / "skills" / "queue-management" / "scripts"
+if str(_qm_scripts) not in sys.path:
+    sys.path.insert(0, str(_qm_scripts))
 
-import queue_isolation
+from queue_ops import get_queue_path  # noqa: E402
 from tests.helpers.queue_test_helpers import (
     setup_isolated_queue,
     setup_legacy_queue,
     assert_queue_path_is_isolated,
     assert_queue_subdirs_exist,
 )
+
+_QUEUE_SUBDIRS = ("incoming", "processing", "done", "failed")
+
+
+def _init_queue(session_id, harness, base_dir):
+    """Compute + create a queue path for the given session/harness (mirrors
+    setup_isolated_queue, but driven by explicit env-derived args)."""
+    queue_path = get_queue_path(session_id, harness, base_dir=base_dir)
+    for subdir in _QUEUE_SUBDIRS:
+        (queue_path / subdir).mkdir(parents=True, exist_ok=True)
+    return queue_path
 
 
 class TestFreshInstallPreservesQueueData:
@@ -84,31 +95,6 @@ class TestFreshInstallPreservesQueueData:
         for harness, task_file in task_files.items():
             assert task_file.exists(), f"Lost data for {harness}"
             assert f'"{harness}"' in task_file.read_text()
-
-    def test_metadata_json_preserved_across_install(self, tmp_path):
-        """Verify metadata.json files are preserved."""
-        session_id = "test-metadata-preserve"
-
-        # Create queues
-        harnesses = ["claude", "copilot"]
-        metadata_files = {}
-
-        for harness in harnesses:
-            queue_path = setup_isolated_queue(tmp_path, session_id, harness)
-            metadata_path = queue_path.parent / "metadata.json"
-            assert metadata_path.exists()
-            metadata_files[harness] = metadata_path
-
-            # Record original content
-            original_content = json.loads(metadata_path.read_text())
-            original_content["preserved"] = True
-            metadata_path.write_text(json.dumps(original_content))
-
-        # Verify after "install fresh"
-        for harness, metadata_path in metadata_files.items():
-            assert metadata_path.exists()
-            content = json.loads(metadata_path.read_text())
-            assert content["preserved"] is True
 
     def test_legacy_queue_needs_migration_notice(self, tmp_path):
         """Verify legacy queues are detected and marked for migration."""
@@ -267,16 +253,10 @@ class TestInstallFreshEnvironmentVariables:
 
         with patch.dict(os.environ, env_vars, clear=False):
             # Initial queue creation
-            qi1 = queue_isolation.QueueIsolation.from_env(
-                base_dir=tmp_path / ".agentic-engineers"
-            )
-            path1 = qi1.initialise()
+            path1 = _init_queue(session_id, "copilot", tmp_path / ".agentic-engineers")
 
             # "After install" - session ID should be same
-            qi2 = queue_isolation.QueueIsolation.from_env(
-                base_dir=tmp_path / ".agentic-engineers"
-            )
-            path2 = qi2.initialise()
+            path2 = _init_queue(session_id, "copilot", tmp_path / ".agentic-engineers")
 
             # Paths should be identical (same session, same harness)
             assert path1 == path2
@@ -293,10 +273,7 @@ class TestInstallFreshEnvironmentVariables:
         }
 
         with patch.dict(os.environ, env1, clear=False):
-            qi1 = queue_isolation.QueueIsolation.from_env(
-                base_dir=tmp_path / ".agentic-engineers"
-            )
-            path1 = qi1.initialise()
+            path1 = _init_queue(session_id, "claude", tmp_path / ".agentic-engineers")
             assert "claude" in str(path1)
 
         # Switch to Copilot after "install fresh"
@@ -307,10 +284,7 @@ class TestInstallFreshEnvironmentVariables:
         }
 
         with patch.dict(os.environ, env2, clear=False):
-            qi2 = queue_isolation.QueueIsolation.from_env(
-                base_dir=tmp_path / ".agentic-engineers"
-            )
-            path2 = qi2.initialise()
+            path2 = _init_queue(session_id, "copilot", tmp_path / ".agentic-engineers")
             assert "copilot" in str(path2)
 
         # Verify paths are different (different harnesses)
@@ -342,23 +316,3 @@ class TestInstallFreshDataIntegrity:
         assert read_back == task_data
         assert read_back["scope"] == task_data["scope"]
 
-    def test_metadata_json_integrity(self, tmp_path):
-        """Verify metadata.json integrity across install."""
-        session_id = "test-metadata-integrity"
-
-        queue_path = setup_isolated_queue(tmp_path, session_id, "copilot")
-        metadata_path = queue_path.parent / "metadata.json"
-
-        # Read original metadata
-        original = json.loads(metadata_path.read_text())
-        original_created_at = original["created_at"]
-
-        # Simulate some operations changing last_accessed_at
-        queue_isolation.init_queue_structure(session_id, "copilot", base_dir=tmp_path / ".agentic-engineers")
-
-        # Verify created_at didn't change
-        updated = json.loads(metadata_path.read_text())
-        assert updated["created_at"] == original_created_at
-        assert updated["last_accessed_at"] >= original["last_accessed_at"]
-        assert updated["session_id"] == session_id
-        assert updated["harness"] == "copilot"

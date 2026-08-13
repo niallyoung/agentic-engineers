@@ -13,7 +13,6 @@
 #   - Main/master push warnings
 #   - DELEGATE/HANDBACK protocol compliance
 #   - Render pipeline completion
-#   - Concurrent test execution (race condition guard)
 #   - Queue path validation
 #   - Agent definition verification
 #
@@ -312,35 +311,18 @@ elif [ -d "tests" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6b. RUN CONCURRENT TESTS (race condition guard)
+# 6b. (removed) RUN CONCURRENT TESTS (race condition guard)
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# TestConcurrentInvocations::test_concurrent_invocations_independent_files
-# has a history of flaking in CI due to a TOCTOU race between the HANDBACK
-# file poller and the writer thread.  Running it three times locally (the
-# test itself spawns threads; no -n / xdist needed) ensures the fix holds
-# before the commit reaches CI.
+# This step used to run TestConcurrentInvocations::test_concurrent_invocations_independent_files,
+# which guarded a TOCTOU race between invoke_agent.py's subprocess HANDBACK
+# file poller and the writer thread. That subprocess/file-poll mechanism
+# (invoke_agent.py, AgentInvoker) has been removed as part of the move to
+# direct sub-agent spawning — the HANDBACK is now returned directly as the
+# Agent/Task tool call result, in-context, with no separate file poller to
+# race against. There is no surviving mechanism for this check to guard, so
+# the step has been removed rather than pointed at a deleted test file.
 #
-echo ""
-echo "🔀 Running concurrent invocation tests (race condition guard)..."
-
-CONCURRENT_ERRORS=0
-if [ "${SKIP_PYTEST:-}" != "1" ] && command -v pytest >/dev/null 2>&1 && [ -d "tests" ]; then
-  if timeout 60 pytest tests/test_invoke_agent.py::TestConcurrentInvocations \
-        -q --tb=short 2>/dev/null; then
-    pass "Concurrent invocation tests passed"
-  else
-    PYTEST_EXIT=$?
-    if [ "$PYTEST_EXIT" -eq 124 ]; then
-      fail "Concurrent invocation tests timed out (>60s) — race condition suspected"
-    else
-      fail "Concurrent invocation tests FAILED — race condition detected. Fix before pushing."
-    fi
-    CONCURRENT_ERRORS=$((CONCURRENT_ERRORS + 1))
-    ERRORS=$((ERRORS + 1))
-    CHECKS_FAILED=$((CHECKS_FAILED + 1))
-  fi
-fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. VALIDATE SPEC COMPLIANCE (No external scripts except renderer/)
@@ -388,167 +370,91 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 9. AGENT DEFINITION VERIFICATION (FIX #3)
 # ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔐 Validating queue paths (FIX #1 — enforce canonical paths)..."
-
-QUEUE_PATH_ERRORS=0
-if command -v python3 >/dev/null 2>&1; then
-  # Note: SPEC.md may contain legacy paths in documentation/examples for historical reference
-  # Only validate source code and queue files, not documentation
-  if false && [ -f "SPEC.md" ]; then
-    if python3 << 'PYTHON_QUEUE_VALIDATOR'
-import sys
-sys.path.insert(0, 'src/skills/_meta/queue-path-validator/scripts')
-try:
-    from queue_path_validator import QueuePathValidator
-    
-    validator = QueuePathValidator()
-    with open('SPEC.md', 'r') as f:
-        content = f.read()
-    
-    invalid = validator.find_invalid_paths_in_text(content)
-    if invalid:
-        print("❌ Found legacy queue paths in SPEC.md:")
-        for path in invalid:
-            print("  - " + path)
-        sys.exit(1)
-    else:
-        print("✓ No legacy queue paths in SPEC.md")
-        sys.exit(0)
-except ImportError:
-    print("⚠ Queue path validator not found — skipping (may be normal during initial setup)")
-    sys.exit(0)
-PYTHON_QUEUE_VALIDATOR
-    then
-      pass "Queue paths in SPEC.md are canonical"
-    else
-      fail "Legacy queue paths detected in SPEC.md — update to canonical format"
-      QUEUE_PATH_ERRORS=$((QUEUE_PATH_ERRORS + 1))
-    fi
-  fi  # Disabled: SPEC.md check (may contain legacy paths in docs)
-  
-  # Validate queue paths in all DELEGATE/HANDBACK files in git staging area
-  if command -v git >/dev/null 2>&1; then
-    # Get staged YAML files (DELEGATE and HANDBACK files)
-    DELEGATE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | grep -E '(queue|DELEGATE|HANDBACK)' || true)
-    
-    if [ ! -z "$DELEGATE_FILES" ]; then
-      YAML_VALIDATION_ERRORS=0
-      for file in $DELEGATE_FILES; do
-        if [ -f "$file" ]; then
-          if python3 << PYTHON_YAML_QUEUE_VALIDATOR
-import sys
-sys.path.insert(0, 'src/skills/_meta/queue-path-validator/scripts')
-try:
-    from queue_path_validator import QueuePathValidator
-    import yaml
-    
-    validator = QueuePathValidator()
-    with open('$file', 'r') as f:
-        content = f.read()
-    
-    # Check for invalid paths in the entire file content
-    invalid = validator.find_invalid_paths_in_text(content)
-    if invalid:
-        print("❌ Invalid queue paths in $file:")
-        for path in invalid:
-            print("  - " + path)
-        sys.exit(1)
-    else:
-        sys.exit(0)
-except Exception as e:
-    # Skip validation if file is not readable or validator not available
-    sys.exit(0)
-PYTHON_YAML_QUEUE_VALIDATOR
-          then
-            :  # Path is valid, continue
-          else
-            YAML_VALIDATION_ERRORS=$((YAML_VALIDATION_ERRORS + 1))
-            QUEUE_PATH_ERRORS=$((QUEUE_PATH_ERRORS + 1))
-          fi
-        fi
-      done
-    fi
-  fi
-  
-  if [ "$QUEUE_PATH_ERRORS" -eq 0 ]; then
-    pass "All queue paths are canonical"
-  else
-    ERRORS=$((ERRORS + QUEUE_PATH_ERRORS))
-    CHECKS_FAILED=$((CHECKS_FAILED + 1))
-  fi
-fi
+# NOTE (SPEC-2026-005 framework slimdown, WP-0, 2026-08-11): the queue-path
+# validation subsection that used to live here (FIX #1) has been removed. It
+# depended on src/skills/_meta/queue-path-validator/scripts/queue_path_validator.py
+# (src/skills/_meta/ is deleted in a later WP; not one of the 8 surviving
+# skills) and was already fully or partially dead code: the SPEC.md check was
+# gated behind `if false`, and the DELEGATE/HANDBACK YAML check silently
+# no-ops via `except Exception: sys.exit(0)` once the validator import fails.
+# Removing it is a pure no-op change in observable hook behavior.
 
 echo ""
 echo "🔐 Verifying agent definitions (FIX #3 — model downgrade protection)..."
 
-if command -v python3 >/dev/null 2>&1; then
-  # Check if agent-verification.py exists
-  if [ -f "src/orchestration/agent-verification.py" ]; then
-    # Verify model_verification_sha in all queue files
-    AGENT_VERIFY_ERRORS=0
-    
-    # Check .agents_verification_sha exists
-    if [ ! -f ".agents_verification_sha" ]; then
-      fail ".agents_verification_sha missing — run: python3 src/orchestration/agent-verification.py generate src/AGENTS.md"
+# NOTE (SPEC-2026-005 framework slimdown, WP-0, 2026-08-11): this block used
+# to be gated behind `if [ -f "src/orchestration/agent-verification.py" ]`.
+# That gate was vestigial — the SHA verification below is fully self-contained
+# (bash + inline python hashlib) and never actually invokes that script; the
+# existence check only gated whether the block ran at all. Since
+# src/orchestration/ is deleted in a later WP, keeping that gate would have
+# silently disabled this check (guarding surviving files src/AGENTS.md and
+# .agents_verification_sha) the moment the script disappeared. Re-gated on
+# src/AGENTS.md instead — the file this block actually verifies — which also
+# preserves the existing no-op behavior in repos/fixtures that don't have a
+# src/AGENTS.md at all (see tests/test_git_hooks.py make_minimal_repo_with_docs).
+if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ]; then
+  # Verify model_verification_sha in all queue files
+  AGENT_VERIFY_ERRORS=0
+
+  # Check .agents_verification_sha exists
+  if [ ! -f ".agents_verification_sha" ]; then
+    fail ".agents_verification_sha missing — run the agent-verification generator against src/AGENTS.md"
+    AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
+  else
+    pass ".agents_verification_sha file exists"
+  fi
+
+  # Get current SHA from file
+  if [ -f ".agents_verification_sha" ]; then
+    CURRENT_SHA=$(grep "^agent_sha256=" ".agents_verification_sha" | cut -d= -f2)
+
+    if [ -z "$CURRENT_SHA" ]; then
+      fail ".agents_verification_sha is empty or malformed"
       AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
     else
-      pass ".agents_verification_sha file exists"
-    fi
-    
-    # Get current SHA from file
-    if [ -f ".agents_verification_sha" ]; then
-      CURRENT_SHA=$(grep "^agent_sha256=" ".agents_verification_sha" | cut -d= -f2)
-      
-      if [ -z "$CURRENT_SHA" ]; then
-        fail ".agents_verification_sha is empty or malformed"
+      pass "Current AGENTS.md SHA: ${CURRENT_SHA:0:16}..."
+
+      # Verify SHA is valid (64 hex chars)
+      if ! echo "$CURRENT_SHA" | grep -qE "^[0-9a-f]{64}$"; then
+        fail "SHA256 format invalid: $CURRENT_SHA"
         AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
       else
-        pass "Current AGENTS.md SHA: ${CURRENT_SHA:0:16}..."
-        
-        # Verify SHA is valid (64 hex chars)
-        if ! echo "$CURRENT_SHA" | grep -qE "^[0-9a-f]{64}$"; then
-          fail "SHA256 format invalid: $CURRENT_SHA"
-          AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
-        else
-          pass "SHA256 format valid"
-        fi
+        pass "SHA256 format valid"
       fi
     fi
-    
-     # Check AGENTS.md hasn't been tampered with (compare computed vs stored SHA)
-     if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ] && [ ! -z "$CURRENT_SHA" ]; then
-       COMPUTED_SHA=$(python3 << 'PYTHON_SHA_COMPUTE' | grep "agent_sha256=" | cut -d= -f2
+  fi
+
+   # Check AGENTS.md hasn't been tampered with (compare computed vs stored SHA)
+   if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ] && [ ! -z "$CURRENT_SHA" ]; then
+     COMPUTED_SHA=$(python3 << 'PYTHON_SHA_COMPUTE' | grep "agent_sha256=" | cut -d= -f2
 import hashlib
 with open('src/AGENTS.md', 'rb') as f:
     COMPUTED_SHA = hashlib.sha256(f.read()).hexdigest()
 print(f"agent_sha256={COMPUTED_SHA}")
 PYTHON_SHA_COMPUTE
 )
-      
-      if [ ! -z "$COMPUTED_SHA" ]; then
-        if [ "$CURRENT_SHA" = "$COMPUTED_SHA" ]; then
-          pass "AGENTS.md SHA matches stored hash — no tampering"
-        else
-          warn "AGENTS.md SHA mismatch detected (AGENTS.md was modified — regenerate .agents_verification_sha if intentional)"
-          warn "  Stored:   $CURRENT_SHA"
-          warn "  Computed: $COMPUTED_SHA"
-          # This is a warning, not an error, to allow legitimate AGENTS.md updates
-        fi
+
+    if [ ! -z "$COMPUTED_SHA" ]; then
+      if [ "$CURRENT_SHA" = "$COMPUTED_SHA" ]; then
+        pass "AGENTS.md SHA matches stored hash — no tampering"
+      else
+        warn "AGENTS.md SHA mismatch detected (AGENTS.md was modified — regenerate .agents_verification_sha if intentional)"
+        warn "  Stored:   $CURRENT_SHA"
+        warn "  Computed: $COMPUTED_SHA"
+        # This is a warning, not an error, to allow legitimate AGENTS.md updates
       fi
     fi
-    
-    if [ "$AGENT_VERIFY_ERRORS" -gt 0 ]; then
-      ERRORS=$((ERRORS + AGENT_VERIFY_ERRORS))
-      CHECKS_FAILED=$((CHECKS_FAILED + 1))
-    else
-      CHECKS_PASSED=$((CHECKS_PASSED + 1))
-    fi
+  fi
+
+  if [ "$AGENT_VERIFY_ERRORS" -gt 0 ]; then
+    ERRORS=$((ERRORS + AGENT_VERIFY_ERRORS))
+    CHECKS_FAILED=$((CHECKS_FAILED + 1))
   else
-    warn "agent-verification.py not found — skipping agent definition verification"
+    CHECKS_PASSED=$((CHECKS_PASSED + 1))
   fi
 else
-  warn "python3 not found — skipping agent definition verification"
+  warn "python3 not found or src/AGENTS.md missing — skipping agent definition verification"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────

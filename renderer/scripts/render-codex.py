@@ -24,6 +24,15 @@ from typing import Any
 
 import yaml
 
+# Canonical Agent Roster table parser — the Python twin of parse_agents_md()
+# in renderer/lib/render-lib.sh. Pinned together by
+# tests/test_agents_table_parity.py. See renderer/lib/agents_table.py for the
+# full table-format contract.
+_LIB_DIR = Path(__file__).resolve().parent.parent / "lib"
+if str(_LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(_LIB_DIR))
+from agents_table import parse_agents_table as _parse_agents_table_rows  # type: ignore
+
 
 DOC_SENTINEL = "# managed by agentic-engineers render-codex.py; do not edit directly"
 CONFIG_SENTINEL = "# managed by agentic-engineers render-codex.py"
@@ -208,34 +217,28 @@ def warn_on_local_only_codex_skills(repo_root: Path, skills_root: Path) -> list[
 
 
 def parse_agents_table(agents_md: Path) -> dict[str, dict[str, str]]:
-    if not agents_md.is_file():
-        return {}
-    result: dict[str, dict[str, str]] = {}
-    in_table = False
-    for line in agents_md.read_text(encoding="utf-8").splitlines():
-        if "| Role |" in line and "| Model |" in line and "| Effort |" in line:
-            in_table = True
-            continue
-        if in_table and line.strip().startswith("|---"):
-            continue
-        if in_table and not line.strip().startswith("|"):
-            break
-        if not in_table:
-            continue
-        cells = [cell.strip() for cell in line.split("|")]
-        if len(cells) < 6 or not cells[1] or cells[1] == "Role":
-            continue
-        role = re.sub(r"\*+", "", cells[1]).strip().lower().replace(" ", "-")
-        model = re.sub(r"\*+", "", cells[2]).strip()
-        effort = re.sub(r"\*+", "", cells[3]).strip().lower()
-        description = re.sub(r"\*+", "", cells[5]).strip()
-        if role and model and effort:
-            result[role] = {
-                "model": model,
-                "effort": effort,
-                "description": description,
-            }
-    return result
+    """Codex-local adapter: canonical row list -> dict keyed by kebab-case role.
+
+    The actual parsing lives in renderer/lib/agents_table.py — the canonical
+    Python parser, pinned to the canonical bash parser (parse_agents_md in
+    renderer/lib/render-lib.sh) by tests/test_agents_table_parity.py. This
+    wrapper only reshapes the row list into the dict-by-role lookup shape
+    this renderer's call sites expect (render-copilot-agents.py has no
+    equivalent shared-parser call site: it does not parse this table at all
+    — it takes each agent's model straight from that agent's own
+    src/agents/*-agent.md frontmatter). Effort is lowercased for the lookups
+    below (REASONING_BY_EFFORT keys); the canonical table already stores
+    effort lowercase, so this is a no-op in practice and kept only to
+    preserve the prior contract.
+    """
+    return {
+        row["role"]: {
+            "model": row["model"],
+            "effort": row["effort"].lower(),
+            "description": row["description"],
+        }
+        for row in _parse_agents_table_rows(agents_md)
+    }
 
 
 def copy_skill(src: Path, dst: Path) -> None:
@@ -243,7 +246,7 @@ def copy_skill(src: Path, dst: Path) -> None:
         shutil.rmtree(dst)
 
     def ignore(_dir: str, names: list[str]) -> set[str]:
-        ignored = {".git", ".DS_Store", "__pycache__", ".coverage", ".pytest_cache"}
+        ignored = {".git", ".DS_Store", "__pycache__", ".coverage", ".pytest_cache", "tests"}
         return {name for name in names if name in ignored or name.endswith(".pyc")}
 
     shutil.copytree(src, dst, ignore=ignore)
@@ -468,18 +471,8 @@ max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
 
-# Phase G: harness queue auto-polling (see docs/guides/harness-queue-polling.md).
-# In Orchestrator mode the idle harness invokes the orchestrator-scheduler skill
-# to drain the DELEGATE queue, backing off exponentially when the queue is empty.
-[idle_loop]
-enabled = true
-interval_seconds = 180
-action = "invoke_skill"
-skill = "orchestrator-scheduler"
-args = ["--poll-once"]
-backoff_intervals = [5, 30, 180, 600]
-watch_enabled = true
-watch_poll_seconds = 0.5
+# Polling-based queue automation has been removed (2026-08-09).
+# Orchestration now uses direct sub-agent spawning per SPEC-2026-004.
 """,
             encoding="utf-8",
         )
@@ -512,16 +505,8 @@ max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
 
-# Phase G: harness queue auto-polling (see docs/guides/harness-queue-polling.md).
-# During idle periods the harness invokes the orchestrator-scheduler skill to
-# drain the DELEGATE queue, backing off exponentially when the queue is empty.
-[idle_loop]
-enabled = true
-interval_seconds = 180
-action = "invoke_skill"
-skill = "orchestrator-scheduler"
-args = ["--poll-once"]
-backoff_intervals = [5, 30, 180, 600]
+# Polling-based queue automation has been removed (2026-08-09).
+# Orchestration now uses direct sub-agent spawning per SPEC-2026-004.
 watch_enabled = true
 watch_poll_seconds = 0.5
 

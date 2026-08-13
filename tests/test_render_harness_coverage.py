@@ -5,8 +5,8 @@ Guarantees that `make render-all` produces a complete, well-formed distribution
 for every harness:
 
   - all 8 specialist agents are rendered per harness (claude/copilot/opencode)
-  - all 27 user-facing skills are rendered per harness
-  - generated framework docs (CLAUDE.md, AGENTS.md, opencode.jsonc, pi SYSTEM.md)
+  - all user-facing skills are rendered per harness
+  - generated framework docs (CLAUDE.md, AGENTS.md, opencode.jsonc)
     are present in dist/ after render
   - every rendered agent carries a non-empty model and description (never "—")
 
@@ -27,6 +27,13 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DIST = REPO_ROOT / "dist"
+
+# Canonical source format for a Claude model id. Two version shapes are valid:
+#   - two-part  claude-haiku-4.5, claude-opus-4.8   (DOT separator)
+#   - one-part  claude-opus-5, claude-sonnet-5, claude-fable-5
+# The invariant is "the version separator is a DOT, never a hyphen". A
+# single-part version has no separator at all, so it need not contain a dot.
+CANONICAL_MODEL_RE = re.compile(r"^claude-(haiku|sonnet|opus|fable)-\d+(\.\d+)?$")
 
 # The 8 canonical specialist roles (source basename without -agent.md).
 EXPECTED_ROLES = {
@@ -78,10 +85,10 @@ def _render_all():
     yield
 
 
-def test_source_has_exactly_27_user_skills():
+def test_source_has_exactly_8_user_skills():
     names = _source_skill_names()
-    assert len(names) == 27, (
-        f"Expected 27 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 8, (
+        f"Expected 8 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 
@@ -119,7 +126,7 @@ def test_harness_renders_all_8_agents(harness):
 
 
 @pytest.mark.parametrize("harness", PER_FILE_AGENT_HARNESSES)
-def test_harness_renders_all_25_skills(harness):
+def test_harness_renders_all_skills(harness):
     skills_dir = DIST / harness / "skills"
     assert skills_dir.is_dir(), f"dist/{harness}/skills/ missing after render"
 
@@ -132,8 +139,8 @@ def test_harness_renders_all_25_skills(harness):
         f"dist/{harness}/skills/ is missing rendered skills (with SKILL.md): "
         f"{sorted(missing)}"
     )
-    assert len(rendered) >= 23, (
-        f"dist/{harness}/skills/ rendered only {len(rendered)} skills; expected >= 23"
+    assert len(rendered) == len(source), (
+        f"dist/{harness}/skills/ rendered {len(rendered)} skills; expected {len(source)}"
     )
 
 
@@ -150,14 +157,6 @@ def test_harness_renders_framework_docs(harness, docs):
         path = DIST / harness / doc
         assert path.is_file(), f"dist/{harness}/{doc} not produced by render"
         assert path.stat().st_size > 0, f"dist/{harness}/{doc} is empty"
-
-
-def test_pi_renders_system_and_config():
-    agent_dir = DIST / "pi" / "agent"
-    for doc in ("SYSTEM.md", "pi.yml", "AGENTS.md"):
-        path = agent_dir / doc
-        assert path.is_file(), f"dist/pi/agent/{doc} not produced by render"
-        assert path.stat().st_size > 0, f"dist/pi/agent/{doc} is empty"
 
 
 @pytest.mark.parametrize("harness", PER_FILE_AGENT_HARNESSES)
@@ -202,11 +201,11 @@ def test_rendered_models_are_harness_appropriate(harness):
                 "provider-prefixed (e.g. github-copilot/...)"
             )
         elif harness == "copilot":
-            assert re.match(r"^claude-(haiku|sonnet|opus)-\d", model_val), (
-                f"copilot/{agent_file.name}: model '{model_val}' is not a dotted "
-                "versioned Claude id"
+            assert CANONICAL_MODEL_RE.match(model_val), (
+                f"copilot/{agent_file.name}: model '{model_val}' is not a "
+                "canonical versioned Claude id"
             )
         elif harness == "claude":
-            assert re.match(r"^(haiku|sonnet|opus)$", model_val) or re.match(
-                r"^claude-(haiku|sonnet|opus)", model_val
+            assert re.match(r"^(haiku|sonnet|opus|fable)$", model_val) or re.match(
+                r"^claude-(haiku|sonnet|opus|fable)", model_val
             ), f"claude/{agent_file.name}: unexpected model id '{model_val}'"

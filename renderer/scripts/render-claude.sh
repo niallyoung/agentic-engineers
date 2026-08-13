@@ -35,6 +35,15 @@ SRC_AGENTS_MD="$REPO_ROOT/src/AGENTS.md"
 SKILL_MARKER=".agentic-engine-claude"
 # Agents are single files; we use a sidecar manifest to track managed names.
 AGENT_MANIFEST="$DST_AGENTS/.agentic-engine-claude"
+
+# DELEGATE/HANDBACK protocol-enforcement hook: PreToolUse guard for the
+# Agent/Task tool. See renderer/scripts/claude-delegate-guard.py for the
+# implementation and root-cause rationale.
+SRC_HOOK="$REPO_ROOT/renderer/scripts/claude-delegate-guard.py"
+DST_HOOKS="$CLAUDE/hooks"
+HOOK_SCRIPT_NAME="claude-delegate-guard.py"
+DST_HOOK="$DST_HOOKS/$HOOK_SCRIPT_NAME"
+HOOK_MARKER="$DST_HOOKS/.agentic-engine-claude"
 # Sentinel on line 1 of generated docs (CLAUDE.md/AGENTS.md) so we can tell ours
 # apart from a user's own file and never overwrite or delete a foreign one.
 # CLAUDE.md is the user's primary memory file — foreign protection is critical.
@@ -81,20 +90,10 @@ inject_settings_model() {
 import json, sys, os
 settings_file, model_alias = sys.argv[1], sys.argv[2]
 
-# Canonical defaults seeded only when no settings.json exists yet. Phase G:
-# harness queue auto-polling (see docs/guides/harness-queue-polling.md).
-DEFAULT_SETTINGS = {
-	"idle_loop": {
-		"enabled": True,
-		"interval_seconds": 180,
-		"action": "invoke_skill",
-		"skill": "orchestrator-scheduler",
-		"args": ["--poll-once"],
-		"backoff_intervals": [5, 30, 180, 600],
-		"watch_enabled": True,
-		"watch_poll_seconds": 0.5,
-	},
-}
+# Canonical defaults seeded only when no settings.json exists yet.
+# Polling-based execution has been removed (2026-08-09) per SPEC-2026-004.
+# Orchestration now uses direct sub-agent spawning.
+DEFAULT_SETTINGS = {}
 
 try:
 	with open(settings_file) as f:
@@ -132,7 +131,131 @@ os.replace(tmp, settings_file)
 PY
 }
 
+# inject_settings_hook SETTINGS_FILE HOOK_SCRIPT_ABS_PATH
+# Non-destructively merges a PreToolUse hook entry (matching the Agent/Task
+# tool) into the JSON settings file's "hooks" key, so the guard fires on
+# every Agent-tool spawn. Preserves all other keys, all other hook event
+# names (SessionStart, PostToolUse, ...), and any PreToolUse entries the
+# user added themselves. Idempotent: re-running with the same script path
+# updates the existing entry in place instead of appending a duplicate,
+# identified by the hook command containing HOOK_SCRIPT_NAME (matched by
+# basename so the entry survives CLAUDE root relocation between renders).
+inject_settings_hook() {
+	local settings="$1" hook_path="$2"
+	python3 - "$settings" "$hook_path" "$HOOK_SCRIPT_NAME" <<'PY'
+import json, sys, os
+
+settings_file, hook_path, hook_name = sys.argv[1], sys.argv[2], sys.argv[3]
+
+try:
+	with open(settings_file) as f:
+		data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+	data = {}
+
+command = "python3 %s" % hook_path
+entry = {
+	"matcher": "Task|Agent",
+	"hooks": [
+		{"type": "command", "command": command, "timeout": 10}
+	],
+}
+
+hooks = data.setdefault("hooks", {})
+pre_tool_use = hooks.setdefault("PreToolUse", [])
+
+# Find our own previously-installed entry (identified by hook_name appearing
+# in any inner hook's command) and update it in place; otherwise append.
+replaced = False
+for existing in pre_tool_use:
+	for inner in existing.get("hooks", []):
+		if hook_name in inner.get("command", ""):
+			existing["matcher"] = entry["matcher"]
+			existing["hooks"] = entry["hooks"]
+			replaced = True
+			break
+	if replaced:
+		break
+if not replaced:
+	pre_tool_use.append(entry)
+
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
+# remove_settings_hook SETTINGS_FILE
+# Removes only the PreToolUse entry this installer added (identified by
+# HOOK_SCRIPT_NAME in the command string), leaving any other PreToolUse
+# entries, any other hook event names, and all unrelated settings untouched.
+# Cleans up now-empty "PreToolUse"/"hooks" containers so uninstall doesn't
+# leave litter behind.
+remove_settings_hook() {
+	local settings="$1"
+	[ -f "$settings" ] || return 0
+	python3 - "$settings" "$HOOK_SCRIPT_NAME" <<'PY'
+import json, sys, os
+
+settings_file, hook_name = sys.argv[1], sys.argv[2]
+
+try:
+	with open(settings_file) as f:
+		data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+	sys.exit(0)
+
+hooks = data.get("hooks")
+if not isinstance(hooks, dict):
+	sys.exit(0)
+
+pre_tool_use = hooks.get("PreToolUse")
+if isinstance(pre_tool_use, list):
+	kept = []
+	for existing in pre_tool_use:
+		inner_hooks = existing.get("hooks", [])
+		is_ours = any(hook_name in inner.get("command", "") for inner in inner_hooks)
+		if not is_ours:
+			kept.append(existing)
+	if kept:
+		hooks["PreToolUse"] = kept
+	else:
+		hooks.pop("PreToolUse", None)
+
+if not hooks:
+	data.pop("hooks", None)
+
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
 # parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
+
+# render_claude_agent_body SRC_FILE
+# Emits the agent body (frontmatter stripped) for the Claude Code target, with
+# the source's "## Integration" section (OpenCode/Copilot CLI invocation
+# instructions — dead weight on Claude Code, which spawns agents via the
+# Agent/Task tool, not a CLI flag) replaced by a one-line Claude-native pointer.
+# "## Integration" is always the final section of a src/agents/*-agent.md file
+# (verified: it runs to EOF in all 8 agents), so this is a safe truncation.
+render_claude_agent_body() {
+	local src="$1"
+	strip_fm "$src" | sed '/^## Integration$/,$d'
+	cat <<'EOF'
+## Integration
+
+This agent is spawned directly via the Agent/Task tool as part of the
+agentic-engineers DELEGATE/HANDBACK protocol. Every DELEGATE and HANDBACK is
+also recorded to `~/.agentic-engineers/{harness}/{session-id}/queue/` as a
+durable audit trail via `enqueue()` — see `~/.claude/AGENTS.md`.
+EOF
+}
 
 
 # Write a managed framework doc with a sentinel on line 1, refusing to overwrite
@@ -184,9 +307,9 @@ auditability, and the DELEGATE/HANDBACK coordination layer.
 
 ## Why protocol-first matters
 
-- **Auditability** — every task is a DELEGATE block in the queue; every result is a HANDBACK
-- **Enforcement** — routing rules, model selection, and escalation triggers are applied consistently
-- **Cost discipline** — the Orchestrator starts with cheap Haiku models and escalates only when needed
+- **Auditability** — every task is meant to be a DELEGATE block in the queue; every result a HANDBACK (in practice this recording is a known gap — see `~/.claude/AGENTS.md` § Audit-Trail Strategy)
+- **Consistency** — routing rules and escalation triggers are documented once and followed by every role
+- **Cost discipline** — each role has a fixed, cost-appropriate model; a low-quality HANDBACK reroutes to a higher tier rather than upgrading the model mid-task
 - **Coordination** — independent tasks are fanned out in parallel; escalation chains are tracked
 
 ## Specialist agents (invoked by the Orchestrator, not directly by users)
@@ -277,6 +400,14 @@ case "$MODE" in
 				echo "  $(_yellow "⚠️  keeping $(basename "$doc") — foreign (not managed by us)")"
 			fi
 		done
+		# DELEGATE/HANDBACK protocol guard hook (only if we installed it)
+		hook_removed=0
+		if [ -f "$HOOK_MARKER" ]; then
+			rm -f "$DST_HOOK" "$HOOK_MARKER"
+			hook_removed=1
+		fi
+		remove_settings_hook "$CLAUDE/settings.json"
+		[ "$hook_removed" -eq 1 ] && echo "  removed DELEGATE protocol-guard hook"
 		# Remove session model (if we set it)
 		remove_settings_model "$CLAUDE/settings.json"
 		echo "  removed model from settings.json"
@@ -290,7 +421,7 @@ case "$MODE" in
 			src="$SRC_SKILLS/$name"; dst="$DST_SKILLS/$name"
 			if [ ! -d "$dst" ]; then echo "  ❌ skill $name (not installed)"; missing=$((missing + 1))
 			elif [ ! -f "$dst/$SKILL_MARKER" ]; then echo "  ⚠️  skill $name (foreign)"; foreign=$((foreign + 1))
-			elif diff -rq "$src" "$dst" --exclude="$SKILL_MARKER" --exclude=".DS_Store" --exclude=".git" >/dev/null 2>&1; then echo "  ✅ skill $name"; ok=$((ok + 1))
+			elif diff -rq "$src" "$dst" --exclude="$SKILL_MARKER" --exclude=".DS_Store" --exclude=".git" --exclude='tests' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' >/dev/null 2>&1; then echo "  ✅ skill $name"; ok=$((ok + 1))
 			else echo "  🔄 skill $name (drift)"; drift=$((drift + 1)); fi
 		done
 		echo "  skills: $ok ok / $drift drift / $missing missing / $foreign foreign"
@@ -317,6 +448,34 @@ case "$MODE" in
 		else
 			echo "  ❌ settings.json model: not set (session will use Anthropic default)"
 		fi
+		# DELEGATE/HANDBACK protocol guard hook
+		if [ ! -f "$DST_HOOK" ]; then
+			echo "  ❌ hook claude-delegate-guard.py (not installed)"
+		elif [ ! -f "$HOOK_MARKER" ]; then
+			echo "  ⚠️  hook claude-delegate-guard.py (foreign)"
+		elif cmp -s "$SRC_HOOK" "$DST_HOOK"; then
+			echo "  ✅ hook claude-delegate-guard.py"
+		else
+			echo "  🔄 hook claude-delegate-guard.py (drift)"
+		fi
+		hook_wired=$(python3 -c "
+import json
+try:
+    d = json.load(open('$CLAUDE/settings.json'))
+except Exception:
+    d = {}
+entries = d.get('hooks', {}).get('PreToolUse', [])
+wired = any(
+    '$HOOK_SCRIPT_NAME' in inner.get('command', '')
+    for e in entries for inner in e.get('hooks', [])
+)
+print('yes' if wired else 'no')
+" 2>/dev/null || echo "no")
+		if [ "$hook_wired" = "yes" ]; then
+			echo "  ✅ settings.json PreToolUse hook: wired"
+		else
+			echo "  ❌ settings.json PreToolUse hook: not wired"
+		fi
 		;;
 
 	install|"")
@@ -333,7 +492,7 @@ case "$MODE" in
 			fi
 			skill_start=$(date +%s)
 			_use_color && printf '\r  ⏳ %-30s' "$name"
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			skill_end=$(date +%s)
 			skill_duration=$(( skill_end - skill_start ))
@@ -414,7 +573,7 @@ case "$MODE" in
 			echo "role: $role_val"
 			echo "---"
 			echo
-			strip_fm "$src_file"
+			render_claude_agent_body "$src_file"
 		} > "$dst_file"
 
 			echo "$name" >> "$AGENT_MANIFEST.tmp"
@@ -463,6 +622,23 @@ case "$MODE" in
 				inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
 				echo "✅ Set session model → $orchestrator_model (orchestrator default)"
 			fi
+		fi
+
+		# 5. DELEGATE/HANDBACK protocol guard: install the PreToolUse hook that
+		# validates Agent/Task-tool spawns of the 8 framework specialist roles
+		# carry a well-formed DELEGATE block, and wire it into settings.json.
+		# See renderer/scripts/claude-delegate-guard.py for the implementation
+		# and root-cause rationale for why this exists.
+		echo "🔒 Installing DELEGATE protocol-guard hook → $DST_HOOKS/..."
+		if [ -f "$DST_HOOK" ] && [ ! -f "$HOOK_MARKER" ]; then
+			echo "  $(_yellow "⚠️  skipping hook — foreign file at $DST_HOOK")"
+		else
+			mkdir -p "$DST_HOOKS"
+			cp "$SRC_HOOK" "$DST_HOOK"
+			chmod +x "$DST_HOOK"
+			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$HOOK_MARKER"
+			inject_settings_hook "$CLAUDE/settings.json" "$DST_HOOK"
+			echo "  $(_green "✅") hook claude-delegate-guard.py (wired into settings.json PreToolUse)"
 		fi
 		;;
 

@@ -4,6 +4,28 @@
 **Origin:** Deferred item from the 2026-06-10 master-prompt audit
 **Question from operator:** "Is HANDBACK actually a DELEGATE / can it be, for direct agent→agent handoff vs queue-and-poll?"
 
+> **2026-08-11 note:** SPEC-2026-004 subsequently replaced queue-and-poll dispatch with
+> direct sub-agent spawn as the canonical execution model (see `docs/SPEC.md`'s
+> ORCHESTRATOR-FIRST EXECUTION MODEL and `src/AGENTS.md`). This note's framing below
+> ("Current Flow (Queue-and-Poll via Orchestrator)") describes the pre-SPEC-2026-004
+> architecture and is retained as historical context for the options analysis; the
+> "30–60s polling interval" and poll-cycle latency arguments no longer apply to Option 0.
+> The schema paths below have also moved: `src/orchestration/{delegate,handback}-schema.yaml`
+> was `docs/specs/{delegate,handback}-schema.yaml`. The core question (should an
+> escalation HANDBACK formally embed the next DELEGATE) remains open and undecided.
+>
+> **2026-08-12 note:** `docs/specs/delegate-schema.yaml` and
+> `docs/specs/handback-schema.yaml` (referenced throughout this note) have since been
+> deleted — their content contradicted the canonical schema (underscored role names,
+> a 0–100 `quality_score`, a date-prefixed `task_id` format, fields like
+> `estimated_hours`/`model_verification_sha` that were never part of the live protocol)
+> and nothing outside documentation loaded them. `docs/specs/protocol-core-v1.0.yaml`
+> is now the single normative DELEGATE/HANDBACK schema; the current ESCALATION packet
+> format (embedded in a HANDBACK's `escalation:` key, not a bare `status: escalate` +
+> `output.escalate_to`) is defined in `src/AGENTS.md`. Open Question 1 below
+> (status-enum drift) is resolved as a side effect: the canonical status enum is
+> `success | failure | partial | blocked | escalate`, full stop.
+
 ---
 
 ## Problem Statement
@@ -38,8 +60,8 @@ Queue layout (LOCKED SPEC, `docs/QUEUE-PROTOCOL.md` / `docs/SPEC.md`):
 
 The two block types are discriminated by `handoff_type: DELEGATE` vs
 `handoff_type: HANDBACK`. Their canonical schemas live at
-`src/orchestration/delegate-schema.yaml` and
-`src/orchestration/handback-schema.yaml`.
+`docs/specs/delegate-schema.yaml` and
+`docs/specs/handback-schema.yaml`.
 
 Escalation today ("Escalation Chaining (C2c)", `docs/QUEUE-PROTOCOL.md`):
 

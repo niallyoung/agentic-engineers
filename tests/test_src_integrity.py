@@ -25,6 +25,13 @@ SRC_AGENTS = REPO_ROOT / "src" / "agents"
 SRC_SKILLS = REPO_ROOT / "src" / "skills"
 AGENTS_MD = REPO_ROOT / "src" / "AGENTS.md"
 
+# Canonical source format for a Claude model id. Two version shapes are valid:
+#   - two-part  claude-haiku-4.5, claude-opus-4.8   (DOT separator)
+#   - one-part  claude-opus-5, claude-sonnet-5, claude-fable-5
+# The invariant is "the version separator is a DOT, never a hyphen". A
+# single-part version has no separator at all, so it need not contain a dot.
+CANONICAL_MODEL_RE = re.compile(r"^claude-(haiku|sonnet|opus|fable)-\d+(\.\d+)?$")
+
 # Canonical roster as named in the AGENTS.md table (display form).
 EXPECTED_TABLE_ROLES = {
     "Orchestrator",
@@ -81,9 +88,9 @@ def test_agent_model_is_canonical_dotted_claude(agent_path):
     """Source agents use the LOCKED canonical dotted Claude format (claude-<tier>-N.N)."""
     fm = _parse_frontmatter(agent_path)
     model = str(fm["model"]).strip()
-    assert re.match(r"^claude-(haiku|sonnet|opus)-\d+\.\d+$", model), (
-        f"{agent_path.name}: model '{model}' is not canonical dotted Claude "
-        "format (e.g. claude-sonnet-4.6)"
+    assert CANONICAL_MODEL_RE.match(model), (
+        f"{agent_path.name}: model '{model}' is not a canonical Claude id "
+        "(e.g. claude-sonnet-4.6 or claude-sonnet-5)"
     )
 
 
@@ -140,9 +147,9 @@ def test_agents_md_table_lists_all_8_roles():
 def test_agents_md_table_models_are_canonical():
     for row in _roster_rows():
         model = row["model"]
-        assert re.match(r"^claude-(haiku|sonnet|opus)-\d+\.\d+$", model), (
+        assert CANONICAL_MODEL_RE.match(model), (
             f"src/AGENTS.md role '{row['role']}': model '{model}' is not a "
-            "canonical dotted Claude id"
+            "canonical Claude id"
         )
 
 
@@ -166,9 +173,9 @@ def test_agents_md_table_effort_never_blank():
 USER_SKILL_FILES = sorted(SRC_SKILLS.glob("*/SKILL.md"))
 
 
-def test_27_user_skill_files_present():
-    assert len(USER_SKILL_FILES) == 27, (
-        f"Expected 27 user-facing src/skills/*/SKILL.md, found "
+def test_8_user_skill_files_present():
+    assert len(USER_SKILL_FILES) == 8, (
+        f"Expected 8 user-facing src/skills/*/SKILL.md, found "
         f"{len(USER_SKILL_FILES)}: {[p.parent.name for p in USER_SKILL_FILES]}"
     )
 

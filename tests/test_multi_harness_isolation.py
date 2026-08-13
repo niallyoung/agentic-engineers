@@ -16,14 +16,14 @@ from unittest.mock import patch
 import uuid
 import tempfile
 
-# Add queue-isolation scripts to path for imports
-_qi_scripts = Path(__file__).parent / "src" / "skills" / "_meta" / "queue-isolation" / "scripts"
-if not _qi_scripts.exists():
-    _qi_scripts = Path(__file__).parent.parent / "src" / "skills" / "_meta" / "queue-isolation" / "scripts"
-if str(_qi_scripts) not in sys.path:
-    sys.path.insert(0, str(_qi_scripts))
+# Path isolation now lives in queue-management's queue_ops.py (the deleted
+# src/skills/_meta/queue-isolation skill's QueueIsolation class was
+# consolidated there).
+_qm_scripts = Path(__file__).parent.parent / "src" / "skills" / "queue-management" / "scripts"
+if str(_qm_scripts) not in sys.path:
+    sys.path.insert(0, str(_qm_scripts))
 
-import queue_isolation
+from queue_ops import detect_harness, get_session_id, get_queue_path  # noqa: E402
 from tests.helpers.queue_test_helpers import (
     setup_isolated_queue,
     assert_queue_path_is_isolated,
@@ -110,32 +110,6 @@ class TestMultiHarnessIsolation:
         # Claude data should not be in Copilot queue
         assert not (copilot_q_again / "incoming" / "task-2.yaml").exists()
 
-    def test_metadata_json_per_harness(self, tmp_path):
-        """Verify each harness has its own metadata.json."""
-        session_id = "test-metadata"
-
-        harnesses = ["claude", "copilot", "local"]
-        metadata_files = {}
-
-        for harness in harnesses:
-            queue_path = setup_isolated_queue(tmp_path, session_id, harness)
-            metadata_path = queue_path.parent / "metadata.json"
-
-            assert metadata_path.exists(), f"metadata.json missing for {harness}"
-
-            with metadata_path.open() as f:
-                metadata = json.load(f)
-
-            assert metadata["session_id"] == session_id
-            assert metadata["harness"] == harness
-            assert "created_at" in metadata
-            assert "last_accessed_at" in metadata
-
-            metadata_files[harness] = metadata_path
-
-        # Verify all metadata files are in different locations
-        assert len(set(str(p) for p in metadata_files.values())) == len(harnesses)
-
     def test_environment_variable_priority_for_harness(self, tmp_path):
         """Test AGENTIC_HARNESS env var overrides detection."""
         session_id = "test-env-priority"
@@ -148,11 +122,10 @@ class TestMultiHarnessIsolation:
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
-            qi = queue_isolation.QueueIsolation.from_env(
-                base_dir=tmp_path / ".agentic-engineers"
-            )
-            assert qi.harness == "explicit-harness"
-            queue_path = qi.initialise()
+            harness = detect_harness()
+            session_id = get_session_id()
+            assert harness == "explicit-harness"
+            queue_path = get_queue_path(session_id, harness, base_dir=tmp_path / ".agentic-engineers")
             assert "explicit-harness" in str(queue_path)
 
     def test_session_id_environment_variable_priority(self, tmp_path):
@@ -164,10 +137,7 @@ class TestMultiHarnessIsolation:
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
-            qi = queue_isolation.QueueIsolation.from_env(
-                base_dir=tmp_path / ".agentic-engineers"
-            )
-            assert qi.session_id == "explicit-session-id"
+            assert get_session_id() == "explicit-session-id"
 
 
 class TestIsolationPathStructure:
@@ -197,8 +167,8 @@ class TestIsolationPathStructure:
         session_id = "test-custom"
         harness = "local"
 
-        queue_path = queue_isolation.init_queue_structure(
-            session_id, harness, base_dir=custom_base
+        queue_path = setup_isolated_queue(
+            tmp_path / "custom-location", session_id, harness
         )
 
         assert "custom-location" in str(queue_path)

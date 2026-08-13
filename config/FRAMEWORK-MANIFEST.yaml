@@ -6,7 +6,7 @@
 
 version: "1.0"
 created: "2026-05-24"
-last_updated: "2026-05-24"
+last_updated: "2026-08-11"
 
 validation_rules:
   - "All source files must be listed in their respective sections"
@@ -24,79 +24,103 @@ agents:
     effort: low
     description: "Well-scoped task with pre-written plan; low-medium complexity coding/implementation"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   lead-engineer:
     name: Lead Engineer
-    model: claude-sonnet-4.6
+    model: claude-sonnet-5
     type: review
     status: active
     effort: medium
     description: "Code review; quality decisions; medium-complexity planning; architectural guidance"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   model-engineer:
     name: Model Engineer
-    model: claude-haiku-4.5
+    model: claude-sonnet-5
     type: optimization
     status: active
-    effort: low
+    effort: medium
     description: "Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations"
     created: "2026-04-24"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   orchestrator:
     name: Orchestrator
-    model: claude-haiku-4.5
+    model: claude-sonnet-5
     type: routing
     status: active
     effort: low
-    description: "All entry points; routing decisions; task management; metrics collection"
+    description: "All entry points; routing decisions; direct sub-agent spawn dispatch; metrics collection"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   principal-engineer:
     name: Principal Engineer
-    model: claude-opus-4.7
+    model: claude-opus-5
     type: architecture
     status: active
     effort: high
     description: "Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   quality-engineer:
     name: Quality Engineer
-    model: claude-sonnet-4.6
+    model: claude-sonnet-5
     type: validation
     status: active
     effort: medium
     description: "Post-implementation quality gate; code review; model suitability assessment"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   security-engineer:
     name: Security Engineer
-    model: claude-opus-4.7
+    model: claude-fable-5
     type: security
     status: active
-    effort: high
+    effort: max
     description: "Security analysis; threat modeling; vulnerability audits; final escalation path"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
   senior-engineer:
     name: Senior Engineer
-    model: claude-sonnet-4.6
+    model: claude-sonnet-5
     type: implementation
     status: active
     effort: high
     description: "Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes"
     created: "2026-01-15"
-    last_deployed: "2026-05-24"
+    last_deployed: "2026-08-11"
 
 skills:
+  codex-agent-cleanup:
+    name: codex-agent-cleanup
+    status: active
+    description: "Routine maintenance for Codex sessions: monitor queue state, close completed sub-agents, resume/escalate active work"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
+  orchestrator:
+    name: orchestrator
+    status: active
+    description: "In-harness queue orchestration: DELEGATE/HANDBACK lifecycle, direct sub-agent spawn dispatch, HANDBACK correlation, crash recovery, idle detection. Queue is a durable audit trail only — no polling."
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
+  protocol-validator:
+    name: protocol-validator
+    status: active
+    description: "Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1.0.yaml"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
   queue-management:
     name: queue-management
     status: active
@@ -105,10 +129,37 @@ skills:
     required_by:
       - orchestrator
 
-  queue-todo-sync:
-    name: queue-todo-sync
+  queue-query:
+    name: queue-query
     status: active
-    description: "Auto-sync queue DELEGATEs ↔ TODO.md on task lifecycle events"
+    description: "Local-queue visibility: query/inspect the per-session, per-harness filesystem queue by state (incoming, processing, done)"
     created: "2026-02-01"
     required_by:
       - orchestrator
+
+  skill-improvement-feedback:
+    name: skill-improvement-feedback
+    status: active
+    description: "Canonical pattern for the skill self-improvement feedback loop: structured skill_feedback in HANDBACKs, accumulation into improvement tasks"
+    created: "2026-02-01"
+    required_by:
+      - orchestrator
+
+  spec-management:
+    name: spec-management
+    status: active
+    description: "Exclusive SPEC.md change protection: structured proposal, impact analysis, multi-level authorization, immutable audit trail. Principal/Security/Lead Engineers only."
+    created: "2026-02-01"
+    required_by:
+      - lead-engineer
+      - principal-engineer
+      - security-engineer
+
+  spec-validator:
+    name: spec-validator
+    status: active
+    description: "Validates implementation compliance with docs/SPEC.md; detects violations and rollbacks; pre-merge/post-merge gate"
+    created: "2026-02-01"
+    required_by:
+      - lead-engineer
+      - principal-engineer

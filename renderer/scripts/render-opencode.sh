@@ -197,34 +197,43 @@ effort_to_variant() {
 
 # Parse src/AGENTS.md primary roster table for a given role's (model, effort, description).
 # Output: tab-separated "model<TAB>effort<TAB>description"; empty if not found.
-# Role lookup is by kebab-case agent name (matches AGENT_ROLE_MAPPING from old python renderer).
+# Role lookup is by kebab-case agent name.
+#
+# Thin wrapper around the canonical bash parser (parse_agents_md +
+# lookup_agent_metadata, defined in renderer/lib/render-lib.sh and sourced
+# via lib.sh above) rather than a private awk implementation. parse_agents_md
+# derives the kebab-case role key straight from the table's Role column
+# (lowercase + spaces->hyphens), so no separate kebab->"Title Case" alias
+# table is needed here — every src/agents/*-agent.md base name already
+# matches a table role directly (e.g. "security-engineer" -> "Security
+# Engineer" -> "security-engineer"). This wrapper also inherits
+# parse_agents_md's protection of the Multi-Model? column's escaped pipe
+# (e.g. "opus-5 (default) \| 4.8 (fallback)") from being mis-split into the
+# description field — the prior hand-rolled awk here did not protect against
+# that and silently truncated the Principal/Security Engineer descriptions
+# to a fragment of the fallback-model text (see renderer/lib/agents_table.py's
+# docstring for the Python-renderer twin of this same historical bug/fix).
+#
+# The parsed map is memoized in $_AGENTS_TABLE_MAP (built once, on first
+# call) since this is invoked once per agent in the render loop.
+_AGENTS_TABLE_MAP=""
 docs_lookup_role() {
 	local kebab="$1"
-	local role
-	case "$kebab" in
-		orchestrator)      role="Orchestrator" ;;
-		engineer)          role="Engineer" ;;
-		senior-engineer)   role="Senior Engineer" ;;
-		lead-engineer)     role="Lead Engineer" ;;
-		quality-engineer)  role="Quality Engineer" ;;
-		principal-engineer) role="Principal Engineer" ;;
-		security|security-engineer) role="Security Engineer" ;;
-		model-engineer)    role="Model Engineer" ;;
-		*) return 0 ;;
-	esac
 	[ -f "$SRC_AGENTS_MD" ] || return 0
-	awk -v role="$role" -F'|' '
-		$0 ~ "\\| \\*\\*"role"\\*\\*" {
-			# fields: 1=empty 2=role 3=model 4=effort 5=cost 6=use_when 7=trailing
-			model=$3; effort=$4; desc=$6
-			gsub(/^[ \t]+|[ \t]+$/, "", model)
-			gsub(/^[ \t]+|[ \t]+$/, "", effort)
-			gsub(/^[ \t]+|[ \t]+$/, "", desc)
-			gsub(/\*\*/, "", model)
-			print model "\t" effort "\t" desc
-			exit
-		}
-	' "$SRC_AGENTS_MD"
+	if [ -z "$_AGENTS_TABLE_MAP" ]; then
+		_AGENTS_TABLE_MAP=$(mktemp)
+		trap 'rm -f "$_AGENTS_TABLE_MAP"' EXIT INT TERM
+		parse_agents_md "$SRC_AGENTS_MD" > "$_AGENTS_TABLE_MAP"
+	fi
+	local row model effort desc
+	row=$(lookup_agent_metadata "$kebab" "$_AGENTS_TABLE_MAP")
+	[ -n "$row" ] || return 0
+	# row is "model|effort|description" (canonical pipe-joined shape) —
+	# convert to this function's tab-separated output contract.
+	model=$(echo "$row" | cut -d'|' -f1)
+	effort=$(echo "$row" | cut -d'|' -f2)
+	desc=$(echo "$row" | cut -d'|' -f3-)
+	printf '%s\t%s\t%s\n' "$model" "$effort" "$desc"
 }
 
 # JSON-escape a string for embedding inside double quotes.
@@ -350,16 +359,6 @@ write_config() {
     "auto": true,
     "reserved": 30000
   },
-  "idle_loop": {
-    "enabled": true,
-    "interval_seconds": 180,
-    "action": "invoke_skill",
-    "skill": "orchestrator-scheduler",
-    "args": ["--poll-once"],
-    "backoff_intervals": [5, 30, 180, 600],
-    "watch_enabled": true,
-    "watch_poll_seconds": 0.5
-  },
   "permission": {
     "read": "allow",
     "edit": "allow",
@@ -402,10 +401,9 @@ DELEGATE/HANDBACK protocol on a queue-based work pipeline.
 ### Orchestrator constraints
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
   applies Model Engineer recommendations.
-- It runs in-harness via a polling loop (no external cron / outbound tools).
-- During idle periods (\`idle_loop\` config, default 180s) the harness invokes the
-  \`orchestrator-scheduler --poll-once\` SKILL to drain the queue. A file-based lock
-  serializes polling across harnesses (Claude Code, OpenCode, …) sharing a session.
+- It runs in-harness via direct sub-agent spawning (no external cron / outbound tools).
+- Dispatch happens by constructing a DELEGATE block and passing it as a sub-agent prompt,
+  then reading the HANDBACK synchronously from the tool result (no polling, no queue intermediation).
 - ALL execution work is delegated to a specialist via DELEGATE/HANDBACK.
 
 ### Role-specific rules
@@ -547,7 +545,7 @@ case "$MODE" in
 			src="$SRC_SKILLS/$name"; dst="$DST_SKILLS/$name"
 			if [ ! -d "$dst" ]; then echo "  ❌ skill $name (not installed)"; missing=$((missing + 1))
 			elif [ ! -f "$dst/$SKILL_MARKER" ]; then echo "  ⚠️  skill $name (foreign)"; foreign=$((foreign + 1))
-			elif diff -rq "$src" "$dst" --exclude="$SKILL_MARKER" --exclude=".DS_Store" --exclude=".git" >/dev/null 2>&1; then echo "  ✅ skill $name"; ok=$((ok + 1))
+			elif diff -rq "$src" "$dst" --exclude="$SKILL_MARKER" --exclude=".DS_Store" --exclude=".git" --exclude='tests' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' >/dev/null 2>&1; then echo "  ✅ skill $name"; ok=$((ok + 1))
 			else echo "  🔄 skill $name (drift)"; drift=$((drift + 1)); fi
 		done
 		echo "  skills: $ok ok / $drift drift / $missing missing / $foreign foreign"
@@ -584,7 +582,7 @@ case "$MODE" in
 				echo "  ⚠️  skipping skill $name — foreign"
 				continue
 			fi
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' "$src/" "$dst/"
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			count_s=$((count_s + 1))
 		done

@@ -16,9 +16,21 @@ See **docs/SPEC.md - Queue Architecture & Paths (LOCKED SPEC)** for full specifi
 
 # Queue-Based Delegation Mechanics (Details)
 
-Simple file-based queue system for DELEGATE/HANDBACK protocol. Enables agent-based delegation workflow via queue instead of direct messages. Each Copilot or Claude session has its own isolated queue, identified by session-id.
+Simple file-based **audit trail** for the DELEGATE/HANDBACK protocol — not the
+delegation mechanism itself (see below). Each harness/session pair has its own
+isolated queue, identified by session-id.
 
-**CANONICAL EXECUTION MODEL:** Orchestrator agent continuously polls `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/` for new DELEGATE blocks, routes tasks to appropriate agents via AGENTS.md decision tree, processes HANDBACK results, and manages queue state transitions. **This is the ONLY way work flows through agentic-engineers.**
+**CANONICAL EXECUTION MODEL:** The spawning agent (the Orchestrator, or any other
+role whose frontmatter grants `spawn_subagent` — see `src/AGENTS.md`'s
+Tools-Frontmatter Permission Model) builds a DELEGATE and dispatches it by
+directly spawning a sub-agent with the DELEGATE as its prompt, reading the
+HANDBACK back from the tool result — no timer, no poll interval, no intermediate
+queue hop (see `docs/SPEC.md`'s ORCHESTRATOR-FIRST EXECUTION MODEL). The queue
+described in this document is a durable audit substrate: every DELEGATE (at
+spawn) and every HANDBACK (at completion) is recorded there via `enqueue()`.
+**All work is routed through the Orchestrator by convention** (see
+`src/AGENTS.md` > Orchestrator Entry Point) — the queue records the resulting
+DELEGATEs/HANDBACKs regardless of which role spawned them.
 
 All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure under `~/.agentic-engineers/`.
 
@@ -28,38 +40,37 @@ All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory str
 
 **As of 2026-05-26:** All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure.
 
+Canonical path (matches `get_queue_path()` in
+`src/skills/queue-management/scripts/queue_ops.py`): **harness outer,
+session-id inner** — `~/.agentic-engineers/{harness}/{session-id}/queue/`.
+
 ```
 ~/.agentic-engineers/
-├── {session-id}/                       # UUID: unique per session
-│   ├── claude/                         # Claude harness
+├── claude/                             # Claude harness
+│   ├── {session-id}/                   # UUID: unique per session
 │   │   ├── metadata.json               # Harness metadata
 │   │   └── queue/
 │   │       ├── incoming/               # New work, ready for Orchestrator
 │   │       ├── processing/             # Work assigned to agent, awaiting HANDBACK
 │   │       ├── done/                   # Completed work, ready for decision
 │   │       └── failed/                 # Errored tasks
-│   ├── copilot/                        # GitHub Copilot harness
-│   │   ├── metadata.json
-│   │   └── queue/
-│   │       ├── incoming/
-│   │       ├── processing/
-│   │       ├── done/
-│   │       └── failed/
-│   ├── opencode/                       # OpenCode harness
-│   │   ├── metadata.json
-│   │   └── queue/
-│   │       ├── incoming/
-│   │       ├── processing/
-│   │       ├── done/
-│   │       └── failed/
-│   └── pi/                             # Pi.dev harness
+│   └── {other-session-id}/ ...
+├── copilot/                            # GitHub Copilot harness
+│   └── {session-id}/
+│       ├── metadata.json
+│       └── queue/
+│           ├── incoming/
+│           ├── processing/
+│           ├── done/
+│           └── failed/
+├── opencode/                           # OpenCode harness
+│   └── {session-id}/
 │       ├── metadata.json
 │       └── queue/ ...
-└── {other-session-id}/                 # Other session
-    ├── claude/ ...
-    ├── copilot/ ...
-    ├── opencode/ ...
-    └── pi/ ...
+└── pi/                                 # Pi.dev harness
+    └── {session-id}/
+        ├── metadata.json
+        └── queue/ ...
 ```
 
 **Legacy Structure (Deprecated):**
@@ -91,57 +102,53 @@ priority: high
 ---
 ```
 
-**Orchestrator agent (running in harness) polls `{session-id}/incoming/` every 30-60s and:**
+**Orchestrator drains `{session-id}/incoming/` at context start and after each task completes (no timer, no poll interval) and:**
 1. Reads task
 2. Applies AGENTS.md routing rules
-3. Creates DELEGATE (HANDOFF.md format)
-4. Stores DELEGATE in `artifacts/delegates/YYYY-MM-DD/`
-5. Sends DELEGATE to appropriate agent
-6. Deletes from `{session-id}/incoming/` (or moves to archive)
+3. Constructs the DELEGATE block per the DELEGATE/HANDBACK Protocol format
+4. Spawns a sub-agent directly with the DELEGATE as its prompt
+5. Records the DELEGATE via `enqueue()` for audit
+6. Marks the item processed in `{session-id}/incoming/` (moved/archived)
 
 ### 2. Processing Queue
 
-**Agent returns work as:** `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}-HANDBACK-{role}.yaml`
+**`enqueue()` writes the HANDBACK as:** `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}.yaml`
 
-Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/queue/processing/2026-04-30-fix-token-timeout-HANDBACK-engineer.yaml`
+Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/queue/processing/2026-04-30-fix-token-timeout.yaml`
 
 ```yaml
 ---
 handoff_type: HANDBACK
 task_id: 2026-04-30-fix-token-timeout
 status: success | failure | partial | blocked | escalate
-deliverables: [...]
-tests: [...]
-tokens_in: 1200
-tokens_out: 820
-model: claude-haiku-4.5
-effort: high
-duration_minutes: 18
-escalations: 0
+output: "Summary of what was done"
+metrics:
+  quality: 0.9
+  tokens: 2020
+  cost: 0.02
+  duration_seconds: 1080
 ---
 ```
 
-**Orchestrator agent polls `{session-id}/processing/` and:**
-1. Routes complete work to Quality Engineer
-2. Escalates blocked work to Lead/Senior Engineer
-3. Moves to `{session-id}/done/` after decision
+**The spawning agent reads the HANDBACK directly from the spawn's tool result** (the
+write above is the audit copy, recorded via `enqueue()` after the fact — see
+[`src/AGENTS.md` > Audit-Trail Strategy](../src/AGENTS.md#audit-trail-strategy)) and
+applies the routing decision per `status` (see
+[`docs/PROTOCOL.md` §4](PROTOCOL.md#4-quality-assessment)). Convention, not
+automatic: the spawning agent MAY additionally spawn Quality Engineer to review the
+HANDBACK before deciding.
 
 ### 3. Done Queue
 
-**Final decision stored as:** `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}-{decision}.yaml`
-
-Example path: `~/.agentic-engineers/claude/54744939-4acb-430c-b2c4-3b8322289d0b/queue/done/2026-04-30-fix-token-timeout-PROCEED.yaml`
-
-```yaml
-task_id: 2026-04-30-fix-token-timeout
-decision: PROCEED | REWORK | ESCALATE
-notes: "Quality Engineer verified; ready to merge"
-```
-
-**Human/external system reads from `{session-id}/done/` for:**
-- Merge decisions (PROCEED)
-- Rework notifications (REWORK)
-- Escalation alerts (ESCALATE)
+There is no automatic `incoming/`→`processing/`→`done/` transition — `enqueue()`
+only ever writes to `incoming/` (DELEGATE) or `processing/` (HANDBACK). Moving a
+task's audit record to `done/` (or `failed/`) is an explicit
+`QueueOperations.move_task(task_id, from_state, to_state)` call by whichever agent
+decided the task is finished, and preserves the filename
+(`~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}.yaml`). There is
+no separate machine-readable "decision" artifact (`PROCEED`/`REWORK`/`ESCALATE`) —
+the HANDBACK's own `status` field is the decision signal; a human or external
+system reading `{session-id}/done/` reads that field directly.
 
 ---
 
@@ -149,86 +156,40 @@ notes: "Quality Engineer verified; ready to merge"
 
 Orchestrator is a harness agent (defined in AGENTS.md) that:
 
-1. **Runs continuously** (loop in harness or periodic invocation)
-2. **Polls queues** every 30-60 seconds
+1. **Runs in agent context** (a live Orchestrator session, not a background loop)
+2. **Drains queues** at context start and after each task completes — no timer, no poll interval
 3. **Routes work** using AGENTS.md decision tree
-4. **Creates DELEGATEs** in HANDOFF.md format
-5. **Sends to agents** via harness (Claude Code or equiv.)
-6. **Manages transitions** (incoming → processing → done)
+4. **Constructs DELEGATEs** per the DELEGATE/HANDBACK Protocol format
+5. **Dispatches by direct sub-agent spawn** (harness Agent/Task tool), reading the HANDBACK from the tool result
+6. **Manages transitions** (incoming → processing → done) and records them via `enqueue()` for audit
 7. **Applies recommendations** from Model Engineer feedback loop
 
 **No external tools**, no cron jobs, no shell scripts — 100% agent-based.
 
 ---
 
-## Escalation Chaining (C2c)
+## Escalation Chaining
 
-When an agent returns a HANDBACK with status `escalate`, the Orchestrator automatically creates a new DELEGATE for the target agent and enqueues it in the `incoming/` queue. This enables seamless agent-to-agent escalation without manual intervention.
+When an agent returns a HANDBACK with `status: escalate`, it embeds an
+**ESCALATION packet** (`from_role`, `to_role`, `reason`, `findings_so_far`,
+`recommended_focus`) under the HANDBACK's `escalation:` key. The receiving agent
+(whichever role spawned the escalating agent — typically the Orchestrator) reads
+it in-context, builds a new DELEGATE targeting `to_role` with the escalation
+content inlined in `context`, appends its own role to `ancestry`, and spawns
+`to_role` directly. The full packet format, the worked example (Engineer → Senior
+→ Lead), and the depth/fan-out/cycle checks that bound this chain (max delegation
+depth 3, `ancestry`-based cycle detection) are defined once, canonically, in
+[`src/AGENTS.md` > ESCALATION Packet
+Format](../src/AGENTS.md#escalation-packet-format) and [Recursion
+Limits](../src/AGENTS.md#recursion-limits) — not duplicated here.
 
-### When Escalation Happens
-
-An agent returns a HANDBACK with:
-
-```yaml
----
-handoff_type: HANDBACK
-task_id: original-task-id
-status: escalate
-output:
-  escalate_to: lead-engineer
-  escalation_reason: "Complex architectural issues require senior review"
-escalation_chain: [engineer, senior-engineer]  # Track the escalation path
----
-```
-
-### Orchestrator Escalation Chaining Process
-
-1. **Detect escalate status**: Check if `handback.status == 'escalate'`
-
-2. **Extract escalation target**: Read `handback.output.escalate_to` (e.g., "lead-engineer")
-
-3. **Create escalation DELEGATE**:
-   - New task_id: `{original_task_id}-escalated-to-{role}`
-   - Agent: escalation target role
-   - Scope: summarizes escalation reason
-   - Context: includes original HANDBACK and metadata
-   - Escalation chain: appends current role to track the path
-
-4. **Enqueue in incoming/**: Write escalation DELEGATE to `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/`
-
-5. **Move original to done/**: Archive original task with escalation metadata
-
-6. **Return escalation result**: Task is now queued for the next agent in the chain
-
-### Example Escalation Chain
-
-```
-Engineer receives DELEGATE
-  ↓
-Engineer finds complex architecture issue
-  ↓
-Engineer returns HANDBACK with status=escalate, escalate_to=senior-engineer
-  ↓
-Orchestrator creates DELEGATE for Senior Engineer
-  ↓
-Senior Engineer receives DELEGATE with original context
-  ↓
-(Process repeats if Senior Engineer also escalates)
-```
-
-### Escalation Chain Tracking
-
-Each escalation appends the current role to the `escalation_chain` array:
-
-```yaml
-escalation_chain: [engineer, senior-engineer, principal-engineer]
-```
-
-This prevents circular escalations and helps debugging by showing the full path.
-
-### Escalation Timeout (Future Enhancement)
-
-If `escalation_chain` length exceeds 3, the Orchestrator treats it as a **circular escalation** and escalates to `security-engineer` for manual review.
+This document's concern is only the audit-trail side of that chain: both the
+original HANDBACK (with its embedded `escalation:` block) and the new DELEGATE it
+produces are `enqueue()`d exactly like any other DELEGATE/HANDBACK — the escalation
+hop leaves the same `incoming/`+`processing/` trail as a normal spawn, one entry
+per hop. `ancestry` growing by one role per hop is what keeps
+`queue-management`'s cycle detection (`has_cycle()`, `exceeds_max_depth()`)
+accurate across an escalation chain, the same as for ordinary sub-tasks.
 
 ---
 
@@ -236,49 +197,45 @@ If `escalation_chain` length exceeds 3, the Orchestrator treats it as a **circul
 
 Each Copilot or Claude session has its own isolated queue, identified by a unique session-id (UUID). This ensures that multiple simultaneous Copilot/Claude instances don't interfere with each other's tasks.
 
-### Session-ID Detection
+### Session-ID and Harness Detection
 
-The Orchestrator detects the session-id using the following priority:
+`queue_ops.py`'s `get_session_id()` and `detect_harness()` resolve these purely
+from environment variables — no filesystem scan:
 
-1. **COPILOT_SESSION_ID Environment Variable** (highest priority)
-   - Set automatically by Copilot CLI runtime
-   - Example: `export COPILOT_SESSION_ID=54744939-4acb-430c-b2c4-3b8322289d0b`
+**Session ID priority:** `AGENTIC_SESSION_ID` > `CLAUDE_SESSION_ID` >
+`COPILOT_SESSION_ID` > a freshly generated `uuid.uuid4()` if none are set.
 
-2. **CLAUDE_SESSION_ID Environment Variable**
-   - Set automatically by Claude runtime (if running in Claude context)
-   - Example: `export CLAUDE_SESSION_ID=...`
-
-3. **Filesystem Scan** (lowest priority)
-   - Scan `~/.copilot/session-state/` or `~/.claude/session-state/`
-   - Find the most recently modified session directory
-   - Use its directory name (UUID) as the session-id
-   - Example: `~/.copilot/session-state/54744939-4acb-430c-b2c4-3b8322289d0b/`
+**Harness priority:** `AGENTIC_HARNESS` (explicit override) > `CLAUDE_SESSION_ID`
+set → `claude` > `COPILOT_SESSION_ID` set → `copilot` > `OPENAI_API_KEY` set →
+`gpt` > `local` (fallback).
 
 ### Multiple Simultaneous Sessions
 
-When multiple harnesses run concurrently, each harness gets a unique queue partition within its session:
+When multiple harnesses run concurrently, each harness gets its own top-level
+partition, and each session within a harness gets its own subdirectory (see the
+canonical path in [Queue Structure](#queue-structure-all-harnesses---unified)
+above):
 
 ```
-~/.agentic-engineers/artifacts/
-├── 54744939-4acb-430c-b2c4-3b8322289d0b/     # Session 1
-│   ├── claude/
+~/.agentic-engineers/
+├── claude/
+│   ├── 54744939-4acb-430c-b2c4-3b8322289d0b/     # Session 1
 │   │   └── queue/
 │   │       ├── incoming/ ← Claude tasks for session 1
 │   │       ├── processing/
 │   │       └── done/
-│   └── copilot/
-│       └── queue/
-│           ├── incoming/ ← Copilot tasks for session 1
-│           ├── processing/
-│           └── done/
-├── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/     # Session 2
-│   ├── claude/
-│   │   └── queue/ ...
-│   └── copilot/
+│   └── 606ff436-b44b-47c5-90b8-f4bcc3fdb413/     # Session 2
 │       └── queue/ ...
+└── copilot/
+    └── 54744939-4acb-430c-b2c4-3b8322289d0b/     # Session 1, different harness
+        └── queue/
+            ├── incoming/ ← Copilot tasks for session 1
+            ├── processing/
+            └── done/
 ```
 
-Each harness's Orchestrator only polls and processes its own queue partition. No cross-contamination, no race conditions.
+Each harness/session pair is its own isolated queue partition. No
+cross-contamination, no race conditions.
 
 ---
 
@@ -294,7 +251,7 @@ Each harness's Orchestrator only polls and processes its own queue partition. No
 **Current:** All harnesses now use the canonical path:
 - `~/.agentic-engineers/{harness}/{session-id}/queue/` ✅ REQUIRED
 
-If you encounter legacy path references, ensure the queue-isolation skill is properly initialized. See `src/skills/_meta/queue-isolation/SKILL.md` for configuration details.
+All harnesses now use the canonical queue path structure with no additional configuration needed.
 
 ---
 
@@ -308,7 +265,7 @@ The pre-commit hook validates example files in the repo; `enqueue()` is the gate
 ### Why enqueue() is mandatory
 
 - Validates canonical schema before any file is written (no partial/invalid artifacts on disk)
-- Enforces atomic writes (no torn files visible to the polling Orchestrator)
+- Enforces atomic writes (no torn files visible to a concurrently draining Orchestrator)
 - Applies rate limiting, duplicate-id checks, and cycle detection
 - Returns a structured result including the written file path for auditability
 
@@ -389,7 +346,7 @@ result = ops.enqueue({
 # result: {"status": "enqueued", "handoff_type": "DELEGATE", "task_id": "fix-auth-timeout", ...}
 
 # NEVER write directly to the queue directory:
-# open("~/.agentic-engineers/.../incoming/fix-auth-timeout.json", "w")  # FORBIDDEN
+# open("~/.agentic-engineers/.../incoming/fix-auth-timeout.yaml", "w")  # FORBIDDEN
 ```
 
 ---
@@ -398,9 +355,9 @@ result = ops.enqueue({
 
 | Artifact | Path | Created By | Used By |
 |----------|------|-----------|---------|
-| DELEGATE | `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.json` | `enqueue()` only | Orchestrator (polls), Agent (receives) |
-| HANDBACK | `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}.json` | `enqueue()` only | Orchestrator (routes), QE (verifies) |
-| Decision | `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}.json` | Orchestrator `move_task()` | Human / external system |
+| DELEGATE | `~/.agentic-engineers/{harness}/{session-id}/queue/incoming/{task_id}.yaml` | `enqueue()` only | Spawning agent (records at spawn time), any agent auditing the trail |
+| HANDBACK | `~/.agentic-engineers/{harness}/{session-id}/queue/processing/{task_id}.yaml` | `enqueue()` only | Spawning agent (records at completion), QE (verifies) |
+| Archived record | `~/.agentic-engineers/{harness}/{session-id}/queue/done/{task_id}.yaml` (or `failed/`) | `move_task()` | Human / external system |
 
 ---
 
@@ -408,12 +365,15 @@ result = ops.enqueue({
 
 | Queue | Format | Example |
 |-------|--------|---------|
-| incoming | `{task_id}.json` | `2026-04-30-fix-token-timeout.json` |
-| processing | `{task_id}.json` | `2026-04-30-fix-token-timeout.json` |
-| done | `{task_id}.json` | `2026-04-30-fix-token-timeout.json` |
+| incoming | `{task_id}.yaml` | `fix-token-timeout.yaml` |
+| processing | `{task_id}.yaml` | `fix-token-timeout.yaml` |
+| done / failed | `{task_id}.yaml` | `fix-token-timeout.yaml` |
 
-Note: All queue files are JSON (written by `enqueue()`) and named by `task_id` only.  
-The state is tracked by which subdirectory (`incoming/`, `processing/`, etc.) the file lives in.
+Note: All queue files are YAML (written by `enqueue()`) and named by `task_id`
+only — `task_id` no longer requires a date prefix (see
+[`docs/PROTOCOL.md` §2.1](PROTOCOL.md#21-delegate)). The state is tracked by
+which subdirectory (`incoming/`, `processing/`, `done/`, `failed/`) the file
+lives in; `move_task()` moves a file between subdirectories without renaming it.
 
 ---
 
@@ -437,49 +397,38 @@ Routing Decision Tree:
 
 ---
 
-## Integration with SKILLS.md
+## Integration with src/SKILLS.md
 
-Each agent role (Engineer, Senior Engineer, etc.) has SKILLS section:
-- How to execute their role
-- Quality standards
-- Escalation triggers
-- Specific workflows (Red-Green TDD for Engineer, etc.)
-
-Agent reads SKILLS.md when receiving DELEGATE, ensuring consistent execution.
+Each agent role (Engineer, Senior Engineer, etc.) has a section in
+[`src/SKILLS.md`](../src/SKILLS.md) covering how to execute their role, quality
+standards, escalation triggers, and specific workflows (e.g. Red-Green TDD for
+Engineer). An agent consults `src/SKILLS.md` when receiving a DELEGATE, ensuring
+consistent execution.
 
 ---
 
 ## Escalation & Rework Paths
 
-**Blocked Task:**
-- Agent returns HANDBACK with `status: blocked`
-- Orchestrator reads blocker reason
-- Escalates to Lead Engineer or Senior Engineer (per AGENTS.md)
-- Lead Engineer unblocks with guidance or revised plan
+**Blocked task:** the spawning agent reads a `status: blocked` HANDBACK, surfaces
+the blocker (per [`docs/PROTOCOL.md` §4](PROTOCOL.md#4-quality-assessment)), and
+either unblocks the task itself with guidance or escalates per the role's
+`src/AGENTS.md` escalation trigger. There is no fixed numeric retry cap in the
+current system — see [`docs/PROTOCOL.md` §4](PROTOCOL.md#4-quality-assessment).
 
-**Quality Issues (QE Rejection):**
-- Quality Engineer rejects HANDBACK (quality gate failed)
-- Orchestrator creates new DELEGATE with QE feedback
-- Task returns to `incoming/` for rework
-- Retry limit per AGENTS.md (typically 3 attempts before escalate)
+**Quality issues:** if Quality Engineer's review finds the delivered work falls
+short of `success_criteria`, the spawning agent constructs a new DELEGATE
+targeting the same or an escalated role with the QE finding inlined in `context`,
+and spawns it directly — the same mechanism as any other DELEGATE, not a special
+"return to incoming/ for rework" path.
 
 ---
 
-## Optional: Archive & Historical Lookup
+## Archive & Historical Lookup (Not Yet Implemented)
 
-After task leaves `done/`:
-
-```
-artifacts/archive/YYYY-MM-DD/{task_id}/
-├── DELEGATE.yaml
-├── HANDBACK.yaml
-└── QE_FEEDBACK.yaml (if applicable)
-```
-
-Used for:
-- Pattern analysis (Model Engineer: which models suit which task types?)
-- Historical trends (cost, rejection rates, etc.)
-- Task replay (if needed, re-run with updated code)
+No archive mechanism exists in the current codebase — this section describes a
+possible future extension, not present behavior. Today, historical lookup means
+reading `done/`/`failed/` directly, or scanning `enqueue()`'s append-only audit
+log (`{session-id}/audit.log`, one line per DELEGATE/HANDBACK).
 
 ---
 
@@ -496,162 +445,19 @@ API layer would then sit atop the database, replacing file I/O.
 
 ## Summary
 
-Queue system = **indirect delegation via files** instead of direct agent-to-agent messages.
+The queue is a **durable audit trail for direct agent-to-agent delegation**, not
+the delegation mechanism itself — dispatch happens via a direct sub-agent spawn;
+`enqueue()` records what happened, both at spawn and at completion.
 
 Benefits:
-- ✅ Decouples agents (they don't need to know about each other)
-- ✅ Enables batch processing (queue can hold multiple pending tasks)
-- ✅ Auditable (all DELEGATE/HANDBACK stored)
-- ✅ Durable (tasks persist if harness restarts)
-- ✅ Agent-based (Orchestrator polls; no external tools needed)
+- Auditable (every DELEGATE/HANDBACK durably recorded via `enqueue()`)
+- Durable (the record persists if a harness session restarts, even though the
+  in-flight spawn does not)
+- No external tools, no polling, no timer — the spawning agent enqueues as part
+  of the spawn, not as a separate mechanism
 
-Orchestrator implementation = AGENTS.md + SKILLS.md. See those docs for:
-- Routing rules (AGENTS.md > Routing Decision Tree)
-- Escalation rules (AGENTS.md > Constraints)
-- Execution details (SKILLS.md > Orchestrator Skills)
+See `src/AGENTS.md` for routing rules (Delegation Model & Routing Rules), role
+escalation triggers (Role Definitions), and the full execution model (Direct
+Sub-Agent Spawn Execution Model); see `src/SKILLS.md` for per-role execution
+detail.
 
-
----
-
-## Queue Enforcement Rules
-
-> Source: queue-enforcement-rules.md (consolidated here)
-
-### Core Principle: ORCHESTRATOR-FIRST
-
-> All agent execution MUST flow through the Orchestrator's queue. No exceptions.
-
-### Rule 1: Queue Context Required
-
-`agent.execute()` can ONLY be called within active queue context.
-
-```python
-# ❌ Violates Rule 1 — No queue context
-agent = create_agent("engineer")
-result = agent.execute(work_item)  # QueueEnforcementError
-
-# ✅ Compliant — Queue context active
-with QueueContextManager():
-    agent = create_agent("engineer")
-    result = agent.execute(work_item)  # OK
-```
-
-### Rule 2: Explicit Context Marking in Tests
-
-Test code MUST explicitly opt into queue context via `QueueContextManager`. Makes testing intent explicit; prevents accidental bypasses.
-
-```python
-# ✅ Compliant
-def test_engineer_agent():
-    with QueueContextManager():
-        engineer = create_agent("engineer")
-        result = engineer.execute(test_item)
-        assert result.success
-```
-
-### Rule 3: Non-Execute Methods Always Allowed
-
-Non-execute methods (`status()`, `get_capabilities()`, etc.) can be called regardless of queue context.
-
-### Violation Handling
-
-| Violation | Error | Resolution |
-|-----------|-------|-----------|
-| execute() outside context | `QueueEnforcementError` | Wrap with `QueueContextManager()` |
-| Test without context | `QueueEnforcementError` | Add explicit context to test |
-| Direct instantiation bypass | `QueueEnforcementError` | Use `create_agent()` factory only |
-
----
-
-## Queue Enforcement Migration Guide
-
-> Source: queue-enforcement-migration-guide.md (consolidated here)
-
-### 3-Step Fix for QueueEnforcementError
-
-**Step 1:** Add import
-```python
-from orchestration.agents.queue_enforcement_middleware import QueueContextManager
-```
-
-**Step 2:** Wrap execution
-```python
-# Before
-agent = create_agent("engineer")
-result = agent.execute(work_item)
-
-# After
-with QueueContextManager():
-    agent = create_agent("engineer")
-    result = agent.execute(work_item)
-```
-
-**Step 3:** Verify
-```bash
-python3 -m pytest orchestration/agents/test_queue_enforcement.py -v
-```
-
-### Test Harness Pattern
-
-```python
-from orchestration.agents.queue_enforcement_middleware import QueueContextManager
-
-class TestEngineerAgent:
-    def setup_method(self):
-        self.ctx = QueueContextManager()
-        self.ctx.__enter__()
-
-    def teardown_method(self):
-        self.ctx.__exit__(None, None, None)
-
-    def test_execution(self):
-        engineer = create_agent("engineer")
-        result = engineer.execute(test_item)
-        assert result.success
-```
-
-### Orchestrator Integration Pattern
-
-```python
-with QueueContextManager():
-    while orchestrator.has_pending_tasks():
-        task = orchestrator.dequeue()
-        agent = create_agent(task.role)
-        handback = agent.execute(task.work_item)
-        orchestrator.process_handback(handback)
-```
-
----
-
-## Queue Enforcement Implementation Reference
-
-> Source: queue-enforcement-implementation-guide.md (consolidated here)
-> See: `orchestration/agents/queue_enforcement_middleware.py` for the implementation.
-
-### Key Classes
-
-| Class | Purpose |
-|-------|---------|
-| `QueueContext` | Thread-local singleton tracking active context state |
-| `QueueContextManager` | Context manager: activates/deactivates queue context |
-| `QueueEnforcementError` | Exception raised when execute() called outside context |
-| `QueueEnforcingProxy` | Transparent proxy wrapping agents to enforce queue rules |
-
-### create_agent() Factory (implementations.py)
-
-The factory wraps every returned agent in `QueueEnforcingProxy`:
-
-```python
-def create_agent(role):
-    if role not in AGENTS:
-        raise ValueError(f"Unknown role: {role}")
-    agent = AGENTS[role]()
-    return QueueEnforcingProxy(agent)   # Enforcement wrapper
-```
-
-### Validation
-
-```bash
-python3 -m pytest orchestration/agents/test_queue_enforcement.py -v
-python3 -m pytest orchestration/agents/test_queue_state_transitions.py -v
-```

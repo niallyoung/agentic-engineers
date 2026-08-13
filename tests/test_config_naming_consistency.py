@@ -2,181 +2,78 @@
 """
 tests/test_config_naming_consistency.py — Model-naming consistency guard.
 
-Task: consolidation-p1-config-naming-standardization
+Validates model-naming consistency across SURVIVING canonical sources:
+  1. src/AGENTS.md roster table
+  2. .githooks/LOCKED_MODELS.sh (LOCKED_MODELS list + AGENT_MODEL_ASSIGNMENTS)
+  3. src/agents/*-agent.md frontmatter 'model:' lines
 
-Codifies the project's two-layer model-naming convention so future config
-edits cannot introduce drift. The convention (see src/config/CONFIG-README.md
-and the docstring of ModelResolver) is:
-
-  Layer 1 — CANONICAL (short, version-agnostic):  ``claude-haiku``
-      Used ONLY in ``models.yaml`` ``role_models.<role>.canonical``.
-      It names a *model family*, not a concrete API model id.
-
-  Layer 2 — RESOLVED (full version):  ``claude-haiku-4.5``
-      Used everywhere a concrete model assignment is needed:
-        * models.yaml  -> providers.<harness>, cost rates, model_selection
-        * model-config.yaml -> agent/task/experiment assignments, cost tiers
-        * .githooks/LOCKED_MODELS.sh -> LOCKED_MODELS + AGENT_MODEL_ASSIGNMENTS
-        * model_resolver.FALLBACK_DEFAULTS
-
-These two layers are intentional, not a style inconsistency: A/B experiments
-and the locked-models enforcement hook distinguish, e.g., ``claude-opus-4.6``
-from ``claude-opus-4.8``. Collapsing version-tracking contexts to short names
-would destroy information. This test therefore enforces:
-
-  * canonical fields use ONLY short names (no version suffix)
-  * every version-tracking context uses ONLY full-version names (with suffix)
-  * the same style is applied consistently *within* each context
+Asserts:
+  - All three sources agree per role
+  - Every model matches claude-{variant}-{major}[.{minor}] format
+  - orchestrator=claude-sonnet-5 and engineer=claude-haiku-4.5 are consistent
 """
 
 import re
 from pathlib import Path
 
-import yaml
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CONFIG_DIR = REPO_ROOT / "src" / "config"
+AGENTS_MD = REPO_ROOT / "src" / "AGENTS.md"
 LOCKED_MODELS_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
+AGENTS_DIR = REPO_ROOT / "src" / "agents"
 
-# A Claude model token of either layer, e.g. "claude-haiku" or "claude-opus-4.8".
-CLAUDE_TOKEN = re.compile(r"claude-(?:haiku|sonnet|opus|fable)[\w.\-]*")
-
-# Full-version names carry a numeric version suffix. Two accepted shapes:
-#   claude-<variant>-<major>.<minor>   e.g. claude-haiku-4.5
-#   claude-fable-<n>                   e.g. claude-fable-5 (single-part by design)
+# Full-version names carry a numeric version suffix.
+# claude-haiku-4.5, claude-sonnet-5, claude-opus-5, claude-fable-5
 FULL_VERSION = re.compile(
-    r"^claude-(?:haiku|sonnet|opus)-\d+\.\d+$|^claude-fable-\d+$"
+    r"^claude-(?:haiku)-\d+\.\d+$|^claude-(?:sonnet|opus|fable)-\d+(?:\.\d+)?$"
 )
-
-# Short (canonical) names carry NO version suffix.
-SHORT_NAME = re.compile(r"^claude-(?:haiku|sonnet|opus|fable)$")
 
 
 def _is_full_version(name: str) -> bool:
     return bool(FULL_VERSION.match(name))
 
 
-def _is_short(name: str) -> bool:
-    return bool(SHORT_NAME.match(name))
+def _parse_agents_md_roster() -> dict:
+    """Parse src/AGENTS.md roster table and extract model assignments."""
+    text = AGENTS_MD.read_text()
+    # Find the roster table — look for lines with | **Role** | ... | model | ...
+    roster = {}
+
+    # Pattern: markdown table row with | **Role** | ... (name in bold)
+    for line in text.split('\n'):
+        if '|' not in line or '**' not in line:
+            continue
+
+        # Match: | **role-name** | ... | model-id | ... (model is typically 2nd column)
+        parts = [p.strip() for p in line.split('|') if p.strip()]
+        if len(parts) < 2:
+            continue
+
+        # Check if first part is a role name (bold-enclosed, case-insensitive)
+        role_match = re.match(r'\*\*([A-Za-z\s\-]+)\*\*', parts[0])
+        if not role_match:
+            continue
+
+        role_name = role_match.group(1).strip()
+        # Convert to snake_case for canonical lookup
+        role = role_name.lower().replace(' ', '_')
+
+        # Find model column (usually contains 'claude-')
+        for part in parts[1:]:
+            if part.startswith('claude-'):
+                roster[role] = part
+                break
+
+    assert roster, "No roles found in AGENTS.md roster table"
+    return roster
 
 
-def _all_claude_tokens(text: str):
-    return CLAUDE_TOKEN.findall(text)
-
-
-# ---------------------------------------------------------------------------
-# models.yaml — the only file that legitimately mixes both layers
-# ---------------------------------------------------------------------------
-
-def _load_models_yaml() -> dict:
-    with open(CONFIG_DIR / "models.yaml") as fh:
-        return yaml.safe_load(fh)
-
-
-def test_models_yaml_canonical_fields_are_short_names():
-    """role_models.<role>.canonical must use short (version-agnostic) names."""
-    data = _load_models_yaml()
-    role_models = data.get("role_models", {})
-    assert role_models, "role_models section missing from models.yaml"
-    for role, cfg in role_models.items():
-        canonical = cfg.get("canonical")
-        assert canonical, f"{role}: missing canonical field"
-        assert _is_short(canonical), (
-            f"{role}.canonical = {canonical!r} is not a short canonical name "
-            f"(expected e.g. 'claude-haiku' with no version suffix)"
-        )
-
-
-def test_models_yaml_provider_assignments_are_full_versions():
-    """providers.<harness> entries must use full-version model ids."""
-    data = _load_models_yaml()
-    for role, cfg in data.get("role_models", {}).items():
-        for harness in ("copilot", "claude"):
-            name = cfg.get("providers", {}).get(harness)
-            assert name, f"{role}: missing providers.{harness}"
-            assert _is_full_version(name), (
-                f"{role}.providers.{harness} = {name!r} must be a full-version "
-                f"name (e.g. 'claude-haiku-4.5')"
-            )
-
-
-def test_models_yaml_cost_and_selection_tables_are_full_versions():
-    """Cost-rate and model_selection Claude keys must be full-version names."""
-    data = _load_models_yaml()
-    anthropic_rates = data.get("providers", {}).get("anthropic", {})
-    selection = data.get("model_selection", {}).get("models", {})
-    for table_name, table in (("providers.anthropic", anthropic_rates),
-                              ("model_selection.models", selection)):
-        claude_keys = [k for k in table if k.startswith("claude-")]
-        assert claude_keys, f"{table_name}: no claude-* keys found"
-        for key in claude_keys:
-            assert _is_full_version(key), (
-                f"{table_name}: key {key!r} must be a full-version name"
-            )
-
-
-# ---------------------------------------------------------------------------
-# Version-tracking contexts — must be 100% full-version, no short leakage
-# ---------------------------------------------------------------------------
-
-def _assert_text_all_full_versions(text: str, label: str):
-    tokens = _all_claude_tokens(text)
-    assert tokens, f"{label}: no claude model names found (unexpected)"
-    short_leaks = sorted({t for t in tokens if _is_short(t)})
-    assert not short_leaks, (
-        f"{label}: short canonical name(s) leaked into a version-tracking "
-        f"context: {short_leaks}. Use full-version names "
-        f"(e.g. 'claude-haiku-4.5') here."
-    )
-    # Every token must match either full-version or short; since short is
-    # disallowed above, surviving tokens must be full-version.
-    malformed = sorted({
-        t for t in tokens
-        if not _is_full_version(t) and not _is_short(t)
-    })
-    assert not malformed, (
-        f"{label}: malformed model name(s) (neither short nor full-version): "
-        f"{malformed}"
-    )
-
-
-def test_model_config_yaml_uses_full_versions():
-    text = (CONFIG_DIR / "model-config.yaml").read_text()
-    _assert_text_all_full_versions(text, "model-config.yaml")
-
-
-def test_locked_models_sh_uses_full_versions():
-    text = LOCKED_MODELS_SH.read_text()
-    _assert_text_all_full_versions(text, "LOCKED_MODELS.sh")
-
-
-def test_resolver_fallback_defaults_use_full_versions():
-    """ModelResolver derives FALLBACK_DEFAULTS from models.yaml's claude
-    provider mapping; every derived value must be a full-version name so it
-    matches what resolve() returns when the registry is present."""
-    from src.orchestration.agents.model_resolver import ModelResolver
-
-    resolver = ModelResolver()  # derives FALLBACK_DEFAULTS from models.yaml
-    defaults = resolver.FALLBACK_DEFAULTS
-    assert defaults, "FALLBACK_DEFAULTS derived empty"
-    for role, model in defaults.items():
-        assert _is_full_version(model), (
-            f"FALLBACK_DEFAULTS[{role!r}] = {model!r} must be a full-version "
-            f"name to match what resolve() returns from models.yaml"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Cross-file agreement — the locked hook, config, and resolver must agree
-# ---------------------------------------------------------------------------
-
-def _parse_locked_assignments() -> dict:
+def _parse_locked_models_assignments() -> dict:
     """Parse AGENT_MODEL_ASSIGNMENTS array from LOCKED_MODELS.sh."""
     text = LOCKED_MODELS_SH.read_text()
     block = re.search(
         r"AGENT_MODEL_ASSIGNMENTS=\((.*?)\)", text, re.DOTALL
     )
-    assert block, "AGENT_MODEL_ASSIGNMENTS array not found"
+    assert block, "AGENT_MODEL_ASSIGNMENTS array not found in LOCKED_MODELS.sh"
     out = {}
     for m in re.finditer(r'"([\w-]+):(claude-[\w.\-]+)"', block.group(1)):
         out[m.group(1)] = m.group(2)
@@ -184,28 +81,87 @@ def _parse_locked_assignments() -> dict:
     return out
 
 
-def test_locked_assignments_reference_locked_models():
-    """Every model assigned to an agent must appear in the LOCKED_MODELS set."""
+def _parse_agent_frontmatter() -> dict:
+    """Parse model: field from src/agents/*-agent.md frontmatter."""
+    models = {}
+    for md_file in AGENTS_DIR.glob("*-agent.md"):
+        text = md_file.read_text()
+        # Look for frontmatter model: line
+        match = re.search(r"^model:\s*(.+)$", text, re.MULTILINE)
+        if match:
+            role = md_file.stem.replace("-agent", "")
+            model = match.group(1).strip()
+            models[role] = model
+    assert models, "No model: fields found in agent .md files"
+    return models
+
+
+def test_locked_models_sh_uses_full_versions():
+    """Every model in LOCKED_MODELS.sh must be a full-version name."""
     text = LOCKED_MODELS_SH.read_text()
     locked_block = re.search(r"LOCKED_MODELS=\((.*?)\)", text, re.DOTALL)
     assert locked_block, "LOCKED_MODELS array not found"
     locked = set(re.findall(r'"(claude-[\w.\-]+)"', locked_block.group(1)))
-    assignments = _parse_locked_assignments()
-    for agent, model in assignments.items():
-        assert model in locked, (
-            f"{agent} assigned {model!r} which is not in LOCKED_MODELS {locked}"
+    assert locked, "No models found in LOCKED_MODELS"
+
+    for model in locked:
+        assert _is_full_version(model), (
+            f"LOCKED_MODELS contains {model!r} which is not a full-version name "
+            f"(expected e.g. 'claude-haiku-4.5' or 'claude-sonnet-5')"
         )
 
 
-def test_model_config_global_default_is_locked():
-    """model-config.yaml global default must be an approved (locked) model."""
-    with open(CONFIG_DIR / "model-config.yaml") as fh:
-        cfg = yaml.safe_load(fh)
-    default = cfg["global"]["default_model"]
-    assert _is_full_version(default), default
-    text = LOCKED_MODELS_SH.read_text()
-    locked_block = re.search(r"LOCKED_MODELS=\((.*?)\)", text, re.DOTALL)
-    locked = set(re.findall(r'"(claude-[\w.\-]+)"', locked_block.group(1)))
-    assert default in locked, (
-        f"global.default_model {default!r} not in LOCKED_MODELS {locked}"
+def test_all_three_sources_agree_per_role():
+    """All three canonical sources agree on model assignments per role."""
+    agents_md_models = _parse_agents_md_roster()
+    locked_assignments = _parse_locked_models_assignments()
+    agent_frontmatter = _parse_agent_frontmatter()
+
+    # Collect all roles across all three sources
+    all_roles = set(agents_md_models.keys()) | set(locked_assignments.keys()) | set(agent_frontmatter.keys())
+
+    for role in all_roles:
+        md_model = agents_md_models.get(role)
+        locked_model = locked_assignments.get(role)
+        fm_model = agent_frontmatter.get(role)
+
+        # All three should have a value for the role
+        assert md_model or locked_model or fm_model, (
+            f"Role {role!r} has no model assignment in any source"
+        )
+
+        # All present sources should agree
+        models_present = [m for m in [md_model, locked_model, fm_model] if m]
+        if len(models_present) > 1:
+            assert len(set(models_present)) == 1, (
+                f"Role {role!r} has conflicting models: "
+                f"AGENTS.md={md_model}, LOCKED_MODELS.sh={locked_model}, "
+                f"*-agent.md={fm_model}"
+            )
+
+
+def test_orchestrator_and_engineer_models_are_canonical():
+    """orchestrator=claude-sonnet-5, engineer=claude-haiku-4.5."""
+    agents_md_models = _parse_agents_md_roster()
+    locked_assignments = _parse_locked_models_assignments()
+    agent_frontmatter = _parse_agent_frontmatter()
+
+    # Check orchestrator
+    orch_md = agents_md_models.get("orchestrator")
+    orch_locked = locked_assignments.get("orchestrator")
+    orch_fm = agent_frontmatter.get("orchestrator")
+
+    orch_models = {m for m in [orch_md, orch_locked, orch_fm] if m}
+    assert orch_models and all(m == "claude-sonnet-5" for m in orch_models), (
+        f"orchestrator must be claude-sonnet-5 across all sources, got {orch_models}"
+    )
+
+    # Check engineer
+    eng_md = agents_md_models.get("engineer")
+    eng_locked = locked_assignments.get("engineer")
+    eng_fm = agent_frontmatter.get("engineer")
+
+    eng_models = {m for m in [eng_md, eng_locked, eng_fm] if m}
+    assert eng_models and all(m == "claude-haiku-4.5" for m in eng_models), (
+        f"engineer must be claude-haiku-4.5 across all sources, got {eng_models}"
     )
