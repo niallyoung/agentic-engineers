@@ -114,8 +114,7 @@ renderer/
 │       └── emit_progress       # consistent progress output (human/json modes)
 └── scripts/
     ├── lib.sh                  # backward-compat SHIM — sources render-lib.sh
-    ├── render-copilot.sh       # renders skills → dist/copilot/skills/
-    ├── render-copilot-agents.sh # renders agents → dist/copilot/agents/ (via Python)
+    ├── render-copilot.sh       # renders agents (via render-copilot-agents.py) + skills → dist/copilot/
     ├── render-copilot-agents.py # Python agent renderer (Copilot CLI format)
     ├── render-claude.sh        # renders agents + skills → dist/claude/
     ├── render-opencode.sh      # renders agents + skills + opencode.jsonc → dist/opencode/

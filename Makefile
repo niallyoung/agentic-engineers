@@ -132,9 +132,8 @@ install-copilot: ## Install rendered agents + skills → ~/.copilot/ (marker-awa
 	@# install-claude) rather than 'rsync dist/copilot/ → ~/.copilot/'. This
 	@# enforces foreign-file protection: user-authored agents/skills and a user's
 	@# own AGENTS.md are never overwritten, and user config/auth/session files are
-	@# left untouched. render-copilot-agents.sh renders agents (sidecar manifest);
-	@# render-copilot.sh renders skills + AGENTS.md and installs git hooks.
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
+	@# left untouched. render-copilot.sh renders agents (via render-copilot-agents.py),
+	@# skills + AGENTS.md and installs git hooks.
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
 	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills + docs)"
 
@@ -149,14 +148,9 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude"
 	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
 
-# Copilot CLI now supports custom agents. Agents are rendered alongside skills.
-# render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
-# Both are called by make install-copilot for complete agent + skill installation.
-
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)
 	@echo "🧹 Uninstalling from $(DESTDIR)/.copilot/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot" --uninstall
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.py" "$(REPO_ROOT)/src/agents" "$(DESTDIR)/.copilot/agents" --uninstall
 
 uninstall-claude: ## Remove from ~/.claude/ (managed only; honors DESTDIR)
 	@echo "🧹 Uninstalling from $(DESTDIR)/.claude/..."
@@ -167,7 +161,6 @@ uninstall-claude: ## Remove from ~/.claude/ (managed only; honors DESTDIR)
 render-copilot: ## Generate dist/copilot/ with agents + skills (provider-specific)
 	@echo "🔨 Rendering agents and skills for Copilot..."
 	@mkdir -p "$(REPO_ROOT)/dist/copilot"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/copilot"
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/copilot"
 	@echo "🔍 Validating rendered Copilot config..."
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ agents directory not rendered" && exit 1)

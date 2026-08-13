@@ -262,7 +262,6 @@ See `tests/test_ci_container_environment.py` for full test suite.
 ---
 
 - `.githooks/LOCKED_MODELS.sh`: Model naming enforcement configuration
-- `.githooks/PRE-PUSH.md`: Detailed pre-push hook implementation notes
 - `docs/SPEC.md`: Architecture and constraints enforced by hooks
 - `docs/AGENTS.md`: Agent definitions and SDLC guidelines
 - `Makefile`: Hook installation via `make setup`

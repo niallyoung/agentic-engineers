@@ -69,7 +69,8 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 │    ✓ Success criteria are testable                                         │
 │    ✓ No secrets in DELEGATE block                                          │
 │  Decision: ACCEPT → Agent Work | REJECT → Orchestrator fixes              │
-│  Output: DELEGATE stored in artifacts/delegates/YYYY-MM-DD/               │
+│  Output: DELEGATE passed as sub-agent spawn prompt (session transcript is  │
+│          the audit record)                                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -146,7 +147,7 @@ Each gate has clear decision rules, what happens on failure, and escalation path
 │    ✓ Agent YAML frontmatter valid (src/agents/*.md)                        │
 │    ✓ Workflow files valid (.github/workflows/*.yml)                        │
 │    ✓ Documentation consistency (SPEC.md, AGENTS.md, README.md)             │
-│    ✓ DELEGATE/HANDBACK protocol compliance (artifacts/)                    │
+│    ✓ DELEGATE/HANDBACK protocol compliance (session transcript)             │
 │    ✓ Test suite passing (pytest if available)                              │
 │    ✓ SPEC compliance (no external scripts, cron files)                     │
 │  Decision:                                                                  │
@@ -237,14 +238,14 @@ Is task security-scoped?
 
 **Output:**
 - DELEGATE block with:
-  - `role`: {Engineer|Senior Engineer|Lead Engineer|...}
-  - `model`: {claude-haiku-4.5|claude-sonnet-4.6|claude-opus-4-6|...}
+  - `agent`: {engineer|senior-engineer|lead-engineer|...}
+  - `model`: {claude-haiku-4.5|claude-sonnet-5|claude-opus-5|claude-fable-5}
   - `effort`: {low|medium|high|max}
   - `scope`: Clear description of work
   - `context`: Background information
   - `plan`: Numbered steps (required for Engineer)
   - `success_criteria`: Testable acceptance criteria
-  - `estimated_tokens`: Budget estimate
+  - `tokens_estimate`: Budget estimate
 
 ---
 
@@ -257,7 +258,7 @@ Is task security-scoped?
 ```yaml
 handoff_type: DELEGATE              # ✓ Required, must be "DELEGATE"
 task_id: YYYY-MM-DD-kebab-case      # ✓ Required, correct format
-role: Engineer                       # ✓ Required, valid role
+agent: engineer                      # ✓ Required, valid agent
 model: claude-haiku-4.5              # ✓ Required, valid model
 effort: high                         # ✓ Required, valid level
 scope: |                             # ✓ Required, ≥15 words, clear
@@ -271,7 +272,7 @@ plan:                                # ✓ Required for Engineer, numbered
 success_criteria:                    # ✓ Required, testable
   - All tests passing
   - Coverage ≥85%
-estimated_tokens: 1500               # ✓ Required, reasonable estimate
+tokens_estimate: 1500                # ✓ Required, reasonable estimate
 ```
 
 **Validation Rules:**
@@ -280,14 +281,14 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
 |-------|------|-------|
 | `handoff_type` | Must be "DELEGATE" | `Invalid handoff_type` |
 | `task_id` | Format: YYYY-MM-DD-kebab-case | `Invalid task_id format` |
-| `role` | Must be valid role | `Invalid role` |
+| `agent` | Must be valid agent | `Invalid agent` |
 | `model` | Must be valid model | `Invalid model` |
 | `effort` | Must be low/medium/high/max | `Invalid effort level` |
 | `scope` | ≥15 words, clear | `Scope too vague` |
 | `context` | Relevant background | `Insufficient context` |
 | `plan` | Numbered steps (for Engineer) | `Plan missing or not numbered` |
 | `success_criteria` | Testable, measurable | `Criteria not testable` |
-| `estimated_tokens` | Reasonable for effort | `Token estimate unrealistic` |
+| `tokens_estimate` | Reasonable for effort | `Token estimate unrealistic` |
 | YAML syntax | Valid YAML | `Invalid YAML syntax` |
 | No secrets | No API keys, passwords | `Secrets detected` |
 
@@ -297,7 +298,7 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
 - If issues persist → Escalate to Senior Engineer
 
 **Output:**
-- DELEGATE stored in `artifacts/delegates/YYYY-MM-DD/DELEGATE-{task_id}-{role}.yaml`
+- DELEGATE delivered as the spawn prompt; the session transcript is the durable audit record
 - Task dispatched by direct sub-agent spawn
 
 ---
@@ -362,9 +363,7 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
   - `status`: complete|failed|partial|blocked
   - `deliverables`: List of files changed
   - `tests`: Test results with pass/fail counts
-  - `tokens_used`: Actual token count
-  - `tokens_estimated`: From DELEGATE
-  - `quality_score`: 0.0-1.0
+  - `metrics`: Canonical block with quality/tokens/cost/duration_seconds
   - `confidence`: 0.0-1.0
   - `notes`: What went well, what was hard
 
@@ -379,20 +378,17 @@ estimated_tokens: 1500               # ✓ Required, reasonable estimate
 ```yaml
 handoff_type: HANDBACK               # ✓ Required, must be "HANDBACK"
 task_id: YYYY-MM-DD-kebab-case       # ✓ Required, matches DELEGATE
-status: complete                     # ✓ Required, valid status
-deliverables:                        # ✓ Required, list of changes
+status: success                      # ✓ Required, valid status
+output: "Summary of work completed"  # ✓ Required
+metrics:                             # ✓ Required, canonical block
+  quality: 0.95
+  tokens: 1200
+  cost: 0.04
+  duration_seconds: 1080
+confidence: 0.95                     # ✓ Required, 0.0-1.0
+deliverables:                        # Optional
   - Modified: src/file.py
   - Added: tests/test_file.py
-tests:                               # ✓ Required, test results
-  - pytest: PASS (47 tests)
-  - coverage: 87%
-quality: 0.95                        # ✓ Required, 0.0-1.0 float
-tokens_used: 1200                    # ✓ Required, actual count
-tokens_estimated: 1500               # ✓ Required, from DELEGATE
-duration_minutes: 18                 # ✓ Required, wall clock time
-confidence: 0.95                     # ✓ Required, 0.0-1.0
-notes: |                             # ✓ Required, summary
-  Implementation complete, all tests passing
 ```
 
 **Quality Scoring Formula:**
@@ -512,11 +508,10 @@ Documentation Consistency
 ├─ docs/AGENTS.md exists with top-level heading
 └─ README.md exists
 
-DELEGATE/HANDBACK Protocol (artifacts/)
-├─ All DELEGATE files valid YAML
-├─ All DELEGATE files have required fields
-├─ All HANDBACK files valid YAML
-├─ All HANDBACK files have required fields
+DELEGATE/HANDBACK Protocol Compliance
+├─ DELEGATE/HANDBACK blocks use canonical formats (session transcript audit)
+├─ All required fields present and valid
+├─ Task IDs properly formatted
 └─ No protocol violations
 
 Test Suite (warnings only)
@@ -561,7 +556,6 @@ SKIP_HOOKS=1 git push
 - [ ] Select appropriate agent
 - [ ] Determine effort level
 - [ ] Create DELEGATE block with all required fields
-- [ ] Store DELEGATE in artifacts/delegates/
 
 **Gate 5: HANDBACK Validation**
 - [ ] Score HANDBACK using formula
@@ -625,7 +619,7 @@ SKIP_HOOKS=1 git push
 - `routing_decision`: Which agent selected
 - `effort_level`: low/medium/high/max
 - `model_assigned`: Which model
-- `estimated_tokens`: Budget estimate
+- `tokens_estimate`: Budget estimate
 
 ### Gate 4: Agent Execution
 - `tokens_used`: Actual token count
@@ -812,4 +806,5 @@ A: Lead Engineer or above. Document authorization in commit message.
 
 ## Update Log
 
+- **2026-08-13:** Align with direct-spawn DELEGATE/HANDBACK model: remove artifact file references, update field names (role→agent, estimated_tokens→tokens_estimate), standardize HANDBACK metrics block (quality/tokens/cost/duration_seconds).
 - **2026-05-16:** Initial comprehensive workflow documentation with 7 gates, decision trees, escalation paths, and metrics collection.

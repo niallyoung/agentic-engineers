@@ -78,6 +78,7 @@ dist/
 # .claude is outside the repo (harness install target) — not committed here
 .claude
 
+
 # ============================================================================
 # JAVASCRIPT / NODE
 # ============================================================================
@@ -103,20 +104,9 @@ node_modules/
 # Session-scoped runtime artifacts live here. Never commit.
 .agentic-engineers/
 
-src/skills/agent_creator
-src/skills/spec_management
-src/skills/spec_validator
-
 # Generated coverage / compliance reports (build artifacts, not source)
 coverage.json
-coverage_copilot.json
 COMPLIANCE_REPORT.json
 
 # Regenerable skills audit output (produced by `python -m src.audit.run_audit`)
 docs/archive/audits/SKILLS-AUDIT.md
-
-# Generated verification files
-*.tmp
-.v3check.tmp
-artifacts/
-dist/

@@ -91,13 +91,17 @@ _stream_emit() {
 
 case "$MODE" in
 	--uninstall)
-		echo "🧹 Removing managed skills from $DST_SKILLS/..."
+		echo "🧹 Removing managed agents and skills from $COPILOT/..."
+		# Remove agents via Python renderer (replaces deleted render-copilot-agents.sh wrapper)
+		python3 "$REPO_ROOT/renderer/scripts/render-copilot-agents.py" "$REPO_ROOT/src/agents" "$COPILOT/agents" --uninstall
+
+		# Remove skills
 		count=0
 		for name in $(list_source_skills); do
 			target="$DST_SKILLS/$name"
 			if [ -f "$target/$MARKER" ]; then
 				rm -rf "$target"
-				echo "  removed $name"
+				echo "  removed skill: $name"
 				count=$((count + 1))
 			fi
 		done
@@ -108,7 +112,7 @@ case "$MODE" in
 		elif [ -f "$DST_RULES" ]; then
 			echo "  ⚠️  keeping AGENTS.md — foreign (not managed by us)"
 		fi
-		echo "✅ Removed $count managed skill(s) + docs"
+		echo "✅ Removed agents + $count managed skill(s) + docs"
 		;;
 
 	--status)
@@ -207,7 +211,18 @@ case "$MODE" in
 			"{\"count\":$count,\"total_kb\":$total_bytes,\"duration_s\":$install_duration}"
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
-		# 2. Framework documentation: generate AGENTS.md (routing guide) from the
+		# 2. Copilot agents: render agents from src/agents/ via Python renderer
+		# (replaces deleted render-copilot-agents.sh wrapper)
+		SRC_AGENTS="$REPO_ROOT/src/agents"
+		if [ -d "$SRC_AGENTS" ]; then
+			echo "🎨 Rendering Copilot CLI Agents..."
+			mkdir -p "$COPILOT/agents"
+			python3 "$REPO_ROOT/renderer/scripts/render-copilot-agents.py" "$SRC_AGENTS" "$COPILOT/agents"
+		else
+			echo "⚠️  skipping agents — source directory not found at $SRC_AGENTS" >&2
+		fi
+
+		# 3. Framework documentation: generate AGENTS.md (routing guide) from the
 		# canonical src/AGENTS.md. Runs for both dist rendering and home install
 		# so the file always exists where downstream steps expect it, and is
 		# marker-protected so a user's own AGENTS.md is never clobbered.

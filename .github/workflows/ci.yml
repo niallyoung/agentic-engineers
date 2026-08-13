@@ -44,7 +44,7 @@ jobs:
             fi
           done
           # Copy hook dependencies (e.g., LOCKED_MODELS.sh sourced by pre-commit)
-          for dep in LOCKED_MODELS.sh LOCKED_MODELS_RATIONALE.md PRE-PUSH.md; do
+          for dep in LOCKED_MODELS.sh LOCKED_MODELS_RATIONALE.md; do
             if [ -f ".githooks/$dep" ]; then
               cp ".githooks/$dep" ".git/hooks/$dep"
             fi

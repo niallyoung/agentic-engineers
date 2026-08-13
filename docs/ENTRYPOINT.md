@@ -57,7 +57,7 @@ happens to it once written:
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
 agent: engineer | senior-engineer | lead-engineer | principal-engineer | security-engineer | quality-engineer | model-engineer | orchestrator
-model: claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.7
+model: claude-haiku-4.5 | claude-sonnet-5 | claude-opus-5 | claude-fable-5
 effort: low | medium | high | max
 scope: |
   Clear, one-sentence description of what the task is.
@@ -84,8 +84,7 @@ Per request, the Orchestrator:
 2. ✅ Spawns that agent directly, passing the DELEGATE as its prompt
 3. ✅ Reads the HANDBACK back as the spawn call's result — no wait loop involved
 4. ✅ Captures span data (observability)
-5. ✅ Updates `artifacts/index.json`
-6. ✅ Pauses when there is no pending DELEGATE and no outstanding spawn
+5. ✅ Pauses when there is no pending DELEGATE and no outstanding spawn
 
 ### 4. Check results
 
@@ -96,8 +95,7 @@ look up.
 
 **Also check:**
 - Generated artifacts (updated specs, reports, code changes)
-- `artifacts/index.json` for metrics
-- Commit results: `git add artifacts/ && git commit -m "..."`
+- Commit results: `git commit -m "..."`
 
 ---
 
@@ -183,25 +181,6 @@ artifacts/2026-05-02/
 └── SPAN-2026-05-02T10:30:00Z-Lead\ Engineer.yaml
 ```
 
-**Index** (for searching):
-```
-artifacts/index.json
-{
-  "by_file_type": {
-    "DELEGATE": [...],
-    "HANDBACK": [...],
-    "SPAN": [...]
-  },
-  "by_task_id": {...},
-  "by_agent_type": {...},
-  "stats": {
-    "total_tokens": 125000,
-    "total_cost": "$2.50",
-    "total_tasks": 8,
-    "success_rate": 1.0
-  }
-}
-```
 
 ---
 
