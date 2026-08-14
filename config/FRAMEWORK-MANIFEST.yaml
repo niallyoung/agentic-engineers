@@ -28,7 +28,7 @@ agents:
 
   lead-engineer:
     name: Lead Engineer
-    model: claude-sonnet-5
+    model: claude-opus-4.8
     type: review
     status: active
     effort: medium

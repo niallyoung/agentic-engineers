@@ -700,8 +700,9 @@ All changes are backward-compatible. Validators and tests require no updates for
 
 We have chosen these Claude models today for cost-quality alignment:
 - **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
-- **claude-sonnet-5** — model-engineer, quality, lead, senior engineers (complex tasks)
+- **claude-sonnet-5** — model-engineer, quality, senior engineers (complex tasks)
 - **claude-opus-5** — principal-engineer (cross-service architecture)
+- **claude-opus-4.8** — lead-engineer (code review, architectural guidance); also emergency fallback for security-engineer if fable-5 is unavailable
 - **claude-fable-5** — security-engineer (unconditional; highest capability for security tasks)
 
 ### Why Locked Models?
