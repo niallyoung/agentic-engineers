@@ -285,8 +285,9 @@ def _parse_frontmatter(text: str) -> dict[str, Any] | None:
 
 
 def _collect_skill_files(skills_dir: Path) -> list[Path]:
-    """Collect all skill markdown files (including nested)."""
-    return sorted(skills_dir.rglob("*.md"))
+    """Collect all skill markdown files (including nested), excluding reference docs."""
+    all_files = skills_dir.rglob("*.md")
+    return sorted(f for f in all_files if f.name not in FRONTMATTER_EXEMPT_PATTERNS)
 
 
 def _is_path_safe(path_to_check: Path, repo_root: Path) -> bool:

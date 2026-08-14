@@ -191,8 +191,8 @@ design decisions (auth flows, crypto selection).
 ### 5. Quality Engineer
 
 **Model:** `claude-sonnet-5`, effort `medium`. Post-implementation validation: verifies
-acceptance criteria against delivered changes, runs `CONFIG=dev make lint && make test &&
-make build`, assesses whether the model/effort tier was appropriate, populates
+acceptance criteria against delivered changes, runs `make quality-gate` (lint + test + verify + validate-renders),
+assesses whether the model/effort tier was appropriate, populates
 `metrics.quality` in the HANDBACK, and flags regressions/missing tests. **MUST NOT:**
 implement fixes for issues it finds (produce a DELEGATE instead) or make architecture
 decisions. **Escalates to Lead Engineer** after 2 persistent build/lint-failure re-runs;

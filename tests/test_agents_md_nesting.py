@@ -23,9 +23,8 @@ tests pin the fix: a nested, user-authored AGENTS.md placed inside an
 installed skill directory must survive a re-render. See docs/RENDERING.md
 "Nested AGENTS.md Precedence Contract" for the documented behavior.
 
-Renderers covered: claude, opencode, codex — matching this task's ownership
-(render-copilot.sh has the identical `rsync --delete` pattern and the
-identical bug, but is out of scope here; see HANDBACK follow-up).
+Renderers covered: all four — claude, opencode, copilot (same rsync
+--exclude fix, commit 1aa490f), and codex (stash/restore in copy_skill()).
 """
 
 from __future__ import annotations
@@ -109,6 +108,21 @@ class TestOpenCodeRendererPreservesNestedAgentsMd:
         ]
         nested = _plant_and_rerender(render_cmd, oc_home / "skills")
         assert nested.exists(), "render-opencode.sh deleted a nested, user-authored AGENTS.md"
+        assert nested.read_text(encoding="utf-8") == NESTED_MARKER_TEXT
+
+
+class TestCopilotRendererPreservesNestedAgentsMd:
+    def test_nested_agents_md_survives_rerender(self, tmp_path):
+        copilot_home = tmp_path / ".copilot"
+        render_cmd = [
+            "bash",
+            str(REPO_ROOT / "renderer/scripts/render-copilot.sh"),
+            str(REPO_ROOT),
+            str(copilot_home),
+            "install",
+        ]
+        nested = _plant_and_rerender(render_cmd, copilot_home / "skills")
+        assert nested.exists(), "render-copilot.sh deleted a nested, user-authored AGENTS.md"
         assert nested.read_text(encoding="utf-8") == NESTED_MARKER_TEXT
 
 

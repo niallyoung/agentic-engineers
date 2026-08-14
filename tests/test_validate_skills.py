@@ -539,19 +539,20 @@ class TestFileCollection:
     """Test _collect_skill_files function."""
 
     def test_collect_skill_files_finds_markdown_files(self, temp_repo):
-        """Test that .md files are collected."""
+        """Test that .md files are collected (excluding reference docs like README.md)."""
         skills_dir = temp_repo["skills_dir"]
-        
+
         # Create test files
         (skills_dir / "auth").mkdir()
         (skills_dir / "auth" / "SKILL.md").write_text("# Auth")
         (skills_dir / "db").mkdir()
         (skills_dir / "db" / "SKILL.md").write_text("# DB")
         (skills_dir / "README.md").write_text("# Skills")
-        
+
         files = _collect_skill_files(skills_dir)
-        assert len(files) == 3
+        assert len(files) == 2  # README.md is excluded
         assert any("SKILL.md" in str(f) for f in files)
+        assert not any("README.md" in str(f) for f in files)
 
     def test_collect_skill_files_nested_directories(self, temp_repo):
         """Test that deeply nested markdown files are found."""

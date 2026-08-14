@@ -340,10 +340,10 @@ The fix, verified with the same live test post-fix:
   `AGENTS.md` found anywhere under the existing destination (`dst.rglob(
   "AGENTS.md")`) before the `rmtree()`, and restores them verbatim after
   `copytree()` completes.
-- `render-copilot.sh` has the identical `rsync -a --delete` skill-sync
-  pattern and therefore the identical bug — it is **not** fixed here
-  (out of scope for this task's owned files); see the HANDBACK for this
-  task for a follow-up spec.
+- `render-copilot.sh` also carries `--exclude='AGENTS.md'` on its
+  skill-sync `rsync -a --delete` line (line 130, pinned by regression test
+  at `tests/test_agents_md_nesting.py:134`), so user nested files survive
+  re-render identically to claude/opencode.
 
 Regression coverage: `tests/test_agents_md_nesting.py` (plants a nested
 `AGENTS.md` inside an installed skill dir, re-renders, asserts survival, for
