@@ -500,7 +500,11 @@ metrics/event record `scripts/handback_rollup.py` and other tooling can query wi
 re-parsing a session transcript. Agents append to it directly via
 `scripts/audit_append.py` (`docs/SPEC.md` § COMPLETE SCRIPT INVENTORY) — a pure,
 stdlib-only formatting/validation helper (clause 3: advisory Python), never a control-flow
-owner.
+owner. **Env var note:** session/harness auto-detection inside `audit_append.py` keys
+off `CLAUDE_CODE_SESSION_ID` — the var a real Claude Code CLI session actually sets —
+not `CLAUDE_SESSION_ID`, which is kept only as an unverified fallback; see that
+script's module docstring before adding another harness's detection var without
+empirically confirming its name first (task-2026-08-15-session-detection-fix).
 
 **Who appends what, when** (every role in the table below, for its own spawns):
 - **`delegate_issued`** + **`subagent_spawned`** — appended when constructing and then

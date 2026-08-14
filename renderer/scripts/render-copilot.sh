@@ -146,6 +146,12 @@ case "$MODE" in
 			count=$((count + 1))
 		done
 
+		# 1.5 Prune orphaned managed skills: dirs we installed on a prior render
+		# whose source skill was since deleted from src/skills/ (a slimdown
+		# round). See prune_orphaned_skills() in renderer/lib/render-lib.sh —
+		# reuses the same marker-based foreign-detection as the loop above.
+		prune_orphaned_skills "$DST_SKILLS" "$SRC_SKILLS" "$MARKER"
+
 		install_end=$(date +%s)
 		install_duration=$(( install_end - install_start ))
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"

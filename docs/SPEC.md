@@ -86,7 +86,10 @@ Orchestrator's own agent context, not in external tooling or background processe
    `escalation`, `refusal`, `limit_exceeded`; required fields: `ts` (ISO-8601 UTC),
    `event`, `task_id`, `parent_task_id`, `depth`, `agent_role`, `agent_model`, `status`,
    and token/cost fields where applicable. An optional `resolves_task_id` MAY link a
-   remediation event chain to the failed/blocked task it addresses. Agents append; they
+   remediation event chain to the failed/blocked task it addresses. Session/harness
+   auto-detection resolves against `CLAUDE_CODE_SESSION_ID` (the verified real Claude
+   Code CLI env var), not `CLAUDE_SESSION_ID` (see `scripts/audit_append.py` module
+   docstring). Agents append; they
    MUST NOT rewrite, reorder, truncate, or delete prior lines — corrections are new events,
    never edits. No metric may be reported that is not grounded in a logged event.
 8. **No External Scripts, Tools, or Cron Jobs (Agent Operations).** No Python owns queue
@@ -726,6 +729,35 @@ into `dist/<harness>/` and installed to each harness's home directory.
   Verification: pytest tests/test_audit_append.py tests/test_handback_rollup.py -q green;
   pytest -q green (baseline +3); python3 renderer/validate_skills.py 7/7;
   dry-run demo: audit_append --resolves-task-id shown. No commits.
+- **2026-08-15:** [senior-engineer, task-2026-08-15-session-detection-fix,
+  authorized_by: user-directive, ancestry: [task-2026-08-15-post-install-verify]]
+  Fixed a HIGH-severity clause-7 correctness bug: `scripts/audit_append.py`'s
+  `get_session_id()`/`detect_harness()` recognized only `CLAUDE_SESSION_ID`, but a
+  real Claude Code CLI session sets `CLAUDE_CODE_SESSION_ID` (verified empirically,
+  `env | grep SESSION`, in a live session — no `CLAUDE_SESSION_ID` present at all).
+  Effect: any caller not manually overriding via `AGENTIC_SESSION_ID`/
+  `AGENTIC_HARNESS` silently fell through to a random uuid4 session id under harness
+  `local`, scattering audit events away from the real, stable
+  `~/.agentic-engineers/claude/{session-id}/audit/` ledger. Fix: both functions now
+  check `CLAUDE_CODE_SESSION_ID` ahead of `CLAUDE_SESSION_ID` in priority (explicit
+  `AGENTIC_SESSION_ID`/`AGENTIC_HARNESS` override still wins first;
+  `CLAUDE_SESSION_ID` kept afterward, unverified, as a defensive fallback only).
+  `COPILOT_SESSION_ID` was checked against this repo's own history and found to be
+  an unverified assumption carried through unchanged from the pre-removal
+  `queue_ops.py` this logic was recovered from — no corroborating evidence either
+  way; left as-is, not silently asserted correct, flagged in the HANDBACK. Repo-wide
+  `git grep CLAUDE_SESSION_ID` confirmed the only other live occurrences are
+  `tests/test_audit_append.py` (updated, +6 tests incl. an exact-scenario regression
+  lock) and `src/skills/audit-trail-review/SKILL.md` (outside this task's ownership;
+  reported, not edited). `src/AGENTS.md` § Audit Events gets a one-sentence pointer
+  to the verified var name. Two stray `~/.agentic-engineers/local/{uuid}/audit/`
+  directories from pre-fix diagnostic calls (made without env overrides) were
+  removed as non-task artifacts. Verification: `pytest tests/test_audit_append.py
+  tests/test_handback_rollup.py -q` green (76 tests, +5 new); bare `pytest -q`
+  green (945 passed, 12 skipped, 5 xfailed); live no-override demo confirmed
+  resolution to
+  `~/.agentic-engineers/claude/b063912d-4cf8-4f83-aea3-71382bcb43b6/audit/`. No
+  commits.
 
 ---
 

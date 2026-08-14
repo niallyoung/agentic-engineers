@@ -59,10 +59,20 @@ Corrections are new events, never edits, per clause 7's own text.
 
 Reuses the env-priority convention `src/skills/queue-management/scripts/queue_ops.py`
 used pre-removal (recovered from git history — see `get_session_id`/`detect_harness`
-below): `AGENTIC_SESSION_ID` > `CLAUDE_SESSION_ID` > `COPILOT_SESSION_ID` for the
-session id (falling back to a fresh UUID4 if none are set); `AGENTIC_HARNESS`
-(explicit) > `CLAUDE_SESSION_ID` > `COPILOT_SESSION_ID` > `OPENAI_API_KEY` > `"local"`
-for the harness.
+below): `AGENTIC_SESSION_ID` > `CLAUDE_CODE_SESSION_ID` > `CLAUDE_SESSION_ID` >
+`COPILOT_SESSION_ID` for the session id (falling back to a fresh UUID4 if none are
+set); `AGENTIC_HARNESS` (explicit) > `CLAUDE_CODE_SESSION_ID` > `CLAUDE_SESSION_ID` >
+`COPILOT_SESSION_ID` > `OPENAI_API_KEY` > `"local"` for the harness. **Verified var
+name:** a real Claude Code CLI session sets `CLAUDE_CODE_SESSION_ID`, not
+`CLAUDE_SESSION_ID` (confirmed empirically via `env | grep SESSION` in a live Claude
+Code shell, 2026-08-15 — see `docs/SPEC.md` clause 7 Update Log). `CLAUDE_SESSION_ID`
+is kept afterward, unverified, only as a defensive fallback in case some other
+invocation context sets the shorter name; it is not known to be set by any harness
+this project renders for. `COPILOT_SESSION_ID` remains unverified — never empirically
+confirmed against a real GitHub Copilot CLI session, carried forward unchanged from
+the pre-removal `queue_ops.py` it was recovered from with no corroborating evidence
+either way; do not treat its presence in this priority chain as confirmation it is
+correct.
 
 ## Dependencies
 
@@ -130,15 +140,22 @@ def _validate_path_component(value: str, *, field: str) -> str:
 def detect_harness(env: Optional[Dict[str, str]] = None) -> str:
     """Detect the current AI harness from environment variables.
 
-    Priority: AGENTIC_HARNESS (explicit) > CLAUDE_SESSION_ID > COPILOT_SESSION_ID
-    > OPENAI_API_KEY > 'local' (fallback). Reimplemented compactly from
-    ``queue_ops.py``'s pre-removal ``detect_harness()`` (git history:
+    Priority: AGENTIC_HARNESS (explicit) > CLAUDE_CODE_SESSION_ID > CLAUDE_SESSION_ID
+    > COPILOT_SESSION_ID > OPENAI_API_KEY > 'local' (fallback). Reimplemented
+    compactly from ``queue_ops.py``'s pre-removal ``detect_harness()`` (git history:
     ``git show <pre-removal-sha>:src/skills/queue-management/scripts/queue_ops.py``).
+
+    ``CLAUDE_CODE_SESSION_ID`` is the real env var a live Claude Code CLI session
+    sets (verified empirically 2026-08-15 — see module docstring and
+    ``docs/SPEC.md`` clause 7 Update Log); ``CLAUDE_SESSION_ID`` is kept afterward
+    as an unverified defensive fallback only.
     """
     e = env if env is not None else os.environ
     explicit = e.get("AGENTIC_HARNESS")
     if explicit:
         return explicit
+    if e.get("CLAUDE_CODE_SESSION_ID"):
+        return "claude"
     if e.get("CLAUDE_SESSION_ID"):
         return "claude"
     if e.get("COPILOT_SESSION_ID"):
@@ -151,11 +168,14 @@ def detect_harness(env: Optional[Dict[str, str]] = None) -> str:
 def get_session_id(env: Optional[Dict[str, str]] = None) -> str:
     """Retrieve the current session ID from environment, or generate a UUID4.
 
-    Priority: AGENTIC_SESSION_ID > CLAUDE_SESSION_ID > COPILOT_SESSION_ID.
-    Reimplemented compactly from ``queue_ops.py``'s pre-removal ``get_session_id()``.
+    Priority: AGENTIC_SESSION_ID > CLAUDE_CODE_SESSION_ID > CLAUDE_SESSION_ID >
+    COPILOT_SESSION_ID. Reimplemented compactly from ``queue_ops.py``'s pre-removal
+    ``get_session_id()``. ``CLAUDE_CODE_SESSION_ID`` is the real, verified Claude
+    Code CLI var (see ``detect_harness`` docstring); ``CLAUDE_SESSION_ID`` is kept
+    afterward as an unverified defensive fallback only.
     """
     e = env if env is not None else os.environ
-    for var in ("AGENTIC_SESSION_ID", "CLAUDE_SESSION_ID", "COPILOT_SESSION_ID"):
+    for var in ("AGENTIC_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID", "COPILOT_SESSION_ID"):
         value = e.get(var)
         if value:
             return value

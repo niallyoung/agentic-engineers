@@ -549,8 +549,45 @@ job_max_runtime_seconds = 1800
                 continue
             copy_skill(skill, dst)
             count_s += 1
+
+        self.prune_orphaned_skills()
+
         print(f"{_green('OK')} Rendered {len(managed_now)} agent(s), {count_s} skill(s)")
         return 0
+
+    def prune_orphaned_skills(self) -> list[str]:
+        """Remove marker-tagged managed skill dirs whose source skill was
+        since deleted from src/skills/ (a slimdown round) — the install loop
+        above only iterates the CURRENT list_source_skills() output, so it
+        never revisits an already-installed dir to notice its source is gone.
+
+        Safety invariant mirrors the "skipping skill X - foreign" guard used
+        by the loop above, not a reinvention of it:
+          - SKILL_MARKER absent  => foreign (not ours) => never touched.
+          - SKILL_MARKER present + name still a current source skill => keep.
+          - SKILL_MARKER present + name NOT a current source skill   => prune.
+
+        Unconditionally removes (there is no dry-run mode) and always prints
+        a report line so the operator sees what happened, e.g.:
+          pruned 3 orphaned managed skill(s): foo, bar, baz
+          pruned 0 orphaned managed skill(s)
+        """
+        pruned: list[str] = []
+        if self.skills_root.exists():
+            current_names = {skill.name for skill in list_source_skills(self.src_skills)}
+            for dst in sorted(self.skills_root.iterdir()):
+                if not dst.is_dir() or dst.name in current_names:
+                    continue
+                if (dst / SKILL_MARKER).exists():
+                    shutil.rmtree(dst)
+                    pruned.append(dst.name)
+                # else: no marker => foreign => leave untouched.
+
+        if pruned:
+            print(f"  🧹 pruned {len(pruned)} orphaned managed skill(s): {', '.join(pruned)}")
+        else:
+            print("  🧹 pruned 0 orphaned managed skill(s)")
+        return pruned
 
     def uninstall(self) -> int:
         removed_agents = 0

@@ -162,8 +162,17 @@ def test_mkdir_p_creates_nested_dirs(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_get_session_id_priority():
-    env = {"AGENTIC_SESSION_ID": "a", "CLAUDE_SESSION_ID": "b", "COPILOT_SESSION_ID": "c"}
+    env = {
+        "AGENTIC_SESSION_ID": "a",
+        "CLAUDE_CODE_SESSION_ID": "b0",
+        "CLAUDE_SESSION_ID": "b",
+        "COPILOT_SESSION_ID": "c",
+    }
     assert get_session_id(env) == "a"
+    assert (
+        get_session_id({"CLAUDE_CODE_SESSION_ID": "b0", "CLAUDE_SESSION_ID": "b", "COPILOT_SESSION_ID": "c"})
+        == "b0"
+    )
     assert get_session_id({"CLAUDE_SESSION_ID": "b", "COPILOT_SESSION_ID": "c"}) == "b"
     assert get_session_id({"COPILOT_SESSION_ID": "c"}) == "c"
 
@@ -173,12 +182,49 @@ def test_get_session_id_falls_back_to_uuid():
     assert re.match(r"^[0-9a-f-]{36}$", sid)
 
 
+def test_get_session_id_claude_code_session_id_alone():
+    """Real Claude Code CLI shape: only CLAUDE_CODE_SESSION_ID is set (no
+    CLAUDE_SESSION_ID, no AGENTIC_SESSION_ID). Must resolve to that value, not a
+    random uuid4 fallback."""
+    assert get_session_id({"CLAUDE_CODE_SESSION_ID": "real-sess-1"}) == "real-sess-1"
+
+
+def test_get_session_id_agentic_override_wins_over_claude_code():
+    """Explicit AGENTIC_SESSION_ID override precedence is preserved even when
+    CLAUDE_CODE_SESSION_ID is also set."""
+    env = {"AGENTIC_SESSION_ID": "override", "CLAUDE_CODE_SESSION_ID": "real-sess-2"}
+    assert get_session_id(env) == "override"
+
+
 def test_detect_harness_priority():
     assert detect_harness({"AGENTIC_HARNESS": "custom", "CLAUDE_SESSION_ID": "x"}) == "custom"
+    assert detect_harness({"CLAUDE_CODE_SESSION_ID": "x"}) == "claude"
     assert detect_harness({"CLAUDE_SESSION_ID": "x"}) == "claude"
     assert detect_harness({"COPILOT_SESSION_ID": "x"}) == "copilot"
     assert detect_harness({"OPENAI_API_KEY": "x"}) == "gpt"
     assert detect_harness({}) == "local"
+
+
+def test_detect_harness_claude_code_session_id_alone():
+    """Real Claude Code CLI shape: only CLAUDE_CODE_SESSION_ID is set. Must be
+    detected as harness 'claude', not fall through to 'local'."""
+    assert detect_harness({"CLAUDE_CODE_SESSION_ID": "real-sess-1"}) == "claude"
+
+
+def test_detect_harness_agentic_override_wins_over_claude_code():
+    env = {"AGENTIC_HARNESS": "custom", "CLAUDE_CODE_SESSION_ID": "real-sess-2"}
+    assert detect_harness(env) == "custom"
+
+
+def test_bug_2026_08_15_claude_code_session_id_regression():
+    """Regression lock for task-2026-08-15-session-detection-fix: the exact env
+    shape observed in a live Claude Code shell (CLAUDE_CODE_SESSION_ID set,
+    CLAUDE_SESSION_ID absent, no AGENTIC_* override) must resolve to the real
+    session id and 'claude' harness, not silently fall back to a random uuid4
+    under harness 'local'."""
+    env = {"CLAUDE_CODE_SESSION_ID": "b063912d-4cf8-4f83-aea3-71382bcb43b6"}
+    assert get_session_id(env) == "b063912d-4cf8-4f83-aea3-71382bcb43b6"
+    assert detect_harness(env) == "claude"
 
 
 def test_resolve_audit_path_shape(tmp_path):

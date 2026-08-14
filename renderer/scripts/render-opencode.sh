@@ -525,6 +525,12 @@ case "$MODE" in
 			count_s=$((count_s + 1))
 		done
 
+		# 1.5 Prune orphaned managed skills: dirs we installed on a prior render
+		# whose source skill was since deleted from src/skills/ (a slimdown
+		# round). See prune_orphaned_skills() in renderer/lib/render-lib.sh —
+		# reuses the same marker-based foreign-detection as the loop above.
+		prune_orphaned_skills "$DST_SKILLS" "$SRC_SKILLS" "$SKILL_MARKER"
+
 		# 2. Parse canonical agent definitions from src/AGENTS.md (once before agent loop)
 		AGENTS_MD="$SRC_AGENTS_MD"
 		AGENTS_MAP=$(mktemp)

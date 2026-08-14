@@ -477,5 +477,64 @@ lookup_agent_metadata() {
 }
 
 # ============================================================================
+# ORPHAN PRUNING
+# ============================================================================
+
+# Prune orphaned managed skill directories under DST_SKILLS: dirs that carry
+# the renderer's SKILL_MARKER (i.e. WE installed them on a previous render)
+# but whose source skill no longer exists under SRC_SKILLS (a later slimdown
+# round deleted it upstream, and the plain "for name in $(list_source_skills)"
+# install loop never revisits what's already on disk to notice).
+#
+# Safety invariant — mirrors the "skipping skill X — foreign" guard already
+# used by every renderer's install loop, not a reinvention of it:
+#   - marker ABSENT  => foreign (not ours) => NEVER touched, no matter what.
+#   - marker PRESENT + name still in the current source set => current, keep.
+#   - marker PRESENT + name NOT in the current source set   => orphan, prune.
+#
+# Usage: prune_orphaned_skills DST_SKILLS SRC_SKILLS SKILL_MARKER
+# Unconditionally removes (there is no dry-run mode) and always prints a
+# single report line, e.g.:
+#   🧹 pruned 3 orphaned managed skill(s): foo, bar, baz
+#   🧹 pruned 0 orphaned managed skill(s)
+prune_orphaned_skills() {
+	local dst_skills="$1" src_skills="$2" marker="$3"
+
+	if [ ! -d "$dst_skills" ]; then
+		echo "  🧹 pruned 0 orphaned managed skill(s)"
+		return 0
+	fi
+
+	# Current source-skill-name set, newline-delimited with sentinel newlines
+	# on both ends so a plain substring `case` match can't false-positive on
+	# a name that is a substring of another name.
+	local current_names
+	current_names=$'\n'"$(list_source_skills "$src_skills")"$'\n'
+
+	local pruned=() d name
+	for d in "$dst_skills"/*/; do
+		[ -d "$d" ] || continue
+		name=$(basename "$d")
+		case "$current_names" in
+			*$'\n'"$name"$'\n'*) continue ;;  # still a current source skill — keep
+		esac
+		if [ -f "$d/$marker" ]; then
+			rm -rf "$d"
+			pruned+=("$name")
+		fi
+		# else: no marker => foreign => leave untouched, even though its name
+		# is not a current source skill.
+	done
+
+	if [ "${#pruned[@]}" -gt 0 ]; then
+		local joined
+		joined=$(IFS=', '; echo "${pruned[*]}")
+		echo "  🧹 pruned ${#pruned[@]} orphaned managed skill(s): $joined"
+	else
+		echo "  🧹 pruned 0 orphaned managed skill(s)"
+	fi
+}
+
+# ============================================================================
 # END render-lib.sh
 # ============================================================================
