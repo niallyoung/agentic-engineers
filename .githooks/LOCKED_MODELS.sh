@@ -52,7 +52,7 @@ LOCKED_MODELS=(
 AGENT_MODEL_ASSIGNMENTS=(
     "engineer-agent:claude-haiku-4.5"
     "orchestrator-agent:claude-sonnet-5"
-    "lead-engineer-agent:claude-opus-4.8"
+    "lead-engineer-agent:claude-sonnet-5"
     "quality-engineer-agent:claude-sonnet-5"
     "senior-engineer-agent:claude-sonnet-5"
     "model-engineer-agent:claude-sonnet-5"

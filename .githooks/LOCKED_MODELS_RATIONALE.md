@@ -22,9 +22,8 @@ We use **positive enforcement** (locked choices) instead of **negative enforceme
 | Model | Agents | Rationale | Cost/Task |
 |-------|--------|-----------|-----------|
 | **claude-haiku-4.5** | engineer, orchestrator | Fast, cost-effective for standard tasks | $0.03-0.05 |
-| **claude-sonnet-5** | model-engineer, quality, senior | Complex tasks, higher quality, cost-optimized | $0.12 |
+| **claude-sonnet-5** | model-engineer, lead, quality, senior | Complex tasks, higher quality, cost-optimized | $0.12 |
 | **claude-opus-5** | principal | High-stakes, cross-service decisions | $0.18 |
-| **claude-opus-4.8** | lead | Code review, architectural guidance — opus-tier capability upgrade from sonnet-5; also emergency fallback for security if fable-5 is unavailable | opus-tier (see SPEC.md Model Naming section) |
 | **claude-fable-5** | security | Defensive security analysis only | $0.36 |
 
 ## Model Switch Process

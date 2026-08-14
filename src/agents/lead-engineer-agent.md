@@ -1,7 +1,7 @@
 ---
 name: lead-engineer
 description: Code review; quality decisions; medium-complexity planning; architectural guidance
-model: claude-opus-4.8
+model: claude-sonnet-5
 accepts:
   - DELEGATE
 returns:
@@ -18,8 +18,8 @@ tools:
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Lead Engineer
-**Model**: claude-opus-4.8
-**Effort**: medium
+**Model**: claude-sonnet-5
+**Effort**: max
 **Purpose**: Code review, architectural guidance, medium-complexity planning. Provides quality assurance and design feedback.
 
 ---
@@ -211,4 +211,4 @@ copilot --allow-all --autopilot --agent lead-engineer "Code review task"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-opus-4.8.
+You are powered by the model named claude-sonnet-5.

@@ -92,7 +92,7 @@ def test_expected_roles_present_with_correct_role_model_effort_tuples():
         "engineer": ("claude-haiku-4.5", "high"),
         "quality-engineer": ("claude-sonnet-5", "medium"),
         "senior-engineer": ("claude-sonnet-5", "high"),
-        "lead-engineer": ("claude-opus-4.8", "medium"),
+        "lead-engineer": ("claude-sonnet-5", "max"),
         "principal-engineer": ("claude-opus-5", "high"),
         "security-engineer": ("claude-fable-5", "max"),
         "model-engineer": ("claude-sonnet-5", "high"),

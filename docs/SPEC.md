@@ -203,7 +203,7 @@ decision tree below to delegate to specialists.
 | **Orchestrator** | claude-sonnet-5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
 | **Engineer** | claude-haiku-4.5 | high | Execute well-scoped tasks with pre-written plans |
 | **Senior Engineer** | claude-sonnet-5 | high | Complex coding without a plan; diagnosis; planning |
-| **Lead Engineer** | claude-opus-4.8 | medium | Code review; quality verification; unblock stuck tasks |
+| **Lead Engineer** | claude-sonnet-5 | max | Code review; quality verification; unblock stuck tasks |
 | **Quality Engineer** | claude-sonnet-5 | medium | Tier 1 quality checks; model suitability assessment |
 | **Principal Engineer** | claude-opus-5 | high | Cross-service architecture; complex multi-step planning |
 | **Security Engineer** | claude-fable-5 | max | Security analysis; vulnerability audits; threat modeling (defensive-scope only, see LOCKED model section) |
@@ -370,13 +370,13 @@ Canonical (source) model IDs use a **dot** in the two-part version
 | Model | Canonical (source) ID | Context Window | Max Output | Use Case |
 |-------|-----------------------|-----------------|------------|----------|
 | **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Engineer |
-| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Orchestrator, Senior Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
+| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Orchestrator, Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
 | **Claude Opus 5** | `claude-opus-5` | 1M | 128K | High capability; Principal Engineer. Single-part version — no transformation in any harness. |
 | **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer (unconditional default). Most expensive model in the roster ($10/$50 per MTok, 2x Opus 5) — a capability upgrade, never a cost saving. Single-part version — identical in every harness, no transformation. |
 | **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 128K | Still locked/approved; no longer assigned to a role |
 | **Claude Opus 4.6** | `claude-opus-4.6` | 1M | 64K | Still locked/approved; no longer assigned to a role |
 | **Claude Opus 4.7** | `claude-opus-4.7` | 1M | 128K | Still locked/approved; no longer assigned to a role |
-| **Claude Opus 4.8** | `claude-opus-4.8` | 1M | 128K | Primary for Lead Engineer (code review, architectural guidance). Also an emergency fallback tier: **Fallback for `security_engineer`** — used only if fable-5 is unavailable. |
+| **Claude Opus 4.8** | `claude-opus-4.8` | 1M | 128K | Emergency fallback tier. **Fallback for `security_engineer`** — used only if fable-5 is unavailable. |
 
 **CRITICAL RULE — canonical IDs:** the two-part version uses a **dot**
 (`claude-opus-4.8`), never an underscore or uppercase. The fully-hyphenated form
@@ -405,7 +405,7 @@ As of 2026-08-11:
 - **Orchestrator:** `claude-sonnet-5` (routing)
 - **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
 - **Senior Engineer:** `claude-sonnet-5` (complex coding, unscoped work)
-- **Lead Engineer:** `claude-opus-4.8` (code review, architectural guidance)
+- **Lead Engineer:** `claude-sonnet-5` (code review, architectural guidance)
 - **Quality Engineer:** `claude-sonnet-5` (quality gates, verification)
 - **Model Engineer:** `claude-sonnet-5` (metrics analysis, recommendations)
 - **Principal Engineer:** `claude-opus-5` (cross-service architecture)
@@ -611,6 +611,37 @@ into `dist/<harness>/` and installed to each harness's home directory.
   land in the same task. Per the spec-management "3a. Self-Authorized Narrow
   Follow-Up" pattern; this Update Log entry is the record (no separate proposal
   file).
+- **2026-08-14:** [lead-engineer, task-2026-08-14-lead-engineer-sonnet5-max,
+  authorized_by: user-directive (2026-08-14), ancestry:
+  [task-2026-08-14-backlog-round]] Correction (supersedes the immediately
+  preceding entry, which is not deleted per the immutable-audit-trail rule):
+  the user revised the directive — Lead Engineer reverts from
+  `claude-opus-4.8`/medium back to `claude-sonnet-5`, with effort raised to
+  `max` (the top of the low\|medium\|high\|max ladder, the existing Security
+  Engineer/fable-5 precedent) rather than restoring the original `high`. Three
+  surgical edits to this LOCKED section, exactly reversing the prior entry's
+  (a)/(b)/(c) plus the effort change: (a) the Official Model Names table's
+  Claude Sonnet 5 row use-case list regains "Lead Engineer"; (b) the Claude
+  Opus 4.8 row is restored verbatim to its pre-2026-08-14 pure
+  "Emergency fallback tier" / `security_engineer`-only wording; (c) the Model
+  Assignment by Agent Role list's Lead Engineer line reverts to
+  `claude-sonnet-5`, parenthetical use-case unchanged. All other rows, the
+  Harness-Specific Model Format table, Model Governance, and Validation &
+  Enforcement text are byte-identical. Verified `max` is already a
+  first-class effort value throughout the render/validation pipeline via the
+  existing Security Engineer precedent — no code changes were needed in
+  `renderer/scripts/render-codex.py` (`REASONING_BY_EFFORT["max"] == "high"`),
+  `renderer/scripts/render-opencode.sh` (`effort_to_variant`/
+  `effort_to_temperature` both already match `high|max`), or
+  `tests/test_src_integrity.py` (`valid_effort` already includes `"max"`);
+  `renderer/validate_agents.py` does not parse effort at all (frontmatter
+  never carries it — the roster table is the sole effort source). Companion
+  edits outside this section (`src/AGENTS.md` roster row,
+  `src/agents/lead-engineer-agent.md` frontmatter + body,
+  `config/FRAMEWORK-MANIFEST.yaml`, `tests/test_agents_table_parity.py`
+  fixture) land in the same task. Per the spec-management "3a.
+  Self-Authorized Narrow Follow-Up" pattern; this Update Log entry is the
+  record (no separate proposal file).
 
 ---
 
