@@ -673,6 +673,37 @@ into `dist/<harness>/` and installed to each harness's home directory.
   — process-only, no SPEC.md content). Per the spec-management "3a.
   Self-Authorized Narrow Follow-Up" pattern; this Update Log entry is the
   record (no separate proposal file).
+- **2026-08-14:** [engineer, task-2026-08-14-delegation-audit-skill,
+  authorized_by: user-directive (2026-08-14-backlog-round), ancestry:
+  [task-2026-08-14-backlog-round]] Added seventh skill (audit-trail-review
+  meta-skill) to the active skills roster. Skill is prose-only (SKILL.md +
+  __init__.py only, no scripts/tests directory). Primary input: on-disk
+  orchestration ledger at `~/.agentic-engineers/{harness}/{session-id}/audit/events-*.jsonl`
+  (clause 7 audit trail, written by scripts/audit_append.py). Core procedure:
+  ledger reconciliation — parse events, index by task_id, identify orphaned
+  delegations (no handback_received), unfinalized acceptances (no gate_result),
+  dropped work (status blocked/failure/escalate with no follow-up), unvisited
+  refusals/limit-breaches, and working-tree orphans (artifacts tied to
+  unfinalized task_ids). Single-session constraint: operates ONLY on current
+  harness + session (never enumerates sibling sessions) to prevent conflating
+  unrelated work. Secondary input (campaign mode): branch diffs for the 5 audit
+  mandates (consistency, unfinished work, claim-vs-truth, privacy, quality).
+  Companion tool: `scripts/handback_rollup.py --events` provides metrics view
+  over the same ledger file. Updates: (a) `src/skills/audit-trail-review/`
+  (was `delegation-audit/` before rename) created with ledger-reconciliation-focused
+  SKILL.md; (b) `renderer/validate_skills.py` ACTIVE_SKILLS list updated
+  (6 → 7, name: audit-trail-review); (c) `src/SKILLS.md` registry row added,
+  status updated to "7 active skills", directory structure note clarified;
+  (d) `tests/test_install_correctness.py` skill count assertion: 6 → 7;
+  (e) `tests/test_render_harness_coverage.py` skill count test updated (6 → 7);
+  (f) `docs/LANDSCAPE.md` bonus-task item 2 updated (6 → 7);
+  (g) `src/skills/README.md` updated (heading "6 skills" → "7 skills", new skill
+  table row); (h) this Update Log entry. No changes to AGENTS.md, agent
+  frontmatter, LOCKED sections, or wire protocol (`docs/specs/protocol-core-v1.0.yaml`).
+  Full validation: `python3 renderer/validate_skills.py` → 7/7 PASS;
+  `make render-all` → all 4 harnesses valid; `pytest tests/ -q` → baseline count
+  updated honestly. Per the engineer self-authorized narrow-follow-up pattern;
+  this Update Log entry is the record (no separate proposal file).
 
 ---
 

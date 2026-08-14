@@ -1,10 +1,10 @@
 # Skills Registry
 
-> **Status:** Framework slimdown phase (SPEC-2026-005). Registry now contains only the 6 surviving skills post queue-removal (2026-08-13). The filesystem queue was removed once dispatch became a direct sub-agent spawn — the harness session transcript is now the durable DELEGATE/HANDBACK audit record. Role definitions and pattern libraries were deleted; refer to [`src/AGENTS.md`](AGENTS.md) for agent descriptions.
+> **Status:** Framework slimdown phase (SPEC-2026-005). Registry now contains 7 active skills post queue-removal (2026-08-13) plus audit-trail-review meta-skill (2026-08-14). The filesystem queue was removed once dispatch became a direct sub-agent spawn — the harness session transcript is now the durable DELEGATE/HANDBACK audit record. Role definitions and pattern libraries were deleted; refer to [`src/AGENTS.md`](AGENTS.md) for agent descriptions.
 
 ---
 
-## Active Skills (6 Survivors)
+## Active Skills (7)
 
 | Skill Name | File | Purpose | Role | Model | Effort |
 |---|---|---|---|---|---|
@@ -14,22 +14,31 @@
 | **spec-management** | `src/skills/spec-management/SKILL.md` | Maintains SPEC.md and tracks implementation compliance across the framework. | senior-engineer, lead-engineer | claude-sonnet-5 | medium |
 | **skill-improvement-feedback** | `src/skills/skill-improvement-feedback/SKILL.md` | Analyzes skill execution feedback and proposes targeted improvements. | orchestrator, lead-engineer | claude-sonnet-5 | medium |
 | **codex-agent-cleanup** | `src/skills/codex-agent-cleanup/SKILL.md` | Codex session hygiene: close completed sub-agents, resume active work, keep agent capacity available. | orchestrator | claude-haiku-4.5 | low |
+| **audit-trail-review** | `src/skills/audit-trail-review/SKILL.md` | Reviews orchestration ledger (JSONL) for unfinished delegations, orphaned work, and status inconsistencies. Prose-only meta-skill. | quality-engineer | claude-sonnet-5 | medium |
 
 ---
 
 ## Skill Directory Structure
 
-Each skill in `src/skills/<name>/` must contain:
+Each skill in `src/skills/<name>/` must contain a minimum:
 
 ```
 src/skills/<name>/
   ├── SKILL.md          # Frontmatter + description (required)
-  ├── __init__.py       # Python package marker (required)
-  ├── scripts/          # Executable implementations (required directory)
+  └── __init__.py       # Python package marker (required)
+```
+
+Script-backed skills also include:
+
+```
+src/skills/<name>/
+  ├── scripts/          # Executable implementations
   │   └── *.py
-  └── tests/            # Test suite (required directory)
+  └── tests/            # Test suite
       └── test_*.py
 ```
+
+Prose-only skills (no `scripts/` directory) contain only SKILL.md and `__init__.py`, per design; the compliance audit exempts them from the scripts/tests directory requirement.
 
 SKILL.md frontmatter (required keys):
 

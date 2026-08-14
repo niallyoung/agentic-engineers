@@ -63,7 +63,8 @@ FRONTMATTER_EXEMPT_PATTERNS = {
 # SPEC-2026-005 framework slimdown, WP-0 (2026-08-11): pruned from 14 to the
 # 8 skills that survive the slimdown. queue-removal (2026-08-13): with
 # dispatch now a direct sub-agent spawn, queue-management and queue-query
-# are deleted. 8 -> 6 skills.
+# are deleted. 8 -> 6 skills. audit-trail-review meta-skill added (2026-08-14,
+# task-2026-08-14-delegation-audit-skill). 6 -> 7 skills.
 ACTIVE_SKILLS: list[str] = [
     "orchestrator",
     "protocol-validator",
@@ -71,6 +72,7 @@ ACTIVE_SKILLS: list[str] = [
     "spec-management",
     "skill-improvement-feedback",
     "codex-agent-cleanup",
+    "audit-trail-review",
 ]
 
 # Required top-level frontmatter keys for the compliance audit.

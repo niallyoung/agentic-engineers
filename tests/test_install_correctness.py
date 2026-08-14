@@ -136,18 +136,20 @@ def test_all_8_agents_installed(installed, harness):
     "harness",
     ["claude", "copilot", "opencode", "codex"],
 )
-def test_all_6_skills_installed(installed, harness):
+def test_all_7_skills_installed(installed, harness):
     # 8 -> 6 in the queue-removal work (task-2026-08-13-queue-removal-code):
     # queue-management and queue-query were deleted along with the
     # filesystem queue now that dispatch is a direct sub-agent spawn.
+    # audit-trail-review meta-skill added (task-2026-08-14-delegation-audit-skill).
+    # 6 -> 7 skills.
     _dist_sub, install_sub, _marker = HARNESS_LAYOUT[harness]
     skills_dir = installed / install_sub / "skills"
     assert skills_dir.is_dir(), f"{harness}: skills/ not installed"
     installed_skills = [
         p for p in skills_dir.iterdir() if p.is_dir() and (p / "SKILL.md").exists()
     ]
-    assert len(installed_skills) == 6, (
-        f"{harness}: expected 6 installed skills, found "
+    assert len(installed_skills) == 7, (
+        f"{harness}: expected 7 installed skills, found "
         f"{len(installed_skills)}"
     )
 
