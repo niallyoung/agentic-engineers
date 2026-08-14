@@ -30,16 +30,13 @@ routing decisions.
 
 ### Current Architecture (Direct Sub-Agent Spawn)
 
-The canonical execution model is **direct sub-agent spawn**, not queue-and-poll:
-the spawning agent constructs a DELEGATE block and passes it directly as the
-prompt of a sub-agent spawn (the harness's Agent/Task tool); the HANDBACK returns
-synchronously as that spawn call's result, in-context. There is no polling
-interval, no dispatch-by-file-write, and no filesystem queue at all — the
-harness session transcript itself (every DELEGATE as a spawn prompt, every
-HANDBACK as that spawn's result) is the durable audit record. See
-[`src/AGENTS.md` > Direct Sub-Agent Spawn Execution
-Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the full
-flow.
+The canonical execution model is **direct sub-agent spawn**: the spawning agent
+constructs a DELEGATE block and passes it directly as the prompt of a sub-agent
+spawn (the harness's Agent/Task tool); the HANDBACK returns synchronously as that
+spawn call's result, in-context. The harness session transcript itself (every
+DELEGATE as a spawn prompt, every HANDBACK as that spawn's result) is the durable
+audit record. See [`src/AGENTS.md` > Direct Sub-Agent Spawn Execution
+Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the full flow.
 
 ### Why It Matters
 

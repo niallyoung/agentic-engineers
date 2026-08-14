@@ -412,9 +412,8 @@ the generated custom-agent HANDBACK contract; update docs for the new launch flo
 ## Dispatch Model
 
 Every DELEGATE is passed directly as a spawned subagent's prompt; the HANDBACK
-returns synchronously as that spawn's result, in-context. There is no queue to
-poll or write — the Codex session transcript is the durable record of every
-DELEGATE/HANDBACK pair.
+returns synchronously as that spawn's result, in-context. The Codex session
+transcript is the durable record of every DELEGATE/HANDBACK pair.
 """,
             encoding="utf-8",
         )

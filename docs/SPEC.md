@@ -22,9 +22,9 @@ Engineer, Senior Engineer, Quality Engineer, Lead Engineer, Principal Engineer, 
 Engineer, Model Engineer — via the DELEGATE/HANDBACK protocol. The Orchestrator is the
 single entry point: it builds a DELEGATE and dispatches it by directly spawning a
 sub-agent with the DELEGATE as the prompt, then reads the HANDBACK from that spawn's
-result. There is no polling loop, timer, or daemon, and no filesystem queue — the
-harness session transcript itself (every DELEGATE as a spawn prompt, every HANDBACK as
-that spawn's result) is the durable audit record.
+result, synchronously and in-context. The harness session transcript itself (every
+DELEGATE as a spawn prompt, every HANDBACK as that spawn's result) is the durable
+audit record.
 
 ---
 
@@ -34,7 +34,7 @@ that spawn's result) is the durable audit record.
 
 The Orchestrator is the single entry point and single router. Dispatch happens by
 directly spawning a sub-agent with the DELEGATE as its prompt — control flow lives in the
-Orchestrator's own agent context, not in a Python process polling a directory on a timer.
+Orchestrator's own agent context, not in external tooling or background processes.
 
 1. **No Direct Agent Invocation.** Engineers MUST NOT invoke specialist agents directly
    or hand-write DELEGATE blocks and pass them out of band. All work is routed by the
@@ -42,9 +42,9 @@ Orchestrator's own agent context, not in a Python process polling a directory on
 2. **Dispatch is a Direct Sub-Agent Spawn.** The Orchestrator builds a DELEGATE per the
    DELEGATE/HANDBACK Protocol section below, spawns a sub-agent with it as the prompt via
    the harness's sub-agent tool, and reads the returned HANDBACK directly from the tool
-   result. There is NO polling interval, NO timer, and NO intermediate queue hop required
-   for the Orchestrator to observe a result — dispatch and collection are synchronous
-   with respect to the Orchestrator's own reasoning.
+   result. Dispatch and collection are synchronous with respect to the Orchestrator's own
+   reasoning — the DELEGATE goes in as the spawn prompt, the HANDBACK comes back as the
+   spawn result, all in a single agent turn.
 3. **Control Flow Lives in Agent Context; Python is Advisory Only.** Routing, escalation,
    retries, and the DELEGATE → spawn → HANDBACK → gate lifecycle are executed by agent
    reasoning. Python modules MAY validate a DELEGATE against a schema, score a HANDBACK,
@@ -105,16 +105,12 @@ approving work solely on a sub-agent's self-reported confidence; skipping qualit
 or escalation rules; using "trivial fix" or similar undefined escape clauses to bypass the
 Orchestrator; letting CI/CD or external systems invoke orchestration scripts directly.
 
-**Why this constraint exists:** the earlier polling formulation required a Python
-scheduler that both violated the no-external-scripts constraint and never carried a
-single real task in any live session (see SPEC-2026-004 in the Update Log). Moving control
-flow into agent context and dispatching by direct spawn achieves the original intent using
-the harness itself — a complete audit trail (every spawn/handback is a real logged event),
-correct routing (the decision tree is applied by the agent that owns it), and accurate
-cost tracking (metrics derive from logged events, not constants). Rendering infrastructure
-(harness distribution, build-time skill rendering) may use subprocess for deterministic
-build operations — this constraint is about orchestration/agent runtime code, not build
-infrastructure.
+**Why this constraint exists:** direct sub-agent spawn achieves a complete audit trail
+(every spawn/handback is a real logged event), correct routing (the decision tree is
+applied by the agent that owns it), and accurate cost tracking (metrics derive from logged
+events, not constants). Rendering infrastructure (harness distribution, build-time skill
+rendering) may use subprocess for deterministic build operations — this constraint is
+about orchestration/agent runtime code, not build infrastructure.
 
 ---
 

@@ -20,8 +20,8 @@ metadata:
 The Orchestrator skill defines the entry-point role's DELEGATE/HANDBACK lifecycle
 under the **direct sub-agent spawn** execution model (see `src/AGENTS.md` >
 Direct Sub-Agent Spawn Execution Model for the full protocol — this SKILL.md is the
-condensed operational reference). There is no polling loop, no queue-state machine
-the Orchestrator drives, and no subprocess correlation: dispatch IS the spawn call.
+condensed operational reference). Dispatch is the spawn call itself: pass the DELEGATE
+as the sub-agent prompt, receive the HANDBACK as the spawn result.
 
 1. **Construct** a DELEGATE block from the incoming request or prior HANDBACK output
 2. **Route** — apply the routing decision tree below to pick the target role

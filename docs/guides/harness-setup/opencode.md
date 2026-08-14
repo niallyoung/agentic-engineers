@@ -58,11 +58,11 @@ opencode --agent orchestrator --dark-factory "Process all pending work"
 ```
 
 This mode:
-- Processes tasks autonomously, spawning specialists directly (Agent/Task tool) rather than polling
+- Processes tasks autonomously, spawning specialists directly (Agent/Task tool)
 - Routes to specialists based on task type
 - Reads each HANDBACK back in-context as its spawn call returns
 - Aggregates results and reports back
-- Pauses when no pending DELEGATEs or outstanding spawns remain — the session transcript is already the audit record, so there is no separate write step
+- Pauses when no pending DELEGATEs or outstanding spawns remain — the session transcript is the audit record
 
 ### Voice Notifications
 
@@ -103,9 +103,8 @@ opencode --agent orchestrator --voice "Task completed with 95/100 quality"
    actually fires: `opencode --agent orchestrator --debug`
 2. Check logs: `tail -f ~/.agentic-engineers/{session-id}/memory/logs/*.log`
 
-There is no polling loop to check separately — if the spawn call fires and returns a
-HANDBACK, routing worked; if it doesn't fire at all, the issue is in the Orchestrator's
-routing decision, not a stalled poller.
+If the spawn call fires and returns a HANDBACK, routing worked; if it doesn't fire at all,
+the issue is in the Orchestrator's routing decision.
 
 ## Advanced Configuration
 

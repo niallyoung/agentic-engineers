@@ -394,9 +394,9 @@ DELEGATE/HANDBACK protocol, dispatched by direct sub-agent spawn.
 ### Orchestrator constraints
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
   applies Model Engineer recommendations.
-- It runs in-harness via direct sub-agent spawning (no external cron / outbound tools).
+- It runs in-harness via direct sub-agent spawning.
 - Dispatch happens by constructing a DELEGATE block and passing it as a sub-agent prompt,
-  then reading the HANDBACK synchronously from the tool result (no polling, no queue intermediation).
+  then reading the HANDBACK synchronously from the tool result.
 - ALL execution work is delegated to a specialist via DELEGATE/HANDBACK.
 
 ### Role-specific rules

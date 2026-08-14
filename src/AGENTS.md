@@ -427,10 +427,10 @@ re-delegate the ESCALATION block at the higher tier (direct spawn).
 
 ### Recursion Limits
 
-Direct spawn removes the natural throttling a polling loop provided. These limits are the
-framework's convention for bounding recursion. **No runtime code counts depth, counts
-fan-out, or detects cycles at spawn time** — see [Tools-Frontmatter Permission
-Model](#tools-frontmatter-permission-model) below. Every agent is expected to self-enforce:
+These limits are the framework's convention for bounding recursion depth and fan-out in
+the delegation tree. **No runtime code counts depth, counts fan-out, or detects cycles
+at spawn time** — see [Tools-Frontmatter Permission Model](#tools-frontmatter-permission-model)
+below. Every agent is expected to self-enforce:
 
 - **Max delegation depth: 3.** Depth is measured in spawn hops from the root DELEGATE
   (depth 0 = the Orchestrator's own top-level DELEGATE). An agent at depth 3 MUST NOT

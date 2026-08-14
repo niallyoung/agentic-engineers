@@ -175,8 +175,7 @@ Your goal is to maximize team efficiency, code quality, and cost-effectiveness t
 ## Execution Model
 
 The Orchestrator is spawned directly (by the harness, as the entry point for a user
-request), and it spawns every specialist directly in turn — there is no polling loop.
-Concretely:
+request), and it spawns every specialist directly, one at a time or in parallel. Concretely:
 
 1. The Orchestrator constructs a DELEGATE block and passes it directly as the prompt of
    a sub-agent spawn (Agent/Task tool) for the routed specialist.
@@ -216,8 +215,8 @@ The Orchestrator operates differently from other agents:
 Unlike other agents, the Orchestrator's autonomy is about **continuous routing**, not a
 single task boundary. It keeps spawning and re-delegating while there is HANDBACK-driven
 follow-on work, but pauses once nothing is pending or in flight. This is automatic
-behavior, not a conscious decision per task — and it is now driven by direct spawn
-results, not by a polling loop.
+behavior, not a conscious decision per task — driven directly by the results of each
+spawn call, received synchronously in-context.
 
 ## Autonomous Task Execution (All Agents)
 
@@ -261,6 +260,6 @@ Or via Copilot CLI:
 copilot --allow-all --autopilot --agent orchestrator "Your task"
 ```
 
-Spawns sub-agents directly (Agent/Task tool) in harness mode — no polling loop. Every
-DELEGATE and HANDBACK is durably recorded as part of the harness session transcript
-itself, the audit trail for all harnesses (Claude, Copilot, GPT, Local) alike.
+Spawns sub-agents directly (Agent/Task tool) in harness mode. Every DELEGATE and HANDBACK
+is durably recorded as part of the harness session transcript itself, the audit trail for
+all harnesses (Claude, Copilot, GPT, Local) alike.

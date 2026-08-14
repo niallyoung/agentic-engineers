@@ -9,13 +9,13 @@ Designed for integration with coding CLIs: **OpenCode**, **Copilot**, **Claude**
 
 Agentic Engineers solves the multi-agent coordination problem: how do you route
 work to the right specialist, enforce quality consistently, and keep cost
-proportional to task complexity — without spaghetti code or a polling daemon?
+proportional to task complexity — through an elegant, minimal orchestration layer?
 
 **The answer:** an ORCHESTRATOR-FIRST architecture built on **direct sub-agent
-spawning**, not queue polling:
+spawning**:
 
 1. Work is expressed as a DELEGATE task (structured YAML: scope, context, plan, success criteria)
-2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result — no polling loop, no timer, no daemon, no filesystem queue
+2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result synchronously, in-context
 3. The specialist executes and returns a HANDBACK with results + metrics
 4. The harness session transcript itself — every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result — is the durable audit record
 5. Metrics feed back into model selection and routing for future tasks

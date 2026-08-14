@@ -46,7 +46,7 @@ delegate: Fix the race condition in span capture (see ISSUE #42)
 The Orchestrator:
 1. Builds a DELEGATE block from your request (`agent`, `model`, `effort`, `scope`, `context`, `plan`, `success_criteria` — see `src/AGENTS.md` for the full format)
 2. Spawns the target role directly (Agent/Task tool), passing the DELEGATE as the sub-agent's prompt — this spawn, recorded in the harness session transcript, is the audit record
-3. Reads the HANDBACK back as the result of the spawn call itself — no polling, no wait loop, no separate file write needed to make it durable
+3. Reads the HANDBACK back as the result of the spawn call itself, synchronously and in-context
 4. Repeats for any further work (re-delegation, escalation) until it has no pending DELEGATEs and no outstanding spawns — then it **pauses** (see [src/AGENTS.md > Pause Condition](../src/AGENTS.md#pause-condition))
 
 **Authoring a DELEGATE by hand** — for scripting, or to hand the Orchestrator a
@@ -177,9 +177,8 @@ No harness mechanically blocks an over-deep or over-wide spawn today; agents sel
 
 When multiple Copilot or Claude instances run concurrently, each is its own independent
 harness session — spawning sub-agents and reading HANDBACKs entirely within its own
-context, with no shared state and no cross-contamination between sessions. There is no
-queue partition to isolate, because there is no queue: each session's transcript is
-already scoped to that session.
+context, with no shared state and no cross-contamination between sessions. Each session's
+transcript is scoped to that session, ensuring isolation by design.
 
 ---
 

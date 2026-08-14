@@ -182,9 +182,8 @@ escalations: []
 Engineer is spawned directly — the parent agent (Orchestrator, or Senior Engineer)
 passes the DELEGATE block above as this agent's prompt via a direct sub-agent spawn
 (Agent/Task tool), and receives the HANDBACK back as that spawn call's result,
-in-context. There is no queue file to poll or write for this exchange to complete; the
-harness session transcript itself is the durable audit record of the DELEGATE/HANDBACK
-pair.
+synchronously and in-context. The harness session transcript itself is the durable
+audit record of the DELEGATE/HANDBACK pair.
 
 **This agent's frontmatter does not grant `spawn_subagent`** (`tools: []`) — Engineer is
 a leaf in the delegation tree by design (see `src/AGENTS.md` § Tools-Frontmatter
