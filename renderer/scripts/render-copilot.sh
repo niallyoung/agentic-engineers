@@ -127,7 +127,7 @@ case "$MODE" in
 
 			# Render skill via rsync
 			skill_start=$(date +%s)
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='AGENTS.md' \
 				"$src/" "$dst/" || {
 				echo "  ❌ $name — rsync failed" >&2
 				continue

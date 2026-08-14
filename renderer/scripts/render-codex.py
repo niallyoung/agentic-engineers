@@ -242,7 +242,16 @@ def parse_agents_table(agents_md: Path) -> dict[str, dict[str, str]]:
 
 
 def copy_skill(src: Path, dst: Path) -> None:
+    # Nested-precedence contract (docs/RENDERING.md): no src skill ships its
+    # own AGENTS.md, so any AGENTS.md found under an already-installed skill
+    # dir is user-authored. rmtree()+copytree() would otherwise wipe it on
+    # every re-render (unlike rsync --delete + --exclude in the other
+    # renderers, this copy path has no equivalent "leave it alone" flag) —
+    # so stash and restore any such files verbatim around the copy.
+    preserved: dict[Path, bytes] = {}
     if dst.exists():
+        for path in dst.rglob("AGENTS.md"):
+            preserved[path.relative_to(dst)] = path.read_bytes()
         shutil.rmtree(dst)
 
     def ignore(_dir: str, names: list[str]) -> set[str]:
@@ -250,6 +259,10 @@ def copy_skill(src: Path, dst: Path) -> None:
         return {name for name in names if name in ignored or name.endswith(".pyc")}
 
     shutil.copytree(src, dst, ignore=ignore)
+    for rel_path, content in preserved.items():
+        target = dst / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
     (dst / SKILL_MARKER).write_text("managed by agentic-engineers render-codex.py\n", encoding="utf-8")
 
 

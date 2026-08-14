@@ -31,6 +31,26 @@ The install/runtime roots are `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`
 
 ---
 
+## Copilot CLI Harness Notes
+
+### /fleet Command Incompatibility (GA April 2026)
+
+GitHub Copilot CLI's native `/fleet` command enables parallel multi-agent orchestration. However, it is **not compatible** with agentic-engineers' DELEGATE/HANDBACK protocol for the following architectural reasons:
+
+**Why /fleet doesn't fit our model:**
+- `/fleet` accepts a single task description; the orchestrator decomposes it into work items and distributes them to subagents
+- Our DELEGATE/HANDBACK protocol requires sending a unique, fully self-contained DELEGATE block to each subagent, with different scope, plan, and success criteria per specialist role
+- /fleet has no mechanism to pass per-agent prompts; all work items derive from the single parent prompt
+- Our use case (e.g., dispatching Engineer, Senior Engineer, and Lead Engineer in parallel with different instructions) requires role-specific prompts, not decomposed work items
+
+**The fundamental mismatch:**
+- `/fleet` model: 1 prompt → orchestrator decomposes → N work items
+- DELEGATE model: N DELEGATE blocks → N subagents receive unique prompts
+
+**Recommendation:** Use agentic-engineers' Orchestrator role to fan out independent tasks with role-specific DELEGATEs (the current approach). The harness session transcript already provides the audit trail and coordination layer that /fleet provides.
+
+---
+
 ## Lifecycle Phases
 
 ### Phase 1: Authoring (Source Layer — `src/`)
@@ -244,6 +264,99 @@ version: <semver>      # specs only
 - Rendered agents (Codex): `<kebab-name>.toml`
 - Skills: directory-based `<kebab-name>/SKILL.md`
 - Specs: `SPEC.md` or `<name>.yaml`
+
+---
+
+## AGENTS.md v1.0 Readiness (research date: 2026-08-14)
+
+**Bottom line: nothing to conform to yet.** AAIF (Linux Foundation Agentic AI
+Foundation, formed Dec 9 2025) hosts AGENTS.md as one of its projects
+alongside MCP and goose, and secondary sources describe a 2026-2027 roadmap
+workstream titled "AGENTS.md v1.0 — first stable behavioral spec, with
+goose-based validation tooling." That claim could not be confirmed from a
+primary AAIF source: [aaif.io](https://aaif.io) lists working groups but no
+roadmap page or spec-status page as of this writing, and
+[github.com/agentsmd/agents.md/releases](https://github.com/agentsmd/agents.md/releases)
+has never cut a release (confirmed live, 2026-08-14: "There aren't any
+releases here"). Treat "AGENTS.md v1.0" as **unreleased / roadmap-only** —
+this note exists so a future re-check doesn't have to re-derive that.
+
+**Nested-file precedence** is documented only informally today:
+[agents.md](https://agents.md/) states "Agents automatically read the
+nearest file in the directory tree, so the closest one takes precedence,"
+but an open GitHub question
+([agentsmd/agents.md#53](https://github.com/agentsmd/agents.md/issues/53),
+opened Sep 11 2025) asking whether conflicts are resolved by nearest-file-wins
+or by merging all ancestor files remains unanswered. A community proposal
+([agentsmd/agents.md#135](https://github.com/agentsmd/agents.md/issues/135),
+opened Jan 8 2026, still open/unmerged, titled "v1.1" — implying no v1.0
+baseline exists to number from) attempts to formalize it: Jurisdiction
+(a file governs its directory and subdirectories), Accumulation (guidance
+builds down the tree), Precedence (local overrides ancestor), and an explicit
+resolution chain "LLM System Prompt → Agent System Prompt → User Prompt →
+Local AGENTS.md → Ancestor AGENTS.md files (nearest first)." The proposal
+explicitly disclaims enforcement: "the specification does not attempt to
+mandate or enforce perfect compliance."
+
+**Validation tooling** does not exist yet in any form we could find —
+no CLI, no schema validator, nothing under the `goose` project exposing an
+AGENTS.md check as of 2026-08-14. See `.github/workflows/ci.yml` "Gate 5
+(stub)" for the forward-looking, always-non-blocking probe that will start
+running automatically once such a tool appears on `PATH`.
+
+### Nested AGENTS.md Precedence Contract (our commitment today)
+
+We do **not** build a nesting engine — each of our renderers emits exactly
+one AGENTS.md per harness install (the root doc: `~/.claude/AGENTS.md`,
+`~/.copilot/AGENTS.md`, `~/.config/opencode/AGENTS.md`, `~/.codex/AGENTS.md`),
+scoped explicitly to that harness install root. That root file is already
+protected from clobbering a user's own file of the same name via the
+sentinel/marker check in each renderer's doc-writer (`write_managed_doc()` in
+render-claude.sh; equivalent inline checks in render-opencode.sh,
+render-copilot.sh, render-codex.py) — unrelated to this task, pre-existing
+behavior.
+
+What this task closed: a **deeper**, user-authored `AGENTS.md` — e.g. one a
+user places inside an installed skill directory such as
+`~/.claude/skills/<name>/AGENTS.md` — is exactly the nested-precedence
+pattern the convention describes, and it was being silently deleted on
+every re-render. `render-claude.sh` and `render-opencode.sh` sync each skill
+directory via `rsync -a --delete`, which treats any file not present in the
+corresponding `src/skills/<name>/` as extraneous and removes it;
+`render-codex.py`'s `copy_skill()` was worse — it `shutil.rmtree()`s the
+entire destination skill directory before recopying, unconditionally. A live
+test (plant a file, re-render, check survival) confirmed the deletion in all
+three before the fix.
+
+The fix, verified with the same live test post-fix:
+
+- `render-claude.sh` / `render-opencode.sh`: the skill-sync `rsync -a
+  --delete` line now also carries `--exclude='AGENTS.md'`. Since no
+  `src/skills/*/` directory ships its own `AGENTS.md`, this is purely
+  protective — it takes such a file out of both the copy and the deletion
+  scope, so a user's nested file is left untouched at any depth under the
+  skill directory.
+- `render-codex.py`'s `copy_skill()` now stashes the bytes of any
+  `AGENTS.md` found anywhere under the existing destination (`dst.rglob(
+  "AGENTS.md")`) before the `rmtree()`, and restores them verbatim after
+  `copytree()` completes.
+- `render-copilot.sh` has the identical `rsync -a --delete` skill-sync
+  pattern and therefore the identical bug — it is **not** fixed here
+  (out of scope for this task's owned files); see the HANDBACK for this
+  task for a follow-up spec.
+
+Regression coverage: `tests/test_agents_md_nesting.py` (plants a nested
+`AGENTS.md` inside an installed skill dir, re-renders, asserts survival, for
+each of claude/opencode/codex; plus a static guard on the `rsync --exclude`
+flags and the `copy_skill()` preserve logic so a future edit can't silently
+reintroduce the bug).
+
+If `src/skills/*/` ever legitimately needs to ship its own `AGENTS.md`
+(e.g. a skill's own subprocess scripts want harness-agnostic behavioral
+guidance), the exclude/preserve logic above will need to special-case that
+skill by name — `tests/test_agents_md_nesting.py::TestNoSourceSkillShipsAgentsMd`
+will fail loudly the day that happens, rather than silently stopping the
+legitimate file from syncing.
 
 ---
 

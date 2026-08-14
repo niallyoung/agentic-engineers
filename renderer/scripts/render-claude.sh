@@ -471,7 +471,11 @@ PY
 			fi
 			skill_start=$(date +%s)
 			_use_color && printf '\r  ⏳ %-30s' "$name"
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' "$src/" "$dst/"
+			# --exclude='AGENTS.md': nested-precedence contract (docs/RENDERING.md) —
+			# no src skill ships its own AGENTS.md, so any found under an installed
+			# skill dir is user-authored. Excluding it keeps rsync --delete from
+			# treating it as extraneous and wiping it on re-render.
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='AGENTS.md' "$src/" "$dst/"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			skill_end=$(date +%s)
 			skill_duration=$(( skill_end - skill_start ))

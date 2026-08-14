@@ -134,6 +134,25 @@ jobs:
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
         run: python renderer/scripts/check_test_regression.py
 
+      - name: "Gate 5 (stub): AAIF AGENTS.md v1.0 conformance"
+        # AAIF's public roadmap lists "AGENTS.md v1.0 — first stable behavioral
+        # spec" with planned goose-based validation tooling, but as of this
+        # writing (2026-08-14) agentsmd/agents.md has never cut a release
+        # (github.com/agentsmd/agents.md/releases is empty) and no validator
+        # CLI has shipped — see docs/RENDERING.md "AGENTS.md v1.0 readiness"
+        # for citations. This step is a forward-looking stub only: it probes
+        # for a `goose` binary with an `agents-md validate` subcommand and
+        # runs it against src/AGENTS.md if found, else prints a dated skip
+        # notice. It must NEVER fail the build while the tooling is
+        # unreleased — flip to a hard gate once AAIF ships v1.0 tooling.
+        run: |
+          if command -v goose >/dev/null 2>&1 && goose agents-md validate --help >/dev/null 2>&1; then
+            echo "::notice::goose AGENTS.md validator detected — running against src/AGENTS.md"
+            goose agents-md validate src/AGENTS.md || echo "::warning::AAIF validator reported issues (non-blocking pending v1.0 GA)"
+          else
+            echo "::notice::[2026-08-14] AAIF AGENTS.md v1.0 validation tooling not yet released (no agentsmd/agents.md GitHub release, no goose validator subcommand found). Skipping — see AAIF roadmap at https://aaif.io and docs/RENDERING.md. This step will activate automatically once a 'goose' binary exposing 'agents-md validate' is on PATH."
+          fi
+
       - name: Verify
         run: make verify
 

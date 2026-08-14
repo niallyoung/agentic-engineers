@@ -281,7 +281,98 @@ Limits](../src/AGENTS.md#recursion-limits); this document does not duplicate the
 
 ---
 
-## 6. Glossary
+## 6. Cost Guardrail (Advisory)
+
+**Why:** `docs/LANDSCAPE.md` § "What harnesses still lack" names runaway subagent cost as
+the multi-agent niche's loudest pain point. The protocol already carries the fields
+needed to guard against it. This section documents a **convention on existing fields**,
+not a wire-format change — `docs/specs/protocol-core-v1.0.yaml` and
+`renderer/scripts/claude-delegate-guard.py` are untouched by it, exactly like the
+[Recursion Limits](../src/AGENTS.md#recursion-limits) it mirrors.
+
+**The fields:** DELEGATE's `tokens_estimate` (int) and `budget` (USD float) — both
+already defined as optional extensions in [§2.1](#21-delegate), both previously
+under-populated in practice.
+
+**The convention** (SHOULD/MUST language below applies to *Orchestrator behavior*, not
+to schema validation):
+
+1. The Orchestrator SHOULD set both `tokens_estimate` and `budget` on every DELEGATE it
+   issues, estimated from task complexity and the target role's typical cost share (see
+   the Cost Target Distribution comparison in [§7](#7-handback-cost-rollup) below).
+2. Before spawning, if the operator has configured a session/task budget ceiling and a
+   DELEGATE's `tokens_estimate`/`budget` would exceed it, the Orchestrator MUST NOT
+   spawn. Instead — without ever calling the Agent/Task tool — it synthesizes a HANDBACK
+   directly:
+   ```yaml
+   handoff_type: HANDBACK
+   task_id: <the DELEGATE's own task_id>
+   status: blocked
+   output: "Refused to spawn — cost guardrail"
+   error: "budget: estimated 0.35 exceeds limit 0.20"
+   metrics: {quality: 0.0, tokens: 0, cost: 0.0, duration_seconds: 0.0}
+   ```
+   This mirrors the existing recursion-limit refusal pattern
+   (`src/AGENTS.md` § [Recursion Limits](../src/AGENTS.md#recursion-limits)): stop, do
+   not silently proceed or invent a workaround, and report `status: blocked` naming
+   which limit was hit and why. The receiving agent (or the operator) decides how to
+   proceed — split the task, raise the budget, or drop it.
+3. A HANDBACK's required `metrics.tokens`/`metrics.cost` (already core fields — no
+   change) are what closes the loop: they are `scripts/handback_rollup.py`'s input
+   (see [§7](#7-handback-cost-rollup)).
+
+**Enforcement: orchestrator-self + QE review.** Nothing mechanical enforces this — no
+schema change, no `PreToolUse` hook change, no new validator layer in
+[§3](#3-validation--enforcement). Like the recursion/fan-out limits it sits beside, this
+is the spawning agent's own judgment call, checked opportunistically when Quality
+Engineer reviews a session's DELEGATE/HANDBACK trail — not a runtime gate. Stating
+anything stronger than that would misrepresent what actually runs.
+
+---
+
+## 7. HANDBACK Cost Rollup
+
+`scripts/handback_rollup.py` (backlog item #10, `docs/LANDSCAPE.md` § Bonus-Task
+Backlog) is a deterministic, dependency-light (stdlib + PyYAML) script that reads one or
+more sources of HANDBACK YAML — files or stdin, fenced or bare, one or many
+`---`-separated documents per source, exactly the shapes an agent actually emits in a
+session transcript — and aggregates them per agent-role into a compact report: count,
+total tokens, total cost, mean quality, mean duration.
+
+**Advisory-only, by design** (`docs/SPEC.md` clause 3, "Python is advisory only"): the
+script *reports*; it never *gates*. It always exits `0` on well-formed input regardless
+of what the aggregated numbers show — a heavy-cost role or a quality dip is information
+for a human or for Quality Engineer, not a build failure. Malformed candidate documents
+(invalid YAML, or a HANDBACK missing/violating a required field) are skipped with a
+warning printed in the report, never raised as an exception.
+
+**The `agent` field convention:** the canonical HANDBACK schema ([§2.2](#22-handback))
+carries no `agent`/role field — only the originating DELEGATE names its target `agent`.
+To attribute cost per role, the rollup relies on a convention, not a schema requirement:
+a HANDBACK MAY echo the DELEGATE's `agent` value back as its own `agent:` (or `role:`)
+field. This is an ordinary forward-compatible extra field per [§1](#1-what-this-protocol-is)'s
+"unknown fields warn, never fail" rule — not a wire-format change. A HANDBACK that omits
+it is still aggregated, just grouped under the synthetic role `unknown`; the omission
+alone is never treated as malformed.
+
+**Cost Target Distribution comparison:** where `docs/SPEC.md`'s Agent Roster table still
+defines one — as of SPEC-2026-005 it does: Orchestrator 55% · Engineer 18% · Senior
+Engineer 8% · Quality Engineer 8% · Lead Engineer 3% · Model Engineer 3% · Principal
+Engineer 3% · Security Engineer 2% — the rollup prints each role's actual cost share
+next to that target. `tests/test_handback_rollup.py::test_cost_target_distribution_matches_spec`
+fails loudly if the script's copy of the distribution drifts from the live `docs/SPEC.md`
+text; if a future SPEC.md revision removes the table, that test (and the comparison
+feature) should be updated to reflect its absence rather than comparing against a
+fabricated target.
+
+```
+python3 scripts/handback_rollup.py session1.yaml session2.yaml
+python3 scripts/handback_rollup.py --json < session.log
+```
+
+---
+
+## 8. Glossary
 
 | Term | Definition |
 |---|---|
@@ -293,14 +384,19 @@ Limits](../src/AGENTS.md#recursion-limits); this document does not duplicate the
 | **`metrics.quality`** | Self-reported (and optionally QE-reviewed) delivery quality, 0.0–1.0 |
 | **Core fields** | Required DELEGATE/HANDBACK fields, strictly validated |
 | **Extension fields** | Optional fields, loosely validated, forward-compatible (unknown fields warn, never fail) |
+| **Cost Guardrail** | Convention (§6) on the existing `tokens_estimate`/`budget` DELEGATE extensions plus Orchestrator refusal behavior; not a schema or hook change |
+| **HANDBACK Cost Rollup** | `scripts/handback_rollup.py` (§7) — advisory per-role cost/quality report derived from HANDBACK `metrics` |
 
 ---
 
-## 7. See Also
+## 9. See Also
 
 - [`src/AGENTS.md`](../src/AGENTS.md) — agent roster, routing decision tree, role
-  definitions, Direct Sub-Agent Spawn Execution Model, Recursion Limits, ACK Protocol
+  definitions, Direct Sub-Agent Spawn Execution Model, Recursion Limits, Cost
+  Guardrail, ACK Protocol
 - [`docs/specs/protocol-core-v1.0.yaml`](specs/protocol-core-v1.0.yaml) — the
   normative schema
 - [`docs/CORE-PROTOCOL-QUICKSTART.md`](CORE-PROTOCOL-QUICKSTART.md) — a 30-minute
   quickstart covering only the core-field subset
+- [`scripts/handback_rollup.py`](../scripts/handback_rollup.py) — the HANDBACK cost
+  rollup script (§7)

@@ -60,6 +60,18 @@ When a limit is hit: stop, do not invent a workaround, and return `status: block
 (procedural — resolvable by restructuring the fan-out) or `status: escalate` (a
 genuine cycle or a task that structurally needs more than 3 hops).
 
+## Cost Guardrail
+
+Set `tokens_estimate` and `budget` on every DELEGATE issued. Before spawning, check them
+against any operator-configured session/task budget ceiling. If spawning would exceed
+it, do not call the Agent/Task tool at all — synthesize a `status: blocked` HANDBACK
+instead, naming the limit hit (e.g. `error: "budget: estimated 0.35 exceeds limit
+0.20"`), exactly like the recursion/fan-out refusal above. This is a convention on
+existing DELEGATE/HANDBACK fields, not a schema or hook change (see `docs/PROTOCOL.md` §
+Cost Guardrail). `scripts/handback_rollup.py` turns the resulting HANDBACK
+`metrics.tokens`/`metrics.cost` into a per-role cost/quality report — advisory only, run
+on demand, never a gate.
+
 ## Audit Trail
 
 Dispatch happens via the spawn call, and the harness session transcript already

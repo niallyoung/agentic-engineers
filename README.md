@@ -31,7 +31,7 @@ The framework is built to be **minimal, portable, and self-reducing**:
 
 ## Positioning
 
-Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy frameworks** (LangGraph, CrewAI) handle durable distributed runtime; **light SDKs** (OpenAI Agents, PydanticAI) offer minimal abstraction; **markdown-first harness** (ours) routes and coordinates work across coding CLIs (Claude, Copilot, Codex, Gemini). Unlike content marketplaces (wshobson/agents, obra/superpowers), we ship a **routing protocol with structured handoff and metrics** — not just agent/skill definitions. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) for the full ecosystem mapping, standards alignment, and why harnesses are commoditizing the layers beneath us.
+Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy frameworks** (LangGraph, CrewAI) handle durable distributed runtime; **light SDKs** (OpenAI Agents, PydanticAI) offer minimal abstraction; **markdown-first harness** (ours) routes and coordinates work across coding CLIs (Claude, Copilot, Codex, Gemini). Unlike content marketplaces (wshobson/agents, obra/superpowers), we ship a **routing protocol with structured handoff and metrics** — not just agent/skill definitions. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) for the full ecosystem mapping, standards alignment, and why harnesses are commoditizing the layers beneath us. The protocol is specified for reuse at [docs/specs/DELEGATE-HANDBACK.md](docs/specs/DELEGATE-HANDBACK.md), independent of this repository's specific roster.
 
 ## The Roster
 

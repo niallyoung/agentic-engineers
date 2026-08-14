@@ -449,6 +449,20 @@ HANDBACK with `status: blocked` (procedural — likely resolvable by restructuri
 fan-out) or `status: escalate` (a genuine cycle, or a task needing more than 3 hops),
 stating which limit was hit and why. The receiving agent decides how to proceed.
 
+### Cost Guardrail
+
+A documented convention on the DELEGATE extension fields `tokens_estimate` and `budget`
+(`docs/specs/protocol-core-v1.0.yaml` — unchanged), not a new mechanism: the Orchestrator
+SHOULD set both on every DELEGATE it issues, and MUST NOT spawn a sub-agent whose
+estimate would exceed an operator-configured session/task budget — instead it returns a
+synthetic `status: blocked` HANDBACK naming which budget limit was hit, exactly like the
+recursion-limit refusal above, without ever calling the Agent/Task tool. HANDBACK
+`metrics.tokens`/`metrics.cost` (already required core fields) close the loop as input
+to `scripts/handback_rollup.py`'s per-role cost/quality report. **Enforcement:
+orchestrator-self + QE review** — no schema change, no PreToolUse hook change; see
+`docs/PROTOCOL.md` § Cost Guardrail for the full convention and a worked HANDBACK
+example.
+
 ### Tools-Frontmatter Permission Model
 
 The `tools:` key in each agent's source frontmatter (`src/agents/<name>-agent.md`) states

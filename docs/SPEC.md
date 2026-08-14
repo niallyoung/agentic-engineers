@@ -183,6 +183,8 @@ none owns dispatch, scheduling, or supervision:
 | `validate_opencode_config.py` | OpenCode config generation gate |
 | `entropy_detector.py` | Entropy-based credential/secret detector (security gate) |
 | `check-gitconfig-no-tokens.sh` | Pre-commit check for tokens leaking into gitconfig |
+| `handback_rollup.py` | Advisory per-role HANDBACK cost/quality rollup (never gates) |
+| `check_model_registry.py` | Advisory models.dev drift check for LOCKED_MODELS.sh (never gates) |
 
 ### ENFORCEMENT CLAUSE
 
@@ -558,6 +560,14 @@ into `dist/<harness>/` and installed to each harness's home directory.
   `docs/REGRESSION-GATE-POLICY.md`, updated in the same task but not a SPEC.md
   change). Per the spec-management "3a. Self-Authorized Narrow Follow-Up" pattern;
   this Update Log entry is the record (no separate proposal file).
+- **2026-08-14:** [orchestrator commit-curation, tasks
+  task-2026-08-14-backlog4-10-cost-governance + task-2026-08-14-backlog7-modelsdev-advisory,
+  authorized_by: user-directive (backlog round)] Registered two new advisory scripts in
+  the COMPLETE SCRIPT INVENTORY table: `handback_rollup.py` (per-role HANDBACK
+  cost/quality rollup) and `check_model_registry.py` (models.dev drift check for
+  `.githooks/LOCKED_MODELS.sh`). Both advisory-only per the ORCHESTRATOR-FIRST
+  "Python is advisory" clause — they report, never gate. Table-rows-plus-this-entry
+  only; no other SPEC content changed; LOCKED section untouched.
 
 ---
 
