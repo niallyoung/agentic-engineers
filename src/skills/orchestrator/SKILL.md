@@ -74,9 +74,10 @@ on demand, never a gate.
 
 ## Audit Trail
 
-Dispatch happens via the spawn call, and the harness session transcript already
-durably records it — the DELEGATE as the spawn prompt, the HANDBACK as that call's
-result. There is no separate write step:
+Two records, two purposes. Dispatch happens via the spawn call, and the harness
+session transcript already durably records it — the DELEGATE as the spawn prompt, the
+HANDBACK as that call's result; that transcript is what makes a DELEGATE/HANDBACK
+*count* (`docs/SPEC.md` clause 4) and there is no separate write step for that:
 
 ```python
 delegate_block = {
@@ -91,6 +92,23 @@ delegate_block = {
 handback = spawn_agent(agent="engineer", prompt=delegate_block)  # direct spawn = dispatch
 # handback is now available in-context; the transcript is the audit record.
 ```
+
+Separately, `docs/SPEC.md` clause 7 requires a queryable metrics/event log: append one
+JSONL line per lifecycle event to
+`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` via
+`scripts/audit_append.py` — `delegate_issued` + `subagent_spawned` at spawn time,
+`handback_received` + `gate_result` once the HANDBACK is back, `refusal`/
+`limit_exceeded` on a refused spawn, `escalation` when routing one:
+
+```bash
+python3 scripts/audit_append.py --event delegate_issued \
+  --task-id my-task-001 --parent-task-id orchestrator-root --depth 1 \
+  --agent-role engineer --agent-model claude-haiku-4.5 --status success
+```
+
+A failed append (exit 1 or 2, stderr message) is a warning only — log it and continue;
+it never blocks a spawn or a HANDBACK. See `src/AGENTS.md` § Audit Events for the full
+per-role duty table.
 
 ## Applying the HANDBACK
 

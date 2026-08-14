@@ -179,8 +179,9 @@ none owns dispatch, scheduling, or supervision:
 | `validate_opencode_config.py` | OpenCode config generation gate |
 | `entropy_detector.py` | Entropy-based credential/secret detector (security gate) |
 | `check-gitconfig-no-tokens.sh` | Pre-commit check for tokens leaking into gitconfig |
-| `handback_rollup.py` | Advisory per-role HANDBACK cost/quality rollup (never gates) |
+| `handback_rollup.py` | Advisory per-role HANDBACK cost/quality rollup (never gates); `--events` mode reads the clause-7 audit JSONL |
 | `check_model_registry.py` | Advisory models.dev drift check for LOCKED_MODELS.sh (never gates) |
+| `audit_append.py` | Deterministic append helper for the clause-7 audit JSONL — agents invoke it to format/validate/append one event; never gates, never owns dispatch |
 
 ### ENFORCEMENT CLAUSE
 
@@ -564,6 +565,33 @@ into `dist/<harness>/` and installed to each harness's home directory.
   `.githooks/LOCKED_MODELS.sh`). Both advisory-only per the ORCHESTRATOR-FIRST
   "Python is advisory" clause — they report, never gate. Table-rows-plus-this-entry
   only; no other SPEC content changed; LOCKED section untouched.
+- **2026-08-14:** [senior-engineer, task-2026-08-14-implement-audit-jsonl,
+  authorized_by: user-directive (backlog round, ancestry:
+  [task-2026-08-14-backlog-round])] Implemented ORCHESTRATOR-FIRST clause 7 (the
+  append-only audit JSONL), which the clause already specified but nothing in the
+  tree wrote to. Added `scripts/audit_append.py` — the deterministic,
+  stdlib-only append helper (docs/SPEC.md clause 3: advisory Python) agents invoke
+  to format/validate/append one clause-7 event; registered in the COMPLETE SCRIPT
+  INVENTORY table above. Wired the append duty into `src/AGENTS.md` (new § Audit
+  Events under Direct Sub-Agent Spawn Execution Model, recomputed
+  `.agents_verification_sha` accordingly), the Orchestrator and the four
+  spawn-capable role definitions (`src/agents/{orchestrator,senior-engineer,
+  lead-engineer,principal-engineer,security-engineer}-agent.md`), and
+  `src/skills/orchestrator/SKILL.md`'s Audit Trail section. Reconciled
+  transcript-vs-JSONL language in `docs/ENTRYPOINT.md`, `docs/PROTOCOL.md` (new §7a
+  Audit Events (JSONL), Glossary entry, §3.1 clarification), and
+  `docs/CONTRIBUTING/README.md`'s historical note — the transcript remains what
+  makes a DELEGATE/HANDBACK count (clause 4, unchanged, still literally true); the
+  JSONL is an additive, queryable metrics/event log, never a substitute. Gave
+  `scripts/handback_rollup.py` a `--events <path...>` mode (`parse_events()`,
+  `validate_event_record()`) that aggregates `handback_received` events into the
+  same per-role table `--json`/table output already produces from HANDBACK YAML,
+  mixable with positional YAML sources in one invocation. Added
+  `tests/test_audit_append.py` (32 cases) and extended
+  `tests/test_handback_rollup.py` (+9 cases for `--events`). Wire format
+  (`docs/specs/protocol-core-v1.0.yaml`) and `renderer/scripts/claude-delegate-guard.py`
+  untouched; both security-gate strings, the `version:` field, and the LOCKED
+  "Model Naming & Harness Compatibility" section untouched.
 
 ---
 

@@ -131,6 +131,14 @@ Every DELEGATE this agent issues and every HANDBACK it receives is durably recor
 part of the harness session transcript itself — the audit trail for this agent's own
 control flow, with no separate write step.
 
+**Audit Events (SPEC clause 7):** additionally, Senior Engineer appends `delegate_issued`
++ `subagent_spawned` when spawning Engineer (or escalating to Lead/Principal/Security),
+`handback_received` + `gate_result` once that HANDBACK returns, `refusal`/
+`limit_exceeded` if a spawn is refused, and `escalation` when re-delegating an
+ESCALATION packet — via `python3 scripts/audit_append.py --event ... ` (see
+`src/AGENTS.md` § Audit Events). A failed append is a warning only; it never blocks
+the actual work.
+
 ---
 
 ## When to Execute vs. Delegate

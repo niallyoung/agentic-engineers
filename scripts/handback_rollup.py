@@ -14,6 +14,12 @@ see COST_TARGET_DISTRIBUTION below, and `tests/test_handback_rollup.py`'s drift 
 against the live SPEC.md text), each role's actual cost share is printed alongside its
 target for comparison.
 
+As of the SPEC clause-7 audit-JSONL work (`docs/PROTOCOL.md` §7a), this script also
+accepts `--events <path...>`: one or more clause-7 audit JSONL files (written by
+`scripts/audit_append.py`) read instead of, or alongside, HANDBACK YAML sources.
+Only `handback_received` events are aggregated (the other six clause-7 event types are
+silently skipped); see `parse_events()` below and §7a for the full input contract.
+
 ## Advisory-only discipline (docs/SPEC.md clause 3: "Python is advisory only")
 
 This script REPORTS. It never GATES. It does not exit non-zero because of what the
@@ -42,6 +48,11 @@ never treated as malformed.
     python3 scripts/handback_rollup.py session1.yaml session2.yaml
     python3 scripts/handback_rollup.py --json < session.log
     cat session.log | python3 scripts/handback_rollup.py
+
+    # --events mode: read docs/SPEC.md clause-7 audit JSONL instead of (or
+    # alongside) HANDBACK YAML sources — see docs/PROTOCOL.md §7a.
+    python3 scripts/handback_rollup.py --events ~/.agentic-engineers/claude/sess-1/audit/events-2026-08-14.jsonl
+    python3 scripts/handback_rollup.py session1.yaml --events events-2026-08-14.jsonl --json
 
 ## Dependencies
 
@@ -217,6 +228,100 @@ def parse_handbacks(text: str, source: str = "<input>") -> Tuple[List[Dict[str, 
     return records, warnings
 
 
+def validate_event_record(doc: Dict[str, Any]) -> List[str]:
+    """Check the fields this rollup depends on for a `handback_received` audit event.
+
+    Narrower than the clause-7 contract `scripts/audit_append.py` enforces at write
+    time — this only validates the fields the rollup actually consumes (task_id,
+    status, agent_role, and the optional numeric fields).
+    """
+    errors: List[str] = []
+
+    task_id = doc.get("task_id")
+    if not isinstance(task_id, str) or not task_id.strip():
+        errors.append("task_id: required, must be a non-empty string")
+
+    status = doc.get("status")
+    if status not in VALID_STATUSES:
+        errors.append("status: must be one of %s (got %r)" % (sorted(VALID_STATUSES), status))
+
+    role = doc.get("agent_role")
+    if role is not None and not isinstance(role, str):
+        errors.append("agent_role: must be a string when present")
+
+    for key in ("tokens", "cost", "quality", "duration_seconds"):
+        if key in doc and doc[key] is not None and not _is_number(doc[key]):
+            errors.append("%s: must be a number" % key)
+
+    return errors
+
+
+def parse_events(text: str, source: str = "<input>") -> Tuple[List[Dict[str, Any]], List[str]]:
+    """Extract usable `handback_received` records from a clause-7 audit JSONL log.
+
+    Reads one JSON object per line (`docs/SPEC.md` clause 7 format, written by
+    `scripts/audit_append.py`). Only `handback_received` events are aggregated — the
+    other six clause-7 event types (`delegate_issued`, `subagent_spawned`,
+    `gate_result`, `escalation`, `refusal`, `limit_exceeded`) are silently skipped,
+    exactly like a DELEGATE block is silently skipped by `parse_handbacks()`.
+    Malformed lines (invalid JSON, not an object, missing/invalid a required field)
+    are skipped with a warning, never raised — this function never crashes on bad
+    input, same discipline as `parse_handbacks()`.
+
+    `quality` and `duration_seconds` are NOT part of the clause-7 required-field set
+    (see `docs/PROTOCOL.md` §7a) — an event may optionally carry them (e.g. via
+    `audit_append.py --extra`) to mirror the originating HANDBACK's full metrics; when
+    absent they default to 0.0 so the record still fits the same
+    `aggregate()`/`render_table()` shape `parse_handbacks()` produces. This is a known
+    limitation of events-only rollups: a pure clause-7 event log carries no
+    quality/duration signal unless the agent chose to attach it.
+    """
+    records: List[Dict[str, Any]] = []
+    warnings: List[str] = []
+
+    for i, raw_line in enumerate(text.splitlines()):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            doc = json.loads(line)
+        except json.JSONDecodeError as e:
+            warnings.append("%s: line %d: invalid JSON (%s)" % (source, i + 1, str(e)))
+            continue
+
+        if not isinstance(doc, dict):
+            warnings.append("%s: line %d: not a JSON object" % (source, i + 1))
+            continue
+
+        if doc.get("event") != "handback_received":
+            # Not the event type this rollup aggregates — correctly ignored, not a warning.
+            continue
+
+        errors = validate_event_record(doc)
+        if errors:
+            task_id = doc.get("task_id", "<unknown task_id>")
+            warnings.append(
+                "%s: line %d (task_id=%r): malformed handback_received event skipped — %s"
+                % (source, i + 1, task_id, "; ".join(errors))
+            )
+            continue
+
+        role = doc.get("agent_role") or "unknown"
+        records.append({
+            "task_id": doc["task_id"],
+            "status": doc["status"],
+            "agent": str(role),
+            "metrics": {
+                "quality": float(doc.get("quality") or 0.0),
+                "tokens": float(doc.get("tokens") or 0.0),
+                "cost": float(doc.get("cost") or 0.0),
+                "duration_seconds": float(doc.get("duration_seconds") or 0.0),
+            },
+        })
+
+    return records, warnings
+
+
 def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
     """Group records by role and compute count/totals/means. Pure function."""
     groups: Dict[str, List[Dict[str, Any]]] = {}
@@ -329,11 +434,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Aggregate HANDBACK YAML blocks into a per-role cost/quality report. Advisory only — never gates."
     )
-    parser.add_argument("sources", nargs="*", help="Files to read (use '-' or omit for stdin)")
+    parser.add_argument("sources", nargs="*", help="HANDBACK YAML files to read (use '-' or omit for stdin)")
+    parser.add_argument(
+        "--events", nargs="*", default=None,
+        help="clause-7 audit JSONL files to read (docs/PROTOCOL.md §7a) — mixable with positional YAML sources",
+    )
     parser.add_argument("--json", action="store_true", dest="as_json", help="Emit JSON instead of a table")
     args = parser.parse_args(argv)
 
-    sources = args.sources or ["-"]
+    sources = list(args.sources or [])
+    event_sources = list(args.events) if args.events is not None else []
+    if not sources and not event_sources:
+        sources = ["-"]
 
     all_records: List[Dict[str, Any]] = []
     all_warnings: List[str] = []
@@ -344,6 +456,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             print("error: could not read %r: %s" % (source, e), file=sys.stderr)
             return 2
         records, warnings = parse_handbacks(text, source=label)
+        all_records.extend(records)
+        all_warnings.extend(warnings)
+
+    for source in event_sources:
+        try:
+            label, text = _read_source(source)
+        except OSError as e:
+            print("error: could not read %r: %s" % (source, e), file=sys.stderr)
+            return 2
+        records, warnings = parse_events(text, source=label)
         all_records.extend(records)
         all_warnings.extend(warnings)
 

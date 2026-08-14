@@ -630,7 +630,10 @@ a spawned sub-agent's HANDBACK is now returned directly as the result of the Age
 tool call, in-context, with no separate file poller reading it. As of SPEC-2026-009
 (2026-08-13) the filesystem queue itself — and the `enqueue()` calls that used to record
 DELEGATE/HANDBACK to it for audit purposes — no longer exist either; the harness session
-transcript is the sole durable audit record. Neither the removed subprocess seam nor the
+transcript is the durable audit record for protocol validity (a separate, queryable
+JSONL event log for metrics was added afterward per `docs/SPEC.md` clause 7 — see
+`docs/PROTOCOL.md` § Audit Events (JSONL) — but that is additive, not a queue, and not
+what this historical note is about). Neither the removed subprocess seam nor the
 removed queue write path is what this test class covered.
 
 **RESOLVED:** the `test-concurrent` Makefile target and its `quality-gate`

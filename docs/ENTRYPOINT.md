@@ -17,6 +17,11 @@ written to or polled from disk to make a delegation "count." See
 [src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
 for the canonical description.
 
+Separately, agents also append a queryable metrics/event log — one JSONL line per
+lifecycle event, per `docs/SPEC.md` clause 7 — which `scripts/handback_rollup.py` can
+consume directly. That log is additive, not a replacement for the transcript above; see
+[docs/PROTOCOL.md > Audit Events (JSONL)](PROTOCOL.md#7a-audit-events-jsonl).
+
 ---
 
 ## 🎯 How to Use Agentic Engineers
@@ -90,8 +95,10 @@ Per request, the Orchestrator:
 
 **Immediately:** the Orchestrator reports the HANDBACK's outcome back to you in the same
 session — you don't need to watch a directory for it to finish. The DELEGATE and HANDBACK
-themselves live in the harness session transcript; there is no separate audit file to go
-look up.
+themselves live in the harness session transcript; there is no separate file you need to
+read for the *result*. There is a separate, queryable JSONL event log (`docs/SPEC.md`
+clause 7, appended by agents via `scripts/audit_append.py`) if you want metrics/cost
+history instead of the outcome itself — see `scripts/handback_rollup.py --events`.
 
 **Also check:**
 - Generated artifacts (updated specs, reports, code changes)
@@ -147,8 +154,19 @@ result are the record; there is nothing further to `cat`.
 There is no filesystem queue. The durable record of what has been dispatched and what
 has completed is the harness session transcript itself: every DELEGATE appears verbatim
 as a sub-agent spawn's prompt, and every HANDBACK appears verbatim as that spawn call's
-result. Nothing is written to or read from a separate directory, and nothing polls
-anything to decide what to spawn next.
+result. Nothing is written to or read from a separate directory to make dispatch
+*happen*, and nothing polls anything to decide what to spawn next.
+
+**A second, queryable log exists alongside it.** `docs/SPEC.md` clause 7 requires
+agents to append one JSON line per orchestration event (`delegate_issued`,
+`subagent_spawned`, `handback_received`, `gate_result`, `escalation`, `refusal`,
+`limit_exceeded`) to
+`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` via
+`scripts/audit_append.py`. This does not change the model above — the transcript is
+still what makes a DELEGATE/HANDBACK *count*; the JSONL is metrics/event data derived
+from the same events, written so `scripts/handback_rollup.py` and similar tooling can
+query it without re-parsing a transcript. See
+[docs/PROTOCOL.md > Audit Events (JSONL)](PROTOCOL.md#7a-audit-events-jsonl).
 
 ---
 
@@ -186,7 +204,7 @@ transcript is scoped to that session, ensuring isolation by design.
 
 ✅ **All work flows through agents** — no external scripts, cron jobs, or utilities
 ✅ **No direct file manipulation** — only via DELEGATE/HANDBACK protocol
-✅ **Audit trail** — every DELEGATE and HANDBACK is recorded in the harness session transcript, plus spans for observability
+✅ **Audit trail** — every DELEGATE and HANDBACK is recorded in the harness session transcript; agents additionally append per-event JSONL records (`docs/SPEC.md` clause 7)
 ✅ **Escalation path** — for blocked or rework items
 ✅ **Cost tracking** — SPAN files capture tokens and cost per task
 

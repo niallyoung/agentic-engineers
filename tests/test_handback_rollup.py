@@ -25,9 +25,11 @@ from scripts.handback_rollup import (  # noqa: E402
     aggregate,
     iter_candidate_documents,
     main,
+    parse_events,
     parse_handbacks,
     render_json,
     render_table,
+    validate_event_record,
     validate_handback,
 )
 
@@ -191,6 +193,79 @@ metrics:
   cost: 0.01
   duration_seconds: 10
 """
+
+
+# ---------------------------------------------------------------------------
+# --events mode fixtures — clause-7 audit JSONL (docs/PROTOCOL.md §7a),
+# the format scripts/audit_append.py writes.
+# ---------------------------------------------------------------------------
+
+EVENTS_FIXTURE_MIXED_TYPES = "\n".join([
+    json.dumps({
+        "ts": "2026-08-14T10:00:00.000Z", "event": "delegate_issued",
+        "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
+        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:00:05.000Z", "event": "subagent_spawned",
+        "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
+        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:01:00.000Z", "event": "handback_received",
+        "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
+        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+        "tokens": 1500, "cost": 0.04, "quality": 0.92, "duration_seconds": 300,
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:01:01.000Z", "event": "gate_result",
+        "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
+        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:05:00.000Z", "event": "handback_received",
+        "task_id": "ev2-task", "parent_task_id": "root", "depth": 1,
+        "agent_role": "senior-engineer", "agent_model": "claude-sonnet-5", "status": "partial",
+        "tokens": 4200, "cost": 0.15, "quality": 0.6, "duration_seconds": 900,
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:06:00.000Z", "event": "escalation",
+        "task_id": "ev3-task", "parent_task_id": "root", "depth": 2,
+        "agent_role": "senior-engineer", "agent_model": "claude-sonnet-5", "status": "escalate",
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:07:00.000Z", "event": "refusal",
+        "task_id": "ev4-task", "parent_task_id": "root", "depth": 4,
+        "agent_role": "orchestrator", "agent_model": "claude-sonnet-5", "status": "blocked",
+    }),
+    json.dumps({
+        "ts": "2026-08-14T10:08:00.000Z", "event": "limit_exceeded",
+        "task_id": "ev5-task", "parent_task_id": "root", "depth": 3,
+        "agent_role": "orchestrator", "agent_model": "claude-sonnet-5", "status": "blocked",
+    }),
+])
+
+EVENTS_FIXTURE_NO_METRICS = json.dumps({
+    "ts": "2026-08-14T11:00:00.000Z", "event": "handback_received",
+    "task_id": "ev6-bare", "parent_task_id": "root", "depth": 1,
+    "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+})
+
+EVENTS_FIXTURE_WITH_MALFORMED_LINE = "\n".join([
+    json.dumps({
+        "ts": "2026-08-14T12:00:00.000Z", "event": "handback_received",
+        "task_id": "ev7-good", "parent_task_id": "root", "depth": 1,
+        "agent_role": "quality-engineer", "agent_model": "claude-sonnet-5", "status": "success",
+        "tokens": 900, "cost": 0.03,
+    }),
+    "{not valid json at all",
+    json.dumps({
+        "ts": "2026-08-14T12:05:00.000Z", "event": "handback_received",
+        "task_id": "ev8-bad-status", "parent_task_id": "root", "depth": 1,
+        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "complete",
+        "tokens": 100, "cost": 0.01,
+    }),
+])
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +492,99 @@ def test_cli_never_exits_nonzero_for_malformed_content(tmp_path):
     f1.write_text(FIXTURE_6_MALFORMED_INVALID_YAML)
     rc = main([str(f1)])
     assert rc == 0  # advisory-only: bad content is reported, never gates
+
+
+# ---------------------------------------------------------------------------
+# --events mode: parse_events / validate_event_record + CLI --events flag
+# ---------------------------------------------------------------------------
+
+def test_parse_events_only_aggregates_handback_received():
+    records, warnings = parse_events(EVENTS_FIXTURE_MIXED_TYPES)
+    assert warnings == []
+    # 8 lines in the fixture, only 2 are handback_received.
+    assert len(records) == 2
+    task_ids = {r["task_id"] for r in records}
+    assert task_ids == {"ev1-task", "ev2-task"}
+
+
+def test_parse_events_extracts_role_tokens_cost_status():
+    records, _ = parse_events(EVENTS_FIXTURE_MIXED_TYPES)
+    by_task = {r["task_id"]: r for r in records}
+    ev1 = by_task["ev1-task"]
+    assert ev1["agent"] == "engineer"
+    assert ev1["status"] == "success"
+    assert ev1["metrics"]["tokens"] == 1500
+    assert ev1["metrics"]["cost"] == pytest.approx(0.04)
+    assert ev1["metrics"]["quality"] == pytest.approx(0.92)
+    assert ev1["metrics"]["duration_seconds"] == 300
+
+
+def test_parse_events_defaults_missing_quality_duration_to_zero():
+    records, warnings = parse_events(EVENTS_FIXTURE_NO_METRICS)
+    assert warnings == []
+    assert len(records) == 1
+    assert records[0]["metrics"]["quality"] == 0.0
+    assert records[0]["metrics"]["duration_seconds"] == 0.0
+    assert records[0]["metrics"]["tokens"] == 0.0
+
+
+def test_parse_events_malformed_line_skipped_with_warning():
+    records, warnings = parse_events(EVENTS_FIXTURE_WITH_MALFORMED_LINE, source="events.jsonl")
+    # 1 good record, 1 invalid-JSON line, 1 bad-status record — both bad lines warned.
+    assert len(records) == 1
+    assert records[0]["task_id"] == "ev7-good"
+    assert len(warnings) == 2
+    assert any("invalid JSON" in w for w in warnings)
+    assert any("ev8-bad-status" in w and "status" in w for w in warnings)
+    assert all("events.jsonl" in w for w in warnings)
+
+
+def test_validate_event_record_accepts_well_formed():
+    doc = {"task_id": "t1", "status": "success", "agent_role": "engineer",
+           "tokens": 10, "cost": 0.01, "quality": 0.9, "duration_seconds": 5}
+    assert validate_event_record(doc) == []
+
+
+def test_validate_event_record_rejects_bad_status_and_nonstring_role():
+    doc = {"task_id": "t1", "status": "complete", "agent_role": 42}
+    errors = validate_event_record(doc)
+    assert any("status" in e for e in errors)
+    assert any("agent_role" in e for e in errors)
+
+
+def test_cli_events_flag_reads_jsonl(tmp_path, capsys):
+    f = tmp_path / "events-2026-08-14.jsonl"
+    f.write_text(EVENTS_FIXTURE_MIXED_TYPES)
+    rc = main(["--events", str(f)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "engineer" in out
+    assert "senior-engineer" in out
+
+
+def test_cli_mixed_yaml_and_events_sources(tmp_path, capsys):
+    yaml_file = tmp_path / "handback.yaml"
+    yaml_file.write_text(FIXTURE_1_BARE_VALID)
+    events_file = tmp_path / "events.jsonl"
+    events_file.write_text(EVENTS_FIXTURE_MIXED_TYPES)
+    rc = main([str(yaml_file), "--events", str(events_file), "--json"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    # FIXTURE_1 contributes one "engineer" record; events contribute another
+    # "engineer" record (ev1-task) plus one "senior-engineer" record.
+    assert payload["roles"]["engineer"]["count"] == 2
+    assert payload["roles"]["senior-engineer"]["count"] == 1
+
+
+def test_cli_events_only_no_positional_sources_does_not_read_stdin(tmp_path, capsys):
+    # Regression: passing only --events must not fall back to reading stdin for
+    # the (empty) positional `sources` list.
+    f = tmp_path / "events.jsonl"
+    f.write_text(EVENTS_FIXTURE_NO_METRICS)
+    rc = main(["--events", str(f)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "engineer" in out
 
 
 # ---------------------------------------------------------------------------

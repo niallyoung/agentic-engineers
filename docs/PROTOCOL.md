@@ -35,8 +35,15 @@ constructs a DELEGATE block and passes it directly as the prompt of a sub-agent
 spawn (the harness's Agent/Task tool); the HANDBACK returns synchronously as that
 spawn call's result, in-context. The harness session transcript itself (every
 DELEGATE as a spawn prompt, every HANDBACK as that spawn's result) is the durable
-audit record. See [`src/AGENTS.md` > Direct Sub-Agent Spawn Execution
+audit record — this is what makes a DELEGATE/HANDBACK *count* (`docs/SPEC.md`
+clause 4). See [`src/AGENTS.md` > Direct Sub-Agent Spawn Execution
 Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the full flow.
+
+A second, additive record exists alongside it: agents append per-event JSONL to a
+queryable audit log per `docs/SPEC.md` clause 7 — see [§7a Audit Events
+(JSONL)](#7a-audit-events-jsonl). It does not change the paragraph above; it is a
+metrics/event log derived from the same events, not an alternate way for a
+DELEGATE/HANDBACK to "count."
 
 ### Why It Matters
 
@@ -197,10 +204,14 @@ None of these layers enforces the *calling* agent's role, ancestry, spawn depth,
 fan-out count — that is the spawning agent's own judgment call per
 [Recursion Limits](../src/AGENTS.md#recursion-limits) in `src/AGENTS.md`.
 
-There is no filesystem queue and no `enqueue()` gateway — the durable audit record is
-the harness session transcript itself (every DELEGATE as a spawn prompt, every HANDBACK
-as that spawn's result), not a separately-written file. The `protocol-validator` skill
-remains the way to validate a DELEGATE/HANDBACK dict or file on demand, in-process.
+There is no filesystem queue and no `enqueue()` gateway — the durable audit record for
+protocol validity is the harness session transcript itself (every DELEGATE as a spawn
+prompt, every HANDBACK as that spawn's result), not a separately-written file. (A
+separate, queryable JSONL event log does exist per `docs/SPEC.md` clause 7 — [§7a Audit
+Events (JSONL)](#7a-audit-events-jsonl) — but none of these three validation layers read
+or write it; it is a metrics/event record, not part of DELEGATE/HANDBACK enforcement.)
+The `protocol-validator` skill remains the way to validate a DELEGATE/HANDBACK dict or
+file on demand, in-process.
 
 ### 3.2 Common Mistakes
 
@@ -367,6 +378,57 @@ python3 scripts/handback_rollup.py session1.yaml session2.yaml
 python3 scripts/handback_rollup.py --json < session.log
 ```
 
+`scripts/handback_rollup.py` also accepts `--events <path...>`, reading the clause-7
+JSONL audit log described in [§7a](#7a-audit-events-jsonl) instead of (or alongside)
+HANDBACK YAML sources — see that section for details.
+
+---
+
+## 7a. Audit Events (JSONL)
+
+**Two records, two purposes.** [§1](#1-what-this-protocol-is)'s transcript-as-audit-record
+model is unchanged by this section: the harness session transcript is still what makes
+a DELEGATE/HANDBACK *count*, and nothing here alters that. `docs/SPEC.md` clause 7
+requires a **second, additive** record: a queryable, append-only JSONL event log,
+written by agents, that tooling can consume without re-parsing a session transcript.
+
+**Path:** `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`
+— one JSON object per line, append-only. Agents append; they MUST NOT rewrite,
+reorder, truncate, or delete prior lines. Corrections are new events, never edits.
+
+**Required events:** `delegate_issued`, `subagent_spawned`, `handback_received`,
+`gate_result`, `escalation`, `refusal`, `limit_exceeded`.
+
+**Required fields on every event:** `ts` (ISO-8601 UTC, computed by the append helper
+— never trusted from caller input), `event`, `task_id`, `parent_task_id` (may be
+`null` for a root-level event, but the key is always present), `depth`, `agent_role`,
+`agent_model`, `status`, plus `tokens`/`cost` where applicable.
+
+**The append helper:** `scripts/audit_append.py` (`docs/SPEC.md` § COMPLETE SCRIPT
+INVENTORY) is the deterministic, stdlib-only utility agents invoke to format, validate,
+and append one event. It is advisory Python under [§1](#1-what-this-protocol-is)'s
+"Python is advisory only" rule (`docs/SPEC.md` clause 3): the agent decides *when* and
+*what* to log; the helper owns formatting/validation/the actual append.
+
+```bash
+python3 scripts/audit_append.py --event delegate_issued \
+  --task-id my-task-001 --parent-task-id orchestrator-root --depth 1 \
+  --agent-role engineer --agent-model claude-haiku-4.5 --status success
+```
+
+**Validation is the one permitted failure mode.** An unknown `event` name or a missing
+required field is rejected — exit 2, a clear stderr message. Any other failure (e.g. an
+unwritable audit directory) exits 1. Either way, this is a **warning, never a
+blocker**: a failed append MUST NOT stop a DELEGATE, a spawn, or a HANDBACK from
+proceeding. See `src/AGENTS.md` § Audit Events for the full per-role duty table (which
+role appends which events at which lifecycle point).
+
+**Consuming it:** `scripts/handback_rollup.py --events <path...>` reads this format
+directly, aggregating `handback_received` events' `agent_role`/`tokens`/`cost`/`status`
+fields into the same per-role report [§7](#7-handback-cost-rollup) produces from
+HANDBACK YAML — the two input modes can be mixed in one invocation. Advisory-only, same
+as the rest of §7: it reports, it never gates.
+
 ---
 
 ## 8. Glossary
@@ -376,7 +438,8 @@ python3 scripts/handback_rollup.py --json < session.log
 | **DELEGATE** | Structured message transferring a task from a spawning agent to a specialist agent |
 | **HANDBACK** | Structured result message returned by a specialist agent, in-context, as its spawn call's result |
 | **ESCALATION packet** | Block embedded in a HANDBACK's `escalation:` key when `status: escalate`, naming the target role and carrying findings-so-far |
-| **Audit trail** | The harness session transcript itself — every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result; there is no separate filesystem record |
+| **Audit trail** | Two records: the harness session transcript (every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result) is what makes a DELEGATE/HANDBACK count — no separate file needed for that; a second, additive JSONL event log ([§7a](#7a-audit-events-jsonl)) is a queryable metrics/event record agents append via `scripts/audit_append.py` per `docs/SPEC.md` clause 7 |
+| **Audit Events JSONL** | The clause-7 append-only event log at `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` — see [§7a](#7a-audit-events-jsonl) |
 | **`ancestry`** | Root-to-parent role chain on a DELEGATE, used for cycle detection and max-depth enforcement |
 | **`metrics.quality`** | Self-reported (and optionally QE-reviewed) delivery quality, 0.0–1.0 |
 | **Core fields** | Required DELEGATE/HANDBACK fields, strictly validated |
@@ -396,4 +459,6 @@ python3 scripts/handback_rollup.py --json < session.log
 - [`docs/CORE-PROTOCOL-QUICKSTART.md`](CORE-PROTOCOL-QUICKSTART.md) — a 30-minute
   quickstart covering only the core-field subset
 - [`scripts/handback_rollup.py`](../scripts/handback_rollup.py) — the HANDBACK cost
-  rollup script (§7)
+  rollup script (§7), including its `--events` JSONL mode (§7a)
+- [`scripts/audit_append.py`](../scripts/audit_append.py) — the clause-7 audit event
+  append helper (§7a)

@@ -463,6 +463,44 @@ orchestrator-self + QE review** — no schema change, no PreToolUse hook change;
 `docs/PROTOCOL.md` § Cost Guardrail for the full convention and a worked HANDBACK
 example.
 
+### Audit Events
+
+`docs/SPEC.md` clause 7 requires a separate, queryable event log alongside the
+transcript: an append-only JSONL at
+`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`. This is
+additive to — not a replacement for — the transcript-as-audit-record model above: the
+transcript remains what makes a DELEGATE/HANDBACK *count* (clause 4); the JSONL is the
+metrics/event record `scripts/handback_rollup.py` and other tooling can query without
+re-parsing a session transcript. Agents append to it directly via
+`scripts/audit_append.py` (`docs/SPEC.md` § COMPLETE SCRIPT INVENTORY) — a pure,
+stdlib-only formatting/validation helper (clause 3: advisory Python), never a control-flow
+owner.
+
+**Who appends what, when** (every role in the table below, for its own spawns):
+- **`delegate_issued`** + **`subagent_spawned`** — appended when constructing and then
+  issuing a DELEGATE via a direct sub-agent spawn (both fire together, at spawn time).
+- **`handback_received`** + **`gate_result`** — appended once the HANDBACK comes back
+  as the spawn call's result (`gate_result` records how the spawning agent applied the
+  HANDBACK's `status` — see [Applying the HANDBACK](#full-flow)).
+- **`refusal`** / **`limit_exceeded`** — appended instead of `subagent_spawned` when a
+  spawn is refused (depth/fan-out/cycle/budget — see Recursion Limits and Cost
+  Guardrail above); the Agent/Task tool is never called.
+- **`escalation`** — appended when re-delegating an ESCALATION packet at a higher tier.
+
+Invocation is a single CLI call per event, e.g.:
+
+```bash
+python3 scripts/audit_append.py --event delegate_issued \
+  --task-id my-task --parent-task-id orchestrator-root --depth 1 \
+  --agent-role senior-engineer --agent-model claude-sonnet-5 --status success
+```
+
+**Failures are warnings, never blockers.** `audit_append.py` exits 2 only for a
+malformed event (unknown `event` name or a missing required field per clause 7); any
+other failure (e.g. an unwritable audit directory) exits 1. Either way, the spawning
+agent notes the failure and proceeds with its actual work — a failed audit append MUST
+NOT stop a DELEGATE, a spawn, or a HANDBACK from being applied.
+
 ### Tools-Frontmatter Permission Model
 
 The `tools:` key in each agent's source frontmatter (`src/agents/<name>-agent.md`) states

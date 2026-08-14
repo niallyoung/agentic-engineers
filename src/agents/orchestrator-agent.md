@@ -187,6 +187,15 @@ request), and it spawns every specialist directly, one at a time or in parallel.
    concurrent (see `src/AGENTS.md` § Recursion Limits), and issues `ancestry`-tagged
    DELEGATEs so downstream re-delegation can detect cycles and depth violations.
 
+**Audit Events (SPEC clause 7):** additionally, as the root of every delegation chain
+the Orchestrator appends `delegate_issued` + `subagent_spawned` at each spawn,
+`handback_received` + `gate_result` once each HANDBACK returns, `refusal`/
+`limit_exceeded` when it refuses a spawn (recursion/fan-out/cycle/budget), and
+`escalation` when re-delegating an ESCALATION packet at a higher tier — via `python3
+scripts/audit_append.py --event ... ` (see `src/AGENTS.md` § Audit Events and
+`src/skills/orchestrator/SKILL.md` § Audit Trail). A failed append is a warning only;
+it never blocks routing or dispatch.
+
 **This agent's frontmatter grants `spawn_subagent`** (see `src/AGENTS.md` §
 Tools-Frontmatter Permission Model) — it is the root of every delegation chain and must
 be able to route to any specialist, including re-delegating ESCALATION packets at a
