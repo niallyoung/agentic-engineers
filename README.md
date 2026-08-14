@@ -33,6 +33,16 @@ The framework is built to be **minimal, portable, and self-reducing**:
 
 Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy frameworks** (LangGraph, CrewAI) handle durable distributed runtime; **light SDKs** (OpenAI Agents, PydanticAI) offer minimal abstraction; **markdown-first harness** (ours) routes and coordinates work across coding CLIs (Claude, Copilot, Codex, Gemini). Unlike content marketplaces (wshobson/agents, obra/superpowers), we ship a **routing protocol with structured handoff and metrics** — not just agent/skill definitions. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) for the full ecosystem mapping, standards alignment, and why harnesses are commoditizing the layers beneath us. The protocol is specified for reuse at [docs/specs/DELEGATE-HANDBACK.md](docs/specs/DELEGATE-HANDBACK.md), independent of this repository's specific roster.
 
+## Standards Compliance
+
+| Standard | Status | Evidence |
+|----------|--------|----------|
+| **Agent Skills** (agentskills.io SKILL.md) | Conformant | All 6 skills audited 2026-08-14; zero deltas. Validated continuously by `renderer/validate_skills.py`. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Bonus-Task Backlog row 2. |
+| **AGENTS.md** (agents.md convention) | Ready (spec unreleased) | Per-harness AGENTS.md files emitted; user-authored nested AGENTS.md preserved on re-render. AAIF v1.0 spec under 2026 roadmap, not yet released — CI probe stub ready for validator arrival. See [docs/RENDERING.md](docs/RENDERING.md) §AGENTS.md v1.0 Readiness and `tests/test_agents_md_nesting.py`. |
+| **DELEGATE/HANDBACK** (task handoff) | Published (ours) | Standalone, vendor-neutral protocol specification published at [docs/specs/DELEGATE-HANDBACK.md](docs/specs/DELEGATE-HANDBACK.md) with normative schema [docs/specs/protocol-core-v1.0.yaml](docs/specs/protocol-core-v1.0.yaml). No external standard exists in this coordination layer. |
+| **MCP** (Model Context Protocol) | Not applicable (complementary) | Tool-layer standard; MCP handles agent↔tool calls. DELEGATE/HANDBACK operates at agent↔agent layer — orthogonal concerns. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Standards Alignment. |
+| **A2A** (Agent-to-Agent Protocol) | Not applicable (orthogonal) | Service-layer protocol for agent-to-service calls. Our in-process spawn model is not a service mesh. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Standards Alignment. |
+
 ## The Roster
 
 Eight roles: **Orchestrator** (routing, `claude-sonnet-5`), **Engineer** (well-scoped

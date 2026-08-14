@@ -73,6 +73,8 @@ Widespread portability in 2026 means:
 
 We **do not** adopt A2A (service-to-service, irrelevant to our in-process spawn model).
 
+**Compliance summary:** See [README.md § Standards Compliance](../README.md#standards-compliance) for a status table of each standard.
+
 ---
 
 ## Validation of the self-reduction thesis
