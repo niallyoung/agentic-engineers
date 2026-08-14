@@ -290,6 +290,30 @@ def test_compute_ts_format():
 
 
 # ---------------------------------------------------------------------------
+# resolves_task_id: optional field for linking remediation chains
+# ---------------------------------------------------------------------------
+
+def test_resolves_task_id_present_and_included(capsys):
+    rc = main(["--event", "handback_received", "--dry-run", "--resolves-task-id", "task-2026-08-14-original"] + BASE_ARGS)
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["resolves_task_id"] == "task-2026-08-14-original"
+
+
+def test_resolves_task_id_absent_and_omitted(capsys):
+    rc = main(["--event", "gate_result", "--dry-run"] + BASE_ARGS)
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out)
+    assert "resolves_task_id" not in out
+
+
+def test_resolves_task_id_malformed_rejected(capsys):
+    rc = main(["--event", "escalation", "--dry-run", "--resolves-task-id", ""] + BASE_ARGS)
+    assert rc == 2
+    assert "resolves_task_id" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
 # Real (non-dry-run) filesystem write failure is a warning, not a crash
 # ---------------------------------------------------------------------------
 

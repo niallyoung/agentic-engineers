@@ -5,7 +5,7 @@ license: Proprietary
 compatibility: agentic-engineers framework v5.10+
 metadata:
   author: agentic-engineers
-  version: "1.0.0"
+  version: "1.0.1"
   category: meta-skill
   role: quality-engineer
   model: claude-sonnet-5
@@ -78,8 +78,9 @@ ledger[task_id] = {
 Check for incomplete state machines:
 
 **Orphaned/Unfinished:**
-- `delegate_issued` + `subagent_spawned` exist, but `handback_received` is missing
-- This blocks reconciliation; the subagent is presumed active or crashed
+- A `delegate_issued` event exists, but no `handback_received` follows it
+- `subagent_spawned` (if present) is corroboration; orphan detection keys off `delegate_issued` alone, not the presence of a spawn event (maiden run: 5 of 7 real dispatches lacked `subagent_spawned` in the ledger; a check requiring it would have missed them)
+- This blocks reconciliation; the task is presumed active, in flight, or crashed
 - **Action:** If orphaned for > 30 minutes: escalate to orchestrator or mark `status: requires-recovery`
 
 **Unfinalized Acceptance:**
@@ -89,7 +90,8 @@ Check for incomplete state machines:
 
 **Dropped Work:**
 - Status `failure`, `blocked`, or `escalate` with NO subsequent re-route/re-issue/rework event
-- Orphaned escalation (e.g., escalated to Lead Engineer but no evidence of re-delegation)
+- A task is only classified as DROPPED if no remediation is found via (checked in order): (i) a later event carrying `resolves_task_id` pointing at it (the new optional field; see SPEC.md clause 7); (ii) heuristic — a subsequent `delegate_issued` sharing `parent_task_id` within ~30 minutes whose role plausibly remediates (engineer/senior-engineer after a quality-engineer failure, or lead-engineer after a senior-engineer escalation); (iii) git-log cross-check for commit messages citing both task_ids.
+- **Example (false positive remediation):** Maiden run found final-consistency-audit (QE task) marked as DROPPED, but audit-findings-fixes (engineer task) remediated it 57ms later under a different task_id — linkage visible only in the commit message, caught by check (iii) above.
 - **Action:** Audit the escalation path; verify the owner knows about it
 
 **Unvisited Refusal:**
@@ -131,6 +133,7 @@ findings:
   dropped_work: [list]
   unvisited_refusals: [list]
   unvisited_limit_breaches: [list]
+  ledger_integrity: [list]
   orphaned_artifacts: [list]
 
 summary: |
@@ -155,6 +158,8 @@ When run over a completed branch (not the live session), audit-trail-review ALSO
 These are **secondary** — invoked only on request or as part of a pre-merge audit, not the default session-ledger procedure.
 
 ## Invocation
+
+**Illustrative command shape — no CLI implementation exists; follow the Procedure steps manually.**
 
 ### Live Session (default)
 
@@ -237,7 +242,7 @@ findings: [detailed list per mandate, see Campaign Audit section]
 
 3. **Single-Session Constraint** — Never enumerate sibling sessions or other harnesses; this prevents conflating unrelated work.
 
-4. **30-Minute Orphan Threshold** — Delegations orphaned for < 30 min may still be in flight; > 30 min is presumed a crash or hang.
+4. **30-Minute Orphan Threshold** — Delegations orphaned for < 30 minutes may still be in flight; > 30 minutes is presumed a crash or hang. The threshold is measured against the auditor's own wall clock at run time (`date -u`), not the ledger file's mtime.
 
 5. **Severity Ranking:**
    - **CRITICAL** (blocks session): unfinalized acceptance, unrecoverable orphan (> 60 min)

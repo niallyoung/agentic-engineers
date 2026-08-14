@@ -85,9 +85,10 @@ Orchestrator's own agent context, not in external tooling or background processe
    events: `delegate_issued`, `subagent_spawned`, `handback_received`, `gate_result`,
    `escalation`, `refusal`, `limit_exceeded`; required fields: `ts` (ISO-8601 UTC),
    `event`, `task_id`, `parent_task_id`, `depth`, `agent_role`, `agent_model`, `status`,
-   and token/cost fields where applicable. Agents append; they MUST NOT rewrite, reorder,
-   truncate, or delete prior lines — corrections are new events, never edits. No metric may
-   be reported that is not grounded in a logged event.
+   and token/cost fields where applicable. An optional `resolves_task_id` MAY link a
+   remediation event chain to the failed/blocked task it addresses. Agents append; they
+   MUST NOT rewrite, reorder, truncate, or delete prior lines — corrections are new events,
+   never edits. No metric may be reported that is not grounded in a logged event.
 8. **No External Scripts, Tools, or Cron Jobs (Agent Operations).** No Python owns queue
    management, dispatch, scheduling, or supervision; no Makefile targets for Orchestrator
    operations; no shell scripts for queue automation; no cron jobs, daemons, or background
@@ -704,6 +705,27 @@ into `dist/<harness>/` and installed to each harness's home directory.
   `make render-all` → all 4 harnesses valid; `pytest tests/ -q` → baseline count
   updated honestly. Per the engineer self-authorized narrow-follow-up pattern;
   this Update Log entry is the record (no separate proposal file).
+- **2026-08-14:** [engineer, task-2026-08-14-atr-findings-fixes,
+  authorized_by: user-directive (2026-08-14-backlog-round), ancestry:
+  [task-2026-08-14-backlog-round, task-2026-08-14-atr-first-run]] Fixed
+  audit-trail-review skill findings from maiden run: (a) SKILL.md v1.0.0 → 1.0.1
+  incorporating 5 QE critiques: Dropped Work disambiguation procedure (check
+  resolves_task_id, then heuristic delegate_issued within 30 min, then git-log);
+  Orphan detection keys off delegate_issued alone (not subagent_spawned);
+  Invocation section relabeled as illustrative-only; Report schema adds sixth
+  category LEDGER-INTEGRITY; Operating Rule 4 clarifies 30-min threshold is
+  measured against auditor's wall clock, not ledger mtime; maiden-run false-positive
+  example added (final-consistency-audit remediated 57ms later by different task_id);
+  (b) audit_append.py adds optional `--resolves-task-id <task_id>` argument,
+  validated as plausible task-id string when present, omitted otherwise;
+  required fields and enum unchanged; +3 tests cover present/absent/malformed cases;
+  (c) handback_rollup.py compat verified: validate_event_record() tolerates new
+  field (no whitelist change needed); (d) docs: SPEC.md clause 7 + one-liner in
+  Update Log (this entry); PROTOCOL.md §7a + one-liner. All changes: SKILL.md,
+  audit_append.py, tests/test_audit_append.py, docs/SPEC.md, docs/PROTOCOL.md.
+  Verification: pytest tests/test_audit_append.py tests/test_handback_rollup.py -q green;
+  pytest -q green (baseline +3); python3 renderer/validate_skills.py 7/7;
+  dry-run demo: audit_append --resolves-task-id shown. No commits.
 
 ---
 

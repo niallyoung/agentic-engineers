@@ -14,7 +14,14 @@ invokes at each lifecycle point it owns (see `src/AGENTS.md` § Direct Sub-Agent
 Execution Model § Audit Events for which role appends which events). The AGENT decides
 *when* and *what* to log; this script owns *formatting, validation, and the actual
 append* — the same division of labor the old (now-removed) `enqueue()` had between
-caller and queue helper, per `docs/SPEC.md` clause 8 ("advisory Python").
+caller and queue helper, per `docs/SPEC.md` clause 3 ("advisory Python").
+
+## Optional `resolves_task_id` field
+
+An optional `--resolves-task-id` argument MAY be passed to link a remediation event
+chain to the failed/blocked task it addresses. This field is validated as a plausible
+task_id string when present; when absent, it is simply omitted from the JSON. All
+required schema and event enum remain unchanged.
 
 ## The one permitted failure mode
 
@@ -94,6 +101,8 @@ ALLOWED_EVENTS = {
 REQUIRED_KEYS = ("task_id", "parent_task_id", "depth", "agent_role", "agent_model", "status")
 
 _NUMERIC_OPTIONAL_KEYS = ("tokens", "cost")
+
+_STRING_OPTIONAL_KEYS = ("resolves_task_id",)
 
 _SAFE_PATH_COMPONENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -199,6 +208,11 @@ def validate_event(doc: Dict[str, Any]) -> List[str]:
         if key in doc and doc[key] is not None and not _is_number(doc[key]):
             errors.append("%s: must be a number" % key)
 
+    if "resolves_task_id" in doc:
+        rtid = doc["resolves_task_id"]
+        if rtid is not None and (not isinstance(rtid, str) or not rtid.strip()):
+            errors.append("resolves_task_id: must be a non-empty string or omitted")
+
     return errors
 
 
@@ -265,6 +279,8 @@ def _build_doc_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         doc["tokens"] = args.tokens
     if args.cost is not None:
         doc["cost"] = args.cost
+    if args.resolves_task_id is not None:
+        doc["resolves_task_id"] = args.resolves_task_id
     return doc
 
 
@@ -284,6 +300,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--status")
     parser.add_argument("--tokens", type=float)
     parser.add_argument("--cost", type=float)
+    parser.add_argument("--resolves-task-id", help="Optional task_id this event resolves (links remediation chains)")
     parser.add_argument("--extra", help="JSON object string merged into the event as additional fields")
     parser.add_argument("--dry-run", action="store_true", help="Print the JSON line without writing it")
     parser.add_argument("--base-dir", help="Override the ~/.agentic-engineers base directory (mainly for tests)")

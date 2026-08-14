@@ -402,7 +402,8 @@ reorder, truncate, or delete prior lines. Corrections are new events, never edit
 **Required fields on every event:** `ts` (ISO-8601 UTC, computed by the append helper
 — never trusted from caller input), `event`, `task_id`, `parent_task_id` (may be
 `null` for a root-level event, but the key is always present), `depth`, `agent_role`,
-`agent_model`, `status`, plus `tokens`/`cost` where applicable.
+`agent_model`, `status`, plus `tokens`/`cost` where applicable. An optional `resolves_task_id`
+field MAY link a remediation event chain to the failed/blocked task it addresses.
 
 **The append helper:** `scripts/audit_append.py` (`docs/SPEC.md` § COMPLETE SCRIPT
 INVENTORY) is the deterministic, stdlib-only utility agents invoke to format, validate,
