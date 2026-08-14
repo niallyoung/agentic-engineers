@@ -30,8 +30,9 @@ as the sub-agent prompt, receive the HANDBACK as the spawn result.
 4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result — the
    session transcript already durably records both the DELEGATE and the HANDBACK, so
    there is no separate bookkeeping step
-5. **Apply the routing decision** on the HANDBACK's `status` (success/partial/blocked/escalate)
-6. **Pause** when no DELEGATEs are pending and no spawns are outstanding
+5. **Verify** (MANDATORY for Engineer HANDBACKs — see below) before accepting/gating it
+6. **Apply the routing decision** on the HANDBACK's `status` (success/partial/blocked/escalate)
+7. **Pause** when no DELEGATEs are pending and no spawns are outstanding
 
 ## Routing Decision Tree
 
@@ -109,6 +110,23 @@ python3 scripts/audit_append.py --event delegate_issued \
 A failed append (exit 1 or 2, stderr message) is a warning only — log it and continue;
 it never blocks a spawn or a HANDBACK. See `src/AGENTS.md` § Audit Events for the full
 per-role duty table.
+
+## Engineer HANDBACK Verification (MANDATORY)
+
+Before accepting an Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before step 6 above —
+independently check:
+
+1. **Phantom-success check** — claimed file changes exist on disk / in `git status`.
+2. **Governance-scope check** — no file outside the DELEGATE's ownership list changed,
+   and no governed baseline (LOCKED sections, regression floors,
+   `.agents_verification_sha`) was modified without granted authority.
+3. **Self-reported test-failure check** — a test failure the HANDBACK calls "expected" or
+   "pre-existing" is never accepted on self-report alone; it needs your own reproduction
+   or a `quality-engineer` sign-off.
+
+Failing any check means rework or re-route, not acceptance. See `src/AGENTS.md` §
+Engineer HANDBACK Verification (MANDATORY) for the full rationale and canonical wording —
+this is a condensed pointer, not a second source of truth.
 
 ## Applying the HANDBACK
 

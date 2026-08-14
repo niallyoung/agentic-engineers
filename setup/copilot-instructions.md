@@ -121,7 +121,7 @@ These rules apply to ALL agents, ALL roles, ALL tasks:
 - **ALWAYS:** Create clear plan before implementing, document architectural decisions
 - **Escalate if:** Cross-team impact, long-term strategy, security/compliance question
 
-### Lead Engineer (Sonnet, Max Effort)
+### Lead Engineer (Sonnet, High Effort)
 - **Task:** Code review, quality gate verification, medium-to-complex planning, mentoring
 - **NEVER:** Accept low-quality HANDBACK, merge code that fails Tier 1 gates, skip escalation rules
 - **ALWAYS:** Verify QUALITY.md checklist before accepting (Tier 1/2/3)

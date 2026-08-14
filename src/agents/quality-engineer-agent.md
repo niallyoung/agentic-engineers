@@ -68,6 +68,18 @@ sub-agent itself. This is what actually enforces the depth bound at the validati
 
 ---
 
+## Sign-Off on Self-Classified Test Failures
+
+Per `src/AGENTS.md` § Engineer HANDBACK Verification (MANDATORY), an Engineer HANDBACK
+that classifies a test failure as "expected" or "pre-existing" cannot be accepted on that
+self-report alone — the spawning agent must either reproduce the failure itself or obtain
+a Quality Engineer sign-off. Quality Engineer owns that sign-off: when spawned to review
+such a HANDBACK, independently reproduce (or otherwise confirm) the claimed failure
+before agreeing it is expected/pre-existing rather than a regression introduced by the
+work under review, and record the determination in the HANDBACK's `validation_checklist`.
+
+---
+
 ## Validation Checklist
 
 - ✅ Spec compliance (matches requirements?)

@@ -39,7 +39,7 @@ switch process.
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
 | **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
 | **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-5 | max | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Lead Engineer** | claude-sonnet-5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
 | **Principal Engineer** | claude-opus-5 | high | opus-5 (default) \| 4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
 | **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
 | **Model Engineer** | claude-sonnet-5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
@@ -424,6 +424,32 @@ separate audit file.
 **Applying the HANDBACK:** `success` → mark done in `TODO.md`; `partial` → re-delegate the
 remainder (direct spawn); `blocked` → surface to the user with the blocker; `escalate` →
 re-delegate the ESCALATION block at the higher tier (direct spawn).
+
+### Engineer HANDBACK Verification (MANDATORY)
+
+Three self-reported "expected"/"pre-existing" test-failure classifications on 2026-08-13/
+14 turned out wrong and were only caught downstream — this codifies the catch as a
+standing duty rather than relying on it happening again by luck. Before accepting any
+Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before treating it as `success` and moving
+on per the table above — the spawning agent MUST independently verify:
+
+1. **Phantom-success check.** Every file change the HANDBACK claims actually exists on
+   disk / shows in `git status` or `git diff`. A HANDBACK claiming work that isn't there
+   is not a `success`, regardless of its stated `status`.
+2. **Governance-scope check.** No file outside the DELEGATE's ownership list changed, and
+   no governed baseline (LOCKED sections, regression floors, `.agents_verification_sha`)
+   was modified without the authority that DELEGATE explicitly granted.
+3. **Self-reported test-failure check.** Any test failure the HANDBACK classifies as
+   "expected" or "pre-existing" is never accepted on self-report alone — it requires
+   either the verifying agent's own reproduction of that failure or a Quality Engineer
+   sign-off (see `src/agents/quality-engineer-agent.md`).
+
+A HANDBACK that fails any of these checks does not get accepted as `success` — it
+triggers rework (re-delegate to the same agent with the discrepancy named) or re-route
+(escalate to a higher tier), per the existing quality-gate convention above. This duty
+applies to Engineer HANDBACKs specifically because Engineer is the framework's
+lowest-scrutiny, highest-fan-out tier; it does not relax the general "verify before
+accepting" expectation that applies when any HANDBACK is accepted at face value.
 
 ### Recursion Limits
 

@@ -19,7 +19,7 @@ If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `ag
 
 **Role**: Lead Engineer
 **Model**: claude-sonnet-5
-**Effort**: max
+**Effort**: high
 **Purpose**: Code review, architectural guidance, medium-complexity planning. Provides quality assurance and design feedback.
 
 ---

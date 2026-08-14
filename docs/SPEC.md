@@ -203,7 +203,7 @@ decision tree below to delegate to specialists.
 | **Orchestrator** | claude-sonnet-5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
 | **Engineer** | claude-haiku-4.5 | high | Execute well-scoped tasks with pre-written plans |
 | **Senior Engineer** | claude-sonnet-5 | high | Complex coding without a plan; diagnosis; planning |
-| **Lead Engineer** | claude-sonnet-5 | max | Code review; quality verification; unblock stuck tasks |
+| **Lead Engineer** | claude-sonnet-5 | high | Code review; quality verification; unblock stuck tasks |
 | **Quality Engineer** | claude-sonnet-5 | medium | Tier 1 quality checks; model suitability assessment |
 | **Principal Engineer** | claude-opus-5 | high | Cross-service architecture; complex multi-step planning |
 | **Security Engineer** | claude-fable-5 | max | Security analysis; vulnerability audits; threat modeling (defensive-scope only, see LOCKED model section) |
@@ -334,6 +334,11 @@ this constraint).
 | **Medium** | Moderate | Bugs with clear root cause, standard features, security fixes | Balanced: explain what changed, why, test verification |
 | **High** | Standard | Complex bugs, architectural changes, security hardening | Deep reasoning, multiple approaches considered, thorough testing |
 | **Max** | Unconstrained | CI failures with unclear root cause, major refactors, advanced analysis | Full exploration and validation, no cost/time constraints |
+
+Effort tiers are comparable only *within* the same model tier — a higher effort level on
+a lower-capability model does not outrank a lower effort level on a higher-capability
+model (e.g. Lead Engineer's `claude-sonnet-5`/high is not "more effort" than Security
+Engineer's `claude-fable-5`/max in any cross-model sense; the two axes are independent).
 
 ---
 
@@ -640,6 +645,32 @@ into `dist/<harness>/` and installed to each harness's home directory.
   `src/agents/lead-engineer-agent.md` frontmatter + body,
   `config/FRAMEWORK-MANIFEST.yaml`, `tests/test_agents_table_parity.py`
   fixture) land in the same task. Per the spec-management "3a.
+  Self-Authorized Narrow Follow-Up" pattern; this Update Log entry is the
+  record (no separate proposal file).
+- **2026-08-14:** [senior-engineer, task-2026-08-14-lead-high-plus-verify-duty,
+  authorized_by: user-directive (2026-08-14), ancestry:
+  [task-2026-08-14-backlog-round]] Effort correction, per the accepted
+  model-engineer review (task-2026-08-14-roster-mix-review): Lead Engineer's
+  effort lands at `high`, not `max` — the model stays `claude-sonnet-5`, so
+  this touches only the Core Architecture roster table (line ~206, not the
+  LOCKED "Model Naming & Harness Compatibility" section) plus the
+  non-LOCKED Effort Levels section, which gains a one-line note that effort
+  tiers are comparable only within the same model tier (a higher effort on a
+  lower-tier model does not outrank a higher-tier model — e.g. Lead
+  Engineer's sonnet-5/high vs. Security Engineer's fable-5/max). The
+  review also found that the Role Definitions prose for Lead Engineer
+  (`src/AGENTS.md` ~line 182) already read `high` and was never updated to
+  `max` in the immediately preceding entry above — this correction brings
+  the roster table into agreement with that prose rather than the reverse.
+  This finalizes the 2026-08-14 Lead Engineer sequence: `claude-sonnet-5`/
+  `high`, per the model-engineer recommendation. Companion edits outside
+  this document (`src/AGENTS.md` roster row, `src/agents/lead-engineer-agent.md`
+  effort line, `config/FRAMEWORK-MANIFEST.yaml`, `setup/copilot-instructions.md`
+  heading, `tests/test_agents_table_parity.py` fixture) land in the same task,
+  alongside an unrelated companion change (mandatory Engineer-HANDBACK
+  independent-verification duty, codified in `src/AGENTS.md`,
+  `src/skills/orchestrator/SKILL.md`, and `src/agents/quality-engineer-agent.md`
+  — process-only, no SPEC.md content). Per the spec-management "3a.
   Self-Authorized Narrow Follow-Up" pattern; this Update Log entry is the
   record (no separate proposal file).
 
