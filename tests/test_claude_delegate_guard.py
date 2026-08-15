@@ -241,6 +241,75 @@ success_criteria:
         assert ">=15 words" in decision["permissionDecisionReason"]
 
 
+class TestDepthAndAncestryOptionalFields:
+    """AC2: depth/ancestry are checked when present, but their absence is a
+    no-op — AC1 covers that the existing valid/invalid tests above (which
+    never set these fields) still pass byte-identically."""
+
+    def test_depth_within_limit_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 3\n"
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "depth == max (3) must be allowed"
+
+    def test_depth_exceeding_limit_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 4\n"
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "exceeds max delegation depth" in decision["permissionDecisionReason"]
+
+    def test_depth_non_integer_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: not-a-number\n"
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "depth" in decision["permissionDecisionReason"]
+        assert "non-negative integer" in decision["permissionDecisionReason"]
+
+    def test_ancestry_inline_form_containing_target_is_denied(self):
+        # DELEGATE targets 'engineer' and 'engineer' already appears in its
+        # own ancestry chain — a declared cycle.
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator, engineer]\n"
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "cycle detected" in decision["permissionDecisionReason"]
+
+    def test_ancestry_inline_form_not_containing_target_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator, security-engineer]\n"
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "non-cyclic ancestry must be allowed"
+
+    def test_ancestry_block_list_form_containing_target_is_denied(self):
+        prompt = (
+            VALID_DELEGATE_PROMPT
+            + "ancestry:\n  - orchestrator\n  - lead-engineer\n  - engineer\n"
+        )
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "cycle detected" in decision["permissionDecisionReason"]
+
+    def test_ancestry_block_list_form_not_containing_target_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry:\n  - orchestrator\n  - lead-engineer\n"
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "non-cyclic block-list ancestry must be allowed"
+
+    def test_delegate_without_depth_or_ancestry_behaves_as_before(self):
+        # Reuses the existing valid prompt verbatim — AC1 regression check.
+        payload = _task_payload("engineer", VALID_DELEGATE_PROMPT)
+        assert run_guard(payload) is None
+
+    def test_guard_still_exits_zero_on_depth_ancestry_deny(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 99\nancestry: [engineer]\n"
+        result = subprocess.run(
+            [sys.executable, str(GUARD)],
+            input=json.dumps(_task_payload("engineer", prompt)),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, "guard must exit 0 (fail open) even when denying"
+        decision = json.loads(result.stdout.strip())["hookSpecificOutput"]
+        assert decision["permissionDecision"] == "deny"
+
+
 class TestInstalledPathExecution:
     """G9 test: verify the guard runs correctly when installed to a temp DESTDIR."""
 

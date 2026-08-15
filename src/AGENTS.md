@@ -459,9 +459,16 @@ accepting" expectation that applies when any HANDBACK is accepted at face value.
 ### Recursion Limits
 
 These limits are the framework's convention for bounding recursion depth and fan-out in
-the delegation tree. **No runtime code counts depth, counts fan-out, or detects cycles
-at spawn time** — see [Tools-Frontmatter Permission Model](#tools-frontmatter-permission-model)
-below. Every agent is expected to self-enforce:
+the delegation tree. **No runtime code counts fan-out or tracks state across spawns** —
+see [Tools-Frontmatter Permission Model](#tools-frontmatter-permission-model) below — but
+the Claude Code PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) does check
+what a single DELEGATE block declares about itself: when the optional `depth` field is
+present it rejects a DELEGATE whose depth exceeds 3, and when the optional `ancestry`
+field is present it rejects a DELEGATE whose target role already appears in that
+ancestry (a declared cycle). The hook validates one spawn at a time from the fields the
+DELEGATE itself carries — it cannot count concurrent fan-out, cannot see sibling spawns,
+and cannot catch a limit violation in a DELEGATE that simply omits `depth`/`ancestry`.
+Every agent is still expected to self-enforce all of the below:
 
 - **Max delegation depth: 3.** Depth is measured in spawn hops from the root DELEGATE
   (depth 0 = the Orchestrator's own top-level DELEGATE). An agent at depth 3 MUST NOT

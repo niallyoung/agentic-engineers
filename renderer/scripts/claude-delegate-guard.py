@@ -18,9 +18,11 @@ Deliberately NOT a thin wrapper around the existing protocol_validator.py:
   - protocol_validator.py additionally requires "skill" and "context" core
     fields and imports PyYAML. This hook only enforces the field subset the
     installing DELEGATE specified (handoff_type, agent, task_id, scope,
-    plan, success_criteria) and avoids a hard PyYAML dependency, because it
-    runs as a subprocess under whatever bare `python3` is first on PATH at
-    hook-execution time — not necessarily the repo's own virtualenv.
+    plan, success_criteria; plus the optional depth/ancestry extension
+    fields when present — see src/AGENTS.md § Recursion Limits) and avoids
+    a hard PyYAML dependency, because it runs as a subprocess under
+    whatever bare `python3` is first on PATH at hook-execution time — not
+    necessarily the repo's own virtualenv.
   - Historical note: delegate_validator.py (deleted after framework slimdown)
     used underscored role names (`senior_engineer`) inherited from an earlier
     convention; the live harness (agent frontmatter, src/AGENTS.md, rendered
@@ -71,6 +73,15 @@ FRAMEWORK_ROLES = {
 # task_id: kebab-case, 3-50 chars — matches protocol_validator.py's TASK_ID_PATTERN.
 TASK_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$")
 
+# src/AGENTS.md § Recursion Limits: max delegation depth 3 (depth 0 = root
+# Orchestrator DELEGATE). An agent at depth 3 MUST NOT itself spawn.
+MAX_DELEGATION_DEPTH = 3
+
+# A single ancestry list item: a bare or quoted role-like token, used both
+# for inline-array form (ancestry: [a, "b"]) and block-list form
+# (- a \n - "b").
+_ANCESTRY_ITEM_RE = re.compile(r"""^\s*-\s*['"]?([A-Za-z0-9_\-]+)['"]?\s*$""")
+
 # A line that opens a new top-level (column-0) YAML mapping key, e.g.
 # "handoff_type: DELEGATE" or "plan:". Used both to segment the DELEGATE
 # block into fields and to locate where a DELEGATE block starts inside a
@@ -88,6 +99,8 @@ plan:
   - "Step 2: ..."
 success_criteria:
   - "AC1: describe done"
+# Optional: depth (0-3) and ancestry ([role, ...]) are validated when present
+# — see src/AGENTS.md § Recursion Limits — but are not required fields.
 """
 
 
@@ -98,6 +111,39 @@ def _count_words(text):
 def _strip_inline_comment(value):
     """Strip a trailing ' # comment' from a scalar YAML value, then trim."""
     return value.split(" #", 1)[0].split("\t#", 1)[0].strip()
+
+
+def _parse_ancestry_items(raw):
+    """Best-effort extraction of role-name items from an ``ancestry`` field's
+    raw value text.
+
+    Handles both forms used in DELEGATE blocks:
+      - inline array: ``[orchestrator, "security-engineer"]``
+      - block list:   ``- orchestrator`` / ``- "security-engineer"`` on
+        their own (indented) lines following ``ancestry:``
+
+    Returns a list of parsed items (possibly empty if the value could not
+    be recovered in either form).
+    """
+    raw = raw.strip()
+    if not raw:
+        return []
+
+    bracket_match = re.search(r"\[(.*?)\]", raw, re.DOTALL)
+    if bracket_match:
+        items = []
+        for tok in bracket_match.group(1).split(","):
+            tok = _strip_inline_comment(tok).strip().strip("'\"").strip()
+            if tok:
+                items.append(tok)
+        return items
+
+    items = []
+    for line in raw.splitlines():
+        m = _ANCESTRY_ITEM_RE.match(_strip_inline_comment(line))
+        if m:
+            items.append(m.group(1))
+    return items
 
 
 def parse_flat_fields(text):
@@ -184,7 +230,11 @@ def validate_delegate(fields, subagent_type):
     ``skill`` and ``context`` are treated as out of scope for this hook (see
     module docstring) — it only enforces the field subset named in the
     DELEGATE that commissioned this hook: handoff_type, agent, task_id,
-    scope (>=15 words), plan, success_criteria.
+    scope (>=15 words), plan, success_criteria. Additionally validates the
+    optional ``depth`` and ``ancestry`` extension fields (src/AGENTS.md §
+    Recursion Limits) when present in the block; their absence is not an
+    error — a DELEGATE that omits them behaves exactly as it did before
+    these checks existed.
 
     Returns a list of error strings (empty == valid).
     """
@@ -228,6 +278,40 @@ def validate_delegate(fields, subagent_type):
         errors.append("success_criteria: required")
     elif len(sc_items) < 1:
         errors.append("success_criteria: must be a non-empty list")
+
+    # --- Optional extension fields (src/AGENTS.md § Recursion Limits) ---
+    # Both are additive/optional: a DELEGATE that omits them validates exactly
+    # as it did before this check existed (AC1). When present, they are
+    # checked only against what this single DELEGATE block declares — this
+    # hook sees one spawn at a time and cannot count concurrent fan-out or
+    # track state across spawns.
+    if "depth" in fields:
+        depth_raw = _strip_inline_comment(fields.get("depth", ""))
+        try:
+            depth_val = int(depth_raw)
+        except ValueError:
+            errors.append("depth: must be a non-negative integer (got %r)" % depth_raw)
+        else:
+            if depth_val < 0:
+                errors.append("depth: must be a non-negative integer (got %r)" % depth_raw)
+            elif depth_val > MAX_DELEGATION_DEPTH:
+                errors.append(
+                    "depth: depth %d exceeds max delegation depth %d"
+                    % (depth_val, MAX_DELEGATION_DEPTH)
+                )
+
+    if "ancestry" in fields:
+        ancestry_items = _parse_ancestry_items(fields.get("ancestry", ""))
+        if not ancestry_items:
+            errors.append(
+                "ancestry: present but no items could be parsed (expected an "
+                "inline array like [role-a, role-b] or a block list of '- role' items)"
+            )
+        elif agent and agent in ancestry_items:
+            errors.append(
+                "ancestry: cycle detected — target role %r already appears in "
+                "ancestry %s" % (agent, ancestry_items)
+            )
 
     return errors
 
