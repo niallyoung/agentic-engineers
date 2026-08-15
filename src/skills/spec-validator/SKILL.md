@@ -8,7 +8,7 @@ metadata:
   version: "1.0"
   category: validation
   role: quality-engineer
-  model: haiku-4-5
+  model: claude-haiku-4.5
   effort: medium
   trigger: pre-merge | on-demand | post-merge-audit
 ---
@@ -181,34 +181,7 @@ No external configuration required. The validator:
 - Works on any unified diff format (`git diff`, `git format-patch`, `diff -u`)
 - Python 3.7+ compatible; no third-party dependencies
 
-## SPAN Capture
-
-After each validation run, capture a SPAN with:
-- `spec_sections_parsed`: count of sections found in SPEC.md
-- `requirements_found`: count of REQ-NNN requirements
-- `violations_total`: total violations detected
-- `overall_status`: PASS / WARN / FAIL
-- `mode`: pre-merge / audit
-
 ## Self-Improvement
 
-This skill participates in the framework's continuous improvement cycle
-(see [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md)).
-
-When you use **spec-validator** during a task, include a skill_feedback entry
-in your HANDBACK to help improve it over time:
-
-```yaml
-skill_feedback:
-  - skill_name: spec-validator
-    effectiveness_score: 0.85        # required: 0.0–1.0
-    clarity_score: 0.90              # optional
-    coverage_gaps:
-      - "Specific scenario the skill did not address"
-    improvement_suggestions:
-      - "Concrete change that would have helped"
-    usage_context: "One sentence on how you used this skill"
-```
-
-Positive feedback is as valuable as critical feedback. Three or more
-feedback items for this skill automatically trigger an improvement task.
+See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
+Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

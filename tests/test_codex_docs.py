@@ -24,12 +24,18 @@ def test_codex_docs_use_explicit_install_language():
         assert "~/.agents/skills" not in text
 
 
-def test_codex_docs_keep_opt_in_language():
+def test_codex_docs_describe_default_install():
+    # NOTE: previously asserted "Supported, opt-in install" — that claim was
+    # false: `make install`'s harness list (Makefile `install:` target) has
+    # included `codex` alongside copilot/claude/opencode since before the "pi"
+    # harness was removed (confirmed via git log -p on the install: target).
+    # Fixed 2026-08-15 as part of an independent security review's M3 finding
+    # (docs contradicted actual Makefile behavior); see docs/SPEC.md Update Log.
     codex_setup = (REPO_ROOT / "docs" / "guides" / "harness-setup" / "codex.md").read_text(
         encoding="utf-8"
     )
 
-    assert "Supported, opt-in install" in codex_setup
+    assert "Supported, included in `make install`" in codex_setup
     assert "~/.codex/skills" in codex_setup
 
 

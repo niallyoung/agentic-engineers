@@ -54,15 +54,12 @@ skill_feedback:
     tone_note: "<note if language felt prescriptive>"
 ```
 
-## Accumulation and Routing
+## Feedback Emission & Convention
 
-- `FeedbackLoop.record_from_handback()` extracts `skill_feedback` and persists
-  raw items to `artifacts/metrics/skill-feedback/<skill-name>.jsonl`
-- `OrchestratorSkill._route_skill_feedback()` checks accumulation counts
-- **Threshold:** ≥ 3 items for one skill → spawn DELEGATE to senior-engineer
-  (effort: low, model: claude-sonnet-4.6)
-- **Deduplication:** if an improvement task for that skill is already in
-  `incoming/` or `processing/`, skip spawning
+Agents emit `skill_feedback` in their HANDBACK blocks (see The `skill_feedback` Block below).
+The feedback is recorded in the session transcript. No automated routing or accumulation
+engine exists yet — feedback is harvested by convention and surfaced to the Orchestrator
+for manual routing decisions.
 
 ## Adding `## Self-Improvement` to a Skill
 
@@ -70,7 +67,7 @@ Every SKILL.md ends with a `## Self-Improvement` section (before any version
 history). The template is in this skill's body above. Replace `[skill-name]`
 with the actual kebab-case skill name.
 
-High-traffic skills (orchestrator, queue-management, spec-validator,
+High-traffic skills (orchestrator, protocol-validator, spec-validator,
 spec-management) add this opening line before the template:
 
 > We aim for [skill-name] to feel like a knowledgeable colleague rather than
@@ -79,14 +76,9 @@ spec-management) add this opening line before the template:
 
 ## Integration Points
 
-- `protocol_validator.py`'s `KNOWN_HANDBACK_RUNTIME_FIELDS` — accepts `skill_feedback`
-  as a forward-compatible HANDBACK extension field (its shape is defined by this
-  skill, the pattern's root definition, rather than by `protocol-core-v1.0.yaml`
-  directly — see `docs/PROTOCOL.md` §2.2)
-- `protocol_validator.py` — warns on malformed items; never errors on unknown sub-fields
-- `session_analyzer.py` — `_harvest_skill_feedback()` aggregates per session
-- `orchestrator_skill.py` — `_route_skill_feedback()` checks threshold and spawns DELEGATEs
-- `feedback_loop.py` — `record_from_handback()` persists raw feedback items
+- **Protocol Validator** — `KNOWN_HANDBACK_RUNTIME_FIELDS` in `src/skills/protocol-validator/scripts/protocol_validator.py`
+  accepts `skill_feedback` as a forward-compatible HANDBACK extension field. Its shape is
+  defined here (this skill's pattern) rather than in `protocol-core-v1.0.yaml` directly.
 
 ## Self-Improvement
 

@@ -141,25 +141,23 @@ PY
 
 	# Offline fallback: synthesize from the family token using the provider's known format.
 	if [ -z "${id:-}" ]; then
+		# Helper: convert family (hyphenated) to dotted format for github-copilot/openrouter.
+		# Single-part-version families (fable-5) keep their hyphen.
+		_to_dotted_format() {
+			case "$1" in
+				fable*) echo "claude-$1" ;;
+				*) printf '%s' "claude-$(echo "$1" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
+			esac
+		}
+
 		case "$provider" in
 			github-copilot)
 				# GitHub Copilot registry uses dotted version: claude-haiku-4.5.
-				# Single-part-version families (fable-5) keep their hyphen — the
-				# dot transform applies only to {major}-{minor} version pairs.
-				case "$family" in
-					fable*) id="claude-$family" ;;
-					*) id="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
-				esac
+				id=$(_to_dotted_format "$family")
 				;;
 			openrouter)
 				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash).
-				# Same single-part-version exemption as github-copilot above.
-				local dotted
-				case "$family" in
-					fable*) dotted="claude-$family" ;;
-					*) dotted="claude-$(printf '%s' "$family" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
-				esac
-				id="anthropic/$dotted"
+				id="anthropic/$(_to_dotted_format "$family")"
 				;;
 			*)
 				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-4-5
@@ -234,13 +232,6 @@ docs_lookup_role() {
 	effort=$(echo "$row" | cut -d'|' -f2)
 	desc=$(echo "$row" | cut -d'|' -f3-)
 	printf '%s\t%s\t%s\n' "$model" "$effort" "$desc"
-}
-
-# JSON-escape a string for embedding inside double quotes.
-json_escape() {
-	# Escape backslash, double-quote, and control chars; collapse newlines to spaces.
-	python3 -c 'import json,sys; sys.stdout.write(json.dumps(sys.stdin.read())[1:-1])' 2>/dev/null \
-		|| sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e ':a;N;$!ba;s/\n/ /g'
 }
 
 # yaml_escape_inline() is defined in lib.sh (sourced above)
@@ -345,8 +336,21 @@ write_config() {
 	#
 	# We emit a minimal provider config with available models, but NO agent array.
 	
-	local default_model
-	default_model=$(map_model_opencode "claude-haiku-4-5")
+	# Derive the default model from the Orchestrator's roster row in
+	# src/AGENTS.md, the same way render-claude.sh/render-copilot.sh derive
+	# their own settings.json session model — never a hardcoded literal,
+	# which drifts silently the moment the roster changes (was hardcoded to
+	# claude-haiku-4-5 while the roster's orchestrator model had moved to
+	# claude-sonnet-5).
+	local default_model orchestrator_meta orchestrator_model_raw
+	orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
+	if [ -n "$orchestrator_meta" ]; then
+		orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
+		default_model=$(map_model_opencode "$orchestrator_model_raw")
+	fi
+	# Fallback only if the roster lookup fails outright (missing/unparseable
+	# src/AGENTS.md) — keeps write_config() from emitting an empty "model" key.
+	[ -n "${default_model:-}" ] || default_model=$(map_model_opencode "claude-haiku-4-5")
 
 	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
@@ -387,89 +391,32 @@ write_rules() {
 
 This OpenCode install is managed by the [agentic-engineers framework]($docs_url).
 Eight specialised subagents (in \`agents/\`) collaborate via a structured
-DELEGATE/HANDBACK protocol on a queue-based work pipeline.
+DELEGATE/HANDBACK protocol, dispatched by direct sub-agent spawn.
 
 ## Mandatory Constraints
 
-### Queue-based routing
-- ALL work flows through \`~/.agentic-engineers/{session-id}/opencode/queue/incoming/ → processing/ → done/\`.
-- The Orchestrator polls the queue and routes per the decision tree in
-  \`src/AGENTS.md\`. No direct delegation from external sources.
-- DELEGATEs are written to the queue's \`incoming/\` directory; HANDBACKs are written to
-  \`processing/\` and moved to \`done/\` after Quality Engineer review.
+### Direct sub-agent spawn routing
+- ALL work is delegated by constructing a DELEGATE block and passing it directly
+  as the prompt of a sub-agent spawn (the task tool). The Orchestrator routes
+  per the decision tree in \`src/AGENTS.md\`. No direct delegation from external
+  sources.
+- The HANDBACK returns synchronously as that spawn call's result, in-context.
+  The harness session transcript is the durable audit record of every
+  DELEGATE/HANDBACK pair — there is no separate queue to poll or write.
 
 ### Orchestrator constraints
 - The Orchestrator MUST NOT perform work — it only routes, coordinates, and
   applies Model Engineer recommendations.
-- It runs in-harness via direct sub-agent spawning (no external cron / outbound tools).
+- It runs in-harness via direct sub-agent spawning.
 - Dispatch happens by constructing a DELEGATE block and passing it as a sub-agent prompt,
-  then reading the HANDBACK synchronously from the tool result (no polling, no queue intermediation).
+  then reading the HANDBACK synchronously from the tool result.
 - ALL execution work is delegated to a specialist via DELEGATE/HANDBACK.
 
 ### Role-specific rules
 - **Security Engineer** is invoked ONLY for security-scoped tasks.
-- **Engineer** MUST NOT receive a task without a pre-written \`plan\` in the
-  DELEGATE (except trivial fixes); blocked tasks escalate to Senior Engineer.
-- **Quality Engineer** provides \`model_assessment\` feedback in every HANDBACK
-  (consumed by the Model Engineer feedback loop).
-- **Lead/Senior Engineer** unblock or redirect Engineer when blocked.
-- Each role has specialised skills under \`skills/\` (see \`docs/SKILLS.md\`).
-
-## Protocol Protection (Critical)
-
-### SPEC.md — Immutable Protocol Document
-
-The SPEC.md file defines the agentic-engineers protocol and is protected from direct modification.
-
-**Why**: SPEC.md is the source of truth for our multi-agent coordination protocol. Unauthorized changes could break protocol compliance.
-
-**Who Can Modify?**
-- **Principal Engineer**: Full access via \`spec-management\` skill
-- **All other agents**: Denied (OpenCode will block direct edits)
-
-**How to Modify SPEC.md?**
-1. Use the \`spec-management\` skill (loads structured proposal interface)
-2. Propose changes via SPEC_CHANGE_PROPOSAL.md
-3. Principal Engineer reviews and approves
-4. Changes applied with audit trail maintained automatically
-5. All modifications tracked in SPEC_CHANGELOG.md
-
-### Protected Files
-
-The following files are protected from unintended modifications:
-- \`SPEC.md\` — Core protocol definition (Principal Engineer only)
-- \`docs/SPEC.md\` — Protocol documentation (Principal Engineer only)
-- \`.githooks/**\` — Git hooks infrastructure (Security Engineer only)
-- \`opencode.jsonc\` — OpenCode configuration (Principal Engineer / Security Engineer only)
-- \`SPEC-*.md\` — Protocol extensions (Principal Engineer only)
-
-### Per-Agent Permissions
-
-All agents use uniform **allow-all** permissions:
-
-| Permission | Allowed |
-|-----------|---------|
-| Bash execution | ✓ Yes (all bash commands allowed) |
-| File edits | ✓ Yes (can edit any file) |
-| Tool usage | ✓ Yes (access to all tools) |
-
-OpenCode's enforcement layer is minimal—the core constraint model is social (shared responsibility, code review, audit trails) rather than technical restrictions. All agents operate with equivalent access levels. Security and coordination are enforced via:
-- The DELEGATE/HANDBACK protocol (queue-based routing)
-- Role-specific constraints in \`src/AGENTS.md\` (decision tree, escalation paths)
-- Code review and audit trails (per-agent action logging)
-- SPEC.md protection via \`spec-management\` skill (only Principal Engineer can propose changes)
-
-### Important Notes
-
-The following patterns require careful handling due to their destructive nature, but they are not blocked at the agent level (all agents have equivalent access):
-- \`rm -rf /\` — System destruction
-- \`rm -rf ~\` — Home directory destruction
-- \`rm -rf .git\` — Repository destruction
-- \`git push --force\` or \`git push -f\` — Force pushes (breaks history)
-- \`git reset --hard HEAD~\` — Destructive resets
-- \`sudo rm\` — Privileged destruction
-
-These operations are governed by **human oversight and protocol discipline**, not technical blocks. Always use code review, test thoroughly, and prefer reversible operations.
+- **Engineer** MUST NOT receive a task without a pre-written \`plan\` in the DELEGATE (except trivial fixes).
+- **Quality Engineer** provides feedback in every HANDBACK.
+- Each role has specialised skills under \`skills/\`.
 
 ## Layout in this install
 - \`agents/\` — 8 subagents; invoke via \`opencode --agent <agent-name>\` or the task tool
@@ -490,7 +437,7 @@ These operations are governed by **human oversight and protocol discipline**, no
 
 ## Full specification
 See [\`src/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
-[\`docs/QUEUE-PROTOCOL.md\`]($docs_url), and [\`docs/SKILLS.md\`]($docs_url)
+and [\`docs/SKILLS.md\`]($docs_url)
 in the source repository for the authoritative protocol.
 EOF
 }
@@ -582,13 +529,41 @@ case "$MODE" in
 				echo "  ⚠️  skipping skill $name — foreign"
 				continue
 			fi
-			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' "$src/" "$dst/"
+			# --exclude='AGENTS.md': nested-precedence contract (docs/RENDERING.md) —
+			# no src skill ships its own AGENTS.md, so any found under an installed
+			# skill dir is user-authored. Excluding it keeps rsync --delete from
+			# treating it as extraneous and wiping it on re-render.
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='AGENTS.md' "$src/" "$dst/"
+			# Remove any tests/__pycache__/.pytest_cache/*.pyc cruft an older
+			# renderer version shipped into this managed skill dir before the
+			# excludes above existed — see prune_excluded_cruft() in
+			# renderer/lib/render-lib.sh for why this is a separate find-based
+			# pass rather than rsync --delete-excluded.
+			prune_excluded_cruft "$dst"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			count_s=$((count_s + 1))
 		done
 
+		# 1.5 Prune orphaned managed skills: dirs we installed on a prior render
+		# whose source skill was since deleted from src/skills/ (a slimdown
+		# round). See prune_orphaned_skills() in renderer/lib/render-lib.sh —
+		# reuses the same marker-based foreign-detection as the loop above.
+		prune_orphaned_skills "$DST_SKILLS" "$SRC_SKILLS" "$SKILL_MARKER"
+
+		# 2. Parse canonical agent definitions from src/AGENTS.md (once before agent loop)
+		AGENTS_MD="$SRC_AGENTS_MD"
+		AGENTS_MAP=$(mktemp)
+		trap 'rm -f "$AGENTS_MAP"' EXIT INT TERM
+		parse_agents_md "$AGENTS_MD" > "$AGENTS_MAP"
+
 		# 2. Agents: hybrid frontmatter merge (src/AGENTS.md + src frontmatter), write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
+		# Capture the PREVIOUS manifest contents before this run's install
+		# loop rebuilds it, so prune_orphaned_agents() below can tell which
+		# names we managed before but whose source agent has since been
+		# renamed/deleted from src/agents/.
+		prev_agent_manifest_names=""
+		[ -f "$AGENT_MANIFEST" ] && prev_agent_manifest_names=$(cat "$AGENT_MANIFEST")
 		: > "$AGENT_MANIFEST.tmp"
 		count_a=0
 		for name in $(list_source_agents); do
@@ -607,12 +582,13 @@ case "$MODE" in
 
 			# Hybrid metadata: src/AGENTS.md is authoritative for model+effort+description.
 			# Source frontmatter is the fallback and may carry richer per-agent description.
-			docs_row=$(docs_lookup_role "$name" || true)
+			docs_row=$(lookup_agent_metadata "$name" "$AGENTS_MAP" || true)
 			docs_model=""; docs_effort=""; docs_desc=""
 			if [ -n "$docs_row" ]; then
-				docs_model=$(printf '%s' "$docs_row" | awk -F'\t' '{print $1}')
-				docs_effort=$(printf '%s' "$docs_row" | awk -F'\t' '{print $2}')
-				docs_desc=$(printf '%s' "$docs_row" | awk -F'\t' '{print $3}')
+				# docs_row is "model|effort|description" (pipe-joined format from lookup_agent_metadata)
+				docs_model=$(echo "$docs_row" | cut -d'|' -f1)
+				docs_effort=$(echo "$docs_row" | cut -d'|' -f2)
+				docs_desc=$(echo "$docs_row" | cut -d'|' -f3-)
 			fi
 			fm_desc=$(extract_fm "$src_file" "description" || true)
 			fm_model=$(extract_fm "$src_file" "model" || true)
@@ -694,16 +670,34 @@ case "$MODE" in
 			count_a=$((count_a + 1))
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
+
+		# 2.5 Prune orphaned managed agents: .md files we installed on a
+		# prior render whose source agent was since renamed/deleted from
+		# src/agents/ (mirrors prune_orphaned_skills() above — see
+		# prune_orphaned_agents() in renderer/lib/render-lib.sh).
+		prune_orphaned_agents "$DST_AGENTS" "$SRC_AGENTS" "$prev_agent_manifest_names"
+
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# This enforces SDLC compliance at commit/push time for the repo itself.
 		# Hooks are installed from REPO_ROOT/.githooks to enforce consistency across all harnesses.
+		# LOW6 note: MODE has no separate "render-only" branch (see the `case
+		# "$MODE" in` above — --uninstall and --status are the only
+		# alternatives to this default branch), so this same code path also
+		# runs for `make render-opencode`, which mutates REPO_ROOT's own
+		# .git/config (core.hooksPath) as a side effect of a target presented
+		# as build-only (dist/opencode/ generation). Intentional/relied-upon —
+		# not changing it here, just flagging it so a future reader isn't
+		# surprised that a "render" target touches the developer's git config.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
 			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
 			git -C "$REPO_ROOT" config core.hooksPath .githooks
-			for hook in "$REPO_ROOT"/.githooks/*; do
-				[ -f "$hook" ] && chmod +x "$hook"
+			# chmod only the actual hook entry points — NOT .githooks/* wholesale,
+			# which kept re-adding exec bits to the .md docs in that directory and
+			# tripping pre-commit's own file-permissions check.
+			for hook in pre-commit pre-push commit-msg post-merge; do
+				[ -f "$REPO_ROOT/.githooks/$hook" ] && chmod +x "$REPO_ROOT/.githooks/$hook"
 			done
 			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
 		else

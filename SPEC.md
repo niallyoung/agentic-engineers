@@ -1,8 +1,8 @@
 ---
 name: Agentic Engineers Implementation Specification
 description: Pointer to the canonical specification at docs/SPEC.md
-version: 1.0
-updated: 2026-06-12
+version: 2.0
+updated: 2026-08-13
 phase: 5.10 (Monitoring & Continuous Improvement)
 status: Pointer — canonical spec is docs/SPEC.md
 type: specification

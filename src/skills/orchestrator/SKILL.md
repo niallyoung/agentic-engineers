@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Direct sub-agent spawn DELEGATE/HANDBACK lifecycle for the entry-point Orchestrator role: constructs a DELEGATE, spawns the target specialist directly via the harness's Agent/Task tool, receives the HANDBACK synchronously as that call's result, applies the routing decision tree, and records both to the durable audit-trail queue via enqueue(). Never implements; never polls."
+description: "Direct sub-agent spawn DELEGATE/HANDBACK lifecycle for the entry-point Orchestrator role: constructs a DELEGATE, spawns the target specialist directly via the harness's Agent/Task tool, receives the HANDBACK synchronously as that call's result, and applies the routing decision tree. The harness session transcript is the durable audit record. Never implements; never polls."
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+
 metadata:
@@ -20,16 +20,17 @@ metadata:
 The Orchestrator skill defines the entry-point role's DELEGATE/HANDBACK lifecycle
 under the **direct sub-agent spawn** execution model (see `src/AGENTS.md` >
 Direct Sub-Agent Spawn Execution Model for the full protocol — this SKILL.md is the
-condensed operational reference). There is no polling loop, no queue-state machine
-the Orchestrator drives, and no subprocess correlation: dispatch IS the spawn call.
+condensed operational reference). Dispatch is the spawn call itself: pass the DELEGATE
+as the sub-agent prompt, receive the HANDBACK as the spawn result.
 
 1. **Construct** a DELEGATE block from the incoming request or prior HANDBACK output
 2. **Route** — apply the routing decision tree below to pick the target role
 3. **Spawn directly** — pass the DELEGATE block as the target agent's prompt via the
    harness's Agent/Task tool; fan out up to 5 concurrent spawns for independent work
-4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result
-5. **Record** both the DELEGATE (at spawn) and the HANDBACK (at completion) to the
-   audit-trail queue via `QueueOperations.enqueue()` (`queue-management` skill)
+4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result — the
+   session transcript already durably records both the DELEGATE and the HANDBACK, so
+   there is no separate bookkeeping step
+5. **Verify** (MANDATORY for Engineer HANDBACKs — see below) before accepting/gating it
 6. **Apply the routing decision** on the HANDBACK's `status` (success/partial/blocked/escalate)
 7. **Pause** when no DELEGATEs are pending and no spawns are outstanding
 
@@ -53,22 +54,33 @@ DELEGATE to the spawning parent, inclusive.
 - **Max fan-out: 5** concurrent sub-agent spawns per parent. A 6th independent task
   waits for one of the first 5 to resolve, or is grouped into a consolidating DELEGATE.
 - **Cycle detection:** before spawning, check whether the target role already appears
-  in `ancestry`. If it does, refuse the spawn — `queue-management`'s `enqueue()` also
-  enforces this at record time via `has_cycle()`/`exceeds_max_depth()`, so a violation
-  is caught even if the pre-spawn check is skipped.
+  in `ancestry`. If it does, refuse the spawn. No runtime code enforces this today —
+  it is a self-enforced convention (see `src/AGENTS.md` § Recursion Limits).
 
 When a limit is hit: stop, do not invent a workaround, and return `status: blocked`
 (procedural — resolvable by restructuring the fan-out) or `status: escalate` (a
 genuine cycle or a task that structurally needs more than 3 hops).
 
-## Audit-Trail Duty (enqueue())
+## Cost Guardrail
 
-Dispatch already happened via the spawn call — `enqueue()` is bookkeeping written
-*after*, never a precondition for the spawn:
+Set `tokens_estimate` and `budget` on every DELEGATE issued. Before spawning, check them
+against any operator-configured session/task budget ceiling. If spawning would exceed
+it, do not call the Agent/Task tool at all — synthesize a `status: blocked` HANDBACK
+instead, naming the limit hit (e.g. `error: "budget: estimated 0.35 exceeds limit
+0.20"`), exactly like the recursion/fan-out refusal above. This is a convention on
+existing DELEGATE/HANDBACK fields, not a schema or hook change (see `docs/PROTOCOL.md` §
+Cost Guardrail). `scripts/handback_rollup.py` turns the resulting HANDBACK
+`metrics.tokens`/`metrics.cost` into a per-role cost/quality report — advisory only, run
+on demand, never a gate.
+
+## Audit Trail
+
+Two records, two purposes. Dispatch happens via the spawn call, and the harness
+session transcript already durably records it — the DELEGATE as the spawn prompt, the
+HANDBACK as that call's result; that transcript is what makes a DELEGATE/HANDBACK
+*count* (`docs/SPEC.md` clause 4) and there is no separate write step for that:
 
 ```python
-from skills.queue_management.scripts.queue_ops import QueueOperations
-
 delegate_block = {
     "handoff_type": "DELEGATE",
     "task_id": "my-task-001",
@@ -79,14 +91,42 @@ delegate_block = {
     "success_criteria": ["criterion 1"],
 }
 handback = spawn_agent(agent="engineer", prompt=delegate_block)  # direct spawn = dispatch
-
-ops = QueueOperations(session_id=session_id)
-ops.enqueue(delegate_block)   # audit record of the DELEGATE, written after dispatch
-ops.enqueue(handback)         # audit record of the HANDBACK, written after completion
+# handback is now available in-context; the transcript is the audit record.
 ```
 
-**FORBIDDEN:** writing directly to any `incoming/`/`processing/`/`done/`/`failed/`
-queue file. `enqueue()` is the only sanctioned write path — see `queue-management`.
+Separately, `docs/SPEC.md` clause 7 requires a queryable metrics/event log: append one
+JSONL line per lifecycle event to
+`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` via
+`scripts/audit_append.py` — `delegate_issued` + `subagent_spawned` at spawn time,
+`handback_received` + `gate_result` once the HANDBACK is back, `refusal`/
+`limit_exceeded` on a refused spawn, `escalation` when routing one:
+
+```bash
+python3 scripts/audit_append.py --event delegate_issued \
+  --task-id my-task-001 --parent-task-id orchestrator-root --depth 1 \
+  --agent-role engineer --agent-model claude-haiku-4.5 --status success
+```
+
+A failed append (exit 1 or 2, stderr message) is a warning only — log it and continue;
+it never blocks a spawn or a HANDBACK. See `src/AGENTS.md` § Audit Events for the full
+per-role duty table.
+
+## Engineer HANDBACK Verification (MANDATORY)
+
+Before accepting an Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before step 6 above —
+independently check:
+
+1. **Phantom-success check** — claimed file changes exist on disk / in `git status`.
+2. **Governance-scope check** — no file outside the DELEGATE's ownership list changed,
+   and no governed baseline (LOCKED sections, regression floors,
+   `.agents_verification_sha`) was modified without granted authority.
+3. **Self-reported test-failure check** — a test failure the HANDBACK calls "expected" or
+   "pre-existing" is never accepted on self-report alone; it needs your own reproduction
+   or a `quality-engineer` sign-off.
+
+Failing any check means rework or re-route, not acceptance. See `src/AGENTS.md` §
+Engineer HANDBACK Verification (MANDATORY) for the full rationale and canonical wording —
+this is a condensed pointer, not a second source of truth.
 
 ## Applying the HANDBACK
 
@@ -107,8 +147,7 @@ skill's user issues that DELEGATE.
 Orchestrator MUST NOT:
 - Write code, edit files, or run tests
 - Make architecture or security decisions
-- Hold state across sessions (use `TODO.md` and the queue's audit trail)
-- Write queue files directly (always via `enqueue()`)
+- Hold state across sessions (use `TODO.md`; the session transcript is the audit trail)
 - Spawn beyond the recursion/fan-out limits above
 
 ## Pause Condition
@@ -118,15 +157,5 @@ PAUSE. Does not invent new work. This is reduced autonomy by design.
 
 ## Self-Improvement
 
-This skill participates in the framework's continuous improvement cycle (see
-[`skill-improvement-feedback`](../skill-improvement-feedback/SKILL.md)). Include a
-`skill_feedback` entry in your HANDBACK when you use `orchestrator`:
-
-```yaml
-skill_feedback:
-  - skill_name: orchestrator
-    effectiveness_score: 0.85        # required: 0.0-1.0
-    coverage_gaps: []
-    improvement_suggestions: []
-    usage_context: "One sentence on how you used this skill"
-```
+See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
+Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

@@ -35,9 +35,10 @@ Exit codes: 0 = valid, 1 = errors, 2 = warnings (in --strict mode), 3 = I/O erro
 NOTE (SPEC-2026-005 framework slimdown, WP-0): moved here from
 src/opencode/config_validator.py — that file was pure stdlib (no relative
 imports) and this move rescues it ahead of src/opencode/ being deleted in a
-later WP. Call sites updated: .githooks/pre-commit, scripts/opencode-safe.sh,
-.github/workflows/ci.yml (credential-scan path exclusion), and
-tests/test_opencode_config_validation.py.
+later WP. Live call sites: .githooks/pre-commit, .github/workflows/ci.yml
+(credential-scan path exclusion), and tests/test_opencode_config_validation.py.
+(scripts/opencode-safe.sh, once also a caller, was removed 2026-08-13 as an
+orphan — see the SPEC.md Update Log.)
 """
 
 from __future__ import annotations

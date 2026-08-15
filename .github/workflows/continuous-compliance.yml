@@ -1,8 +1,7 @@
 ---
 # ORCHESTRATOR-001: Continuous Compliance
 #
-# Continuously validates that the codebase stays compliant with docs/SPEC.md and
-# that the DELEGATE/HANDBACK protocol queue remains structurally sound.
+# Continuously validates that the codebase stays compliant with docs/SPEC.md.
 #
 #   * On pull requests -> SPEC validation runs in `pre-merge` mode and FAILS the
 #     check on any violation, acting as a merge gate.
@@ -104,28 +103,3 @@ jobs:
             exit 1
           fi
           echo "SPEC compliance gate passed."
-
-  protocol-consistency:
-    name: Protocol Queue Consistency
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyyaml pytest
-
-      - name: Run framework consistency tests
-        run: |
-          if [ -f tests/test_framework_consistency.py ]; then
-            python3 -m pytest tests/test_framework_consistency.py -v
-          else
-            echo "No framework consistency tests found; skipping."
-          fi

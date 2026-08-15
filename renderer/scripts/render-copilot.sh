@@ -3,7 +3,7 @@
 #
 # Inputs:  $1 = REPO_ROOT (agentic-engineers repo root)
 #          $2 = COPILOT root (e.g., $HOME/.copilot)
-#          $3 = optional: --uninstall | --status | --stream | --stream=json
+#          $3 = optional: --uninstall | --status
 #
 # Behavior: copies any directory under $REPO_ROOT/skills/ that contains a SKILL.md
 # into $COPILOT/skills/<name>/. Top-level loose .md files in skills/ are skipped
@@ -12,10 +12,6 @@
 #
 # A marker file (.agentic-engine-copilot) is written to each managed skill so
 # uninstall can identify what to remove.
-#
-# Streaming modes:
-#   --stream      : Human-readable progress with per-skill timing (ANSI colors if TTY)
-#   --stream=json : Structured JSON-lines output for CI/CD pipelines (delegates to Python helper)
 
 set -euo pipefail
 
@@ -59,45 +55,20 @@ write_agents_md() {
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-# Helper function for streaming output
-_stream_emit() {
-	local mode="$1" type="$2" skill="$3" data="$4"
-	[ -z "$mode" ] && return 0  # No-op in default mode
-
-	local ts
-	ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-	if [ "$mode" = "human" ]; then
-		# ANSI progress indicator (suppressed if not a TTY)
-		if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-			case "$type" in
-				start)    printf "\r  ⏳ %-30s" "$skill" ;;
-				complete) printf "\r  ✅ %-30s\n" "$skill" ;;
-				skip)     printf "\r  ⚠️  %-30s\n" "$skill" ;;
-				error)    printf "\r  ❌ %-30s\n" "$skill" ;;
-				summary)  : ;;  # handled by main echo
-			esac
-		fi
-	elif [ "$mode" = "json" ]; then
-		# Native JSON-lines emission (no external helper — the deleted
-		# src/harnesses/copilot_cli/streaming.py this used to exec is gone).
-		local json_data="$data"
-		[ -z "$json_data" ] && json_data="{}"
-		printf '{"ts":"%s","type":"%s","skill":"%s","data":%s}\n' \
-			"$ts" "$type" "$skill" "$json_data"
-	fi
-}
-
 
 case "$MODE" in
 	--uninstall)
-		echo "🧹 Removing managed skills from $DST_SKILLS/..."
+		echo "🧹 Removing managed agents and skills from $COPILOT/..."
+		# Remove agents via Python renderer (replaces deleted render-copilot-agents.sh wrapper)
+		python3 "$REPO_ROOT/renderer/scripts/render-copilot-agents.py" "$REPO_ROOT/src/agents" "$COPILOT/agents" --uninstall
+
+		# Remove skills
 		count=0
 		for name in $(list_source_skills); do
 			target="$DST_SKILLS/$name"
 			if [ -f "$target/$MARKER" ]; then
 				rm -rf "$target"
-				echo "  removed $name"
+				echo "  removed skill: $name"
 				count=$((count + 1))
 			fi
 		done
@@ -108,7 +79,7 @@ case "$MODE" in
 		elif [ -f "$DST_RULES" ]; then
 			echo "  ⚠️  keeping AGENTS.md — foreign (not managed by us)"
 		fi
-		echo "✅ Removed $count managed skill(s) + docs"
+		echo "✅ Removed agents + $count managed skill(s) + docs"
 		;;
 
 	--status)
@@ -137,15 +108,7 @@ case "$MODE" in
 		else echo "  ⚠️  AGENTS.md (foreign — not managed by us)"; fi
 		;;
 
-	install|""|--stream|--stream=json)
-		# Determine output mode
-		STREAM_MODE=""
-		if [ "$MODE" = "--stream" ]; then
-			STREAM_MODE="human"
-		elif [ "$MODE" = "--stream=json" ]; then
-			STREAM_MODE="json"
-		fi
-
+	install|"")
 		echo "📦 Rendering skills → $DST_SKILLS/..."
 		mkdir -p "$DST_SKILLS"
 		count=0
@@ -158,33 +121,24 @@ case "$MODE" in
 
 			# Foreign skill protection (unchanged)
 			if [ -d "$dst" ] && [ ! -f "$dst/$MARKER" ]; then
-				_stream_emit "$STREAM_MODE" "skip" "$name" "{}"
 				echo "  ⚠️  skipping $name — exists at $dst and is not managed by us"
 				continue
 			fi
 
-			# Emit start event
+			# Render skill via rsync
 			skill_start=$(date +%s)
-			_stream_emit "$STREAM_MODE" "start" "$name" "{\"src\":\"$src\"}"
+			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='AGENTS.md' \
+				"$src/" "$dst/" || {
+				echo "  ❌ $name — rsync failed" >&2
+				continue
+			}
 
-			# Streaming rsync: use --progress for human mode (more compatible than --info=progress2)
-			# For non-streaming mode, use standard rsync
-			if [ "$STREAM_MODE" = "human" ]; then
-				rsync -a --delete --progress \
-					--exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
-					"$src/" "$dst/" || {
-					_stream_emit "$STREAM_MODE" "error" "$name" \
-						"{\"message\":\"rsync failed with exit $?\"}"
-					echo "  ❌ $name — rsync failed" >&2
-					continue
-				}
-			else
-				rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' \
-					"$src/" "$dst/" || {
-					echo "  ❌ $name — rsync failed" >&2
-					continue
-				}
-			fi
+			# Remove any tests/__pycache__/.pytest_cache/*.pyc cruft an older
+			# renderer version shipped into this managed skill dir before the
+			# excludes above existed — see prune_excluded_cruft() in
+			# renderer/lib/render-lib.sh for why this is a separate find-based
+			# pass rather than rsync --delete-excluded.
+			prune_excluded_cruft "$dst"
 
 			# Write marker only after successful rsync
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$MARKER"
@@ -195,47 +149,96 @@ case "$MODE" in
 			skill_bytes=$(du -sk "$dst" 2>/dev/null | cut -f1 || echo 0)
 			total_bytes=$(( total_bytes + skill_bytes ))
 
-			_stream_emit "$STREAM_MODE" "complete" "$name" \
-				"{\"duration_s\":$skill_duration,\"kb\":$skill_bytes}"
 			echo "  rendered $name (${skill_duration}s)"
 			count=$((count + 1))
 		done
 
+		# 1.5 Prune orphaned managed skills: dirs we installed on a prior render
+		# whose source skill was since deleted from src/skills/ (a slimdown
+		# round). See prune_orphaned_skills() in renderer/lib/render-lib.sh —
+		# reuses the same marker-based foreign-detection as the loop above.
+		prune_orphaned_skills "$DST_SKILLS" "$SRC_SKILLS" "$MARKER"
+
 		install_end=$(date +%s)
 		install_duration=$(( install_end - install_start ))
-		_stream_emit "$STREAM_MODE" "summary" "" \
-			"{\"count\":$count,\"total_kb\":$total_bytes,\"duration_s\":$install_duration}"
 		echo "✅ Rendered $count skill(s) to $DST_SKILLS/ (${install_duration}s, ${total_bytes}KB)"
 
-		# 2. Framework documentation: generate AGENTS.md (routing guide) from the
+		# 2. Copilot agents: render agents from src/agents/ via Python renderer
+		# (replaces deleted render-copilot-agents.sh wrapper)
+		SRC_AGENTS="$REPO_ROOT/src/agents"
+		if [ -d "$SRC_AGENTS" ]; then
+			echo "🎨 Rendering Copilot CLI Agents..."
+			mkdir -p "$COPILOT/agents"
+			python3 "$REPO_ROOT/renderer/scripts/render-copilot-agents.py" "$SRC_AGENTS" "$COPILOT/agents"
+		else
+			echo "⚠️  skipping agents — source directory not found at $SRC_AGENTS" >&2
+		fi
+
+		# 3. Framework documentation: generate AGENTS.md (routing guide) from the
 		# canonical src/AGENTS.md. Runs for both dist rendering and home install
 		# so the file always exists where downstream steps expect it, and is
 		# marker-protected so a user's own AGENTS.md is never clobbered.
 		echo "📖 Writing AGENTS.md → $DST_RULES ..."
 		write_agents_md
 
-		# 2b. settings.json — harness session model + Phase G queue auto-polling
-		# (idle_loop: exponential backoff + file-watch). Written for both dist
-		# rendering and home install so the installed tree matches dist exactly
-		# and the harness ships with auto-polling enabled.
-		# See docs/guides/harness-queue-polling.md.
+		# 2b. settings.json — harness session model configuration. Written for
+		# both dist rendering and home install so the installed tree matches
+		# dist exactly.
 		echo "⚙️  Writing settings.json → $COPILOT/settings.json ..."
-		cat > "$COPILOT/settings.json" <<'EOF'
+
+		# Derive model from orchestrator row in canonical AGENTS.md
+		orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
+		if [ -n "$orchestrator_meta" ]; then
+			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
+			orchestrator_model=$(map_model "$orchestrator_model_raw")
+			if [ -n "$orchestrator_model" ]; then
+				cat > "$COPILOT/settings.json" <<EOF
 {
-  "model": "claude-haiku-4-5",
+  "model": "$orchestrator_model",
   "harness": "copilot"
 }
 EOF
-		echo "  ✅ settings.json (session model configuration)"
+				echo "  ✅ settings.json (session model → $orchestrator_model from orchestrator)"
+			else
+				# Fallback if model mapping fails
+				cat > "$COPILOT/settings.json" <<'EOF'
+{
+  "model": "sonnet",
+  "harness": "copilot"
+}
+EOF
+				echo "  ✅ settings.json (fallback: sonnet)"
+			fi
+		else
+			# Fallback if lookup fails
+			cat > "$COPILOT/settings.json" <<'EOF'
+{
+  "model": "sonnet",
+  "harness": "copilot"
+}
+EOF
+			echo "  ✅ settings.json (fallback: sonnet — orchestrator not found in roster)"
+		fi
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# GitHub Copilot harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
 		# Note: Copilot uses the same git repo as OpenCode/Claude, so hooks are shared.
+		# LOW6 note: MODE has no separate "render-only" branch (see the `case
+		# "$MODE" in` above — --uninstall and --status are the only
+		# alternatives to this default branch), so this same code path also
+		# runs for `make render-copilot`, which mutates REPO_ROOT's own
+		# .git/config (core.hooksPath) as a side effect of a target presented
+		# as build-only (dist/copilot/ generation). Intentional/relied-upon —
+		# not changing it here, just flagging it so a future reader isn't
+		# surprised that a "render" target touches the developer's git config.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
 			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
 			git -C "$REPO_ROOT" config core.hooksPath .githooks
-			for hook in "$REPO_ROOT"/.githooks/*; do
-				[ -f "$hook" ] && chmod +x "$hook"
+			# chmod only the actual hook entry points — NOT .githooks/* wholesale,
+			# which kept re-adding exec bits to the .md docs in that directory and
+			# tripping pre-commit's own file-permissions check.
+			for hook in pre-commit pre-push commit-msg post-merge; do
+				[ -f "$REPO_ROOT/.githooks/$hook" ] && chmod +x "$REPO_ROOT/.githooks/$hook"
 			done
 			echo "✅ Git hooks installed (core.hooksPath = .githooks)"
 		else

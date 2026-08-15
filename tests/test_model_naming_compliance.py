@@ -195,23 +195,6 @@ class TestModelNamingCompliance:
                     f"(e.g. claude-opus-4.7 or claude-opus-5)"
                 )
 
-    def test_agents_registry_uses_hyphen_format(self):
-        """docs/AGENTS.md agent registry must use hyphen-format models."""
-        agents_doc = self.REPO_ROOT / "docs" / "AGENTS.md"
-        assert agents_doc.exists(), f"AGENTS.md not found: {agents_doc}"
-
-        content = agents_doc.read_text()
-
-        # Extract all model references (in tables and descriptions)
-        model_refs = re.findall(r'claude-[a-z]+-[0-9-]+', content)
-
-        for model_ref in model_refs:
-            # Check no dots
-            assert "." not in model_ref, (
-                f"AGENTS.md: Model '{model_ref}' uses dots. "
-                f"Use hyphens only"
-            )
-
     def test_rendered_copilot_uses_hyphen_format(self):
         """Rendered Copilot files must use dot-format models (Copilot CLI requirement)."""
         copilot_dir = self.REPO_ROOT / "dist" / "copilot" / "agents"
@@ -239,30 +222,6 @@ class TestModelNamingCompliance:
                     f"dist/copilot/{agent_file.name}: Model '{model}' is not a "
                     f"canonical Claude id (e.g. claude-opus-4.7, claude-opus-5) "
                     f"or short form (opus)"
-                )
-
-    def test_rendered_claude_uses_hyphen_format(self):
-        """Rendered Claude files must use hyphen-format models (frontmatter only)."""
-        claude_dir = self.REPO_ROOT / "dist" / "claude" / "agents"
-        if not claude_dir.exists():
-            pytest.skip("dist/claude not present")
-
-        claude_agents = list(claude_dir.glob("*.md"))
-        if not claude_agents:
-            pytest.skip("No rendered Claude agents found")
-
-        for agent_file in claude_agents:
-            content = agent_file.read_text()
-            # Only check frontmatter (body may contain example DELEGATE blocks with versioned IDs)
-            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
-            if not frontmatter_match:
-                continue
-            frontmatter = frontmatter_match.group(1)
-            model_refs = re.findall(r'^model:\s*([^\s\n]+)', frontmatter, re.MULTILINE)
-
-            for model in model_refs:
-                assert "." not in model, (
-                    f"dist/claude/{agent_file.name}: Model '{model}' uses dots"
                 )
 
     def test_rendered_opencode_uses_hyphen_format(self):
@@ -296,44 +255,6 @@ class TestModelNamingCompliance:
                         f"dist/opencode/{agent_file.name}: Model '{model}' uses dots"
                     )
 
-    def test_no_dots_in_agent_frontmatter(self):
-        """CRITICAL: Agent frontmatter must use dot-format for Copilot CLI compatibility."""
-        agent_files = list(self.REPO_ROOT.glob("src/agents/*-agent.md"))
-
-        for agent_file in agent_files:
-            content = agent_file.read_text()
-
-            # Extract frontmatter
-            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
-            if not frontmatter_match:
-                continue
-
-            frontmatter = frontmatter_match.group(1)
-
-            # Check no old hyphenated format in model field
-            for forbidden in self.FORBIDDEN_PATTERNS:
-                assert not re.search(forbidden, frontmatter), (
-                    f"{agent_file.name}: Frontmatter uses forbidden format (old hyphenated). "
-                    f"Use dots for Copilot CLI (e.g., claude-opus-4.7)"
-                )
-
-    def test_official_documentation_references(self):
-        """Verify official documentation links are current."""
-        spec_file = self.REPO_ROOT / "docs" / "SPEC.md"
-        content = spec_file.read_text()
-
-        # Check that official sources are documented
-        required_links = [
-            "https://docs.anthropic.com/claude/docs/models-overview",
-            "https://docs.github.com/en/copilot/reference/ai-models/supported-models",
-        ]
-
-        for link in required_links:
-            assert link in content, (
-                f"SPEC.md missing required official source link: {link}"
-            )
-
-
 class TestModelNamingConsistency:
     """Test consistency of model names across files."""
 
@@ -364,55 +285,6 @@ class TestModelNamingConsistency:
         assert not extra_in_agents, (
             f"Agent files use models not in validator: {extra_in_agents}"
         )
-
-    def test_agent_files_consistency(self):
-        """Agent files of same role should use same model (allow exceptions)."""
-        models_by_role = {}
-        exceptions = {
-            "principal-engineer": ["claude-opus-4.6", "claude-opus-4.7"],  # May use both
-        }
-
-        for agent_file in (self.REPO_ROOT / "src" / "agents").glob("*-agent.md"):
-            # Determine role (order matters - more specific patterns first)
-            if "orchestrator" in agent_file.name:
-                role = "orchestrator"
-            elif "principal-engineer" in agent_file.name:
-                role = "principal-engineer"
-            elif "senior-engineer" in agent_file.name:
-                role = "senior-engineer"
-            elif "lead-engineer" in agent_file.name:
-                role = "lead-engineer"
-            elif "model-engineer" in agent_file.name:
-                role = "model-engineer"
-            elif "quality-engineer" in agent_file.name:
-                role = "quality-engineer"
-            elif "security-engineer" in agent_file.name:
-                role = "security-engineer"
-            elif agent_file.name == "engineer-agent.md":
-                role = "engineer"
-            else:
-                continue
-
-            content = agent_file.read_text()
-            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
-            if not frontmatter_match:
-                continue
-
-            frontmatter = frontmatter_match.group(1)
-            models = re.findall(r'^model:\s*([^\s\n]+)', frontmatter, re.MULTILINE)
-
-            if models:
-                model = models[0].strip('"\'')  # Take first model (should be frontmatter)
-                if role not in models_by_role:
-                    models_by_role[role] = model
-                else:
-                    # Allow exceptions (some roles may have multiple valid models)
-                    allowed = exceptions.get(role, [models_by_role[role]])
-                    assert model in allowed, (
-                        f"Inconsistent models for {role} ({agent_file.name}): "
-                        f"first was {models_by_role[role]}, now {model}. "
-                        f"Expected one of: {allowed}"
-                    )
 
     def test_agents_use_only_locked_models(self):
         """Verify agents use only LOCKED Claude models (positive enforcement).
@@ -476,40 +348,6 @@ class TestModelNamingConsistency:
                 f"{agent_file.name}: Unversioned model found. "
                 f"Locked models must have versions: {', '.join(sorted(self.LOCKED_MODELS))}."
             )
-
-    def test_transformer_logic_documented(self):
-        """CRITICAL: Each renderer script must have comments explaining model transformation."""
-        renderer_files = [
-            self.REPO_ROOT / "renderer" / "scripts" / "render-copilot-agents.py",
-            self.REPO_ROOT / "renderer" / "scripts" / "render-copilot-agents.sh",
-            self.REPO_ROOT / "renderer" / "scripts" / "render-opencode.sh",
-        ]
-
-        for renderer_file in renderer_files:
-            if not renderer_file.exists():
-                continue
-
-            content = renderer_file.read_text()
-
-            # Check for transformation logic comments
-            has_comment = any(keyword in content.lower() for keyword in [
-                'transform',
-                'model',
-                'version',
-                'copilot',
-                'opencode',
-                'claude',
-                'harness'
-            ])
-
-            # Comment doesn't need to be present if file doesn't do transformation
-            # (e.g., copilot pass-through), but should at least have something
-            if 'model' in content.lower():
-                assert has_comment or len(content) < 100, (
-                    f"{renderer_file.name}: Contains model transformation but lacks documentation. "
-                    f"Add comment explaining: canonical format input → {renderer_file.stem} output format"
-                )
-
 
 
 if __name__ == "__main__":

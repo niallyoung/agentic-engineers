@@ -148,6 +148,259 @@ class TestFailsOpen:
         assert result.stdout.strip() == ""
 
 
+class TestGuardDecisionSurface:
+    """Extended decision-surface tests for edge cases and field variations."""
+
+    def test_agent_tool_name_allowed_like_task_tool_name(self):
+        """The guard should accept 'Agent' tool_name equally to 'Task'."""
+        payload = {
+            "tool_name": "Agent",
+            "tool_input": {"subagent_type": "engineer", "prompt": VALID_DELEGATE_PROMPT},
+        }
+        assert run_guard(payload) is None, "Agent tool with valid DELEGATE must be allowed"
+
+    def test_deprecated_type_discriminator_is_accepted(self):
+        """The guard accepts the deprecated 'type: DELEGATE' discriminator for compatibility."""
+        prompt = VALID_DELEGATE_PROMPT.replace("handoff_type: DELEGATE", "type: DELEGATE")
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "deprecated 'type: DELEGATE' must still be allowed"
+
+    def test_decoy_fenced_block_before_real_delegate(self):
+        """A non-DELEGATE fenced block followed by a real DELEGATE should pass."""
+        prompt = """\
+Here is some example code:
+
+```python
+def example():
+    type: "not a DELEGATE"
+    pass
+```
+
+Now the real task:
+
+```yaml
+handoff_type: DELEGATE
+agent: engineer
+task_id: fix-login-timeout-bug
+scope: |
+  Fix the login timeout bug in the authentication service by extending the
+  grace period and adding a regression test for the expired-token path.
+plan:
+  - "Step 1: Reproduce the timeout with a failing test"
+  - "Step 2: Extend the grace period and verify the test passes"
+success_criteria:
+  - "AC1: Regression test passes"
+"""
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "real DELEGATE after decoy block must be allowed"
+
+    def test_missing_subagent_type_allows_for_generic_agents(self):
+        """If subagent_type is missing or not a framework role, the tool call is allowed."""
+        payload = {
+            "tool_name": "Task",
+            "tool_input": {"prompt": "Just explore the codebase"},
+        }
+        assert run_guard(payload) is None, "missing subagent_type should allow (generic agent)"
+
+    def test_scope_word_count_with_block_scalar_indentation(self):
+        """Scope word count should correctly count words even with block-scalar indentation."""
+        # Block scalar indentation should not be counted as extra words.
+        prompt = """\
+handoff_type: DELEGATE
+agent: engineer
+task_id: test-word-count
+scope: |
+  This scope text has at least fifteen words
+  spread across multiple indented lines
+  to verify the word-count logic correctly
+  strips indentation and counts actual words
+plan:
+  - "Step 1: Test"
+success_criteria:
+  - "AC1: Passes"
+"""
+        payload = _task_payload("engineer", prompt)
+        # Should pass because the scope has enough words when indentation is stripped.
+        assert run_guard(payload) is None, "word count should ignore indentation"
+
+    def test_scope_word_count_fails_on_insufficient_words(self):
+        """Scope with fewer than 15 words should be denied."""
+        prompt = """\
+handoff_type: DELEGATE
+agent: engineer
+task_id: test-short-scope
+scope: Not enough words here
+plan:
+  - "Step 1: Test"
+success_criteria:
+  - "AC1: Passes"
+"""
+        payload = _task_payload("engineer", prompt)
+        decision = run_guard(payload)
+        assert decision["permissionDecision"] == "deny"
+        assert ">=15 words" in decision["permissionDecisionReason"]
+
+
+class TestDepthAndAncestryOptionalFields:
+    """AC2: depth/ancestry are checked when present, but their absence is a
+    no-op — AC1 covers that the existing valid/invalid tests above (which
+    never set these fields) still pass byte-identically."""
+
+    def test_depth_within_limit_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 3\n"
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "depth == max (3) must be allowed"
+
+    def test_depth_exceeding_limit_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 4\n"
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "exceeds max delegation depth" in decision["permissionDecisionReason"]
+
+    def test_depth_non_integer_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: not-a-number\n"
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "depth" in decision["permissionDecisionReason"]
+        assert "non-negative integer" in decision["permissionDecisionReason"]
+
+    def test_ancestry_inline_form_containing_target_is_denied(self):
+        # DELEGATE targets 'engineer' and 'engineer' already appears in its
+        # own ancestry chain — a declared cycle.
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator, engineer]\n"
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "cycle detected" in decision["permissionDecisionReason"]
+
+    def test_ancestry_inline_form_not_containing_target_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator, security-engineer]\n"
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "non-cyclic ancestry must be allowed"
+
+    def test_ancestry_block_list_form_containing_target_is_denied(self):
+        prompt = (
+            VALID_DELEGATE_PROMPT
+            + "ancestry:\n  - orchestrator\n  - lead-engineer\n  - engineer\n"
+        )
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "cycle detected" in decision["permissionDecisionReason"]
+
+    def test_ancestry_block_list_form_not_containing_target_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry:\n  - orchestrator\n  - lead-engineer\n"
+        payload = _task_payload("engineer", prompt)
+        assert run_guard(payload) is None, "non-cyclic block-list ancestry must be allowed"
+
+    def test_delegate_without_depth_or_ancestry_behaves_as_before(self):
+        # Reuses the existing valid prompt verbatim — AC1 regression check.
+        payload = _task_payload("engineer", VALID_DELEGATE_PROMPT)
+        assert run_guard(payload) is None
+
+    def test_guard_still_exits_zero_on_depth_ancestry_deny(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 99\nancestry: [engineer]\n"
+        result = subprocess.run(
+            [sys.executable, str(GUARD)],
+            input=json.dumps(_task_payload("engineer", prompt)),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, "guard must exit 0 (fail open) even when denying"
+        decision = json.loads(result.stdout.strip())["hookSpecificOutput"]
+        assert decision["permissionDecision"] == "deny"
+
+
+class TestInstalledPathExecution:
+    """G9 test: verify the guard runs correctly when installed to a temp DESTDIR."""
+
+    def test_guard_installed_and_executed_as_hook_subprocess(self, tmp_path):
+        """
+        Render the harness into a temp DESTDIR, extract the PreToolUse hook
+        command path from settings.json, execute it as a subprocess with a
+        deny-worthy payload, and assert the deny JSON is returned.
+
+        This proves the INSTALLED wiring (not just the repo copy) works end-to-end.
+        """
+        import tempfile
+        import shutil
+
+        # Create a temp install directory.
+        destdir = tmp_path / "test-install"
+        destdir.mkdir()
+
+        # Run 'make install-claude DESTDIR=<destdir>' to render + install.
+        result = subprocess.run(
+            ["make", "install-claude", f"DESTDIR={destdir}"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, f"make install-claude failed: {result.stderr}"
+
+        # Load settings.json from the installed location.
+        settings_json = destdir / ".claude" / "settings.json"
+        assert settings_json.exists(), f"settings.json not found at {settings_json}"
+
+        with open(settings_json) as f:
+            settings = json.load(f)
+
+        # Extract the PreToolUse hook command from settings.
+        hooks = settings.get("hooks", {}).get("PreToolUse", [])
+        assert hooks, "No PreToolUse hooks found in settings.json"
+
+        hook_command = None
+        for hook_entry in hooks:
+            for hook in hook_entry.get("hooks", []):
+                if hook.get("type") == "command":
+                    hook_command = hook.get("command")
+                    break
+
+        assert hook_command, "No hook command found in settings.json"
+
+        # The hook command should point to the installed guard script.
+        assert "claude-delegate-guard.py" in hook_command, (
+            f"Hook command doesn't reference claude-delegate-guard.py: {hook_command}"
+        )
+
+        # Execute the hook command via subprocess with a deny-worthy payload
+        # (missing DELEGATE block).
+        deny_payload = {
+            "tool_name": "Task",
+            "tool_input": {
+                "subagent_type": "engineer",
+                "prompt": "Please fix the bug without a DELEGATE block.",
+            },
+        }
+
+        # Parse the hook command to extract the script path and args.
+        import shlex
+        hook_parts = shlex.split(hook_command)
+
+        result = subprocess.run(
+            hook_parts,
+            input=json.dumps(deny_payload),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        assert result.returncode == 0, (
+            f"installed hook must exit 0 (fail open), got {result.returncode}: {result.stderr}"
+        )
+
+        # The hook should output a deny JSON.
+        assert result.stdout.strip(), "installed hook should produce deny output"
+        output = json.loads(result.stdout)
+        decision = output.get("hookSpecificOutput", {})
+        assert (
+            decision.get("permissionDecision") == "deny"
+        ), f"installed hook should deny missing DELEGATE, got: {output}"
+        assert (
+            "requires a canonical" in decision.get("permissionDecisionReason", "")
+        ), "deny reason should mention canonical DELEGATE"
+
+
 class TestFrameworkRolesMatchRoster:
     """FRAMEWORK_ROLES in claude-delegate-guard.py is a hardcoded literal by
     design (see the module's own comment: the guard is stdlib-only and runs

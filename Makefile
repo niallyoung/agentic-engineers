@@ -1,8 +1,8 @@
-.PHONY: help install clean-install fresh-install-copilot fresh-install-claude fresh-install-opencode fresh-install-codex \
+.PHONY: help install \
         install-copilot install-claude install-opencode install-codex \
         uninstall-copilot uninstall-claude uninstall-all uninstall-opencode uninstall-codex \
-        setup status harness-toggle migrate-queue-paths create-test-session test-protocol-e2e \
-        verify verify-harness-sync validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
+        setup harness-toggle test-protocol-e2e \
+        verify validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-opencode render-codex render-specs render-all \
         lint test test-skills test-ci test-ci-force test-ci-shell quality-gate
 
@@ -42,11 +42,7 @@ help:
 	@echo "Install targets (platform-specific):"
 	@echo "  install             Install default harness set (~/.claude/, ~/.copilot/, ~/.config/opencode/, ~/.codex/)"
 	@echo "                      (override root for testing: make install DESTDIR=/tmp/ae-test)"
-	@echo "  clean-install       Interactive backup + fresh install (prompts for each harness)"
-	@echo "  fresh-install-copilot     Interactive: install Copilot only (with optional backup)"
-	@echo "  fresh-install-claude      Interactive: install Claude only (with optional backup)"
-	@echo "  fresh-install-opencode    Interactive: install OpenCode only (with optional backup)"
-	@echo "  fresh-install-codex       Interactive: install Codex only (with optional backup)"
+	@echo "                      (interactive per-harness prompts: bash renderer/scripts/unified-install.sh --interactive)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-opencode    Install agents & skills → ~/.config/opencode/ (OpenCode-compatible)"
@@ -66,7 +62,6 @@ help:
 	@echo "  render-all          All harnesses + specs"
 	@echo ""
 	@echo "Diagnostic:"
-	@echo "  status              Check installation status (all supported harnesses)"
 	@echo "  harness-toggle      Symlink the active harness (HARNESS=claude|copilot|opencode)"
 	@echo "                      (override link path: ACTIVE_LINK=/path/to/active-harness)"
 	@echo "  verify              Full verification (structure + agents + skills + protocols)"
@@ -78,8 +73,7 @@ help:
 	@echo "  validate-specs      Verify dist/specs/ is deployed and valid"
 	@echo "  clean               Remove build artifacts"
 	@echo ""
-	@echo "Queue & Testing:"
-	@echo "  create-test-session Create test session + sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)"
+	@echo "Protocol Testing:"
 	@echo "  test-protocol-e2e   Run end-to-end protocol tests (DELEGATE → HANDBACK)"
 	@echo ""
 	@echo "Quality & Testing:"
@@ -88,7 +82,7 @@ help:
 	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
 	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
 	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
-	@echo "  quality-gate        Pre-push quality checks (lint + test + verify)"
+	@echo "  quality-gate        Pre-push quality checks (lint + test + verify + render validation)"
 
 setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "🔒 Setting up Git hooks..."
@@ -117,12 +111,6 @@ setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "📖 Hook documentation: .githooks/README.md"
 	@echo "🚀 Ready! Hooks will run automatically on commit/push"
 
-migrate-queue-paths: ## Migrate queue sessions from old paths (artifacts/) to canonical paths
-	@bash "$(REPO_ROOT)/setup/migrate-queue-paths.sh"
-
-create-test-session: ## Create test session with sample DELEGATE (AGENTIC_SESSION_ID=X AGENTIC_HARNESS=Y)
-	@bash "$(REPO_ROOT)/setup/create-test-session.sh"
-
 test-protocol-e2e: ## Run end-to-end protocol tests (DELEGATE → HANDBACK)
 	@echo "🧪 Running end-to-end protocol tests (Phase 4)..."
 	@echo "Testing: DELEGATE → processing → HANDBACK → done/failed/escalation"
@@ -136,22 +124,6 @@ install: render-all ## Install default harness set (auto-backup, non-interactive
 	@echo "✅ Installation complete!"
 	@echo ""
 	@echo "Next: copilot --autopilot --agent orchestrator 'Your task'"
-	@echo "Or: Queue tasks using DELEGATE blocks in ~/.copilot/queue/incoming/"
-
-clean-install: render-all ## Interactive: Install default harness set (prompt for each)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot claude opencode codex
-
-fresh-install-copilot: ## Interactive: install Copilot only (prompt for backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" copilot
-
-fresh-install-claude: ## Interactive: install Claude only (prompt for backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" claude
-
-fresh-install-opencode: ## Interactive: install OpenCode only (prompt for backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" opencode
-
-fresh-install-codex: ## Interactive: install Codex only (prompt for backup)
-	@bash "$(REPO_ROOT)/renderer/scripts/unified-install.sh" "$(REPO_ROOT)" --interactive --destdir "$(DESTDIR)" codex
 
 install-copilot: ## Install rendered agents + skills → ~/.copilot/ (marker-aware: never overwrites foreign files)
 	@echo "📦 Installing Copilot agents + skills + docs → $(DESTDIR)/.copilot/ (marker-aware)..."
@@ -160,9 +132,8 @@ install-copilot: ## Install rendered agents + skills → ~/.copilot/ (marker-awa
 	@# install-claude) rather than 'rsync dist/copilot/ → ~/.copilot/'. This
 	@# enforces foreign-file protection: user-authored agents/skills and a user's
 	@# own AGENTS.md are never overwritten, and user config/auth/session files are
-	@# left untouched. render-copilot-agents.sh renders agents (sidecar manifest);
-	@# render-copilot.sh renders skills + AGENTS.md and installs git hooks.
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
+	@# left untouched. render-copilot.sh renders agents (via render-copilot-agents.py),
+	@# skills + AGENTS.md and installs git hooks.
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot"
 	@echo "✅ Installation to $(DESTDIR)/.copilot/ complete (agents + skills + docs)"
 
@@ -177,14 +148,9 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude"
 	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
 
-# Copilot CLI now supports custom agents. Agents are rendered alongside skills.
-# render-copilot-agents.sh and render-copilot-agents.py handle agent rendering.
-# Both are called by make install-copilot for complete agent + skill installation.
-
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)
 	@echo "🧹 Uninstalling from $(DESTDIR)/.copilot/..."
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(DESTDIR)/.copilot" --uninstall
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.py" "$(REPO_ROOT)/src/agents" "$(DESTDIR)/.copilot/agents" --uninstall
 
 uninstall-claude: ## Remove from ~/.claude/ (managed only; honors DESTDIR)
 	@echo "🧹 Uninstalling from $(DESTDIR)/.claude/..."
@@ -195,7 +161,6 @@ uninstall-claude: ## Remove from ~/.claude/ (managed only; honors DESTDIR)
 render-copilot: ## Generate dist/copilot/ with agents + skills (provider-specific)
 	@echo "🔨 Rendering agents and skills for Copilot..."
 	@mkdir -p "$(REPO_ROOT)/dist/copilot"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot-agents.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/copilot"
 	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist/copilot"
 	@echo "🔍 Validating rendered Copilot config..."
 	@test -d "$(REPO_ROOT)/dist/copilot/agents" || (echo "❌ agents directory not rendered" && exit 1)
@@ -219,7 +184,7 @@ render-claude: ## Generate dist/claude/ (provider-specific)
 	@echo "   ✓ Claude docs (CLAUDE.md + AGENTS.md) validated"
 	@echo "✅ Claude rendering complete (see dist/claude/)"
 
-verify: ## Verify framework structure and tests (agents, skills, dependencies, queue)
+verify: ## Verify framework structure and tests (agents, skills, dependencies)
 	@echo "🔍 Verifying framework structure..."
 	@echo ""
 	@echo "1️⃣  Checking directory structure..."
@@ -243,20 +208,13 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 	@test -f "$(REPO_ROOT)/renderer/scripts/render-codex.py" || (echo "❌ render-codex.py missing" && exit 1)
 	@echo "   ✓ Installation scripts verified"
 	@echo ""
-	@echo "4️⃣  Checking queue infrastructure..."
-	@if [ -d "$(HOME)/.copilot/queue" ]; then \
-		echo "   ✓ Queue infrastructure exists (Copilot)"; \
-	else \
-		echo "   ⚠️  Queue not installed (run 'make install-copilot')"; \
-	fi
-	@echo ""
-	@echo "5️⃣  Validating agent definitions (src/agents/)..."
+	@echo "4️⃣  Validating agent definitions (src/agents/)..."
 	@python3 "$(REPO_ROOT)/renderer/validate_agents.py" 2>&1 || echo "   ⚠️  Agent validation skipped (validator error)"
 	@echo ""
-	@echo "6️⃣  Validating skill definitions (src/skills/)..."
+	@echo "5️⃣  Validating skill definitions (src/skills/)..."
 	@python3 "$(REPO_ROOT)/renderer/validate_skills.py" 2>&1 || echo "   ⚠️  Skill validation skipped (validator error)"
 	@echo ""
-	@echo "7️⃣  Checking protocol documents present..."
+	@echo "6️⃣  Checking protocol documents present..."
 	@test -f "$(REPO_ROOT)/src/AGENTS.md" || (echo "❌ src/AGENTS.md missing" && exit 1)
 	@test -f "$(REPO_ROOT)/src/SKILLS.md" || (echo "❌ src/SKILLS.md missing" && exit 1)
 	@test -f "$(REPO_ROOT)/src/TODO.md.template" || (echo "❌ src/TODO.md.template missing" && exit 1)
@@ -264,28 +222,6 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies, q
 	@echo "   ✓ All protocol documents present"
 	@echo ""
 	@echo "✅ Framework structure verified"
-
-verify-harness-sync: ## Verify installed harness files match dist/ (warns on divergence)
-	@echo "🔐 Verifying harness synchronization between dist/ and installed..."
-	@echo ""
-	@DIST_FILE="$(REPO_ROOT)/dist/claude/CLAUDE.md"; \
-	INSTALLED_FILE="$(HOME)/.claude/CLAUDE.md"; \
-	if [ ! -f "$$DIST_FILE" ]; then \
-		echo "❌ Dist file not found: $$DIST_FILE"; exit 1; \
-	fi; \
-	if [ ! -f "$$INSTALLED_FILE" ]; then \
-		echo "⚠️  Installed file not found: $$INSTALLED_FILE (run 'make install-claude' first)"; exit 1; \
-	fi; \
-	if diff -q "$$DIST_FILE" "$$INSTALLED_FILE" > /dev/null 2>&1; then \
-		echo "✅ Claude CLAUDE.md is in sync with dist/"; \
-	else \
-		echo "⚠️  Divergence detected between dist/ and installed:"; \
-		diff -u "$$DIST_FILE" "$$INSTALLED_FILE" | head -40; \
-		echo ""; \
-		echo "To synchronize, run: make install-claude"; \
-		exit 1; \
-	fi
-	@echo "✅ Harness synchronization verified"
 
 validate-opencode: ## Validate OpenCode config generation (status + JSON schema check)
 	@echo "🔍 Validating OpenCode install at ~/.config/opencode/..."
@@ -542,16 +478,3 @@ harness-toggle: ## Force-create active-harness symlink (HARNESS=claude|copilot|o
 	@ln -sfn "$(REPO_ROOT)/dist/$(HARNESS)" "$(ACTIVE_LINK)"
 	@echo "✅ Active harness: $(HARNESS)"
 	@echo "   $(ACTIVE_LINK) -> $(REPO_ROOT)/dist/$(HARNESS)"
-
-status: ## Check installation status (all supported harnesses)
-	@echo "📋 Installation status for ~/.copilot/:"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-copilot.sh" "$(REPO_ROOT)" "$(HOME)/.copilot" --status
-	@echo ""
-	@echo "📋 Installation status for ~/.claude/:"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(HOME)/.claude" --status
-	@echo ""
-	@echo "📋 Installation status for ~/.config/opencode/:"
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
-	@echo ""
-	@echo "📋 Installation status for ~/.codex/:"
-	@python3 "$(REPO_ROOT)/renderer/scripts/render-codex.py" "$(REPO_ROOT)" "$(HOME)/.codex" --skills-root "$(HOME)/.codex/skills" --status

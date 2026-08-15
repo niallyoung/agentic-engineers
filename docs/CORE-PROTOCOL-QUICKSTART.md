@@ -9,13 +9,14 @@ status: APPROVED
 ## The Basics
 
 The protocol has two parts:
-- **Core** (7 required fields) — must always be present, strictly validated
+- **Core** (9 required fields) — must always be present, strictly validated
 - **Extensions** (optional fields) — add when needed, loosely validated
 
 ## DELEGATE (send work to an agent)
 
 ```yaml
 handoff_type: DELEGATE               # protocol identifier
+spec_version: "1.0"                  # protocol spec version
 task_id: my-task-2026-05-13          # kebab-case, 3-50 chars
 skill: code-review                    # skill name from skills/
 agent: engineer                       # who handles it
@@ -36,6 +37,8 @@ context: >                            # >=20 words
 ## HANDBACK (return results)
 
 ```yaml
+handoff_type: HANDBACK               # protocol identifier
+spec_version: "1.0"                  # protocol spec version
 task_id: my-task-2026-05-13          # must match DELEGATE task_id
 status: success                       # success|failure|partial|blocked|escalate
 output:                               # any structured output
@@ -54,8 +57,8 @@ metrics:
 # Extend DELEGATE with optional fields
 task_id: my-task-2026-05-13
 # ... core fields ...
-effort: high            # low|medium|high
-model: claude-opus-4.7  # any string
+effort: high            # low|medium|high|max
+model: claude-opus-5    # any string
 priority: 8             # 1-10
 parent_task_id: parent-task-001
 budget: 5.0

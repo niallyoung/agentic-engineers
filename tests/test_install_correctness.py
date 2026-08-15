@@ -15,6 +15,7 @@ The install is performed once (session-scoped) because it is slow.
 
 import filecmp
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -27,6 +28,7 @@ HARNESS_LAYOUT = {
     "claude": ("claude", ".claude", ".agentic-engine-claude"),
     "copilot": ("copilot", ".copilot", ".agentic-engine-copilot"),
     "opencode": ("opencode", ".config/opencode", ".agentic-engine-opencode"),
+    "codex": ("codex", ".codex", ".agentic-engine-codex"),
 }
 
 # Files that legitimately differ between dist/ and installed/ (marker
@@ -36,6 +38,7 @@ IGNORED_NAMES = {
     ".agentic-engine-claude",
     ".agentic-engine-copilot",
     ".agentic-engine-opencode",
+    ".agentic-engine-codex",
     "settings.json",
 }
 
@@ -112,24 +115,34 @@ def test_managed_marker_written(installed, harness):
 
 @pytest.mark.parametrize(
     "harness",
-    ["claude", "copilot", "opencode"],
+    ["claude", "copilot", "opencode", "codex"],
 )
 def test_all_8_agents_installed(installed, harness):
     _dist_sub, install_sub, _marker = HARNESS_LAYOUT[harness]
     agents_dir = installed / install_sub / "agents"
     assert agents_dir.is_dir(), f"{harness}: agents/ not installed"
-    agent_md = [p for p in agents_dir.glob("*.md")]
-    assert len(agent_md) == 8, (
-        f"{harness}: expected 8 installed agents, found {len(agent_md)}: "
-        f"{sorted(p.name for p in agent_md)}"
+    # codex uses .toml, others use .md
+    if harness == "codex":
+        agent_files = [p for p in agents_dir.glob("*.toml")]
+    else:
+        agent_files = [p for p in agents_dir.glob("*.md")]
+    assert len(agent_files) == 8, (
+        f"{harness}: expected 8 installed agents, found {len(agent_files)}: "
+        f"{sorted(p.name for p in agent_files)}"
     )
 
 
 @pytest.mark.parametrize(
     "harness",
-    ["claude", "copilot", "opencode"],
+    ["claude", "copilot", "opencode", "codex"],
 )
 def test_all_8_skills_installed(installed, harness):
+    # 8 -> 6 in the queue-removal work (task-2026-08-13-queue-removal-code):
+    # queue-management and queue-query were deleted along with the
+    # filesystem queue now that dispatch is a direct sub-agent spawn.
+    # audit-trail-review meta-skill added (task-2026-08-14-delegation-audit-skill).
+    # 6 -> 7 skills. self-healing-review meta-skill added
+    # (task-2026-08-15-self-healing-skill). 7 -> 8 skills.
     _dist_sub, install_sub, _marker = HARNESS_LAYOUT[harness]
     skills_dir = installed / install_sub / "skills"
     assert skills_dir.is_dir(), f"{harness}: skills/ not installed"
@@ -187,3 +200,74 @@ def test_install_honors_destdir_does_not_touch_home(installed):
     assert (installed / ".claude").exists()
     assert (installed / ".copilot").exists()
     assert (installed / ".config" / "opencode").exists()
+    assert (installed / ".codex").exists()
+
+
+def test_install_with_home_override_and_destdir_isolation():
+    """
+    Verify that `make install DESTDIR=<dir>` with HOME != DESTDIR installs under
+    DESTDIR only and does not touch HOME (tests HOME override + DESTDIR isolation).
+
+    This absorbs the unique semantics from tests/test_fresh_install_e2e.py that
+    validates framework installation respects DESTDIR parameter (sandbox-safe).
+    """
+    import tempfile
+    import shutil
+
+    destdir = None
+    temp_home = None
+    try:
+        destdir = tempfile.mkdtemp(prefix="test-install-destdir-")
+        temp_home = tempfile.mkdtemp(prefix="test-install-home-")
+
+        # Run install with DESTDIR != HOME so the install does not touch HOME
+        env = os.environ.copy()
+        env["HOME"] = temp_home
+
+        result = subprocess.run(
+            [
+                "make",
+                "install",
+                f"DESTDIR={destdir}",
+                "BACKUP=never",
+            ],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode == 0, (
+            f"make install with HOME override failed:\n"
+            f"STDOUT:\n{result.stdout[-2000:]}\n\nSTDERR:\n{result.stderr[-2000:]}"
+        )
+
+        # Verify files landed under DESTDIR, not under HOME
+        for _dist, install_sub, _marker in HARNESS_LAYOUT.values():
+            destdir_path = Path(destdir) / install_sub
+            assert destdir_path.is_dir(), (
+                f"Expected {install_sub}/ installed under DESTDIR, not found"
+            )
+
+        # Verify HOME was not touched (should be empty except for fixtures)
+        home_claude = Path(temp_home) / ".claude"
+        home_copilot = Path(temp_home) / ".copilot"
+        home_opencode = Path(temp_home) / ".config" / "opencode"
+        home_codex = Path(temp_home) / ".codex"
+
+        assert not home_claude.exists(), (
+            "Install with DESTDIR != HOME leaked into HOME/.claude"
+        )
+        assert not home_copilot.exists(), (
+            "Install with DESTDIR != HOME leaked into HOME/.copilot"
+        )
+        assert not home_opencode.exists(), (
+            "Install with DESTDIR != HOME leaked into HOME/.config/opencode"
+        )
+        assert not home_codex.exists(), (
+            "Install with DESTDIR != HOME leaked into HOME/.codex"
+        )
+    finally:
+        if destdir and os.path.exists(destdir):
+            shutil.rmtree(destdir, ignore_errors=True)
+        if temp_home and os.path.exists(temp_home):
+            shutil.rmtree(temp_home, ignore_errors=True)

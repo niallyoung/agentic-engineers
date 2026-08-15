@@ -15,9 +15,9 @@ You're ready to contribute.
 
 ### Python Version (Pinned: 3.11)
 
-This project targets **Python 3.11**. CI and the Docker container are the **source of truth** — all GitHub Actions workflows and the `Dockerfile` use Python 3.11, and `setup.py` requires `>=3.11`. A `.python-version` file pins 3.11 for pyenv/local tooling.
+This project targets **Python 3.11**. The GitHub Actions workflows are the **source of truth** — every workflow uses `actions/setup-python` pinned to 3.11 (none of them use the Dockerfile), and `setup.py` requires `>=3.11`. A `.python-version` file pins 3.11 for pyenv/local tooling. The `Dockerfile` and `test-ci*` Makefile targets below are a local CI-parity mirror, not what CI itself runs.
 
-To run the test suite under the exact CI Python version without installing 3.11 locally, use the container target:
+To run the test suite under a local approximation of the CI Python version without installing 3.11 locally, use the container target:
 
 ```bash
 make test-ci         # Run tests in the python:3.11 container (matches CI exactly)
@@ -68,9 +68,13 @@ After `make install`, the framework automatically:
    git checkout -b feature/your-feature
    ```
 
-3. **Make your changes** using the framework's own tools:
-    - New agent? Use `agent-creator` skill
-    - New skill? Use `skill-creator` skill
+3. **Make your changes**:
+    - New agent? Author a `src/agents/<name>-agent.md` directly, following the structure
+      of an existing one (e.g. `src/agents/engineer-agent.md`), then register it in
+      `src/AGENTS.md` and `config/FRAMEWORK-MANIFEST.yaml`.
+    - New skill? Author a `src/skills/<category>/<name>/SKILL.md` directly, following the
+      structure of an existing one (e.g. `spec-validator`), then register it in
+      `src/SKILLS.md` and `config/FRAMEWORK-MANIFEST.yaml`. See "Creating New Skills" below.
     - Code changes? Delegate to the Orchestrator!
 
       Instead of editing files directly, use the delegation format. Here's an example:
@@ -145,10 +149,16 @@ This speeds up iteration without installing all 4 harnesses.
 
 ## Framework-First Approach
 
-**Don't manually create or edit files.** Use the framework's meta-skills:
+New skills and agents follow this repo's skills-first, minimal-tooling philosophy:
+author them directly.
 
-- **New agent?** Delegate to `agent-creator` — scaffolds definitions, validates YAML, updates registries.
-- **New skill?** Delegate to `skill-creator` — scaffolds structure, handles SKILL.md, validates against roster.
+- **New agent?** Create `src/agents/<name>-agent.md` following the structure of an
+  existing agent (e.g. `src/agents/engineer-agent.md`), then register it in
+  `src/AGENTS.md` + `config/FRAMEWORK-MANIFEST.yaml`. The glob-based renderer discovers
+  it automatically — no manual per-harness wiring needed.
+- **New skill?** Create `src/skills/<category>/<name>/SKILL.md` following the structure
+  of an existing skill (e.g. `spec-validator`), then register it in `src/SKILLS.md` +
+  `config/FRAMEWORK-MANIFEST.yaml`. The glob-based renderer discovers it automatically.
 - **Code review?** Use the `Lead Engineer` agent for architectural guidance.
 - **Complex planning?** Use the `Senior Engineer` agent to plan unscoped work.
 
@@ -271,7 +281,6 @@ consistent prefixes so related skills group together and are easy to discover.
 
 | Prefix | Domain | Existing members |
 |--------|--------|------------------|
-| `queue-*` | DELEGATE/HANDBACK queue lifecycle | queue-management, queue-query |
 | `spec-*` | SPEC.md governance | spec-validator, spec-management |
 | `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator |
 | `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup, skill-improvement-feedback |
@@ -285,6 +294,11 @@ The surviving skill roster is documented in `src/SKILLS.md`. Deleted skills incl
 queue-todo-sync, metrics-etl, tokenadvisor, agent-creator, consistency-checker,
 cost-aggregation, cost-budgeting, doc-quality-monitor, file-sync, harness-integration-tracker,
 local-model-runtime, model-selection, session-analyzer, testing, usage-tracking, and workflow-review.
+
+**Follow-up (2026-08-13, SPEC-2026-009):** the filesystem queue itself was removed
+(dispatch is direct sub-agent spawn only; the harness session transcript is the durable
+audit record). `queue-management` and `queue-query` — the two skills that implemented
+and exposed that queue — were deleted in the same effort.
 
 ---
 
@@ -386,7 +400,7 @@ scripts/check-gitconfig-no-tokens.sh
 
 ## Working with Background Agents
 
-When using background agents (e.g., `skill-creator`, `agent-creator`) to create implementation files:
+When using background agents (e.g., Engineer, Senior Engineer) to create implementation files:
 
 **Background agents MUST explicitly commit their files to git.** This ensures:
 - ✅ Created files persist beyond the agent's session
@@ -451,7 +465,7 @@ git commit --amend
 
 ---
 
-## CI/CD Requirements (Phase 5.1+)
+## CI/CD Requirements
 
 All contributions pass through a multi-gate CI pipeline defined in
 `.github/workflows/ci.yml`. This section documents each gate, what it checks,
@@ -459,29 +473,48 @@ and how to satisfy it locally before pushing.
 
 ### Gates Overview
 
-| Gate | Script | Failing Exit | When Added |
-|------|--------|-------------|------------|
-| Credential scan | `scripts/check-gitconfig-no-tokens.sh` | Hard fail | Phase 1 |
-| Lint | `make lint` | Hard fail | Phase 1 |
-| **SKILL.md compliance** | `scripts/validate_skills.py` | Hard fail on errors; warn on warnings | Phase 5.1 |
-| **Circular import detection** | `scripts/detect_circular_imports.py` | Hard fail | Phase 5.1 |
-| **Protocol compliance** | Inline (queue YAML validation) | Hard fail if queue files exist | Phase 5.1 |
-| **Conformance report** | `scripts/validate_skills.py --json` | Non-failing (audit trail) | Phase 5.1 |
-| Test suite | `make test` | Hard fail | Phase 1 |
-| Verify | `make verify` | Hard fail | Phase 1 |
-| Token cost annotation | Inline (reads `data/metrics/`) | Non-failing (audit only) | Phase 5.1 |
+| Gate | Script | Failing Exit |
+|------|--------|-------------|
+| Credential scan | `scripts/check-gitconfig-no-tokens.sh` | Hard fail |
+| Lint | `make lint` | Hard fail |
+| **SKILL.md frontmatter + registry + compliance** | `renderer/validate_skills.py` | Hard fail on errors; warn on warnings |
+| **Skill template conformance report** | `renderer/validate_skills.py --json` + `scripts/format_skill_report.py` | Non-failing (audit trail) |
+| **Orphaned bytecode check** | Inline (folded in from the former `validate-sources.yml`) | Hard fail |
+| Render agents + skills | `make render-*` | Hard fail |
+| Test suite | `make test` | Hard fail |
+| **Harness regression check** | `renderer/scripts/check_test_regression.py` | Hard fail |
+| Verify | `make verify` | Hard fail |
 
-### Gate 1: SKILL.md Frontmatter Compliance
+**Removed (2026-08-13 infra consolidation):** the standalone circular-import gate
+(`scripts/detect_circular_imports.py` scanned `src/` for `src.*`-style intra-package
+imports, but no code in this repo uses that import style — skills use `sys.path`-based
+imports — so it always scanned 0 modules and could never fail); the token-cost
+annotation step (`scripts/annotate_token_costs.py` read `data/metrics/`, which nothing
+in this repo writes); and the separate `scripts/validate_skills.py`, whose
+ACTIVE_SKILLS compliance-schema checks were merged into `renderer/validate_skills.py`
+so there is a single validator. `validate-sources.yml`'s `verify-test-sources` and
+`check-skill-integrity` jobs were also dropped (the former duplicated `make test`'s own
+collection step; the latter scanned a top-level `skills/` directory that no longer
+exists post-slimdown and was therefore vacuous) — its one substantive job (orphaned
+bytecode) was folded into `ci.yml` above.
 
-Every active skill listed in `ACTIVE_SKILLS` inside `scripts/validate_skills.py`
-must have a `SKILL.md` with all required frontmatter fields.
+### Gate: SKILL.md Frontmatter, Registry, and Compliance
+
+`renderer/validate_skills.py` runs two passes:
+
+1. **Frontmatter + registry** (every `SKILL.md` under `src/skills/`): required
+   `name`/`description` fields, known `roles`, and two-way completeness against
+   `src/SKILLS.md`.
+2. **ACTIVE_SKILLS compliance audit** (only the skills listed in `ACTIVE_SKILLS`
+   inside `renderer/validate_skills.py`): required frontmatter metadata keys,
+   required directory structure, and presence of a `## Self-Improvement` section.
 
 **Run locally:**
 ```bash
-python scripts/validate_skills.py           # errors cause CI failure
-python scripts/validate_skills.py --strict  # warnings also cause failure (use for Phase 5.2)
-python scripts/validate_skills.py --skill queue-management  # check a single skill
-python scripts/validate_skills.py --json    # machine-readable output
+python renderer/validate_skills.py           # errors cause CI failure
+python renderer/validate_skills.py --strict  # warnings also cause failure
+python renderer/validate_skills.py --skill protocol-validator  # audit a single skill
+python renderer/validate_skills.py --json    # ACTIVE_SKILLS compliance audit, machine-readable
 ```
 
 **Required frontmatter fields:**
@@ -513,45 +546,29 @@ src/skills/<skill-name>/
     └── test_<skill>.py   ← at least one test file required
 ```
 
-Use the `skill-creator` skill (or `agent-creator` for agents) to scaffold a
-conformant skill/agent directly — see `src/SKILLS.md` / `src/AGENTS.md`.
+Author the skill/agent directly by following the structure of an existing one
+(e.g. `spec-validator` for a skill, `engineer-agent.md` for an agent) — see
+`src/SKILLS.md` / `src/AGENTS.md` for the registration steps.
 
-### Gate 2: Circular Import Detection
+### Gate: Skill Template Conformance Report (Audit Trail)
 
-Static AST analysis over `src/` detects any circular import chains.
-
-**Run locally:**
-```bash
-python scripts/detect_circular_imports.py
-python scripts/detect_circular_imports.py --verbose  # print full import graph
-python scripts/detect_circular_imports.py --root src/skills  # skills only
-```
-
-If a cycle is detected, restructure the imports to eliminate it (e.g., move
-shared types to a dedicated `_types.py` module that neither importer depends on).
-
-### Gate 3: Protocol Compliance
-
-Any YAML files in the `queue/` directory (if present) are validated against the
-DELEGATE/HANDBACK protocol schema. This gate is a no-op on repos with no queue files.
+This gate runs `renderer/validate_skills.py --json`, pipes it through
+`scripts/format_skill_report.py`, and writes the output to the GitHub Actions step
+summary. It is **non-failing** — it exists to create an audit trail of skill health
+over time. Check it in the "Summary" tab of any CI run.
 
 **Run locally:**
 ```bash
-# If you have queue files:
-python -c "from src.skills.protocol_validator.scripts import validate_file; print(validate_file('queue/incoming/example.yaml'))"
+python renderer/validate_skills.py --json | python scripts/format_skill_report.py
 ```
 
-### Gate 4: Conformance Report (Audit Trail)
+### Harness Regression Check
 
-This gate runs `validate_skills.py --json` and writes the output to the GitHub
-Actions step summary. It is **non-failing** — it exists to create an audit trail
-of skill health over time. Check it in the "Summary" tab of any CI run.
-
-### Token Cost Annotation (Non-Failing)
-
-If `data/metrics/` contains JSON files with token usage data, the CI run
-annotates the step summary with the token cost of that commit. This is non-failing
-and informational only. Phase 5.2 will add a hard cost budget gate.
+`.github/workflows/ci.yml`'s "Gate 4: Harness regression check" step runs
+`renderer/scripts/check_test_regression.py` after `make render-*` and `make test`,
+enforcing a minimum collected-test-count floor. See
+[docs/REGRESSION-GATE-POLICY.md](../REGRESSION-GATE-POLICY.md) for the baseline and
+how to update it.
 
 ---
 
@@ -564,23 +581,24 @@ Before pushing to a feature branch:
 make lint
 
 # 2. Skill compliance (if you touched any skill)
-python scripts/validate_skills.py
+python renderer/validate_skills.py
 
-# 3. Circular imports
-python scripts/detect_circular_imports.py
-
-# 4. Full test suite
+# 3. Full test suite
 make test
 
-# 5. Harness render (if you touched skills or agents)
+# 4. Harness render (if you touched skills or agents)
 make render-copilot render-claude render-opencode render-codex render-specs
 
-# 6. Verify manifest
+# 5. Verify manifest
 make verify
 ```
 
-The pre-push git hook runs the full test suite automatically — do not bypass
-with `SKIP_HOOKS=1` except in documented emergencies.
+The pre-push git hook validates agent/workflow YAML, SPEC/AGENTS/README
+presence, SPEC architectural constraints, and the `.agents_verification_sha`
+integrity hash — it does **not** re-run the full test suite or a render pass
+(both are redundant with CI, which runs them minutes later); run `make test`
+yourself before pushing. Do not bypass hooks with `SKIP_HOOKS=1` except in
+documented emergencies.
 
 ---
 
@@ -620,16 +638,21 @@ read an empty file that was still being written by a writer thread.
 as part of the move to the
 [Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model):
 a spawned sub-agent's HANDBACK is now returned directly as the result of the Agent/Task
-tool call, in-context, with no separate file poller reading it. The `enqueue()` calls
-that still record DELEGATE/HANDBACK to the queue for audit purposes are a distinct code
-path from that removed subprocess seam and are not what this test class covered.
+tool call, in-context, with no separate file poller reading it. As of SPEC-2026-009
+(2026-08-13) the filesystem queue itself — and the `enqueue()` calls that used to record
+DELEGATE/HANDBACK to it for audit purposes — no longer exist either; the harness session
+transcript is the durable audit record for protocol validity (a separate, queryable
+JSONL event log for metrics was added afterward per `docs/SPEC.md` clause 7 — see
+`docs/PROTOCOL.md` § Audit Events (JSONL) — but that is additive, not a queue, and not
+what this historical note is about). Neither the removed subprocess seam nor the
+removed queue write path is what this test class covered.
 
 **RESOLVED:** the `test-concurrent` Makefile target and its `quality-gate`
 prerequisite, and the equivalent inline check in `.githooks/pre-push`
 ("6b. RUN CONCURRENT TESTS"), have been removed rather than repointed —
-there is no surviving mechanism (subprocess spawn + file-poll race) for a
-replacement test to guard. If concurrent `enqueue()` audit-write coverage
-under the new model is wanted, that is new test coverage to design, not a
+there is no surviving mechanism (subprocess spawn + file-poll race, or — since
+SPEC-2026-009 — a queue write) for a replacement test to guard. If concurrent-spawn
+coverage under the new model is wanted, that is new test coverage to design, not a
 repoint of this guard.
 
 ---
@@ -986,14 +1009,14 @@ quality-engineer, and model-engineer are meant to be leaves.
 
 - **Agent Roster & Routing:** [`src/AGENTS.md`](../../src/AGENTS.md) — all roles, responsibilities, routing decision tree, and tool-access model
 - **Skills Matrix:** [`src/SKILLS.md`](../../src/SKILLS.md) — available skills and capabilities
-- **Specification:** [`docs/SPEC.md`](../SPEC.md) — protocol, queue architecture, and model assignments
+- **Specification:** [`docs/SPEC.md`](../SPEC.md) — protocol and model assignments
 
 ---
 
 ## FAQ
 
-- **How do I add an agent?** Use `agent-creator` skill or read [`src/AGENTS.md`](../../src/AGENTS.md)
-- **How do I add a skill?** Use `skill-creator` skill or read [`src/SKILLS.md`](../../src/SKILLS.md)
+- **How do I add an agent?** Author `src/agents/<name>-agent.md` directly and register it — see [`src/AGENTS.md`](../../src/AGENTS.md)
+- **How do I add a skill?** Author `src/skills/<category>/<name>/SKILL.md` directly and register it — see [`src/SKILLS.md`](../../src/SKILLS.md)
 - **What if CI fails?** Run `make verify` locally — it checks everything
 - **Need help?** Check the references above or open an issue
 

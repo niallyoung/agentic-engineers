@@ -9,15 +9,15 @@ Designed for integration with coding CLIs: **OpenCode**, **Copilot**, **Claude**
 
 Agentic Engineers solves the multi-agent coordination problem: how do you route
 work to the right specialist, enforce quality consistently, and keep cost
-proportional to task complexity — without spaghetti code or a polling daemon?
+proportional to task complexity — through an elegant, minimal orchestration layer?
 
 **The answer:** an ORCHESTRATOR-FIRST architecture built on **direct sub-agent
-spawning**, not queue polling:
+spawning**:
 
 1. Work is expressed as a DELEGATE task (structured YAML: scope, context, plan, success criteria)
-2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result — no polling loop, no timer, no daemon
+2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result synchronously, in-context
 3. The specialist executes and returns a HANDBACK with results + metrics
-4. Every DELEGATE and HANDBACK is durably recorded to the per-session queue as an audit trail (inbox only — nothing reads it via polling)
+4. The harness session transcript itself — every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result — is the durable audit record
 5. Metrics feed back into model selection and routing for future tasks
 
 ## Goals
@@ -28,6 +28,20 @@ The framework is built to be **minimal, portable, and self-reducing**:
 - **Framework self-reduction** — as base and frontier models improve, LOC and complexity are meant to decrease, not grow
 - **Eventual redundancy** — when harnesses compose and delegate work well by default, this coordination layer should fade into standard practice
 - **Harness comparative analysis** — the `src/ → make render → dist/ → make install → ~/.<harness>` pipeline lets the same agent/skill roster be compared across harnesses for feature parity and quality trade-offs
+
+## Positioning
+
+Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy frameworks** (LangGraph, CrewAI) handle durable distributed runtime; **light SDKs** (OpenAI Agents, PydanticAI) offer minimal abstraction; **markdown-first harness** (ours) routes and coordinates work across coding CLIs (Claude, Copilot, Codex, Gemini). Unlike content marketplaces (wshobson/agents, obra/superpowers), we ship a **routing protocol with structured handoff and metrics** — not just agent/skill definitions. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) for the full ecosystem mapping, standards alignment, and why harnesses are commoditizing the layers beneath us. The protocol is specified for reuse at [docs/specs/DELEGATE-HANDBACK.md](docs/specs/DELEGATE-HANDBACK.md), independent of this repository's specific roster.
+
+## Standards Compliance
+
+| Standard | Status | Evidence |
+|----------|--------|----------|
+| **Agent Skills** (agentskills.io SKILL.md) | Conformant | All 7 skills audited 2026-08-14; zero deltas. Validated continuously by `renderer/validate_skills.py`. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Bonus-Task Backlog row 2. |
+| **AGENTS.md** (agents.md convention) | Ready (spec unreleased) | Per-harness AGENTS.md files emitted; user-authored nested AGENTS.md preserved on re-render. AAIF v1.0 spec under 2026 roadmap, not yet released — CI probe stub ready for validator arrival. See [docs/RENDERING.md](docs/RENDERING.md) §AGENTS.md v1.0 Readiness and `tests/test_agents_md_nesting.py`. |
+| **DELEGATE/HANDBACK** (task handoff) | Published (ours) | Standalone, vendor-neutral protocol specification published at [docs/specs/DELEGATE-HANDBACK.md](docs/specs/DELEGATE-HANDBACK.md) with normative schema [docs/specs/protocol-core-v1.0.yaml](docs/specs/protocol-core-v1.0.yaml). No external standard exists in this coordination layer. |
+| **MCP** (Model Context Protocol) | Not applicable (complementary) | Tool-layer standard; MCP handles agent↔tool calls. DELEGATE/HANDBACK operates at agent↔agent layer — orthogonal concerns. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Standards Alignment. |
+| **A2A** (Agent-to-Agent Protocol) | Not applicable (orthogonal) | Service-layer protocol for agent-to-service calls. Our in-process spawn model is not a service mesh. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Standards Alignment. |
 
 ## The Roster
 
@@ -91,8 +105,8 @@ pre-push check; CI re-runs the same gate. Git hooks under `.githooks/` enforce
 protocol compliance at commit time — DELEGATE/HANDBACK structure, secret-leak
 checks, and SPEC.md drift (`scripts/validate-spec-constraints.py`). CI's
 security-gate workflow additionally runs `scripts/entropy_detector.py` for
-credential/secret entropy scanning, and `scripts/check_protocol_compliance.py`
-validates queue-protocol conformance. Run the full local suite with `make test`.
+credential/secret entropy scanning. DELEGATE/HANDBACK protocol conformance is
+validated on demand via the `protocol-validator` skill. Run the full local suite with `make test`.
 
 ## Documentation
 
@@ -102,10 +116,9 @@ validates queue-protocol conformance. Run the full local suite with `make test`.
 | Skills catalog | [src/SKILLS.md](src/SKILLS.md) |
 | Specification | [docs/SPEC.md](docs/SPEC.md) |
 | Protocol (DELEGATE/HANDBACK) | [docs/PROTOCOL.md](docs/PROTOCOL.md) |
-| Queue protocol | [docs/QUEUE-PROTOCOL.md](docs/QUEUE-PROTOCOL.md) |
 | Onboarding | [docs/ONBOARDING.md](docs/ONBOARDING.md) |
 | Docs index | [docs/INDEX.md](docs/INDEX.md) |
-| Guides (agent/skill creation, harness setup, troubleshooting) | [docs/guides/](docs/guides/) |
+| Guides (harness setup, deployment, cost/quality trade-offs) | [docs/guides/](docs/guides/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Supported Harnesses
@@ -113,9 +126,9 @@ validates queue-protocol conformance. Run the full local suite with `make test`.
 | Harness | Status |
 |---------|--------|
 | [OpenCode](docs/guides/harness-setup/opencode.md) | Recommended |
-| [Claude Code](docs/guides/harness-setup/claude.md) | Stable |
+| Claude Code | Stable |
 | GitHub Copilot | Stable |
-| [Codex](docs/guides/harness-setup/codex.md) | Supported, opt-in install |
+| [Codex](docs/guides/harness-setup/codex.md) | Supported |
 
 ## Contributing
 

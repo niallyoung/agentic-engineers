@@ -69,11 +69,9 @@ Rules:
 
 ## DELEGATE / TODO Mapping
 
-Each `TASK-NNN` in TODO.md corresponds to a DELEGATE file:
-
-```
-~/.agentic-engineers/{harness}/{session-id}/queue/incoming/TASK-NNN.yaml  ← in-flight
-~/.agentic-engineers/{harness}/{session-id}/queue/done/TASK-NNN-handback.yaml  ← completed
-```
+Each `TASK-NNN` in TODO.md corresponds to a DELEGATE constructed and passed
+directly as a sub-agent spawn prompt; the matching HANDBACK returns
+synchronously as that spawn call's result, in-context. The harness session
+transcript is the durable record of both — there is no separate queue file.
 
 When a HANDBACK is received, update TODO.md immediately.

@@ -2,7 +2,7 @@
 
 **Description:** Codex setup for agentic-engineers custom agents, skills, and permission profiles.
 
-**Status:** Supported, opt-in install.
+**Status:** Supported, included in `make install`.
 
 **Captured From:** `codex-cli 0.141.0` on 2026-06-19.
 
@@ -26,7 +26,6 @@ When you run `make install-codex`, the renderer installs user-scoped Codex confi
 - `~/.codex/agentic-engineers.config.toml` - mergeable reference when `config.toml` is user-managed
 - `~/.codex/agents/*.toml` - Codex custom agent definitions
 - `~/.codex/skills/*` - Codex-discoverable agent skills
-- `~/.agentic-engineers/{harness}/{session-id}/queue/` - Canonical queue workspace for DELEGATE/HANDBACK handoffs (`harness=codex`)
 
 Repository-scoped `.codex/config.toml`, `.codex/agents/*.toml`, and
 `.codex/skills` remain valid Codex locations, but the first agentic-engineers

@@ -9,7 +9,7 @@ frontmatter schemas, model-id formats, and directory layouts differ.
 | Harness | Render script | Install target | Output |
 |---|---|---|---|
 | Claude Code | `renderer/scripts/render-claude.sh` | `make install-claude` | `~/.claude/` |
-| Copilot CLI | `renderer/scripts/render-copilot.sh` + `render-copilot-agents.sh` | `make install-copilot` | `~/.copilot/` |
+| Copilot CLI | `renderer/scripts/render-copilot.sh` (agents via render-copilot-agents.py) | `make install-copilot` | `~/.copilot/` |
 | OpenCode | `renderer/scripts/render-opencode.sh` | `make install-opencode` | `~/.config/opencode/` |
 | Codex | `renderer/scripts/render-codex.py` | `make install-codex` | `~/.codex/` |
 
@@ -41,9 +41,9 @@ and each installed target.
 ```
 renderer/
 ├── scripts/
-│   ├── render-claude.sh             — Claude Code renderer
-│   ├── render-copilot.sh            — Copilot CLI skills + docs renderer
-│   ├── render-copilot-agents.sh/py  — Copilot CLI agent renderer
+│   ├── render-claude.sh             — Claude Code renderer (agents + skills)
+│   ├── render-copilot.sh            — Copilot CLI renderer (agents via render-copilot-agents.py + skills + docs)
+│   ├── render-copilot-agents.py     — Copilot CLI agent renderer (Python)
 │   ├── render-opencode.sh           — OpenCode renderer
 │   ├── render-codex.py              — Codex renderer
 │   ├── render-specs.sh              — SPEC.md + orchestration YAML renderer
@@ -70,6 +70,8 @@ Update workflow:
 2. Re-render: `make render-all` (or the single-harness target).
 3. Validate: `make validate-renders && make validate-agents && make validate-skills`.
 4. Commit the source changes — never the rendered `dist/` output.
+
+**Note:** There is no `make status` target. Use `make validate-renders` to check for drift between source and rendered output.
 
 ## See Also
 

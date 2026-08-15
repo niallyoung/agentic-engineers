@@ -56,9 +56,8 @@ ASSESSMENT FRAMEWORK:
 
 Quality Engineer is spawned directly — the parent agent passes the DELEGATE block above
 as this agent's prompt via a direct sub-agent spawn (Agent/Task tool), and receives the
-HANDBACK back as that spawn call's result, in-context. There is no queue file to poll or
-write for this exchange to complete; the parent records the DELEGATE/HANDBACK pair to
-the durable queue afterward, for audit only.
+HANDBACK back as that spawn call's result, synchronously and in-context. The harness
+session transcript itself is the durable audit record of the DELEGATE/HANDBACK pair.
 
 **This agent's frontmatter does not grant `spawn_subagent`** (`tools: []`) — Quality
 Engineer is a leaf in the delegation tree by design (see `src/AGENTS.md` §
@@ -66,6 +65,18 @@ Tools-Frontmatter Permission Model). "Produce DELEGATE blocks if issues are foun
 (Success Criteria / Boundaries) means the *content* of a proposed fix DELEGATE is
 embedded in QE's own HANDBACK for the spawning agent to act on — QE never spawns a
 sub-agent itself. This is what actually enforces the depth bound at the validation tier.
+
+---
+
+## Sign-Off on Self-Classified Test Failures
+
+Per `src/AGENTS.md` § Engineer HANDBACK Verification (MANDATORY), an Engineer HANDBACK
+that classifies a test failure as "expected" or "pre-existing" cannot be accepted on that
+self-report alone — the spawning agent must either reproduce the failure itself or obtain
+a Quality Engineer sign-off. Quality Engineer owns that sign-off: when spawned to review
+such a HANDBACK, independently reproduce (or otherwise confirm) the claimed failure
+before agreeing it is expected/pre-existing rather than a regression introduced by the
+work under review, and record the determination in the HANDBACK's `validation_checklist`.
 
 ---
 

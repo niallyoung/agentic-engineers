@@ -4,18 +4,24 @@
 # Fires automatically after: git merge, git pull
 #
 # Sections:
-#   1. Queue cleanup check (orphaned DELEGATEs older than 24h)
-#   2. Workflow state validation (queue consistency)
-#   3. Span capture trigger (fire-and-forget DELEGATE to queue)
-#   4. Documentation drift check (SPEC.md / AGENTS.md modified in merge)
+#   1. Documentation drift check (SPEC.md / AGENTS.md modified in merge)
 #
 # Install: git config core.hooksPath .githooks
-# Bypass:  SKIP_HOOKS=1 (skips all sections; no audit written — hook is informational only)
+# Bypass:  SKIP_HOOKS=1 (skips all sections; hook is informational only)
 #
 # Exit codes:
 #   0 — always (this hook is informational; never blocks post-merge)
 #
 # Design: docs/architecture/SDLC-HOOKS-DESIGN.md §5.4
+#
+# NOTE (queue-removal, task-2026-08-13-queue-removal-code): this hook used to
+# carry a queue cleanup check, a workflow state validation check, and a
+# fire-and-forget span-capture DELEGATE writer, all operating on
+# artifacts/queue/{incoming,processing,done}/ — a path that predates the
+# ~/.agentic-engineers/{harness}/{session-id}/queue/ layout and was never
+# populated in this repo. Dispatch is now a direct sub-agent spawn and the
+# harness session transcript is the durable audit record, so the filesystem
+# queue (and this hook's sections about it) has been removed entirely.
 
 set -uo pipefail
 
@@ -29,9 +35,6 @@ if [ "${SKIP_HOOKS:-}" = "1" ]; then
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-QUEUE_INCOMING="$REPO_ROOT/artifacts/queue/incoming"
-QUEUE_PROCESSING="$REPO_ROOT/artifacts/queue/processing"
-QUEUE_DONE="$REPO_ROOT/artifacts/queue/done"
 
 WARNINGS=0
 
@@ -44,85 +47,7 @@ info() {
   echo "ℹ️  post-merge: $1"
 }
 
-# ── 1. QUEUE CLEANUP CHECK ─────────────────────────────────────────────────────
-# Warn about orphaned DELEGATEs in incoming/ older than 24 hours.
-# These may indicate a stalled Orchestrator or failed workflow.
-
-if [ -d "$QUEUE_INCOMING" ]; then
-  # Use find with -mtime +1 (older than 24h); suppress errors if find unavailable
-  ORPHANED=$(find "$QUEUE_INCOMING" -name "*.yaml" -mtime +1 2>/dev/null | wc -l | tr -d ' ')
-  if [ "${ORPHANED:-0}" -gt 0 ]; then
-    warn "$ORPHANED DELEGATE(s) in artifacts/queue/incoming/ older than 24h — possible stalled workflow"
-    echo "   Run: /queue-status (OpenCode) or ls artifacts/queue/incoming/ to review"
-    echo "   These may indicate the Orchestrator is not running or a task failed silently."
-  fi
-fi
-
-# ── 2. WORKFLOW STATE VALIDATION ───────────────────────────────────────────────
-# Check for tasks that appear in both processing/ and done/ (inconsistent state).
-# Also check for malformed YAML in queue files.
-
-if [ -d "$QUEUE_PROCESSING" ] && [ -d "$QUEUE_DONE" ]; then
-  # Find task IDs in processing/
-  for f in "$QUEUE_PROCESSING"/*.yaml; do
-    [ -f "$f" ] || continue
-    TASK_ID=$(basename "$f" .yaml)
-    # Check if a matching done/ file exists (task completed but still in processing)
-    if ls "$QUEUE_DONE/${TASK_ID}"* 2>/dev/null | grep -q .; then
-      warn "Task $TASK_ID appears in both processing/ and done/ — possible cleanup needed"
-    fi
-    # Check YAML validity (best-effort)
-    if command -v python3 >/dev/null 2>&1; then
-      if ! python3 -c "import sys,yaml; yaml.safe_load(open(sys.argv[1]))" "$f" 2>/dev/null; then
-        warn "Malformed YAML in queue: $f"
-      fi
-    fi
-  done
-fi
-
-# ── 3. SPAN CAPTURE TRIGGER ────────────────────────────────────────────────────
-# Write a lightweight DELEGATE to the queue for the Orchestrator to record this
-# merge event as a span. Fire-and-forget — we do NOT poll for a HANDBACK.
-
-if [ -d "$QUEUE_INCOMING" ]; then
-  TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
-  TS_COMPACT=$(date -u +%Y%m%d%H%M%S 2>/dev/null || date +%Y%m%d%H%M%S)
-  MERGE_TYPE="regular"
-  if [ "$SQUASH_MERGE" = "1" ]; then
-    MERGE_TYPE="squash"
-  fi
-
-  SPAN_TASK_ID="post-merge-span-${TS_COMPACT}"
-  SPAN_FILE="$QUEUE_INCOMING/${SPAN_TASK_ID}.yaml"
-
-  # Write DELEGATE (best-effort; never fail if write fails)
-  {
-    cat > "$SPAN_FILE" <<YAML
----
-handoff_type: DELEGATE
-task_id: ${SPAN_TASK_ID}
-timestamp: ${TIMESTAMP}
-role: Orchestrator
-model: claude-haiku-4-5
-effort: low
-origin: post-merge-hook
-scope: Capture span for merge event. Record merge metadata for observability.
-context:
-  - merge_type: ${MERGE_TYPE}
-  - timestamp: ${TIMESTAMP}
-plan:
-  - 1. Record merge span to artifacts/
-success_criteria:
-  - Span recorded
-YAML
-  } 2>/dev/null || true
-
-  if [ -f "$SPAN_FILE" ]; then
-    info "Span capture DELEGATE written: $SPAN_TASK_ID"
-  fi
-fi
-
-# ── 4. DOCUMENTATION DRIFT CHECK ───────────────────────────────────────────────
+# ── 1. DOCUMENTATION DRIFT CHECK ───────────────────────────────────────────────
 # If SPEC.md or AGENTS.md were modified in this merge, warn that agent
 # implementations may need updating.
 

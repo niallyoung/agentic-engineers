@@ -48,7 +48,8 @@ EXPECTED_ROLES = {
 }
 
 # Harnesses that render one markdown file per agent into dist/<h>/agents/.
-PER_FILE_AGENT_HARNESSES = ("claude", "copilot", "opencode")
+# For codex, the extension is .toml instead of .md.
+PER_FILE_AGENT_HARNESSES = ("claude", "copilot", "opencode", "codex")
 
 
 def _source_skill_names():
@@ -86,6 +87,12 @@ def _render_all():
 
 
 def test_source_has_exactly_8_user_skills():
+    # 8 -> 6 in the queue-removal work (task-2026-08-13-queue-removal-code):
+    # queue-management and queue-query were deleted along with the
+    # filesystem queue now that dispatch is a direct sub-agent spawn.
+    # audit-trail-review meta-skill added (task-2026-08-14-delegation-audit-skill).
+    # 6 -> 7 skills. self-healing-review meta-skill added
+    # (task-2026-08-15-self-healing-skill). 7 -> 8 skills.
     names = _source_skill_names()
     assert len(names) == 8, (
         f"Expected 8 user-facing skills in src/skills/, found {len(names)}: "
@@ -109,15 +116,29 @@ def test_harness_renders_all_8_agents(harness):
     agents_dir = DIST / harness / "agents"
     assert agents_dir.is_dir(), f"dist/{harness}/agents/ missing after render"
 
-    rendered = list(agents_dir.glob("*.md"))
+    # codex uses .toml, others use .md
+    if harness == "codex":
+        rendered = list(agents_dir.glob("*.toml"))
+        expected_pattern = lambda role: f"{role}.toml"
+    else:
+        rendered = list(agents_dir.glob("*.md"))
+        expected_pattern = lambda role: f"{role}.md" if harness != "copilot" else f"{role}-agent.agent.md"
+
     # Map each rendered file back to a role by checking which expected role
-    # its filename starts with (copilot uses <role>-agent.agent.md, others <role>.md).
+    # its filename starts with (copilot uses <role>-agent.agent.md, others <role>.md, codex uses <role>.toml).
     found_roles = set()
     for f in rendered:
         stem = f.name
         for role in EXPECTED_ROLES:
-            if stem == f"{role}.md" or stem == f"{role}-agent.agent.md":
-                found_roles.add(role)
+            if harness == "codex":
+                if stem == f"{role}.toml":
+                    found_roles.add(role)
+            elif harness == "copilot":
+                if stem == f"{role}-agent.agent.md":
+                    found_roles.add(role)
+            else:
+                if stem == f"{role}.md":
+                    found_roles.add(role)
     missing = EXPECTED_ROLES - found_roles
     assert not missing, (
         f"dist/{harness}/agents/ is missing rendered agents for roles: "

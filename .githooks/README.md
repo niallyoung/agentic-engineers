@@ -23,7 +23,7 @@ This command:
 
 **Duration:** < 3 seconds (optimized for minimal dev friction)
 
-**Enforces (6 core checks):**
+**Enforces (3 core checks, staged files only):**
 
 1. **Syntax Validation**
    - Python: `python3 -m py_compile` (all staged .py files)
@@ -31,77 +31,63 @@ This command:
    - Optional: `shellcheck` if installed (recommendations only)
    - **Blocks commit:** ❌ Yes (syntax errors are hard failures)
 
-2. **Linting (Python Style)**
-   - Uses: `pylint` (if available)
-   - Suppresses: missing-docstring, line-too-long, too-many-args, fixme (too strict)
-   - Checks: staged Python files (excluding tests)
-   - **Blocks commit:** ⚠️ Warning only (informational, not blocking)
-
-3. **Type Checking**
-   - Uses: `mypy --ignore-missing-imports` (if available)
-   - Checks: staged source files (excluding tests, vendor code)
-   - **Blocks commit:** ⚠️ Warning only (mypy can be noisy with partial stubs)
-
-4. **Secrets Detection**
-   - Patterns: API keys, passwords, tokens, AWS keys, env vars
+2. **Secrets Detection**
+   - Patterns: API keys, passwords, tokens, AWS keys, literal-valued sensitive env vars
    - Checks: all staged files (skips binaries/images)
    - **Blocks commit:** ❌ Yes (secrets in git = permanent exposure)
 
-5. **Contract Validation**
-   - Checks: decorator mismatches (@property with params, @staticmethod with self)
-   - Pattern matching: basic decorator patterns
-   - **Blocks commit:** ⚠️ Warning only (false positives possible)
-
-6. **File Permissions**
+3. **File Permissions**
    - Rejects: executable bits on .md, .yaml, .yml, .txt, .json, .jsonc files
    - Rationale: documentation should never be executable
    - **Blocks commit:** ❌ Yes (permissions errors indicate accidents)
 
-**Additional Checks (beyond the 6 core):**
+**Additional Checks (beyond the 3 core):**
 
 - **SPEC Constraints:** No external scripts in orchestration/scripts/ or orchestration/config/*.cron
-- **Agent Frontmatter:** Consistency between src/agents/*-agent.md and docs/AGENTS.md
+- **Agent Frontmatter:** Consistency between src/agents/*-agent.md model/effort and src/AGENTS.md
 - **YAML/JSON Validation:** Well-formedness checks
 - **Bypass Markers:** Warns if --no-verify or SKIP_HOOKS=1 in committed code
 - **Orphaned Bytecode:** Detects .pyc without .py source
-- **Queue Path Centralization:** Enforces ~/.agentic-engineers/ (blocks legacy paths)
 - **Model Naming:** Enforces locked model set (from .githooks/LOCKED_MODELS.sh)
-- **OpenCode Config:** Validates opencode.jsonc structure
+- **OpenCode Config:** Validates opencode.jsonc structure (when staged)
+- **DELEGATE/HANDBACK Protocol:** Required fields on staged protocol YAML files
+
+> **2026-08-13 infra consolidation:** removed the former pylint and mypy
+> checks (both optional — skipped entirely when the tool wasn't installed —
+> and warn-only even when they ran, so neither could ever block a commit)
+> and the contract-validation heuristic (also warn-only). See
+> `.githooks/pre-commit`'s inline NOTEs at each removal site.
 
 ### pre-push
 
 **When:** Runs automatically before `git push` (including `git push --force`)
 
-**Duration:** Variable (tests can be slow, typically 30-60 seconds)
+**Duration:** A few seconds — deliberately does **not** re-run the test suite
+or a render pass; both duplicate `ci.yml`, which runs them as the real,
+blocking gate within minutes of every push.
 
-**Enforces (3 core checks):**
-
-1. **Full Test Suite**
-   - Command: `make test` or `pytest tests/`
-   - Requirements: All 3514+ tests must pass
-   - Skips: test_git_hooks.py (to avoid hook recursion)
-   - **Blocks push:** ❌ Yes (test failures prevent deployment)
-
-2. **Spec Compliance**
-   - Checks: No SPEC.md drift (external scripts, cron files, Makefile violations)
-   - Validates: All DELEGATE/HANDBACK protocol files
-   - **Blocks push:** ❌ Yes (spec violations = architecture violations)
-
-3. **No Linting Errors**
-   - Verifies: Committed code passes pre-commit linting checks
-   - Skips: pytest execution if SKIP_PYTEST=1 (for testing hook itself)
-   - **Blocks push:** ⚠️ Advisory (warnings from pre-commit are not blocking)
-
-**Additional Checks (beyond the 3 core):**
+**Enforces:**
 
 - **Agent YAML Validation:** All src/agents/*.md have valid YAML frontmatter
 - **Workflow Files:** GitHub Actions YAML (.github/workflows/) well-formedness
 - **Documentation:** SPEC.md, AGENTS.md, README.md existence and structure
-- **DELEGATE/HANDBACK Protocol:** Valid YAML and required fields
-- **Render Pipeline:** All harnesses (copilot, claude, opencode, pi, specs) render successfully
-- **Concurrent Tests:** Race condition guard (test_concurrent_invocations)
-- **Queue Path Validation:** DELEGATE/HANDBACK files use canonical queue paths
-- **Agent Definition Verification:** .agents_verification_sha matches AGENTS.md content
+- **Spec Compliance:** No SPEC.md drift (external scripts, cron files,
+  Makefile violations); `scripts/validate-spec-constraints.py`
+- **Agent Definition Verification:** `.agents_verification_sha` matches
+  `src/AGENTS.md` content
+- **Gitconfig Credential Guard:** No embedded tokens in `~/.gitconfig` /
+  `~/.git-credentials`
+- **Main/master push warning:** advisory only, does not block
+
+> **2026-08-13 infra consolidation:** removed the DELEGATE/HANDBACK artifact
+> scan (scanned `artifacts/delegates/`, a filesystem-queue path that has
+> never existed since dispatch became direct sub-agent spawn — always a
+> no-op), the render-pipeline step (referenced a `render-pi` Makefile target
+> that no longer exists — always failed and only ever warned), and the full
+> test-suite run (warn-only; could never actually block a push, and cost up
+> to 180s for that). Run `make test` yourself before pushing — the pre-push
+> hook no longer does it for you. See `.githooks/pre-push`'s inline NOTEs at
+> each removal site.
 
 ## Emergency Override
 
@@ -131,21 +117,23 @@ GIT_SKIP_HOOKS=1 git push
 
 ### Hook File Locations
 
-- **pre-commit:** `.githooks/pre-commit` (~200 lines, comprehensive validation)
-- **pre-push:** `.githooks/pre-push` (~560 lines, test + spec validation)
+- **pre-commit:** `.githooks/pre-commit` (staged-file validation)
+- **pre-push:** `.githooks/pre-push` (agent/workflow/SPEC validation — no test run)
 - **commit-msg:** `.githooks/commit-msg` (enforces commit message format)
-- **post-merge:** `.githooks/post-merge` (updates dependencies after merge)
+- **post-merge:** `.githooks/post-merge` (documentation-drift check, informational only)
 
 ### Performance Targets
 
-| Hook | Target | Actual | Status |
-|------|--------|--------|--------|
-| pre-commit | < 3 seconds | ~1-2s (typical) | ✅ Optimized |
-| pre-push | < 10 seconds | ~30-60s (tests) | ✅ Tests slow OK |
-| commit-msg | < 1 second | < 0.5s | ✅ Fast |
-| post-merge | < 5 seconds | ~2-3s | ✅ Fast |
+| Hook | Target | Status |
+|------|--------|--------|
+| pre-commit | < 5 seconds | ✅ Staged files only |
+| pre-push | < 5 seconds | ✅ No test/render pass |
+| commit-msg | < 1 second | ✅ Fast |
+| post-merge | < 5 seconds | ✅ Fast |
 
-**Note:** pre-push includes full test suite, which can take 30-60 seconds. This is acceptable because tests are the primary quality gate.
+**Note:** neither hook runs the test suite — `ci.yml` is the test gate, and
+runs within minutes of every push. Run `make test` yourself before pushing
+if you want local confidence ahead of CI.
 
 ## Configuration
 
@@ -174,8 +162,7 @@ Some hooks support environment variables to disable specific checks:
 
 - **SKIP_HOOKS=1**: Bypass all hook checks (emergency only)
 - **GIT_SKIP_HOOKS=1**: Alias for SKIP_HOOKS=1
-- **SKIP_PYTEST=1**: Skip pytest in pre-push (for testing hook itself)
-- **BYPASS_HOOK_VALIDATION=true**: Skip agent frontmatter validation
+- **BYPASS_HOOK_VALIDATION=true**: Skip agent frontmatter / opencode.jsonc / protocol validation
 
 ## Troubleshooting
 
@@ -190,15 +177,16 @@ Some hooks support environment variables to disable specific checks:
    - Move to .env file or secrets manager
    - Use git filter-branch to remove from history (if critical)
 
-3. **Pre-push test failures:**
-   - Run locally: `make test`
-   - Review error output
-   - Fix failing tests before pushing
+3. **Test failures (caught by CI, not pre-push):**
+   - The pre-push hook does not run the test suite — run `make test` locally
+     before pushing for confidence ahead of CI
+   - Review CI's "Test" step output if a push fails there
 
 4. **Pre-push spec violations:**
-   - Check for external scripts in orchestration/
-   - Verify DELEGATE/HANDBACK files in queue/
-   - Ensure Makefile follows SPEC.md patterns
+   - Check for external scripts in orchestration/scripts/ or cron files in
+     orchestration/config/
+   - Ensure Makefile follows SPEC.md patterns (no direct script invocations
+     outside renderer/scripts/)
 
 ### Hooks Not Running
 
@@ -237,44 +225,21 @@ make test-ci-force          # Strict: all tests must pass
 make test-ci-shell          # Interactive debug shell in container
 ```
 
-**What this catches that pre-push hooks don't:**
-- **Symlink issues:** Tests verify symlink creation, resolution, relative paths, and path traversal security
-- **Path platform differences:** Container tests validate paths with spaces, special chars, absolute/relative resolution
-- **File permissions:** Tests verify read/write/execute permissions on files and directories
-- **Python 3.11 specific features:** Tests confirm async/await, pathlib.match(), typing module, exception groups
-- **System dependencies:** Validates git, python3, pytest, pyyaml availability in container
-
 **Workflow:**
 ```bash
 # 1. Make local changes
-# 2. Pre-commit hook runs (~2 seconds)
-# 3. Pre-push hook runs tests (~30-60 seconds)
-# 4. Still want confidence? Test in container first
+# 2. Pre-commit hook runs (staged files, a few seconds)
+# 3. Run the test suite yourself (pre-push does not run it): make test
+# 4. Still want CI-exact confidence? Test in container first
 make test-ci-force
 
 # 5. If green, push
 git push
 ```
 
-**Container tests included (46 total):**
-- TestContainerSymlinks (5 tests): symlink operations
-- TestContainerFilePaths (6 tests): path resolution
-- TestContainerFilePermissions (6 tests): permission handling
-- TestPython311Compatibility (6 tests): Python 3.11 features
-- TestSystemDependencies (4 tests): required tools
-- TestDockerfileBuild (5 tests): Dockerfile validation
-- TestMakefileTargets (5 tests): CI targets
-- TestGitConfiguration (2 tests): Git setup
-- TestPlatformDetection (3 tests): OS detection
-- TestContainerIntegration (2 tests): full integration
-- TestErrorMessages (1 test): error handling
-
-See `tests/test_ci_container_environment.py` for full test suite.
-
 ---
 
 - `.githooks/LOCKED_MODELS.sh`: Model naming enforcement configuration
-- `.githooks/PRE-PUSH.md`: Detailed pre-push hook implementation notes
 - `docs/SPEC.md`: Architecture and constraints enforced by hooks
 - `docs/AGENTS.md`: Agent definitions and SDLC guidelines
 - `Makefile`: Hook installation via `make setup`

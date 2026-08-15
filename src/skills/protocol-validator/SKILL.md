@@ -12,7 +12,6 @@ metadata:
   effort: high
   thinking: false
   dependencies:
-    - queue-management (for CoreProtocolValidator)
     - PyYAML (for spec loading)
 ---
 
@@ -28,12 +27,10 @@ future fields.
 **What it does:**
 
 1. **Load Spec at Runtime** — Load `docs/specs/protocol-core-v1.0.yaml` once, cache in memory
-2. **Validate Core Fields** — Strict validation of 7 required DELEGATE fields and 4 required HANDBACK fields
+2. **Validate Core Fields** — Strict validation of 9 required DELEGATE fields and 6 required HANDBACK fields
 3. **Validate Extensions** — Loose validation of optional fields; unknown fields logged as warnings
 4. **Forward-Compatibility** — Schema evolution supported; future fields don't break current validators
 5. **Performance** — <5ms per validation (core <1ms, extensions <2ms)
-6. **Enum Drift Detection** — Scan codebase for HANDBACK status enum divergence (success/failure/etc.)
-7. **Protocol Divergence Detection** — Detect multiple independent escalation/validation implementations
 
 **Why it matters:**
 
@@ -41,7 +38,6 @@ future fields.
 - **Runtime Spec Updates** — Protocol improvements via DELEGATE/HANDBACK loaded dynamically
 - **Unknown Field Handling** — Allows schema to evolve without breaking old code
 - **Traceability** — All validations logged with context (task_id, field, reason)
-- **Integration Ready** — Works with check_protocol_compliance.py and orchestrator
 
 ---
 
@@ -58,7 +54,7 @@ validator = ProtocolValidator(spec_path="docs/specs/protocol-core-v1.0.yaml")
 # Validate DELEGATE
 delegate = {
     "task_id": "feature-x-001",
-    "skill": "queue-management",
+    "skill": "spec-validator",
     "agent": "senior-engineer",
     "scope": "Implement feature X with comprehensive testing and documentation across all modules",
     "success_criteria": ["All tests pass", "Code reviewed and approved"],
@@ -93,29 +89,13 @@ else:
     print(f"❌ Validation errors: {result.errors}")
 ```
 
-### CLI Interface
-
-```bash
-# Validate a DELEGATE from file
-python -m skills.protocol_validator --delegate path/to/delegate.yaml
-
-# Validate a HANDBACK from file
-python -m skills.protocol_validator --handback path/to/handback.yaml
-
-# Validate and get JSON output for integration
-python -m skills.protocol_validator --delegate path/to/delegate.yaml --json
-
-# Load custom spec
-python -m skills.protocol_validator --delegate path/to/delegate.yaml --spec path/to/custom-spec.yaml
-```
-
 ---
 
 ## Protocol Specification
 
 The validator loads specification from `docs/specs/protocol-core-v1.0.yaml`. Protocol version 1.0 defines:
 
-### DELEGATE Core Fields (7 required)
+### DELEGATE Core Fields (9 required)
 
 | Field | Type | Rules |
 |-------|------|-------|
@@ -126,8 +106,10 @@ The validator loads specification from `docs/specs/protocol-core-v1.0.yaml`. Pro
 | `success_criteria` | array | ≥1 items, each describing a measurable outcome |
 | `plan` | array | ≥2 items, each ≥3 words (minimum 9 chars), describes steps |
 | `context` | string or array | String: ≥20 words OR Array: ≥1 items of strings |
+| `spec_version` | string | Protocol spec version authorizing this task |
+| `handoff_type` | string | Must be `DELEGATE` |
 
-### HANDBACK Core Fields (4 required)
+### HANDBACK Core Fields (6 required)
 
 | Field | Type | Rules |
 |-------|------|-------|
@@ -135,6 +117,8 @@ The validator loads specification from `docs/specs/protocol-core-v1.0.yaml`. Pro
 | `status` | string | One of: success, failure, partial, blocked, escalate |
 | `output` | any | Any structured output from the task |
 | `metrics` | object | Required subfields: quality (0.0-1.0), tokens (≥0), cost (≥0), duration_seconds (≥0) |
+| `spec_version` | string | Protocol spec version used when the task executed |
+| `handoff_type` | string | Must be `HANDBACK` |
 
 ### Extension Fields (Optional, Forward-Compatible)
 
@@ -180,29 +164,26 @@ The validator is designed to support schema evolution:
 1. **Unknown Fields** — Logged as warnings, don't cause validation failure
 2. **New Spec Versions** — Load new spec, validate against it (supports major version bumps)
 3. **Field Deprecation** — Old code validates against old spec, new code against new spec
-4. **Gradual Migration** — validators can report schema version mismatch via check_protocol_compliance.py
 
 ---
 
 ## Integration
 
-### With Queue-Management
+### With Direct Sub-Agent Spawn Dispatch
 
 ```python
-from skills.queue_management.scripts import QueueOperations
 from skills.protocol_validator.scripts import ProtocolValidator
 
-queue = QueueOperations(session_id="my-session")
 validator = ProtocolValidator()
 
-# Validate before queueing
+# Validate before spawning the target agent
 delegate = {...}
 result = validator.validate_delegate(delegate)
 if not result.valid:
     print(f"Validation failed: {result.errors}")
     raise ValueError("Invalid DELEGATE")
 
-queue.create_delegate(**delegate)
+handback = spawn_agent(agent=delegate["agent"], prompt=delegate)  # direct spawn
 ```
 
 ### With Orchestrator
@@ -212,14 +193,6 @@ The Orchestrator should:
 2. Call `validator.validate_delegate()` before routing
 3. Call `validator.validate_handback()` before accepting completion
 4. Log validation results (valid DELEGATEs don't need logging; failures logged with context)
-
-### With CI Compliance Checking
-
-The check_protocol_compliance.py script uses protocol-validator to check queue integrity:
-1. Load all DELEGATEs from queue
-2. Run `validator.validate_delegate()` on each
-3. Aggregate results: count passes/failures/warnings
-4. Report: schema compliance percentage, unknown fields, deprecated patterns
 
 ---
 
@@ -294,9 +267,7 @@ Warnings are informational:
 ## References
 
 - `docs/specs/protocol-core-v1.0.yaml` — Canonical protocol specification
-- `skills/queue-management/` — CoreProtocolValidator reference impl
 - `docs/CORE-PROTOCOL-QUICKSTART.md` — Protocol 101
-- `docs/PROTOCOL-MIGRATION-GUIDE.md` — Migration from older versions
 
 ---
 
@@ -310,23 +281,5 @@ Warnings are informational:
 
 ## Self-Improvement
 
-This skill participates in the framework's continuous improvement cycle
-(see [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md)).
-
-When you use **protocol-validator** during a task, include a skill_feedback entry
-in your HANDBACK to help improve it over time:
-
-```yaml
-skill_feedback:
-  - skill_name: protocol-validator
-    effectiveness_score: 0.85        # required: 0.0–1.0
-    clarity_score: 0.90              # optional
-    coverage_gaps:
-      - "Specific scenario the skill did not address"
-    improvement_suggestions:
-      - "Concrete change that would have helped"
-    usage_context: "One sentence on how you used this skill"
-```
-
-Positive feedback is as valuable as critical feedback. Three or more
-feedback items for this skill automatically trigger an improvement task.
+See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
+Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

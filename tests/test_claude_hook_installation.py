@@ -207,6 +207,34 @@ class TestStatus:
         assert "hook claude-delegate-guard.py" in result.stdout
         assert "wired" in result.stdout
 
+    def test_status_reports_installed_hook_not_foreign(self, tmp_path):
+        """Regression: a genuinely-installed hook must be reported as
+        installed (✅), never as foreign. --status previously checked for
+        SRC_HOOK + '.marker' — a path in the *source* repo tree that
+        install never writes — instead of the destination marker
+        (hooks/.agentic-engine-claude) that install actually writes. That
+        made every correctly-installed hook print as foreign, contradicting
+        the "wired" line on the same output.
+        """
+        _render(tmp_path)
+        result = _render(tmp_path, "--status")
+        assert result.returncode == 0
+        assert "✅ hook claude-delegate-guard.py" in result.stdout
+        assert "(foreign)" not in result.stdout
+
+    def test_status_reports_genuinely_foreign_hook_as_foreign(self, tmp_path):
+        """A hook file present at the destination without our marker (a
+        user's own script, or ours with the marker removed) must still be
+        reported as foreign — the fix for the above must not collapse into
+        always reporting "installed" regardless of marker state.
+        """
+        _render(tmp_path)
+        (tmp_path / "hooks" / ".agentic-engine-claude").unlink()
+        result = _render(tmp_path, "--status")
+        assert result.returncode == 0
+        assert "⚠️" in result.stdout
+        assert "hook claude-delegate-guard.py (foreign)" in result.stdout
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -1,28 +1,12 @@
 # Deployment Guide: Agentic Engineers
 
-## Overview
-
-**This guide previously described deploying a "Continuous Polling Loop Automation"
-system** — a background process (`bin/run-automation-controller.sh`) that
-continuously polled a task queue, read DELEGATE files, and spawned agents as
-subprocesses, packaged as a systemd service / Docker container / Kubernetes
-deployment.
-
-That script, the polling loop it wrapped, and the architecture doc it linked to
-(`docs/architecture/continuous-polling.md`) no longer exist. An audit of live sessions
-found that dispatch never actually went through that polling path in practice — every
-real delegation happened via a direct sub-agent spawn instead. The framework has been
-updated to match the model that was actually running: the Orchestrator builds a
-DELEGATE and spawns the target agent directly (Agent/Task tool) within the harness
-session, reading the HANDBACK back as the tool result. See
+"Deploying agentic-engineers" means installing the framework's agent/skill definitions
+into a harness (Claude Code, OpenCode, Copilot CLI, Codex) and invoking that harness's
+Orchestrator agent interactively. There is no standalone background service — the
+Orchestrator builds a DELEGATE and spawns the target agent directly (Agent/Task tool)
+within the harness session, reading the HANDBACK back as the tool result. See
 [src/AGENTS.md > Direct Sub-Agent Spawn Execution Model](../../src/AGENTS.md#direct-sub-agent-spawn-execution-model)
 for the canonical description.
-
-**Practical consequence:** there is no standalone background service to install,
-run under systemd, containerize, or scale horizontally. "Deploying agentic-engineers"
-today means installing the framework's agent/skill definitions into a harness
-(Claude Code, OpenCode, Copilot CLI, Codex) and invoking that harness's
-Orchestrator agent interactively — see the sections below.
 
 ---
 
@@ -94,36 +78,20 @@ someone who has verified a real path end to end.
 
 ---
 
-## The Audit-Trail Queue Directory
+## The Audit Trail: Harness Session Transcript
 
-Dispatch is direct, but every DELEGATE and HANDBACK is still recorded to
-`~/.agentic-engineers/{harness}/{session-id}/queue/` for audit purposes (see
-[src/AGENTS.md > Audit-Trail Strategy](../../src/AGENTS.md#audit-trail-strategy)).
-That directory is ordinary state on disk, so ordinary backup practices apply if you
-want to retain it beyond a session:
-
-```bash
-# Back up one session's audit trail
-tar -czf queue-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
-  ~/.agentic-engineers/<harness>/<session-id>/queue/
-
-# Back up everything under agentic-engineers' work directory
-tar -czf agentic-engineers-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
-  ~/.agentic-engineers/
-```
-
-There is no separate "restore and restart a service" procedure to document — restoring
-the directory simply restores the audit trail; it does not resume or replay any
-dispatch, since dispatch already completed synchronously within the harness session
-that produced it.
+Every DELEGATE and HANDBACK is recorded in the harness session transcript itself — the
+DELEGATE as a sub-agent spawn's prompt, the HANDBACK as that spawn call's result. Dispatch
+completes synchronously within the harness session that produced it. If you need to retain
+a record of a session's work beyond the session itself, use your harness's own
+session-history or transcript-export mechanism, if it offers one — agentic-engineers does
+not write a separate copy of its own.
 
 ---
 
 ## Maintenance
 
 **Periodically:**
-- Prune old per-session queue partitions under `~/.agentic-engineers/{harness}/` if
-  disk usage matters to you — each is just DELEGATE/HANDBACK YAML plus artifacts.
 - Keep the harness CLI itself (Claude Code / OpenCode / Copilot CLI / Codex)
   up to date per its own release process; agentic-engineers has no dependencies of its
   own to patch beyond what `make install` renders.

@@ -162,8 +162,8 @@ def main(argv: list[str] | None = None) -> int:
     if args:
         repo_root = Path(args[0]).absolute()
     else:
-        # Default: parent of this script's parent directory
-        repo_root = Path(__file__).absolute().parent.parent
+        # Default: parent of this script's parent directory (two levels up from renderer/scripts/)
+        repo_root = Path(__file__).absolute().parent.parent.parent
 
     if not repo_root.exists():
         print(f"❌ REPO_ROOT not found: {repo_root}", file=sys.stderr)

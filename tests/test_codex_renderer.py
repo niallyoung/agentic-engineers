@@ -115,7 +115,7 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "handoff_type: HANDBACK" in agents_doc
     assert "Orchestrator-only" in agents_doc
     assert "does not implement user tasks itself" in agents_doc
-    assert "~/.agentic-engineers/codex/{session-id}/queue/" in agents_doc
+    assert "Dispatch Model" in agents_doc
     assert "expected_handback" not in agents_doc
     assert "semicolon-separated tasks" in agents_doc
     assert "spawn independent tasks in parallel" in agents_doc.lower()

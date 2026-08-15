@@ -9,11 +9,9 @@
 ## Features
 
 - ✅ Full DELEGATE/HANDBACK protocol support
-- ✅ Direct sub-agent spawn dispatch (Agent/Task tool), with the queue retained as a durable audit trail — not something anything polls to route work
-- ✅ Real-time token tracking (27% Orchestrator + 73% subagents)
-- ✅ Concurrent agent execution (tested with 36+ agents)
-- ✅ Voice notifications with distinct personalities
-- ✅ Dark factory mode (autonomous operation)
+- ✅ Direct sub-agent spawn dispatch (Agent/Task tool) — the harness session transcript is the durable audit record; nothing polls anything to route work
+- ✅ Real-time token tracking
+- ✅ Concurrent agent execution
 
 ## Installation
 
@@ -22,30 +20,24 @@ make install-opencode
 ```
 
 This will:
-1. Create queue directories at `~/.agentic-engineers/opencode/{session-id}/queue/`
-2. Render agent configurations into `~/.config/opencode/` with OpenCode-specific model names
-3. Install protocol documents and skills
-4. Set up the renderer pipeline
+1. Render agent configurations into `~/.config/opencode/` with OpenCode-specific model names
+2. Install protocol documents and skills
+3. Set up the renderer pipeline
 
 ## Configuration
 
-### Queue Directories (Audit Trail)
+### Audit Trail
 
-OpenCode records every DELEGATE and HANDBACK to a per-session queue directory as a
-durable audit trail — dispatch itself happens via direct sub-agent spawn, not by
-anything reading this directory:
-
-```bash
-mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}
-```
-
-These directories are created automatically by `make install-opencode`.
+There is no filesystem queue. OpenCode dispatches via direct sub-agent spawn (Agent/Task
+tool), and every DELEGATE and HANDBACK is recorded in the harness session transcript
+itself — the DELEGATE as a spawn prompt, the HANDBACK as that spawn's result. Nothing
+reads or writes a separate queue directory.
 
 OpenCode's rendered config lives in `~/.config/opencode/` and includes `AGENTS.md`, `opencode.jsonc`, `agents/`, and `skills/`.
 
 ### Model Names
 
-OpenCode uses hyphenated model names (e.g., `claude-opus-4-8` instead of `claude-opus-4.8`).
+OpenCode uses hyphenated model names (e.g., `claude-haiku-4-5` instead of `claude-haiku-4.5`).
 
 The renderer automatically transforms model names during installation.
 
@@ -57,33 +49,19 @@ The renderer automatically transforms model names during installation.
 opencode --agent orchestrator "Your task description here"
 ```
 
-### Dark Factory Mode (Autonomous)
+### Autonomous Execution
 
-```bash
-opencode --agent orchestrator --dark-factory "Process all pending tasks in queue"
-```
-
-This mode:
-- Processes tasks autonomously, spawning specialists directly (Agent/Task tool) rather than polling
-- Routes to specialists based on task type
-- Reads each HANDBACK back in-context as its spawn call returns
-- Aggregates results and reports back
-- Records each DELEGATE/HANDBACK to the audit-trail queue, then pauses when no pending DELEGATEs or outstanding spawns remain
-
-### Voice Notifications
-
-OpenCode supports voice notifications for task lifecycle events:
-
-```bash
-# Enable voice notifications in config
-opencode --agent orchestrator --voice "Task completed with 95/100 quality"
-```
+The Orchestrator processes tasks autonomously by:
+- Spawning specialists directly (Agent/Task tool)
+- Routing to specialists based on task type
+- Reading each HANDBACK back in-context as its spawn call returns
+- Aggregating results and reporting back
+- Pausing when no pending DELEGATEs or outstanding spawns remain — the session transcript is the audit record
 
 ## Known Limitations
 
-- Requires queue directories to be created at `~/.agentic-engineers/opencode/{session-id}/queue/`
-- Model names use hyphenated format (e.g., `claude-opus-4-8`)
-- Session-based queue isolation for concurrent operation
+- Model names use hyphenated format (e.g., `claude-haiku-4-5`)
+- Each session is independently isolated for concurrent operation — there is no shared queue state to coordinate
 
 ## Compatibility Notes
 
@@ -93,23 +71,9 @@ opencode --agent orchestrator --voice "Task completed with 95/100 quality"
 
 ## Troubleshooting
 
-### Queue directories not found
-
-**Symptom:** `Error: Queue directory ~/.agentic-engineers/opencode/{session-id}/queue/incoming not found`
-
-**Fix:**
-```bash
-mkdir -p ~/.agentic-engineers/opencode/{session-id}/queue/{incoming,processing,done}
-```
-
-Or re-run:
-```bash
-make install-opencode
-```
-
 ### Model not recognized
 
-**Symptom:** `Error: Model 'claude-opus-4.8' not found`
+**Symptom:** `Error: Model 'claude-haiku-4.5' not found`
 
 **Cause:** OpenCode expects hyphenated model names.
 
@@ -117,44 +81,21 @@ make install-opencode
 
 ### Agent not routing correctly
 
-**Symptom:** Orchestrator isn't spawning the expected specialist, or the audit trail
-isn't recording DELEGATE/HANDBACK entries.
+**Symptom:** Orchestrator isn't spawning the expected specialist.
 
 **Fix:**
-1. Check queue permissions: `ls -la ~/.agentic-engineers/opencode/{session-id}/queue/`
-2. Run with `--debug` and confirm the Agent/Task spawn call for the expected role
+1. Run with `--debug` and confirm the Agent/Task spawn call for the expected role
    actually fires: `opencode --agent orchestrator --debug`
-3. Check logs: `tail -f ~/.agentic-engineers/{session-id}/memory/logs/*.log`
+2. Check logs: `tail -f ~/.agentic-engineers/{session-id}/memory/logs/*.log`
 
-There is no polling loop to check separately — if the spawn call fires and returns a
-HANDBACK, routing worked; if it doesn't fire at all, the issue is in the Orchestrator's
-routing decision, not a stalled poller.
+If the spawn call fires and returns a HANDBACK, routing worked; if it doesn't fire at all,
+the issue is in the Orchestrator's routing decision.
 
 ## Advanced Configuration
 
 ### Concurrent Agent Execution
 
-OpenCode supports tens to hundreds of concurrent agents. To test:
-
-```bash
-# Launch orchestrator with high concurrency
-opencode --agent orchestrator --max-agents 100 "Process batch of 100 tasks"
-```
-
-**Tested capacity:**
-- ✅ 36+ concurrent agents (production validated)
-- ✅ 100+ sub-agents in parallel delegation chains
-- ✅ 5-tier deep hierarchies
-
-### Voice Notification Customization
-
-Edit `~/.agentic-engineers/config/voice.yaml` to customize voices per agent:
-
-```yaml
-orchestrator: "Alex"      # System voice for orchestrator
-engineer: "Samantha"      # System voice for engineers
-quality_engineer: "Tom"   # System voice for QE
-```
+OpenCode orchestrates concurrent agent work through the DELEGATE/HANDBACK protocol. Multiple specialists can be spawned and their results read back in-context.
 
 ## Next Steps
 

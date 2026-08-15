@@ -56,8 +56,8 @@ ROLE_ROUTING_TABLE = """- orchestrator: intake, routing, task management, synthe
 
 STRICT_ORCHESTRATOR_MODE = """- The root Codex session is an orchestrator only; it does not implement user tasks itself.
 - Convert every substantive user request into one or more DELEGATE YAML blocks and hand them to subagents.
-- If the queue is empty, do not invent work; report idle or ask for the next task.
-- Root-thread work is limited to intake, routing, queue coordination, Git coordination, final verification, and synthesis of HANDBACKs.
+- If there is no pending or in-flight delegated work, do not invent work; report idle or ask for the next task.
+- Root-thread work is limited to intake, routing, dispatch coordination, Git coordination, final verification, and synthesis of HANDBACKs.
 - Never resolve a user task in the root session when a specialist role exists."""
 
 
@@ -66,11 +66,11 @@ DELEGATE_GRAMMAR = """When the user starts a message with `delegate:` or `DELEGA
 Parse the text after the prefix as semicolon-separated tasks; also accept newline bullets or numbered lists as task separators. For each task:
 1. Assign a stable task_id such as `codex-001`, `codex-002`, preserving user wording in `scope`.
 2. Choose the narrowest appropriate custom agent using the routing table.
-3. Build a canonical DELEGATE payload with the queue-management fields needed for validation: `handoff_type: DELEGATE`, `task_id`, `agent`, `skill`, `model`, `effort`, `scope`, `context`, `plan`, and `success_criteria`.
+3. Build a canonical DELEGATE payload with the fields needed for protocol validation: `handoff_type: DELEGATE`, `task_id`, `agent`, `skill`, `model`, `effort`, `scope`, `context`, `plan`, and `success_criteria`.
 4. Spawn independent tasks in parallel where file ownership and dependencies do not conflict; keep same-file edits coordinated.
 5. Wait for all spawned agents needed for the current turn, then synthesize a final HANDBACK-style summary.
 
-If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If the queue is empty, do not invent work."""
+If a task is ambiguous, route discovery/planning to `lead-engineer` or `senior-engineer` instead of guessing. If there is no pending or in-flight delegated work, do not invent work."""
 
 
 HANDBACK_CONTRACT = """Return results in this shape whenever you were spawned with a DELEGATE:
@@ -242,7 +242,32 @@ def parse_agents_table(agents_md: Path) -> dict[str, dict[str, str]]:
 
 
 def copy_skill(src: Path, dst: Path) -> None:
+    # Nested-precedence contract (docs/RENDERING.md): no src skill ships its
+    # own AGENTS.md, so any AGENTS.md found under an already-installed skill
+    # dir is user-authored. rmtree()+copytree() would otherwise wipe it on
+    # every re-render (unlike rsync --delete + --exclude in the other
+    # renderers, this copy path has no equivalent "leave it alone" flag) —
+    # so stash and restore any such files verbatim around the copy.
+    #
+    # FIX 3 note (task-2026-08-15-fix-renderer-bugs): the 3 bash renderers
+    # needed a dedicated post-rsync cleanup pass (prune_excluded_cruft() in
+    # renderer/lib/render-lib.sh) because rsync --delete never removes a path
+    # matched by --exclude, so a tests/__pycache__/.pytest_cache/*.pyc dir
+    # shipped by an OLDER renderer version, before those excludes existed,
+    # is invisible to rsync in both directions and orphaned forever. This
+    # function has no equivalent bug and needs no equivalent extra cleanup
+    # step: it is NOT incremental. Every re-render does rmtree(dst) (wiping
+    # the entire prior install, cruft included) followed by a full
+    # copytree(src, dst, ignore=ignore) rebuild from src, and `ignore`
+    # already excludes the same cruft patterns from ever being (re)copied.
+    # There is no code path by which a stale excluded file can survive a
+    # re-render here — verified by the shared orphan-cruft regression suite
+    # (tests/test_install_orphan_pruning.py), which passes for codex without
+    # any change to this function.
+    preserved: dict[Path, bytes] = {}
     if dst.exists():
+        for path in dst.rglob("AGENTS.md"):
+            preserved[path.relative_to(dst)] = path.read_bytes()
         shutil.rmtree(dst)
 
     def ignore(_dir: str, names: list[str]) -> set[str]:
@@ -250,6 +275,10 @@ def copy_skill(src: Path, dst: Path) -> None:
         return {name for name in names if name in ignored or name.endswith(".pyc")}
 
     shutil.copytree(src, dst, ignore=ignore)
+    for rel_path, content in preserved.items():
+        target = dst / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
     (dst / SKILL_MARKER).write_text("managed by agentic-engineers render-codex.py\n", encoding="utf-8")
 
 
@@ -273,12 +302,8 @@ class CodexRenderer:
     def metadata_for(self, agent: AgentSource) -> dict[str, str]:
         docs_meta = self.canonical.get(agent.name, {})
         role = AGENT_NAME_TO_REGISTRY_ROLE.get(agent.name, agent.name.replace("-", "_"))
-        effort = docs_meta.get("effort") or str(agent.frontmatter.get("effort") or "medium")
-        description = (
-            docs_meta.get("description")
-            or str(agent.frontmatter.get("description") or "")
-            or agent.body.strip().splitlines()[0]
-        )
+        effort = docs_meta.get("effort", "medium")
+        description = docs_meta.get("description", "")
         return {
             "role": role,
             "effort": effort,
@@ -303,7 +328,7 @@ You are a Codex custom subagent rendered from agentic-engineers.
 - The Orchestrator does not do implementation work itself; it decomposes tasks and delegates them.
 - Never bypass the Orchestrator for root-thread task execution.
 - When spawned with a DELEGATE, execute only that scope and return the HANDBACK YAML shape below.
-- Do not invent queue work when the queue is empty.
+- Do not invent work when there is nothing pending or in flight.
 - When independent work can be parallelized, summarize what can safely fan out and what must remain sequential.
 - You are not alone in the codebase. Preserve user changes and other agents' changes; never revert work you did not make.
 
@@ -376,7 +401,7 @@ codex --profile {ORCHESTRATOR_PROFILE} --sandbox workspace-write --ask-for-appro
 - Cheap-first routing: Orchestrator and Engineer use `{CHEAP_CODEX_MODEL}`; planning,
   review, security, quality, and model optimization use `{STRONG_CODEX_MODEL}`.
 - Parallelize independent work, but keep git history, migrations, and same-file edits coordinated.
-- Pause for genuine product/security decisions. Do not invent work when the queue is empty.
+- Pause for genuine product/security decisions. Do not invent work when there is nothing pending or in flight.
 {STRICT_ORCHESTRATOR_MODE}
 
 ## Codex Usage
@@ -400,11 +425,11 @@ the generated custom-agent HANDBACK contract; update docs for the new launch flo
 
 {HANDBACK_CONTRACT}
 
-## Queue Convention
+## Dispatch Model
 
-Use `~/.agentic-engineers/codex/{{session-id}}/queue/` for Codex queue partitions
-with `incoming/`, `processing/`, `done/`, and `failed/` states. Queue writes must
-go through the queue-management skill when available.
+Every DELEGATE is passed directly as a spawned subagent's prompt; the HANDBACK
+returns synchronously as that spawn's result, in-context. The Codex session
+transcript is the durable record of every DELEGATE/HANDBACK pair.
 """,
             encoding="utf-8",
         )
@@ -470,9 +495,6 @@ network_access = false
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
-
-# Polling-based queue automation has been removed (2026-08-09).
-# Orchestration now uses direct sub-agent spawning per SPEC-2026-004.
 """,
             encoding="utf-8",
         )
@@ -505,11 +527,6 @@ max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
 
-# Polling-based queue automation has been removed (2026-08-09).
-# Orchestration now uses direct sub-agent spawning per SPEC-2026-004.
-watch_enabled = true
-watch_poll_seconds = 0.5
-
 # Autopilot-style self-tests can use:
 #   codex exec --sandbox workspace-write --ask-for-approval never "<task>"
 #
@@ -532,12 +549,15 @@ watch_poll_seconds = 0.5
 
         print(f"Rendering Codex custom agents -> {self.agents_dir}")
         managed_before = self.managed_names()
+        source_agents = list_source_agents(self.src_agents)
         managed_now: list[str] = []
-        for agent in list_source_agents(self.src_agents):
+        for agent in source_agents:
             if self.render_agent(agent, managed_before):
                 managed_now.append(agent.name)
                 print(f"  {_green('OK')} agent {agent.name}")
         self.manifest.write_text("\n".join(sorted(managed_now)) + "\n", encoding="utf-8")
+
+        self.prune_orphaned_agents(managed_before, {agent.name for agent in source_agents})
 
         print(f"Rendering Codex skills -> {self.skills_root}")
         count_s = 0
@@ -548,8 +568,83 @@ watch_poll_seconds = 0.5
                 continue
             copy_skill(skill, dst)
             count_s += 1
+
+        self.prune_orphaned_skills()
+
         print(f"{_green('OK')} Rendered {len(managed_now)} agent(s), {count_s} skill(s)")
         return 0
+
+    def prune_orphaned_agents(self, managed_before: set[str], current_source_names: set[str]) -> list[str]:
+        """Remove managed agent .toml files whose source agent was since
+        renamed or deleted from src/agents/.
+
+        Mirrors prune_orphaned_agents() in renderer/lib/render-lib.sh (the
+        bash twin used by render-claude.sh/render-opencode.sh) and this
+        class's own prune_orphaned_skills() below, adapted for the
+        manifest-only trust model render_agent() already uses: a dest file
+        is refused only when it exists AND its name is NOT in
+        managed_before (the manifest loaded before this run). By that same
+        construction, every name in managed_before is one we installed, so
+        if its source has since disappeared it is safe to prune.
+
+        Unconditionally removes (no dry-run mode) and always prints a report
+        line, mirroring prune_orphaned_skills()'s wording convention.
+        """
+        pruned: list[str] = []
+        for name in sorted(managed_before):
+            if name in current_source_names:
+                continue
+            # Defend against a tampered/corrupted manifest line before it is
+            # ever used to build a deletion path (LOW1 — path traversal
+            # hardening): a name like "../../x" must never reach unlink().
+            # Same safe-charset check as uninstall() below.
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                print(f"  {_yellow('WARNING')} skipping invalid manifest entry (unsafe name): {name}")
+                continue
+            path = self.agents_dir / f"{name}.toml"
+            if path.exists():
+                path.unlink()
+                pruned.append(name)
+
+        if pruned:
+            print(f"  🧹 pruned {len(pruned)} orphaned managed agent(s): {', '.join(pruned)}")
+        else:
+            print("  🧹 pruned 0 orphaned managed agent(s)")
+        return pruned
+
+    def prune_orphaned_skills(self) -> list[str]:
+        """Remove marker-tagged managed skill dirs whose source skill was
+        since deleted from src/skills/ (a slimdown round) — the install loop
+        above only iterates the CURRENT list_source_skills() output, so it
+        never revisits an already-installed dir to notice its source is gone.
+
+        Safety invariant mirrors the "skipping skill X - foreign" guard used
+        by the loop above, not a reinvention of it:
+          - SKILL_MARKER absent  => foreign (not ours) => never touched.
+          - SKILL_MARKER present + name still a current source skill => keep.
+          - SKILL_MARKER present + name NOT a current source skill   => prune.
+
+        Unconditionally removes (there is no dry-run mode) and always prints
+        a report line so the operator sees what happened, e.g.:
+          pruned 3 orphaned managed skill(s): foo, bar, baz
+          pruned 0 orphaned managed skill(s)
+        """
+        pruned: list[str] = []
+        if self.skills_root.exists():
+            current_names = {skill.name for skill in list_source_skills(self.src_skills)}
+            for dst in sorted(self.skills_root.iterdir()):
+                if not dst.is_dir() or dst.name in current_names:
+                    continue
+                if (dst / SKILL_MARKER).exists():
+                    shutil.rmtree(dst)
+                    pruned.append(dst.name)
+                # else: no marker => foreign => leave untouched.
+
+        if pruned:
+            print(f"  🧹 pruned {len(pruned)} orphaned managed skill(s): {', '.join(pruned)}")
+        else:
+            print("  🧹 pruned 0 orphaned managed skill(s)")
+        return pruned
 
     def uninstall(self) -> int:
         removed_agents = 0
@@ -638,8 +733,6 @@ watch_poll_seconds = 0.5
             for field in ("name =", "description =", "model =", "model_reasoning_effort =", "developer_instructions ="):
                 if field not in text:
                     errors.append(f"{path.name} missing {field}")
-            if "gpt-5.2" in text or "gpt-5.3-codex" in text:
-                errors.append(f"{path.name} uses deprecated Codex model")
         if not (self.codex_home / "AGENTS.md").is_file():
             errors.append("missing AGENTS.md")
         else:
@@ -648,7 +741,7 @@ watch_poll_seconds = 0.5
                 "Agentic Engineers Framework - Codex Integration",
                 "Orchestrator-only",
                 "Delegate Prefix",
-                "~/.agentic-engineers/codex/{session-id}/queue/",
+                "Dispatch Model",
             ):
                 if required not in agents_doc:
                     errors.append(f"AGENTS.md missing {required}")
@@ -688,8 +781,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Render agentic-engineers for Codex")
     parser.add_argument("repo_root", nargs="?", help="Repository root")
     parser.add_argument("codex_home", nargs="?", help="Codex home/output directory")
-    parser.add_argument("--repo-root", dest="repo_root_flag")
-    parser.add_argument("--dest", dest="codex_home_flag")
     parser.add_argument("--skills-root", dest="skills_root")
     parser.add_argument("--uninstall", action="store_true")
     parser.add_argument("--status", action="store_true")
@@ -699,8 +790,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
-    repo_root = Path(args.repo_root_flag or args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
-    codex_home = Path(args.codex_home_flag or args.codex_home or Path.home() / ".codex").expanduser().resolve()
+    repo_root = Path(args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
+    codex_home = Path(args.codex_home or Path.home() / ".codex").expanduser().resolve()
     skills_root = (
         Path(args.skills_root).expanduser().resolve()
         if args.skills_root

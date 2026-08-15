@@ -53,13 +53,26 @@ SKILLS_ROOT = REPO_ROOT / "src" / "skills"
 # tests dir went missing, got excluded, etc.) — fail loudly rather than
 # silently reporting a shrinking number.
 #
-# Re-baselined in WP-5 of the SPEC-2026-005 framework slimdown from the
-# measured actual (250 tests across 5 script-backed skills: protocol-validator,
-# queue-management, queue-query, skill-improvement-feedback, spec-validator).
-# Floor is ~95% of that actual, matching the same headroom convention used by
+# Re-baselined in WP-R3-05 (task-2026-08-13-r3-wp05-test-consolidation) from
+# the measured actual of 289 tests across the same 3 script-backed skills
+# (protocol-validator, skill-improvement-feedback, spec-validator). The
+# tests/-scope duplicate layers (tests/test_core_protocol_validator.py,
+# tests/test_spec_validator.py) were collapsed into these skill-local
+# suites: protocol-validator gained a new parametrized
+# test_protocol_validator_core.py (low-level CoreProtocolValidator/
+# ExtensionValidator coverage migrated in from the deleted tests/-scope
+# file) and had its own TestPerformance trimmed to a single <5ms check
+# (52 -> 187 tests net); spec-validator's suite lost its
+# orphan-method-dependent tests (parse_file/correlate_with_spec/
+# validate_files removed from spec_validator.py) and TestDomainModels but
+# gained the real-docs/SPEC.md TestSpecValidatorIntegration class (114 ->
+# 99 tests). Floor is ~95% of the new actual (289 * 0.95 = 274.55 -> 274),
+# matching the same headroom convention used by
 # renderer/scripts/check_test_regression.py. Update only alongside a real
-# skill addition/removal.
-MIN_EXPECTED_TESTS = 237
+# skill addition/removal or another deliberate test-suite consolidation.
+#
+# Prior baseline (queue-removal, task-2026-08-13-queue-removal-code): 169.
+MIN_EXPECTED_TESTS = 274
 
 # Some skill suites (file-sync in particular) exercise the real repository
 # tree end-to-end rather than an isolated fixture, so they run considerably

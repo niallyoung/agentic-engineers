@@ -20,7 +20,7 @@
 |----------|---------|
 | [SPEC.md](SPEC.md) | **Source of truth** — implementation specification |
 | [PROTOCOL.md](PROTOCOL.md) | DELEGATE/HANDBACK validation, scoring, and escalation reference |
-| [QUEUE-PROTOCOL.md](QUEUE-PROTOCOL.md) | Queue mechanics + state machine (durable inbox/audit substrate) |
+| [specs/DELEGATE-HANDBACK.md](specs/DELEGATE-HANDBACK.md) | Standalone, publication-ready DELEGATE/HANDBACK protocol specification (external audience) |
 | [CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md) | 30-minute protocol quick start |
 | [ENTRYPOINT.md](ENTRYPOINT.md) | Standard execution model |
 | [WORKFLOW.md](WORKFLOW.md) | SDLC lifecycle and enforcement gates |
@@ -34,10 +34,16 @@
 
 | Location | Contents |
 |----------|----------|
-| [design/](design/) | Active design notes (spawn-sub-agent pattern, HANDBACK-as-DELEGATE) |
-| [decisions/](decisions/) | Architecture Decision Records (historical) |
+| [decisions/](decisions/) | Architecture Decision Records (model centralization, repository structure) |
 | [specs/](specs/) | Machine-readable protocol schemas (delegate/handback/protocol-core) |
-| [spec-proposals/](spec-proposals/) | SPEC change proposals (spec-management audit trail) |
+
+---
+
+## Reference & Analysis
+
+| Document | Purpose |
+|----------|---------|
+| [LANDSCAPE.md](LANDSCAPE.md) | Multi-agent orchestration ecosystem (2026); competitor landscape; standards alignment; positioning |
 
 ---
 
@@ -45,7 +51,7 @@
 
 | Location | Contents |
 |----------|----------|
-| [guides/](guides/) | Agent/skill creation, harness extension, deployment, troubleshooting — see [guides/INDEX.md](guides/INDEX.md) |
+| [guides/](guides/) | Harness setup, deployment, cost/quality trade-offs — see [guides/README.md](guides/README.md) |
 
 ---
 

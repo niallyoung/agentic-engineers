@@ -477,5 +477,194 @@ lookup_agent_metadata() {
 }
 
 # ============================================================================
+# EXCLUDED-CRUFT CLEANUP
+# ============================================================================
+
+# Remove cruft (tests/, __pycache__, .pytest_cache dirs; loose *.pyc files)
+# from an already-installed managed skill dir, at any depth. This exists
+# because those patterns are excluded from every renderer's skill rsync
+# invocation (see docs/RENDERING.md nested-precedence contract) — an OLDER
+# renderer version shipped them into managed skill dirs before the excludes
+# were added, and plain `rsync --delete` never removes an EXCLUDED path (it
+# only removes paths that would otherwise be part of the transfer), so they
+# were permanently orphaned inside otherwise-still-managed dirs.
+#
+# NOTE on why this is a find-based walk rather than `rsync --delete-excluded`
+# (task-2026-08-15-fix-renderer-bugs FIX 3): --delete-excluded plus a
+# `--filter='protect AGENTS.md'` guard was the originally proposed fix, but
+# empirical testing (four separate tmp-dir trials, order and pattern
+# permutations) proved it unsafe on this project's actual `rsync` — macOS
+# ships `openrsync` (BSD's rsync replacement, protocol-29 "2.6.9 compatible")
+# as /usr/bin/rsync, not GNU rsync, and in that implementation
+# --delete-excluded silently disables ALL receiver-side protect/hide filter
+# rules the moment it's present on the command line — not just the ones
+# matching the same pattern. Confirmed: even a bare `--filter='protect
+# AGENTS.md'` with NO --exclude='AGENTS.md' at all still lost AGENTS.md the
+# instant --delete-excluded was added. Shipping the suggested flag
+# combination would have been a live-install data-loss regression on this
+# exact machine. This helper sidesteps the whole interaction: the rsync
+# invocation stays exactly as before (plain --delete + --exclude, which
+# already correctly leaves excluded files/AGENTS.md untouched — verified),
+# and cruft removal is a separate, portable, rsync-implementation-independent
+# pass that can never touch anything named AGENTS.md because it only ever
+# matches the specific cruft names/patterns below.
+#
+# Usage: prune_excluded_cruft DST_DIR
+prune_excluded_cruft() {
+	local dst="$1"
+	[ -d "$dst" ] || return 0
+
+	# Cruft directories, anywhere under dst (depth-first so nested cruft
+	# inside another cruft dir is handled before its now-partially-emptied
+	# parent is matched and removed too — each match is independently safe
+	# via `rm -rf`, which tolerates already-removed sub-paths).
+	find "$dst" -depth \( -type d \( -name 'tests' -o -name '__pycache__' -o -name '.pytest_cache' \) \) -print0 2>/dev/null \
+		| while IFS= read -r -d '' d; do
+			rm -rf "$d"
+		done
+
+	# Loose *.pyc files, anywhere under dst.
+	find "$dst" -type f -name '*.pyc' -print0 2>/dev/null \
+		| while IFS= read -r -d '' f; do
+			rm -f "$f"
+		done
+}
+
+# ============================================================================
+# ORPHAN PRUNING
+# ============================================================================
+
+# Validate that a name is safe to use as a single path component when building
+# a deletion path (e.g. "$dst_agents/$name.md" in prune_orphaned_agents below).
+# Only letters, digits, hyphen, underscore — no '.', no '/', no other
+# metacharacters — so a tampered manifest line (e.g. "../../x") can never walk
+# outside the managed directory. Mirrors the validation style already used in
+# scripts/audit_append.py's _validate_path_component() (same defense-in-depth
+# rationale — untrusted content read from disk, about to be used in a path).
+# Usage: is_safe_entity_name <name>  (bash return code 0 == safe)
+is_safe_entity_name() {
+	local name="$1"
+	[[ "$name" =~ ^[A-Za-z0-9_-]+$ ]]
+}
+
+# Prune orphaned managed skill directories under DST_SKILLS: dirs that carry
+# the renderer's SKILL_MARKER (i.e. WE installed them on a previous render)
+# but whose source skill no longer exists under SRC_SKILLS (a later slimdown
+# round deleted it upstream, and the plain "for name in $(list_source_skills)"
+# install loop never revisits what's already on disk to notice).
+#
+# Safety invariant — mirrors the "skipping skill X — foreign" guard already
+# used by every renderer's install loop, not a reinvention of it:
+#   - marker ABSENT  => foreign (not ours) => NEVER touched, no matter what.
+#   - marker PRESENT + name still in the current source set => current, keep.
+#   - marker PRESENT + name NOT in the current source set   => orphan, prune.
+#
+# Usage: prune_orphaned_skills DST_SKILLS SRC_SKILLS SKILL_MARKER
+# Unconditionally removes (there is no dry-run mode) and always prints a
+# single report line, e.g.:
+#   🧹 pruned 3 orphaned managed skill(s): foo, bar, baz
+#   🧹 pruned 0 orphaned managed skill(s)
+prune_orphaned_skills() {
+	local dst_skills="$1" src_skills="$2" marker="$3"
+
+	if [ ! -d "$dst_skills" ]; then
+		echo "  🧹 pruned 0 orphaned managed skill(s)"
+		return 0
+	fi
+
+	# Current source-skill-name set, newline-delimited with sentinel newlines
+	# on both ends so a plain substring `case` match can't false-positive on
+	# a name that is a substring of another name.
+	local current_names
+	current_names=$'\n'"$(list_source_skills "$src_skills")"$'\n'
+
+	local pruned=() d name
+	for d in "$dst_skills"/*/; do
+		[ -d "$d" ] || continue
+		name=$(basename "$d")
+		case "$current_names" in
+			*$'\n'"$name"$'\n'*) continue ;;  # still a current source skill — keep
+		esac
+		if [ -f "$d/$marker" ]; then
+			rm -rf "$d"
+			pruned+=("$name")
+		fi
+		# else: no marker => foreign => leave untouched, even though its name
+		# is not a current source skill.
+	done
+
+	if [ "${#pruned[@]}" -gt 0 ]; then
+		local joined
+		joined=$(IFS=', '; echo "${pruned[*]}")
+		echo "  🧹 pruned ${#pruned[@]} orphaned managed skill(s): $joined"
+	else
+		echo "  🧹 pruned 0 orphaned managed skill(s)"
+	fi
+}
+
+# Prune orphaned managed agent files: an agent .md file we installed on a
+# PREVIOUS render (its base name was listed in AGENT_MANIFEST before this
+# run's install loop rebuilt it) whose source agent no longer exists under
+# SRC_AGENTS (renamed/deleted upstream) — mirrors prune_orphaned_skills()
+# above, adapted for agents' trust model.
+#
+# Agents have no per-file marker like skills' SKILL_MARKER. Instead, every
+# renderer's agent-install loop already treats manifest membership itself as
+# the ours-vs-foreign boundary: it refuses to overwrite a dst file that
+# exists but is NOT listed in AGENT_MANIFEST (see the "skipping agent X —
+# foreign" guards in render-claude.sh / render-opencode.sh). By that same
+# construction, every name that WAS in the manifest is one we installed —
+# so if such a name has since dropped out of the current source-agent set,
+# it is safe to prune without any separate per-file marker check.
+#
+# Usage: prune_orphaned_agents DST_AGENTS SRC_AGENTS PREV_MANIFEST_NAMES
+#   PREV_MANIFEST_NAMES: newline-separated agent names read from
+#   AGENT_MANIFEST by the CALLER before this run's install loop overwrites
+#   it (pass "" if the manifest didn't exist yet — nothing to prune).
+# Unconditionally removes (there is no dry-run mode) and always prints a
+# single report line, e.g.:
+#   🧹 pruned 2 orphaned managed agent(s): foo, bar
+#   🧹 pruned 0 orphaned managed agent(s)
+prune_orphaned_agents() {
+	local dst_agents="$1" src_agents="$2" prev_manifest_names="$3"
+
+	if [ -z "$prev_manifest_names" ]; then
+		echo "  🧹 pruned 0 orphaned managed agent(s)"
+		return 0
+	fi
+
+	local current_names
+	current_names=$'\n'"$(list_source_agents "$src_agents")"$'\n'
+
+	local pruned=() name
+	while IFS= read -r name; do
+		[ -n "$name" ] || continue
+		# Defend against a tampered/corrupted manifest line before it is ever
+		# used to build a deletion path (LOW1 — path traversal hardening):
+		# reject/skip and log, never silently proceed.
+		if ! is_safe_entity_name "$name"; then
+			echo "  ⚠️  skipping invalid manifest entry (unsafe name): $name" >&2
+			continue
+		fi
+		case "$current_names" in
+			*$'\n'"$name"$'\n'*) continue ;;  # still a current source agent — keep
+		esac
+		if [ -f "$dst_agents/$name.md" ]; then
+			rm -f "$dst_agents/$name.md"
+			pruned+=("$name")
+		fi
+		# else: previously-managed name has no dst file anymore anyway — nothing to prune.
+	done <<< "$prev_manifest_names"
+
+	if [ "${#pruned[@]}" -gt 0 ]; then
+		local joined
+		joined=$(IFS=', '; echo "${pruned[*]}")
+		echo "  🧹 pruned ${#pruned[@]} orphaned managed agent(s): $joined"
+	else
+		echo "  🧹 pruned 0 orphaned managed agent(s)"
+	fi
+}
+
+# ============================================================================
 # END render-lib.sh
 # ============================================================================

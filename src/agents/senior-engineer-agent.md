@@ -80,7 +80,7 @@ PROCESS:
 
   5. IF DELEGATING:
      - Create sub-DELEGATE blocks for each sub-task
-     - Assign to appropriate agents (Engineer, Lead Engineer, Healing)
+     - Assign to appropriate agents (Engineer, Lead Engineer)
      - Wait for HANDBACK from each
      - Aggregate results
 
@@ -127,9 +127,17 @@ one of its own ancestors is refused rather than followed. If a limit is hit, Sen
 Engineer MUST stop and return `status: blocked` or `status: escalate` rather than
 proceeding — see `src/AGENTS.md` § Recursion Limits.
 
-Every DELEGATE this agent issues and every HANDBACK it receives is recorded to the
-durable queue via `enqueue()` as an audit trail; the queue is written to, never polled,
-for this agent's own control flow.
+Every DELEGATE this agent issues and every HANDBACK it receives is durably recorded as
+part of the harness session transcript itself — the audit trail for this agent's own
+control flow, with no separate write step.
+
+**Audit Events (SPEC clause 7):** additionally, Senior Engineer appends `delegate_issued`
++ `subagent_spawned` when spawning Engineer (or escalating to Lead/Principal/Security),
+`handback_received` + `gate_result` once that HANDBACK returns, `refusal`/
+`limit_exceeded` if a spawn is refused, and `escalation` when re-delegating an
+ESCALATION packet — via `python3 scripts/audit_append.py --event ... ` (see
+`src/AGENTS.md` § Audit Events). A failed append is a warning only; it never blocks
+the actual work.
 
 ---
 

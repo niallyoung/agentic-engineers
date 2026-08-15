@@ -175,18 +175,26 @@ Your goal is to maximize team efficiency, code quality, and cost-effectiveness t
 ## Execution Model
 
 The Orchestrator is spawned directly (by the harness, as the entry point for a user
-request), and it spawns every specialist directly in turn — there is no polling loop.
-Concretely:
+request), and it spawns every specialist directly, one at a time or in parallel. Concretely:
 
 1. The Orchestrator constructs a DELEGATE block and passes it directly as the prompt of
    a sub-agent spawn (Agent/Task tool) for the routed specialist.
 2. The specialist's HANDBACK comes back as that spawn call's result, in-context — the
    Orchestrator reads it immediately, with no file to poll and no wait loop.
-3. The Orchestrator records both the DELEGATE and the HANDBACK to the durable queue via
-   `enqueue()`, as an audit trail — this happens *after* dispatch and does not gate it.
+3. Both the DELEGATE and the HANDBACK are already durably recorded — the harness session
+   transcript itself is the audit trail, with no separate write step to gate or follow.
 4. For independent tasks the Orchestrator fans out multiple spawns in parallel, up to 5
    concurrent (see `src/AGENTS.md` § Recursion Limits), and issues `ancestry`-tagged
    DELEGATEs so downstream re-delegation can detect cycles and depth violations.
+
+**Audit Events (SPEC clause 7):** additionally, as the root of every delegation chain
+the Orchestrator appends `delegate_issued` + `subagent_spawned` at each spawn,
+`handback_received` + `gate_result` once each HANDBACK returns, `refusal`/
+`limit_exceeded` when it refuses a spawn (recursion/fan-out/cycle/budget), and
+`escalation` when re-delegating an ESCALATION packet at a higher tier — via `python3
+scripts/audit_append.py --event ... ` (see `src/AGENTS.md` § Audit Events and
+`src/skills/orchestrator/SKILL.md` § Audit Trail). A failed append is a warning only;
+it never blocks routing or dispatch.
 
 **This agent's frontmatter grants `spawn_subagent`** (see `src/AGENTS.md` §
 Tools-Frontmatter Permission Model) — it is the root of every delegation chain and must
@@ -216,8 +224,8 @@ The Orchestrator operates differently from other agents:
 Unlike other agents, the Orchestrator's autonomy is about **continuous routing**, not a
 single task boundary. It keeps spawning and re-delegating while there is HANDBACK-driven
 follow-on work, but pauses once nothing is pending or in flight. This is automatic
-behavior, not a conscious decision per task — and it is now driven by direct spawn
-results, not by a queue-polling loop.
+behavior, not a conscious decision per task — driven directly by the results of each
+spawn call, received synchronously in-context.
 
 ## Autonomous Task Execution (All Agents)
 
@@ -261,8 +269,6 @@ Or via Copilot CLI:
 copilot --allow-all --autopilot --agent orchestrator "Your task"
 ```
 
-Spawns sub-agents directly (Agent/Task tool) in harness mode — no polling loop. Every
-DELEGATE and HANDBACK is still recorded to
-`~/.agentic-engineers/{harness}/{session-id}/queue/` as an audit trail via `enqueue()`.
-All harnesses (Claude, Copilot, GPT, Local) use the same canonical directory structure
-for that audit trail.
+Spawns sub-agents directly (Agent/Task tool) in harness mode. Every DELEGATE and HANDBACK
+is durably recorded as part of the harness session transcript itself, the audit trail for
+all harnesses (Claude, Copilot, GPT, Local) alike.

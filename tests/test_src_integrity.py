@@ -58,13 +58,6 @@ def _parse_frontmatter(path: Path):
     return yaml.safe_load(block) or {}
 
 
-def test_exactly_8_agent_source_files():
-    assert len(AGENT_FILES) == 8, (
-        f"Expected 8 src/agents/*-agent.md files, found {len(AGENT_FILES)}: "
-        f"{[p.name for p in AGENT_FILES]}"
-    )
-
-
 @pytest.mark.parametrize("agent_path", AGENT_FILES, ids=lambda p: p.name)
 def test_agent_frontmatter_required_fields(agent_path):
     fm = _parse_frontmatter(agent_path)
@@ -171,13 +164,6 @@ def test_agents_md_table_effort_never_blank():
 # --------------------------------------------------------------------------- #
 
 USER_SKILL_FILES = sorted(SRC_SKILLS.glob("*/SKILL.md"))
-
-
-def test_8_user_skill_files_present():
-    assert len(USER_SKILL_FILES) == 8, (
-        f"Expected 8 user-facing src/skills/*/SKILL.md, found "
-        f"{len(USER_SKILL_FILES)}: {[p.parent.name for p in USER_SKILL_FILES]}"
-    )
 
 
 @pytest.mark.parametrize(

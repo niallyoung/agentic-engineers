@@ -10,8 +10,14 @@ model_guidance: |
   Fable-5 is not scoped more narrowly than the role's own approved work — but the
   framework-wide scope limit still applies and is unchanged: restricted-topic work
   (offensive tooling, exploit development, attack automation) is OUT OF SCOPE on every
-  model. The Orchestrator's DelegateValidator C5 gate rejects such DELEGATEs and
-  escalates to the user — there is no model re-routing and no bypass.
+  model. This is a role convention, not a mechanical gate: `renderer/scripts/
+  claude-delegate-guard.py` (the PreToolUse hook that gates every specialist spawn)
+  validates DELEGATE structure only (field presence/format) and performs no
+  scope/topic/content inspection. The defensive-only constraint is enforced by this
+  agent's own judgment against its system prompt and by operator/reviewer review —
+  there is no model re-routing, but there is also no mechanical prevention of a
+  restricted-topic DELEGATE reaching this agent; it must be refused here, in the
+  agent's own output, and escalated to the user.
 accepts:
   - DELEGATE
 returns:
@@ -54,9 +60,17 @@ defensive-only scope constraint (see model_guidance above) is independent of and
 additional to this spawn authority — it bounds *what* Security Engineer may work on, not
 whether it may delegate.
 
-Every DELEGATE this agent issues and every HANDBACK it receives is recorded to the
-durable queue via `enqueue()` as an audit trail; the queue is written to, never polled,
-for this agent's own control flow.
+Every DELEGATE this agent issues and every HANDBACK it receives is durably recorded as
+part of the harness session transcript itself — the audit trail for this agent's own
+control flow, with no separate write step.
+
+**Audit Events (SPEC clause 7):** additionally, Security Engineer appends
+`delegate_issued` + `subagent_spawned` when spawning Engineer/Senior Engineer with an
+implementation DELEGATE for an audit finding, `handback_received` + `gate_result` once
+that HANDBACK returns, `refusal`/`limit_exceeded` if a spawn is refused, and
+`escalation` if it ever needs to route one — via `python3 scripts/audit_append.py
+--event ... ` (see `src/AGENTS.md` § Audit Events). A failed append is a warning only;
+it never blocks the actual work.
 
 ## Your Responsibilities
 
@@ -168,7 +182,7 @@ success_criteria:
   - Findings table produced with severity classification
   - CRITICAL or HIGH findings result in status: failure
   - Remediation recommendations provided for each finding
-estimated_tokens: 4000
+tokens_estimate: 4000
 ---
 ```
 
