@@ -176,3 +176,91 @@ class TestOrphanSkillPruning:
         assert "pruned 0 orphaned managed skill(s)" in result.stdout, (
             f"{harness}: expected a 0-orphan report line on a clean re-render:\n{result.stdout[-1500:]}"
         )
+
+
+def _plant_cruft_and_nested_agents_md(skill_dir: Path) -> None:
+    """Plant tests/__pycache__/.pytest_cache/*.pyc cruft an OLDER renderer
+    version would have shipped into an already-installed managed skill dir
+    before those patterns were excluded from the skill sync (rsync
+    --exclude in the 3 bash renderers; the `ignore` callback in codex's
+    copy_skill()) — invisible to `rsync --delete` in both directions because
+    an EXCLUDED path is never treated as extraneous, so it was orphaned
+    forever. Also plants a nested, user-authored AGENTS.md in the SAME dir,
+    which must survive the exact same re-render untouched (nested-precedence
+    contract, docs/RENDERING.md)."""
+    (skill_dir / "tests").mkdir(parents=True, exist_ok=True)
+    (skill_dir / "tests" / "test_foo.py").write_text("old test\n", encoding="utf-8")
+    (skill_dir / "__pycache__").mkdir(parents=True, exist_ok=True)
+    (skill_dir / "__pycache__" / "foo.pyc").write_text("bytecode\n", encoding="utf-8")
+    (skill_dir / ".pytest_cache").mkdir(parents=True, exist_ok=True)
+    (skill_dir / ".pytest_cache" / "marker").write_text("cache\n", encoding="utf-8")
+    (skill_dir / "bar.pyc").write_text("loose pyc\n", encoding="utf-8")
+    (skill_dir / "AGENTS.md").write_text("USER OWNED - DO NOT DELETE\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize("harness", list(HARNESS_RENDER))
+class TestExcludedCruftCleanup:
+    """FIX 3 regression pin (task-2026-08-15-fix-renderer-bugs).
+
+    Background: the originally proposed fix was `rsync --delete-excluded`
+    paired with `--filter='protect AGENTS.md'`. Empirical testing (required
+    by the DELEGATE before touching the real renderer scripts) proved that
+    combination unsafe on this project's actual `rsync`: macOS ships
+    `openrsync` (BSD's replacement, protocol-29 "2.6.9 compatible") as
+    /usr/bin/rsync, and in that implementation --delete-excluded silently
+    disables ALL receiver-side protect/hide filter rules the instant it's
+    present — not just the ones matching the same pattern. Shipping the
+    suggested flags as-is would have deleted a user's nested AGENTS.md on
+    every re-render. The shipped fix instead keeps the existing (already
+    rsync-safe) plain --delete + --exclude invocation unchanged and adds a
+    separate, rsync-implementation-independent cleanup pass
+    (prune_excluded_cruft() in renderer/lib/render-lib.sh for the 3 bash
+    renderers; codex's copy_skill() needs no equivalent step because it
+    rmtree()s + rebuilds the whole skill dir from src on every render, so
+    excluded cruft can never survive a re-render there in the first place —
+    see the comment above copy_skill() in render-codex.py).
+
+    Dual invariant pinned here, proven simultaneously in one re-render:
+      (a) tests/__pycache__/.pytest_cache/*.pyc cruft planted into an
+          ALREADY-INSTALLED managed skill dir is removed.
+      (b) a nested user-authored AGENTS.md planted in the SAME dir survives
+          the SAME re-render, byte-for-byte.
+    """
+
+    def test_cruft_removed_and_nested_agents_md_survives(self, tmp_path, harness):
+        cmd_prefix, home_sub, _marker = HARNESS_RENDER[harness]
+        home = tmp_path / home_sub
+
+        _render(cmd_prefix, home)
+        skill_dir = home / "skills" / REAL_SKILL_NAME
+        assert skill_dir.is_dir(), (
+            f"{harness}: expected currently-shipped skill '{REAL_SKILL_NAME}' to be installed"
+        )
+
+        _plant_cruft_and_nested_agents_md(skill_dir)
+        assert (skill_dir / "tests").is_dir()
+        assert (skill_dir / "__pycache__").is_dir()
+        assert (skill_dir / ".pytest_cache").is_dir()
+        assert (skill_dir / "bar.pyc").is_file()
+        assert (skill_dir / "AGENTS.md").is_file()
+
+        _render(cmd_prefix, home)
+
+        assert not (skill_dir / "tests").exists(), f"{harness}: tests/ cruft survived re-render"
+        assert not (skill_dir / "__pycache__").exists(), (
+            f"{harness}: __pycache__/ cruft survived re-render"
+        )
+        assert not (skill_dir / ".pytest_cache").exists(), (
+            f"{harness}: .pytest_cache/ cruft survived re-render"
+        )
+        assert not (skill_dir / "bar.pyc").exists(), f"{harness}: loose *.pyc cruft survived re-render"
+
+        agents_md = skill_dir / "AGENTS.md"
+        assert agents_md.is_file(), f"{harness}: nested user-authored AGENTS.md was wrongly removed"
+        assert agents_md.read_text(encoding="utf-8") == "USER OWNED - DO NOT DELETE\n", (
+            f"{harness}: nested AGENTS.md content was altered by the cruft-cleanup pass"
+        )
+
+        # The skill's own SKILL.md must still be present (proves the cleanup
+        # pass didn't collaterally damage the managed skill it belongs to).
+        assert (skill_dir / "SKILL.md").is_file()

@@ -133,6 +133,13 @@ case "$MODE" in
 				continue
 			}
 
+			# Remove any tests/__pycache__/.pytest_cache/*.pyc cruft an older
+			# renderer version shipped into this managed skill dir before the
+			# excludes above existed — see prune_excluded_cruft() in
+			# renderer/lib/render-lib.sh for why this is a separate find-based
+			# pass rather than rsync --delete-excluded.
+			prune_excluded_cruft "$dst"
+
 			# Write marker only after successful rsync
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$MARKER"
 

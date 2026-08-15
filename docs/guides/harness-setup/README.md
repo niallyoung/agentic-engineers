@@ -8,7 +8,7 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 |---------|-------------|----------|--------|
 | [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
 | GitHub Copilot | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
-| [Claude Code](claude.md) | Claude's native IDE and code editor | Interactive development, prototyping | ✅ Stable |
+| Claude Code | Claude's native CLI harness | Interactive development, prototyping | ✅ Stable (see [opencode.md](opencode.md) or [codex.md](codex.md) for a template-quality per-harness setup guide) |
 | [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Supported, opt-in install |
 
 ## Quick Start
@@ -84,29 +84,12 @@ Run `make install` for the default harness set, or use individual `make install-
 
 ## Quality Gates
 
-All harnesses pass through three quality gates before deployment:
-
-1. **DELEGATE Structure Validation** (40% weight)
-   - Task ID format validation (`YYYY-MM-DD-kebab-case`)
-   - Required field presence (scope, plan, success_criteria)
-   - Scope clarity and completeness
-
-2. **Task Routing Quality** (35% weight)
-   - Correct agent selection via decision tree
-   - Confidence scoring (≥75% required)
-   - Model suitability assessment
-
-3. **HANDBACK Validation** (25% weight)
-   - Success criteria met
-   - Quality score ≥ threshold
-   - Metrics presence and accuracy
-
-**Routing by Quality Score:**
-- 90–100: Move to done immediately
-- 80–89: Move to done with notes
-- 70–79: Route to Lead Engineer for review
-- 60–69: Issue rework DELEGATE (max 2 retries)
-- <60: Escalate to Principal Engineer
+All harnesses pass through the same DELEGATE Validation and HANDBACK Validation gates
+(Gates 3 and 5) before work is considered done. There is no automated multi-layer
+composite-scoring formula or fixed numeric acceptance threshold — quality is assessed
+by convention (self-reported `metrics.quality`, optional Quality Engineer verification,
+routing by `status`). See [docs/PROTOCOL.md](../../PROTOCOL.md) and
+[docs/WORKFLOW.md](../../WORKFLOW.md) § Gate 5 for the authoritative description.
 
 ## Continuous Evaluation Framework (EVALS-001)
 

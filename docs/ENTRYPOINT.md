@@ -45,7 +45,7 @@ copilot --agent orchestrator
 ### 2. Give it your request
 
 ```
-delegate: Fix the race condition in span capture (see ISSUE #42)
+delegate: Fix the race condition in claude-delegate-guard.py (see ISSUE #42)
 ```
 
 The Orchestrator:
@@ -88,7 +88,7 @@ Per request, the Orchestrator:
 1. ✅ Routes the task to the appropriate agent (per AGENTS.md)
 2. ✅ Spawns that agent directly, passing the DELEGATE as its prompt
 3. ✅ Reads the HANDBACK back as the spawn call's result — no wait loop involved
-4. ✅ Captures span data (observability)
+4. ✅ Records per-event JSONL audit data via `scripts/audit_append.py` (`docs/SPEC.md` clause 7)
 5. ✅ Pauses when there is no pending DELEGATE and no outstanding spawn
 
 ### 4. Check results
@@ -116,7 +116,7 @@ delegate: Update docs/SPEC.md with current Phase 5.10 implementation
 
 The Orchestrator spawns Senior Engineer directly with a DELEGATE built from that
 request (scope: update `docs/SPEC.md` for Phase 5.10; context: SKILLS.md changes,
-SPAN-CAPTURE-INTEGRATION.md; plan: read the relevant docs, then update SPEC.md), reads
+relevant SPEC.md sections; plan: read the relevant docs, then update SPEC.md), reads
 the HANDBACK back in-context, and reports the outcome to you — both the DELEGATE and the
 HANDBACK live in the session transcript, not a separate file:
 
@@ -140,7 +140,7 @@ cat artifacts/spec-validation-report.md
 ### Workflow 3: Fix Code Issues
 
 ```
-delegate: Fix race condition in Orchestrator span capture (see ISSUE #42)
+delegate: Fix race condition in the audit-JSONL append path (see ISSUE #42)
 ```
 
 The Orchestrator spawns Engineer directly with a DELEGATE (RED-GREEN-REFACTOR plan),
@@ -206,7 +206,7 @@ transcript is scoped to that session, ensuring isolation by design.
 ✅ **No direct file manipulation** — only via DELEGATE/HANDBACK protocol
 ✅ **Audit trail** — every DELEGATE and HANDBACK is recorded in the harness session transcript; agents additionally append per-event JSONL records (`docs/SPEC.md` clause 7)
 ✅ **Escalation path** — for blocked or rework items
-✅ **Cost tracking** — SPAN files capture tokens and cost per task
+✅ **Cost tracking** — HANDBACK `metrics` (tokens, cost, quality, duration) plus the per-event JSONL audit log (`docs/SPEC.md` clause 7, `scripts/audit_append.py`)
 
 See `docs/SPEC.md` for full architectural constraints.
 

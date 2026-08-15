@@ -35,10 +35,10 @@
 
 ## Enforcement Understanding
 
-- [ ] Pre-commit hook validates all DELEGATE blocks before every commit (Groups A/B/C)
+- [ ] Pre-commit hook validates all DELEGATE blocks before every commit
 - [ ] Orchestrator runs pre-flight checks internally before emitting any DELEGATE
 - [ ] Bad DELEGATEs will be **blocked and returned** with specific error messages — fix the error, do not work around it
-- [ ] HANDBACKs require passing tests; coverage must not drop below 70% for modified packages
+- [ ] HANDBACKs require passing tests; coverage must not drop below 85% for modified packages
 - [ ] Know all escalation paths (Section 9): when to escalate and to whom
 
 ---

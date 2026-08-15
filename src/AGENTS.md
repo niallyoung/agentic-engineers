@@ -53,8 +53,9 @@ cross-repo design; `claude-opus-4.8` is an emergency fallback only (opus-5 unava
 documented in HANDBACK. Security Engineer uses `claude-fable-5` unconditionally;
 `claude-opus-4.8` is an emergency fallback only. The defensive-only scope constraint
 applies on **every** model, not just fable-5 — restricted-topic work is out of scope
-framework-wide and is rejected by the Orchestrator's DelegateValidator C5 gate rather
-than re-routed. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
+framework-wide and is rejected by the C5 offensive-scope gate in `renderer/scripts/
+claude-delegate-guard.py` (the live PreToolUse hook that gates every specialist spawn)
+rather than re-routed. See [SPEC.md > Model Selection Architecture](../docs/SPEC.md).
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
 

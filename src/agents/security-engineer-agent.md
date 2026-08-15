@@ -10,8 +10,10 @@ model_guidance: |
   Fable-5 is not scoped more narrowly than the role's own approved work — but the
   framework-wide scope limit still applies and is unchanged: restricted-topic work
   (offensive tooling, exploit development, attack automation) is OUT OF SCOPE on every
-  model. The Orchestrator's DelegateValidator C5 gate rejects such DELEGATEs and
-  escalates to the user — there is no model re-routing and no bypass.
+  model. The C5 offensive-scope gate is enforced live by `renderer/scripts/
+  claude-delegate-guard.py` (the PreToolUse hook that gates every specialist spawn),
+  which rejects such DELEGATEs and escalates to the user — there is no model
+  re-routing and no bypass.
 accepts:
   - DELEGATE
 returns:

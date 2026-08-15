@@ -6,7 +6,7 @@
 
 version: "1.0"
 created: "2026-05-24"
-last_updated: "2026-08-13"
+last_updated: "2026-08-15"
 
 validation_rules:
   - "All source files must be listed in their respective sections"
@@ -147,3 +147,12 @@ skills:
     required_by:
       - lead-engineer
       - principal-engineer
+
+  audit-trail-review:
+    name: audit-trail-review
+    status: active
+    description: "Reviews the orchestration audit trail (JSONL ledger) for unfinished delegations, orphaned work, and status inconsistencies"
+    created: "2026-08-14"
+    required_by:
+      - quality-engineer
+      - orchestrator

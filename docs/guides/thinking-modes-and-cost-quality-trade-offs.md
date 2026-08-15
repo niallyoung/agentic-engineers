@@ -31,5 +31,5 @@ See [src/AGENTS.md](../../src/AGENTS.md) and [docs/decisions/](../decisions/) fo
 
 ## Related Reading
 
-- **8 Specialized Roles:** See [README.md#8-specialized-roles](../../README.md#8-specialized-roles) for the full roles table
-- **Multi-Model Support:** See [README.md#multi-model-support--provider-routing](../../README.md#multi-model-support--provider-routing) for provider-specific model mappings
+- **The Roster (8 roles):** See [README.md#the-roster](../../README.md#the-roster) for the full roles table
+- **Model assignments per harness:** See [README.md](../../README.md) for an overview, or [docs/SPEC.md § Model Naming & Harness Compatibility](../SPEC.md) for the authoritative per-harness model mapping

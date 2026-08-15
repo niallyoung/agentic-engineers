@@ -476,6 +476,12 @@ PY
 			# skill dir is user-authored. Excluding it keeps rsync --delete from
 			# treating it as extraneous and wiping it on re-render.
 			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='AGENTS.md' "$src/" "$dst/"
+			# Remove any tests/__pycache__/.pytest_cache/*.pyc cruft an older
+			# renderer version shipped into this managed skill dir before the
+			# excludes above existed — see prune_excluded_cruft() in
+			# renderer/lib/render-lib.sh for why this is a separate find-based
+			# pass rather than rsync --delete-excluded.
+			prune_excluded_cruft "$dst"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			skill_end=$(date +%s)
 			skill_duration=$(( skill_end - skill_start ))
@@ -512,6 +518,12 @@ PY
 
 		# 2. Agents: transform frontmatter, write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
+		# Capture the PREVIOUS manifest contents before this run's install
+		# loop rebuilds it, so prune_orphaned_agents() below can tell which
+		# names we managed before but whose source agent has since been
+		# renamed/deleted from src/agents/.
+		prev_agent_manifest_names=""
+		[ -f "$AGENT_MANIFEST" ] && prev_agent_manifest_names=$(cat "$AGENT_MANIFEST")
 		: > "$AGENT_MANIFEST.tmp"
 		count_a=0
 		for name in $(list_source_agents); do
@@ -570,6 +582,12 @@ PY
 			count_a=$((count_a + 1))
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
+
+		# 2.4 Prune orphaned managed agents: .md files we installed on a
+		# prior render whose source agent was since renamed/deleted from
+		# src/agents/ (mirrors prune_orphaned_skills() above — see
+		# prune_orphaned_agents() in renderer/lib/render-lib.sh).
+		prune_orphaned_agents "$DST_AGENTS" "$SRC_AGENTS" "$prev_agent_manifest_names"
 
 		# 2.5 Framework documentation: generate CLAUDE.md + AGENTS.md.
 		# Generated (not copied from a stale dist artifact) so the files always

@@ -27,15 +27,6 @@ class TestGate1NoOrphanedAgents:
         agents_dir = Path("src/agents")
         assert agents_dir.exists(), "src/agents/ directory not found"
     
-    def test_no_orphaned_source_agents(self):
-        """All *.md files in src/agents/ (except README, _archive) must be valid agents"""
-        agents_dir = Path("src/agents")
-        agent_files = sorted([f.name for f in agents_dir.glob("*-agent.md")])
-        
-        assert len(agent_files) > 0, "No *-agent.md files found in src/agents/"
-        for fname in agent_files:
-            assert fname.endswith("-agent.md"), f"Agent file {fname} doesn't follow naming convention"
-    
     def test_manifest_agents_match_source_files(self):
         """FRAMEWORK-MANIFEST.yaml must list all agents in src/agents/"""
         manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
@@ -55,30 +46,22 @@ class TestGate1NoOrphanedAgents:
 
 
 class TestGate2NoArchivedAgentsDeployed:
-    """Gate 2: Archived agents must not exist in user deployment directories"""
-    
-    def test_no_archived_agents_in_copilot(self):
-        """~/.copilot/agents/ should not contain archived agent files"""
-        copilot_agents = Path.home() / ".copilot" / "agents"
-        if not copilot_agents.exists():
-            pytest.skip("~/.copilot/agents/ not found")
-        
-        archived = ["healing-engineer", "metrics", "spec-engineer", "testing"]
+    """Gate 2: Archived agents must not exist in source (prevents deployment of archived agents)"""
+
+    def test_no_archived_agents_in_source(self):
+        """src/agents/ should not contain archived agent source files"""
+        agents_dir = Path("src/agents")
+
+        # List of archived agent names that should NOT be in src/
+        archived = ["healing-engineer", "metrics", "spec-engineer", "testing", "healing"]
+
         for archive in archived:
-            for pattern in [f"{archive}.agent.md", f"{archive}.md"]:
-                file_path = copilot_agents / pattern
-                assert not file_path.exists(), f"Archived agent {pattern} found in ~/.copilot/agents/"
-    
-    def test_no_archived_agents_in_claude(self):
-        """~/.claude/agents/ should not contain archived agent files"""
-        claude_agents = Path.home() / ".claude" / "agents"
-        if not claude_agents.exists():
-            pytest.skip("~/.claude/agents/ not found")
-        
-        archived = ["healing.md", "metrics.md", "spec-engineer.md", "testing.md"]
-        for fname in archived:
-            file_path = claude_agents / fname
-            assert not file_path.exists(), f"Archived agent {fname} found in ~/.claude/agents/"
+            for pattern in [f"{archive}-agent.md", f"{archive}.md"]:
+                file_path = agents_dir / pattern
+                assert not file_path.exists(), (
+                    f"Archived agent {pattern} found in src/agents/. "
+                    f"These should have been removed as part of framework cleanup."
+                )
     
 
 class TestGate3SkillsHaveMarker:
@@ -128,7 +111,7 @@ class TestGate3SkillsHaveMarker:
         missing = source_skills - manifest_skills
         if missing and len(missing) > 10:
             pytest.skip(f"Too many source skills not in manifest - manifest is incomplete. Found {missing}. Skipping.")
-        # Pass if f"Source skills not in manifest: {missing}"
+        assert not missing, f"Source skills not in manifest: {missing}"
 
 
 class TestGate4NamingConsistency:
@@ -186,44 +169,28 @@ class TestGate5ManifestConsistency:
 
 
 class TestGate6NoDuplicatesOrStaleFiles:
-    """Gate 6: No duplicate or stale agent files in any deployment layer"""
-    
-    def test_no_duplicate_copilot_agents(self):
-        """~/.copilot/agents/ should not have multiple versions of same agent"""
-        copilot_agents = Path.home() / ".copilot" / "agents"
-        if not copilot_agents.exists():
-            pytest.skip("~/.copilot/agents/ not found")
-        
-        agent_names = set()
-        agent_files = list(copilot_agents.glob("*-agent.agent.md"))
-        
-        for fname in agent_files:
-            # Extract base name (engineer from engineer-agent.agent.md)
-            base_name = fname.stem.replace("-agent", "")
-            assert base_name not in agent_names, f"Duplicate agent: {base_name}"
-            agent_names.add(base_name)
-    
-    def test_no_stale_legacy_files_in_copilot(self):
-        """~/.copilot/agents/ should not contain old-format files"""
-        copilot_agents = Path.home() / ".copilot" / "agents"
-        if not copilot_agents.exists():
-            pytest.skip("~/.copilot/agents/ not found")
-        
-        # Legacy format: engineer.agent.md (vs canonical engineer-agent.agent.md)
-        # These should exist as symlinks only, not as real files
-        legacy_files = [f for f in copilot_agents.glob("*.agent.md") 
-                       if not f.name.startswith(".") and not "-agent.agent.md" in f.name]
-        
-        for fname in legacy_files:
-            # Allow if it's a symlink (backward compat)
-            assert fname.is_symlink(), f"Legacy file {fname.name} is not a symlink (should be canonical or symlink only)"
-    
+    """Gate 6: No duplicate or stale agent definitions in source"""
+
     def test_no_duplicate_src_agent_definitions(self):
         """src/agents/ should not have duplicate agent definitions"""
         agents_dir = Path("src/agents")
         agent_names = set()
-        
+
         for fname in agents_dir.glob("*-agent.md"):
             base_name = fname.stem.replace("-agent", "")
             assert base_name not in agent_names, f"Duplicate agent in source: {base_name}"
             agent_names.add(base_name)
+
+    def test_no_stale_agent_definitions_in_source(self):
+        """src/agents/ should contain only current, canonical agent definitions"""
+        agents_dir = Path("src/agents")
+
+        # All agent definitions must follow the canonical naming: {name}-agent.md
+        for agent_file in agents_dir.glob("*.md"):
+            if agent_file.name in ["README.md", "orchestration-agents-README.md"]:
+                continue
+            if agent_file.name.startswith("_"):
+                continue
+            assert agent_file.name.endswith("-agent.md"), (
+                f"Agent {agent_file.name} doesn't follow canonical -agent.md naming"
+            )

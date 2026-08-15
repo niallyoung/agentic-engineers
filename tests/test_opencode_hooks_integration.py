@@ -127,60 +127,6 @@ class TestGitHooksConfiguration:
                     f"{hook.name} should be a bash script"
 
 
-@pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24). Commands were not actively used in current workflow.")
-class TestOpenCodeCommands:
-    """Test OpenCode command files (SKIPPED: commands deleted in cleanup)"""
-
-    def test_sdlc_check_command_exists(self):
-        """Verify /sdlc-check command file exists"""
-        cmd = OPENCODE_COMMANDS_DIR / "sdlc-check.md"
-        assert cmd.exists(), f"{cmd} not found"
-
-    def test_hooks_install_command_exists(self):
-        """Verify /hooks-install command file exists"""
-        cmd = OPENCODE_COMMANDS_DIR / "hooks-install.md"
-        assert cmd.exists(), f"{cmd} not found"
-
-    def test_queue_status_command_exists(self):
-        """Verify /queue-status command file exists"""
-        cmd = OPENCODE_COMMANDS_DIR / "queue-status.md"
-        assert cmd.exists(), f"{cmd} not found"
-
-    def test_sdlc_check_has_frontmatter(self):
-        """Verify sdlc-check command has valid frontmatter"""
-        cmd = OPENCODE_COMMANDS_DIR / "sdlc-check.md"
-        content = cmd.read_text()
-        assert content.startswith("---"), "Command should start with YAML frontmatter"
-        assert "description:" in content, "Command should have description"
-        assert "agent:" in content, "Command should specify agent"
-
-    def test_hooks_install_has_frontmatter(self):
-        """Verify hooks-install command has valid frontmatter"""
-        cmd = OPENCODE_COMMANDS_DIR / "hooks-install.md"
-        content = cmd.read_text()
-        assert content.startswith("---"), "Command should start with YAML frontmatter"
-        assert "description:" in content, "Command should have description"
-
-    def test_queue_status_has_frontmatter(self):
-        """Verify queue-status command has valid frontmatter"""
-        cmd = OPENCODE_COMMANDS_DIR / "queue-status.md"
-        content = cmd.read_text()
-        assert content.startswith("---"), "Command should start with YAML frontmatter"
-        assert "description:" in content, "Command should have description"
-
-    def test_commands_have_descriptions(self):
-        """Verify all commands have meaningful descriptions"""
-        for cmd_file in OPENCODE_COMMANDS_DIR.glob("*.md"):
-            content = cmd_file.read_text()
-            # Extract description from frontmatter
-            lines = content.split("\n")
-            for line in lines:
-                if line.startswith("description:"):
-                    desc = line.replace("description:", "").strip()
-                    assert len(desc) > 10, f"{cmd_file.name} has too short description: {desc}"
-                    break
-
-
 class TestHooksIntegration:
     """Test integration between hooks and OpenCode"""
 
@@ -250,37 +196,6 @@ class TestOpenCodeIntegrationWorkflow:
         assert git_hooks_path == ".githooks", \
             f"git config should have .githooks, got {git_hooks_path}"
 
-    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
-    def test_commands_reference_enforcement_hooks(self):
-        """Verify OpenCode commands reference the enforcement hooks"""
-        hooks_install = OPENCODE_COMMANDS_DIR / "hooks-install.md"
-        content = hooks_install.read_text()
-        
-        # Should mention core.hooksPath
-        assert "core.hooksPath" in content, \
-            "hooks-install command should mention core.hooksPath"
-        assert ".githooks" in content, \
-            "hooks-install command should reference .githooks"
-
-    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
-    def test_sdlc_check_references_hooks(self):
-        """Verify sdlc-check command validates hooks"""
-        sdlc_check = OPENCODE_COMMANDS_DIR / "sdlc-check.md"
-        content = sdlc_check.read_text()
-        
-        # Should mention git hooks validation
-        assert "git" in content.lower() or "hook" in content.lower(), \
-            "sdlc-check command should validate git hooks"
-
-    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
-    def test_queue_status_references_artifacts(self):
-        """Verify queue-status command checks queue artifacts"""
-        queue_status = OPENCODE_COMMANDS_DIR / "queue-status.md"
-        content = queue_status.read_text()
-        
-        # Should mention artifacts/queue
-        assert "artifacts/queue" in content or "queue" in content.lower(), \
-            "queue-status command should reference queue artifacts"
 
 
 class TestHooksBypassMechanisms:
@@ -354,27 +269,3 @@ class TestFullIntegration:
         assert "command" in config, "Config should have commands"
         assert "permission" in config, "Config should have permissions"
 
-    @pytest.mark.skip(reason="OpenCode commands deleted as part of file cleanup (2026-05-24)")
-    def test_hooks_and_commands_work_together(self):
-        """Verify hooks and OpenCode commands are coordinated"""
-        # hooks-install command should match actual git config
-        result = subprocess.run(
-            ["git", "config", "core.hooksPath"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True
-        )
-        
-        assert result.returncode == 0, "git config should succeed"
-        assert result.stdout.strip() == ".githooks", \
-            "Hooks should be configured at .githooks"
-        
-        # All hook files should exist
-        assert (GITHOOKS_DIR / "pre-commit").exists()
-        assert (GITHOOKS_DIR / "commit-msg").exists()
-        assert (GITHOOKS_DIR / "pre-push").exists()
-        
-        # All command files should exist
-        assert (OPENCODE_COMMANDS_DIR / "hooks-install.md").exists()
-        assert (OPENCODE_COMMANDS_DIR / "sdlc-check.md").exists()
-        assert (OPENCODE_COMMANDS_DIR / "queue-status.md").exists()

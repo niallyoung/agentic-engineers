@@ -113,6 +113,18 @@ agents:
    - Agents: `agents/.agentic-engine-<harness>` (manifest file, e.g. `.agentic-engine-claude`)
    - Specs: `dist/specs/.agentic-engine-specs`
 
+5. **Orphaned skill pruning** — after installing/updating skills, each of
+   `render-claude.sh`, `render-copilot.sh`, and `render-opencode.sh` calls
+   `prune_orphaned_skills()` (`renderer/lib/render-lib.sh`): it removes any previously
+   installed skill directory whose source under `src/skills/` no longer exists (e.g. from
+   a slimdown round), gated on that directory still carrying the harness's own marker file
+   — a directory without the marker is treated as foreign/user-authored and left alone.
+   The step always runs (no dry-run mode) and prints a single report line, e.g.
+   `🧹 pruned 2 orphaned managed skill(s): foo, bar` or `🧹 pruned 0 orphaned managed skill(s)`.
+   (An equivalent orphan-pruning step for agents was in progress in a sibling change as of
+   this writing and had not yet landed — check `renderer/lib/render-lib.sh` for a
+   `prune_orphaned_agents()` function before assuming it exists.)
+
 #### Renderer library architecture (post-consolidation):
 
 ```

@@ -420,8 +420,10 @@ As of 2026-08-11:
 - **Principal Engineer:** `claude-opus-5` (cross-service architecture)
 - **Security Engineer:** `claude-fable-5` (unconditional; highest capability for threat modeling, vulnerability analysis).
   `ModelResolver.resolve('security_engineer')` unconditionally returns `claude-fable-5`.
-  Defensive-scope enforcement is applied by the C5 offensive-scope gate in `DelegateValidator`,
-  not by model routing. Fallback to `claude-opus-5` if fable-5 is unavailable (documented in HANDBACK).
+  Defensive-scope enforcement is applied by the C5 offensive-scope gate in
+  `renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every
+  specialist spawn), not by model routing. Fallback to `claude-opus-5` if fable-5 is
+  unavailable (documented in HANDBACK).
 
 ### Model Governance: Locking & Switching
 

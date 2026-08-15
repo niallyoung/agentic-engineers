@@ -15,7 +15,7 @@
 # one field set.
 #
 # Precedence when reconciling drift:
-#   1. core_protocol_validator.py  (runtime enforcement — authoritative)
+#   1. protocol_validator.py  (runtime enforcement — authoritative)
 #   2. docs/specs/protocol-core-v1.0.yaml  (this file — canonical description)
 #   3. SPEC.md  (human-readable narrative — descriptive only)
 #
@@ -84,7 +84,7 @@ definitions:
   metrics:
     description: >
       Quantitative outcome of a HANDBACK. All four subfields are REQUIRED by the
-      runtime validator (core_protocol_validator.validate_handback_core).
+      runtime validator (CoreProtocolValidator.validate_handback_core).
     type: object
     required: [quality, tokens, cost, duration_seconds]
     additionalProperties: true
@@ -203,7 +203,7 @@ delegate:
         What will be done, to what, and explicit out-of-scope boundaries.
       minWords: 15
       x-rationale: >
-        The >=15-word floor is ENFORCED by core_protocol_validator.py
+        The >=15-word floor is ENFORCED by protocol_validator.py
         (validate_delegate_core, check #4). Its purpose is to force a delegator
         to articulate a non-trivial, bounded scope rather than a vague one-liner
         like "fix the bug". Empirically, sub-15-word scopes correlated with

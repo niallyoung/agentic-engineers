@@ -167,14 +167,15 @@ class TestRenderMarkdownParseability:
             fm = _get_frontmatter(text)
             assert fm, f"{harness}/{agent_file.name}: no YAML frontmatter"
 
-            # Parse YAML frontmatter
-            # Some copilot agents have ... on its own line (YAML document end marker)
-            # which breaks parsing when part of a frontmatter block. Strip them.
-            fm_cleaned = "\n".join(
-                line for line in fm.split("\n") if line.strip() != "..."
-            )
+            # Parse YAML frontmatter as-is. (Previously this stripped bare "..."
+            # lines to tolerate a stray YAML document-end marker that
+            # render-copilot-agents.py used to leak into the frontmatter for
+            # any plain-scalar description — see FIX 1 /
+            # TestCopilotFrontmatterSingleDocument below, which pins the fix
+            # directly. Tolerating it here would hide a regression instead of
+            # catching it, now that the root cause is fixed.)
             try:
-                parsed = yaml.safe_load(fm_cleaned) or {}
+                parsed = yaml.safe_load(fm) or {}
             except yaml.YAMLError as e:
                 pytest.fail(
                     f"{harness}/{agent_file.name}: invalid YAML frontmatter: {e}"
@@ -201,6 +202,63 @@ class TestRenderMarkdownParseability:
                 (parsed.get("options") or {}).get("role")
             )
             assert identity, f"{harness}/{agent_file.name}: missing identity (name/role)"
+
+
+class TestCopilotFrontmatterSingleDocument:
+    """FIX 1 regression pin (task-2026-08-15-fix-renderer-bugs).
+
+    render-copilot-agents.py used to build the description field via a bare
+    yaml.dump(description).strip() — for any plain-scalar description that
+    doesn't need quoting, yaml.dump() appends a document-end marker
+    ('...\\n') that .strip() does not remove (it only strips whitespace, not
+    the literal '...' text). That leaked a stray '...' line into the middle
+    of the frontmatter block. A lenient parser can silently swallow that and
+    still return a (truncated) dict, so this test does not merely assert "no
+    exception" — it re-parses each frontmatter block as a SINGLE YAML
+    document (no cleanup/stripping of any kind) and asserts the parsed dict
+    actually contains model/accepts/returns/role for all 8 rendered agents.
+    """
+
+    def test_all_copilot_agents_parse_as_single_document_with_full_fields(self):
+        agents_dir = DIST / "copilot" / "agents"
+        assert agents_dir.is_dir(), "dist/copilot/agents/ does not exist — run make render-all"
+
+        agent_files = sorted(agents_dir.glob("*.agent.md"))
+        assert len(agent_files) == 8, (
+            f"expected 8 rendered copilot agents, found {len(agent_files)}: "
+            f"{[f.name for f in agent_files]}"
+        )
+
+        for agent_file in agent_files:
+            text = agent_file.read_text(encoding="utf-8")
+            assert text.startswith("---\n"), f"{agent_file.name}: missing opening frontmatter delimiter"
+            end = text.find("\n---\n", 4)
+            assert end != -1, f"{agent_file.name}: missing closing frontmatter delimiter"
+            fm_raw = text[4:end]
+
+            # No stripping, no line filtering — exactly what a strict YAML
+            # loader sees. yaml.safe_load_all() would silently treat a mid-
+            # block '...' as a document boundary and only load the first
+            # document; using the single-document loader (safe_load) instead
+            # means a stray '...' surfaces as a hard parse error or, if it
+            # happens to still parse, is caught by the field-presence checks
+            # below rather than passing silently.
+            documents = list(yaml.safe_load_all(fm_raw))
+            assert len(documents) == 1, (
+                f"{agent_file.name}: frontmatter contains {len(documents)} YAML "
+                f"documents (expected exactly 1) — a stray '...' document-end "
+                f"marker is mid-block. Documents: {documents}"
+            )
+            parsed = documents[0]
+            assert isinstance(parsed, dict), f"{agent_file.name}: frontmatter did not parse to a mapping"
+
+            for field in ("model", "accepts", "returns", "role"):
+                assert field in parsed, (
+                    f"{agent_file.name}: frontmatter missing '{field}' — got keys {sorted(parsed.keys())}"
+                )
+                assert parsed[field] not in (None, "", []), (
+                    f"{agent_file.name}: field '{field}' is empty"
+                )
 
 
 class TestRenderTOMLParseability:
@@ -346,6 +404,52 @@ class TestSettingsJSONConsistency:
                     f"{harness}/settings.json model '{model_val}' does not match "
                     f"src/AGENTS.md orchestrator model '{orchestrator_model}' (expected tier: {expected_tier})"
                 )
+
+    def test_opencode_default_model_agrees_with_agents_table(self):
+        """
+        FIX 2 regression pin (task-2026-08-15-fix-renderer-bugs): dist/opencode/
+        opencode.jsonc's top-level "model" (the OpenCode default model) must be
+        derived from the Orchestrator's roster row in src/AGENTS.md, not a
+        hardcoded literal. It was previously hardcoded to "claude-haiku-4-5"
+        regardless of what the roster's orchestrator row actually said.
+
+        opencode.jsonc's model is a fully-qualified provider-prefixed string
+        whose LAST path segment is the model id (e.g. "anthropic/claude-sonnet-5",
+        or "openrouter/anthropic/claude-sonnet.5" for providers that nest a
+        second provider segment). map_model_opencode() also renders some
+        providers (github-copilot, openrouter) in DOTTED version format
+        (claude-sonnet.5) rather than the roster's hyphenated form
+        (claude-sonnet-5) — this test's provider is whatever the render
+        environment auto-detects (see detect_opencode_provider()), which can
+        legitimately vary by machine/CI (e.g. a GITHUB_TOKEN in the test env
+        flips it to github-copilot), so the comparison normalizes dots to
+        hyphens and only checks the last segment rather than assuming a
+        specific provider or exact string.
+        """
+        agents_table = _parse_agents_table(REPO_ROOT / "src" / "AGENTS.md")
+        assert agents_table, "Could not parse src/AGENTS.md"
+
+        orchestrator_model = agents_table.get("orchestrator")
+        assert orchestrator_model, "Orchestrator model not found in src/AGENTS.md"
+
+        jsonc_file = DIST / "opencode" / "opencode.jsonc"
+        if not jsonc_file.is_file():
+            pytest.skip("dist/opencode/opencode.jsonc does not exist")
+
+        raw = jsonc_file.read_text(encoding="utf-8")
+        parsed = json.loads(_strip_jsonc(raw))
+
+        model_val = parsed.get("model", "")
+        assert model_val, "opencode.jsonc: missing or empty 'model' field"
+        assert "/" in model_val, f"opencode.jsonc: model '{model_val}' is not provider-qualified"
+
+        model_id = model_val.rsplit("/", 1)[1]
+        normalized = model_id.replace(".", "-")
+        assert normalized == orchestrator_model, (
+            f"opencode.jsonc model-id '{model_id}' (from '{model_val}', normalized "
+            f"'{normalized}') does not match src/AGENTS.md orchestrator model "
+            f"'{orchestrator_model}'"
+        )
 
 
 class TestMutationDetection:

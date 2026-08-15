@@ -12,6 +12,23 @@ from typing import Dict, Tuple
 
 import yaml
 
+
+def _dump_scalar_field(key: str, value: str) -> str:
+    """Render a single "key: value" YAML mapping entry via yaml.safe_dump(),
+    deliberately avoiding yaml.dump()'s bare-scalar code path (see call site
+    in render_agent() for why: it appends a stray '...' document-end marker
+    for any plain scalar that doesn't need quoting). safe_dump({key: value})
+    goes through YAML's mapping-emission path instead, which never emits a
+    document terminator for a single key. Returns the line(s) with the
+    trailing newline stripped, ready to embed inside a hand-built frontmatter
+    block; long values may wrap across a continuation line indented two
+    spaces, which is valid YAML for a plain scalar and re-parses to the same
+    single-line string.
+    """
+    dumped = yaml.safe_dump({key: value}, default_flow_style=False, allow_unicode=True)
+    return dumped.rstrip("\n")
+
+
 class CopilotAgentRenderer:
     """Renders source agent definitions to Copilot CLI agent profiles"""
     
@@ -113,11 +130,19 @@ class CopilotAgentRenderer:
         protocol_lines.append(f"role: {role_val}")
         protocol_block = "\n".join(protocol_lines)
 
-        # Rebuild with clean frontmatter (spec-compliant). Quote description to handle folded scalars.
+        # Rebuild with clean frontmatter (spec-compliant). Render the description
+        # via _dump_scalar_field() rather than a bare yaml.dump(description) —
+        # yaml.dump() of a bare string hits YAML's plain-scalar-document code
+        # path, which appends a trailing '...\n' document-end marker for any
+        # value that does NOT need quoting (most plain-English descriptions).
+        # .strip() only removes whitespace, not the literal '...' text, so it
+        # was leaking into the frontmatter as a stray mid-block YAML document
+        # terminator. safe_dump({'description': value}) instead renders a
+        # "description: value" mapping entry, which never hits that code path.
         description = frontmatter.get('description', '')
         output = f"""---
 name: {frontmatter['name']}
-description: {yaml.dump(description).strip()}
+{_dump_scalar_field('description', description)}
 model: {frontmatter['model']}
 {protocol_block}
 ---
@@ -133,20 +158,20 @@ model: {frontmatter['model']}
     
     def render_all(self) -> int:
         """Render all source agents"""
-        
+
         if not self.src_dir.exists():
             print(f"❌ Source directory not found: {self.src_dir}")
             return 1
-        
+
         # Get all .md agent definition files
         agent_files = list(self.src_dir.glob('*.md'))
         if not agent_files:
             print(f"❌ No agent definitions found in {self.src_dir}")
             return 1
-        
+
         print(f"🎨 Rendering {len(agent_files)} agents from {self.src_dir}")
         print(f"📁 Output: {self.dest_dir}\n")
-        
+
         rendered = 0
         skipped = 0
         errors = 0
@@ -164,6 +189,11 @@ model: {frontmatter['model']}
                 print(f"❌ Error rendering {src_file.name}: {e}")
                 errors += 1
 
+        # Prune orphaned managed agents BEFORE overwriting the manifest:
+        # self.managed_names still holds the PREVIOUS run's manifest here.
+        current_source_names = {f.stem for f in agent_files}
+        self._prune_orphaned_agents(current_source_names)
+
         # Persist the manifest of names we manage so future installs/uninstalls
         # can distinguish our files from the user's. Keep any previously-managed
         # names whose source agent still exists (they were rendered this run).
@@ -177,6 +207,37 @@ model: {frontmatter['model']}
             return 1
 
         return 0
+
+    def _prune_orphaned_agents(self, current_source_names: set) -> list:
+        """Remove managed agent files whose source agent was since renamed
+        or deleted from the source directory.
+
+        Mirrors prune_orphaned_agents() in renderer/lib/render-lib.sh (the
+        bash twin used by render-claude.sh/render-opencode.sh), adapted for
+        this renderer's manifest-only trust model: render_agent()'s foreign-
+        file guard already treats manifest membership as the ours-vs-foreign
+        boundary (a dest file is refused only when it exists AND is NOT
+        listed in self.managed_names, the manifest loaded at __init__ time —
+        i.e. BEFORE this run). By that same construction, every name in
+        self.managed_names is one we installed, so if its source has since
+        disappeared it is safe to prune without any separate per-file marker.
+
+        Unconditionally removes (no dry-run mode) and always prints a report
+        line, mirroring prune_orphaned_skills()'s wording convention.
+        """
+        pruned = []
+        for name in sorted(self.managed_names):
+            if name in current_source_names:
+                continue
+            dest_file = self.dest_dir / f"{name}.agent.md"
+            if dest_file.exists():
+                dest_file.unlink()
+                pruned.append(name)
+        if pruned:
+            print(f"🧹 pruned {len(pruned)} orphaned managed agent(s): {', '.join(pruned)}")
+        else:
+            print("🧹 pruned 0 orphaned managed agent(s)")
+        return pruned
 
     def _write_manifest(self, managed_names: set) -> None:
         """Write the sidecar manifest listing the agent base-names we manage."""

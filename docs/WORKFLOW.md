@@ -39,7 +39,7 @@ targets follow each role's "Escalates to" in `src/AGENTS.md` Role Definitions).
 | 2 | Orchestrator Routing | Gate 1 passed | AGENTS.md routing tree applied; agent/model/effort selected | DELEGATE built | Escalate to human |
 | 3 | DELEGATE Validation | DELEGATE constructed | Required fields present & valid (AGENTS.md DELEGATE Block Format) | Agent spawned | Fix and resubmit |
 | 4 | Agent Execution | Agent spawned | Plan executed, tests run, quality baseline met | HANDBACK returned | `blocked`/`failure` → rework or escalate |
-| 5 | HANDBACK Validation | HANDBACK returned | Composite score (formula below) | Merge / Lead review / Rework / Escalate | — |
+| 5 | HANDBACK Validation | HANDBACK returned | Quality assessed by convention (see Gate 5 below) | Merge / Lead review / Rework / Escalate | — |
 | 6 | Pre-Commit | `git commit` | `.githooks/pre-commit` checks | Commit created | Commit blocked |
 | 7 | Pre-Push | `git push` | `.githooks/pre-push` checks | Push proceeds | Push blocked |
 
@@ -163,7 +163,7 @@ By convention (not auto-collected by the harness), these metrics are tracked whe
 |---|---|
 | 2 | `routing_decision`, `effort_level`, `model_assigned`, `tokens_estimate` |
 | 4 | `tokens_used`, `duration_seconds`, `tests_passed`/`tests_failed`, `code_coverage`, `quality`, `confidence` |
-| 5 | `quality_composite`, `routing_decision`, `rework_count` |
+| 5 | `quality` (self-reported, optionally QE-adjusted), `routing_decision`, `rework_count` |
 
 ---
 

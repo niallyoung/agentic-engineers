@@ -13,8 +13,6 @@
 #   SPEC.md                   — master framework specification
 #   FRAMEWORK-MANIFEST.yaml   — entity registry (agents/skills/hooks)
 #   orchestration.yaml        — orchestrator runtime config (budgets, routing)
-#   deployment.yaml           — deployment mode config
-#   token_budget.yaml         — token budget thresholds
 #
 # A marker file (.agentic-engine-specs) is written to $DEST_ROOT/specs/ so
 # install/uninstall can identify managed files vs user additions.

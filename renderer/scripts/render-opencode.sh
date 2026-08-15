@@ -336,8 +336,21 @@ write_config() {
 	#
 	# We emit a minimal provider config with available models, but NO agent array.
 	
-	local default_model
-	default_model=$(map_model_opencode "claude-haiku-4-5")
+	# Derive the default model from the Orchestrator's roster row in
+	# src/AGENTS.md, the same way render-claude.sh/render-copilot.sh derive
+	# their own settings.json session model — never a hardcoded literal,
+	# which drifts silently the moment the roster changes (was hardcoded to
+	# claude-haiku-4-5 while the roster's orchestrator model had moved to
+	# claude-sonnet-5).
+	local default_model orchestrator_meta orchestrator_model_raw
+	orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
+	if [ -n "$orchestrator_meta" ]; then
+		orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
+		default_model=$(map_model_opencode "$orchestrator_model_raw")
+	fi
+	# Fallback only if the roster lookup fails outright (missing/unparseable
+	# src/AGENTS.md) — keeps write_config() from emitting an empty "model" key.
+	[ -n "${default_model:-}" ] || default_model=$(map_model_opencode "claude-haiku-4-5")
 
 	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
@@ -521,6 +534,12 @@ case "$MODE" in
 			# skill dir is user-authored. Excluding it keeps rsync --delete from
 			# treating it as extraneous and wiping it on re-render.
 			rsync -a --delete --exclude='.DS_Store' --exclude='.git' --exclude='tests/' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='AGENTS.md' "$src/" "$dst/"
+			# Remove any tests/__pycache__/.pytest_cache/*.pyc cruft an older
+			# renderer version shipped into this managed skill dir before the
+			# excludes above existed — see prune_excluded_cruft() in
+			# renderer/lib/render-lib.sh for why this is a separate find-based
+			# pass rather than rsync --delete-excluded.
+			prune_excluded_cruft "$dst"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$dst/$SKILL_MARKER"
 			count_s=$((count_s + 1))
 		done
@@ -539,6 +558,12 @@ case "$MODE" in
 
 		# 2. Agents: hybrid frontmatter merge (src/AGENTS.md + src frontmatter), write .md
 		echo "📦 Rendering agents → $DST_AGENTS/..."
+		# Capture the PREVIOUS manifest contents before this run's install
+		# loop rebuilds it, so prune_orphaned_agents() below can tell which
+		# names we managed before but whose source agent has since been
+		# renamed/deleted from src/agents/.
+		prev_agent_manifest_names=""
+		[ -f "$AGENT_MANIFEST" ] && prev_agent_manifest_names=$(cat "$AGENT_MANIFEST")
 		: > "$AGENT_MANIFEST.tmp"
 		count_a=0
 		for name in $(list_source_agents); do
@@ -645,6 +670,13 @@ case "$MODE" in
 			count_a=$((count_a + 1))
 		done
 		mv "$AGENT_MANIFEST.tmp" "$AGENT_MANIFEST"
+
+		# 2.5 Prune orphaned managed agents: .md files we installed on a
+		# prior render whose source agent was since renamed/deleted from
+		# src/agents/ (mirrors prune_orphaned_skills() above — see
+		# prune_orphaned_agents() in renderer/lib/render-lib.sh).
+		prune_orphaned_agents "$DST_AGENTS" "$SRC_AGENTS" "$prev_agent_manifest_names"
+
 		echo "✅ Rendered $count_s skill(s), $count_a agent(s)"
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable

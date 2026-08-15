@@ -68,9 +68,13 @@ After `make install`, the framework automatically:
    git checkout -b feature/your-feature
    ```
 
-3. **Make your changes** using the framework's own tools:
-    - New agent? Use `agent-creator` skill
-    - New skill? Use `skill-creator` skill
+3. **Make your changes**:
+    - New agent? Author a `src/agents/<name>-agent.md` directly, following the structure
+      of an existing one (e.g. `src/agents/engineer-agent.md`), then register it in
+      `src/AGENTS.md` and `config/FRAMEWORK-MANIFEST.yaml`.
+    - New skill? Author a `src/skills/<category>/<name>/SKILL.md` directly, following the
+      structure of an existing one (e.g. `spec-validator`), then register it in
+      `src/SKILLS.md` and `config/FRAMEWORK-MANIFEST.yaml`. See "Creating New Skills" below.
     - Code changes? Delegate to the Orchestrator!
 
       Instead of editing files directly, use the delegation format. Here's an example:
@@ -145,10 +149,16 @@ This speeds up iteration without installing all 4 harnesses.
 
 ## Framework-First Approach
 
-**Don't manually create or edit files.** Use the framework's meta-skills:
+New skills and agents follow this repo's skills-first, minimal-tooling philosophy:
+author them directly.
 
-- **New agent?** Delegate to `agent-creator` — scaffolds definitions, validates YAML, updates registries.
-- **New skill?** Delegate to `skill-creator` — scaffolds structure, handles SKILL.md, validates against roster.
+- **New agent?** Create `src/agents/<name>-agent.md` following the structure of an
+  existing agent (e.g. `src/agents/engineer-agent.md`), then register it in
+  `src/AGENTS.md` + `config/FRAMEWORK-MANIFEST.yaml`. The glob-based renderer discovers
+  it automatically — no manual per-harness wiring needed.
+- **New skill?** Create `src/skills/<category>/<name>/SKILL.md` following the structure
+  of an existing skill (e.g. `spec-validator`), then register it in `src/SKILLS.md` +
+  `config/FRAMEWORK-MANIFEST.yaml`. The glob-based renderer discovers it automatically.
 - **Code review?** Use the `Lead Engineer` agent for architectural guidance.
 - **Complex planning?** Use the `Senior Engineer` agent to plan unscoped work.
 
@@ -390,7 +400,7 @@ scripts/check-gitconfig-no-tokens.sh
 
 ## Working with Background Agents
 
-When using background agents (e.g., `skill-creator`, `agent-creator`) to create implementation files:
+When using background agents (e.g., Engineer, Senior Engineer) to create implementation files:
 
 **Background agents MUST explicitly commit their files to git.** This ensures:
 - ✅ Created files persist beyond the agent's session
@@ -536,8 +546,9 @@ src/skills/<skill-name>/
     └── test_<skill>.py   ← at least one test file required
 ```
 
-Use the `skill-creator` skill (or `agent-creator` for agents) to scaffold a
-conformant skill/agent directly — see `src/SKILLS.md` / `src/AGENTS.md`.
+Author the skill/agent directly by following the structure of an existing one
+(e.g. `spec-validator` for a skill, `engineer-agent.md` for an agent) — see
+`src/SKILLS.md` / `src/AGENTS.md` for the registration steps.
 
 ### Gate: Skill Template Conformance Report (Audit Trail)
 
@@ -1004,8 +1015,8 @@ quality-engineer, and model-engineer are meant to be leaves.
 
 ## FAQ
 
-- **How do I add an agent?** Use `agent-creator` skill or read [`src/AGENTS.md`](../../src/AGENTS.md)
-- **How do I add a skill?** Use `skill-creator` skill or read [`src/SKILLS.md`](../../src/SKILLS.md)
+- **How do I add an agent?** Author `src/agents/<name>-agent.md` directly and register it — see [`src/AGENTS.md`](../../src/AGENTS.md)
+- **How do I add a skill?** Author `src/skills/<category>/<name>/SKILL.md` directly and register it — see [`src/SKILLS.md`](../../src/SKILLS.md)
 - **What if CI fails?** Run `make verify` locally — it checks everything
 - **Need help?** Check the references above or open an issue
 

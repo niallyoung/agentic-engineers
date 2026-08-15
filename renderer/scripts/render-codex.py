@@ -248,6 +248,22 @@ def copy_skill(src: Path, dst: Path) -> None:
     # every re-render (unlike rsync --delete + --exclude in the other
     # renderers, this copy path has no equivalent "leave it alone" flag) —
     # so stash and restore any such files verbatim around the copy.
+    #
+    # FIX 3 note (task-2026-08-15-fix-renderer-bugs): the 3 bash renderers
+    # needed a dedicated post-rsync cleanup pass (prune_excluded_cruft() in
+    # renderer/lib/render-lib.sh) because rsync --delete never removes a path
+    # matched by --exclude, so a tests/__pycache__/.pytest_cache/*.pyc dir
+    # shipped by an OLDER renderer version, before those excludes existed,
+    # is invisible to rsync in both directions and orphaned forever. This
+    # function has no equivalent bug and needs no equivalent extra cleanup
+    # step: it is NOT incremental. Every re-render does rmtree(dst) (wiping
+    # the entire prior install, cruft included) followed by a full
+    # copytree(src, dst, ignore=ignore) rebuild from src, and `ignore`
+    # already excludes the same cruft patterns from ever being (re)copied.
+    # There is no code path by which a stale excluded file can survive a
+    # re-render here — verified by the shared orphan-cruft regression suite
+    # (tests/test_install_orphan_pruning.py), which passes for codex without
+    # any change to this function.
     preserved: dict[Path, bytes] = {}
     if dst.exists():
         for path in dst.rglob("AGENTS.md"):
@@ -533,12 +549,15 @@ job_max_runtime_seconds = 1800
 
         print(f"Rendering Codex custom agents -> {self.agents_dir}")
         managed_before = self.managed_names()
+        source_agents = list_source_agents(self.src_agents)
         managed_now: list[str] = []
-        for agent in list_source_agents(self.src_agents):
+        for agent in source_agents:
             if self.render_agent(agent, managed_before):
                 managed_now.append(agent.name)
                 print(f"  {_green('OK')} agent {agent.name}")
         self.manifest.write_text("\n".join(sorted(managed_now)) + "\n", encoding="utf-8")
+
+        self.prune_orphaned_agents(managed_before, {agent.name for agent in source_agents})
 
         print(f"Rendering Codex skills -> {self.skills_root}")
         count_s = 0
@@ -554,6 +573,37 @@ job_max_runtime_seconds = 1800
 
         print(f"{_green('OK')} Rendered {len(managed_now)} agent(s), {count_s} skill(s)")
         return 0
+
+    def prune_orphaned_agents(self, managed_before: set[str], current_source_names: set[str]) -> list[str]:
+        """Remove managed agent .toml files whose source agent was since
+        renamed or deleted from src/agents/.
+
+        Mirrors prune_orphaned_agents() in renderer/lib/render-lib.sh (the
+        bash twin used by render-claude.sh/render-opencode.sh) and this
+        class's own prune_orphaned_skills() below, adapted for the
+        manifest-only trust model render_agent() already uses: a dest file
+        is refused only when it exists AND its name is NOT in
+        managed_before (the manifest loaded before this run). By that same
+        construction, every name in managed_before is one we installed, so
+        if its source has since disappeared it is safe to prune.
+
+        Unconditionally removes (no dry-run mode) and always prints a report
+        line, mirroring prune_orphaned_skills()'s wording convention.
+        """
+        pruned: list[str] = []
+        for name in sorted(managed_before):
+            if name in current_source_names:
+                continue
+            path = self.agents_dir / f"{name}.toml"
+            if path.exists():
+                path.unlink()
+                pruned.append(name)
+
+        if pruned:
+            print(f"  🧹 pruned {len(pruned)} orphaned managed agent(s): {', '.join(pruned)}")
+        else:
+            print("  🧹 pruned 0 orphaned managed agent(s)")
+        return pruned
 
     def prune_orphaned_skills(self) -> list[str]:
         """Remove marker-tagged managed skill dirs whose source skill was
