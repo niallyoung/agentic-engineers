@@ -414,10 +414,10 @@ case "$MODE" in
 			else echo "  ⚠️  $label (foreign)"; fi
 		done
 		# settings.json status (single python3 pass)
-		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" <<'PY'
+		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" "$HOOK_MARKER" <<'PY'
 import json, sys, os, filecmp
 
-settings_file, src_hook, dst_hook, hook_name = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+settings_file, src_hook, dst_hook, hook_name, hook_marker = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
 
 # settings.json model
 try:
@@ -434,7 +434,7 @@ else:
 # Hook file status
 if not os.path.exists(dst_hook):
 	print("  ❌ hook claude-delegate-guard.py (not installed)")
-elif not os.path.exists(src_hook + ".marker"):
+elif not os.path.exists(hook_marker):
 	print("  ⚠️  hook claude-delegate-guard.py (foreign)")
 elif filecmp.cmp(src_hook, dst_hook, shallow=False):
 	print("  ✅ hook claude-delegate-guard.py")

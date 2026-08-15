@@ -38,7 +38,7 @@ INPUT: DELEGATE block with:
   - context: Relevant files, error messages, requirements
   - success_criteria: Clear acceptance criteria
   - repo_path: Repository location
-  - estimated_tokens: Budget estimate
+  - tokens_estimate: Budget estimate
 
 PROCESS:
 
@@ -63,8 +63,8 @@ PROCESS:
 
   4. MEASURE TOKEN EFFICIENCY
      - tokens_used: actual
-     - tokens_estimated: from DELEGATE
-     - efficiency = tokens_used / tokens_estimated
+     - tokens_estimate: from DELEGATE
+     - efficiency = tokens_used / tokens_estimate
      - If efficiency > 0.8: Model Engineer may recommend upgrade next time
 
   5. CAPTURE QUALITY METRICS
@@ -148,7 +148,7 @@ success_criteria:
   - Token with exp 30 seconds ago is accepted (grace period)
   - Token with exp 31+ seconds ago is rejected
   - Code coverage maintained above 87%
-estimated_tokens: 1500
+tokens_estimate: 1500
 ---
 ```
 

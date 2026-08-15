@@ -18,7 +18,7 @@ If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `ag
 
 **Role**: Model Engineer  
 **Model**: claude-sonnet-5  
-**Effort**: medium
+**Effort**: high
 
 **Why Sonnet-5**: Strong reasoning for model selection analysis and cost/quality tradeoff evaluation.
 
@@ -37,7 +37,7 @@ HANDBACKs), across the 8 framework roles in `src/AGENTS.md` (Orchestrator, Engin
 Senior Engineer, Lead Engineer, Principal Engineer, Security Engineer, Quality Engineer,
 Model Engineer). Orchestrator now uses claude-sonnet-5 for improved routing analysis:
 
-1. For each role present, compute **efficiency** = `tokens_observed / tokens_estimated`.
+1. For each role present, compute **efficiency** = `tokens_observed / tokens_estimate`.
 2. Apply thresholds: efficiency < 0.5 → suggest downgrading to a cheaper tier (confidence
    ~0.85); 0.5–0.8 → current model is appropriate, keep it (confidence ~0.90); > 0.8 →
    consider upgrading, but only if quality was also borderline — upgrades get a lower
@@ -77,7 +77,7 @@ handoff_type: DELEGATE
 task_id: 2026-05-26-model-feedback-quality-gate
 agent: model-engineer
 model: claude-sonnet-5
-effort: medium
+effort: high
 scope: >
   Analyse token efficiency and quality metrics from the most recent commit-quality-gate
   HANDBACK set. Recommend model or effort tier adjustments for each agent role.
@@ -88,7 +88,7 @@ context:
   - "Decision quality: PROCEED (quality gate passed)"
   - "Session: {session-id}"
 plan:
-  - "Compute efficiency ratio per role (tokens_observed / tokens_estimated)"
+  - "Compute efficiency ratio per role (tokens_observed / tokens_estimate)"
   - "Apply thresholds: <0.5 → suggest downgrade, 0.5-0.8 → keep, >0.8 → consider upgrade"
   - "Weigh efficiency against metrics.quality before recommending a downgrade"
   - "Build recommendation struct with model, confidence, reasoning per role"
@@ -98,7 +98,7 @@ success_criteria:
   - Recommendation produced for each role with confidence >= 0.70
   - Recommendations written to model-recommendations.jsonl
   - HANDBACK returned with next_suggested_models map
-estimated_tokens: 1500
+tokens_estimate: 1500
 ---
 ```
 

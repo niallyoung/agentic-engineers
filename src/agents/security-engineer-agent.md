@@ -178,7 +178,7 @@ success_criteria:
   - Findings table produced with severity classification
   - CRITICAL or HIGH findings result in status: failure
   - Remediation recommendations provided for each finding
-estimated_tokens: 4000
+tokens_estimate: 4000
 ---
 ```
 

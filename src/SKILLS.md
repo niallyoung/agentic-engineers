@@ -8,12 +8,12 @@
 
 | Skill Name | File | Purpose | Role | Model | Effort |
 |---|---|---|---|---|---|
-| **orchestrator** | `src/skills/orchestrator/SKILL.md` | Direct sub-agent spawn dispatch, HANDBACK correlation, crash recovery, implementing the DELEGATE/HANDBACK protocol lifecycle. | orchestrator | claude-haiku-4.5 | high |
-| **protocol-validator** | `src/skills/protocol-validator/SKILL.md` | Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1. | all | claude-haiku-4.5 | medium |
+| **orchestrator** | `src/skills/orchestrator/SKILL.md` | Direct sub-agent spawn dispatch, HANDBACK correlation, crash recovery, implementing the DELEGATE/HANDBACK protocol lifecycle. | orchestrator | claude-sonnet-5 | low |
+| **protocol-validator** | `src/skills/protocol-validator/SKILL.md` | Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1. | all | claude-haiku-4.5 | high |
 | **spec-validator** | `src/skills/spec-validator/SKILL.md` | Validates implementation compliance with SPEC.md requirements. | quality-engineer, lead-engineer | claude-haiku-4.5 | medium |
-| **spec-management** | `src/skills/spec-management/SKILL.md` | Maintains SPEC.md and tracks implementation compliance across the framework. | senior-engineer, lead-engineer | claude-sonnet-5 | medium |
-| **skill-improvement-feedback** | `src/skills/skill-improvement-feedback/SKILL.md` | Analyzes skill execution feedback and proposes targeted improvements. | orchestrator, lead-engineer | claude-sonnet-5 | medium |
-| **codex-agent-cleanup** | `src/skills/codex-agent-cleanup/SKILL.md` | Codex session hygiene: close completed sub-agents, resume active work, keep agent capacity available. | orchestrator | claude-haiku-4.5 | low |
+| **spec-management** | `src/skills/spec-management/SKILL.md` | Maintains SPEC.md and tracks implementation compliance across the framework. | principal-engineer | claude-opus-5 | medium |
+| **skill-improvement-feedback** | `src/skills/skill-improvement-feedback/SKILL.md` | Analyzes skill execution feedback and proposes targeted improvements. | orchestrator, lead-engineer | claude-haiku-4.5 | low |
+| **codex-agent-cleanup** | `src/skills/codex-agent-cleanup/SKILL.md` | Codex session hygiene: close completed sub-agents, resume active work, keep agent capacity available. | orchestrator | claude-haiku-4.5 | medium |
 | **audit-trail-review** | `src/skills/audit-trail-review/SKILL.md` | Reviews orchestration ledger (JSONL) for unfinished delegations, orphaned work, and status inconsistencies. Prose-only meta-skill. | quality-engineer | claude-sonnet-5 | medium |
 
 ---

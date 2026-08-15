@@ -82,7 +82,7 @@ help:
 	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
 	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
 	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
-	@echo "  quality-gate        Pre-push quality checks (lint + test + verify)"
+	@echo "  quality-gate        Pre-push quality checks (lint + test + verify + render validation)"
 
 setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
 	@echo "🔒 Setting up Git hooks..."

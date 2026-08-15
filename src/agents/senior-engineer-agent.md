@@ -80,7 +80,7 @@ PROCESS:
 
   5. IF DELEGATING:
      - Create sub-DELEGATE blocks for each sub-task
-     - Assign to appropriate agents (Engineer, Lead Engineer, Healing)
+     - Assign to appropriate agents (Engineer, Lead Engineer)
      - Wait for HANDBACK from each
      - Aggregate results
 

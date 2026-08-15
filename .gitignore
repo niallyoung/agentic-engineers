@@ -47,6 +47,7 @@ MANIFEST
 # TESTING
 # ============================================================================
 .coverage
+.coverage.*
 .pytest_cache/
 htmlcov/
 .tox/
