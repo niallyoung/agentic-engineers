@@ -608,6 +608,14 @@ PY
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# Claude Code harness: hooks are installed from REPO_ROOT/.githooks to enforce consistency.
 		# Note: Claude Code uses the same git repo as OpenCode, so hooks are shared.
+		# LOW6 note: MODE has no separate "render-only" branch (see the `case
+		# "$MODE" in` above — --uninstall and --status are the only
+		# alternatives to this default branch), so this same code path also
+		# runs for `make render-claude`, which mutates REPO_ROOT's own
+		# .git/config (core.hooksPath) as a side effect of a target presented
+		# as build-only (dist/claude/ generation). Intentional/relied-upon —
+		# not changing it here, just flagging it so a future reader isn't
+		# surprised that a "render" target touches the developer's git config.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
 			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
 			git -C "$REPO_ROOT" config core.hooksPath .githooks

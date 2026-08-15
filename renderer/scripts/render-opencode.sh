@@ -682,6 +682,14 @@ case "$MODE" in
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable
 		# This enforces SDLC compliance at commit/push time for the repo itself.
 		# Hooks are installed from REPO_ROOT/.githooks to enforce consistency across all harnesses.
+		# LOW6 note: MODE has no separate "render-only" branch (see the `case
+		# "$MODE" in` above — --uninstall and --status are the only
+		# alternatives to this default branch), so this same code path also
+		# runs for `make render-opencode`, which mutates REPO_ROOT's own
+		# .git/config (core.hooksPath) as a side effect of a target presented
+		# as build-only (dist/opencode/ generation). Intentional/relied-upon —
+		# not changing it here, just flagging it so a future reader isn't
+		# surprised that a "render" target touches the developer's git config.
 		if [ -d "$REPO_ROOT/.githooks" ]; then
 			echo "📦 Installing git hooks from $REPO_ROOT/.githooks/..."
 			git -C "$REPO_ROOT" config core.hooksPath .githooks

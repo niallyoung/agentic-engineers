@@ -534,6 +534,19 @@ prune_excluded_cruft() {
 # ORPHAN PRUNING
 # ============================================================================
 
+# Validate that a name is safe to use as a single path component when building
+# a deletion path (e.g. "$dst_agents/$name.md" in prune_orphaned_agents below).
+# Only letters, digits, hyphen, underscore — no '.', no '/', no other
+# metacharacters — so a tampered manifest line (e.g. "../../x") can never walk
+# outside the managed directory. Mirrors the validation style already used in
+# scripts/audit_append.py's _validate_path_component() (same defense-in-depth
+# rationale — untrusted content read from disk, about to be used in a path).
+# Usage: is_safe_entity_name <name>  (bash return code 0 == safe)
+is_safe_entity_name() {
+	local name="$1"
+	[[ "$name" =~ ^[A-Za-z0-9_-]+$ ]]
+}
+
 # Prune orphaned managed skill directories under DST_SKILLS: dirs that carry
 # the renderer's SKILL_MARKER (i.e. WE installed them on a previous render)
 # but whose source skill no longer exists under SRC_SKILLS (a later slimdown
@@ -626,6 +639,13 @@ prune_orphaned_agents() {
 	local pruned=() name
 	while IFS= read -r name; do
 		[ -n "$name" ] || continue
+		# Defend against a tampered/corrupted manifest line before it is ever
+		# used to build a deletion path (LOW1 — path traversal hardening):
+		# reject/skip and log, never silently proceed.
+		if ! is_safe_entity_name "$name"; then
+			echo "  ⚠️  skipping invalid manifest entry (unsafe name): $name" >&2
+			continue
+		fi
 		case "$current_names" in
 			*$'\n'"$name"$'\n'*) continue ;;  # still a current source agent — keep
 		esac

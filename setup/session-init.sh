@@ -36,11 +36,8 @@ if [ -f "$AGENTIC_ENGINEERS_ROOT/setup/copilot-instructions.md" ]; then
     : # Instructions are for documentation; loaded implicitly by LLMs
 fi
 
-# 2. Initialize usage tracking (automatic during session)
-#    This enables continuous token monitoring without explicit agent action
-if [ -f "$AGENTIC_ENGINEERS_ROOT/skills/usage-tracking/SESSION-INIT.sh" ]; then
-    bash "$AGENTIC_ENGINEERS_ROOT/skills/usage-tracking/SESSION-INIT.sh"
-fi
+# 2. Usage tracking is handled via skills loaded at runtime
+#    (formerly by skills/usage-tracking/SESSION-INIT.sh, now integrated into skill lifecycle)
 
 # 3. Install git hooks
 #    This ensures pre-commit and pre-push hooks are active

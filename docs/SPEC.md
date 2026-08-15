@@ -420,10 +420,14 @@ As of 2026-08-11:
 - **Principal Engineer:** `claude-opus-5` (cross-service architecture)
 - **Security Engineer:** `claude-fable-5` (unconditional; highest capability for threat modeling, vulnerability analysis).
   `ModelResolver.resolve('security_engineer')` unconditionally returns `claude-fable-5`.
-  Defensive-scope enforcement is applied by the C5 offensive-scope gate in
+  Defensive-scope enforcement is a role convention — followed by the Security
+  Engineer's own system prompt and cross-checked by operator/reviewer judgment, not by
+  model routing and not mechanically enforced by
   `renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every
-  specialist spawn), not by model routing. Fallback to `claude-opus-5` if fable-5 is
-  unavailable (documented in HANDBACK).
+  specialist spawn), which validates DELEGATE structure only (handoff_type, agent,
+  task_id format, scope word count, plan, success_criteria present) and contains no
+  scope/topic/content inspection. Fallback to `claude-opus-5` if fable-5 is unavailable
+  (documented in HANDBACK).
 
 ### Model Governance: Locking & Switching
 
@@ -760,6 +764,51 @@ into `dist/<harness>/` and installed to each harness's home directory.
   resolution to
   `~/.agentic-engineers/claude/b063912d-4cf8-4f83-aea3-71382bcb43b6/audit/`. No
   commits.
+- **2026-08-15:** [lead-engineer, task-2026-08-15-fix-c5-honesty,
+  authorized_by: user-directive, ancestry: [task-2026-08-15-post-install-verify,
+  task-2026-08-15-security-review-fable5]] Fixed a HIGH-severity false-assurance
+  finding from an independent fable-5 Security Engineer review: this document (then
+  lines 423-426), `src/AGENTS.md` (lines 54-58), and
+  `src/agents/security-engineer-agent.md` (frontmatter `model_guidance`) each claimed
+  a "C5 offensive-scope gate" mechanically enforced the Security Engineer's
+  defensive-only constraint inside `renderer/scripts/claude-delegate-guard.py` — but
+  that hook (re-verified in full for this fix) validates only DELEGATE structural
+  fields (handoff_type, agent, task_id format, scope word count, plan,
+  success_criteria presence) and performs zero scope/topic/content inspection; no
+  such gate exists anywhere in the repo (`grep -rn "C5\|offensive-scope"` confirmed).
+  All three claims rewritten to accurately describe the constraint as a role
+  convention — followed by the Security Engineer's own system prompt and
+  cross-checked by operator/reviewer judgment, not mechanically enforced — matching
+  the honest register already used for depth/fan-out/cycle enforcement in
+  `src/AGENTS.md` § Recursion Limits ("No runtime code counts depth, counts fan-out,
+  or detects cycles at spawn time"). Also fixed a related finding (M2) in the
+  newly-added `src/skills/self-healing-review/SKILL.md` (lines ~115-116 and
+  ~171-172), which cited the same phantom gate as its security-engineer routing
+  rationale and Security Review Cadence backstop, and added a missing clarification
+  to its Autonomous / AFK Operation section: push authorization is scoped to the
+  invocation that granted it (a single `/loop` run or one `ScheduleWakeup`-driven
+  session), not standing/indefinite — a new AFK session requires fresh
+  authorization. No LOCKED-section semantics changed (this corrects a false
+  implementation-detail claim, not a protocol rule); per the 3a self-authorized
+  narrow-follow-up pattern (`src/skills/spec-management/SKILL.md`), this Update Log
+  entry is the record — no separate proposal file. Files touched: this document,
+  `src/AGENTS.md` (`.agents_verification_sha` recomputed), `src/agents/
+  security-engineer-agent.md`, `src/skills/self-healing-review/SKILL.md`.
+  Verification: `python3 -m pytest tests/test_agents_table_parity.py
+  tests/test_framework_consistency.py tests/test_claude_delegate_guard.py -q` green;
+  `grep -rn "C5\|offensive-scope"` across the repo returns zero remaining matches.
+- **2026-08-15:** [orchestrator, task-2026-08-15-fix-fabricated-docs,
+  authorized_by: user-directive] Fixed the security review's M3 finding: four docs
+  described Codex as a separate/opt-in install, contradicting the Makefile's
+  `install:` target, whose harness list (`copilot claude opencode codex`) has
+  included `codex` since before the removed "pi" harness (confirmed via
+  `git log -p` on that target) — the "opt-in" claim was the actual doc bug, not the
+  Makefile. `docs/guides/harness-setup/codex.md`'s status line corrected to
+  "Supported, included in `make install`." One stale test
+  (`tests/test_codex_docs.py::test_codex_docs_keep_opt_in_language`) asserted the
+  old, incorrect claim as required content and failed once the doc was corrected;
+  renamed to `test_codex_docs_describe_default_install` and its assertion updated
+  to match verified reality. No LOCKED-section semantics changed.
 
 ---
 

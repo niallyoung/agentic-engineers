@@ -225,13 +225,6 @@ make test-ci-force          # Strict: all tests must pass
 make test-ci-shell          # Interactive debug shell in container
 ```
 
-**What this catches that pre-push hooks don't:**
-- **Symlink issues:** Tests verify symlink creation, resolution, relative paths, and path traversal security
-- **Path platform differences:** Container tests validate paths with spaces, special chars, absolute/relative resolution
-- **File permissions:** Tests verify read/write/execute permissions on files and directories
-- **Python 3.11 specific features:** Tests confirm async/await, pathlib.match(), typing module, exception groups
-- **System dependencies:** Validates git, python3, pytest, pyyaml availability in container
-
 **Workflow:**
 ```bash
 # 1. Make local changes
@@ -243,21 +236,6 @@ make test-ci-force
 # 5. If green, push
 git push
 ```
-
-**Container tests included (46 total):**
-- TestContainerSymlinks (5 tests): symlink operations
-- TestContainerFilePaths (6 tests): path resolution
-- TestContainerFilePermissions (6 tests): permission handling
-- TestPython311Compatibility (6 tests): Python 3.11 features
-- TestSystemDependencies (4 tests): required tools
-- TestDockerfileBuild (5 tests): Dockerfile validation
-- TestMakefileTargets (5 tests): CI targets
-- TestGitConfiguration (2 tests): Git setup
-- TestPlatformDetection (3 tests): OS detection
-- TestContainerIntegration (2 tests): full integration
-- TestErrorMessages (1 test): error handling
-
-See `tests/test_ci_container_environment.py` for full test suite.
 
 ---
 

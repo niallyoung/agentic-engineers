@@ -131,11 +131,7 @@ delegate: Validate implementation against docs/SPEC.md
 ```
 
 The Orchestrator spawns Lead Engineer directly, reads back the HANDBACK (validation
-report), and reports the outcome:
-
-```bash
-cat artifacts/spec-validation-report.md
-```
+report), and reports the outcome immediately in the session.
 
 ### Workflow 3: Fix Code Issues
 

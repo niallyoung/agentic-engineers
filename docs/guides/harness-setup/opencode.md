@@ -10,10 +10,8 @@
 
 - ✅ Full DELEGATE/HANDBACK protocol support
 - ✅ Direct sub-agent spawn dispatch (Agent/Task tool) — the harness session transcript is the durable audit record; nothing polls anything to route work
-- ✅ Real-time token tracking (27% Orchestrator + 73% subagents)
-- ✅ Concurrent agent execution (tested with 36+ agents)
-- ✅ Voice notifications with distinct personalities
-- ✅ Dark factory mode (autonomous operation)
+- ✅ Real-time token tracking
+- ✅ Concurrent agent execution
 
 ## Installation
 
@@ -51,27 +49,14 @@ The renderer automatically transforms model names during installation.
 opencode --agent orchestrator "Your task description here"
 ```
 
-### Dark Factory Mode (Autonomous)
+### Autonomous Execution
 
-```bash
-opencode --agent orchestrator --dark-factory "Process all pending work"
-```
-
-This mode:
-- Processes tasks autonomously, spawning specialists directly (Agent/Task tool)
-- Routes to specialists based on task type
-- Reads each HANDBACK back in-context as its spawn call returns
-- Aggregates results and reports back
-- Pauses when no pending DELEGATEs or outstanding spawns remain — the session transcript is the audit record
-
-### Voice Notifications
-
-OpenCode supports voice notifications for task lifecycle events:
-
-```bash
-# Enable voice notifications in config
-opencode --agent orchestrator --voice "Task completed with 95/100 quality"
-```
+The Orchestrator processes tasks autonomously by:
+- Spawning specialists directly (Agent/Task tool)
+- Routing to specialists based on task type
+- Reading each HANDBACK back in-context as its spawn call returns
+- Aggregating results and reporting back
+- Pausing when no pending DELEGATEs or outstanding spawns remain — the session transcript is the audit record
 
 ## Known Limitations
 
@@ -110,27 +95,7 @@ the issue is in the Orchestrator's routing decision.
 
 ### Concurrent Agent Execution
 
-OpenCode supports tens to hundreds of concurrent agents. To test:
-
-```bash
-# Launch orchestrator with high concurrency
-opencode --agent orchestrator --max-agents 100 "Process batch of 100 tasks"
-```
-
-**Tested capacity:**
-- ✅ 36+ concurrent agents (production validated)
-- ✅ 100+ sub-agents in parallel delegation chains
-- ✅ 5-tier deep hierarchies
-
-### Voice Notification Customization
-
-Edit `~/.agentic-engineers/config/voice.yaml` to customize voices per agent:
-
-```yaml
-orchestrator: "Alex"      # System voice for orchestrator
-engineer: "Samantha"      # System voice for engineers
-quality_engineer: "Tom"   # System voice for QE
-```
+OpenCode orchestrates concurrent agent work through the DELEGATE/HANDBACK protocol. Multiple specialists can be spawned and their results read back in-context.
 
 ## Next Steps
 

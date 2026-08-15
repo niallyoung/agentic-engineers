@@ -118,7 +118,7 @@ validated on demand via the `protocol-validator` skill. Run the full local suite
 | Protocol (DELEGATE/HANDBACK) | [docs/PROTOCOL.md](docs/PROTOCOL.md) |
 | Onboarding | [docs/ONBOARDING.md](docs/ONBOARDING.md) |
 | Docs index | [docs/INDEX.md](docs/INDEX.md) |
-| Guides (agent/skill creation, harness setup, troubleshooting) | [docs/guides/](docs/guides/) |
+| Guides (harness setup, deployment, cost/quality trade-offs) | [docs/guides/](docs/guides/) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Supported Harnesses
@@ -128,7 +128,7 @@ validated on demand via the `protocol-validator` skill. Run the full local suite
 | [OpenCode](docs/guides/harness-setup/opencode.md) | Recommended |
 | Claude Code | Stable |
 | GitHub Copilot | Stable |
-| [Codex](docs/guides/harness-setup/codex.md) | Supported, opt-in install |
+| [Codex](docs/guides/harness-setup/codex.md) | Supported |
 
 ## Contributing
 

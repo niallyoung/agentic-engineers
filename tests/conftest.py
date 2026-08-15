@@ -16,6 +16,7 @@ import pytest
 import tempfile
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -82,8 +83,13 @@ def pytest_collection_modifyitems(session, config, items):
         # This catches untracked test sources from background agents
         if ('skills/' in test_file or 'src/' in test_file) and '/tests/' not in test_file:
             try:
-                result = os.system(f"git ls-files '{test_file}' > /dev/null 2>&1")
-                if result != 0:
+                # Use subprocess to properly detect untracked files
+                result = subprocess.run(
+                    ["git", "ls-files", "--error-unmatch", test_file],
+                    capture_output=True,
+                    cwd=os.path.dirname(test_file) or "."
+                )
+                if result.returncode != 0:
                     untracked_msg = f"   ⚠️  Test source not tracked in git: {test_file}"
                     print(untracked_msg)
                     untracked_tests.append(test_file)

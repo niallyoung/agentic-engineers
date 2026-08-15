@@ -110,7 +110,7 @@ class TestGate3SkillsHaveMarker:
         # Allow skills to be in manifest but not on disk (they may be conditional)
         missing = source_skills - manifest_skills
         if missing and len(missing) > 10:
-            pytest.skip(f"Too many source skills not in manifest - manifest is incomplete. Found {missing}. Skipping.")
+            pytest.fail(f"Too many source skills not in manifest (drift detected, should fail not skip): {missing}")
         assert not missing, f"Source skills not in manifest: {missing}"
 
 

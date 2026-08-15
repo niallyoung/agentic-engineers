@@ -2,7 +2,7 @@
 
 **Description:** Codex setup for agentic-engineers custom agents, skills, and permission profiles.
 
-**Status:** Supported, opt-in install.
+**Status:** Supported, included in `make install`.
 
 **Captured From:** `codex-cli 0.141.0` on 2026-06-19.
 

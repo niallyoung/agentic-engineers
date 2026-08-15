@@ -112,8 +112,8 @@ appears (e.g. a new harness, a new script, a new external dependency).
      in a throwaway tmp dir first, rather than trusting the suggestion);
    - anything touching `docs/SPEC.md`, or requiring spec-management authority
      → `lead-engineer`;
-   - anything security-scoped → `security-engineer` (defensive-only, per the
-     C5 gate — see Security Review Cadence below).
+   - anything security-scoped → `security-engineer` (defensive-only by role
+     convention, not a mechanical gate — see Security Review Cadence below).
 
 6. **Dispatch all fix packages in parallel**, again respecting fan-out ≤ 5 and
    file disjointness.
@@ -168,8 +168,9 @@ the call, but it never makes it.
 
 A full self-healing-review cycle SHOULD periodically include a Security
 Engineer-led pass, independent of the QE-led dimensions above: fan out a
-`security-engineer` DELEGATE (defensive-scope only, per the C5 gate documented
-in `src/AGENTS.md`) to review the same repo state for injection risks,
+`security-engineer` DELEGATE (defensive-scope only, enforced as a role
+convention per `src/AGENTS.md` — not by a mechanical content gate) to review
+the same repo state for injection risks,
 credential handling, the entropy-detector's own coverage, and privacy
 (session data never entering tracked files). Route any findings it surfaces
 through Engineer/Senior-Engineer fix packages exactly like any other
@@ -183,7 +184,11 @@ To run this unattended (e.g. overnight):
 - Invoke via the `/loop` skill (self-paced dynamic mode) or `ScheduleWakeup`
   for recurring invocation.
 - Default to **commit-only, never push**, unless the operator has explicitly
-  authorized push for this run.
+  authorized push for this run. Authorization is scoped to the invocation that
+  granted it — a single `/loop` run or one `ScheduleWakeup`-driven session —
+  not standing/indefinite: it does not carry across separate `/loop`
+  invocations, and a new AFK session requires fresh authorization even if a
+  prior run was push-authorized.
 - State resolution is the audit-trail ledger itself — no separate state file
   is needed. Every `delegate_issued` / `handback_received` / `gate_result`
   this procedure produces is already durably logged per SPEC clause 7, so a

@@ -121,9 +121,13 @@ agents:
    — a directory without the marker is treated as foreign/user-authored and left alone.
    The step always runs (no dry-run mode) and prints a single report line, e.g.
    `🧹 pruned 2 orphaned managed skill(s): foo, bar` or `🧹 pruned 0 orphaned managed skill(s)`.
-   (An equivalent orphan-pruning step for agents was in progress in a sibling change as of
-   this writing and had not yet landed — check `renderer/lib/render-lib.sh` for a
-   `prune_orphaned_agents()` function before assuming it exists.)
+
+5.5 **Orphaned agent pruning** — after installing/updating agents, each renderer
+   also calls `prune_orphaned_agents()` (`renderer/lib/render-lib.sh`): it removes any
+   previously installed agent file whose source under `src/agents/` no longer exists
+   (e.g. from a rename or deletion), gated on that agent still being listed in the
+   harness's own manifest file — an agent not in the manifest is treated as foreign/user-authored
+   and left alone.
 
 #### Renderer library architecture (post-consolidation):
 

@@ -229,6 +229,13 @@ model: {frontmatter['model']}
         for name in sorted(self.managed_names):
             if name in current_source_names:
                 continue
+            # Defend against a tampered/corrupted manifest line before it is
+            # ever used to build a deletion path (LOW1 — path traversal
+            # hardening): a name like "../../x" must never reach unlink().
+            # Same safe-charset check as uninstall() below.
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                print(f"⚠️  Skipping invalid manifest entry (unsafe name): {name}")
+                continue
             dest_file = self.dest_dir / f"{name}.agent.md"
             if dest_file.exists():
                 dest_file.unlink()

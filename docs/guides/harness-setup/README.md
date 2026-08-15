@@ -6,7 +6,7 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 
 | Harness | Description | Best For | Status |
 |---------|-------------|----------|--------|
-| [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use, dark factory mode | ✅ Recommended |
+| [OpenCode](opencode.md) | Primary harness for autonomous coordination | Production use | ✅ Recommended |
 | GitHub Copilot | GitHub's official CLI with CI/CD integration | GitHub workflows, team collaboration | ✅ Stable |
 | Claude Code | Claude's native CLI harness | Interactive development, prototyping | ✅ Stable (see [opencode.md](opencode.md) or [codex.md](codex.md) for a template-quality per-harness setup guide) |
 | [Codex](codex.md) | Codex custom agents, skills, and permission profiles | Local development, workspace-managed runs | ✅ Supported, opt-in install |
@@ -19,9 +19,9 @@ Agentic Engineers supports multiple AI coding harnesses. Choose the one that fit
 make install
 ```
 
-This runs the default harness renderers (OpenCode, Copilot, and Claude). Use `make install-codex` separately for Codex.
+This installs all default harnesses: OpenCode, Copilot, Claude, and Codex.
 
-Each installer writes only to its own harness config root: `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, or `~/.codex/` via `make install-codex`.
+Each installer writes only to its own harness config root: `~/.config/opencode/`, `~/.copilot/`, `~/.claude/`, or `~/.codex/`.
 
 ### Install Claude Code (Interactive Development)
 
@@ -91,22 +91,6 @@ by convention (self-reported `metrics.quality`, optional Quality Engineer verifi
 routing by `status`). See [docs/PROTOCOL.md](../../PROTOCOL.md) and
 [docs/WORKFLOW.md](../../WORKFLOW.md) § Gate 5 for the authoritative description.
 
-## Continuous Evaluation Framework (EVALS-001)
-
-Harness and model compatibility is continuously tested via the **EVALS-001 framework** (currently in development). This ensures:
-
-- ✅ **Automated regression testing** — Nightly CI/CD job detects breaking changes
-- ✅ **Model compatibility matrix** — Track which models work with which harnesses
-- ✅ **Skill interoperability tests** — Validate each skill works across all harnesses
-- ✅ **End-to-end delegation workflows** — Test complex scenarios (escalation, parallel work, error handling)
-
-**Success Criteria:**
-- All harness × model × skill combinations tested automatically
-- Compatibility reports showing pass/fail status
-- Model regressions detected immediately
-- ≥95% pass rate required before production deployment
-
-**Status:** EVALS-001 framework in active development.
 
 ## Next Steps
 

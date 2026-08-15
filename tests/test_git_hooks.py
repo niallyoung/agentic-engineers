@@ -613,7 +613,7 @@ class TestPrePushHook:
             result = self._run_push_in_repo(tmpdir)
         assert result.returncode == 0
 
-    @pytest.mark.xfail(reason="Hook runs pytest which may fail; test env expects docs/ to be optional")
+    @pytest.mark.xfail(reason="Hook enforces docs/ presence (docs/SPEC.md, docs/AGENTS.md, README.md are required per SPEC)")
     def test_passes_without_docs_dir(self):
         """Hook does not enforce docs presence — passes even without docs/."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -621,7 +621,7 @@ class TestPrePushHook:
             result = self._run_push_in_repo(tmpdir)
         assert result.returncode == 0
 
-    @pytest.mark.xfail(reason="Hook runs pytest which may fail; test env expects docs/AGENTS.md to be optional")
+    @pytest.mark.xfail(reason="Hook enforces docs/AGENTS.md presence (required per SPEC for agent registry)")
     def test_passes_without_agents_md(self):
         """Hook does not enforce docs/AGENTS.md — passes without it."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -632,7 +632,7 @@ class TestPrePushHook:
             result = self._run_push_in_repo(tmpdir)
         assert result.returncode == 0
 
-    @pytest.mark.xfail(reason="Hook runs pytest which may fail; test env expects README.md to be optional")
+    @pytest.mark.xfail(reason="Hook enforces README.md presence (required per SPEC for repo documentation)")
     def test_passes_without_readme(self):
         """Hook does not enforce README.md — passes without it."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -645,7 +645,7 @@ class TestPrePushHook:
 
     # ── SPEC compliance ────────────────────────────────────────────────────────
 
-    @pytest.mark.xfail(reason="Hook enforces SPEC rules despite test expecting it not to")
+    @pytest.mark.xfail(reason="Hook enforces SPEC compliance: orchestration/scripts/ prohibited (scripts only in renderer/scripts/)")
     def test_passes_with_orchestration_scripts_present(self):
         """Hook does not enforce SPEC orchestration rules — passes with orchestration/scripts/."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -670,7 +670,7 @@ class TestPrePushHook:
         combined = result.stdout + result.stderr
         assert "YAML" in combined or "yaml" in combined.lower() or "agent" in combined.lower()
 
-    @pytest.mark.xfail(reason="Hook runs pytest which may fail; test expects optional agent fields")
+    @pytest.mark.xfail(reason="Hook validates required agent YAML fields (name, model, description are mandatory)")
     def test_passes_on_agent_missing_required_fields(self):
         """Hook validates YAML syntax only — passes even if name/model fields absent."""
         with tempfile.TemporaryDirectory() as tmpdir:

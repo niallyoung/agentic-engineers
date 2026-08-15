@@ -71,6 +71,8 @@ Update workflow:
 3. Validate: `make validate-renders && make validate-agents && make validate-skills`.
 4. Commit the source changes — never the rendered `dist/` output.
 
+**Note:** There is no `make status` target. Use `make validate-renders` to check for drift between source and rendered output.
+
 ## See Also
 
 - `src/AGENTS.md` — canonical roster, roles, and models.

@@ -51,7 +51,7 @@
 
 | Location | Contents |
 |----------|----------|
-| [guides/](guides/) | Agent/skill creation, harness extension, deployment, troubleshooting — see [guides/README.md](guides/README.md) |
+| [guides/](guides/) | Harness setup, deployment, cost/quality trade-offs — see [guides/README.md](guides/README.md) |
 
 ---
 

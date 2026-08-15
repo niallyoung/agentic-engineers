@@ -9,7 +9,7 @@ status: APPROVED
 ## The Basics
 
 The protocol has two parts:
-- **Core** (7 required fields) — must always be present, strictly validated
+- **Core** (9 required fields) — must always be present, strictly validated
 - **Extensions** (optional fields) — add when needed, loosely validated
 
 ## DELEGATE (send work to an agent)

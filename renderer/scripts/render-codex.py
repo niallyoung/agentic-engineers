@@ -594,6 +594,13 @@ job_max_runtime_seconds = 1800
         for name in sorted(managed_before):
             if name in current_source_names:
                 continue
+            # Defend against a tampered/corrupted manifest line before it is
+            # ever used to build a deletion path (LOW1 — path traversal
+            # hardening): a name like "../../x" must never reach unlink().
+            # Same safe-charset check as uninstall() below.
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                print(f"  {_yellow('WARNING')} skipping invalid manifest entry (unsafe name): {name}")
+                continue
             path = self.agents_dir / f"{name}.toml"
             if path.exists():
                 path.unlink()
