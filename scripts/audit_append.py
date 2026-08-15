@@ -6,8 +6,9 @@
 `docs/SPEC.md` § ORCHESTRATOR-FIRST EXECUTION MODEL, clause 7 ("Audit Trail:
 Append-Only JSONL, Write-Only from the Agent") requires every orchestration event —
 `delegate_issued`, `subagent_spawned`, `handback_received`, `gate_result`,
-`escalation`, `refusal`, `limit_exceeded` — to be appended as one JSON object per
-line to `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`.
+`escalation`, `refusal`, `limit_exceeded`, `operator_interjection` — to be appended
+as one JSON object per line to
+`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`.
 
 This script is that append helper: a deterministic, stdlib-only utility an AGENT
 invokes at each lifecycle point it owns (see `src/AGENTS.md` § Direct Sub-Agent Spawn
@@ -102,6 +103,7 @@ ALLOWED_EVENTS = {
     "escalation",
     "refusal",
     "limit_exceeded",
+    "operator_interjection",
 }
 
 # Required on every event per docs/SPEC.md clause 7 ("required fields: ts ..., event,

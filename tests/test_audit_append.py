@@ -50,8 +50,10 @@ def test_each_event_type_accepted_dry_run(event, capsys):
     assert out["task_id"] == "t1"
 
 
-def test_seven_events_in_enum():
-    # Locks the clause-7 enum size so an accidental addition/removal is caught.
+def test_eight_events_in_enum():
+    # Locks the clause-7 enum so an accidental addition/removal is caught.
+    # operator_interjection added 2026-08-15 (Mid-Task Directives protocol —
+    # see src/AGENTS.md § Mid-Task Directives and the docs/SPEC.md Update Log).
     assert ALLOWED_EVENTS == {
         "delegate_issued",
         "subagent_spawned",
@@ -60,6 +62,7 @@ def test_seven_events_in_enum():
         "escalation",
         "refusal",
         "limit_exceeded",
+        "operator_interjection",
     }
 
 

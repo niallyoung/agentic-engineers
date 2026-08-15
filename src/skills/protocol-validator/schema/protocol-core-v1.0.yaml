@@ -399,3 +399,32 @@ handback:
     error:
       type: string
       description: Error detail when status is failure/blocked.
+
+    interjections:
+      type: array
+      items:
+        type: object
+        required: [ts, source, directive, disposition]
+        properties:
+          ts:
+            type: string
+            description: ISO-8601 UTC timestamp when the directive was received.
+          source:
+            type: string
+            enum: [operator, parent]
+            description: Which authority issued the mid-task directive.
+          directive:
+            type: string
+            description: The directive verbatim, unparaphrased.
+          disposition:
+            type: string
+            enum: [applied, superseded, refused, escalated]
+            description: How the receiving agent dispositioned the directive.
+      description: >
+        Mid-Task Directives received while executing this task (operator
+        interjections via the harness's mid-turn message channel, or course
+        corrections from the spawning agent) that the agent acted on or
+        dispositioned. Disclosure here is MANDATORY whenever any such
+        directive was acted on — see src/AGENTS.md > Mid-Task Directives
+        for the governing rules (source taxonomy, scope test, echo-back,
+        conflict handling).
