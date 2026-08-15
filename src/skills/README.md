@@ -11,14 +11,17 @@ Each harness renderer (`renderer/scripts/render-*.sh|py`) copies every skill
 into that harness's install location verbatim, so a skill written once works
 identically across Claude Code, Copilot CLI, OpenCode, and Codex.
 
-## The 7 skills
+## The 8 skills
 
 The filesystem queue (`~/.agentic-engineers/{harness}/{session-id}/queue/`) was
 removed in the queue-removal work: dispatch is a direct sub-agent spawn, and
 the durable DELEGATE/HANDBACK audit record is the harness session transcript
 itself, so `queue-management` and `queue-query` no longer exist. The
 `audit-trail-review` meta-skill was added (2026-08-14) to audit the
-orchestration ledger (JSONL) for unfinished work and inconsistencies.
+orchestration ledger (JSONL) for unfinished work and inconsistencies. The
+`self-healing-review` meta-skill was added (2026-08-15) to codify the
+repeatable investigate-fix-verify-commit quality cycle used to drive framework
+and repo quality rounds.
 
 | Skill | Kind | Purpose |
 |---|---|---|
@@ -27,6 +30,7 @@ orchestration ledger (JSONL) for unfinished work and inconsistencies.
 | `skill-improvement-feedback` | prose-only | Canonical pattern for `skill_feedback` in HANDBACKs |
 | `codex-agent-cleanup` | prose-only | Routine maintenance for Codex sessions |
 | `audit-trail-review` | prose-only | Reviews orchestration ledger (JSONL) for unfinished work and inconsistencies |
+| `self-healing-review` | prose-only | Repeatable investigate-fix-verify quality cycle across the framework/repo |
 | `protocol-validator` | script-backed | Runtime DELEGATE/HANDBACK schema validation |
 | `spec-validator` | script-backed | Post-hoc compliance checking of a diff against `docs/SPEC.md` |
 

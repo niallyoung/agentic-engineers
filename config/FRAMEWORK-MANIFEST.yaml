@@ -156,3 +156,11 @@ skills:
     required_by:
       - quality-engineer
       - orchestrator
+
+  self-healing-review:
+    name: self-healing-review
+    status: active
+    description: "Repeatable investigate-fix-verify quality cycle: fan out read-only QE investigations, consolidate findings, dispatch disjoint fix packages by severity/file ownership, independently verify every HANDBACK, run the full battery, and commit"
+    created: "2026-08-15"
+    required_by:
+      - orchestrator
