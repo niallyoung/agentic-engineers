@@ -425,9 +425,10 @@ As of 2026-08-11:
   model routing and not mechanically enforced by
   `renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every
   specialist spawn), which validates DELEGATE structure only (handoff_type, agent,
-  task_id format, scope word count, plan, success_criteria present) and contains no
-  scope/topic/content inspection. Fallback to `claude-opus-5` if fable-5 is unavailable
-  (documented in HANDBACK).
+  task_id format, scope word count, plan, success_criteria present; plus the optional
+  depth/ancestry extension fields when present — see § Recursion Limits) and contains
+  no scope/topic/content inspection. Fallback to `claude-opus-5` if fable-5 is
+  unavailable (documented in HANDBACK).
 
 ### Model Governance: Locking & Switching
 
