@@ -332,7 +332,8 @@ if command -v python3 >/dev/null 2>&1 && [ -f "src/AGENTS.md" ]; then
 
   # Check .agents_verification_sha exists
   if [ ! -f ".agents_verification_sha" ]; then
-    fail ".agents_verification_sha missing — run the agent-verification generator against src/AGENTS.md"
+    fail ".agents_verification_sha missing — regenerate it with:"
+    fail "  python3 -c \"import hashlib,datetime;print('agent_sha256='+hashlib.sha256(open('src/AGENTS.md','rb').read()).hexdigest());print('generated_at='+datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+'Z')\" > .agents_verification_sha"
     AGENT_VERIFY_ERRORS=$((AGENT_VERIFY_ERRORS + 1))
   else
     pass ".agents_verification_sha file exists"

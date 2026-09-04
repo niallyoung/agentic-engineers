@@ -117,6 +117,23 @@ Re-baseline history (each ~95% of the measured actual at that point):
     bare `pytest` = 832 passed / 12 skipped / 5 xfailed / 0 failed (849
     collected) -- both independently reproduced, not taken on report alone.
 
+  - Post-slimdown cleanup (2026-09-03, task_id cleanup-fix-d-tests): no test
+    deletion — this is a pure staleness correction. The floor had sat at 532
+    (set from WP-R3-05's measured 560) while the suite grew back to 689, so the
+    gate was effectively running at 77% headroom instead of the documented 95%
+    and would have waved through a ~157-test deletion. Re-measured with this
+    script's own methodology: 689 collected in tests/ -> floor 654
+    (689 * 0.95 = 654.55 -> 654). The measurement was taken last, after this
+    task's own test changes AND the concurrent dead-code deletions in sibling
+    work packages had all landed. Net movement from the 691 measured at the
+    start of that task: five dead non-strict xfails in tests/test_git_hooks.py
+    were inverted into positive enforcement tests (count-neutral: 5 xfail ->
+    5 pass); one parametrize case asserting the phantom model id
+    claude-haiku-4.6 was removed alongside its removal from
+    renderer/validate_agents.py (-1); and tests/test_validate_skills.py's
+    test_validate_skill_file_strict_mode was deleted after the `strict`
+    parameter it exercised was removed from validate_skill_file() (-1).
+
 Exit 0 = all gates pass. Exit 1 = regression detected (CI will fail the build).
 """
 
@@ -126,22 +143,26 @@ import os
 import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
-# Re-baselined 2026-08-13 (WP-R3-05, task_id task-2026-08-13-r3-wp05-test-consolidation,
-# governed retrospective re-baseline applying the WP-R3-11 convention -- see
-# docs/REGRESSION-GATE-POLICY.md for the QE-methodology-reuse judgment call) from
-# the measured actual of 560 collected tests in tests/ (was 766 under WP-R3-11;
-# -206 from deleting tests/test_core_protocol_validator.py and
-# tests/test_spec_validator.py, whose coverage was migrated into skill-local
-# suites, NOT dropped -- see the companion `scripts/run_skill_tests.py` floor,
-# raised 169 -> 274 in the same change). Floor is ~95% (560 * 0.95 = 532 exactly).
-# This supersedes WP-R3-11's 727 floor. See this file's module docstring "Round 3
-# batch 4, WP-R3-05" entry for the full trajectory, and the scope clarification
-# above it (this floor tracks `pytest tests/`, NOT the larger bare-`pytest` count
-# that also pulls in skill-local test dirs).
+#
+# Re-baselined 2026-09-03 (post-slimdown cleanup, task_id cleanup-fix-d-tests).
+#   Measured actual: 689 tests collected by `python3 -m pytest tests/ --collect-only -q`
+#   Derivation:      689 * 0.95 = 654.55 -> floor 654 (floor(), per this gate's convention)
+#
+# WHY THIS MOVED: the floor had been left at 532 — set from a measured 560 back
+# in WP-R3-05 — while the suite grew to 689. 532/689 = 77%, so a 157-test
+# deletion would still have passed a gate documented as "95%". The floor was
+# tracking a suite size that had not existed for weeks; this restores the
+# intended 5% headroom rather than changing the policy.
+#
+# SCOPE (the recurring trap — read before touching this number): this floor
+# tracks `pytest tests/` ONLY (689). A bare `pytest` collects ~978, because
+# pytest.ini's `testpaths` also names three skill-local test dirs (~289 tests).
+# Those 289 are floored separately by MIN_EXPECTED_TESTS in
+# scripts/run_skill_tests.py. Never set this number from a bare-`pytest` count.
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 532,
+        "minimum": 654,
         "label": "Full test suite",
     },
 }

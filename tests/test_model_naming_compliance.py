@@ -56,6 +56,13 @@ def _load_locked_models() -> Set[str]:
     return models
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _render_all(render_all):
+    """Opt in to the session-scoped render (tests/conftest.py) — the dist/ checks
+    below are hard assertions, so a render must be guaranteed."""
+    yield
+
+
 class TestModelNamingCompliance:
     """Test model naming compliance across entire codebase (positive enforcement).
     
@@ -74,15 +81,19 @@ class TestModelNamingCompliance:
 
     # Approved = locked set plus legacy ids still valid in rendered/example
     # output but no longer assigned to any agent.
+    # claude-haiku-4.6 was dropped from this set together with its removal from
+    # renderer/validate_agents.py::KNOWN_MODELS — it is a phantom id Anthropic
+    # never shipped and it no longer occurs anywhere in the repo, so approving it
+    # could only ever wave through a typo.
     APPROVED_MODELS = LOCKED_MODELS | {
-        "claude-haiku-4.6",
         "claude-opus-4.5",
     }
 
     # Forbidden patterns (old hyphenated format, underscores, uppercase, etc.)
     FORBIDDEN_PATTERNS = [
         r"claude-haiku-4-5",   # Old hyphenated format
-        r"claude-haiku-4-6",
+        r"claude-haiku-4-6",  # kept: guards the hyphen-vs-dot render format, not
+                              # the existence of a 4.6 model (see APPROVED_MODELS above)
         r"claude-sonnet-4-5",
         r"claude-sonnet-4-6",
         r"claude-opus-4-5",
@@ -198,12 +209,13 @@ class TestModelNamingCompliance:
     def test_rendered_copilot_uses_hyphen_format(self):
         """Rendered Copilot files must use dot-format models (Copilot CLI requirement)."""
         copilot_dir = self.REPO_ROOT / "dist" / "copilot" / "agents"
-        if not copilot_dir.exists():
-            pytest.skip("dist/copilot not present")
+        assert copilot_dir.is_dir(), "dist/copilot/agents/ not present — run 'make render-all'"
 
         copilot_agents = list(copilot_dir.glob("*.agent.md"))
-        if not copilot_agents:
-            pytest.skip("No rendered Copilot agents found")
+        assert copilot_agents, (
+            "No rendered Copilot agents found in "
+            "dist/copilot/agents/ — run 'make render-all'"
+        )
 
         for agent_file in copilot_agents:
             content = agent_file.read_text()
@@ -227,12 +239,13 @@ class TestModelNamingCompliance:
     def test_rendered_opencode_uses_hyphen_format(self):
         """Rendered OpenCode files must use hyphen-format models (frontmatter only)."""
         opencode_dir = self.REPO_ROOT / "dist" / "opencode" / "agents"
-        if not opencode_dir.exists():
-            pytest.skip("dist/opencode not present")
+        assert opencode_dir.is_dir(), "dist/opencode/agents/ not present — run 'make render-all'"
 
         opencode_agents = list(opencode_dir.glob("*.md"))
-        if not opencode_agents:
-            pytest.skip("No rendered OpenCode agents found")
+        assert opencode_agents, (
+            "No rendered OpenCode agents found in "
+            "dist/opencode/agents/ — run 'make render-all'"
+        )
 
         for agent_file in opencode_agents:
             content = agent_file.read_text()

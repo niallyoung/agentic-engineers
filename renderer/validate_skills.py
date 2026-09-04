@@ -132,16 +132,14 @@ def _compliance_get_value(frontmatter: str, key: str, *, indent: int = 0) -> str
     return m.group(1).strip() if m else None
 
 
-def _check_self_improvement_section(skill_dir: Path) -> str | None:
-    """Return a warning string if SKILL.md is missing ## Self-Improvement, else None."""
-    skill_md = skill_dir / "SKILL.md"
-    if not skill_md.exists():
-        return None
-    try:
-        content = skill_md.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    if "## Self-Improvement" not in content:
+def _check_self_improvement_section(skill_md_text: str) -> str | None:
+    """Return a warning string if SKILL.md is missing ## Self-Improvement, else None.
+
+    Takes the already-read SKILL.md text rather than a directory: the only caller
+    has the content in hand, and re-opening the file here made the audit read every
+    SKILL.md twice.
+    """
+    if "## Self-Improvement" not in skill_md_text:
         return "SKILL.md missing ## Self-Improvement section"
     return None
 
@@ -221,7 +219,7 @@ def audit_skill_compliance(skill_name: str, skills_dir: Path) -> SkillCompliance
     if category_val and category_val not in COMPLIANCE_ALLOWED_CATEGORIES:
         result.warnings.append(f"metadata.category {category_val!r} not in allowed set {sorted(COMPLIANCE_ALLOWED_CATEGORIES)}")
 
-    self_improvement_warning = _check_self_improvement_section(skill_dir)
+    self_improvement_warning = _check_self_improvement_section(raw_text)
     if self_improvement_warning:
         result.warnings.append(self_improvement_warning)
 
@@ -395,7 +393,7 @@ class ValidationError:
         return f"  [{self.level}] {loc}: {self.message}"
 
 
-def validate_skill_file(path: Path, strict: bool = False) -> list[ValidationError]:
+def validate_skill_file(path: Path) -> list[ValidationError]:
     """Validate a single skill file's frontmatter."""
     errors: list[ValidationError] = []
 
@@ -429,11 +427,11 @@ def validate_skill_file(path: Path, strict: bool = False) -> list[ValidationErro
 
     # Required fields — only enforce on SKILL.md files
     if is_skill_md:
-        for field in sorted(REQUIRED_FIELDS):
-            if field not in fm or not fm[field]:
+        for key in sorted(REQUIRED_FIELDS):
+            if key not in fm or not fm[key]:
                 errors.append(ValidationError(
                     path, "ERROR",
-                    f"Missing required frontmatter field: '{field}'"
+                    f"Missing required frontmatter field: '{key}'"
                 ))
 
     return errors
@@ -443,7 +441,6 @@ def validate_registry_completeness(
     skills_dir: Path,
     skills_md_content: str,
     repo_root: Path,
-    strict: bool = False,
 ) -> list[ValidationError]:
     """
     Check that:
@@ -471,10 +468,10 @@ def validate_registry_completeness(
             # Also check if the parent path is mentioned anywhere in SKILLS.md
             rel = str(skill_md.relative_to(repo_root))
             if rel not in skills_md_content:
-                level = "WARNING"  # Not an error — may be intentionally unregistered
+                # Not an error — a skill may be intentionally unregistered.
                 errors.append(ValidationError(
-                    skill_md, level,
-                    f"SKILL.md on disk not registered in src/SKILLS.md — add to the skill inventory"
+                    skill_md, "WARNING",
+                    "SKILL.md on disk not registered in src/SKILLS.md — add to the skill inventory"
                 ))
 
     return errors
@@ -499,14 +496,14 @@ def validate_skills(
 
     # Per-file validation
     for skill_file in skill_files:
-        findings = validate_skill_file(skill_file, strict=strict)
+        findings = validate_skill_file(skill_file)
         all_errors.extend(findings)
         checked += 1
 
     # Registry completeness check
     if skills_md_content:
         registry_findings = validate_registry_completeness(
-            skills_dir, skills_md_content, repo_root, strict=strict
+            skills_dir, skills_md_content, repo_root
         )
         all_errors.extend(registry_findings)
 
@@ -526,7 +523,7 @@ def validate_skills(
     elif warnings:
         print(f"⚠️  0 errors, {len(warnings)} warning(s)")
     else:
-        print(f"✅ 0 errors, 0 warnings")
+        print("✅ 0 errors, 0 warnings")
 
     return len(errors), len(warnings)
 

@@ -12,7 +12,7 @@
 # Exit codes:
 #   0 — always (this hook is informational; never blocks post-merge)
 #
-# Design: docs/architecture/SDLC-HOOKS-DESIGN.md §5.4
+# Design: see .githooks/README.md for the hook suite's design and contracts.
 #
 # NOTE (queue-removal, task-2026-08-13-queue-removal-code): this hook used to
 # carry a queue cleanup check, a workflow state validation check, and a
@@ -23,6 +23,10 @@
 # harness session transcript is the durable audit record, so the filesystem
 # queue (and this hook's sections about it) has been removed entirely.
 
+# Deliberately `set -uo pipefail` WITHOUT -e: this hook is informational and must
+# always exit 0 (see "Exit codes" above). Under -e any probe returning non-zero —
+# the `git rev-parse ORIG_HEAD` guard, a `grep` that finds nothing — would abort
+# the hook mid-report and surface as a post-merge failure to the user.
 set -uo pipefail
 
 # Squash merge flag: $1 = 1 if squash, 0 otherwise

@@ -7,7 +7,8 @@ Tests verify:
 - Skill deployment structure correct (each has SKILL.md marker)
 - Distribution structure correct (all entity types present)
 - Render consistency (all transformations applied uniformly)
-- Renderer library consolidation (render-lib.sh as unified lib, lib.sh as shim)
+- Renderer library consolidation (render-lib.sh is the single unified lib;
+  the renderer/scripts/lib.sh shim has been deleted)
 - Spec deployment pipeline (dist/specs/ deployed and valid)
 - Harness lifecycle documentation exists
 """
@@ -20,6 +21,17 @@ from pathlib import Path
 # relative Path("...") lookups fail.  Anchoring to __file__ is safe regardless
 # of the current working directory at test execution time.
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _render_all(render_all):
+    """Opt this module in to the session-scoped render (tests/conftest.py).
+
+    Required because the dist/ presence checks below are hard assertions rather
+    than skips: without a guaranteed render, a local `make test` would have
+    reported them as passing-by-skipping.
+    """
+    yield
 
 
 class TestRenderLibrary:
@@ -99,9 +111,9 @@ class TestRenderedAgentNaming:
         """render-copilot-agents.py must produce *.agent.md files (using name field)"""
         renderer_path = REPO_ROOT / "renderer/scripts/render-copilot-agents.py"
         
-        if not renderer_path.exists():
-            pytest.skip("render-copilot-agents.py not found")
-        
+        assert renderer_path.exists(), \
+            "renderer/scripts/render-copilot-agents.py not found — the copilot renderer is required"
+
         content = renderer_path.read_text()
         
         # Should extract name from frontmatter, not use source filename
@@ -112,9 +124,9 @@ class TestRenderedAgentNaming:
         """Rendered agents must have valid YAML frontmatter"""
         dist_agents = REPO_ROOT / "dist/copilot/agents"
         
-        if not dist_agents.exists():
-            pytest.skip("dist/copilot/agents/ not found")
-        
+        assert dist_agents.is_dir(), \
+            "dist/copilot/agents/ not found — run 'make render-all'"
+
         agent_files = list(dist_agents.glob("*-agent.agent.md"))
         
         for agent_file in agent_files:
@@ -128,19 +140,20 @@ class TestSkillDeploymentStructure:
     """Verify skill deployment structure is correct (SKILL.md markers)"""
     
     def test_all_skills_have_skill_md(self):
-        """Most skill directories should contain SKILL.md (legacy ones may have different structure)"""
+        """Every skill directory must contain SKILL.md — it is the renderer's entry point.
+
+        This previously skipped when fewer than 50% of skills had SKILL.md, i.e. it
+        disabled itself on exactly the condition it exists to catch, and its remaining
+        assertion (`> 0`) could not fail while any single skill was well-formed. Post
+        SPEC-2026-005 slimdown all 8 skill dirs carry SKILL.md, so this is now exact.
+        """
         skills_dir = REPO_ROOT / "src/skills"
-        skill_dirs = [d for d in skills_dir.iterdir() 
+        skill_dirs = [d for d in skills_dir.iterdir()
                      if d.is_dir() and not d.name.startswith("_") and not d.name.startswith(".")]
-        
-        # Check that majority have SKILL.md
-        skill_with_marker = [d for d in skill_dirs if (d / "SKILL.md").exists()]
-        assert len(skill_with_marker) > 0, "No skills with SKILL.md found"
-        # Allow some legacy skills without marker, but majority should have it
-        if len(skill_with_marker) < len(skill_dirs) * 0.5:
-            pytest.skip(f"Only {len(skill_with_marker)}/{len(skill_dirs)} skills have SKILL.md - expected 50%+ for consistency gates")
-        assert len(skill_with_marker) > 0, \
-            f"Less than 60% of skills have SKILL.md ({len(skill_with_marker)}/{len(skill_dirs)})"
+
+        assert skill_dirs, "No skill directories found under src/skills/"
+        missing = sorted(d.name for d in skill_dirs if not (d / "SKILL.md").exists())
+        assert missing == [], f"Skill directories missing SKILL.md: {missing}"
     
     def test_skill_frontmatter_has_required_fields(self):
         """SKILL.md files should have name/title and description"""
@@ -176,9 +189,9 @@ class TestDistDeployment:
     def test_dist_agent_files_follow_naming_convention(self):
         """All dist/copilot/agents/*.agent.md files must end with -agent.agent.md"""
         dist_agents = REPO_ROOT / "dist/copilot/agents"
-        if not dist_agents.exists():
-            pytest.skip("dist/copilot/agents/ not found")
-        
+        assert dist_agents.is_dir(), \
+            "dist/copilot/agents/ not found — run 'make render-all'"
+
         for fname in dist_agents.glob("*.agent.md"):
             assert fname.name.endswith("-agent.agent.md"), \
                 f"Agent {fname.name} doesn't follow -agent.agent.md convention"
@@ -193,8 +206,8 @@ class TestDistDeployment:
     def test_dist_skill_dirs_have_skill_md(self):
         """All skill directories in dist/ must have SKILL.md"""
         dist_skills = REPO_ROOT / "dist/copilot/skills"
-        if not dist_skills.exists():
-            pytest.skip("dist/copilot/skills/ not found")
+        assert dist_skills.is_dir(), \
+            "dist/copilot/skills/ not found — run 'make render-all'"
         
         for skill_dir in dist_skills.iterdir():
             if not skill_dir.is_dir():
@@ -216,38 +229,33 @@ class TestSpecDeployment:
     def test_dist_specs_has_spec_md(self):
         """dist/specs/SPEC.md must be deployed"""
         dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
-            pytest.skip("dist/specs/ not found — run 'make render-specs' first")
+        assert dist_specs.is_dir(), "dist/specs/ not found — run 'make render-all'"
         assert (dist_specs / "SPEC.md").exists(), "dist/specs/SPEC.md not found — SPEC.md not deployed"
 
     def test_dist_specs_has_framework_manifest(self):
         """dist/specs/FRAMEWORK-MANIFEST.yaml must be deployed"""
         dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
-            pytest.skip("dist/specs/ not found — run 'make render-specs' first")
+        assert dist_specs.is_dir(), "dist/specs/ not found — run 'make render-all'"
         assert (dist_specs / "FRAMEWORK-MANIFEST.yaml").exists(), \
             "dist/specs/FRAMEWORK-MANIFEST.yaml not found — manifest not deployed"
 
     def test_dist_specs_has_orchestration_yaml(self):
         """dist/specs/orchestration.yaml must be deployed"""
         dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
-            pytest.skip("dist/specs/ not found — run 'make render-specs' first")
+        assert dist_specs.is_dir(), "dist/specs/ not found — run 'make render-all'"
         assert (dist_specs / "orchestration.yaml").exists(), "dist/specs/orchestration.yaml not found"
 
     def test_dist_specs_marker_exists(self):
         """dist/specs/ must have the management marker file"""
         dist_specs = REPO_ROOT / "dist/specs"
-        if not dist_specs.exists():
-            pytest.skip("dist/specs/ not found — run 'make render-specs' first")
+        assert dist_specs.is_dir(), "dist/specs/ not found — run 'make render-all'"
         assert (dist_specs / ".agentic-engine-specs").exists(), \
             "dist/specs/.agentic-engine-specs marker missing — run 'make render-specs'"
 
     def test_spec_md_has_frontmatter(self):
         """Deployed SPEC.md must have valid YAML frontmatter"""
         spec_file = REPO_ROOT / "dist/specs/SPEC.md"
-        if not spec_file.exists():
-            pytest.skip("dist/specs/SPEC.md not found")
+        assert spec_file.is_file(), "dist/specs/SPEC.md not found — run 'make render-all'"
         content = spec_file.read_text()
         assert content.startswith("---"), \
             "dist/specs/SPEC.md does not start with frontmatter (---)"
@@ -258,8 +266,8 @@ class TestSpecDeployment:
         """FRAMEWORK-MANIFEST.yaml must be parseable YAML"""
         import yaml
         manifest = REPO_ROOT / "dist/specs/FRAMEWORK-MANIFEST.yaml"
-        if not manifest.exists():
-            pytest.skip("dist/specs/FRAMEWORK-MANIFEST.yaml not found")
+        assert manifest.is_file(), \
+            "dist/specs/FRAMEWORK-MANIFEST.yaml not found — run 'make render-all'"
         try:
             data = yaml.safe_load(manifest.read_text())
             assert isinstance(data, dict), "FRAMEWORK-MANIFEST.yaml parsed but is not a dict"
@@ -271,8 +279,8 @@ class TestSpecDeployment:
         """Deployed SPEC.md must match source docs/SPEC.md"""
         src = REPO_ROOT / "docs/SPEC.md"
         dst = REPO_ROOT / "dist/specs/SPEC.md"
-        if not src.exists() or not dst.exists():
-            pytest.skip("SPEC.md source or deployed copy not found")
+        assert src.is_file(), "docs/SPEC.md not found — the SPEC source is required"
+        assert dst.is_file(), "dist/specs/SPEC.md not found — run 'make render-all'"
         assert src.read_text() == dst.read_text(), \
             "dist/specs/SPEC.md is out of sync with docs/SPEC.md — run 'make render-specs'"
 

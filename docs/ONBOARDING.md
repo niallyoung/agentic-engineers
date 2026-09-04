@@ -38,15 +38,15 @@
 - [ ] Pre-commit hook validates all DELEGATE blocks before every commit
 - [ ] Orchestrator runs pre-flight checks internally before emitting any DELEGATE
 - [ ] Bad DELEGATEs will be **blocked and returned** with specific error messages — fix the error, do not work around it
-- [ ] HANDBACKs require passing tests; coverage must not drop below 85% for modified packages
-- [ ] Know all escalation paths (Section 9): when to escalate and to whom
+- [ ] HANDBACKs require passing tests. Coverage is measured and reported but is not a hard gate — there is no `--cov-fail-under` in the repo; reviewers assess coverage changes by eye
+- [ ] Know all escalation paths (`docs/PROTOCOL.md` section 5, *Escalation*): when to escalate and to whom
 
 ---
 
 ## Questions & Escalation
 
 - [ ] Know to ask clarifying questions **before starting** the task, not after completing wrong work
-- [ ] Know how to request Principal Engineer escalation: set `status: blocked` in HANDBACK with clear explanation
+- [ ] Know how to request Principal Engineer escalation: return `status: escalate` in the HANDBACK with an embedded ESCALATION packet naming the target role and reason (`docs/PROTOCOL.md` section 5). `status: blocked` means the task cannot proceed at all — it is not an escalation request.
 - [ ] Know who to ask for each question type:
   - **Protocol questions** → Lead Engineer
   - **Metrics & cost optimization** → Model Engineer

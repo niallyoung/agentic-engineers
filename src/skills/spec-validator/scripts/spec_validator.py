@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -45,7 +45,6 @@ class SpecSection:
     level: int          # Heading level: 1 = #, 2 = ##, etc.
     content: str        # Raw text content of the section (excluding sub-sections)
     subsections: List["SpecSection"] = field(default_factory=list)
-    start_line: int = 0
 
 
 @dataclass
@@ -57,7 +56,6 @@ class Requirement:
     mandatory: bool = True          # True if MUST / REQUIRED, False if SHOULD / OPTIONAL
     keywords: List[str] = field(default_factory=list)  # e.g. ["MUST", "MUST NOT"]
     section: str = ""               # Section title where this requirement lives
-    line_hint: int = 0
 
 
 @dataclass
@@ -100,15 +98,6 @@ class DiffHunk:
     content: str          # Raw hunk content (added + removed lines + context)
     added_lines: List[str] = field(default_factory=list)
     removed_lines: List[str] = field(default_factory=list)
-
-
-@dataclass
-class SpecCorrelation:
-    """Correlation between a diff hunk and a SPEC requirement/section."""
-    hunk: DiffHunk
-    requirement_id: Optional[str]   # e.g. "REQ-001", or None if no match
-    section_title: Optional[str]
-    keyword_matches: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -431,7 +420,6 @@ class SpecParser:
                     title=title,
                     level=level,
                     content="\n".join(content_lines),
-                    start_line=i,
                 )
 
                 all_sections.append(section)  # always add to flat list
@@ -820,19 +808,7 @@ class ComplianceChecker:
         "/examples/",
         # Build & installation tooling (SPEC-exempt)
         "renderer/",
-        "setup/",
         "scripts/",  # CI/dev tooling scripts (run_skill_tests.py, etc.)
-        # Harness rendering infrastructure (SPEC-exempt per SPEC.md line 109 and §Note):
-        # "src/harnesses/*/ rendering infrastructure can use subprocess for
-        #  build-time operations (rsync, etc.)"
-        "src/harnesses/",
-        # CI/dev tooling that runs external dev tools (linters, pytest, git) —
-        # not agent-runtime queue/span/routing operations
-        "src/standardization/",
-        "src/audit/",
-        "src/skills/testing/",
-        # Evaluation framework that invokes external harnesses for functional testing
-        "src/skills/_meta/evaluation_framework/",
     )
     # Only executable source files are scanned by the security heuristics.
     _HEURISTIC_SOURCE_EXTENSIONS: Tuple[str, ...] = (
@@ -918,14 +894,6 @@ class ComplianceChecker:
                     ))
 
         return violations
-
-    def _find_violating_file_by_pattern(self, pattern: str, diff: DiffAnalysis) -> Optional[str]:
-        """Find which file triggered a security pattern match."""
-        for hunk in diff.hunks:
-            content = "\n".join(hunk.added_lines)
-            if re.search(pattern, content, re.IGNORECASE):
-                return hunk.file_path
-        return None
 
     def _find_evidence(self, constraint_lower: str, added_content: str) -> str:
         """Find the most relevant line in added content for a constraint violation."""
@@ -1048,7 +1016,7 @@ class GapDetector:
                         description=(
                             f"Deletion of '{deleted_file}' may roll back "
                             f"{req.id} ({req.title}). "
-                            f"SPEC.md was not updated."
+                            "SPEC.md was not updated."
                         ),
                         keyword_matches=list(overlap),
                     ))
@@ -1139,67 +1107,67 @@ class ComplianceReporter:
         status_emoji = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌"}.get(
             report.overall_status, "❓"
         )
-        lines.append(f"# Spec-Validator Compliance Report")
-        lines.append(f"")
+        lines.append("# Spec-Validator Compliance Report")
+        lines.append("")
         lines.append(f"**Status:** {status_emoji} **{report.overall_status}**  ")
         lines.append(f"**Generated:** {report.generated_at}  ")
-        lines.append(f"")
+        lines.append("")
 
         if report.summary:
-            lines.append(f"## Summary")
-            lines.append(f"")
+            lines.append("## Summary")
+            lines.append("")
             lines.append(report.summary)
-            lines.append(f"")
+            lines.append("")
 
         # Violations
         lines.append(f"## Violations ({len(report.violations)})")
-        lines.append(f"")
+        lines.append("")
         if report.violations:
             for v in report.violations:
                 icon = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡",
                         "LOW": "🟢"}.get(v.severity.value, "⚪")
                 lines.append(f"### {icon} [{v.severity.value}] {v.rule}")
-                lines.append(f"")
+                lines.append("")
                 lines.append(f"**Description:** {v.description}  ")
                 if v.file_path:
                     lines.append(f"**File:** `{v.file_path}`  ")
                 if v.evidence:
-                    lines.append(f"**Evidence:**")
-                    lines.append(f"```")
+                    lines.append("**Evidence:**")
+                    lines.append("```")
                     lines.append(v.evidence)
-                    lines.append(f"```")
+                    lines.append("```")
                 if v.constraint_text:
                     lines.append(f"**Spec Constraint:** {v.constraint_text}  ")
-                lines.append(f"")
+                lines.append("")
         else:
-            lines.append(f"_No violations detected._")
-            lines.append(f"")
+            lines.append("_No violations detected._")
+            lines.append("")
 
         # Gaps
         lines.append(f"## Gaps ({len(report.gaps)})")
-        lines.append(f"")
+        lines.append("")
         if report.gaps:
             for g in report.gaps:
                 lines.append(f"- **[{g.gap_type.value}]** {g.description}")
                 if g.file_path:
                     lines.append(f"  - File: `{g.file_path}`")
-            lines.append(f"")
+            lines.append("")
         else:
-            lines.append(f"_No gaps detected._")
-            lines.append(f"")
+            lines.append("_No gaps detected._")
+            lines.append("")
 
         # Rollbacks
         lines.append(f"## Rollback Detections ({len(report.rollbacks)})")
-        lines.append(f"")
+        lines.append("")
         if report.rollbacks:
             for rb in report.rollbacks:
                 lines.append(f"- **{rb.deleted_file}** — {rb.description}")
                 if rb.spec_requirement_id:
                     lines.append(f"  - Spec Requirement: `{rb.spec_requirement_id}`")
-            lines.append(f"")
+            lines.append("")
         else:
-            lines.append(f"_No rollbacks detected._")
-            lines.append(f"")
+            lines.append("_No rollbacks detected._")
+            lines.append("")
 
         return "\n".join(lines)
 

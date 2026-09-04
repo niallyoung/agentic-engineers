@@ -14,8 +14,7 @@ This script is that append helper: a deterministic, stdlib-only utility an AGENT
 invokes at each lifecycle point it owns (see `src/AGENTS.md` § Direct Sub-Agent Spawn
 Execution Model § Audit Events for which role appends which events). The AGENT decides
 *when* and *what* to log; this script owns *formatting, validation, and the actual
-append* — the same division of labor the old (now-removed) `enqueue()` had between
-caller and queue helper, per `docs/SPEC.md` clause 3 ("advisory Python").
+append* — per `docs/SPEC.md` clause 3 ("advisory Python").
 
 ## Optional `resolves_task_id` field
 
@@ -58,22 +57,15 @@ Corrections are new events, never edits, per clause 7's own text.
 
 ## Session/harness resolution
 
-Reuses the env-priority convention `src/skills/queue-management/scripts/queue_ops.py`
-used pre-removal (recovered from git history — see `get_session_id`/`detect_harness`
-below): `AGENTIC_SESSION_ID` > `CLAUDE_CODE_SESSION_ID` > `CLAUDE_SESSION_ID` >
-`COPILOT_SESSION_ID` for the session id (falling back to a fresh UUID4 if none are
-set); `AGENTIC_HARNESS` (explicit) > `CLAUDE_CODE_SESSION_ID` > `CLAUDE_SESSION_ID` >
-`COPILOT_SESSION_ID` > `OPENAI_API_KEY` > `"local"` for the harness. **Verified var
-name:** a real Claude Code CLI session sets `CLAUDE_CODE_SESSION_ID`, not
-`CLAUDE_SESSION_ID` (confirmed empirically via `env | grep SESSION` in a live Claude
-Code shell, 2026-08-15 — see `docs/SPEC.md` clause 7 Update Log). `CLAUDE_SESSION_ID`
-is kept afterward, unverified, only as a defensive fallback in case some other
-invocation context sets the shorter name; it is not known to be set by any harness
-this project renders for. `COPILOT_SESSION_ID` remains unverified — never empirically
-confirmed against a real GitHub Copilot CLI session, carried forward unchanged from
-the pre-removal `queue_ops.py` it was recovered from with no corroborating evidence
-either way; do not treat its presence in this priority chain as confirmation it is
-correct.
+Session id priority: `AGENTIC_SESSION_ID` > `CLAUDE_CODE_SESSION_ID` >
+`CLAUDE_SESSION_ID` > `COPILOT_SESSION_ID`, falling back to a fresh UUID4.
+Harness priority: `AGENTIC_HARNESS` > `CLAUDE_CODE_SESSION_ID` > `CLAUDE_SESSION_ID`
+> `COPILOT_SESSION_ID` > `OPENAI_API_KEY` > `"local"`.
+
+Only `CLAUDE_CODE_SESSION_ID` is empirically verified (a live Claude Code CLI session
+sets it; 2026-08-15, see `docs/SPEC.md` clause 7 Update Log). `CLAUDE_SESSION_ID` and
+`COPILOT_SESSION_ID` are unverified defensive fallbacks — do not read their presence
+here as confirmation that any harness sets them.
 
 ## Dependencies
 
@@ -114,17 +106,13 @@ REQUIRED_KEYS = ("task_id", "parent_task_id", "depth", "agent_role", "agent_mode
 
 _NUMERIC_OPTIONAL_KEYS = ("tokens", "cost")
 
-_STRING_OPTIONAL_KEYS = ("resolves_task_id",)
-
 _SAFE_PATH_COMPONENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def _validate_path_component(value: str, *, field: str) -> str:
     """Validate a session_id/harness value before using it in an audit path.
 
-    Mirrors ``queue_ops.py``'s ``_validate_path_component`` (recovered from git
-    history prior to the queue's removal) so audit paths get the same defense
-    against path traversal / illegal characters that queue paths used to.
+    Defends audit paths against path traversal / illegal characters.
     """
     if not isinstance(value, str):
         raise ValueError(f"{field} must be a string, got {type(value).__name__}")
@@ -143,9 +131,7 @@ def detect_harness(env: Optional[Dict[str, str]] = None) -> str:
     """Detect the current AI harness from environment variables.
 
     Priority: AGENTIC_HARNESS (explicit) > CLAUDE_CODE_SESSION_ID > CLAUDE_SESSION_ID
-    > COPILOT_SESSION_ID > OPENAI_API_KEY > 'local' (fallback). Reimplemented
-    compactly from ``queue_ops.py``'s pre-removal ``detect_harness()`` (git history:
-    ``git show <pre-removal-sha>:src/skills/queue-management/scripts/queue_ops.py``).
+    > COPILOT_SESSION_ID > OPENAI_API_KEY > 'local' (fallback).
 
     ``CLAUDE_CODE_SESSION_ID`` is the real env var a live Claude Code CLI session
     sets (verified empirically 2026-08-15 — see module docstring and
@@ -171,8 +157,7 @@ def get_session_id(env: Optional[Dict[str, str]] = None) -> str:
     """Retrieve the current session ID from environment, or generate a UUID4.
 
     Priority: AGENTIC_SESSION_ID > CLAUDE_CODE_SESSION_ID > CLAUDE_SESSION_ID >
-    COPILOT_SESSION_ID. Reimplemented compactly from ``queue_ops.py``'s pre-removal
-    ``get_session_id()``. ``CLAUDE_CODE_SESSION_ID`` is the real, verified Claude
+    COPILOT_SESSION_ID. ``CLAUDE_CODE_SESSION_ID`` is the real, verified Claude
     Code CLI var (see ``detect_harness`` docstring); ``CLAUDE_SESSION_ID`` is kept
     afterward as an unverified defensive fallback only.
     """
@@ -296,7 +281,8 @@ def _build_doc_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     ):
         if value is not None:
             doc[key] = value
-    doc["parent_task_id"] = args.parent_task_id
+    # Empty string means "root-level" (per --parent-task-id help) -> null.
+    doc["parent_task_id"] = args.parent_task_id or None
     if args.tokens is not None:
         doc["tokens"] = args.tokens
     if args.cost is not None:
@@ -329,6 +315,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.event is None:
+        # Reading stdin happens ONLY here, never when --event is supplied, so a
+        # normal flag-driven append can never block on an open stdin. Guard the
+        # interactive case: without this, `audit_append.py` with no arguments and
+        # no redirect blocks forever on a tty with no indication why.
+        if sys.stdin.isatty():
+            print(
+                "audit_append: no --event given; stdin is a terminal, so there is "
+                "nothing to read. Pass --event, or pipe a JSON object on stdin.",
+                file=sys.stderr,
+            )
+            return 2
         raw = sys.stdin.read()
         if not raw.strip():
             print("audit_append: no --event given and stdin is empty", file=sys.stderr)

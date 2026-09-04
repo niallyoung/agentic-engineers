@@ -141,8 +141,10 @@ class TestHappyPath:
 
     def test_live_repo_config_passes(self):
         repo_cfg = Path(__file__).resolve().parents[1] / "opencode.jsonc"
-        if not repo_cfg.exists():
-            pytest.skip("repo opencode.jsonc not present")
+        assert repo_cfg.is_file(), (
+            "repo-root opencode.jsonc not found — it is a tracked source file, "
+            "so its absence is a regression, not a reason to skip"
+        )
         r = validate_file(repo_cfg)
         assert r.ok, "live opencode.jsonc must always validate clean: " + "\n".join(
             e.format() for e in r.errors

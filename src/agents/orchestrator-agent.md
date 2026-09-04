@@ -271,4 +271,4 @@ copilot --allow-all --autopilot --agent orchestrator "Your task"
 
 Spawns sub-agents directly (Agent/Task tool) in harness mode. Every DELEGATE and HANDBACK
 is durably recorded as part of the harness session transcript itself, the audit trail for
-all harnesses (Claude, Copilot, GPT, Local) alike.
+all four supported harnesses (Claude Code, Copilot, OpenCode, Codex) alike.

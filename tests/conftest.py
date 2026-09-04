@@ -259,3 +259,102 @@ def get_ci_safe_skills_path() -> Path:
 def ci_safe_skills_path() -> Path:
     """Pytest fixture providing CI-safe skills path."""
     return get_ci_safe_skills_path()
+
+
+# ---------------------------------------------------------------------------
+# Shared render fixture
+# ---------------------------------------------------------------------------
+#
+# `make render-all` used to be invoked by a byte-identical module-scoped
+# autouse fixture in BOTH tests/test_render_parseability.py and
+# tests/test_render_harness_coverage.py, costing two full renders per run.
+# It is hoisted here at session scope so the render happens exactly once.
+#
+# It is deliberately NOT autouse: making it autouse in this conftest would
+# force a full render for every `pytest tests/...` invocation, including
+# targeted runs of modules that never look at dist/. Modules that need a
+# rendered dist/ opt in with a one-line module-scoped autouse shim:
+#
+#     @pytest.fixture(scope="module", autouse=True)
+#     def _render_all(render_all):
+#         yield
+#
+# Because this fixture is session-scoped, N opting-in modules still trigger
+# exactly one render.
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture(scope="session")
+def render_all():
+    """Render every harness into dist/ exactly once per test session."""
+    result = subprocess.run(
+        ["make", "render-all"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, (
+        "make render-all failed:\n"
+        f"STDOUT:\n{result.stdout[-3000:]}\n\nSTDERR:\n{result.stderr[-3000:]}"
+    )
+    yield
+
+
+# ---------------------------------------------------------------------------
+# Shared temp-repo / frontmatter fixtures
+# ---------------------------------------------------------------------------
+#
+# tests/test_validate_agents.py and tests/test_validate_skills.py carried
+# near-verbatim copies of `temp_repo`, `malformed_frontmatter` and
+# `missing_closing_delimiter`. The only real difference between the two
+# `temp_repo` bodies was which directory under src/ got created, so it is
+# parameterised here on `subdir`.
+
+
+def make_temp_repo(tmp_path: Path, subdir: str) -> Dict:
+    """Build a throwaway repo skeleton containing ``src/<subdir>/``.
+
+    Returns the same dict shape both callers already expected: ``root``,
+    ``src_dir``, and a ``<subdir>_dir`` key (e.g. ``agents_dir``/``skills_dir``).
+    """
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(exist_ok=True)
+
+    src_dir = repo_root / "src"
+    target_dir = src_dir / subdir
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "root": repo_root,
+        "src_dir": src_dir,
+        f"{subdir}_dir": target_dir,
+    }
+
+
+@pytest.fixture
+def temp_repo_factory(tmp_path):
+    """Return a callable ``factory(subdir)`` producing a temp repo skeleton."""
+    def _factory(subdir: str) -> Dict:
+        return make_temp_repo(tmp_path, subdir)
+    return _factory
+
+
+@pytest.fixture
+def malformed_frontmatter():
+    """Frontmatter whose YAML body cannot parse (unclosed quote and sequence)."""
+    return """---
+name: test
+description: "unclosed quote
+invalid yaml: [
+---
+"""
+
+
+@pytest.fixture
+def missing_closing_delimiter():
+    """Frontmatter opened with --- but never closed."""
+    return """---
+name: test
+description: test
+"""

@@ -11,26 +11,29 @@
 #   Entity listing:
 #     - list_source_skills [SRC_SKILLS]     — enumerate skill dirs containing SKILL.md
 #     - list_source_agents [SRC_AGENTS]     — enumerate agent source files (*-agent.md)
-#     - list_source_specs [SRC_SPECS]       — enumerate spec source files (SPEC.md)
 #
 #   Frontmatter manipulation:
 #     - extract_fm <file> <key>             — extract a frontmatter field value
+#     - extract_fm_list <file> <key>        — extract a frontmatter list as CSV
 #     - strip_fm <file>                     — strip frontmatter, return body
-#
-#   Entity naming (core transformation logic):
-#     - get_entity_name <file>              — extract canonical entity name from frontmatter
-#     - get_entity_type <entity>            — infer entity type from naming
-#     - transform_entity_filename <src> <dst_dir> <entity_type> — unified transformation
+#     - extract_body_model <file>           — extract a body "Model:" line
 #
 #   Validation:
 #     - validate_frontmatter <file> <type>  — ensure required fields exist
-#     - validate_entity_structure <dst_file> — verify output format consistency
-#     - validate_deployment <dst_root>      — comprehensive deployment validation
+#     - is_safe_entity_name <name>          — reject unsafe names before path use
+#
+#   Canonical roster:
+#     - parse_agents_md <agents_md>         — parse the src/AGENTS.md roster table
+#     - lookup_agent_metadata <name> <map>  — look up one roster row
 #
 #   Utilities:
 #     - yaml_escape_inline <text>           — escape text for YAML inline values
 #     - map_model <model_id>                — map full model name to short form
-#     - emit_progress <mode> <type> <msg>   — consistent progress output
+#
+#   Cleanup / pruning:
+#     - prune_excluded_cruft <dst_dir>      — remove tests//__pycache__/*.pyc cruft
+#     - prune_orphaned_skills <dst> <src> <marker>
+#     - prune_orphaned_agents <dst> <src> <prev_manifest_names>
 
 set -euo pipefail
 
@@ -70,20 +73,6 @@ list_source_agents() {
 	for f in "$src_dir"/*-agent.md; do
 		[ -f "$f" ] || continue
 		basename "$f" "-agent.md"
-	done
-}
-
-# Enumerate source specs (SPEC.md files), returning directory name.
-# Usage: list_source_specs [SRC_SPECS_PATH]
-#   If SRC_SPECS_PATH is omitted, uses $SRC_SPECS env var.
-list_source_specs() {
-	local src_dir="${1:-${SRC_SPECS:-}}"
-	[ -n "$src_dir" ] || { echo "error: SRC_SPECS not set" >&2; return 1; }
-	
-	local d
-	for d in "$src_dir"/*/; do
-		[ -f "$d/SPEC.md" ] || continue
-		basename "$d"
 	done
 }
 
@@ -166,80 +155,6 @@ extract_body_model() {
 }
 
 # ============================================================================
-# ENTITY NAMING & TRANSFORMATION
-# ============================================================================
-
-# Get canonical entity name from frontmatter.
-# For agents/skills/specs, extracts the 'name' field from YAML frontmatter.
-# Usage: get_entity_name <file>
-get_entity_name() {
-	local file="$1"
-	[ -f "$file" ] || { echo "error: file not found: $file" >&2; return 1; }
-	
-	local name
-	name=$(extract_fm "$file" "name")
-	[ -n "$name" ] || { echo "error: 'name' field not found in frontmatter: $file" >&2; return 1; }
-	
-	echo "$name"
-}
-
-# Infer entity type from its characteristics.
-# Usage: get_entity_type <file>
-# Returns: "agent", "skill", or "spec"
-get_entity_type() {
-	local file="$1"
-	[ -f "$file" ] || { echo "error: file not found: $file" >&2; return 1; }
-	
-	# Check for presence of type-specific fields
-	if extract_fm "$file" "role" >/dev/null 2>&1; then
-		echo "agent"
-	elif extract_fm "$file" "model" >/dev/null 2>&1; then
-		# Agents also have 'model', so check for agent-specific 'role' field first
-		# If no 'role', but has 'model' + 'description', it might be skill or spec
-		if extract_fm "$file" "scope" >/dev/null 2>&1; then
-			echo "spec"
-		else
-			echo "skill"
-		fi
-	else
-		echo "unknown"
-	fi
-}
-
-# Transform entity filename according to unified naming convention.
-# src → dst transformation:
-#   - Agents:  engineer-agent.md → engineer.agent.md (based on 'name' field)
-#   - Skills:  skill-dir/ → skill-dir/ (directory-based, no single file transform)
-#   - Specs:   spec-dir/SPEC.md → spec-dir/SPEC.md (directory-based)
-#
-# Usage: transform_entity_filename <src_file> <dst_dir> <entity_type>
-# Returns the destination filename (not full path).
-transform_entity_filename() {
-	local src_file="$1" dst_dir="$2" entity_type="$3"
-	
-	case "$entity_type" in
-		agent)
-			# Extract canonical name from frontmatter, build dest filename
-			local name
-			name=$(get_entity_name "$src_file") || return 1
-			echo "${name}.agent.md"
-			;;
-		skill)
-			# Skills are directory-based; no transformation needed
-			basename "$src_file"
-			;;
-		spec)
-			# Specs are directory-based; no transformation needed
-			basename "$src_file"
-			;;
-		*)
-			echo "error: unknown entity type: $entity_type" >&2
-			return 1
-			;;
-	esac
-}
-
-# ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================
 
@@ -282,84 +197,6 @@ validate_frontmatter() {
 	return 0
 }
 
-# Validate rendered entity file structure.
-# Usage: validate_entity_structure <dst_file>
-validate_entity_structure() {
-	local dst_file="$1"
-	
-	[ -f "$dst_file" ] || { echo "error: rendered file not found: $dst_file" >&2; return 1; }
-	
-	# Check frontmatter exists (starts with ---)
-	if ! head -1 "$dst_file" | grep -q "^---$"; then
-		echo "error: rendered file missing frontmatter: $dst_file" >&2
-		return 1
-	fi
-	
-	# Check name field exists and is non-empty
-	local name
-	name=$(extract_fm "$dst_file" "name")
-	if [ -z "$name" ]; then
-		echo "error: rendered file missing 'name' field: $dst_file" >&2
-		return 1
-	fi
-	
-	return 0
-}
-
-# Comprehensive deployment validation.
-# Usage: validate_deployment <dst_root>
-# Checks:
-#   - All source agents have rendered counterparts
-#   - All filenames follow naming convention
-#   - Rendered files have valid frontmatter
-#   - No orphaned files in destination
-validate_deployment() {
-	local dst_root="$1"
-	[ -d "$dst_root" ] || { echo "error: destination root not found: $dst_root" >&2; return 1; }
-	
-	local errors=0
-	
-	# Check agents directory structure
-	if [ -d "$dst_root/agents" ]; then
-		local agent_file
-		for agent_file in "$dst_root/agents"/*.md; do
-			[ -f "$agent_file" ] || continue
-			
-			# Agent files should be named "*.agent.md"
-			if ! [[ "$(basename "$agent_file")" =~ \.agent\.md$ ]]; then
-				echo "error: agent file does not follow naming convention: $agent_file" >&2
-				errors=$((errors + 1))
-			fi
-			
-			# Validate structure
-			if ! validate_entity_structure "$agent_file"; then
-				errors=$((errors + 1))
-			fi
-		done
-	fi
-	
-	# Check skills directory structure
-	if [ -d "$dst_root/skills" ]; then
-		local skill_dir
-		for skill_dir in "$dst_root/skills"/*/; do
-			[ -d "$skill_dir" ] || continue
-			
-			# Skills should have SKILL.md
-			if [ ! -f "$skill_dir/SKILL.md" ]; then
-				echo "error: skill missing SKILL.md: $skill_dir" >&2
-				errors=$((errors + 1))
-			fi
-		done
-	fi
-	
-	if [ $errors -gt 0 ]; then
-		echo "error: validation failed with $errors error(s)" >&2
-		return 1
-	fi
-	
-	return 0
-}
-
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -382,46 +219,11 @@ map_model() {
 		*haiku*)  echo "haiku" ;;
 		*sonnet*) echo "sonnet" ;;
 		*opus*)   echo "opus" ;;
+		*fable*)  echo "fable" ;;
 		gpt-5*)   echo "gpt-5" ;;
 		gpt-4*)   echo "gpt-4" ;;
 		*)        echo "" ;;
 	esac
-}
-
-# Emit progress message with consistent formatting.
-# Usage: emit_progress <mode> <type> <entity_name> [extra_data]
-#   mode: "human" (ANSI colors), "json", or empty (silent)
-#   type: "start", "complete", "skip", "error", "summary"
-emit_progress() {
-	local mode="$1" type="$2" entity="$3" data="${4:-}"
-	
-	[ -z "$mode" ] && return 0  # No-op in silent mode
-	
-	local ts
-	ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-	
-	if [ "$mode" = "human" ]; then
-		case "$type" in
-			start)
-				_use_color && printf '\r  ⏳ %-30s' "$entity" || printf '  ⏳ %-30s' "$entity"
-				;;
-			complete)
-				_use_color && printf '\r  %s %-30s\n' "$(_green "✅")" "$entity" || printf '  ✅ %-30s\n' "$entity"
-				;;
-			skip)
-				_use_color && printf '\r  %s %-30s\n' "$(_yellow "⚠️ ")" "$entity" || printf '  ⚠️  %-30s\n' "$entity"
-				;;
-			error)
-				_use_color && printf '\r  %s %-30s\n' "$(_red "❌")" "$entity" || printf '  ❌ %-30s\n' "$entity"
-				;;
-			summary)
-				# Summary handled by caller
-				;;
-		esac
-	elif [ "$mode" = "json" ]; then
-		# JSON output delegated to Python helper (if needed)
-		:
-	fi
 }
 
 # Parse src/AGENTS.md canonical agent definitions table.

@@ -27,30 +27,47 @@ jobs:
         run: |
           pip install pyyaml pytest
       
-      - name: Run framework consistency gates
-        run: |
-          python3 -m pytest tests/test_framework_consistency.py -v
-      
-      - name: Generate dist/ outputs (prerequisite for render validation)
+      # render-all MUST run before the consistency gates: several of them
+      # (e.g. test_copilot_rendered_agents_end_with_agent_agent_md) pytest.skip
+      # when dist/ is absent, so running them first silently disabled them.
+      - name: Generate dist/ outputs (prerequisite for both gate suites)
+        id: render
         run: |
           make render-all
-      
+
+      - name: Run framework consistency gates
+        id: consistency
+        run: |
+          python3 -m pytest tests/test_framework_consistency.py -v
+
       - name: Run render pipeline validation
+        id: render_pipeline
         run: |
           python3 -m pytest tests/test_render_pipeline.py -v
-      
+
+      # Derived from real step outcomes. The previous version printed six
+      # hard-coded "✅ Gate N" lines under if: always(), so the job summary
+      # claimed all-green even when the pytest step had failed.
       - name: Generate framework status report
         if: always()
         run: |
-          echo "## Framework Status Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Framework Gates" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Gate 1: No orphaned agents" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Gate 2: No archived agents deployed" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Gate 3: All skills have SKILL.md" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Gate 4: Naming consistency enforced" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Gate 5: FRAMEWORK-MANIFEST.yaml valid" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Gate 6: No duplicates/stale files" >> $GITHUB_STEP_SUMMARY
+          icon() {
+            case "$1" in
+              success) echo "✅ success" ;;
+              skipped) echo "⏭️ skipped" ;;
+              "")      echo "⚪ did not run" ;;
+              *)       echo "❌ $1" ;;
+            esac
+          }
+          {
+            echo "## Framework Status Report"
+            echo ""
+            echo "| Step | Result |"
+            echo "| --- | --- |"
+            echo "| Render dist/ outputs | $(icon '${{ steps.render.outcome }}') |"
+            echo "| Framework consistency gates | $(icon '${{ steps.consistency.outcome }}') |"
+            echo "| Render pipeline validation | $(icon '${{ steps.render_pipeline.outcome }}') |"
+          } >> "$GITHUB_STEP_SUMMARY"
       
       - name: Report summary
         if: success()

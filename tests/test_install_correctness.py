@@ -44,8 +44,16 @@ IGNORED_NAMES = {
 
 
 @pytest.fixture(scope="module")
-def installed(tmp_path_factory):
-    """Render + install all 4 harnesses into a throwaway DESTDIR."""
+def installed(tmp_path_factory, render_all):
+    """Render + install all 4 harnesses into a throwaway DESTDIR.
+
+    Depends on the session-scoped `render_all` (tests/conftest.py) because every
+    assertion in this module compares the installed tree against the repo's
+    dist/ tree. `make install` renders fresh output into DESTDIR, so without a
+    guaranteed `make render-all` first, dist/ can lag src/ and the comparison
+    reports "content differs" for a source edit that is simply not rendered yet
+    — a stale-artifact false positive, not an install defect.
+    """
     destdir = tmp_path_factory.mktemp("pe-install")
     result = subprocess.run(
         ["make", "install", f"DESTDIR={destdir}", "BACKUP=never"],

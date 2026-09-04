@@ -29,7 +29,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Haiku 4.5",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 8192},
+            "limit": {"context": 200000, "output": 8192},
             "cost": {"input": 0.80, "output": 4.00},
         },
         {
@@ -37,7 +37,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Sonnet 5",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 16384},
+            "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 3.00, "output": 15.00},
         },
         {
@@ -45,7 +45,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Sonnet 4.5",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 8192},
+            "limit": {"context": 200000, "output": 8192},
             "cost": {"input": 3.00, "output": 15.00},
         },
         {
@@ -53,7 +53,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Opus 5",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 16384},
+            "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 15.00, "output": 75.00},
         },
         {
@@ -61,7 +61,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Fable 5",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 4096},
+            "limit": {"context": 200000, "output": 4096},
             "cost": {"input": 0.30, "output": 1.50},
         },
         # Deprecated model for testing
@@ -70,7 +70,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Opus 4.8",
             "provider": "anthropic",
             "status": "deprecated",
-            "limit": {"output": 16384},
+            "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 15.00, "output": 75.00},
         },
         # Model that exists but isn't in our LOCKED_MODELS
@@ -79,7 +79,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Sonnet 4.6",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 8192},
+            "limit": {"context": 200000, "output": 8192},
             "cost": {"input": 3.00, "output": 15.00},
         },
         {
@@ -87,7 +87,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Opus 4.6",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 16384},
+            "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 15.00, "output": 75.00},
         },
         {
@@ -95,7 +95,7 @@ FIXTURE_REGISTRY_DATA = {
             "name": "Claude Opus 4.7",
             "provider": "anthropic",
             "status": None,
-            "limit": {"output": 16384},
+            "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 15.00, "output": 75.00},
         },
     ]
@@ -179,7 +179,10 @@ def test_build_model_index():
     haiku_info = index["claude-haiku-4.5"]
     assert haiku_info.provider == "anthropic"
     assert haiku_info.cost_input == 0.80
-    assert haiku_info.context_window == 8192
+    # 200000 is limit.context; the model's limit.output is 8192. Asserting the
+    # context value specifically is what catches a regression back to reading
+    # limit.output as the context window.
+    assert haiku_info.context_window == 200000
 
 
 def test_model_id_normalization():
@@ -209,7 +212,7 @@ def test_check_found_model():
     assert result.found
     assert result.in_registry_as == "claude-haiku-4.5"
     assert result.cost_input == 0.80
-    assert result.context_window == 8192
+    assert result.context_window == 200000  # limit.context, not limit.output (8192)
 
 
 def test_check_deprecated_model():

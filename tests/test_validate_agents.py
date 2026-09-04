@@ -41,23 +41,9 @@ from validate_agents import (
 # ============================================================================
 
 @pytest.fixture
-def temp_repo(tmp_path):
-    """Create a temporary repository structure for testing."""
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    
-    # Create src/agents directory
-    agents_dir = repo_root / "src" / "agents"
-    agents_dir.mkdir(parents=True)
-    
-    # Create src directory
-    src_dir = repo_root / "src"
-    
-    return {
-        "root": repo_root,
-        "agents_dir": agents_dir,
-        "src_dir": src_dir,
-    }
+def temp_repo(temp_repo_factory):
+    """Temp repo skeleton containing src/agents/ (see tests/conftest.py)."""
+    return temp_repo_factory("agents")
 
 
 @pytest.fixture
@@ -83,25 +69,11 @@ model: sonnet
 """
 
 
-@pytest.fixture
-def malformed_frontmatter():
-    """Frontmatter with syntax errors."""
-    return """---
-name: test
-description: "unclosed quote
-model: [
----
-"""
-
-
-@pytest.fixture
-def missing_closing_delimiter():
-    """Frontmatter missing closing --- delimiter."""
-    return """---
-name: test
-description: test
-model: sonnet
-"""
+# NOTE: `malformed_frontmatter` and `missing_closing_delimiter` are shared
+# fixtures defined in tests/conftest.py — both this module and
+# test_validate_skills.py carried near-verbatim copies. Every consumer only
+# needs "YAML that will not parse" / "no closing delimiter", so one definition
+# serves both.
 
 
 # ============================================================================
@@ -417,9 +389,12 @@ model: sonnet
 # Unit Tests: Model Validation
 # ============================================================================
 
+# NOTE: claude-haiku-4.6 was removed from this list alongside its removal from
+# renderer/validate_agents.py::KNOWN_MODELS — Anthropic never shipped it, and the
+# string now appears nowhere in the repo. Asserting a phantom id is "recognized"
+# pinned a validator bug in place as if it were the contract.
 @pytest.mark.parametrize("model", [
     "claude-haiku-4.5",
-    "claude-haiku-4.6",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
     "claude-opus-4.5",

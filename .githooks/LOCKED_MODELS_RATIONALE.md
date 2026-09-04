@@ -182,6 +182,6 @@ Revisit in Q3 if vulnerability detection improves in Sonnet.
 
 ## See Also
 
-- [.githooks/LOCKED_MODELS.sh](./.githooks/LOCKED_MODELS.sh) — Canonical model list
+- [LOCKED_MODELS.sh](./LOCKED_MODELS.sh) — Canonical model list
 - [SPEC.md](../SPEC.md#approved-claude-models) — Architectural documentation
 - [CONTRIBUTING.md](../CONTRIBUTING.md#model-selection) — Contributor guide

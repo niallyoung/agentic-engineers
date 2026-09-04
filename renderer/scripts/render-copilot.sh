@@ -52,8 +52,8 @@ write_agents_md() {
 }
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
-# shellcheck source=lib.sh
-source "$(dirname "$0")/lib.sh"
+# shellcheck source=../lib/render-lib.sh
+source "$(dirname "$0")/../lib/render-lib.sh"
 
 
 case "$MODE" in

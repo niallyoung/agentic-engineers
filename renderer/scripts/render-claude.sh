@@ -20,11 +20,8 @@ REPO_ROOT="${1:?usage: render-claude.sh REPO_ROOT CLAUDE_DIR [--uninstall|--stat
 CLAUDE="${2:?usage: render-claude.sh REPO_ROOT CLAUDE_DIR [--uninstall|--status]}"
 MODE="${3:-install}"
 
-# ANSI color helpers — suppressed when NO_COLOR is set or stdout is not a TTY
-_use_color() { [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; }
-_green()  { _use_color && printf '\033[32m%s\033[0m' "$1" || printf '%s' "$1"; }
-_yellow() { _use_color && printf '\033[33m%s\033[0m' "$1" || printf '%s' "$1"; }
-_red()    { _use_color && printf '\033[31m%s\033[0m' "$1" || printf '%s' "$1"; }
+# ANSI color helpers (_use_color/_green/_yellow/_red/_dim) come from
+# renderer/lib/render-lib.sh, sourced below.
 
 SRC_SKILLS="$REPO_ROOT/src/skills"
 SRC_AGENTS="$REPO_ROOT/src/agents"
@@ -47,10 +44,18 @@ HOOK_MARKER="$DST_HOOKS/.agentic-engine-claude"
 # apart from a user's own file and never overwrite or delete a foreign one.
 # CLAUDE.md is the user's primary memory file — foreign protection is critical.
 DOC_SENTINEL='<!-- managed by agentic-engineers render-claude.sh'
+# Records the settings.json "model" value THIS installer last wrote. Presence
+# plus content is the ONLY safe signal that the framework — not the operator —
+# owns that key: a MISSING "model" key is not evidence we may write one, since
+# that is exactly the state of an operator who has never run this installer and
+# is deliberately inheriting their Anthropic account default. See the settings
+# block in the install branch below.
+MODEL_MARKER="$CLAUDE/.agentic-engine-claude-model"
 
-# Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
-# shellcheck source=lib.sh
-source "$(dirname "$0")/lib.sh"
+# Source shared functions (list_source_skills, list_source_agents, extract_fm,
+# strip_fm, extract_body_model, colour helpers).
+# shellcheck source=../lib/render-lib.sh
+source "$(dirname "$0")/../lib/render-lib.sh"
 
 # Map canonical model ID → Claude Code tier name or full ID fallback.
 # Claude Code accepts short tier aliases (haiku/sonnet/opus) and resolves
@@ -58,8 +63,8 @@ source "$(dirname "$0")/lib.sh"
 # Unknown tiers: emit the full hyphenated model ID so the agent still gets a model
 # rather than silently inheriting the session default.
 #
-# NOTE: This intentionally shadows the map_model helper in render-lib.sh:380.
-# render-claude.sh declares its own tier-alias logic rather than delegating to lib.sh
+# NOTE: This intentionally shadows the map_model helper in renderer/lib/render-lib.sh.
+# render-claude.sh declares its own tier-alias logic rather than delegating to render-lib.sh
 # because Claude Code's short-alias resolution (haiku→latest haiku) differs from
 # OpenCode/Copilot, which require fully-qualified model IDs. Keeping both definitions
 # prevents accidental cross-harness incompatibility if either logic needs to drift
@@ -164,6 +169,32 @@ os.replace(tmp, settings_file)
 PY
 }
 
+# _settings_get_model SETTINGS_FILE
+# Echo the current "model" value from the JSON settings file, or the empty
+# string if the file is absent, unparseable, or has no "model" key.
+_settings_get_model() {
+	local settings="$1"
+	[ -f "$settings" ] || return 0
+	python3 - "$settings" <<'PY'
+import json, sys
+try:
+	with open(sys.argv[1]) as f:
+		data = json.load(f)
+except (OSError, ValueError):
+	data = {}
+value = data.get("model") if isinstance(data, dict) else None
+print(value if isinstance(value, str) else "")
+PY
+}
+
+# _model_marker_value
+# Echo the model alias we last wrote to settings.json (per MODEL_MARKER), or
+# the empty string if we have never written one.
+_model_marker_value() {
+	[ -f "$MODEL_MARKER" ] || return 0
+	head -n1 "$MODEL_MARKER" | tr -d '[:space:]'
+}
+
 # inject_settings_model SETTINGS_FILE MODEL_ALIAS
 # Merges {"model": MODEL_ALIAS} into the JSON settings file using Python.
 # Creates the file if absent; preserves all other keys.
@@ -207,7 +238,7 @@ remove_settings_hook() {
 	_settings_edit "$settings" remove_hook "$HOOK_SCRIPT_NAME"
 }
 
-# parse_agents_md() and lookup_agent_metadata() are defined in lib.sh (sourced above)
+# parse_agents_md() and lookup_agent_metadata() are defined in renderer/lib/render-lib.sh (sourced above)
 
 # render_claude_agent_body SRC_FILE
 # Emits the agent body (frontmatter stripped) for the Claude Code target, with
@@ -380,9 +411,18 @@ case "$MODE" in
 		fi
 		remove_settings_hook "$CLAUDE/settings.json"
 		[ "$hook_removed" -eq 1 ] && echo "  removed DELEGATE protocol-guard hook"
-		# Remove session model (if we set it)
-		remove_settings_model "$CLAUDE/settings.json"
-		echo "  removed model from settings.json"
+		# Remove session model — but ONLY if the value still on disk is the one
+		# we wrote (per MODEL_MARKER). A user-chosen value is never removed, for
+		# the same reason install never overwrites one.
+		uninstall_model=$(_settings_get_model "$CLAUDE/settings.json")
+		uninstall_marker=$(_model_marker_value)
+		if [ -n "$uninstall_model" ] && [ "$uninstall_model" = "$uninstall_marker" ]; then
+			remove_settings_model "$CLAUDE/settings.json"
+			echo "  removed model from settings.json"
+		elif [ -n "$uninstall_model" ]; then
+			echo "  $(_yellow "ℹ️  keeping session model ($uninstall_model) — set by you, not by the framework")"
+		fi
+		rm -f "$MODEL_MARKER"
 		echo "✅ Removed $count_s skill(s), $count_a agent(s), $count_d doc(s)"
 		;;
 
@@ -414,10 +454,10 @@ case "$MODE" in
 			else echo "  ⚠️  $label (foreign)"; fi
 		done
 		# settings.json status (single python3 pass)
-		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" "$HOOK_MARKER" <<'PY'
+		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" "$HOOK_MARKER" "$MODEL_MARKER" <<'PY'
 import json, sys, os, filecmp
 
-settings_file, src_hook, dst_hook, hook_name, hook_marker = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+settings_file, src_hook, dst_hook, hook_name, hook_marker, model_marker = sys.argv[1:7]
 
 # settings.json model
 try:
@@ -426,10 +466,26 @@ try:
 except Exception:
 	model = ''
 
-if model:
-	print(f"  ✅ settings.json model: {model}")
+# What (if anything) THIS installer last wrote there — see MODEL_MARKER.
+try:
+	with open(model_marker) as f:
+		marker_model = f.readline().strip()
+except OSError:
+	marker_model = ''
+
+if model and model == marker_model:
+	print(f"  ✅ settings.json model: {model} (managed by the framework)")
+elif model:
+	print(f"  ℹ️  settings.json model: {model} (set by you — the framework will not change it)")
+elif marker_model:
+	print("  ℹ️  settings.json model: not set (you cleared the framework's value; it will not be re-added)")
+elif os.path.exists(settings_file):
+	# An existing settings.json with no "model" key is a deliberate state, not a
+	# gap: the operator is inheriting their account default. Never flagged as an
+	# error, and never filled in — see the install branch's SAFETY note.
+	print("  ℹ️  settings.json model: not set (inheriting your account default; the framework will not add one)")
 else:
-	print("  ❌ settings.json model: not set (session will use Anthropic default)")
+	print("  ❌ settings.json model: not set (no settings.json yet — a fresh install will create one)")
 
 # Hook file status
 if not os.path.exists(dst_hook):
@@ -632,13 +688,58 @@ PY
 
 		# 4. Settings: set session model to orchestrator's model so Claude Code
 		# starts as the Orchestrator agent rather than defaulting to Sonnet.
+		#
+		# SAFETY — we write settings.json's "model" key ONLY when we are the ones
+		# who put it there. This used to be an unconditional write, which meant
+		# every `make install` silently PINNED the operator's Claude Code session
+		# model: an operator with no "model" key (inheriting their Anthropic
+		# account default, often a STRONGER model than the orchestrator alias)
+		# got one written in and was quietly downgraded.
+		#
+		# The first write is gated on whether settings.json EXISTS, not on whether
+		# the "model" key is absent. Key-absence is not a safe "go ahead" signal:
+		# an existing settings.json with no "model" key is exactly the steady
+		# state of an operator deliberately inheriting their account default, so
+		# treating that as "unclaimed" reintroduces the very downgrade this guard
+		# exists to prevent. Creating the file ourselves is different — the key is
+		# then ours by construction, and it is what makes a genuine fresh install
+		# (and dist/claude/settings.json, which the renderer builds from nothing)
+		# come out with a model at all.
+		#
+		# MODEL_MARKER records the value we last wrote, and governs updates and
+		# uninstall thereafter:
+		#
+		#   file absent                    → fresh install, the file is ours  → SET
+		#   file exists + value==marker    → still exactly what we wrote      → UPDATE
+		#   file exists + no "model" key   → theirs: never had one, or cleared it → SKIP
+		#   file exists + value!=marker    → user-chosen (or hand-edited)     → SKIP
 		orchestrator_meta=$(lookup_agent_metadata "orchestrator" "$AGENTS_MAP" 2>/dev/null || true)
 		if [ -n "$orchestrator_meta" ]; then
 			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
 			orchestrator_model=$(map_model "$orchestrator_model_raw")
 			if [ -n "$orchestrator_model" ]; then
-				inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
-				echo "✅ Set session model → $orchestrator_model (orchestrator default)"
+				# Capture existence BEFORE anything in this run can create the
+				# file. Nothing above writes settings.json; the protocol-guard
+				# hook injection in step 5 below does, so this check must stay
+				# ahead of it.
+				settings_existed=0
+				[ -f "$CLAUDE/settings.json" ] && settings_existed=1
+				current_model=$(_settings_get_model "$CLAUDE/settings.json")
+				marker_model=$(_model_marker_value)
+
+				if [ "$settings_existed" -eq 0 ]; then
+					inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
+					printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
+					echo "✅ Set session model → $orchestrator_model (orchestrator default)"
+				elif [ -n "$current_model" ] && [ "$current_model" = "$marker_model" ]; then
+					inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
+					printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
+					echo "✅ Session model → $orchestrator_model (orchestrator default)"
+				elif [ -z "$current_model" ]; then
+					echo "ℹ️  Leaving your session model unset (inheriting your account default)"
+				else
+					echo "ℹ️  Keeping your existing session model ($current_model) — set by you, not by the framework"
+				fi
 			fi
 		fi
 

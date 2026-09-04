@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml cryptography pytest
+          pip install pyyaml pytest
           pip install -e .
 
       - name: Entropy-based credential scanning
@@ -99,10 +99,14 @@ jobs:
           print("✅ Security: SPEC.md compliance verified")
           EOF
 
+      # Was `safety check --json || true`: `safety check` is deprecated in
+      # safety 3.x (superseded by `safety scan`) and the `|| true` meant the
+      # step could never fail, so it was decorative. pip-audit is a real gate.
       - name: Dependency vulnerability scan
         run: |
-          pip install safety
-          safety check --json || true  # Warn but don't fail yet
+          pip install pip-audit
+          pip-audit --progress-spinner=off \
+            || { echo "::error::Vulnerable dependencies detected — upgrade the pinned versions above, or add an explicit --ignore-vuln with a justification."; exit 1; }
 
       - name: YAML schema validation
         run: |

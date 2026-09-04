@@ -100,7 +100,7 @@ skills:
   codex-agent-cleanup:
     name: codex-agent-cleanup
     status: active
-    description: "Routine maintenance for Codex sessions: monitor queue state, close completed sub-agents, resume/escalate active work"
+    description: "Routine maintenance for Codex sessions: monitor active sub-agent state, close completed sub-agents, resume or escalate active work, and keep agent capacity available."
     created: "2026-02-01"
     required_by:
       - orchestrator

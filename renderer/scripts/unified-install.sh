@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # unified-install.sh - Unified multi-harness installation with consistent backup strategy
 # Part of agentic-engineers install system
 #

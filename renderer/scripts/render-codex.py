@@ -789,7 +789,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv or sys.argv[1:])
+    args = parse_args(argv if argv is not None else sys.argv[1:])
     repo_root = Path(args.repo_root or Path(__file__).resolve().parents[2]).expanduser().resolve()
     codex_home = Path(args.codex_home or Path.home() / ".codex").expanduser().resolve()
     skills_root = (

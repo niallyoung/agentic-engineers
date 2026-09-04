@@ -32,10 +32,15 @@ spec-management governs changes *to* SPEC.md itself.
 
 ### 1. Proposal
 
-Write a proposal file at `docs/spec-proposals/SPEC-YYYY-NNN.yaml` (next sequential
-number for the year) with this schema. Historical proposal files have been archived
-(see docs/SPEC.md Update Log for the full amendment record); this template remains
-the canonical format for future SPEC.md changes:
+Draft the proposal as a YAML block using the schema below, identified as
+`SPEC-YYYY-NNN` (next sequential number for the year).
+
+**There is no `docs/spec-proposals/` directory, and proposals are not committed as
+separate files.** The proposal is a working artifact — it travels in the DELEGATE that
+requests the change and in the review thread. What becomes permanent is the Update Log
+entry in `docs/SPEC.md` (step 4 below), which carries the full rationale and is
+append-only. That entry, not a YAML file, is the archived record of every amendment
+from SPEC-2026-001 onward. This schema remains the canonical drafting format:
 
 ```yaml
 change_id: SPEC-2026-NNN
@@ -122,14 +127,15 @@ Once approved: edit `docs/SPEC.md` to make the described change, then append one
 to its changelog list (near the end of the document) in this exact format:
 
 ```
-- **YYYY-MM-DD:** [SPEC-YYYY-NNN — proposer-role, approved by approver-role] One or
-  two sentences: what changed and why. See `docs/spec-proposals/SPEC-YYYY-NNN.yaml`.
+- **YYYY-MM-DD:** [SPEC-YYYY-NNN — proposer-role, approved by approver-role] What
+  changed and why, in enough detail to stand alone without the proposal draft.
 ```
 
 This changelog list, in order, IS the immutable audit trail — every entry is
-append-only (never edit or remove a prior entry) and points back to its proposal
-file for full detail. `git log -- docs/SPEC.md docs/spec-proposals/` gives the
-tamper-evident history on top of that.
+append-only (never edit or remove a prior entry). Because the proposal draft is not
+committed anywhere, the entry must be **self-contained**: record the rationale,
+the sections touched, and any sanctioned deviations in the entry itself.
+`git log -- docs/SPEC.md` gives the tamper-evident history on top of that.
 
 ### 5. Rollback
 

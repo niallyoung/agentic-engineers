@@ -37,12 +37,10 @@ SRC_CONFIG="$REPO_ROOT/config"
 DST_SPECS="$DEST_ROOT/specs"
 MARKER=".agentic-engine-specs"
 
-# ANSI color helpers — respects NO_COLOR and TTY detection
-_use_color() { [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; }
-_green()  { _use_color && printf '\033[32m%s\033[0m' "$1" || printf '%s' "$1"; }
-_yellow() { _use_color && printf '\033[33m%s\033[0m' "$1" || printf '%s' "$1"; }
-_red()    { _use_color && printf '\033[31m%s\033[0m' "$1" || printf '%s' "$1"; }
-_dim()    { _use_color && printf '\033[2m%s\033[0m'  "$1" || printf '%s' "$1"; }
+# ANSI color helpers (_use_color/_green/_yellow/_red/_dim) and the shared
+# renderer functions come from the unified library.
+# shellcheck source=../lib/render-lib.sh
+source "$SCRIPT_DIR/../lib/render-lib.sh"
 
 # Files to deploy: <src_path> <dest_name>
 SPEC_FILES=(

@@ -3,7 +3,7 @@
 validate_renders.py — verify that all src/skills/ entries have corresponding dist/ outputs.
 
 Usage:
-    python3 scripts/validate_renders.py [REPO_ROOT]
+    python3 renderer/scripts/validate_renders.py [REPO_ROOT]
 
     REPO_ROOT defaults to the parent directory of this script's parent (i.e., repo root).
 
@@ -25,7 +25,6 @@ Run automatically via:
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -33,8 +32,11 @@ from pathlib import Path
 # Harnesses whose dist/<harness>/skills/ dirs must mirror src/skills/
 HARNESSES = ["claude", "copilot", "opencode", "codex"]
 
-# Skill directories in src/skills/ that are framework-internal and intentionally
-# NOT rendered to dist/ (e.g., _meta contains implementation helpers, not user-facing skills)
+# Skill directories in src/skills/ whose name starts with one of these prefixes are
+# framework-internal and intentionally NOT rendered to dist/. The underscore prefix is
+# the convention for implementation helpers rather than user-facing skills; no such
+# directory exists at present, but the rule stays so one can be added without also
+# having to remember to update this validator.
 _META_PREFIXES = ("_",)
 
 

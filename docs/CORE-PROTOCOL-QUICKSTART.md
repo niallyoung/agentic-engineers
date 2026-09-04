@@ -80,7 +80,7 @@ budget: 5.0
 - ❌ `scope: "Fix it"` — too short (<15 words)
 - ❌ `plan: ["Do everything"]` — needs >=2 steps
 - ❌ `context: "Context here"` — too short (<20 words)
-- ✅ Extensions with unknown fields are ignored by core validation
+- ✅ Extensions with unknown fields **warn, never fail** — core validation reports them but does not reject the block (forward compatibility)
 
 ## See Also
 - `docs/specs/protocol-core-v1.0.yaml` — full schema definition

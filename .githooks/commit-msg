@@ -12,6 +12,10 @@
 # Install: git config core.hooksPath .githooks
 # Bypass: SKIP_COMMIT_MSG_HOOK=true git commit
 
+# Deliberately `set -uo pipefail` WITHOUT -e. This hook leans heavily on probes
+# whose non-zero exit is a normal outcome (`grep -q` misses, the many `|| true`
+# guards below); under -e the first such miss would abort validation silently and
+# report a spurious pass/fail. Failures are tracked explicitly via fail()/ERRORS.
 set -uo pipefail
 
 COMMIT_MSG_FILE="$1"
@@ -225,7 +229,7 @@ if [ "${SKIP_HOOKS:-}" = "1" ] || echo "$COMMIT_MSG" | grep -qi 'SKIP_HOOKS'; th
     # Require non-trivial reason (>= 10 chars after the colon).
     REASON=$(echo "$COMMIT_MSG" | grep -iE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:' | head -n1 | sed -E 's/^[[:space:]]*[A-Za-z_]+[[:space:]]*:[[:space:]]*//')
     if [ "${#REASON}" -lt 10 ]; then
-      fail "Hook-bypass reason too short ('${REASON}'). Provide ≥10 chars (e.g. ticket ID, incident link). See docs/SECURITY-HOOKS.md."
+      fail "Hook-bypass reason too short ('${REASON}'). Provide ≥10 chars (e.g. ticket ID, incident link)."
     else
       success "SKIP_HOOKS bypass is documented with reason (${#REASON} chars)"
     fi
@@ -235,7 +239,7 @@ if [ "${SKIP_HOOKS:-}" = "1" ] || echo "$COMMIT_MSG" | grep -qi 'SKIP_HOOKS'; th
     echo "   - SKIP_HOOKS: <reason>"
     echo "   - reason: <explanation>"
     echo "   - emergency: <justification>"
-    echo "   See docs/SECURITY-HOOKS.md for the bypass procedure."
+    echo "   See .githooks/README.md for the bypass procedure."
   fi
 fi
 

@@ -146,7 +146,7 @@ It renders through the standard framework flow into the Codex install path, so
 new skill work should be created under `src/skills/` first and then rendered into
 `dist/codex/` and the Codex user install locations by `make install-codex`.
 
-Use it to keep completed sub-agents closed and the queue clear enough for new
+Use it to keep completed sub-agents closed and agent capacity free for new
 parallel work. It is the Codex-specific hygiene routine for agent lifecycle
 cleanup.
 

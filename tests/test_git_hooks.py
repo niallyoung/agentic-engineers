@@ -613,48 +613,66 @@ class TestPrePushHook:
             result = self._run_push_in_repo(tmpdir)
         assert result.returncode == 0
 
-    @pytest.mark.xfail(reason="Hook enforces docs/ presence (docs/SPEC.md, docs/AGENTS.md, README.md are required per SPEC)")
-    def test_passes_without_docs_dir(self):
-        """Hook does not enforce docs presence — passes even without docs/."""
+    def test_fails_without_docs_dir(self):
+        """A repo with no docs/ at all must be rejected (SPEC.md + AGENTS.md + README.md required).
+
+        Observed hook behaviour: exit 1, reporting all three missing docs as errors.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             result = self._run_push_in_repo(tmpdir)
-        assert result.returncode == 0
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "docs/SPEC.md not found" in combined
+        assert "docs/AGENTS.md not found" in combined
+        assert "README.md not found" in combined
 
-    @pytest.mark.xfail(reason="Hook enforces docs/AGENTS.md presence (required per SPEC for agent registry)")
-    def test_passes_without_agents_md(self):
-        """Hook does not enforce docs/AGENTS.md — passes without it."""
+    def test_fails_without_agents_md(self):
+        """docs/AGENTS.md is the agent registry and is required per SPEC — its absence must block.
+
+        Observed hook behaviour: exit 1 with exactly one error, "docs/AGENTS.md not found".
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             (Path(tmpdir) / "docs").mkdir()
             (Path(tmpdir) / "docs" / "SPEC.md").write_text("# Spec\nversion: 1.0\n")
             (Path(tmpdir) / "README.md").write_text("# Readme\n")
             result = self._run_push_in_repo(tmpdir)
-        assert result.returncode == 0
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "docs/AGENTS.md not found" in combined
 
-    @pytest.mark.xfail(reason="Hook enforces README.md presence (required per SPEC for repo documentation)")
-    def test_passes_without_readme(self):
-        """Hook does not enforce README.md — passes without it."""
+    def test_fails_without_readme(self):
+        """README.md is required repo documentation per SPEC — its absence must block the push.
+
+        Observed hook behaviour: exit 1 with exactly one error, "README.md not found".
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
             (Path(tmpdir) / "docs").mkdir()
             (Path(tmpdir) / "docs" / "SPEC.md").write_text("# Spec\nversion: 1.0\n")
             (Path(tmpdir) / "docs" / "AGENTS.md").write_text("# Agents\n")
             result = self._run_push_in_repo(tmpdir)
-        assert result.returncode == 0
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "README.md not found" in combined
 
     # ── SPEC compliance ────────────────────────────────────────────────────────
 
-    @pytest.mark.xfail(reason="Hook enforces SPEC compliance: orchestration/scripts/ prohibited (scripts only in renderer/scripts/)")
-    def test_passes_with_orchestration_scripts_present(self):
-        """Hook does not enforce SPEC orchestration rules — passes with orchestration/scripts/."""
+    def test_fails_with_orchestration_scripts_present(self):
+        """SPEC allows executable scripts only under renderer/scripts/ — orchestration/scripts/ must block.
+
+        Observed hook behaviour: exit 1, "External scripts found in orchestration/scripts/".
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_minimal_repo_with_docs(tmpdir)
             scripts = Path(tmpdir) / "orchestration" / "scripts"
             scripts.mkdir(parents=True)
             (scripts / "bad.py").write_text("x=1\n")
             result = self._run_push_in_repo(tmpdir)
-        assert result.returncode == 0
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "orchestration/scripts" in combined
 
     # ── Agent YAML validation ──────────────────────────────────────────────────
 
@@ -670,16 +688,23 @@ class TestPrePushHook:
         combined = result.stdout + result.stderr
         assert "YAML" in combined or "yaml" in combined.lower() or "agent" in combined.lower()
 
-    @pytest.mark.xfail(reason="Hook validates required agent YAML fields (name, model, description are mandatory)")
-    def test_passes_on_agent_missing_required_fields(self):
-        """Hook validates YAML syntax only — passes even if name/model fields absent."""
+    def test_fails_on_agent_missing_required_fields(self):
+        """Agent frontmatter with valid YAML but no name/model must still be rejected.
+
+        Observed hook behaviour: exit 1 with a separate error per missing field
+        ("Missing required field 'name'" and "... 'model'"). Note the hook checks
+        name and model only — role and effort live in the markdown body, not frontmatter.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_minimal_repo_with_docs(tmpdir)
             agents = Path(tmpdir) / "src" / "agents"
             agents.mkdir(parents=True)
             (agents / "incomplete-agent.md").write_text("---\nrole: engineer\n---\n# Agent\n")
             result = self._run_push_in_repo(tmpdir)
-        assert result.returncode == 0
+        assert result.returncode != 0
+        combined = result.stdout + result.stderr
+        assert "Missing required field 'name'" in combined
+        assert "Missing required field 'model'" in combined
 
     def test_passes_with_valid_agent_yaml(self):
         """Valid agent YAML frontmatter with name and model must pass."""
@@ -786,7 +811,10 @@ class TestHookInstallation:
         """
         # Positive test: parse src/AGENTS.md and verify we get all 8 agents
         # Use REPO_ROOT to derive paths dynamically (not hardcoded)
-        lib_sh_path = REPO_ROOT / "renderer" / "scripts" / "lib.sh"
+        # Sourced from renderer/lib/render-lib.sh, the canonical render library.
+        # This previously sourced renderer/scripts/lib.sh, a thin shim that has
+        # since been deleted; parse_agents_md only ever lived in render-lib.sh.
+        lib_sh_path = REPO_ROOT / "renderer" / "lib" / "render-lib.sh"
         agents_md_path = REPO_ROOT / "src" / "AGENTS.md"
 
         parse_result = subprocess.run(

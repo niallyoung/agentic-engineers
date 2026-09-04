@@ -156,7 +156,7 @@ result. Nothing is written to or read from a separate directory to make dispatch
 **A second, queryable log exists alongside it.** `docs/SPEC.md` clause 7 requires
 agents to append one JSON line per orchestration event (`delegate_issued`,
 `subagent_spawned`, `handback_received`, `gate_result`, `escalation`, `refusal`,
-`limit_exceeded`) to
+`limit_exceeded`, `operator_interjection`) to
 `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` via
 `scripts/audit_append.py`. This does not change the model above — the transcript is
 still what makes a DELEGATE/HANDBACK *count*; the JSONL is metrics/event data derived
@@ -180,10 +180,14 @@ See `src/AGENTS.md` for the full agent roster, routing decision tree, and role d
 - Max concurrent spawns: 5 per parent (see [src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits))
 - Max delegation depth: 3 (root DELEGATE = depth 0)
 
-**Note on enforcement:** the depth/fan-out limits above are a documented contract each
-agent's own definition observes (via its `tools:` frontmatter grant — see
-[src/AGENTS.md > Tools-Frontmatter Permission Model](../src/AGENTS.md#tools-frontmatter-permission-model)).
-No harness mechanically blocks an over-deep or over-wide spawn today; agents self-enforce.
+**Note on enforcement:** these limits are a documented contract each agent's own
+definition observes (via its `tools:` frontmatter grant — see
+[src/AGENTS.md > Tools-Frontmatter Permission Model](../src/AGENTS.md#tools-frontmatter-permission-model)),
+*plus* a partial mechanical check on the Claude harness. Its `PreToolUse` guard,
+`renderer/scripts/claude-delegate-guard.py`, blocks a DELEGATE that declares
+`depth` > 3 or that names its own target role in `ancestry`. Because both fields are
+optional and the guard sees one spawn at a time, a DELEGATE omitting them is unchecked
+and over-wide fan-out is never blocked. No other harness has an equivalent guard.
 
 ---
 

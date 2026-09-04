@@ -30,8 +30,10 @@ class TestGate1NoOrphanedAgents:
     def test_manifest_agents_match_source_files(self):
         """FRAMEWORK-MANIFEST.yaml must list all agents in src/agents/"""
         manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        if not manifest_path.exists():
-            pytest.skip("config/FRAMEWORK-MANIFEST.yaml not yet created")
+        assert manifest_path.exists(), (
+            "config/FRAMEWORK-MANIFEST.yaml is required and must exist "
+            "(this was previously a skip reading 'not yet created')"
+        )
         
         with open(manifest_path) as f:
             manifest = yaml.safe_load(f)
@@ -85,18 +87,22 @@ class TestGate3SkillsHaveMarker:
         skills_dir = Path("src/skills")
         loose_md = list(skills_dir.glob("*.md"))
         
-        # Only documentation and README allowed; no implementation .md at top level
-        allowed = {"README.md", "SKILLS.md", "IMPLEMENTATION-SUMMARY.md", "CONSOLIDATION-PLAN.md"}
-        orphaned = [f.name for f in loose_md if f.name not in allowed]
-        
-        # Allow some doc files; fail only if too many orphaned
-        assert len(orphaned) < 10, f"Too many orphaned .md files in src/skills/: {orphaned}"
+        # Only documentation and README allowed; no implementation .md at top level.
+        # IMPLEMENTATION-SUMMARY.md and CONSOLIDATION-PLAN.md were dropped from this
+        # allow-list: neither file exists any more (src/skills/*.md is README.md only),
+        # so allowing them could only ever mask a regression.
+        allowed = {"README.md", "SKILLS.md"}
+        orphaned = sorted(f.name for f in loose_md if f.name not in allowed)
+
+        assert orphaned == [], f"Orphaned .md files in src/skills/: {orphaned}"
     
     def test_manifest_skills_match_disk(self):
         """FRAMEWORK-MANIFEST.yaml must list all skills"""
         manifest_path = Path("config/FRAMEWORK-MANIFEST.yaml")
-        if not manifest_path.exists():
-            pytest.skip("config/FRAMEWORK-MANIFEST.yaml not yet created")
+        assert manifest_path.exists(), (
+            "config/FRAMEWORK-MANIFEST.yaml is required and must exist "
+            "(this was previously a skip reading 'not yet created')"
+        )
         
         with open(manifest_path) as f:
             manifest = yaml.safe_load(f)
@@ -107,11 +113,19 @@ class TestGate3SkillsHaveMarker:
         source_skills = set(d.name for d in skills_dir.iterdir() 
                            if d.is_dir() and not d.name.startswith("_") and (d / "SKILL.md").exists())
         
-        # Allow skills to be in manifest but not on disk (they may be conditional)
-        missing = source_skills - manifest_skills
-        if missing and len(missing) > 10:
-            pytest.fail(f"Too many source skills not in manifest (drift detected, should fail not skip): {missing}")
-        assert not missing, f"Source skills not in manifest: {missing}"
+        # Skills may be in the manifest but not on disk (they may be conditional);
+        # the reverse — on disk but unlisted — is always drift. The former
+        # `if len(missing) > 10: pytest.fail(...)` branch was dead code: the
+        # unconditional assert below already fails on any non-empty `missing`.
+        missing = sorted(source_skills - manifest_skills)
+        assert missing == [], f"Source skills not in manifest: {missing}"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _render_all(render_all):
+    """Opt in to the session-scoped render (tests/conftest.py) — the dist/ checks
+    below are hard assertions, so a render must be guaranteed."""
+    yield
 
 
 class TestGate4NamingConsistency:
@@ -121,7 +135,7 @@ class TestGate4NamingConsistency:
         """All agent source files (except README) must end with -agent.md"""
         agents_dir = Path("src/agents")
         agent_files = [f.name for f in agents_dir.glob("*.md")
-                      if not f.name.startswith("_") and f.name not in ["orchestration-agents-README.md", "README.md"]]
+                      if not f.name.startswith("_") and f.name != "README.md"]
         
         for fname in agent_files:
             if fname.endswith(".md"):
@@ -130,8 +144,7 @@ class TestGate4NamingConsistency:
     def test_copilot_rendered_agents_end_with_agent_agent_md(self):
         """Rendered agents in dist/copilot/agents/ must end with -agent.agent.md"""
         dist_agents = Path("dist/copilot/agents")
-        if not dist_agents.exists():
-            pytest.skip("dist/copilot/agents/ not found")
+        assert dist_agents.is_dir(), "dist/copilot/agents/ not found — run 'make render-all'"
         
         agent_files = [f.name for f in dist_agents.glob("*.agent.md")]
         
@@ -165,7 +178,7 @@ class TestGate5ManifestConsistency:
         assert len(agents) > 0, "FRAMEWORK-MANIFEST.yaml agents list is empty"
 
         skills = manifest.get("skills", {})
-        assert len(skills) >= 0, "FRAMEWORK-MANIFEST.yaml skills list is invalid"
+        assert len(skills) > 0, "FRAMEWORK-MANIFEST.yaml skills list is empty"
 
 
 class TestGate6NoDuplicatesOrStaleFiles:
@@ -187,7 +200,7 @@ class TestGate6NoDuplicatesOrStaleFiles:
 
         # All agent definitions must follow the canonical naming: {name}-agent.md
         for agent_file in agents_dir.glob("*.md"):
-            if agent_file.name in ["README.md", "orchestration-agents-README.md"]:
+            if agent_file.name == "README.md":
                 continue
             if agent_file.name.startswith("_"):
                 continue

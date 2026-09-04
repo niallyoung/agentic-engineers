@@ -71,18 +71,13 @@ def _frontmatter(text):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def _render_all():
-    """Render every harness once before this module's tests run."""
-    result = subprocess.run(
-        ["make", "render-all"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, (
-        "make render-all failed:\n"
-        f"STDOUT:\n{result.stdout[-3000:]}\n\nSTDERR:\n{result.stderr[-3000:]}"
-    )
+def _render_all(render_all):
+    """Opt this module in to the session-scoped render.
+
+    The body used to be a byte-identical copy of the same fixture in the other
+    render test module, so `make render-all` ran twice per session. It now
+    lives in tests/conftest.py at session scope; this shim just requests it.
+    """
     yield
 
 
