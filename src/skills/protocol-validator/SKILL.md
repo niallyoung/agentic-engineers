@@ -201,7 +201,7 @@ The Orchestrator should:
 ### Unit Tests
 
 ```python
-# tests/test_protocol_validator.py
+# src/skills/protocol-validator/tests/test_protocol_validator.py
 
 def test_validate_delegate_core_all_required_fields_present():
     """All 7 core fields present => valid"""

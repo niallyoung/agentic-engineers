@@ -47,10 +47,6 @@ VALID_AGENTS = {
 # match this exactly (or be registered as deliberate legacy aliases).
 VALID_STATUSES = {'success', 'failure', 'partial', 'blocked', 'escalate'}
 
-# Legacy aliases accepted during transition (map legacy -> canonical).
-# Files that accept *only* these without the canonical equivalents are drifted.
-LEGACY_STATUS_ALIASES = {'complete': 'success', 'failed': 'failure', 'escalated': 'escalate'}
-
 VALID_EFFORTS = {'low', 'medium', 'high', 'max'}  # 'max' is Security Engineer's tier; 'epic' (seen in some legacy validators) is not canonical
 
 # Forward-compatible additions accepted at runtime before the canonical spec
@@ -103,7 +99,7 @@ class CoreProtocolValidator:
     """Validate DELEGATE/HANDBACK core fields only (strict, fast <50ms)."""
 
     def validate_delegate_core(self, delegate: Dict) -> Tuple[bool, List[str]]:
-        """Validate 7 required core fields of a DELEGATE."""
+        """Validate the required core fields of a DELEGATE."""
         errors: List[str] = []
 
         if not isinstance(delegate, dict):
@@ -116,12 +112,15 @@ class CoreProtocolValidator:
         elif not TASK_ID_PATTERN.match(task_id):
             errors.append(f"task_id: must be kebab-case, 3-50 chars (got '{task_id}')")
 
-        # 2. skill: must exist in skills/
-        skill = delegate.get('skill')
-        if not skill or not isinstance(skill, str):
-            errors.append("skill: required, must be a string")
-        elif not _skill_exists(skill):
-            errors.append(f"skill: unknown skill '{skill}' (not found in skills/)")
+        # 2. skill: OPTIONAL (demoted from required — see the note on
+        #    delegate.required in protocol-core-v1.0.yaml). Validated only when
+        #    supplied; a DELEGATE that omits it is valid.
+        if 'skill' in delegate:
+            skill = delegate['skill']
+            if not skill or not isinstance(skill, str):
+                errors.append("skill: must be a non-empty string when present")
+            elif not _skill_exists(skill):
+                errors.append(f"skill: unknown skill '{skill}' (not found in skills/)")
 
         # 3. agent: must be in VALID_AGENTS
         agent = delegate.get('agent')
@@ -369,13 +368,12 @@ class ProtocolValidator:
         if spec_path is not None:
             candidate = Path(spec_path)
             if not candidate.is_absolute():
-                repo_root = Path(__file__).resolve().parents[4]  # src/skills/protocol-validator/scripts/script.py -> repo root
-                candidate = repo_root / spec_path
+                candidate = _repo_root() / spec_path
             self.spec_path = candidate
         elif self._SKILL_LOCAL_SPEC.exists():
             self.spec_path = self._SKILL_LOCAL_SPEC
         else:
-            self.spec_path = Path(__file__).resolve().parents[4] / "docs" / "specs" / "protocol-core-v1.0.yaml"
+            self.spec_path = _repo_root() / "docs" / "specs" / "protocol-core-v1.0.yaml"
 
         if not self.spec_path.exists():
             raise FileNotFoundError(
@@ -419,11 +417,11 @@ class ProtocolValidator:
         field_types = {}
         
         # 1. Validate core fields (uses Phase 3 validator)
-        core_valid, core_errors = self._core_validator.validate_delegate_core(delegate)
+        _, core_errors = self._core_validator.validate_delegate_core(delegate)
         errors.extend(core_errors)
         
         # 2. Validate extension fields
-        ext_valid, ext_errors = self._extension_validator.validate_extensions(delegate)
+        _, ext_errors = self._extension_validator.validate_extensions(delegate)
         errors.extend(ext_errors)
         
         # 3. Check for unknown fields (forward-compatibility)
@@ -440,7 +438,7 @@ class ProtocolValidator:
         # 5. Calculate duration
         duration_ms = (time.time() - start_time) * 1000
         
-        # Valid if no core errors (extensions don't block validation)
+        # Valid if neither core nor extension validation produced an error.
         valid = len(errors) == 0
         
         return ValidationResult(
@@ -467,11 +465,11 @@ class ProtocolValidator:
         field_types = {}
         
         # 1. Validate core fields
-        core_valid, core_errors = self._core_validator.validate_handback_core(handback)
+        _, core_errors = self._core_validator.validate_handback_core(handback)
         errors.extend(core_errors)
         
         # 2. Validate extension fields
-        ext_valid, ext_errors = self._extension_validator.validate_handback_extensions(handback)
+        _, ext_errors = self._extension_validator.validate_handback_extensions(handback)
         errors.extend(ext_errors)
 
         token_usage = handback.get('token_usage')
@@ -618,8 +616,8 @@ def validate_delegate(delegate: Dict[str, Any]) -> Tuple[bool, List[str]]:
         (valid, errors) where valid is True only when there are no core or
         extension errors, and errors is the combined list of error messages.
     """
-    core_valid, core_errors = _core.validate_delegate_core(delegate)
-    ext_valid, ext_errors = _ext.validate_extensions(delegate) if isinstance(delegate, dict) else (True, [])
+    _, core_errors = _core.validate_delegate_core(delegate)
+    _, ext_errors = _ext.validate_extensions(delegate) if isinstance(delegate, dict) else (True, [])
     errors = list(core_errors) + list(ext_errors)
     return (len(errors) == 0, errors)
 
@@ -638,8 +636,8 @@ def validate_handback(handback: Dict[str, Any]) -> Tuple[bool, List[str]]:
         (valid, errors) where valid is True only when there are no core or
         extension errors, and errors is the combined list of error messages.
     """
-    core_valid, core_errors = _core.validate_handback_core(handback)
-    ext_valid, ext_errors = _ext.validate_handback_extensions(handback) if isinstance(handback, dict) else (True, [])
+    _, core_errors = _core.validate_handback_core(handback)
+    _, ext_errors = _ext.validate_handback_extensions(handback) if isinstance(handback, dict) else (True, [])
     errors = list(core_errors) + list(ext_errors)
     return (len(errors) == 0, errors)
 

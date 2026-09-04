@@ -45,10 +45,13 @@ Model Engineer). Orchestrator now uses claude-sonnet-5 for improved routing anal
 3. Weigh efficiency against `metrics.quality`: a role that used few tokens but also
    scored poorly is not "efficient," it under-delivered — don't recommend a downgrade
    on that basis.
-4. Build one recommendation per role (`model`, `confidence`, `reasoning`), append it to
-   `~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl`.
+4. Build one recommendation per role (`model`, `confidence`, `reasoning`).
 5. Return the recommendations in the HANDBACK's `recommendation` block with a
-   `next_suggested_models` map. Model Engineer never applies a recommendation itself —
+   `next_suggested_models` map. **The HANDBACK is the deliverable** — there is no
+   sidecar file to write. The durable per-session record of the metrics this analysis
+   is derived from is the clause-7 audit JSONL
+   (`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`),
+   summarised by `scripts/handback_rollup.py`. Model Engineer never applies a recommendation itself —
    see Boundaries below.
 
 **Recommendations are advisory only.** The live model assignment is the static per-role
@@ -65,9 +68,9 @@ durable audit record of the DELEGATE/HANDBACK pair.
 
 **This agent's frontmatter does not grant `spawn_subagent`** (`tools: []`) — Model
 Engineer is a leaf in the delegation tree by design (see `src/AGENTS.md` §
-Tools-Frontmatter Permission Model): it produces recommendations only (written to
-`src/TOKEN_METRICS.md` and returned in its HANDBACK), never a DELEGATE targeting another
-agent, and never spawns a sub-agent itself.
+Tools-Frontmatter Permission Model): it produces recommendations only (returned in its
+HANDBACK), never a DELEGATE targeting another agent, and never spawns a sub-agent
+itself.
 
 ## Example DELEGATE Block
 
@@ -92,11 +95,10 @@ plan:
   - "Apply thresholds: <0.5 → suggest downgrade, 0.5-0.8 → keep, >0.8 → consider upgrade"
   - "Weigh efficiency against metrics.quality before recommending a downgrade"
   - "Build recommendation struct with model, confidence, reasoning per role"
-  - "Append to ~/.agentic-engineers/{harness}/{session-id}/feedback/model-recommendations.jsonl"
+  - "Return the recommendations in the HANDBACK recommendation block"
 success_criteria:
   - Efficiency ratio calculated for all 5 roles
   - Recommendation produced for each role with confidence >= 0.70
-  - Recommendations written to model-recommendations.jsonl
   - HANDBACK returned with next_suggested_models map
 tokens_estimate: 1500
 ---
@@ -115,7 +117,7 @@ output: |
   Analysed token efficiency across 5 roles for commit-quality-gate session.
   Overall efficiency 0.84. Security Engineer underutilised (63%) — flagged for review,
   not a downgrade (quality was high). All other roles appropriately sized.
-  Recommendations written to model-recommendations.jsonl.
+  Recommendations returned in this HANDBACK's recommendation block.
 metrics:
   quality: 0.90
   tokens: 950
@@ -160,9 +162,11 @@ next_suggested_models:
 ## Feedback Loop: Learning Over Time
 
 **Design intent, not current behavior:** the confidence-convergence mechanics below are
-not wired into any code path today — recommendations are written to
-`model-recommendations.jsonl` and `src/TOKEN_METRICS.md` but nothing reads them back in
-to update confidence automatically. This section documents where the loop is headed.
+not wired into any code path today. Recommendations are returned in the HANDBACK and
+read by the Orchestrator that requested them, but nothing persists or reads them back in
+to update confidence automatically across sessions. Closing that loop would need a
+durable recommendation store, which does not exist. This section documents where the
+loop is headed, not what it does.
 
 ```
 Run 1: Recommend Sonnet for Senior Engineer (confidence: 0.70)

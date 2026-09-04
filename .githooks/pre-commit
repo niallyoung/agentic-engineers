@@ -219,9 +219,9 @@ validate_agent_frontmatter() {
 	fi
 	
 	# Source shared lib for extract_fm, parse_agents_md, lookup_agent_metadata
-	# shellcheck source=../renderer/scripts/lib.sh
-	source "$repo_root/renderer/scripts/lib.sh" 2>/dev/null || {
-		echo "⚠️  pre-commit: could not source lib.sh — skipping frontmatter check" >&2
+	# shellcheck source=../renderer/lib/render-lib.sh
+	source "$repo_root/renderer/lib/render-lib.sh" 2>/dev/null || {
+		echo "⚠️  pre-commit: could not source render-lib.sh — skipping frontmatter check" >&2
 		return 0
 	}
 	
@@ -332,8 +332,9 @@ json.loads(content)
 fi
 
 # ─── Section: OpenCode harness config validation ─────────────────────────────
-# Security-critical: opencode.jsonc errors have broken the OpenCode CLI twice
-# (see docs/OPENCODE-CONFIG-INVESTIGATION.md). When the file is staged, run
+# Security-critical: opencode.jsonc errors have broken the OpenCode CLI twice.
+# The validator (scripts/validate_opencode_config.py) documents each rule it
+# enforces, and is the reference for what a valid config looks like. When staged, run
 # the full schema validator (scripts/validate_opencode_config.py) and BLOCK the
 # commit on any ERROR finding. Warnings are surfaced but do not block.
 #
@@ -348,7 +349,7 @@ if git diff --cached --name-only | grep -qE '^opencode\.jsonc$'; then
     trap "rm -f '$staged_tmp'" EXIT
     git show ":opencode.jsonc" > "$staged_tmp" 2>/dev/null || true
     if ! ( cd "$REPO_ROOT_HOOK" && python3 scripts/validate_opencode_config.py "$staged_tmp" ); then
-      fail "opencode.jsonc validation failed — see errors above (see docs/OPENCODE-CONFIG-COMMON-MISTAKES.md)"
+      fail "opencode.jsonc validation failed — see errors above; run 'python3 scripts/validate_opencode_config.py opencode.jsonc' to reproduce"
     fi
   else
     warn "opencode.jsonc staged but validator not available — install scripts/validate_opencode_config.py"
@@ -628,6 +629,11 @@ else
   # Get all staged YAML/YML files
   STAGED_YAML_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true)
 
+  # Count of protocol files actually validated, tallied as we go. This used to be
+  # recomputed after the loop by re-running the identical `git show` + grep scan
+  # purely to produce a number; the loop already knows.
+  PROTOCOL_FILE_COUNT=0
+
   for file in $STAGED_YAML_FILES; do
     [ -f "$file" ] || continue
 
@@ -638,6 +644,7 @@ else
     if ! echo "$file_content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
       continue
     fi
+    PROTOCOL_FILE_COUNT=$((PROTOCOL_FILE_COUNT + 1))
 
     # Detect which discriminator field is used. Warn on deprecated type: form.
     uses_deprecated_type=false
@@ -796,23 +803,10 @@ else
     echo "   → SKIP_HOOKS=1 git commit (bypasses all checks)"
     ERRORS=$((ERRORS + PROTOCOL_ERRORS))
   else
-    # Report when DELEGATE/HANDBACK files were validated successfully.
-    # NOTE: under `set -o pipefail`, the inner `grep` exits 1 when no YAML files
-    # are staged; that non-zero status propagates as the pipeline's status and,
-    # combined with `set -e`, silently aborts the hook with exit 1 right after the
-    # banner. The trailing `|| true` neutralises the empty-match exit so the
-    # command-substitution always succeeds. We also strip the leading whitespace
-    # that BSD `wc -l` emits before the numeric comparison.
-    protocol_file_count=$( { git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' | while read -r f; do
-      content=$(git show ":$f" 2>/dev/null)
-      if echo "$content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
-        echo "1"
-      fi
-    done | wc -l; } || true)
-    protocol_file_count=$(echo "$protocol_file_count" | tr -d '[:space:]')
-
-    if [ "${protocol_file_count:-0}" -gt 0 ]; then
-      echo "✅ DELEGATE/HANDBACK validation passed ($protocol_file_count protocol file(s) validated)"
+    # Report when DELEGATE/HANDBACK files were validated successfully, using the
+    # tally kept by the validation loop above.
+    if [ "${PROTOCOL_FILE_COUNT:-0}" -gt 0 ]; then
+      echo "✅ DELEGATE/HANDBACK validation passed ($PROTOCOL_FILE_COUNT protocol file(s) validated)"
     fi
   fi
 fi

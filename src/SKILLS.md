@@ -1,6 +1,6 @@
 # Skills Registry
 
-> **Status:** Framework slimdown phase (SPEC-2026-005). Registry now contains 7 active skills post queue-removal (2026-08-13) plus the audit-trail-review (2026-08-14) and self-healing-review (2026-08-15) meta-skills, for 8 total. The filesystem queue was removed once dispatch became a direct sub-agent spawn — the harness session transcript is now the durable DELEGATE/HANDBACK audit record. Role definitions and pattern libraries were deleted; refer to [`src/AGENTS.md`](AGENTS.md) for agent descriptions.
+> **Status:** Framework slimdown phase (SPEC-2026-005). Registry contains **8 active skills**: the 6 that remained after queue-removal (2026-08-13) plus the audit-trail-review (2026-08-14) and self-healing-review (2026-08-15) meta-skills. The filesystem queue was removed once dispatch became a direct sub-agent spawn — the harness session transcript is now the durable DELEGATE/HANDBACK audit record. Role definitions and pattern libraries were deleted; refer to [`src/AGENTS.md`](AGENTS.md) for agent descriptions.
 
 ---
 
@@ -26,8 +26,13 @@ Each skill in `src/skills/<name>/` must contain a minimum:
 ```
 src/skills/<name>/
   ├── SKILL.md          # Frontmatter + description (required)
-  └── __init__.py       # Python package marker (required)
+  └── __init__.py       # Python package marker (only for script-backed skills)
 ```
+
+`__init__.py` is required only where the skill ships importable Python. Four skills
+have one (`audit-trail-review`, `protocol-validator`, `self-healing-review`,
+`spec-validator`); the four prose-only skills (`codex-agent-cleanup`, `orchestrator`,
+`skill-improvement-feedback`, `spec-management`) correctly have none.
 
 Script-backed skills also include:
 
@@ -78,16 +83,18 @@ Validates:
 
 ## Quick Reference by Role
 
+All 8 skills appear exactly once below, grouped by the `role` in their frontmatter.
+
 ### Orchestrator
 - `orchestrator/SKILL.md` — direct sub-agent spawn dispatch
+- `protocol-validator/SKILL.md` — DELEGATE/HANDBACK runtime validation
 - `codex-agent-cleanup/SKILL.md` — session cleanup
 - `skill-improvement-feedback/SKILL.md` — feedback analysis
 - `self-healing-review/SKILL.md` — investigate-fix-verify quality cycle
 
-### Quality Engineer / Lead Engineer
+### Quality Engineer
 - `spec-validator/SKILL.md` — SPEC compliance validation
-- `spec-management/SKILL.md` — SPEC maintenance
-- `protocol-validator/SKILL.md` — protocol validation
+- `audit-trail-review/SKILL.md` — audit JSONL review for orphaned/unfinished delegations
 
-### All Roles
-- `protocol-validator/SKILL.md` — shared validation tool
+### Principal Engineer
+- `spec-management/SKILL.md` — governed `docs/SPEC.md` maintenance

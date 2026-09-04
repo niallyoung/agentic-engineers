@@ -32,13 +32,8 @@ CLI usage
 
 Exit codes: 0 = valid, 1 = errors, 2 = warnings (in --strict mode), 3 = I/O error.
 
-NOTE (SPEC-2026-005 framework slimdown, WP-0): moved here from
-src/opencode/config_validator.py — that file was pure stdlib (no relative
-imports) and this move rescues it ahead of src/opencode/ being deleted in a
-later WP. Live call sites: .githooks/pre-commit, .github/workflows/ci.yml
-(credential-scan path exclusion), and tests/test_opencode_config_validation.py.
-(scripts/opencode-safe.sh, once also a caller, was removed 2026-08-13 as an
-orphan — see the SPEC.md Update Log.)
+Call sites: .githooks/pre-commit, .github/workflows/ci.yml (credential-scan
+path exclusion), and tests/test_opencode_config_validation.py.
 """
 
 from __future__ import annotations
@@ -313,7 +308,7 @@ class OpenCodeConfigValidator:
                 code="OC999",
                 severity=Severity.ERROR,
                 message=f"Config file not found: {p}",
-                hint="Run `make install` or `scripts/validate-opencode-config.sh` to bootstrap.",
+                hint="Run `make install-opencode` to bootstrap the config.",
             ))
             return r
         except OSError as exc:
@@ -335,7 +330,7 @@ class OpenCodeConfigValidator:
                 code="OC010",
                 severity=Severity.ERROR,
                 message=f"Config is suspiciously small ({size} bytes) — likely truncated",
-                hint="Restore from backup; see docs/OPENCODE-CONFIG-RECOVERY.md.",
+                hint="Restore from backup; see docs/guides/harness-setup/opencode.md.",
             ))
         elif size > MAX_CONFIG_BYTES:
             r.add(ValidationError(
@@ -551,7 +546,7 @@ class OpenCodeConfigValidator:
                     message=f"command.{name} is missing required `template` field",
                     path=f"{ppath}.template",
                     hint="Every custom command must define a `template` string. See "
-                         "docs/OPENCODE-CONFIG-COMMON-MISTAKES.md#missing-template.",
+                         "docs/guides/harness-setup/opencode.md.",
                 ))
             else:
                 t = spec["template"]

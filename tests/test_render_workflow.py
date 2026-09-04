@@ -154,10 +154,15 @@ class TestDistStructure:
     """Verify the committed dist/ directory has the expected structure."""
 
     @pytest.fixture(autouse=True)
-    def check_dist_present(self, repo_root):
+    def check_dist_present(self, repo_root, render_all):
+        """Guarantee dist/ via the session render, then assert it really landed.
+
+        This used to skip the entire class when dist/ was absent — i.e. it
+        disabled every dist/ assertion below on exactly the condition they exist
+        to detect.
+        """
         dist = repo_root / "dist"
-        if not dist.exists():
-            pytest.skip("dist/ not present (run 'make render-all' first)")
+        assert dist.is_dir(), "dist/ not present after render — run 'make render-all'"
 
     def test_dist_claude_has_skills_and_agents(self, repo_root):
         assert (repo_root / "dist" / "claude" / "skills").is_dir()
@@ -176,8 +181,9 @@ class TestDistStructure:
         """Every skill directory inside dist/ must contain a SKILL.md."""
         for harness in ["claude", "copilot", "opencode"]:
             skills_dir = repo_root / "dist" / harness / "skills"
-            if not skills_dir.exists():
-                continue
+            assert skills_dir.is_dir(), (
+                f"dist/{harness}/skills/ not present — run 'make render-all'"
+            )
             for skill_dir in skills_dir.iterdir():
                 if skill_dir.is_dir():
                     assert (skill_dir / "SKILL.md").exists(), (
@@ -189,13 +195,17 @@ class TestDistStructure:
         skill_sets: dict[str, set[str]] = {}
         for harness in ["claude", "copilot", "opencode"]:
             skills_dir = repo_root / "dist" / harness / "skills"
-            if skills_dir.exists():
-                skill_sets[harness] = {
-                    d.name for d in skills_dir.iterdir() if d.is_dir()
-                }
+            assert skills_dir.is_dir(), (
+                f"dist/{harness}/skills/ not present — run 'make render-all'"
+            )
+            skill_sets[harness] = {
+                d.name for d in skills_dir.iterdir() if d.is_dir()
+            }
 
-        if len(skill_sets) < 2:
-            pytest.skip("Not enough harnesses to compare")
+        # All three harnesses are rendered unconditionally, so there is always
+        # something to compare; the old `< 2 -> skip` silently disabled the
+        # cross-harness check whenever a render had partially failed.
+        assert len(skill_sets) == 3, f"Expected 3 harnesses, got {sorted(skill_sets)}"
 
         harnesses = list(skill_sets.keys())
         ref_harness = harnesses[0]

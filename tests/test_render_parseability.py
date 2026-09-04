@@ -39,18 +39,13 @@ DIST = REPO_ROOT / "dist"
 
 
 @pytest.fixture(scope="module", autouse=True)
-def _render_all():
-    """Render every harness once before this module's tests run."""
-    result = subprocess.run(
-        ["make", "render-all"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, (
-        "make render-all failed:\n"
-        f"STDOUT:\n{result.stdout[-3000:]}\n\nSTDERR:\n{result.stderr[-3000:]}"
-    )
+def _render_all(render_all):
+    """Opt this module in to the session-scoped render.
+
+    The body used to be a byte-identical copy of the same fixture in the other
+    render test module, so `make render-all` ran twice per session. It now
+    lives in tests/conftest.py at session scope; this shim just requests it.
+    """
     yield
 
 
@@ -159,8 +154,8 @@ class TestRenderMarkdownParseability:
     def test_rendered_agents_have_parseable_yaml_frontmatter(self, harness):
         """Every rendered agent .md must have valid YAML frontmatter with non-empty description/model."""
         agents_dir = DIST / harness / "agents"
-        if not agents_dir.is_dir():
-            pytest.skip(f"dist/{harness}/agents/ does not exist")
+        assert agents_dir.is_dir(), \
+            f"dist/{harness}/agents/ does not exist — run 'make render-all'"
 
         for agent_file in agents_dir.glob("*.md"):
             text = agent_file.read_text(encoding="utf-8")
@@ -268,8 +263,8 @@ class TestRenderTOMLParseability:
     def test_codex_agents_are_parseable_toml(self):
         """Every codex agent .toml must parse successfully and contain required fields."""
         agents_dir = DIST / "codex" / "agents"
-        if not agents_dir.is_dir():
-            pytest.skip("dist/codex/agents/ does not exist")
+        assert agents_dir.is_dir(), \
+            "dist/codex/agents/ does not exist — run 'make render-all'"
 
         for agent_file in agents_dir.glob("*.toml"):
             raw = agent_file.read_text(encoding="utf-8")
@@ -297,8 +292,8 @@ class TestRenderTOMLParseability:
         """Codex config.toml and agentic-engineers-orchestrator.config.toml must parse."""
         for config_name in ["config.toml", "agentic-engineers-orchestrator.config.toml"]:
             config_path = DIST / "codex" / config_name
-            if not config_path.is_file():
-                pytest.skip(f"dist/codex/{config_name} does not exist")
+            assert config_path.is_file(), \
+                f"dist/codex/{config_name} does not exist — run 'make render-all'"
 
             raw = config_path.read_text(encoding="utf-8")
             try:
@@ -326,8 +321,8 @@ class TestOpenCodeJSONParseability:
     def test_opencode_jsonc_is_valid_json_after_stripping(self):
         """opencode.jsonc must parse to valid JSON after JSONC comment stripping."""
         jsonc_file = DIST / "opencode" / "opencode.jsonc"
-        if not jsonc_file.is_file():
-            pytest.skip("dist/opencode/opencode.jsonc does not exist")
+        assert jsonc_file.is_file(), \
+            "dist/opencode/opencode.jsonc does not exist — run 'make render-all'"
 
         raw = jsonc_file.read_text(encoding="utf-8")
         stripped = _strip_jsonc(raw)
@@ -345,8 +340,8 @@ class TestOpenCodeJSONParseability:
     def test_opencode_jsonc_passes_strict_validation(self):
         """opencode.jsonc must pass scripts/validate_opencode_config.py with strict=True."""
         jsonc_file = DIST / "opencode" / "opencode.jsonc"
-        if not jsonc_file.is_file():
-            pytest.skip("dist/opencode/opencode.jsonc does not exist")
+        assert jsonc_file.is_file(), \
+            "dist/opencode/opencode.jsonc does not exist — run 'make render-all'"
 
         # Import validator
         sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -378,8 +373,8 @@ class TestSettingsJSONConsistency:
 
         for harness in ["claude", "copilot"]:
             settings_file = DIST / harness / "settings.json"
-            if not settings_file.is_file():
-                pytest.skip(f"dist/{harness}/settings.json does not exist")
+            assert settings_file.is_file(), \
+                f"dist/{harness}/settings.json does not exist — run 'make render-all'"
 
             try:
                 parsed = json.loads(settings_file.read_text(encoding="utf-8"))
@@ -433,8 +428,8 @@ class TestSettingsJSONConsistency:
         assert orchestrator_model, "Orchestrator model not found in src/AGENTS.md"
 
         jsonc_file = DIST / "opencode" / "opencode.jsonc"
-        if not jsonc_file.is_file():
-            pytest.skip("dist/opencode/opencode.jsonc does not exist")
+        assert jsonc_file.is_file(), \
+            "dist/opencode/opencode.jsonc does not exist — run 'make render-all'"
 
         raw = jsonc_file.read_text(encoding="utf-8")
         parsed = json.loads(_strip_jsonc(raw))

@@ -26,12 +26,12 @@
 models carry a **single-part version** and therefore have no separator at all:
 `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. The invariant is "never a hyphen as the
 version separator" (`claude-opus-4-7` is a per-harness render, never source).
-See [SPEC.md > Model Naming Architecture](../docs/SPEC.md).
+See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec).
 
 **SINGLE SOURCE OF TRUTH:** Model assignments are defined in `.githooks/LOCKED_MODELS.sh`
 (`LOCKED_MODELS` + `AGENT_MODEL_ASSIGNMENTS`). All hooks, validators, and this table must
-stay synchronized with it — see [SPEC.md > Model Governance](../docs/SPEC.md) for the
-switch process.
+stay synchronized with it — see [SPEC.md > Model Governance: Locking & Switching](../docs/SPEC.md#model-governance-locking--switching)
+for the switch process.
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
@@ -59,7 +59,7 @@ inspects a DELEGATE's scope, topic, or content for offensive-vs-defensive framin
 specialist spawn) validates DELEGATE structure only (field presence/format); the
 defensive-only constraint is enforced by the Security Engineer's own system prompt and
 by operator/reviewer judgment, not re-routing. See
-[SPEC.md > Model Selection Architecture](../docs/SPEC.md).
+[SPEC.md > Model Fallback & Defensive-Scope Notes](../docs/SPEC.md#model-fallback--defensive-scope-notes).
 
 **Rule:** Start cheap, escalate only when needed. The Orchestrator routes all work; it never implements.
 

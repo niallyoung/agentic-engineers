@@ -37,7 +37,7 @@ Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy 
 
 | Standard | Status | Evidence |
 |----------|--------|----------|
-| **Agent Skills** (agentskills.io SKILL.md) | Conformant | All 7 skills audited 2026-08-14; zero deltas. Validated continuously by `renderer/validate_skills.py`. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Bonus-Task Backlog row 2. |
+| **Agent Skills** (agentskills.io SKILL.md) | Conformant | All 8 skills audited (7 on 2026-08-14, plus `self-healing-review` on 2026-08-15); zero deltas. Validated continuously by `renderer/validate_skills.py`. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Bonus-Task Backlog row 2. |
 | **AGENTS.md** (agents.md convention) | Ready (spec unreleased) | Per-harness AGENTS.md files emitted; user-authored nested AGENTS.md preserved on re-render. AAIF v1.0 spec under 2026 roadmap, not yet released — CI probe stub ready for validator arrival. See [docs/RENDERING.md](docs/RENDERING.md) §AGENTS.md v1.0 Readiness and `tests/test_agents_md_nesting.py`. |
 | **DELEGATE/HANDBACK** (task handoff) | Published (ours) | Standalone, vendor-neutral protocol specification published at [docs/specs/DELEGATE-HANDBACK.md](docs/specs/DELEGATE-HANDBACK.md) with normative schema [docs/specs/protocol-core-v1.0.yaml](docs/specs/protocol-core-v1.0.yaml). No external standard exists in this coordination layer. |
 | **MCP** (Model Context Protocol) | Not applicable (complementary) | Tool-layer standard; MCP handles agent↔tool calls. DELEGATE/HANDBACK operates at agent↔agent layer — orthogonal concerns. See [docs/LANDSCAPE.md](docs/LANDSCAPE.md) §Standards Alignment. |
@@ -56,7 +56,7 @@ definitions, routing rules, and escalation paths live in
 ## Quick Start
 
 ```bash
-# Install the default harness set (OpenCode, Copilot, Claude)
+# Install the default harness set (Copilot, Claude, OpenCode, Codex)
 make install
 
 # Or a single harness:
@@ -83,7 +83,7 @@ DESTDIR=/tmp/test-install make install-opencode
 **Using the Orchestrator:**
 
 ```bash
-claude --permission-mode auto --dangerously-skip-permissions --agent orchestrator
+claude --agent orchestrator
 opencode --agent orchestrator
 copilot --agent orchestrator
 ```

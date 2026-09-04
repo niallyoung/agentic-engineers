@@ -54,8 +54,8 @@ RULES_SENTINEL='<!-- managed by agentic-engineers render-opencode.sh'
 CACHE="${OPENCODE_MODELS_CACHE:-$HOME/.cache/opencode/models.json}"
 
 # Source shared functions (list_source_skills, list_source_agents, extract_fm, strip_fm, extract_body_model)
-# shellcheck source=lib.sh
-source "$(dirname "$0")/lib.sh"
+# shellcheck source=../lib/render-lib.sh
+source "$(dirname "$0")/../lib/render-lib.sh"
 
 # Detect which OpenCode provider the current user has configured.
 # Precedence: explicit OPENCODE_PROVIDER env override → first auth env var found
@@ -71,8 +71,12 @@ detect_opencode_provider() {
 		echo "amazon-bedrock"; return
 	fi
 	if [ -n "${GOOGLE_VERTEX_PROJECT:-}" ]; then echo "google-vertex-anthropic"; return; fi
-	# Sniff the installed opencode.jsonc for an existing model prefix.
-	local cfg="$HOME/.config/opencode/opencode.jsonc"
+	# Sniff the opencode.jsonc in the dir we were asked to render into for an
+	# existing model prefix. Deliberately NOT $HOME/.config/opencode: reading the
+	# live user config while rendering to dist/ or a DESTDIR sandbox leaks host
+	# state into a build that is supposed to be hermetic (and makes dist/ output
+	# differ per machine), defeating the point of passing a destination at all.
+	local cfg="$OPENCODE/opencode.jsonc"
 	if [ -f "$cfg" ]; then
 		local p
 		p=$(grep -oE '"model"[[:space:]]*:[[:space:]]*"[^/"]+' "$cfg" 2>/dev/null | grep -oE '[^"]+$' || true)
@@ -199,7 +203,7 @@ effort_to_variant() {
 #
 # Thin wrapper around the canonical bash parser (parse_agents_md +
 # lookup_agent_metadata, defined in renderer/lib/render-lib.sh and sourced
-# via lib.sh above) rather than a private awk implementation. parse_agents_md
+# above) rather than a private awk implementation. parse_agents_md
 # derives the kebab-case role key straight from the table's Role column
 # (lowercase + spaces->hyphens), so no separate kebab->"Title Case" alias
 # table is needed here — every src/agents/*-agent.md base name already
@@ -234,7 +238,7 @@ docs_lookup_role() {
 	printf '%s\t%s\t%s\n' "$model" "$effort" "$desc"
 }
 
-# yaml_escape_inline() is defined in lib.sh (sourced above)
+# yaml_escape_inline() is defined in renderer/lib/render-lib.sh (sourced above)
 
 # Derive a docs URL from the repo's git remote (best-effort).
 derive_docs_url() {
@@ -436,8 +440,8 @@ DELEGATE/HANDBACK protocol, dispatched by direct sub-agent spawn.
 - **Permission enforcement** is runtime-based; violations are logged and blocked at execution time.
 
 ## Full specification
-See [\`src/AGENTS.md\`]($docs_url), [\`docs/HANDOFF.md\`]($docs_url),
-and [\`docs/SKILLS.md\`]($docs_url)
+See [\`src/AGENTS.md\`]($docs_url), [\`docs/PROTOCOL.md\`]($docs_url),
+and [\`src/SKILLS.md\`]($docs_url)
 in the source repository for the authoritative protocol.
 EOF
 }

@@ -5,9 +5,10 @@ must be installed into a fresh $CLAUDE/hooks/ directory and wired into
 $CLAUDE/settings.json non-destructively, idempotently, and removably.
 
 These tests always render into a temp directory (never the developer's real
-~/.claude), matching the project convention used by tests/claude/conftest.py
-and the DELEGATE that commissioned this hook: "validate via dist/ or a temp
-dir instead" of re-running install against a live ~/.claude.
+~/.claude), per the DELEGATE that commissioned this hook: "validate via dist/
+or a temp dir instead" of re-running install against a live ~/.claude.
+(This previously cited tests/claude/conftest.py as the convention's source;
+that file has since been deleted, so the rationale is stated directly.)
 """
 
 import json

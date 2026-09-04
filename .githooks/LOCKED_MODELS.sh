@@ -44,7 +44,7 @@ LOCKED_MODELS=(
 # Examples:
 # - prefer claude-sonnet-4.6 → fallback to claude-sonnet-4.5 or claude-sonnet-5.0
 # - prefer claude-opus-4.6 → fallback to claude-opus-4.7
-# - prefer claude-haiku-4.5 → fallback to claude-haiku-4.6 if it exists
+# - prefer claude-haiku-4.5 → fallback to any other haiku release, then sonnet
 
 # ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────
 # This is the canonical assignment. Agents MUST use a model from this mapping.
@@ -73,7 +73,16 @@ is_model_locked() {
     return 1  # Model is NOT locked (not approved)
 }
 
-# ─── VALIDATION HELPER: Get locked models for a specific agent ───────────────
+# ─── INTERACTIVE / DIAGNOSTIC HELPERS ────────────────────────────────────────
+# The three functions below (get_agent_locked_model, show_locked_models,
+# show_agent_assignments) have NO caller anywhere in this repo — only
+# is_model_locked() above is invoked by a hook (.githooks/pre-commit). They are
+# kept, and exported, as the documented sourcing API for interactive use:
+#   source .githooks/LOCKED_MODELS.sh && show_agent_assignments
+# See LOCKED_MODELS_RATIONALE.md § "Enforcement Mechanism". Do not delete them
+# expecting to remove dead code — delete them only alongside that documented API.
+
+# Get the locked model for a specific agent.
 get_agent_locked_model() {
     local agent_role="$1"
     

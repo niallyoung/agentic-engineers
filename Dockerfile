@@ -9,10 +9,8 @@ FROM python:3.11-slim
 
 # Install system dependencies needed by the test suite
 # - git: for version detection and symlink support
-# - build-essential: for compiling Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up git symlink support (matches CI configuration)

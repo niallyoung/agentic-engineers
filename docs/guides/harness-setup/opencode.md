@@ -31,7 +31,14 @@ This will:
 There is no filesystem queue. OpenCode dispatches via direct sub-agent spawn (Agent/Task
 tool), and every DELEGATE and HANDBACK is recorded in the harness session transcript
 itself — the DELEGATE as a spawn prompt, the HANDBACK as that spawn's result. Nothing
-reads or writes a separate queue directory.
+reads or writes a queue directory.
+
+Alongside the transcript, agents append one JSON line per orchestration event to
+`~/.agentic-engineers/opencode/{session-id}/audit/events-YYYY-MM-DD.jsonl` (via
+`scripts/audit_append.py`, per `docs/SPEC.md` clause 7). Two records, two purposes: the
+transcript is what makes a DELEGATE/HANDBACK *count*; the JSONL is additive, queryable
+event/metrics data. See
+[docs/PROTOCOL.md > Audit Events (JSONL)](../../PROTOCOL.md#7a-audit-events-jsonl).
 
 OpenCode's rendered config lives in `~/.config/opencode/` and includes `AGENTS.md`, `opencode.jsonc`, `agents/`, and `skills/`.
 
@@ -86,7 +93,8 @@ The Orchestrator processes tasks autonomously by:
 **Fix:**
 1. Run with `--debug` and confirm the Agent/Task spawn call for the expected role
    actually fires: `opencode --agent orchestrator --debug`
-2. Check logs: `tail -f ~/.agentic-engineers/{session-id}/memory/logs/*.log`
+2. Inspect the session's audit events, which record each spawn and its outcome:
+   `tail -f ~/.agentic-engineers/opencode/{session-id}/audit/events-*.jsonl`
 
 If the spawn call fires and returns a HANDBACK, routing worked; if it doesn't fire at all,
 the issue is in the Orchestrator's routing decision.

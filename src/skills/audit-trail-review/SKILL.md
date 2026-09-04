@@ -48,7 +48,7 @@ Load the session's current events JSONL from:
 
 Format: one JSON object per line; required fields per SPEC.md clause 7:
 - `ts` (ISO-8601 UTC timestamp)
-- `event` (string: `delegate_issued`, `subagent_spawned`, `handback_received`, `gate_result`, `escalation`, `refusal`, `limit_exceeded`)
+- `event` (string: `delegate_issued`, `subagent_spawned`, `handback_received`, `gate_result`, `escalation`, `refusal`, `limit_exceeded`, `operator_interjection`)
 - `task_id` (required)
 - `parent_task_id` (may be null for root tasks)
 - `depth` (integer)

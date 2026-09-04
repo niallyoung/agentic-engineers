@@ -116,12 +116,18 @@ class TestDelegateCoreFieIds:
             result = validator.validate_delegate(valid_delegate)
             assert result.valid is True, f"Expected valid task_id: {task_id}"
 
-    def test_validate_delegate_missing_skill(self, validator, valid_delegate):
-        """Missing or invalid skill => error"""
+    def test_validate_delegate_missing_skill_is_valid(self, validator, valid_delegate):
+        """Absent skill => still valid; `skill` is an optional extension, not a core field.
+
+        `skill` (and `spec_version`) were demoted from delegate.core_fields to
+        delegate.extensions in protocol-core-v1.0.yaml. It is now validated only
+        when present — see test_validate_delegate_unknown_skill below, which still
+        rejects a skill that does not exist.
+        """
         del valid_delegate['skill']
         result = validator.validate_delegate(valid_delegate)
-        assert result.valid is False
-        assert any('skill' in e for e in result.errors)
+        assert result.valid is True, f"Expected valid, got errors: {result.errors}"
+        assert not any('skill' in e for e in result.errors)
 
     def test_validate_delegate_unknown_skill(self, validator, valid_delegate):
         """Skill that doesn't exist in skills/ => error"""

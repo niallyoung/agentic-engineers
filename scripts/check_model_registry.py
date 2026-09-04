@@ -13,11 +13,9 @@ import re
 import sys
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
 import urllib.request
-import urllib.error
-from urllib.error import URLError, HTTPError
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LOCKED_MODELS_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
@@ -45,6 +43,7 @@ class RegistryCheckResult:
     model: str
     found: bool
     in_registry_as: Optional[str] = None  # normalized registry id if found
+    provider: Optional[str] = None  # models.dev provider id (e.g. "anthropic")
     status: Optional[str] = None
     context_window: Optional[int] = None
     cost_input: Optional[float] = None
@@ -85,8 +84,8 @@ def _fetch_models_dev_registry() -> Optional[Dict]:
     try:
         with urllib.request.urlopen(MODELS_DEV_API, timeout=REQUEST_TIMEOUT) as resp:
             return json.loads(resp.read())
-    except (URLError, HTTPError, Exception) as e:
-        # Network unavailable — advisory only, return None
+    except Exception:
+        # Network unavailable / malformed response — advisory only.
         return None
 
 
@@ -109,105 +108,171 @@ def _normalize_model_id(registry_id: str, locked_id: str) -> bool:
         return True
 
     # Variant: family + major version only (strip minor)
-    def get_base(m: str) -> str:
-        # Extract claude-{variant}-{major}
-        match = re.match(r"^(claude-[\w]+)-(\d+)", m)
-        if match:
-            return match.group(1) + "-" + match.group(2)
-        return m
+    return _match_tier(registry_id, locked_id) is not None
 
-    return get_base(registry_id) == get_base(locked_id)
+
+def _model_base(m: str) -> str:
+    """Family + major version only, e.g. claude-opus-4.7 -> claude-opus-4."""
+    match = re.match(r"^(claude-[\w]+)-(\d+)", m)
+    if match:
+        return match.group(1) + "-" + match.group(2)
+    return m
+
+
+def _match_tier(registry_id: str, locked_id: str) -> Optional[int]:
+    """Rank how well a registry id matches a locked id — lower is better.
+
+    0  exact id
+    1  dot/dash spelling variant (Anthropic publishes claude-opus-4-7 where
+       LOCKED_MODELS.sh writes claude-opus-4.7)
+    2  trailing ".0" variant
+    3  family + major only — LOSSY: claude-opus-4.6, 4.7 and 4.8 all share the
+       base claude-opus-4, so this tier must never outrank tier 1, or a lookup
+       for 4.7 reports 4.5's context window and pricing.
+
+    Returns None when the ids do not correspond at all.
+    """
+    if registry_id == locked_id:
+        return 0
+    if registry_id.replace(".", "-") == locked_id.replace(".", "-"):
+        return 1
+    if registry_id == locked_id + ".0" or locked_id == registry_id + ".0":
+        return 2
+    if _model_base(registry_id) == _model_base(locked_id):
+        return 3
+    return None
+
+
+def _iter_registry_models(registry_data: Dict):
+    """Yield (provider_id, model_id, model_dict) from a models.dev api.json payload.
+
+    Verified shape (fetched from https://models.dev/api.json, 2026-09-03):
+
+        { "<provider-id>": { "id": ..., "name": ..., "models": { "<model-id>": {...} } } }
+
+    i.e. the top level is keyed by *provider*, and each provider holds a
+    ``models`` dict keyed by model id. The previous implementation treated each
+    top-level entry as a model, so every provider dict was indexed under its
+    provider id and no locked model could ever be found.
+
+    A flat ``{"models": [...]}`` / ``{"data": [...]}`` list is still accepted as
+    a defensive fallback in case the endpoint changes shape.
+    """
+    if not isinstance(registry_data, dict):
+        return
+
+    # Defensive fallback: a flat list of model objects.
+    for flat_key in ("models", "data"):
+        flat = registry_data.get(flat_key)
+        if isinstance(flat, list):
+            for model in flat:
+                if isinstance(model, dict) and model.get("id"):
+                    yield model.get("provider"), model["id"], model
+            return
+
+    # Canonical shape: provider -> {"models": {model_id: {...}}}
+    for provider_id, provider in registry_data.items():
+        if not isinstance(provider, dict):
+            continue
+        models = provider.get("models")
+        if not isinstance(models, dict):
+            continue
+        for model_id, model in models.items():
+            if isinstance(model, dict):
+                yield provider_id, model.get("id") or model_id, model
 
 
 def _build_model_index(registry_data: Dict) -> Dict[str, ModelInfo]:
-    """
-    Build a searchable index of models from registry.
+    """Build a {model_id: ModelInfo} index from a models.dev api.json payload."""
+    index: Dict[str, ModelInfo] = {}
 
-    Registry structure: { "providers": [ ... ], "models": [ ... ] }
-    or { "data": [ ... ] } etc. We look for a list or models/providers structure.
-    """
-    index = {}
-
-    # Try common structures
-    models_list = []
-    if isinstance(registry_data, dict):
-        if "models" in registry_data and isinstance(registry_data["models"], list):
-            models_list = registry_data["models"]
-        elif "data" in registry_data and isinstance(registry_data["data"], list):
-            models_list = registry_data["data"]
-        elif isinstance(registry_data, list):
-            models_list = registry_data
-        else:
-            # Assume top-level is a dict of models keyed by id
-            models_list = []
-            for key, val in registry_data.items():
-                if isinstance(val, dict):
-                    if "id" not in val:
-                        val["id"] = key
-                    models_list.append(val)
-
-    for model in models_list:
-        if not isinstance(model, dict):
-            continue
-
-        model_id = model.get("id", "")
+    for provider_id, model_id, model in _iter_registry_models(registry_data):
         if not model_id:
             continue
 
-        # Extract relevant fields
+        limit = model.get("limit") if isinstance(model.get("limit"), dict) else {}
         info = ModelInfo(
             id=model_id,
             name=model.get("name"),
-            provider=model.get("provider"),
+            provider=provider_id,
+            # models.dev exposes limit.context (input context window) and
+            # limit.output (max output tokens). The context window is `context`;
+            # this previously read `output` and reported max-output as context.
             status=model.get("status"),
-            context_window=model.get("limit", {}).get("output") if isinstance(model.get("limit"), dict) else None,
+            context_window=limit.get("context"),
         )
 
-        # Extract pricing
-        if isinstance(model.get("cost"), dict):
-            info.cost_input = model["cost"].get("input")
-            info.cost_output = model["cost"].get("output")
+        cost = model.get("cost")
+        if isinstance(cost, dict):
+            info.cost_input = cost.get("input")
+            info.cost_output = cost.get("output")
 
-        index[model_id] = info
+        # Same model id appears under many reseller providers with differing
+        # limits. Prefer the first entry seen, but let the canonical "anthropic"
+        # provider win any collision so limits/pricing come from the source.
+        existing = index.get(model_id)
+        if existing is None or (provider_id == "anthropic" and existing.provider != "anthropic"):
+            index[model_id] = info
 
     return index
+
+
+CANONICAL_PROVIDER = "anthropic"
 
 
 def check_model_against_registry(
     locked_model: str,
     registry_index: Dict[str, ModelInfo]
 ) -> RegistryCheckResult:
-    """Check a single locked model against the registry."""
+    """Check a single locked model against the registry.
+
+    models.dev lists the same model under dozens of reseller providers, whose
+    reported limits and pricing differ from Anthropic's own. Anthropic also
+    publishes dashed ids (``claude-opus-4-7``) where ``LOCKED_MODELS.sh`` uses
+    dotted ones (``claude-opus-4.7``), so an exact id hit is usually a reseller.
+
+    Candidates are therefore ranked (canonical provider first, then exact id)
+    rather than returning the first hit — an exact reseller match used to win
+    over the canonical dashed entry and report that reseller's context window.
+    """
     result = RegistryCheckResult(model=locked_model, found=False)
 
-    # Exact match
-    if locked_model in registry_index:
-        info = registry_index[locked_model]
-        result.found = True
-        result.in_registry_as = locked_model
-        result.status = info.status
-        result.context_window = info.context_window
-        result.cost_input = info.cost_input
-        result.cost_output = info.cost_output
-        if info.status:
-            result.notes = f"Status: {info.status}"
+    candidates = [
+        (registry_id, info)
+        for registry_id, info in registry_index.items()
+        if _match_tier(registry_id, locked_model) is not None
+    ]
+
+    if not candidates:
+        result.notes = "unknown to registry (naming mismatch or too new)"
         return result
 
-    # Try normalization: check for .0 variants or base-only matches
-    for registry_id, info in registry_index.items():
-        if _normalize_model_id(registry_id, locked_model):
-            result.found = True
-            result.in_registry_as = registry_id
-            result.status = info.status
-            result.context_window = info.context_window
-            result.cost_input = info.cost_input
-            result.cost_output = info.cost_output
-            if info.status:
-                result.notes = f"Status: {info.status} (found as {registry_id})"
-            return result
+    def rank(item):
+        registry_id, info = item
+        tier = _match_tier(registry_id, locked_model)
+        return (
+            # Precise matches (exact / dot-dash / ".0") beat the lossy base tier.
+            tier >= 3,
+            # Within equally precise matches prefer Anthropic itself: a locked id
+            # is dotted, so a reseller's verbatim "claude-opus-4.6" (tier 0) is a
+            # coincidence, while Anthropic's "claude-opus-4-6" (tier 1) is the
+            # real model — and only Anthropic's limits/pricing are authoritative.
+            info.provider != CANONICAL_PROVIDER,
+            tier,
+            registry_id,
+        )
 
-    # Not found
-    result.notes = "unknown to registry (naming mismatch or too new)"
+    registry_id, info = min(candidates, key=rank)
+
+    result.found = True
+    result.in_registry_as = registry_id
+    result.provider = info.provider
+    result.status = info.status
+    result.context_window = info.context_window
+    result.cost_input = info.cost_input
+    result.cost_output = info.cost_output
+    if info.status:
+        result.notes = f"Status: {info.status} (found as {registry_id})"
     return result
 
 
@@ -247,6 +312,8 @@ def format_output_text(
         if result.found:
             if result.in_registry_as != result.model:
                 lines.append(f"  Registry ID: {result.in_registry_as}")
+            if result.provider:
+                lines.append(f"  Provider: {result.provider}")
             if result.status:
                 lines.append(f"  Status: {result.status}")
             if result.context_window:
@@ -271,7 +338,7 @@ def format_output_text(
     return "\n".join(lines)
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Check LOCKED_MODELS.sh against models.dev registry"
     )
@@ -291,12 +358,15 @@ def main():
         assignments = _parse_agent_assignments()
 
         # Fetch registry (or skip if --offline)
-        registry_data = {} if args.offline else _fetch_models_dev_registry()
+        registry_data = None if args.offline else _fetch_models_dev_registry()
 
         if registry_data is None:
-            # Network unavailable; advisory only
+            # No registry to compare against; advisory only.
             registry_index = {}
-            offline_note = "(network unavailable — advisory skipped)"
+            offline_note = (
+                "(--offline: registry fetch skipped)" if args.offline
+                else "(network unavailable — advisory skipped)"
+            )
         else:
             registry_index = _build_model_index(registry_data)
             offline_note = ""
@@ -324,14 +394,14 @@ def main():
             if offline_note:
                 print(f"\nNote: {offline_note}")
 
-        # Advisory-only: always exit 0
-        sys.exit(0)
+        # Advisory-only: a successful run always reports 0.
+        return 0
 
     except Exception as e:
-        # Real crash: report and exit 1
+        # Real crash: report and return 1.
         print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

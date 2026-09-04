@@ -51,7 +51,7 @@ renderer/
 │   ├── validate_renders.py          — dist/ vs src/skills/ sync check
 │   ├── check_test_regression.py     — pytest collection-count regression gate
 │   ├── claude-delegate-guard.py     — Claude PreToolUse hook enforcing DELEGATE protocol
-│   └── lib.sh                       — shared shell helpers
+│   └── render-lib.sh                — shared shell helpers (single source of truth)
 ├── lib/                             — shared Python rendering helpers
 ├── validate_agents.py               — src/agents/ frontmatter + registration validator
 ├── validate_skills.py               — src/skills/ frontmatter + registry validator

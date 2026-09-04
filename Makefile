@@ -28,6 +28,19 @@ endif
 # Supported harnesses (mirrors install/render targets).
 HARNESSES := claude copilot opencode codex
 
+# Lint scope. Python: every first-party source tree, not just src/ + tests/.
+PY_LINT_DIRS := $(REPO_ROOT)/src $(REPO_ROOT)/tests $(REPO_ROOT)/scripts $(REPO_ROOT)/renderer
+# Shell: renderer scripts *and* renderer/lib, standalone scripts/, and the
+# extensionless git hooks (which are bash and were previously unlinted).
+SHELL_LINT_FILES := $(shell find "$(REPO_ROOT)/renderer" "$(REPO_ROOT)/scripts" -name '*.sh' -type f 2>/dev/null) \
+                    $(shell ls "$(REPO_ROOT)"/.githooks/pre-commit "$(REPO_ROOT)"/.githooks/pre-push \
+                               "$(REPO_ROOT)"/.githooks/commit-msg "$(REPO_ROOT)"/.githooks/post-merge \
+                               "$(REPO_ROOT)"/.githooks/*.sh 2>/dev/null)
+
+# Parse a JSONC file (strip // line comments, then json.loads). Takes the path
+# as $$1. Shared by validate-opencode and lint so the one-liner lives once.
+JSONC_CHECK = python3 -c "import json,sys,re; t=open(sys.argv[1]).read(); t=re.sub(r'^\s*//.*$$','',t,flags=re.M); json.loads(t)"
+
 # Active-harness symlink location. Defaults to the framework state dir under
 # $(HOME); override for hermetic testing, e.g.:
 #   make harness-toggle HARNESS=opencode ACTIVE_LINK=/tmp/ae-test/active-harness
@@ -62,7 +75,7 @@ help:
 	@echo "  render-all          All harnesses + specs"
 	@echo ""
 	@echo "Diagnostic:"
-	@echo "  harness-toggle      Symlink the active harness (HARNESS=claude|copilot|opencode)"
+	@echo "  harness-toggle      Symlink the active harness (HARNESS=$(subst $() ,|,$(HARNESSES)))"
 	@echo "                      (override link path: ACTIVE_LINK=/path/to/active-harness)"
 	@echo "  verify              Full verification (structure + agents + skills + protocols)"
 	@echo "  validate-opencode   Validate OpenCode config generation"
@@ -209,10 +222,10 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies)
 	@echo "   ✓ Installation scripts verified"
 	@echo ""
 	@echo "4️⃣  Validating agent definitions (src/agents/)..."
-	@python3 "$(REPO_ROOT)/renderer/validate_agents.py" 2>&1 || echo "   ⚠️  Agent validation skipped (validator error)"
+	@python3 "$(REPO_ROOT)/renderer/validate_agents.py" || (echo "❌ Agent validation failed — fix errors above" && exit 1)
 	@echo ""
 	@echo "5️⃣  Validating skill definitions (src/skills/)..."
-	@python3 "$(REPO_ROOT)/renderer/validate_skills.py" 2>&1 || echo "   ⚠️  Skill validation skipped (validator error)"
+	@python3 "$(REPO_ROOT)/renderer/validate_skills.py" || (echo "❌ Skill validation failed — fix errors above" && exit 1)
 	@echo ""
 	@echo "6️⃣  Checking protocol documents present..."
 	@test -f "$(REPO_ROOT)/src/AGENTS.md" || (echo "❌ src/AGENTS.md missing" && exit 1)
@@ -224,11 +237,11 @@ verify: ## Verify framework structure and tests (agents, skills, dependencies)
 	@echo "✅ Framework structure verified"
 
 validate-opencode: ## Validate OpenCode config generation (status + JSON schema check)
-	@echo "🔍 Validating OpenCode install at ~/.config/opencode/..."
-	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(HOME)/.config/opencode" --status
-	@if [ -f "$(HOME)/.config/opencode/opencode.jsonc" ]; then \
-		(command -v jq >/dev/null && jq -e --raw-input 'inputs' "$(HOME)/.config/opencode/opencode.jsonc" >/dev/null 2>&1) \
-		|| python3 -c "import json,sys,re; t=open(sys.argv[1]).read(); t=re.sub(r'^\s*//.*$$','',t,flags=re.M); json.loads(t)" "$(HOME)/.config/opencode/opencode.jsonc"; \
+	@echo "🔍 Validating OpenCode install at $(DESTDIR)/.config/opencode/..."
+	@bash "$(REPO_ROOT)/renderer/scripts/render-opencode.sh" "$(REPO_ROOT)" "$(DESTDIR)/.config/opencode" --status
+	@if [ -f "$(DESTDIR)/.config/opencode/opencode.jsonc" ]; then \
+		(command -v jq >/dev/null && jq -e --raw-input 'inputs' "$(DESTDIR)/.config/opencode/opencode.jsonc" >/dev/null 2>&1) \
+		|| $(JSONC_CHECK) "$(DESTDIR)/.config/opencode/opencode.jsonc"; \
 		echo "✅ opencode.jsonc is valid JSONC"; \
 	fi
 	@echo "✅ OpenCode validation complete"
@@ -255,21 +268,35 @@ validate-renders: ## Verify all src/skills/ have corresponding dist/ outputs (fa
 
 lint: ## Lint Python, Shell, and YAML files
 	@echo "🔍 Linting Python files (syntax check)..."
-	@find "$(REPO_ROOT)/src" -name "*.py" -type f -exec python3 -m py_compile {} \; 2>&1 | grep -v "^$$" || echo "   ✓ Python syntax OK"
-	@find "$(REPO_ROOT)/tests" -name "*.py" -type f -exec python3 -m py_compile {} \; 2>&1 | grep -v "^$$" || echo "   ✓ Test syntax OK"
+	@# py_compile is a hard gate: pipe through xargs so a compile error is the
+	@# recipe's exit status. (The old `-exec ... \; | grep -v '^$$'` inverted
+	@# this — an error made grep MATCH, so the pipeline exited 0.)
+	@find $(PY_LINT_DIRS) -name "*.py" -type f -not -path "*/__pycache__/*" -print0 \
+		| xargs -0 python3 -m py_compile \
+		|| (echo "❌ Python syntax errors above — fix them" && exit 1)
+	@echo "   ✓ Python syntax OK (src, tests, scripts, renderer)"
 	@if command -v ruff >/dev/null 2>&1; then \
 		echo "🔍 Linting Python files (ruff style)..."; \
-		ruff check "$(REPO_ROOT)/src" "$(REPO_ROOT)/tests" 2>&1 || echo "   ⚠️  Ruff warnings detected"; \
+		ruff check $(PY_LINT_DIRS) || echo "   ⚠️  Ruff style findings (advisory — not a gate)"; \
+	else \
+		echo "   ⏭️  ruff not installed — skipping style lint (advisory only)"; \
 	fi
 	@echo "🔍 Linting Shell files (bash -n)..."
-	@find "$(REPO_ROOT)/renderer/scripts" -name "*.sh" -type f -exec bash -n {} \; && echo "   ✓ Shell syntax OK"
+	@# Note: `exit 1` must NOT be wrapped in ( ... ) here — a subshell exit would
+	@# only leave the subshell and the loop would carry on with status 0.
+	@for f in $(SHELL_LINT_FILES); do \
+		bash -n "$$f" || { echo "❌ Shell syntax error in $$f"; exit 1; }; \
+	done
+	@echo "   ✓ Shell syntax OK (renderer, scripts, .githooks)"
 	@if command -v shellcheck >/dev/null 2>&1; then \
 		echo "🔍 Linting Shell files (shellcheck)..."; \
-		find "$(REPO_ROOT)/renderer/scripts" -name "*.sh" -type f -exec shellcheck {} \; && echo "   ✓ shellcheck OK" || echo "   ⚠️  shellcheck warnings"; \
+		shellcheck $(SHELL_LINT_FILES) && echo "   ✓ shellcheck OK" || echo "   ⚠️  shellcheck findings (advisory — not a gate)"; \
+	else \
+		echo "   ⏭️  shellcheck not installed — skipping (advisory only)"; \
 	fi
 	@if [ -f "$(REPO_ROOT)/opencode.jsonc" ]; then \
 		echo "🔍 Linting YAML/JSON files..."; \
-		python3 -c "import json,sys,re; t=open('$(REPO_ROOT)/opencode.jsonc').read(); t=re.sub(r'^\s*//.*$$','',t,flags=re.M); json.loads(t)" && echo "   ✓ opencode.jsonc syntax OK"; \
+		$(JSONC_CHECK) "$(REPO_ROOT)/opencode.jsonc" && echo "   ✓ opencode.jsonc syntax OK"; \
 	fi
 	@echo ""
 	@echo "✅ All lints passed"
@@ -285,7 +312,7 @@ test: ## Run pytest test suite with coverage (tests/ + every src/skills/*/tests 
 	@echo "✅ Tests complete. HTML coverage report: htmlcov/index.html"
 	@$(MAKE) test-skills
 
-test-skills: ## Run each src/skills/*/tests suite (8 skills) in its own subprocess
+test-skills: ## Run each src/skills/*/tests suite (3 script-backed skills) in its own subprocess
 	@echo ""
 	@echo "🧪 Running skill test suites (src/skills/*/tests)..."
 	@echo "   Each skill runs in its own subprocess — see scripts/run_skill_tests.py"
@@ -461,7 +488,7 @@ validate-specs: ## Verify dist/specs/ is deployed and all spec files are valid
 	@bash "$(REPO_ROOT)/renderer/scripts/render-specs.sh" "$(REPO_ROOT)" "$(REPO_ROOT)/dist" --validate || (echo "❌ Spec validation failed — run 'make render-specs' to regenerate" && exit 1)
 	@echo "✅ Spec validation complete"
 
-harness-toggle: ## Force-create active-harness symlink (HARNESS=claude|copilot|opencode, ACTIVE_LINK=path)
+harness-toggle: ## Force-create active-harness symlink (HARNESS=<one of $(HARNESSES)>, ACTIVE_LINK=path)
 	@if [ -z "$(HARNESS)" ]; then \
 		echo "❌ HARNESS not set. Usage: make harness-toggle HARNESS=<$(subst $() ,|,$(HARNESSES))>"; \
 		exit 1; \

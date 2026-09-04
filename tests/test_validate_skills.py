@@ -44,23 +44,9 @@ from validate_skills import (
 # ============================================================================
 
 @pytest.fixture
-def temp_repo(tmp_path):
-    """Create a temporary repository structure for testing."""
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    
-    # Create src/skills directory
-    skills_dir = repo_root / "src" / "skills"
-    skills_dir.mkdir(parents=True)
-    
-    # Create src directory
-    src_dir = repo_root / "src"
-    
-    return {
-        "root": repo_root,
-        "skills_dir": skills_dir,
-        "src_dir": src_dir,
-    }
+def temp_repo(temp_repo_factory):
+    """Temp repo skeleton containing src/skills/ (see tests/conftest.py)."""
+    return temp_repo_factory("skills")
 
 
 @pytest.fixture
@@ -86,24 +72,11 @@ description: Minimal skill
 """
 
 
-@pytest.fixture
-def malformed_frontmatter():
-    """Frontmatter with syntax errors."""
-    return """---
-name: test
-description: "unclosed quote
-invalid yaml: [
----
-"""
-
-
-@pytest.fixture
-def missing_closing_delimiter():
-    """Frontmatter missing closing --- delimiter."""
-    return """---
-name: test
-description: test
-"""
+# NOTE: `malformed_frontmatter` and `missing_closing_delimiter` are shared
+# fixtures defined in tests/conftest.py — both this module and
+# test_validate_skills.py carried near-verbatim copies. Every consumer only
+# needs "YAML that will not parse" / "no closing delimiter", so one definition
+# serves both.
 
 
 # ============================================================================
@@ -216,18 +189,12 @@ class TestPathSecurity:
         traversal_errors = [e for e in errors if "not allowed" in e.message or ".." in e.message]
         assert len(traversal_errors) > 0, "Should reject paths with .."
 
-    def test_extract_skills_md_rejects_absolute_paths(self, temp_repo):
-        """Test that absolute paths in SKILLS.md are rejected (CRITICAL)."""
-        repo_root = temp_repo["root"]
-        skills_md_content = """
-| `/etc/passwd` |
-| `src/skills/valid/SKILL.md` |
-"""
-        referenced, errors = _extract_skill_paths_from_skills_md(skills_md_content, repo_root)
-        # Should have error for absolute path
-        abs_errors = [e for e in errors if "outside" in e.message or "not allowed" in e.message]
-        # Absolute paths won't match the regex, but let's ensure no errors for valid paths
-        assert len(errors) >= 0
+    # NOTE: a second, identical `def test_extract_skills_md_rejects_absolute_paths`
+    # used to sit here. Python keeps only the LAST definition of a name in a class
+    # body, so this copy was silently discarded and had never executed. Its body was
+    # `assert len(errors) >= 0` (unfalsifiable) plus an unused `abs_errors` local.
+    # The surviving definition below is the real one; this copy is deleted rather
+    # than renamed because it asserted nothing.
 
     def test_extract_skills_md_accepts_valid_paths(self, temp_repo):
         """Test that valid relative paths in SKILLS.md are accepted."""
@@ -249,9 +216,15 @@ class TestPathSecurity:
 | `src\skills\..\..\..\etc\passwd` |
 """
         referenced, errors = _extract_skill_paths_from_skills_md(skills_md_content, repo_root)
-        # Pattern uses forward slashes, so Windows paths won't be extracted
-        # but we should gracefully handle them
-        assert len(errors) >= 0
+        # The extraction pattern is forward-slash only, so a backslash path is not
+        # extracted at all — that IS the rejection. Assert both halves of that
+        # contract; the previous `assert len(errors) >= 0` could not fail even if
+        # the traversal had been extracted and accepted.
+        assert not referenced, (
+            f"Backslash paths must not be extracted, got: {sorted(referenced)}"
+        )
+        traversal = sorted(r for r in referenced if ".." in str(r))
+        assert not traversal, f"Traversal path escaped extraction: {traversal}"
 
     def test_extract_skills_md_rejects_absolute_paths(self, temp_repo):
         """Test that absolute paths in SKILLS.md are explicitly rejected."""
@@ -653,24 +626,12 @@ name: test
         errors = validate_skill_file(doc_file)
         assert errors == []
 
-    def test_validate_skill_file_strict_mode(self, temp_repo):
-        """Test that strict mode treats warnings as errors."""
-        skill_file = temp_repo["skills_dir"] / "test" / "SKILL.md"
-        skill_file.parent.mkdir(parents=True)
-        
-        content = """---
-name: test
-description: Test
-roles:
-  - unknown-role
----
-"""
-        skill_file.write_text(content)
-        
-        errors = validate_skill_file(skill_file, strict=True)
-        # In strict mode, role warnings might be errors
-        # Behavior depends on implementation
-        assert len(errors) >= 0
+    # NOTE: `test_validate_skill_file_strict_mode` was deleted here. It called
+    # validate_skill_file(skill_file, strict=True) and then asserted
+    # `len(errors) >= 0` — unfalsifiable either way. The `strict` parameter has
+    # since been removed from validate_skill_file()'s signature entirely, so the
+    # test's whole premise ("strict mode treats warnings as errors") no longer
+    # describes anything the validator does. Removed rather than re-pointed.
 
 
 # ============================================================================
@@ -1042,7 +1003,13 @@ metadata:
         """ACTIVE_SKILLS must stay in sync with the real src/skills/ directory
         (the compliance audit only covers skills named in this list)."""
         repo_skills_dir = Path(__file__).parent.parent / "src" / "skills"
-        on_disk = {p.name for p in repo_skills_dir.iterdir() if p.is_dir()}
+        # Ignore underscore/dot-prefixed dirs (__pycache__, scratch dirs) exactly
+        # as every other skill-directory scan in this suite does — otherwise a
+        # stray .pyc directory fails a test about the SKILL registry.
+        on_disk = {
+            p.name for p in repo_skills_dir.iterdir()
+            if p.is_dir() and not p.name.startswith(("_", "."))
+        }
         assert set(ACTIVE_SKILLS) == on_disk, (
             f"ACTIVE_SKILLS {sorted(ACTIVE_SKILLS)} does not match "
             f"src/skills/ on disk {sorted(on_disk)}"

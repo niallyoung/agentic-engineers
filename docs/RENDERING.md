@@ -22,7 +22,7 @@ src/                    dist/                   ~/.copilot/ (etc.)    AI Harness
 ─────────────────────   ─────────────────────   ─────────────────     ─────────────
 agents/*-agent.md  ──►  copilot/agents/         ~/.copilot/agents/   loaded at session start
 skills/*/SKILL.md  ──►  copilot/skills/         ~/.copilot/skills/   loaded on demand (skill tool)
-config/SPEC.md etc ──►  specs/                  n/a (local ref only) QA/consistency checks
+docs/SPEC.md etc  ──►  specs/                  n/a (local ref only) QA/consistency checks
 src/agents/*.md    ──►  opencode/agents/        ~/.config/opencode/  loaded at session start
 src/skills/*/      ──►  opencode/skills/        ~/.config/opencode/  loaded on demand
 ```
@@ -137,15 +137,19 @@ renderer/
 │   └── render-lib.sh          # UNIFIED library — single source of truth
 │       ├── list_source_skills  # enumerate skills by SKILL.md presence
 │       ├── list_source_agents  # enumerate agents by *-agent.md pattern
-│       ├── list_source_specs   # enumerate spec directories by SPEC.md presence
 │       ├── extract_fm          # parse YAML frontmatter field
+│       ├── extract_fm_list     # parse a YAML frontmatter list field
 │       ├── strip_fm            # strip frontmatter, return body
+│       ├── extract_body_model  # read the model named in an agent body
 │       ├── validate_frontmatter   # check required fields for entity type
-│       ├── validate_entity_structure  # verify rendered file format
-│       ├── validate_deployment    # comprehensive deployment check
 │       ├── yaml_escape_inline  # safe YAML string escaping
 │       ├── map_model           # short model name mapping (haiku/sonnet/opus)
-│       └── emit_progress       # consistent progress output (human/json modes)
+│       ├── parse_agents_md     # parse the roster table in src/AGENTS.md
+│       ├── lookup_agent_metadata  # role -> model/effort from that roster
+│       ├── is_safe_entity_name # reject unsafe skill/agent names before pruning
+│       ├── prune_excluded_cruft    # drop non-entity files from a render target
+│       ├── prune_orphaned_skills   # delete rendered skills with no source
+│       └── prune_orphaned_agents   # delete rendered agents with no source
 └── scripts/
     ├── lib.sh                  # backward-compat SHIM — sources render-lib.sh
     ├── render-copilot.sh       # renders agents (via render-copilot-agents.py) + skills → dist/copilot/

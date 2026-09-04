@@ -78,14 +78,24 @@ someone who has verified a real path end to end.
 
 ---
 
-## The Audit Trail: Harness Session Transcript
+## The Audit Trail: Two Records, Two Purposes
 
-Every DELEGATE and HANDBACK is recorded in the harness session transcript itself — the
-DELEGATE as a sub-agent spawn's prompt, the HANDBACK as that spawn call's result. Dispatch
-completes synchronously within the harness session that produced it. If you need to retain
-a record of a session's work beyond the session itself, use your harness's own
-session-history or transcript-export mechanism, if it offers one — agentic-engineers does
-not write a separate copy of its own.
+**1. The harness session transcript — what makes a DELEGATE/HANDBACK count.** Every
+DELEGATE and HANDBACK is recorded in the transcript itself: the DELEGATE as a sub-agent
+spawn's prompt, the HANDBACK as that spawn call's result. Dispatch completes synchronously
+within the session that produced it. To retain this beyond the session, use your harness's
+own session-history or transcript-export mechanism, if it offers one — agentic-engineers
+does not write a second copy of the transcript.
+
+**2. The JSONL event log — additive, queryable metrics.** Separately, `docs/SPEC.md`
+clause 7 requires agents to append one JSON line per orchestration event to
+`~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl` via
+`scripts/audit_append.py`. This is append-only event/metrics data derived from the same
+events, written so tooling such as `scripts/handback_rollup.py` can query a session
+without re-parsing a transcript. It does not replace the transcript and is not what
+establishes protocol validity.
+
+See [docs/PROTOCOL.md > Audit Events (JSONL)](../PROTOCOL.md#7a-audit-events-jsonl).
 
 ---
 

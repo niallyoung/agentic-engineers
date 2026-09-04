@@ -161,7 +161,9 @@ class TestValidateDelegateCore:
         ("task_id", "invalid_task"),
         ("task_id", "ab"),
         ("task_id", "-bad-id"),
-        ("skill", _DEL),
+        # ("skill", _DEL) removed: `skill` is an optional extension now, so its
+        # ABSENCE is valid. The cases below still hold — when skill IS present it
+        # must be a non-empty string naming a real skill.
         ("skill", None),
         ("skill", 42),
         ("skill", "nonexistent-skill-xyz-123"),

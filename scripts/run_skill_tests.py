@@ -6,10 +6,9 @@ run_skill_tests.py — Execute every src/skills/**/tests/ suite in CI.
 
 `pytest.ini` sets `testpaths = tests`, so tests living under `src/skills/*/tests/`
 are never collected by `make test` / CI on their own — each surviving skill's
-test files need their own CI visibility via this runner. (Historical note:
-before the SPEC-2026-005 framework slimdown this covered ~1,200 tests across
-36 skills; post-slimdown there are 8 skills, 5 of which are script-backed and
-carry tests/ — see MIN_EXPECTED_TESTS below.)
+test files need their own CI visibility via this runner. Of the 8 skills, 3 are
+script-backed and carry a tests/ suite: protocol-validator, spec-validator and
+skill-improvement-feedback.
 
 The obvious fix — add `src/skills` to `testpaths` and run one big `pytest`
 session — does NOT work correctly here: many skills use the identical
@@ -53,30 +52,13 @@ SKILLS_ROOT = REPO_ROOT / "src" / "skills"
 # tests dir went missing, got excluded, etc.) — fail loudly rather than
 # silently reporting a shrinking number.
 #
-# Re-baselined in WP-R3-05 (task-2026-08-13-r3-wp05-test-consolidation) from
-# the measured actual of 289 tests across the same 3 script-backed skills
-# (protocol-validator, skill-improvement-feedback, spec-validator). The
-# tests/-scope duplicate layers (tests/test_core_protocol_validator.py,
-# tests/test_spec_validator.py) were collapsed into these skill-local
-# suites: protocol-validator gained a new parametrized
-# test_protocol_validator_core.py (low-level CoreProtocolValidator/
-# ExtensionValidator coverage migrated in from the deleted tests/-scope
-# file) and had its own TestPerformance trimmed to a single <5ms check
-# (52 -> 187 tests net); spec-validator's suite lost its
-# orphan-method-dependent tests (parse_file/correlate_with_spec/
-# validate_files removed from spec_validator.py) and TestDomainModels but
-# gained the real-docs/SPEC.md TestSpecValidatorIntegration class (114 ->
-# 99 tests). Floor is ~95% of the new actual (289 * 0.95 = 274.55 -> 274),
-# matching the same headroom convention used by
-# renderer/scripts/check_test_regression.py. Update only alongside a real
-# skill addition/removal or another deliberate test-suite consolidation.
-#
-# Prior baseline (queue-removal, task-2026-08-13-queue-removal-code): 169.
+# Floor is ~95% of the measured actual (289 tests across the 3 script-backed
+# skills), matching renderer/scripts/check_test_regression.py's convention.
+# Rationale and re-baselining rules: docs/REGRESSION-GATE-POLICY.md.
 MIN_EXPECTED_TESTS = 274
 
-# Some skill suites (file-sync in particular) exercise the real repository
-# tree end-to-end rather than an isolated fixture, so they run considerably
-# slower than a typical unit-test suite. Generous but bounded.
+# Some skill suites exercise the real repository tree end-to-end rather than an
+# isolated fixture, so they run slower than a typical unit suite. Bounded.
 SUBPROCESS_TIMEOUT_SECONDS = 600
 
 # Matches every count-bearing token in pytest's final summary line, e.g.:

@@ -130,7 +130,8 @@ effort: high
 **Optional extensions:** `token_usage` (structured input/output/cached breakdown),
 `escalations`, `model_assessment`, `confidence` (0.0–1.0), `retry_count`,
 `model_used`, `effort_actual`, `children_created`, `children_results`, `flags`,
-`criteria_results`, `error`. `skill_feedback` (structured per-skill feedback
+`criteria_results`, `error`, `interjections` (operator interjections received
+mid-task, each with `ts`, `source`, `directive`, `disposition`). `skill_feedback` (structured per-skill feedback
 consumed by the `skill-improvement-feedback` pattern) is accepted at runtime as a
 forward-compatible field — see `protocol_validator.py`'s
 `KNOWN_HANDBACK_RUNTIME_FIELDS` and `src/skills/skill-improvement-feedback/SKILL.md`
@@ -197,12 +198,25 @@ The three enforcement layers cover different fields and operate at different tim
 | `status` enum | ✅ | ✅ | — | Skill + pre-commit |
 | `metrics` sub-fields | ✅ | ✅ | — | Skill + pre-commit |
 | Secret patterns | — | ✅ | — | pre-commit only |
+| `depth` <= 3 (when declared) | — | — | ✅ | PreToolUse only |
+| `ancestry` cycle (when declared) | — | — | ✅ | PreToolUse only |
 
 **Reality:** The `protocol-validator` skill is authoritative for *completeness* (all required fields); `.githooks/pre-commit` is a fast gate for committed files; `PreToolUse` guard is the gate for in-session Agent-tool spawns. An agent may also *self-enforce* its role's `spawn` recursion limits (depth, fan-out) before issuing a DELEGATE to a sub-agent — that is not a validator responsibility.
 
-None of these layers enforces the *calling* agent's role, ancestry, spawn depth, or
-fan-out count — that is the spawning agent's own judgment call per
-[Recursion Limits](../src/AGENTS.md#recursion-limits) in `src/AGENTS.md`.
+**Recursion limits are partially enforced.** The `PreToolUse` guard
+(`renderer/scripts/claude-delegate-guard.py`) *does* reject a DELEGATE whose `depth`
+exceeds 3, and *does* reject one whose `agent` already appears in its own `ancestry`
+(a cycle). Two caveats bound that:
+
+- `depth` and `ancestry` are **optional** extension fields. A DELEGATE that omits them
+  is not checked — the guard cannot infer a depth it was not told.
+- The guard sees **one spawn at a time**, so it cannot count concurrent fan-out. The
+  max-fan-out-5 limit is not mechanically enforced anywhere.
+
+No layer enforces the *calling* agent's role or fan-out count; those remain the spawning
+agent's own judgment call per [Recursion Limits](../src/AGENTS.md#recursion-limits) in
+`src/AGENTS.md`. The guard is Claude-harness-specific; no other harness has an
+equivalent.
 
 There is no filesystem queue and no `enqueue()` gateway — the durable audit record for
 protocol validity is the harness session transcript itself (every DELEGATE as a spawn
@@ -397,7 +411,7 @@ written by agents, that tooling can consume without re-parsing a session transcr
 reorder, truncate, or delete prior lines. Corrections are new events, never edits.
 
 **Required events:** `delegate_issued`, `subagent_spawned`, `handback_received`,
-`gate_result`, `escalation`, `refusal`, `limit_exceeded`.
+`gate_result`, `escalation`, `refusal`, `limit_exceeded`, `operator_interjection`.
 
 **Required fields on every event:** `ts` (ISO-8601 UTC, computed by the append helper
 — never trusted from caller input), `event`, `task_id`, `parent_task_id` (may be

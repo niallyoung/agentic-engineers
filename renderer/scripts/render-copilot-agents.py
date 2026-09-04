@@ -4,11 +4,12 @@ Copilot CLI Agent Renderer
 Converts src/agents/*.md to dist/copilot/agents/*.agent.md with Copilot CLI spec compliance
 """
 
+import argparse
 import os
-import sys
 import re
+import sys
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import yaml
 
@@ -200,7 +201,7 @@ model: {frontmatter['model']}
         if newly_managed:
             self._write_manifest(newly_managed)
 
-        print(f"\n✅ Rendering complete!")
+        print("\n✅ Rendering complete!")
         print(f"   {rendered} agents rendered, {skipped} skipped (foreign), {errors} errors")
 
         if errors > 0:
@@ -271,13 +272,35 @@ model: {frontmatter['model']}
         print(f"✅ Removed {removed} managed agent(s)")
         return 0
 
-def main():
-    # Parse arguments. Optional trailing --uninstall removes managed agents.
-    args = [a for a in sys.argv[1:] if a != "--uninstall"]
-    uninstall = "--uninstall" in sys.argv[1:]
+def parse_args(argv: list) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="render-copilot-agents.py",
+        description="Render agentic-engineers source agents for the Copilot CLI",
+    )
+    parser.add_argument("src_dir", help="Source agents directory (src/agents)")
+    parser.add_argument(
+        "dest_dir",
+        nargs="?",
+        default=os.path.expanduser("~/.copilot/agents"),
+        help="Destination agents directory (default: ~/.copilot/agents)",
+    )
+    parser.add_argument(
+        "--uninstall",
+        action="store_true",
+        help="Remove managed agents instead of rendering",
+    )
+    return parser.parse_args(argv)
 
-    src_dir = args[0]
-    dest_dir = args[1] if len(args) > 1 else os.path.expanduser('~/.copilot/agents')
+
+def main(argv: Optional[list] = None):
+    # Previously this indexed sys.argv[1:] directly, so a bare invocation died
+    # with an unhandled IndexError and no usage message. argparse mirrors
+    # render-codex.py and prints usage on a missing argument instead.
+    args = parse_args(argv if argv is not None else sys.argv[1:])
+    uninstall = args.uninstall
+
+    src_dir = args.src_dir
+    dest_dir = args.dest_dir
 
     # Get absolute paths
     repo_root = Path(__file__).parent.parent.parent  # ../../ from scripts/
@@ -288,7 +311,7 @@ def main():
     dest_path = Path(dest_dir).expanduser().resolve()
 
     print(f"\n{'='*60}")
-    print(f"Copilot CLI Agent Renderer")
+    print("Copilot CLI Agent Renderer")
     print(f"{'='*60}\n")
 
     renderer = CopilotAgentRenderer(str(src_path), str(dest_path))
@@ -299,12 +322,12 @@ def main():
     exit_code = renderer.render_all()
 
     if exit_code == 0:
-        print(f"✅ All agents ready for Copilot CLI!")
+        print("✅ All agents ready for Copilot CLI!")
         print(f"📍 Location: {dest_path}")
-        print(f"\nUsage in Copilot CLI:")
-        print(f"  /agent                      # Select agent interactively")
-        print(f"  copilot --agent=engineer    # Explicit selection")
-        print(f"  Use the security-engineer   # Auto-inference in prompts")
+        print("\nUsage in Copilot CLI:")
+        print("  /agent                      # Select agent interactively")
+        print("  copilot --agent=engineer    # Explicit selection")
+        print("  Use the security-engineer   # Auto-inference in prompts")
     
     return exit_code
 

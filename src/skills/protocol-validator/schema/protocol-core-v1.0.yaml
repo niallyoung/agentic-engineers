@@ -160,15 +160,19 @@ definitions:
 delegate:
   type: object
   description: Orchestrator -> Agent task assignment.
+  # NOTE: `skill` and `spec_version` were previously listed here as required.
+  # Nothing in live practice sends either — not src/AGENTS.md's quick reference,
+  # not any agent's example DELEGATE, not the spawn guard, not a single real
+  # DELEGATE — and _skill_exists() would have rejected the docs' own examples
+  # (skill: engineer, skill: code-review; no such skills exist). Both are now
+  # optional extensions so the schema matches the protocol as actually spoken.
   required:
     - task_id
-    - skill
     - agent
     - scope
     - success_criteria
     - plan
     - context
-    - spec_version
     - handoff_type
 
   # --- Required core fields (strictly enforced) ---------------------------
@@ -178,20 +182,10 @@ delegate:
       $ref: "#/definitions/task_id"
       description: Unique kebab-case task identifier.
 
-    spec_version:
-      type: string
-      description: Protocol spec version authorizing this task.
-
     handoff_type:
       type: string
       enum: [DELEGATE]
       description: Protocol identifier.
-
-    skill:
-      type: string
-      description: >
-        Name of the skill responsible for the task. Must resolve to an existing
-        entry under skills/ (directory or <skill>.md) at validation time.
 
     agent:
       $ref: "#/definitions/agent"
@@ -242,6 +236,17 @@ delegate:
 
   # --- Optional extension fields (loosely validated, forward-compatible) ---
   extensions:
+
+    skill:
+      type: string
+      description: >
+        Optional name of a skill responsible for the task. When present it
+        SHOULD resolve to an entry under skills/, but a DELEGATE that omits it
+        is valid.
+
+    spec_version:
+      type: string
+      description: Optional protocol spec version authorizing this task.
 
     model:
       type: string

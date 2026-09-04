@@ -34,40 +34,34 @@ except ImportError:
 # Constants
 # ---------------------------------------------------------------------------
 
-# KNOWN_MODELS — LOCKED per docs/SPEC.md "Model Naming Architecture"
+# KNOWN_MODELS — the set of model ids a source agent may declare.
 #
-# This set is the SINGLE SOURCE OF TRUTH for approved models.
-# ALL models must be listed here; validator rejects anything outside this set.
+# See docs/SPEC.md § "Model Naming & Harness Compatibility (LOCKED SPEC)" for the
+# architecture, and .githooks/LOCKED_MODELS.sh for the models actually assigned to
+# agents (the pre-commit hook enforces that narrower set). This set is deliberately
+# a superset of LOCKED_MODELS: it also accepts ids that are still legal in rendered
+# or example output but are no longer assigned to any agent.
 #
-# STRUCTURE:
-#   Versioned Claude models (canonical source format, DOTS required):
-#     - claude-haiku-4.5, claude-haiku-4.6
-#     - claude-sonnet-4.5, claude-sonnet-4.6
-#     - claude-opus-4.5, claude-opus-4.6, claude-opus-4.7, claude-opus-4.8
-#   
-#   Short aliases (for Claude Code harness only):
-#     - haiku, sonnet, opus (no version numbers)
+# ACCEPTED:
+#   - Canonical source ids, version separated by a DOT: claude-{variant}-{major}.{minor}
+#     (single-part versions have no dot at all: claude-opus-5, claude-fable-5)
+#   - Claude Code short aliases, no version: haiku, sonnet, opus, fable
 #
-# FORBIDDEN (causes validator to REJECT):
-#   ❌ GPT models (gpt-4, gpt-4o, gpt-4o-mini)
-#   ❌ Unversioned Claude (claude-opus without -4.7)
-#   ❌ Hyphens in version (claude-opus-4-7) — source uses DOTS
-#   ❌ Uppercase, underscores, or other formats
+# REJECTED (reported as a WARNING, or an ERROR under --strict):
+#   - Non-Claude models
+#   - Hyphenated versions (claude-opus-4-7) — that is a per-harness RENDER format
+#     produced by the OpenCode renderer, never a valid source id
+#   - Uppercase, underscores, or any other shape
 #
-# RATIONALE:
-#   Model naming broke repeatedly across commits due to per-harness
-#   format confusion. Source agents use canonical format (DOTS),
-#   renderers transform per harness (OpenCode→hyphens, Claude Code→aliases).
-#   This set enforces the canonical format for source validation.
-#   See docs/SPEC.md for complete architecture & transformation rules.
-#
+# Anything added here must exist in the Anthropic API model list. Keep it in step
+# with .githooks/LOCKED_MODELS.sh when a model is approved or retired — a phantom
+# id here silently green-lights an agent that can never actually be spawned.
 
 KNOWN_MODELS = {
     # Versioned Claude models (canonical source format)
     # SOURCE: https://docs.anthropic.com/claude/docs/models-overview
     # Format: claude-{variant}-{major}.{minor} or claude-{variant}-{major} (for single-part versions)
     "claude-haiku-4.5",
-    "claude-haiku-4.6",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
     "claude-sonnet-5",
@@ -236,7 +230,7 @@ def validate_agents(
         checked += 1
 
     # Also validate HANDBACK metrics requirements in AGENTS.md
-    all_errors.extend(validate_handback_schema(src_dir, strict=strict))
+    all_errors.extend(validate_handback_schema(src_dir))
 
     errors = [e for e in all_errors if e.level == "ERROR"]
     warnings = [e for e in all_errors if e.level == "WARNING"]
@@ -257,7 +251,7 @@ def validate_agents(
     return len(errors), len(warnings)
 
 
-def validate_handback_schema(src_dir: Path, strict: bool = False) -> list[ValidationError]:
+def validate_handback_schema(src_dir: Path) -> list[ValidationError]:
     """Verify AGENTS.md documents the canonical HANDBACK schema.
 
     The single source of truth is ``docs/specs/protocol-core-v1.0.yaml`` (enforced
@@ -297,9 +291,8 @@ def validate_handback_schema(src_dir: Path, strict: bool = False) -> list[Valida
 
     for field in required_handback_fields:
         if field not in content:
-            level = "WARNING"
             errors.append(ValidationError(
-                agents_md_path, level,
+                agents_md_path, "WARNING",
                 f"AGENTS.md HANDBACK schema missing '{field}' field documentation"
             ))
 

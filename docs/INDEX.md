@@ -19,7 +19,7 @@
 | Document | Purpose |
 |----------|---------|
 | [SPEC.md](SPEC.md) | **Source of truth** — implementation specification |
-| [PROTOCOL.md](PROTOCOL.md) | DELEGATE/HANDBACK validation, scoring, and escalation reference |
+| [PROTOCOL.md](PROTOCOL.md) | DELEGATE/HANDBACK validation, enforcement, quality assessment, and escalation reference |
 | [specs/DELEGATE-HANDBACK.md](specs/DELEGATE-HANDBACK.md) | Standalone, publication-ready DELEGATE/HANDBACK protocol specification (external audience) |
 | [CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md) | 30-minute protocol quick start |
 | [ENTRYPOINT.md](ENTRYPOINT.md) | Standard execution model |
@@ -27,6 +27,7 @@
 | [RENDERING.md](RENDERING.md) | Framework render/install pipeline |
 | [REGRESSION-GATE-POLICY.md](REGRESSION-GATE-POLICY.md) | Regression testing gate (interim permissive, WP-0/WP-5) |
 | [BACKGROUND-AGENT-COMMIT-PROTOCOL.md](BACKGROUND-AGENT-COMMIT-PROTOCOL.md) | Background agent commit protocol |
+| [CONTRIBUTING/README.md](CONTRIBUTING/README.md) | Contributor guide (also reachable as the repo-root `CONTRIBUTING.md` symlink) |
 
 ---
 
@@ -35,7 +36,7 @@
 | Location | Contents |
 |----------|----------|
 | [decisions/](decisions/) | Architecture Decision Records (model centralization, repository structure) |
-| [specs/](specs/) | Machine-readable protocol schemas (delegate/handback/protocol-core) |
+| [specs/](specs/) | Machine-readable protocol schema (`protocol-core-v1.0.yaml`) plus the standalone DELEGATE/HANDBACK specification |
 
 ---
 

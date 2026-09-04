@@ -9,15 +9,15 @@ rules without modifying this script.
 Usage:
   python3 scripts/validate-spec-constraints.py                    # Check all constraints
   python3 scripts/validate-spec-constraints.py --constraint NAME  # Check specific constraint
-  python3 scripts/validate-spec-constraints.py --fix              # (future) Auto-fix violations
+
+Invoked by .githooks/pre-push (see that hook's SPEC constraint section).
 """
 
-import os
 import re
 import sys
 import argparse
 from pathlib import Path
-from typing import List, Dict, Set, Tuple
+from typing import List, Tuple
 from dataclasses import dataclass
 
 
@@ -26,7 +26,7 @@ class Constraint:
     """Defines a SPEC architectural constraint to validate."""
     name: str
     description: str
-    spec_section: str  # e.g., "Queue Architecture & Paths"
+    spec_section: str  # e.g., "ORCHESTRATOR-FIRST EXECUTION MODEL"
     forbidden_patterns: List[str]  # Regex patterns that must not appear in code (non-comments)
     search_paths: List[str]  # Directories to search (relative to repo root)
     search_extensions: List[str]  # File extensions to check (e.g., ['.sh', '.py', '.md'])
@@ -35,10 +35,13 @@ class Constraint:
 
 # Define all SPEC constraints here — add new ones as the framework evolves
 CONSTRAINTS = [
+    # orchestration/ no longer exists (removed in the framework slimdown). These
+    # patterns are retained as a *re-introduction* guard: nothing may add an
+    # external script-runner tree back under orchestration/.
     Constraint(
         name="no-external-scripts-in-orchestration",
         description="All automation must flow through DELEGATE/HANDBACK; external scripts forbidden in orchestration/",
-        spec_section="Queue Architecture & Paths (LOCKED)",
+        spec_section="ORCHESTRATOR-FIRST EXECUTION MODEL",
         forbidden_patterns=[
             r"orchestration/scripts",
             r"orchestration/config/.*\.cron",
@@ -47,16 +50,7 @@ CONSTRAINTS = [
         search_extensions=[".sh", ".py"],
         skip_patterns=["LEGACY", "fallback", "historic", "example", "TODO"],
     ),
-    # Future constraints can be added here:
-    # Constraint(
-    #     name="queue-paths-canonical",
-    #     description="All queue paths must use ~/.agentic-engineers/ canonical path",
-    #     spec_section="Queue Architecture & Paths",
-    #     forbidden_patterns=[r"~/.copilot/queue", r"~/\.claude/queue"],
-    #     search_paths=["src", "docs"],
-    #     search_extensions=[".py", ".sh", ".md"],
-    #     skip_patterns=["LEGACY", "deprecated", "historic"],
-    # ),
+    # Future constraints can be added here.
 ]
 
 
@@ -109,21 +103,10 @@ def find_violations(constraint: Constraint, repo_root: Path) -> List[Tuple[str, 
                                 rel_path = file_path.relative_to(repo_root)
                                 violations.append((str(rel_path), line_num, line.rstrip()))
                                 break  # One violation per line
-            except Exception as e:
-                # Skip files that can't be read
-                pass
+            except OSError as e:
+                print(f"warning: could not read {file_path}: {e}", file=sys.stderr)
 
     return violations
-
-
-def validate_constraint(constraint: Constraint, repo_root: Path) -> Tuple[bool, List[Tuple[str, int, str]]]:
-    """
-    Validate a single constraint.
-
-    Returns: (is_valid, violations)
-    """
-    violations = find_violations(constraint, repo_root)
-    return len(violations) == 0, violations
 
 
 def format_violation(file_path: str, line_num: int, line_content: str) -> str:
@@ -141,14 +124,11 @@ def main():
         help="Validate only this constraint (by name)",
         choices=[c.name for c in CONSTRAINTS],
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output results as JSON",
-    )
     args = parser.parse_args()
 
-    repo_root = Path.cwd()
+    # Derive the repo root from this file, not the cwd: running the script from a
+    # subdirectory used to silently scan nothing and report success.
+    repo_root = Path(__file__).resolve().parent.parent
     constraints_to_check = (
         [c for c in CONSTRAINTS if c.name == args.constraint]
         if args.constraint
@@ -159,10 +139,10 @@ def main():
     total_violations = 0
 
     for constraint in constraints_to_check:
-        is_valid, violations = validate_constraint(constraint, repo_root)
+        violations = find_violations(constraint, repo_root)
         total_violations += len(violations)
 
-        if not is_valid:
+        if violations:
             all_valid = False
             print(f"❌ {constraint.name}")
             print(f"   {constraint.description}")

@@ -203,7 +203,7 @@ effort: medium
 
 | Field | Type | Purpose |
 |---|---|---|
-| `token_usage` | object | Structured input/output/cached/total breakdown, superseding flat `metrics.tokens` |
+| `token_usage` | object | Structured input/output/cached/total breakdown, superseding flat `metrics.tokens`. (Schema-wise this is a `core_fields` entry that is not in `required` — optional in practice, listed here with the other optional fields.) |
 | `escalations` | integer | Count of times this task was escalated during execution |
 | `model_assessment` | string | Reviewer's judgement on whether the model tier fit the task |
 | `confidence` | number | Agent's self-reported confidence, 0.0–1.0 |
@@ -215,6 +215,7 @@ effort: medium
 | `flags` | array\<string\> | Free-form advisory flags |
 | `criteria_results` | array | Per-`success_criteria`-item evidence and gaps |
 | `error` | string | Error detail when `status` is `failure` or `blocked` |
+| `interjections` | array | Operator interjections received mid-task, each recording the directive and its disposition (`required: [ts, source, directive, disposition]`) |
 
 > **Two more fields are in active documented use but absent from the schema's
 > extension list** — do not conflate them: `skill_feedback` (structured
@@ -255,10 +256,10 @@ hand-transcription:
 ```python
 import yaml
 schema = yaml.safe_load(open("docs/specs/protocol-core-v1.0.yaml"))
-schema["delegate"]["required"]            # -> the 9 DELEGATE core fields
+schema["delegate"]["required"]            # -> the 9 required DELEGATE fields
 schema["delegate"]["extensions"].keys()   # -> the 11 DELEGATE extensions
-schema["handback"]["required"]            # -> the 6 HANDBACK core fields
-schema["handback"]["extensions"].keys()   # -> the 11 HANDBACK extensions
+schema["handback"]["required"]            # -> the 6 required HANDBACK fields
+schema["handback"]["extensions"].keys()   # -> the 12 HANDBACK extensions
 ```
 
 `ancestry`, `skill_feedback`, and `escalation` (singular) were confirmed
@@ -308,11 +309,18 @@ convention — RECOMMENDED as a default absent a stronger reason to differ — i
   delegating, an agent SHOULD check whether its target role already appears
   in `ancestry`; if so, it SHOULD refuse rather than complete a cycle.
 
-**Enforcement optional.** In the reference implementation, none of these
-three rules is checked by runtime code at delegation time — no counter
-tracks depth or fan-out, and no code inspects `ancestry` for cycles. They are
-self-enforced by convention. A conformant *enforcer* (§6) MAY make one or
-more of these checks mechanical; today's reference enforcers do not.
+**Enforcement is partial.** Of the three rules above, two are mechanically
+checked at delegation time by the reference spawn-time guard
+(`renderer/scripts/claude-delegate-guard.py`, §6): it rejects a DELEGATE
+declaring `depth` greater than 3, and rejects one whose `agent` already appears
+in its own `ancestry` list. Both checks are conditional on the DELEGATE
+*declaring* those optional fields — a DELEGATE that omits `depth` or `ancestry`
+passes unchecked, since the guard cannot infer what it was not told.
+
+Fan-out is **not** enforced: the guard is invoked once per spawn and holds no
+state across spawns, so it cannot count concurrent sub-agents. That rule remains
+self-enforced by convention, as does the choice to populate `ancestry` honestly.
+A conformant *enforcer* (§6) MAY make the remaining check mechanical.
 
 ### 5.4 The ESCALATION Packet
 
@@ -393,7 +401,7 @@ overlapping rather than one complete gate:
 |---|---|---|
 | `protocol-validator` skill (`protocol_validator.py`) | `task_id`, `skill`, `agent`, `scope`, `success_criteria`, `plan`, `context` on DELEGATE; `task_id`, `status`, `output`, `metrics` on HANDBACK | On demand, in-process |
 | Commit-time hook (regex-based) | `task_id`, `agent`, `handoff_type` on DELEGATE; `status`, `metrics` sub-fields, `handoff_type` on HANDBACK; plus a secret-pattern scan | `git commit`, on staged files |
-| Spawn-time guard (dependency-free, fails open) | `task_id`, `agent`, `scope`, `plan`, `success_criteria` on DELEGATE only | Every in-session agent-spawn call |
+| Spawn-time guard (dependency-free, fails open) | `handoff_type`, `task_id` (kebab-case, 3–50 chars), `agent`, `scope` (>=15 words), `plan`, `success_criteria` on DELEGATE only; plus `depth` <= 3 and `ancestry` cycle detection when those optional fields are declared | Every in-session agent-spawn call |
 
 **An honest gap, not an oversight:** `spec_version` is a required core field
 (§4.1, §4.2) but is not currently checked for presence or format by any of
