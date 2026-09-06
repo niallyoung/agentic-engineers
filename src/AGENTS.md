@@ -13,7 +13,7 @@
 - **Reduced autonomy** — agents pause when there is no pending or in-flight delegated work; they do NOT invent work
 - **Start cheap, escalate deliberately** — each role's default model is the cheapest tier capable of that role's job (see the Agent Roster table); a low-quality HANDBACK triggers rework or reroutes to a higher-tier role, not a live mid-task model upgrade
 - **Root-cause fixes** — address the actual problem; never disable tests, add workarounds, or avoid failures
-- **Cold-context agents** — every DELEGATE is self-contained; the receiving agent cannot rely on session state
+- **Cold-context agents** — every DELEGATE is self-contained; the receiving agent cannot rely on session state. Where a harness supports it, an agent that already holds the relevant context MAY be *continued* rather than cold-spawned (see [Sub-Agent Reuse](#sub-agent-reuse-agent-continuation)) — an optimization that still requires a full, self-contained DELEGATE
 - **Parallel by default** — the Orchestrator fans out multiple DELEGATEs simultaneously when tasks are independent
 - **Token-conscious** — cite line numbers, suppress verbose output, trust tool confirmations; measure with Model Engineer
 
@@ -407,7 +407,9 @@ MODEL_USED: claude-sonnet-5   # actual model used (not the requested model)
 3.  The spawning agent SPAWNS the target agent directly (Agent/Task tool),
     passing the DELEGATE block as the sub-agent's prompt. For independent
     tasks, it fans out multiple spawns in parallel — up to 5 concurrent per
-    parent (see Recursion Limits)
+    parent (see Recursion Limits). When the follow-on work builds directly on
+    what a still-live or recent sub-agent already did, it CONTINUES that agent
+    instead of cold-spawning a duplicate (see Sub-Agent Reuse)
 4.  Each spawned agent ACKs, loads its skill, performs work (and MAY itself
     spawn further sub-agents if its frontmatter grants `spawn_subagent`,
     subject to the same depth/fan-out/cycle checks), and returns a HANDBACK
@@ -455,6 +457,84 @@ triggers rework (re-delegate to the same agent with the discrepancy named) or re
 applies to Engineer HANDBACKs specifically because Engineer is the framework's
 lowest-scrutiny, highest-fan-out tier; it does not relax the general "verify before
 accepting" expectation that applies when any HANDBACK is accepted at face value.
+
+### Sub-Agent Reuse (Agent Continuation)
+
+**Principle.** When the next unit of work builds directly on what a sub-agent just did,
+prefer *continuing that same agent* over spawning a fresh, cold-context one. A cold spawn
+has to re-read the same files and re-derive the same understanding the previous agent
+already holds; continuing it pays those tokens, that latency, and that cost only once.
+This is an optimization *within* the direct-spawn model — not a new dispatch mechanism, and
+not a relaxation of any rule below.
+
+**This does not weaken "cold-context agents."** A continuation DELEGATE is still
+self-contained: full canonical schema, its own `scope`/`context`/`plan`/`success_criteria`,
+readable on its own. Continuation lets the agent *skip re-deriving* what it already worked
+out; it is never licence to send a terse DELEGATE that only makes sense to an agent with
+retained state. Correctness must never depend on memory a fresh agent would lack.
+
+**When to reuse (continue the same agent):**
+
+- Sequential or iterative steps of one effort, where step N+1 operates on step N's output
+  (e.g. "now wire the function you just wrote into its call sites").
+- The agent just analysed, reverse-engineered, or mapped exactly the code/logic the next
+  task acts on — a fresh agent would only repeat that discovery.
+- A fix-up after review: applying Lead/QE review feedback to code the *same* agent authored.
+- Several DELEGATEs against one code area, in one role, close together in time.
+
+**When NOT to reuse (spawn fresh, cold):**
+
+- A different role or domain is required. Continuation is the *same node, same role*
+  resuming; routing to another role is always a new spawn.
+- Independent verification is the point. Quality Engineer validating an Engineer's work —
+  or any reviewer checking an implementer's output — MUST be a fresh agent; a reviewer that
+  inherited the implementer's context and rationalizations is not an independent check.
+- The prior context is stale, was paused long ago, or is polluted with abandoned
+  dead-ends; the re-derivation you would save is worth less than the confusion you carry
+  forward.
+- The continuation would overflow the agent's context window (a long prior task plus a
+  large new one) — a fresh, tightly-scoped spawn is cheaper and safer.
+- The new work is genuinely independent of what the agent did — there is no shared context
+  to preserve, so there is nothing to gain.
+
+**Protocol invariants (unchanged by reuse):**
+
+- **Full DELEGATE, new `task_id`.** A continuation is still issued as a canonical DELEGATE
+  block (`handoff_type`, `agent`, `task_id`, `scope` >=15 words, `context`, `plan`,
+  `success_criteria`) with a *new* `task_id`, and still returns a HANDBACK. The Claude
+  PreToolUse guard (`renderer/scripts/claude-delegate-guard.py`) validates it exactly as it
+  validates any DELEGATE — it is unchanged and does not distinguish a continuation from a
+  cold spawn.
+- **No extra depth hop, same ancestry.** Continuing an agent does *not* create a new node
+  in the delegation tree and does *not* add a spawn hop — it is the same node, at the depth
+  and with the `ancestry` it was originally spawned at. Cycle detection is unaffected (the
+  continued agent's `ancestry` is what it always was).
+- **Still counts toward fan-out.** While a continued agent is in flight it occupies one of
+  its parent's 5 concurrent-child slots, exactly like a freshly spawned child.
+- **Cost guardrail unchanged.** Still set `tokens_estimate`/`budget`; a continuation's
+  estimate is normally *lower* than the cold-spawn equivalent because the context is
+  already loaded — reflect that saving in the number.
+
+**Audit trail.** Clause-7 events are emitted for a continuation the same as for any
+dispatch: `delegate_issued` + `subagent_spawned` at issue time, `handback_received` +
+`gate_result` on return. There is no distinct event name, and `scripts/audit_append.py`'s
+interface is unchanged. Mark the continuation *in the data you already control*: name the
+prior `task_id` in the DELEGATE's `scope`/`context` (which lands verbatim in the
+transcript), and set the optional `resolves_task_id` field on the audit event
+(`docs/PROTOCOL.md` § 7a) to link the continuation back to the task it builds on. A
+reviewer reading the trail can then see that task B resumed the agent from task A rather
+than starting cold.
+
+**Per-harness support.** Use continuation where the harness offers a first-class primitive
+for it; where it does not, fall back to a fresh spawn carrying a context-rich DELEGATE. The
+DELEGATE/HANDBACK contract is identical either way.
+
+| Harness | Sub-agent continuation | Mechanism / fallback |
+|---|---|---|
+| **Claude Code** | Supported today | `SendMessage` to a live or recently-completed sub-agent (by id or name) resumes it with its context intact; `ListAgents` enumerates the candidates. A plain new `Agent`/`Task` call is always cold. `subagent_type: fork` inherits the *caller's* context, not a specialist's — a different mechanism, not specialist continuation. |
+| **Codex** | Supported | `codex resume` and `codex fork` session subcommands, and `codex exec resume`, re-enter a prior session (`docs/guides/harness-setup/codex.md`); the `codex-agent-cleanup` skill already assumes resumable sub-agents (`wait_agent`, `close_agent`, "resume active work"). |
+| **OpenCode** | Not first-class (as documented) | No documented sub-agent continuation primitive (`docs/guides/harness-setup/opencode.md`). Fall back to a fresh spawn with a context-rich DELEGATE. |
+| **Copilot** | Not first-class | `/fleet` decomposes a single prompt into work items with no per-agent prompt or continuation channel (`docs/RENDERING.md` § Copilot CLI Harness Notes). Fall back to a fresh spawn with a context-rich DELEGATE. |
 
 ### Recursion Limits
 

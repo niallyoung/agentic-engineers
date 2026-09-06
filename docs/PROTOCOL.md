@@ -39,6 +39,13 @@ audit record — this is what makes a DELEGATE/HANDBACK *count* (`docs/SPEC.md`
 clause 4). See [`src/AGENTS.md` > Direct Sub-Agent Spawn Execution
 Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the full flow.
 
+A DELEGATE MAY also **continue an existing sub-agent** that already holds the
+relevant context instead of cold-spawning a new one, on harnesses that support it
+(Claude Code via `SendMessage`; Codex via `resume`/`fork`). The message format,
+its validation, and the HANDBACK contract are identical to a cold spawn;
+continuation adds no delegation-tree node and no depth hop. See [`src/AGENTS.md` >
+Sub-Agent Reuse](../src/AGENTS.md#sub-agent-reuse-agent-continuation).
+
 A second, additive record exists alongside it: agents append per-event JSONL to a
 queryable audit log per `docs/SPEC.md` clause 7 — see [§7a Audit Events
 (JSONL)](#7a-audit-events-jsonl). It does not change the paragraph above; it is a
@@ -417,7 +424,11 @@ reorder, truncate, or delete prior lines. Corrections are new events, never edit
 — never trusted from caller input), `event`, `task_id`, `parent_task_id` (may be
 `null` for a root-level event, but the key is always present), `depth`, `agent_role`,
 `agent_model`, `status`, plus `tokens`/`cost` where applicable. An optional `resolves_task_id`
-field MAY link a remediation event chain to the failed/blocked task it addresses.
+field MAY link a remediation event chain to the failed/blocked task it addresses — or link
+a **continuation** (a DELEGATE that resumes an existing sub-agent, see [`src/AGENTS.md` >
+Sub-Agent Reuse](../src/AGENTS.md#sub-agent-reuse-agent-continuation)) back to the task it
+builds on. A continuation emits the same `delegate_issued`/`subagent_spawned` events as a
+cold spawn; there is no distinct event name for it.
 
 **The append helper:** `scripts/audit_append.py` (`docs/SPEC.md` § COMPLETE SCRIPT
 INVENTORY) is the deterministic, stdlib-only utility agents invoke to format, validate,
