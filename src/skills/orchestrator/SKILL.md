@@ -26,7 +26,10 @@ as the sub-agent prompt, receive the HANDBACK as the spawn result.
 1. **Construct** a DELEGATE block from the incoming request or prior HANDBACK output
 2. **Route** — apply the routing decision tree below to pick the target role
 3. **Spawn directly** — pass the DELEGATE block as the target agent's prompt via the
-   harness's Agent/Task tool; fan out up to 5 concurrent spawns for independent work
+   harness's Agent/Task tool; fan out up to 5 concurrent spawns for independent work.
+   Before a *cold* spawn, check (e.g. `ListAgents`) for a still-live or recently-completed
+   sub-agent that already holds the context this task needs; if the work builds directly
+   on what it just did, continue that agent instead (see **Sub-Agent Reuse** below)
 4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result — the
    session transcript already durably records both the DELEGATE and the HANDBACK, so
    there is no separate bookkeeping step
@@ -42,6 +45,25 @@ as the sub-agent prompt, receive the HANDBACK as the spawn result.
 4. Unscoped complex work → `senior-engineer` (plans, then delegates to `engineer`)
 5. Well-scoped work with a plan → `engineer`
 6. Default → `engineer` with as much context as can be attached
+
+## Sub-Agent Reuse (Agent Continuation)
+
+Prefer *continuing* a sub-agent that already holds the relevant context over cold-spawning
+a fresh one whenever the follow-on work builds directly on what that agent just did — it
+saves re-reading the same files and re-deriving the same understanding (tokens, latency,
+cost). Reuse for sequential/iterative steps of one effort, fix-ups to code the same agent
+wrote, or repeated DELEGATEs against one code area in one role. Do **not** reuse when a
+different role is needed, when independent verification is the point (QE checking an
+Engineer MUST be a fresh agent), or when the prior context is stale or would overflow.
+
+A continuation is still a full canonical DELEGATE with a new `task_id`, still returns a
+HANDBACK, does **not** add a depth hop (same node, same `ancestry`), still counts toward
+the max-5 fan-out while in flight, and still emits the clause-7 audit events. On Claude
+Code, continue via `SendMessage` to the agent's id/name; on Codex via `resume`/`fork`;
+OpenCode and Copilot have no first-class primitive, so fall back to a fresh spawn with a
+context-rich DELEGATE. Full rules and the per-harness table: see `src/AGENTS.md` §
+Sub-Agent Reuse (Agent Continuation) — this is a condensed pointer, not a second source
+of truth.
 
 ## Recursion & Fan-Out Limits
 

@@ -7,6 +7,11 @@ builds a DELEGATE and spawns the target agent directly (Agent/Task tool), readin
 HANDBACK back as the tool result in the same turn:
 - All harnesses (Copilot, Claude, OpenCode, Codex) use identical DELEGATE/HANDBACK
   protocol and identical dispatch mechanics
+- Where the harness supports it (Claude Code via `SendMessage`, Codex via `resume`/`fork`),
+  the Orchestrator MAY *continue* an existing sub-agent that already holds the needed
+  context instead of cold-spawning a fresh one — same DELEGATE/HANDBACK contract, no extra
+  delegation-tree depth. See [src/AGENTS.md > Sub-Agent
+  Reuse](../src/AGENTS.md#sub-agent-reuse-agent-continuation)
 - Orchestrator auto-detects the harness from the session environment
 - Multiple simultaneous harness instances don't interfere with each other — each is its
   own independent session, spawning and reading results entirely in its own context
