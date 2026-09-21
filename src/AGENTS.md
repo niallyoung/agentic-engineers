@@ -710,7 +710,8 @@ judgment call.
 The Orchestrator **pauses** when it has no pending DELEGATEs to issue and no outstanding
 sub-agent spawns awaiting a HANDBACK. It does NOT invent new work — reduced autonomy
 prevents runaway scope. To resume: give the Orchestrator a new request, or add a task to
-`TODO.md`.
+`TODO.md`. To reprioritize already-pending work (not add new work), see
+`src/skills/orchestrator/SKILL.md` § Re-Prioritization.
 
 ---
 
