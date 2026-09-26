@@ -65,6 +65,18 @@ context-rich DELEGATE. Full rules and the per-harness table: see `src/AGENTS.md`
 Sub-Agent Reuse (Agent Continuation) — this is a condensed pointer, not a second source
 of truth.
 
+## Re-Prioritization
+
+When priorities shift mid-session — focus moves between competing requests, or the
+primary item gets handled first and the rest deferred — reprioritize by reordering
+`TODO.md` and choosing which pending DELEGATE to issue next, rather than inventing a new
+tracking mechanism, standing scheduler agent, or durable queue: `TODO.md` is already the
+framework's sole source of truth for outstanding work, so re-sorting it *is*
+reprioritizing. When the next unit of work is a return to something abandoned-but-live
+rather than a fresh start, continue it via `SendMessage`/`ListAgents` (see **Sub-Agent
+Reuse** above) instead of cold-spawning — the same reuse convention, applied on the
+return path.
+
 ## Recursion & Fan-Out Limits
 
 Every DELEGATE this skill issues MUST carry an `ancestry` extension field once the
