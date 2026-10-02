@@ -22,18 +22,15 @@
 ## Agent Roster
 
 **MODEL NAMING (LOCKED):** Models use canonical format with a DOT version separator,
-`claude-{variant}-{major}.{minor}` (e.g. `claude-haiku-4.5`, `claude-opus-4.8`). Current-generation
-models carry a **single-part version** and therefore have no separator at all:
-`claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. Claude Sonnet 5.5 (`claude-sonnet-5.5`,
-Orchestrator) is the one current-generation model with a two-part version, so it uses the dot
-in source and renders to `claude-sonnet-5-5` for Claude Code. The invariant is "never a hyphen as the
-version separator" (`claude-opus-4-7` is a per-harness render, never source).
-See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec).
+`claude-{variant}-{major}.{minor}` (e.g. in source: two-part versioned models like Opus 4.x). Current-generation
+models carry a **single-part version** and therefore have no separator at all (e.g. in source: Opus 5, Sonnet 5). 
+Sonnet 5.5 is the one current-generation model with a two-part version, so it uses the dot in source 
+and renders to `claude-sonnet-5-5` for Claude Code (hyphens are per-harness renders only, never source).
+See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec) and [docs/MODELS.md](../docs/MODELS.md) for the complete model registry.
 
-**SINGLE SOURCE OF TRUTH:** Model assignments are defined in `.githooks/LOCKED_MODELS.sh`
-(`LOCKED_MODELS` + `AGENT_MODEL_ASSIGNMENTS`). All hooks, validators, and this table must
-stay synchronized with it — see [SPEC.md > Model Governance: Locking & Switching](../docs/SPEC.md#model-governance-locking--switching)
-for the switch process.
+**SINGLE SOURCE OF TRUTH:** Model assignments are defined in `config/models.yaml`. 
+All generated targets (frontmatter, manifests, hooks, tables) are kept synchronized via `python3 scripts/models.py sync`.
+See [docs/decisions/ADR-model-pin-registry.md](../docs/decisions/ADR-model-pin-registry.md) for the governance model and [docs/MODELS.md](../docs/MODELS.md) for the current roster.
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
@@ -46,9 +43,9 @@ for the switch process.
 | **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
 | **Model Engineer** | claude-sonnet-5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
-> **This table is load-bearing, not documentation.** `renderer/lib/render-lib.sh:parse_agents_md()`
-> reads the Model and Effort columns to render the Claude Code and OpenCode harnesses. Editing an
-> agent's frontmatter without editing this row ships the *old* model to those two harnesses.
+> **This table is auto-generated, not hand-edited.** The Model and Effort columns are regenerated
+> by `python3 scripts/models.py sync` from `config/models.yaml`. To change a role's model, edit the registry
+> (not this table) and run sync.
 
 **Multi-Model column notes:** Principal Engineer uses `claude-opus-5` for all planning and
 cross-repo design; `claude-opus-4.8` is an emergency fallback only (opus-5 unavailable),

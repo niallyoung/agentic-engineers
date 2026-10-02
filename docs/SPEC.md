@@ -200,18 +200,9 @@ Agent SKILL (with a `SKILL.md`) within 30 days of discovery.
 ### Agents & Roles (Multi-Agent Model)
 
 All work enters via **Orchestrator** (default entry point), which applies the routing
-decision tree below to delegate to specialists.
-
-| Role | Model | Effort | Purpose |
-|------|-------|--------|---------|
-| **Orchestrator** | claude-sonnet-5.5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
-| **Engineer** | claude-haiku-4.5 | high | Execute well-scoped tasks with pre-written plans |
-| **Senior Engineer** | claude-sonnet-5 | high | Complex coding without a plan; diagnosis; planning |
-| **Lead Engineer** | claude-sonnet-5 | high | Code review; quality verification; unblock stuck tasks |
-| **Quality Engineer** | claude-sonnet-5 | medium | Tier 1 quality checks; model suitability assessment |
-| **Principal Engineer** | claude-opus-5 | high | Cross-service architecture; complex multi-step planning |
-| **Security Engineer** | claude-fable-5 | max | Security analysis; vulnerability audits; threat modeling (defensive-scope only, see LOCKED model section) |
-| **Model Engineer** | claude-sonnet-5 | high | Analyze feedback; recommend optimal model/effort |
+decision tree below to delegate to specialists. Each role is pinned to a specific model;
+see [docs/MODELS.md](MODELS.md) for the current model roster and [src/AGENTS.md](../src/AGENTS.md)
+for full role definitions, capabilities, escalation paths, and routing rules.
 
 **Cost Target Distribution:** Orchestrator 55% · Engineer 18% · Senior Engineer 8% ·
 Quality Engineer 8% · Lead Engineer 3% · Model Engineer 3% · Principal Engineer 3% ·
@@ -465,10 +456,7 @@ documentation (`src/AGENTS.md`'s roster matches source agent files exactly, pre-
 enforced); rendered output (`dist/{copilot,claude,opencode}/agents/*` match the registry's
 per-harness IDs — Codex is excluded because it renders its own GPT-family models). Format
 regressions are caught by the pre-commit hook and CI (`test_model_naming_compliance.py`);
-Quality Engineer review is a further mandatory step. The enforcement tooling is being
-migrated from the legacy `.githooks/LOCKED_MODELS.sh` allowlist to the registry (see
-`docs/decisions/ADR-model-pin-registry.md`); until that lands, `.githooks/LOCKED_MODELS.sh`
-remains the enforced copy and must agree with `config/models.yaml`.
+Quality Engineer review is a further mandatory step. The registry is the enforced source: the pre-commit and commit-msg hooks, `renderer/validate_agents.py`, and the CI tests all derive from `config/models.yaml` through `scripts/models.py` (see `docs/decisions/ADR-model-pin-registry.md`), and `.githooks/LOCKED_MODELS.sh` is only a generated compatibility shim.
 
 ---
 

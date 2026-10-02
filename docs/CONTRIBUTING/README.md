@@ -558,135 +558,45 @@ repoint of this guard.
 
 ## Multi-Model Agent Variants
 
-Some Tier 3 (Opus) roles support **multi-model selection** within the opus family. Rather than a single fixed model, the Orchestrator selects the optimal opus variant when creating DELEGATEs for these roles.
-
-### Roles with Multi-Model Support (Phase 1)
-
-**Principal Engineer** — selects among 4.6, 4.7, 4.8:
-- `claude-opus-4.6` — pure architecture planning (design-only; no cross-repo execution)
-- `claude-opus-4.7` — design decisions with cross-repo execution impact
-- `claude-opus-4.8` — security-critical design choices (auth, crypto, compliance)
-
-**Security Engineer** — always fable-5 (unconditional default):
-- `claude-fable-5` — always; security analysis is non-negotiable (highest capability tier)
-- `claude-opus-4.8` — emergency fallback only if fable-5 is unavailable; document in HANDBACK
-- Never downgrade by choice
-
-### How It Works
-
-1. **Orchestrator selects variant** at DELEGATE-creation time based on the incoming task profile
-2. **model_guidance field** in the DELEGATE communicates the selection rationale to the receiving agent
-3. **Quality Engineer** provides `model_assessment` feedback in HANDBACK (model used, appropriateness, recommendation)
-4. **Model Engineer** analyzes `model_assessment` feedback and feeds recommendations back to the Orchestrator routing loop
-
-### DELEGATE Example with model_guidance
-
-```yaml
----
-handoff_type: DELEGATE
-task_id: 2026-06-05-arch-cursor-design
-role: principal-engineer
-model: claude-opus-4.6
-model_guidance: |
-  Pure architecture planning — use claude-opus-4.6.
-  Escalate to 4.7 if cross-repo execution scope is discovered during analysis.
-effort: high
-scope: Design delta-token cursor model for event store sync.
----
-```
-
-### Future Phases
-
-- **Phase 2** (planned): Extend multi-model selection to Senior Engineer (sonnet-4.5 vs 4.6)
-- **Phase 3** (planned): Full multi-model routing for all roles, driven by Model Engineer feedback data
-
-All changes are backward-compatible. Validators and tests require no updates for the Phase 1 rollout — `claude-opus-4.7` is now in `LOCKED_MODELS.sh`.
+All roles are pinned to specific Claude models as documented in [docs/MODELS.md](../MODELS.md),
+which is generated from the registry (`config/models.yaml`). Model selection decisions
+and the rationale for each pin are described in [docs/decisions/ADR-model-pin-registry.md](../decisions/ADR-model-pin-registry.md).
+To change a role's model, edit the registry and run `python3 scripts/models.py sync` — no
+validator or specification edits are required.
 
 ---
 
-## Model Selection (Locked)
+## Model Selection (Registry-Driven)
 
-**CRITICAL: Model choices are LOCKED by strategic decision and enforced by pre-commit hooks.**
+**Model selections are managed through the registry** (`config/models.yaml`), with per-harness
+rendering (dots for Copilot, hyphens for OpenCode, etc.) handled automatically by `scripts/models.py sync`.
 
-We have chosen these Claude models today for cost-quality alignment:
-- **claude-haiku-4.5** — engineers (fast, cost-effective)
-- **claude-sonnet-5.5** — orchestrator (routing)
-- **claude-sonnet-5** — model-engineer, quality, lead, senior engineers (complex tasks)
-- **claude-opus-5** — principal-engineer (cross-service architecture)
-- **claude-fable-5** — security-engineer (unconditional; highest capability for security tasks)
-
-### Why Locked Models?
-
-**Positive enforcement approach:**
-- ✅ "These are our chosen models" (not "GPT forbidden")
-- ✅ Users CAN request changes via Orchestrator
-- ✅ Changes are documented and auditable
-- ✅ Simpler than maintaining rejection patterns
+All agent models must exist in `config/models.yaml` before being used. The canonical
+format is dotted (e.g., `claude-sonnet-5.5`); harness-specific render IDs are specified
+in the registry's `ids` field. See [docs/MODELS.md](../MODELS.md) for the current pinned
+models and [docs/decisions/ADR-model-pin-registry.md](../decisions/ADR-model-pin-registry.md)
+for the policy.
 
 ### Adding a New Agent
 
-When adding an agent to `src/agents/`, use the canonical format with DOTS:
+When adding an agent to `src/agents/`, use the canonical format with DOTS from the registry:
 
 ```yaml
 ---
 name: my-agent
 description: Agent description
-model: claude-{variant}-{major}.{minor}  # ← REQUIRED format (e.g., claude-haiku-4.5)
+model: claude-sonnet-5  # ← Must match a key in config/models.yaml
 ---
 ```
 
-**Locked models** (pick one):
-- ✅ `claude-haiku-4.5`
-- ✅ `claude-sonnet-4.5`
-- ✅ `claude-sonnet-4.6`
-- ✅ `claude-opus-4.6`
-- ✅ `claude-opus-4.7`
-- ✅ `claude-opus-4.8`
-
-**Not locked** (rejected by pre-commit hook):
-- ❌ `claude-opus-4-7` (hyphens in version — use dots)
-- ❌ `claude-opus` (unversioned — use full version)
-- ❌ `gpt-4` (not a locked model — use Claude)
-
 ### Requesting a Model Change
 
-If you need a different model for an agent:
+To change a role's pinned model:
 
-1. **Contact Orchestrator** with:
-   - Agent name (e.g., `engineer-agent`)
-   - Requested model (e.g., `claude-sonnet-4.5`)
-   - Reason (e.g., "Current model too slow for code review")
-   - Expected impact (e.g., "Cost +$0.02/task, quality +15%")
-
-2. **Orchestrator evaluates:**
-   - Budget impact (is cost increase justified?)
-   - Capability improvement (does task profile warrant it?)
-   - Timeline (when should it take effect?)
-
-3. **Decision:**
-   - ✅ Approved → Model is added to locked set
-   - ⏸️ Deferred → Revisit later (e.g., next budget cycle)
-   - ❌ Denied → Explain why (e.g., budget constraint)
-
-4. **If approved:**
-   - Model is added to `.githooks/LOCKED_MODELS.sh`
-   - PR includes rationale in commit message
-   - Pre-commit hook enforces new lock from merge forward
-
-### Why Per-Harness Transformations?
-
-Different harnesses have incompatible model format requirements:
-
-| Harness | Model Examples | Format |
-|---------|---|---|
-| Copilot CLI | `claude-opus-4.8`, `claude-opus-4.6` (multi-model) | Dots in version |
-| OpenCode | `claude-opus-4.7` | Hyphens in version (limitation) |
-| Claude Code | `opus` | Short alias |
-| Codex | `claude-opus-5` | Codex custom format |
-
-Note: Principal and Security Engineer roles support multi-model selection. Orchestrator chooses the appropriate opus variant (4.6, 4.7, or 4.8) at DELEGATE-creation time based on task complexity. See SPEC.md > Model Selection Architecture.
-
-**Key principle:** Source agents use ONE canonical format (DOTS). Renderers transform per-harness. This separation makes source maintainable and allows automation of transformations.
+1. Edit `config/models.yaml`: update `roles.<role>.model` and append a `pin_history` entry
+2. Run `python3 scripts/models.py sync` to regenerate all derived files
+3. Run `python3 scripts/models.py check` to validate the change
+4. Commit with a conventional message and a `Model-Pin-Approved-By:` trailer (see ADR for details)
 
 ### Workflow
 

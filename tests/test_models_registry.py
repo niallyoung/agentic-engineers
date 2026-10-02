@@ -28,7 +28,7 @@ _spec.loader.exec_module(models)
 
 CLI = [sys.executable, str(REPO_ROOT / "scripts" / "models.py")]
 COPY_PATHS = ["config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml", "src/AGENTS.md",
-              "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha"]
+              "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha", "docs/MODELS.md"]
 
 
 def cli(*args, root=REPO_ROOT):
@@ -148,6 +148,7 @@ class TestCheckRules:
     def test_deprecated_pin_warns_not_errors(self, tmp_path):
         root = make_tree(tmp_path)
         edit_registry(root, lambda r: r["models"]["claude-fable-5"].update(status="deprecated"))
+        cli("sync", root=root)  # Regenerate docs/MODELS.md after registry edit
         errors, warns = models.check(root)
         assert errors == [] and any("deprecated" in w for w in warns)
 
@@ -292,7 +293,7 @@ class TestBumpSimulation:
     """Re-pinning a role touches the registry (+ pin_history) and generated files only."""
 
     GENERATED = {"src/AGENTS.md", "src/agents/senior-engineer-agent.md",
-                 "config/FRAMEWORK-MANIFEST.yaml", ".agents_verification_sha"}
+                 "config/FRAMEWORK-MANIFEST.yaml", ".agents_verification_sha", "docs/MODELS.md"}
 
     @staticmethod
     def _bump(reg):
