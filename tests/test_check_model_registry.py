@@ -3,7 +3,7 @@
 tests/test_check_model_registry.py — Advisory model-registry drift checker tests.
 
 Tests:
-1. Parsing of real LOCKED_MODELS.sh
+1. Parsing of the real config/models.yaml registry
 2. Drift detection against fixtures
 3. --offline flag handling
 4. --json output shape
@@ -73,7 +73,7 @@ FIXTURE_REGISTRY_DATA = {
             "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 15.00, "output": 75.00},
         },
-        # Model that exists but isn't in our LOCKED_MODELS
+        # Model that exists but isn't in our registry
         {
             "id": "claude-sonnet-4.6",
             "name": "Claude Sonnet 4.6",
@@ -122,46 +122,32 @@ def test_script_is_executable(script):
 
 
 def test_parse_locked_models(script):
-    """Test parsing LOCKED_MODELS from real .githooks/LOCKED_MODELS.sh."""
-    # Import and test directly
+    """_parse_locked_models follows config/models.yaml (no fixed expectation)."""
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     from check_model_registry import _parse_locked_models
+    import models as model_registry
 
     models = _parse_locked_models()
 
-    # Should have the expected locked models
-    expected = {
-        "claude-haiku-4.5",
-        "claude-sonnet-4.5",
-        "claude-sonnet-4.6",
-        "claude-sonnet-5",
-        "claude-sonnet-5.5",
-        "claude-opus-4.6",
-        "claude-opus-4.7",
-        "claude-opus-4.8",
-        "claude-opus-5",
-        "claude-fable-5",
-    }
-
-    assert set(models) == expected, f"Parsed models {set(models)} != expected {expected}"
+    reg = model_registry.load_registry(REPO_ROOT)
+    expected = {m for m, v in reg["models"].items() if v["status"] != "retired"}
+    assert set(models) == expected, f"Parsed models {set(models)} != registry {expected}"
+    assert len(models) == len(set(models)), "duplicate model ids"
+    # Every pinned role model must be among the checked models.
+    for cfg in reg["roles"].values():
+        assert cfg["model"] in models
 
 
 def test_parse_agent_assignments(script):
-    """Test parsing AGENT_MODEL_ASSIGNMENTS from real LOCKED_MODELS.sh."""
+    """_parse_agent_assignments mirrors roles.<role>.model in config/models.yaml."""
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     from check_model_registry import _parse_agent_assignments
+    import models as model_registry
 
     assignments = _parse_agent_assignments()
 
-    # Should have expected agents
-    assert "engineer-agent" in assignments
-    assert assignments["engineer-agent"] == "claude-haiku-4.5"
-
-    assert "orchestrator-agent" in assignments
-    assert assignments["orchestrator-agent"] == "claude-sonnet-5.5"
-
-    assert "security-engineer-agent" in assignments
-    assert assignments["security-engineer-agent"] == "claude-fable-5"
+    reg = model_registry.load_registry(REPO_ROOT)
+    assert assignments == {f"{role}-agent": cfg["model"] for role, cfg in reg["roles"].items()}
 
 
 def test_build_model_index():

@@ -389,22 +389,9 @@ model: sonnet
 # Unit Tests: Model Validation
 # ============================================================================
 
-# NOTE: claude-haiku-4.6 was removed from this list alongside its removal from
-# renderer/validate_agents.py::KNOWN_MODELS — Anthropic never shipped it, and the
-# string now appears nowhere in the repo. Asserting a phantom id is "recognized"
-# pinned a validator bug in place as if it were the contract.
-@pytest.mark.parametrize("model", [
-    "claude-haiku-4.5",
-    "claude-sonnet-4.5",
-    "claude-sonnet-4.6",
-    "claude-opus-4.5",
-    "claude-opus-4.6",
-    "claude-opus-4.7",
-    "claude-opus-4.8",
-    "haiku",
-    "sonnet",
-    "opus",
-])
+# The recognised models come from config/models.yaml (via KNOWN_MODELS), never a fixed
+# list here: a hard-coded copy drifts the moment a model is registered or retired.
+@pytest.mark.parametrize("model", sorted(KNOWN_MODELS))
 def test_known_models_validation(temp_repo, model):
     """Test that all known models pass validation."""
     agent_file = temp_repo["agents_dir"] / "test-agent.md"
