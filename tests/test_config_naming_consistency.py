@@ -10,7 +10,7 @@ Validates model-naming consistency across SURVIVING canonical sources:
 Asserts:
   - All three sources agree per role
   - Every model matches claude-{variant}-{major}[.{minor}] format
-  - orchestrator=claude-sonnet-5 and engineer=claude-haiku-4.5 are consistent
+  - orchestrator=claude-sonnet-5.5 and engineer=claude-haiku-4.5 are consistent
 """
 
 import re

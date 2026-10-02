@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: All entry points; routing decisions; task management; metrics collection; model recommendations
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 accepts:
   - DELEGATE
 returns:

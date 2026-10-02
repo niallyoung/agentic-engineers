@@ -8,7 +8,7 @@ metadata:
   version: "2.0"
   category: orchestration
   role: orchestrator
-  model: claude-sonnet-5
+  model: claude-sonnet-5.5
   effort: low
   thinking: false
 ---

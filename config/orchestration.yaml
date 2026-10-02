@@ -16,7 +16,9 @@
 # 4.6's $3/$15 per MTok yet emits ~30% more tokens for the same text, so the
 # four Sonnet roles consume budget ~30% faster than the historical figures these
 # ceilings were set against. Re-baseline with count_tokens against the new model
-# before tightening or trusting them; do not scale old token counts.
+# before tightening or trusting them; do not scale old token counts. The Orchestrator
+# moved to Sonnet 5.5 (SPEC-2026-010); its tokenizer has not been measured here, so
+# re-baseline its share the same way.
 budget:
   # Maximum USD spend per session (single orchestrator run)
   session_usd: 5.00

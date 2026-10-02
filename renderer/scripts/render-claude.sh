@@ -72,6 +72,10 @@ source "$(dirname "$0")/../lib/render-lib.sh"
 map_model() {
 	local raw="$1"
 	case "$raw" in
+		# Orchestrator pin (SPEC-2026-010): a specific minor version cannot be expressed
+		# by the floating "sonnet" alias, so Sonnet 5.5 renders as its full API ID.
+		# Accepts both the canonical dot form and an already-hyphenated form.
+		claude-sonnet-5.5|claude-sonnet-5-5) echo "claude-sonnet-5-5" ;;
 		*haiku*)  echo "haiku"  ;;
 		*sonnet*) echo "sonnet" ;;
 		*opus*)   echo "opus"   ;;

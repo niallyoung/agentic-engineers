@@ -88,7 +88,7 @@ def test_expected_roles_present_with_correct_role_model_effort_tuples():
     python_rows = {row[0]: row for row in _parse_via_python(AGENTS_MD)}
 
     expected = {
-        "orchestrator": ("claude-sonnet-5", "low"),
+        "orchestrator": ("claude-sonnet-5.5", "low"),
         "engineer": ("claude-haiku-4.5", "high"),
         "quality-engineer": ("claude-sonnet-5", "medium"),
         "senior-engineer": ("claude-sonnet-5", "high"),

@@ -48,7 +48,7 @@ agents:
 
   orchestrator:
     name: Orchestrator
-    model: claude-sonnet-5
+    model: claude-sonnet-5.5
     type: routing
     status: active
     effort: low

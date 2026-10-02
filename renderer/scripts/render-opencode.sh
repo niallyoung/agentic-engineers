@@ -146,12 +146,11 @@ PY
 	# Offline fallback: synthesize from the family token using the provider's known format.
 	if [ -z "${id:-}" ]; then
 		# Helper: convert family (hyphenated) to dotted format for github-copilot/openrouter.
-		# Single-part-version families (fable-5) keep their hyphen.
+		# Only the MINOR separator becomes a dot: haiku-4-5 -> claude-haiku-4.5,
+		# sonnet-5-5 -> claude-sonnet-5.5. The family/major hyphen stays, and
+		# single-part-version families (fable-5, opus-5, sonnet-5) are unchanged.
 		_to_dotted_format() {
-			case "$1" in
-				fable*) echo "claude-$1" ;;
-				*) printf '%s' "claude-$(echo "$1" | sed -E 's/-([0-9])-([0-9])$/.\1.\2/; s/-([0-9])$/.\1/')" ;;
-			esac
+			printf '%s' "claude-$(echo "$1" | sed -E 's/-([0-9]+)-([0-9]+)$/-\1.\2/')"
 		}
 
 		case "$provider" in

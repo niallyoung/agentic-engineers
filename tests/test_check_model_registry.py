@@ -135,6 +135,7 @@ def test_parse_locked_models(script):
         "claude-sonnet-4.5",
         "claude-sonnet-4.6",
         "claude-sonnet-5",
+        "claude-sonnet-5.5",
         "claude-opus-4.6",
         "claude-opus-4.7",
         "claude-opus-4.8",
@@ -157,7 +158,7 @@ def test_parse_agent_assignments(script):
     assert assignments["engineer-agent"] == "claude-haiku-4.5"
 
     assert "orchestrator-agent" in assignments
-    assert assignments["orchestrator-agent"] == "claude-sonnet-5"
+    assert assignments["orchestrator-agent"] == "claude-sonnet-5.5"
 
     assert "security-engineer-agent" in assignments
     assert assignments["security-engineer-agent"] == "claude-fable-5"

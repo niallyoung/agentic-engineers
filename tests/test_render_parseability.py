@@ -394,10 +394,16 @@ class TestSettingsJSONConsistency:
             # Example: AGENTS.md says "claude-sonnet-5", settings.json might say "sonnet".
             # This is acceptable because "sonnet" is the short form of the Orchestrator model.
             expected_tier = orchestrator_model.split("-")[1]  # e.g., "sonnet" from "claude-sonnet-5"
-            if model_val != orchestrator_model and model_val != expected_tier:
+            # Two-part versions (e.g. claude-sonnet-5.5, SPEC-2026-010) render to the pinned
+            # hyphenated full ID (claude-sonnet-5-5) in Claude Code, not a floating alias.
+            pinned = orchestrator_model.replace(".", "-")
+            accepted = {orchestrator_model, expected_tier, pinned}
+            if "." in orchestrator_model and harness == "claude":
+                accepted = {pinned}  # the Claude Code pin must be exact, never a floating alias
+            if model_val not in accepted:
                 pytest.fail(
                     f"{harness}/settings.json model '{model_val}' does not match "
-                    f"src/AGENTS.md orchestrator model '{orchestrator_model}' (expected tier: {expected_tier})"
+                    f"src/AGENTS.md orchestrator model '{orchestrator_model}' (accepted: {sorted(accepted)})"
                 )
 
     def test_opencode_default_model_agrees_with_agents_table(self):
@@ -440,7 +446,8 @@ class TestSettingsJSONConsistency:
 
         model_id = model_val.rsplit("/", 1)[1]
         normalized = model_id.replace(".", "-")
-        assert normalized == orchestrator_model, (
+        # Source ids may be two-part dotted (claude-sonnet-5.5); normalize both sides.
+        assert normalized == orchestrator_model.replace(".", "-"), (
             f"opencode.jsonc model-id '{model_id}' (from '{model_val}', normalized "
             f"'{normalized}') does not match src/AGENTS.md orchestrator model "
             f"'{orchestrator_model}'"

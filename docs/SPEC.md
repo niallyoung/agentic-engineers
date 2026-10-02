@@ -204,7 +204,7 @@ decision tree below to delegate to specialists.
 
 | Role | Model | Effort | Purpose |
 |------|-------|--------|---------|
-| **Orchestrator** | claude-sonnet-5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
+| **Orchestrator** | claude-sonnet-5.5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
 | **Engineer** | claude-haiku-4.5 | high | Execute well-scoped tasks with pre-written plans |
 | **Senior Engineer** | claude-sonnet-5 | high | Complex coding without a plan; diagnosis; planning |
 | **Lead Engineer** | claude-sonnet-5 | high | Code review; quality verification; unblock stuck tasks |
@@ -379,7 +379,8 @@ Canonical (source) model IDs use a **dot** in the two-part version
 | Model | Canonical (source) ID | Context Window | Max Output | Use Case |
 |-------|-----------------------|-----------------|------------|----------|
 | **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Engineer |
-| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Orchestrator, Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
+| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
+| **Claude Sonnet 5.5** | `claude-sonnet-5.5` | 1M | 128K | Balanced; Orchestrator (routing). Two-part version — the dot is transformed to a hyphen in per-harness renders (`claude-sonnet-5-5` for Claude Code's full-ID pin, OpenCode's Anthropic provider, and Copilot's hyphenated form where applicable). |
 | **Claude Opus 5** | `claude-opus-5` | 1M | 128K | High capability; Principal Engineer. Single-part version — no transformation in any harness. |
 | **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer (unconditional default). Most expensive model in the roster ($10/$50 per MTok, 2x Opus 5) — a capability upgrade, never a cost saving. Single-part version — identical in every harness, no transformation. |
 | **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 128K | Still locked/approved; no longer assigned to a role |
@@ -404,6 +405,7 @@ and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/refer
 |---------|--------------|-----------------|----------------|
 | **Claude (Claude Code)** | `claude-opus-5` | `opus` (tier alias) or full ID | Tier alias where the runtime accepts it; else no transformation (single-part) |
 | **Copilot CLI** | `claude-opus-5` | `claude-opus-5` | None (single-part) |
+| **Claude (Claude Code), two-part example** | `claude-sonnet-5.5` | `claude-sonnet-5-5` (full ID, never the floating `sonnet` alias) | Dot→hyphen, pinned: the Orchestrator's `settings.json` default and its agent frontmatter use the pinned full ID so the session does not float to whatever `sonnet` currently resolves to; every other Sonnet-tier role keeps the `sonnet` alias |
 | **OpenCode** | `claude-opus-5` | `anthropic/claude-opus-5` | `anthropic/` prefix (single-part, no dot→hyphen) |
 | **Codex** | *(not carried forward)* | `gpt-5.4-mini` (Orchestrator/Engineer) or `gpt-5.5` (all other roles) | Not a canonical-ID transform — Codex substitutes its own GPT-family model per agent-role tier (`CODEX_MODEL_BY_ROLE` in `renderer/scripts/render-codex.py`); it never emits a `claude-*` ID |
 
@@ -411,7 +413,7 @@ and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/refer
 
 As of 2026-08-11:
 
-- **Orchestrator:** `claude-sonnet-5` (routing)
+- **Orchestrator:** `claude-sonnet-5.5` (routing)
 - **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
 - **Senior Engineer:** `claude-sonnet-5` (complex coding, unscoped work)
 - **Lead Engineer:** `claude-sonnet-5` (code review, architectural guidance)
@@ -875,6 +877,7 @@ into `dist/<harness>/` and installed to each harness's home directory.
   operator from an options analysis (option C, accept-and-govern; prevention rejected
   as non-portable and undesirable — the same channel is the operator's emergency
   brake).
+- **2026-10-02:** [SPEC-2026-010 — lead-engineer, authorized_by: user-directive (Orchestrator default to Claude Sonnet 5.5; framework-wide governed amendment), routed via Orchestrator DELEGATE task orchestrator-sonnet-5-5-switch; full peer approval_chain not recorded because the user directive is the approval of record for this Model Switch] Model Switch under the Model Switch Process in the LOCKED "Model Naming & Harness Compatibility" section: the Orchestrator's assigned model moves from `claude-sonnet-5` to `claude-sonnet-5.5`. Only the Orchestrator changes; Engineer (`claude-haiku-4.5`), Senior/Lead/Quality/Model Engineer (`claude-sonnet-5`), Principal (`claude-opus-5`) and Security (`claude-fable-5`) are unchanged. `.githooks/LOCKED_MODELS.sh` updated first (`claude-sonnet-5.5` added to `LOCKED_MODELS`; `orchestrator-agent` reassigned in `AGENT_MODEL_ASSIGNMENTS`). Edits to this LOCKED section: (a) Official Model Names table gains a Claude Sonnet 5.5 row and the Sonnet 5 row drops "Orchestrator"; (b) Harness-Specific Model Format table gains a two-part-version row documenting that Claude Code receives the pinned full ID `claude-sonnet-5-5` for the Orchestrator rather than the floating `sonnet` alias; (c) Model Assignment by Agent Role Orchestrator line changes model only. The roster table row in "Agents & Roles" is updated to match. Naming rule is unchanged: Sonnet 5.5 is the first current-generation two-part version, so it uses the dot in source (`claude-sonnet-5.5`) and the hyphen only in per-harness renders. Rationale for pinning: `render-claude.sh` previously mapped every `*sonnet*` ID to the floating `sonnet` alias, which cannot express a specific minor version; the Orchestrator's `settings.json` default and agent frontmatter now map `claude-sonnet-5.5` to `claude-sonnet-5-5`. The installer's marker semantics are unchanged: a user-chosen `settings.json` model is never overwritten, and a value the installer itself wrote (the old `sonnet`) migrates to the new pin. Companion edits outside this section: `src/AGENTS.md`, `src/agents/orchestrator-agent.md`, `src/agents/model-engineer-agent.md`, `src/skills/orchestrator/SKILL.md`, `src/SKILLS.md`, `config/FRAMEWORK-MANIFEST.yaml`, `config/orchestration.yaml` (tokenizer re-baseline note), `README.md`, `docs/ENTRYPOINT.md`, `docs/CONTRIBUTING/README.md`, `renderer/validate_agents.py` (`KNOWN_MODELS`), `renderer/scripts/render-claude.sh`, and the affected tests. Cost note: the Sonnet 5.5 price and tokenizer are not asserted here; re-baseline `config/orchestration.yaml` budgets before relying on them.
 
 ---
 

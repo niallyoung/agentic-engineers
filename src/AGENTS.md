@@ -24,7 +24,9 @@
 **MODEL NAMING (LOCKED):** Models use canonical format with a DOT version separator,
 `claude-{variant}-{major}.{minor}` (e.g. `claude-haiku-4.5`, `claude-opus-4.8`). Current-generation
 models carry a **single-part version** and therefore have no separator at all:
-`claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. The invariant is "never a hyphen as the
+`claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. Claude Sonnet 5.5 (`claude-sonnet-5.5`,
+Orchestrator) is the one current-generation model with a two-part version, so it uses the dot
+in source and renders to `claude-sonnet-5-5` for Claude Code. The invariant is "never a hyphen as the
 version separator" (`claude-opus-4-7` is a per-harness render, never source).
 See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec).
 
@@ -35,7 +37,7 @@ for the switch process.
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
-| **Orchestrator** | claude-sonnet-5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Orchestrator** | claude-sonnet-5.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
 | **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
 | **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
@@ -123,7 +125,7 @@ confidence: 0.95                   # 0.0-1.0 float
 
 ```
 User / External Trigger
-  └─► Orchestrator  (sonnet-5 — routing)
+  └─► Orchestrator  (sonnet-5.5 — routing)
         ├─► Engineer               ← well-scoped tasks with full plans
         ├─► Senior Engineer        ← unscoped or multi-file work
         │     ├─► Lead Engineer    ← architecture decisions, code review
@@ -148,7 +150,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 1. Orchestrator
 
-**Model:** `claude-sonnet-5`, effort `low`. Entry point for all user requests; routes via
+**Model:** `claude-sonnet-5.5`, effort `low`. Entry point for all user requests; routes via
 the decision tree above; never implements. Parses requests into DELEGATE blocks, spawns
 the target agent directly (Agent/Task tool), fans out up to 5 concurrent spawns for
 independent work, and receives each HANDBACK in-context — the session transcript is the
