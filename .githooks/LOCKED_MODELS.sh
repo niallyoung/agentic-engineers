@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # .githooks/LOCKED_MODELS.sh
 #
+# GENERATED from config/models.yaml by scripts/models.py sync - do not edit
+# To change model pins, edit config/models.yaml and run: python3 scripts/models.py sync
+#
 # Single source of truth for model locks (approved model choices).
 # These models are LOCKED by choice and cannot be changed without explicit Orchestrator approval.
 #
@@ -9,20 +12,8 @@
 # - Users CAN request model changes by contacting Orchestrator
 # - Changes are auditable and explicit
 #
-# Update this only when Orchestrator explicitly approves a model switch for a named agent.
-# Create a PR with:
-#   - Commit message: "Approved model switch for {agent} because {reason}"
-#   - Rationale in PR description (cost delta, capability improvement, etc)
-#
 # Bypass: SKIP_HOOKS=1 (for emergency situations only; document reason in commit msg)
 
-# ─── LOCKED MODELS: Canonical list (only these are allowed in agents) ────────
-# Format: claude-{variant}-{major}.{minor}
-#
-# Note: Principal Engineer and Security Engineer support multi-model selection
-# within the opus family. The Orchestrator selects the appropriate opus variant
-# at DELEGATE-creation time based on task complexity and risk profile.
-# See docs/SPEC.md > Model Selection Architecture for the full decision tree.
 LOCKED_MODELS=(
     "claude-haiku-4.5"
     "claude-sonnet-4.5"

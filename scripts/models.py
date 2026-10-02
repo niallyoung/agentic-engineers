@@ -150,6 +150,35 @@ def render_locked_models(text: str, reg: dict) -> str:
     models = list((reg.get("models") or {}))
     assigns = [f'    "{r}-agent:{c["model"]}"' for r, c in (reg.get("roles") or {}).items()]
     locked_body = "\n".join(f'    "{m}"' for m in models)
+
+    # Replace the header comment block with GENERATED banner
+    # This replaces the old "Single source of truth" / "Update this only when Orchestrator approves" text
+    header = """#!/usr/bin/env bash
+# .githooks/LOCKED_MODELS.sh
+#
+# GENERATED from config/models.yaml by scripts/models.py sync - do not edit
+# To change model pins, edit config/models.yaml and run: python3 scripts/models.py sync
+#
+# Single source of truth for model locks (approved model choices).
+# These models are LOCKED by choice and cannot be changed without explicit Orchestrator approval.
+#
+# Philosophy: POSITIVE ENFORCEMENT
+# - "We chose these Claude models" (not "GPT is forbidden")
+# - Users CAN request model changes by contacting Orchestrator
+# - Changes are auditable and explicit
+#
+# Bypass: SKIP_HOOKS=1 (for emergency situations only; document reason in commit msg)"""
+
+    # Find the end of the initial header (ends at the first code line or LOCKED_MODELS definition)
+    header_end = text.find("LOCKED_MODELS=(")
+    if header_end == -1:
+        header_end = text.find("# ─── LOCKED MODELS")
+
+    if header_end != -1:
+        # Keep everything from LOCKED_MODELS onwards
+        rest = text[header_end:]
+        text = header + "\n\n" + rest
+
     text = re.sub(r"(?ms)^LOCKED_MODELS=\(\n.*?\n\)", lambda _m: f"LOCKED_MODELS=(\n{locked_body}\n)", text, count=1)
     text = re.sub(r"(?ms)^AGENT_MODEL_ASSIGNMENTS=\(\n.*?\n\)",
                   lambda _m: "AGENT_MODEL_ASSIGNMENTS=(\n" + "\n".join(assigns) + "\n)", text, count=1)
