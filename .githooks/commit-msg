@@ -259,7 +259,11 @@ if git diff --cached --name-only 2>/dev/null | grep -qx 'config/models\.yaml'; t
   mkdir -p "$PIN_TMP/old/config" "$PIN_TMP/new/config"
   git show "HEAD:config/models.yaml" > "$PIN_TMP/old/config/models.yaml" 2>/dev/null || rm -f "$PIN_TMP/old/config/models.yaml"
   git show ":config/models.yaml" > "$PIN_TMP/new/config/models.yaml" 2>/dev/null || rm -f "$PIN_TMP/new/config/models.yaml"
-  PIN_OUT=$(python3 - "$COMMIT_MSG_HOOK_DIR/../scripts" "$PIN_TMP" <<'PY' 2>&1
+  # models.py lives next to this hook's repo; when the hook is a copy (e.g. .git/hooks/),
+  # fall back to the committing repo's own scripts/.
+  PIN_SCRIPTS="$COMMIT_MSG_HOOK_DIR/../scripts"
+  [ -f "$PIN_SCRIPTS/models.py" ] || PIN_SCRIPTS="$PIN_TOP/scripts"
+  PIN_OUT=$(python3 - "$PIN_SCRIPTS" "$PIN_TMP" <<'PY' 2>&1
 import sys
 sys.path.insert(0, sys.argv[1])
 try:
@@ -283,7 +287,7 @@ PY
   ) || PIN_OUT="PYFAIL: $PIN_OUT"
   rm -rf "$PIN_TMP"
 
-  if [ "$PIN_OUT" = "NOYAML" ]; then
+  if [[ "$PIN_OUT" == *NOYAML* ]]; then
     fail "config/models.yaml is staged but python3 has no PyYAML, so pin changes cannot be checked"
     echo "   Fix: python3 -m pip install pyyaml"
   elif [[ "$PIN_OUT" == PYFAIL:* ]]; then

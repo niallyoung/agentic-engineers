@@ -71,6 +71,15 @@ def change_pin(text):
     return head + f"\n  {ROLE}:\n    model: {ALT_PIN}\n" + rest
 
 
+def change_fallback_only(text):
+    """Edit only ROLE's fallback list (never its pin): the trailer rule must not fire."""
+    cfg = REGISTRY["roles"][ROLE]
+    old = f"    model: {ROLE_PIN}\n    effort: {cfg['effort']}\n    fallback: [{', '.join(cfg['fallback'])}]"
+    assert old in text, "engineer role block not found in the expected inline form"
+    alt = next(m for m in REGISTRY["models"] if m != ROLE_PIN and m not in cfg["fallback"])
+    return text.replace(old, old.rsplit("fallback:", 1)[0] + f"fallback: [{alt}]", 1)
+
+
 def change_effort_only(text):
     return text.replace("schema_version: 1", "schema_version: 1\n# a comment-only edit", 1)
 
@@ -125,6 +134,36 @@ class TestCommitMsgModelPinTrailer:
         r = run_commit_msg(repo, "chore: comment-only registry edit\n")
         assert r.returncode == 0, out(r)
         assert "Model-Pin-Approved-By" not in out(r)
+
+    def test_fallback_only_change_needs_no_trailer(self, tmp_path):
+        repo = make_repo(tmp_path)
+        edit_registry(repo, change_fallback_only)
+        r = run_commit_msg(repo, "chore: change a fallback list only\n")
+        assert r.returncode == 0, out(r)
+        assert "Model-Pin-Approved-By" not in out(r)
+
+    def test_missing_pyyaml_fails_loudly(self, tmp_path):
+        """With a registry change staged and no PyYAML the hook must not silently pass."""
+        repo = make_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        block = tmp_path.parent / (tmp_path.name + "-noyaml")
+        block.mkdir()
+        (block / "yaml.py").write_text("raise ImportError('PyYAML blocked for test')\n")
+        r = run_commit_msg(repo, SUBJECT + "\n\nModel-Pin-Approved-By: Jane\n", PYTHONPATH=str(block))
+        assert r.returncode == 1, out(r)
+        assert "PyYAML" in out(r)
+
+    def test_hook_copy_outside_repo_tree_still_finds_models_py(self, tmp_path):
+        """CI copies hooks into .git/hooks/: there ../scripts does not exist."""
+        repo = make_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        copy = repo / ".git" / "hooks" / "commit-msg"
+        shutil.copy(COMMIT_MSG, copy)
+        shutil.copytree(REPO_ROOT / "scripts", repo / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
+        msg = repo / "MSG"
+        msg.write_text(SUBJECT + "\n")
+        r = subprocess.run([str(copy), str(msg)], cwd=repo, capture_output=True, text=True, timeout=30)
+        assert r.returncode == 1 and "Model-Pin-Approved-By" in out(r), out(r)
 
     def test_commit_not_touching_registry_needs_no_trailer(self, tmp_path):
         repo = make_repo(tmp_path)
@@ -264,3 +303,51 @@ class TestPreCommitRegistryEnforcement:
         r = run_pre_commit(repo)
         assert r.returncode != 0, out(r)
         assert "models.py check failed" in out(r)
+
+
+def _floored_role_and_low_model():
+    """(role, model) where the role's family has a min_pin and `model` is below it."""
+    for role, cfg in REGISTRY["roles"].items():
+        fam = REGISTRY["models"][cfg["model"]]["family"]
+        floor = REGISTRY["families"][fam].get("min_pin")
+        if not floor:
+            continue
+        for mid, m in REGISTRY["models"].items():
+            if m["family"] == fam and m["status"] != "retired" and models_cli._below_min_pin(REGISTRY, mid):
+                return role, mid
+    return None, None
+
+
+class TestPreCommitFamilyFloor:
+    def test_pin_below_family_floor_is_rejected(self, tmp_path):
+        role, low = _floored_role_and_low_model()
+        if role is None:
+            pytest.skip("registry defines no family min_pin with a below-floor model")
+        pin = REGISTRY["roles"][role]["model"]
+        repo = make_full_registry_repo(tmp_path)
+        edit_registry(repo, lambda t: t.replace(f"  {role}:\n    model: {pin}", f"  {role}:\n    model: {low}", 1))
+        r = run_pre_commit(repo)
+        assert r.returncode != 0, out(r)
+        assert "min_pin" in out(r)
+        assert "models.py check failed" in out(r)
+
+    def test_floor_applies_to_pins_not_fallbacks(self):
+        """A below-floor model is a legal fallback target: check reports no error for it."""
+        errors, _ = models_cli.check(REPO_ROOT)
+        assert not [e for e in errors if "fallback" in e and "min_pin" in e]
+
+    def test_missing_pyyaml_fails_loudly(self, tmp_path):
+        repo = make_full_registry_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        block = tmp_path.parent / (tmp_path.name + "-noyaml")
+        block.mkdir()
+        (block / "yaml.py").write_text("raise ImportError('PyYAML blocked for test')\n")
+        r = run_pre_commit(repo, PYTHONPATH=str(block))
+        assert r.returncode != 0, out(r)
+        assert "PyYAML" in out(r)
+
+    def test_skip_hooks_bypasses_registry_check(self, tmp_path):
+        repo = make_full_registry_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        r = run_pre_commit(repo, SKIP_HOOKS="1")
+        assert r.returncode == 0, out(r)

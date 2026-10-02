@@ -48,7 +48,7 @@ This command:
 - **YAML/JSON Validation:** Well-formedness checks
 - **Bypass Markers:** Warns if --no-verify or SKIP_HOOKS=1 in committed code
 - **Orphaned Bytecode:** Detects .pyc without .py source
-- **Model Naming:** Enforces locked model set (from .githooks/LOCKED_MODELS.sh)
+- **Model Registry:** Staged `src/agents/*-agent.md` models must be known registry IDs (`scripts/models.py is-known`); when registry-related files are staged, `models.py check` (shape, fallback policy, family `min_pin` floor, pin_history, generated targets current) and `sync --check` must pass. No version allowlist lives in the hook; needs PyYAML (fails loudly without it)
 - **OpenCode Config:** Validates opencode.jsonc structure (when staged)
 - **DELEGATE/HANDBACK Protocol:** Required fields on staged protocol YAML files
 
@@ -119,7 +119,7 @@ GIT_SKIP_HOOKS=1 git push
 
 - **pre-commit:** `.githooks/pre-commit` (staged-file validation)
 - **pre-push:** `.githooks/pre-push` (agent/workflow/SPEC validation — no test run)
-- **commit-msg:** `.githooks/commit-msg` (enforces commit message format)
+- **commit-msg:** `.githooks/commit-msg` (enforces commit message format; a commit that changes any `roles.<role>.model` in `config/models.yaml` also needs a non-empty `Model-Pin-Approved-By:` trailer, see docs/SPEC.md Model Pin Change)
 - **post-merge:** `.githooks/post-merge` (documentation-drift check, informational only)
 
 ### Performance Targets
@@ -239,7 +239,8 @@ git push
 
 ---
 
-- `.githooks/LOCKED_MODELS.sh`: Model naming enforcement configuration
+- `config/models.yaml` + `scripts/models.py`: the model pin registry the hooks enforce
+- `.githooks/LOCKED_MODELS.sh`: GENERATED compatibility copy (`python3 scripts/models.py sync`); not read by the hooks
 - `docs/SPEC.md`: Architecture and constraints enforced by hooks
 - `docs/AGENTS.md`: Agent definitions and SDLC guidelines
 - `Makefile`: Hook installation via `make setup`

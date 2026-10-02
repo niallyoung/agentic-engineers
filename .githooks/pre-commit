@@ -496,7 +496,10 @@ echo ""
 echo "🔒 Validating model registry compliance..."
 
 MODEL_REG_TOP=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+# models.py lives next to this hook's repo; when the hook is a copy (e.g. .git/hooks/),
+# fall back to the committing repo's own scripts/.
 MODELS_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/models.py"
+[ -f "$MODELS_PY" ] || MODELS_PY="$MODEL_REG_TOP/scripts/models.py"
 MODEL_ERRORS=0
 
 STAGED_MODEL_REL=$(git diff --cached --name-only --diff-filter=ACMRD \
