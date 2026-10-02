@@ -43,12 +43,6 @@ jobs:
               chmod +x ".git/hooks/$hook"
             fi
           done
-          # Copy hook dependencies (e.g., LOCKED_MODELS.sh sourced by pre-commit)
-          for dep in LOCKED_MODELS.sh LOCKED_MODELS_RATIONALE.md; do
-            if [ -f ".githooks/$dep" ]; then
-              cp ".githooks/$dep" ".git/hooks/$dep"
-            fi
-          done
           echo "Git hooks configured:"
           git config core.hooksPath
           ls -lh .git/hooks/{pre-commit,commit-msg,post-merge,pre-push} 2>/dev/null || echo "Some hooks missing"
@@ -67,6 +61,13 @@ jobs:
 
       - name: Lint
         run: make lint
+
+      - name: Model Registry Check
+        run: |
+          # Check model registry consistency and verify generated targets are current
+          python3 scripts/models.py check
+          python3 scripts/models.py sync --check
+          echo "✅ Model registry is current and consistent"
 
       # ── Skill/render gates ───────────────────────────────────────────────
 
