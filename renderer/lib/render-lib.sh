@@ -28,7 +28,7 @@
 #
 #   Utilities:
 #     - yaml_escape_inline <text>           — escape text for YAML inline values
-#     - map_model <model_id>                — map full model name to short form
+#     - map_model <role> <harness>          — registry-pinned model ID for a role (scripts/models.py)
 #
 #   Cleanup / pruning:
 #     - prune_excluded_cruft <dst_dir>      — remove tests//__pycache__/*.pyc cruft
@@ -211,19 +211,44 @@ yaml_escape_inline() {
 	tr '\n' ' ' | sed -e 's/\\/\\\\/g' -e 's/"/'\''/g' -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//'
 }
 
-# Map full model name to short form (for Claude Code, etc).
-# claude-haiku-4.5 → haiku, claude-sonnet-4.6 → sonnet, etc.
-# Usage: map_model <model_id>
+# Map a framework ROLE to the exact model ID a harness should be rendered with.
+# This is the ONE model-mapping implementation: every harness renderer calls it,
+# and it reads config/models.yaml through scripts/models.py (never parses the
+# registry itself, never hardcodes a model ID or a tier alias).
+#
+#   map_model <role> <harness>      harness: claude | copilot | opencode
+#
+# Prints the registry's pinned ID for that role+harness (e.g. claude-sonnet-5,
+# claude-haiku-4-5). Prints nothing (and returns 1) when the role or harness ID
+# is unknown, so a caller can warn and skip instead of guessing.
+#
+# Claude Code only: AGENTIC_CLAUDE_MODEL_RENDER=alias is an explicit, reversible
+# operator override that renders the floating family alias (haiku|sonnet|opus|
+# fable, from families.<f>.claude_alias in the registry) instead of the pin.
+# Default (unset or "pinned-id") is the exact pinned ID. The alias path exists
+# only so a rejected ID can be backed out without a code change; it is off by
+# default and documented in render-claude.sh.
+_models_py() {
+	printf '%s' "${MODELS_PY:-${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/scripts/models.py}"
+}
+
 map_model() {
-	case "$1" in
-		*haiku*)  echo "haiku" ;;
-		*sonnet*) echo "sonnet" ;;
-		*opus*)   echo "opus" ;;
-		*fable*)  echo "fable" ;;
-		gpt-5*)   echo "gpt-5" ;;
-		gpt-4*)   echo "gpt-4" ;;
-		*)        echo "" ;;
-	esac
+	local role="${1:-}" harness="${2:-}"
+	[ -n "$role" ] && [ -n "$harness" ] || return 1
+	local mp; mp=$(_models_py)
+	if [ "$harness" = "claude" ] && [ "${AGENTIC_CLAUDE_MODEL_RENDER:-pinned-id}" = "alias" ]; then
+		python3 - "$mp" "$role" <<'PY' 2>/dev/null || return 1
+import sys, importlib.util
+spec = importlib.util.spec_from_file_location("models", sys.argv[1])
+m = importlib.util.module_from_spec(spec); sys.modules["models"] = m; spec.loader.exec_module(m)
+reg = m.load_registry(m.Path(sys.argv[1]).resolve().parent.parent)
+model = m._role_cfg(reg, sys.argv[2])["model"]
+fam = reg["models"][model]["family"]
+print(reg["families"][fam]["claude_alias"])
+PY
+		return
+	fi
+	python3 "$mp" --root "$(dirname "$(dirname "$mp")")" get "$role" --harness "$harness" --field id 2>/dev/null
 }
 
 # Parse src/AGENTS.md canonical agent definitions table.

@@ -99,25 +99,72 @@ _opencode_family_token() {
 		| sed -E 's#^claude-##'
 }
 
-# Map a canonical agentic-engineers model token → fully-qualified "provider/model-id"
-# that OpenCode accepts.  Accepts both hyphen (claude-haiku-4-5) and dot
-# (claude-haiku-4.5) input formats.
+# Map a framework ROLE → fully-qualified "provider/model-id" that OpenCode accepts.
+#
+# The model token comes from the registry (map_model <role> opencode, i.e.
+# models[<pin>].ids.opencode via scripts/models.py); this function only adds the
+# provider prefix and the provider-specific spelling.
 #
 # Resolution order:
 #  1. Detect provider from environment / installed config.
-#  2. Query ~/.cache/opencode/models.json for that provider's exact registered ID.
-#  3. Fall back to a per-provider format table when the cache is absent.
-#
-# Returns "" (empty) when the model cannot be resolved; caller warns + skips.
+#  2. If the provider cache (~/.cache/opencode/models.json) lists models for that
+#     provider, ask scripts/models.py `resolve` whether the pin is available there.
+#     When it is not, resolve walks the role's fallback chain; a fallback is NEVER
+#     silent: a WARN goes to stderr and the walk is recorded in
+#     $REPO_ROOT/dist/opencode/model-resolution.json. No usable model => "" (the
+#     caller warns and skips the agent).
+#  3. Take the exact registered ID from the cache, or synthesize it per provider
+#     format when the cache is absent/empty (no availability information then,
+#     so the pin is used as-is).
 map_model_opencode() {
-	local raw="$1"
-	[ -n "$raw" ] || { echo ""; return; }
+	local role="$1"
+	[ -n "$role" ] || { echo ""; return; }
 
-	local provider family id
+	local provider token family id avail=""
 	provider=$(detect_opencode_provider)
-	family=$(_opencode_family_token "$raw")
+	token=$(map_model "$role" opencode || true)
+	[ -n "$token" ] || { echo ""; return; }
 
-	# Cache lookup: resolve the exact ID for this provider+family from models.dev data.
+	# Provider-scoped availability list (date stamps stripped) from the cache.
+	if [ -f "$CACHE" ] && command -v python3 >/dev/null 2>&1; then
+		avail=$(mktemp)
+		if ! python3 - "$CACHE" "$provider" "$avail" <<'PY'
+import json, re, sys
+cache_path, provider, out = sys.argv[1:4]
+try:
+    data = json.load(open(cache_path))
+    pdata = data.get(provider, {})
+    models = pdata.get("models", pdata) if isinstance(pdata, dict) else {}
+    ids = [k for k in models if isinstance(k, str)]
+except Exception:
+    sys.exit(1)
+if not ids:
+    sys.exit(1)  # provider has no model list: no availability information
+ids += [re.sub(r"-\d{8}(-.*)?$", "", i) for i in ids]
+json.dump(sorted(set(ids)), open(out, "w"))
+PY
+		then
+			rm -f "$avail"; avail=""
+		fi
+	fi
+
+	if [ -n "$avail" ]; then
+		local rec_dir="$REPO_ROOT/dist/opencode" resolved rc=0
+		mkdir -p "$rec_dir"
+		resolved=$(python3 "$(_models_py)" --root "$REPO_ROOT" resolve "$role" --harness opencode \
+			--available-from "$avail" --record "$rec_dir/model-resolution.json") || rc=$?
+		rm -f "$avail"
+		if [ "$rc" -ne 0 ] || [ -z "$resolved" ]; then
+			echo "  ⚠️  no model for role '$role' is available in provider '$provider' (see $rec_dir/model-resolution.json)" >&2
+			echo ""; return
+		fi
+		# resolve already printed "WARN model-fallback ..." on stderr when it fell back.
+		token="$resolved"
+	fi
+
+	family=$(_opencode_family_token "$token")
+
+	# Cache lookup: the exact registered spelling for this provider+family.
 	if [ -f "$CACHE" ] && command -v python3 >/dev/null 2>&1; then
 		id=$(python3 - "$CACHE" "$provider" "$family" <<'PY'
 import json, sys, re
@@ -345,15 +392,11 @@ write_config() {
 	# which drifts silently the moment the roster changes (was hardcoded to
 	# claude-haiku-4-5 while the roster's orchestrator model had moved to
 	# claude-sonnet-5).
-	local default_model orchestrator_meta orchestrator_model_raw
-	orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
-	if [ -n "$orchestrator_meta" ]; then
-		orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
-		default_model=$(map_model_opencode "$orchestrator_model_raw")
+	local default_model
+	default_model=$(map_model_opencode "orchestrator")
+	if [ -z "${default_model:-}" ]; then
+		echo "  ⚠️  no OpenCode model for orchestrator (see config/models.yaml); opencode.jsonc \"model\" left empty" >&2
 	fi
-	# Fallback only if the roster lookup fails outright (missing/unparseable
-	# src/AGENTS.md) — keeps write_config() from emitting an empty "model" key.
-	[ -n "${default_model:-}" ] || default_model=$(map_model_opencode "claude-haiku-4-5")
 
 	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install
@@ -607,13 +650,15 @@ case "$MODE" in
 			desc=$(printf '%s' "$desc" | yaml_escape_inline)
 
 			# Pick model: prefer docs (single source of truth), fall back to frontmatter then body.
+			# The ID itself comes from config/models.yaml (role-keyed); the roster/
+			# frontmatter value is only reported when the registry has no entry.
 			model_raw="${docs_model:-${fm_model:-$body_model}}"
-			model_full=$(map_model_opencode "$model_raw")
+			model_full=$(map_model_opencode "$name")
 			if [ -z "$model_full" ]; then
 				if [ -z "$model_raw" ]; then
 					echo "  ⚠️  skipping agent $name — no model in src/AGENTS.md or source frontmatter (non-canonical role?)"
 				else
-					echo "  ⚠️  skipping agent $name — model '$model_raw' not in OpenCode registry (see map_model_opencode)"
+					echo "  ⚠️  skipping agent $name — model '$model_raw' has no usable OpenCode model in config/models.yaml (see map_model_opencode)"
 				fi
 				continue
 			fi

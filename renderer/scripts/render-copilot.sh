@@ -186,38 +186,25 @@ case "$MODE" in
 		# dist exactly.
 		echo "⚙️  Writing settings.json → $COPILOT/settings.json ..."
 
-		# Derive model from orchestrator row in canonical AGENTS.md
-		orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
-		if [ -n "$orchestrator_meta" ]; then
-			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
-			orchestrator_model=$(map_model "$orchestrator_model_raw")
-			if [ -n "$orchestrator_model" ]; then
-				cat > "$COPILOT/settings.json" <<EOF
+		# Session model = the registry's pinned Copilot ID for the orchestrator
+		# (scripts/models.py via map_model). Never a floating alias: if the
+		# registry has no ID, say so and omit the key rather than guess.
+		orchestrator_model=$(map_model "orchestrator" copilot || true)
+		if [ -n "$orchestrator_model" ]; then
+			cat > "$COPILOT/settings.json" <<EOF
 {
   "model": "$orchestrator_model",
   "harness": "copilot"
 }
 EOF
-				echo "  ✅ settings.json (session model → $orchestrator_model from orchestrator)"
-			else
-				# Fallback if model mapping fails
-				cat > "$COPILOT/settings.json" <<'EOF'
-{
-  "model": "sonnet",
-  "harness": "copilot"
-}
-EOF
-				echo "  ✅ settings.json (fallback: sonnet)"
-			fi
+			echo "  ✅ settings.json (session model → $orchestrator_model from registry)"
 		else
-			# Fallback if lookup fails
 			cat > "$COPILOT/settings.json" <<'EOF'
 {
-  "model": "sonnet",
   "harness": "copilot"
 }
 EOF
-			echo "  ✅ settings.json (fallback: sonnet — orchestrator not found in roster)"
+			echo "  ⚠️  settings.json written WITHOUT a model — no copilot ID for orchestrator in config/models.yaml" >&2
 		fi
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable

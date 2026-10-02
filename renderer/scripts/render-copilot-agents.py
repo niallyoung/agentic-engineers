@@ -30,6 +30,29 @@ def _dump_scalar_field(key: str, value: str) -> str:
     return dumped.rstrip("\n")
 
 
+def _registry_copilot_id(role: str, source_model: str) -> str:
+    """Pinned Copilot model ID for *role* from config/models.yaml (via scripts/models.py).
+
+    Falls back to the source frontmatter value only for a role the registry does
+    not know (a non-framework agent), and warns so the fallback is never silent.
+    """
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    sys.path.insert(0, str(repo_root / "scripts"))
+    try:
+        import models  # scripts/models.py
+        reg = models.load_registry(repo_root)
+        cfg = (reg.get("roles") or {}).get(role)
+        rid = models.harness_id(reg, cfg["model"], "copilot") if cfg else None
+    except Exception as exc:  # registry unreadable: surface, do not guess
+        print(f"WARN model-registry-unavailable role={role}: {exc}", file=sys.stderr)
+        rid = None
+    if rid:
+        return rid
+    print(f"WARN no copilot ID in registry for role={role}; using source frontmatter model {source_model}",
+          file=sys.stderr)
+    return str(source_model)
+
+
 class CopilotAgentRenderer:
     """Renders source agent definitions to Copilot CLI agent profiles"""
     
@@ -141,10 +164,11 @@ class CopilotAgentRenderer:
         # terminator. safe_dump({'description': value}) instead renders a
         # "description: value" mapping entry, which never hits that code path.
         description = frontmatter.get('description', '')
+        model_id = _registry_copilot_id(str(frontmatter.get('name') or agent_name).removesuffix('-agent'), frontmatter['model'])
         output = f"""---
 name: {frontmatter['name']}
 {_dump_scalar_field('description', description)}
-model: {frontmatter['model']}
+model: {model_id}
 {protocol_block}
 ---
 

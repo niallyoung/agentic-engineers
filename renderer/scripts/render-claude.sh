@@ -57,37 +57,18 @@ MODEL_MARKER="$CLAUDE/.agentic-engine-claude-model"
 # shellcheck source=../lib/render-lib.sh
 source "$(dirname "$0")/../lib/render-lib.sh"
 
-# Map canonical model ID → Claude Code tier name or full ID fallback.
-# Claude Code accepts short tier aliases (haiku/sonnet/opus) and resolves
-# them to the latest available version in that tier — inherently version-agnostic.
-# Unknown tiers: emit the full hyphenated model ID so the agent still gets a model
-# rather than silently inheriting the session default.
+# Model IDs: map_model <role> claude (renderer/lib/render-lib.sh) is the single
+# registry-driven mapper. It prints the EXACT pinned Claude Code ID from
+# config/models.yaml via scripts/models.py (e.g. claude-sonnet-5, claude-haiku-4-5,
+# claude-sonnet-5-5). There is no floating tier alias and no per-version special
+# case in this script.
 #
-# NOTE: This intentionally shadows the map_model helper in renderer/lib/render-lib.sh.
-# render-claude.sh declares its own tier-alias logic rather than delegating to render-lib.sh
-# because Claude Code's short-alias resolution (haiku→latest haiku) differs from
-# OpenCode/Copilot, which require fully-qualified model IDs. Keeping both definitions
-# prevents accidental cross-harness incompatibility if either logic needs to drift
-# in the future.
-map_model() {
-	local raw="$1"
-	case "$raw" in
-		# Orchestrator pin (SPEC-2026-010): a specific minor version cannot be expressed
-		# by the floating "sonnet" alias, so Sonnet 5.5 renders as its full API ID.
-		# Accepts both the canonical dot form and an already-hyphenated form.
-		claude-sonnet-5.5|claude-sonnet-5-5) echo "claude-sonnet-5-5" ;;
-		*haiku*)  echo "haiku"  ;;
-		*sonnet*) echo "sonnet" ;;
-		*opus*)   echo "opus"   ;;
-		*fable*)  echo "fable"  ;;
-		"")       echo ""       ;;
-		*)
-			# Unknown tier: normalise dots→hyphens and emit the full ID.
-			# Claude Code accepts fully-qualified model IDs when no tier alias matches.
-			printf '%s' "$raw" | sed 's/\./-/g'
-			;;
-	esac
-}
+# Reversible switch: AGENTIC_CLAUDE_MODEL_RENDER=alias renders the floating family
+# alias (haiku|sonnet|opus|fable) for every agent and the settings.json default
+# instead of the pin. Default (unset / "pinned-id") is the exact pinned ID. Use it
+# only to back out if a Claude Code build rejects a pinned ID; it is never the
+# default. (config/models.yaml harnesses.claude.render does not expose an alias
+# mode, so this is an environment override only.)
 
 # _settings_edit SETTINGS_FILE OPERATION [ARGS...]
 # Unified helper for all settings.json edits. Operation is a Python function name;
@@ -458,10 +439,11 @@ case "$MODE" in
 			else echo "  ⚠️  $label (foreign)"; fi
 		done
 		# settings.json status (single python3 pass)
-		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" "$HOOK_MARKER" "$MODEL_MARKER" <<'PY'
+		status_pin=$(map_model "orchestrator" claude || true)
+		python3 - "$CLAUDE/settings.json" "$SRC_HOOK" "$DST_HOOK" "$HOOK_SCRIPT_NAME" "$HOOK_MARKER" "$MODEL_MARKER" "$status_pin" <<'PY'
 import json, sys, os, filecmp
 
-settings_file, src_hook, dst_hook, hook_name, hook_marker, model_marker = sys.argv[1:7]
+settings_file, src_hook, dst_hook, hook_name, hook_marker, model_marker, pinned = sys.argv[1:8]
 
 # settings.json model
 try:
@@ -477,7 +459,11 @@ try:
 except OSError:
 	marker_model = ''
 
-if model and model == marker_model:
+if model and model == marker_model and pinned and model != pinned:
+	# The framework wrote this value, but the registry pin has since moved (or the
+	# value is a legacy alias). Re-running install migrates it; nothing is changed here.
+	print(f"  🔄 settings.json model: stale managed value '{model}' (registry pin is '{pinned}'; re-run install to update)")
+elif model and model == marker_model:
 	print(f"  ✅ settings.json model: {model} (managed by the framework)")
 elif model:
 	print(f"  ℹ️  settings.json model: {model} (set by you — the framework will not change it)")
@@ -611,7 +597,11 @@ PY
 			model_raw=$(echo "$canonical_metadata" | cut -d'|' -f1)
 			effort=$(echo "$canonical_metadata" | cut -d'|' -f2)
 			desc=$(echo "$canonical_metadata" | cut -d'|' -f3-)
-			model=$(map_model "$model_raw")
+			model=$(map_model "$name" claude || true)
+			if [ -z "$model" ]; then
+				echo "  $(_yellow "⚠️  skipping agent $name — no Claude ID for role in config/models.yaml (roster model: ${model_raw:-none})")"
+				continue
+			fi
 
 		# Protocol declaration: read machine-readable capability keys from the
 		# source agent frontmatter so the harness can detect protocol support.
@@ -717,10 +707,10 @@ PY
 		#   file exists + value==marker    → still exactly what we wrote      → UPDATE
 		#   file exists + no "model" key   → theirs: never had one, or cleared it → SKIP
 		#   file exists + value!=marker    → user-chosen (or hand-edited)     → SKIP
-		orchestrator_meta=$(lookup_agent_metadata "orchestrator" "$AGENTS_MAP" 2>/dev/null || true)
-		if [ -n "$orchestrator_meta" ]; then
-			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
-			orchestrator_model=$(map_model "$orchestrator_model_raw")
+		orchestrator_model=$(map_model "orchestrator" claude || true)
+		if [ -z "$orchestrator_model" ]; then
+			echo "$(_yellow "⚠️  no Claude ID for orchestrator in config/models.yaml — leaving settings.json model alone")" >&2
+		else
 			if [ -n "$orchestrator_model" ]; then
 				# Capture existence BEFORE anything in this run can create the
 				# file. Nothing above writes settings.json; the protocol-guard
