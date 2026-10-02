@@ -4,7 +4,8 @@
         setup harness-toggle test-protocol-e2e \
         verify validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-opencode render-codex render-specs render-all \
-        lint test test-skills test-ci test-ci-force test-ci-shell quality-gate
+        lint test test-skills test-ci test-ci-force test-ci-shell quality-gate \
+        models-sync models-check
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -95,6 +96,8 @@ help:
 	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
 	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
 	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
+	@echo "  models-sync         Regenerate derived model registry targets from config/models.yaml"
+	@echo "  models-check        Validate model registry and check that generated targets are current"
 	@echo "  quality-gate        Pre-push quality checks (lint + test + verify + render validation)"
 
 setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
@@ -383,7 +386,17 @@ test-ci-shell: ## Open interactive shell in CI container for debugging
 	@echo ""
 	@echo "👋 Exited CI container"
 
-quality-gate: lint test verify validate-renders ## Pre-push quality checks (lint + test + verify + render validation)
+models-sync: ## Regenerate derived model registry targets from config/models.yaml
+	@echo "🔄 Syncing model registry targets..."
+	@python3 "$(REPO_ROOT)/scripts/models.py" sync
+	@echo "✅ Model registry sync complete"
+
+models-check: ## Validate model registry and check that generated targets are current
+	@echo "🔍 Checking model registry and generated targets..."
+	@python3 "$(REPO_ROOT)/scripts/models.py" check
+	@echo "✅ Model registry check passed"
+
+quality-gate: lint test verify validate-renders models-check ## Pre-push quality checks (lint + test + verify + render validation)
 	@echo ""
 	@echo "✅✅✅ Quality gate PASSED ✅✅✅"
 	@echo ""
