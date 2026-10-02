@@ -76,8 +76,11 @@ artifacts/
 *.tmp
 temp/
 dist/
-# .claude is outside the repo (harness install target) — not committed here
-.claude
+# ~/.claude is the harness install target — not committed here. The project-level
+# .claude/ carries only the cloud-session SessionStart hook + its settings.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 
 
 # ============================================================================
