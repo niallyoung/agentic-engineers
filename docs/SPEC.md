@@ -348,12 +348,14 @@ Engineer's `claude-fable-5`/max in any cross-model sense; the two axes are indep
 
 ## Model Fallback & Defensive-Scope Notes
 
-Context for the LOCKED section below (not itself LOCKED): Principal Engineer defaults
-unconditionally to `claude-opus-5`; fallback to `claude-opus-4.8` only on opus-5
-unavailability (documented in HANDBACK `model_assessment`) — never a cost-driven
-downgrade. Security Engineer defaults unconditionally to `claude-fable-5` for its
+Context for the LOCKED section below (not itself LOCKED). Each role's pin and its
+declared fallback live in `config/models.yaml` (rendered in `docs/MODELS.md`). Principal
+Engineer defaults unconditionally to its pinned model; fallback to `claude-opus-4.8` only on
+unavailability of the pin (documented in HANDBACK `model_assessment`) — never a cost-driven
+downgrade. Security Engineer defaults unconditionally to its pinned model for its
 highest-capability reasoning on threat modeling and vulnerability assessment; fallback to
-`claude-opus-5` only on fable-5 unavailability. Fable-5 is approved **exclusively for
+`claude-opus-4.8` only on unavailability of the pin. The Sonnet-tier roles fall back to
+`claude-sonnet-4.6`. Fable-5 is approved **exclusively for
 defensive security analysis** — vulnerability assessment, threat modelling of existing
 systems, compliance review, audit-finding triage. It is never approved for exploit
 development, offensive research, adversarial/jailbreak work, or destructive-capability
@@ -366,103 +368,107 @@ recorded passively via HANDBACK `safeguard_events` and escalated, never re-route
 
 ## Model Naming & Harness Compatibility (LOCKED SPEC)
 
-This section documents the approved AI model names and their official sources. Model naming is **CRITICAL** for harness compatibility and MUST NOT be changed without updating all validators, tests, and this specification.
+This section locks the **invariants** of model selection. It deliberately does NOT list
+model versions, per-role assignments, or per-harness ID tables: those are *values*, owned
+by `config/models.yaml` and rendered for humans in [`docs/MODELS.md`](MODELS.md)
+(generated; do not edit by hand). Changing a value is a **Model Pin Change** (below) and is
+not a SPEC amendment. Changing an invariant below IS a SPEC amendment and goes through the
+`spec-management` skill.
 
-### Official Model Names (AUTHORITATIVE)
+### Invariants (LOCKED)
 
-**Source:** [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/docs/models-overview)
+- **I1 — Canonical ID format.** Source model IDs are `claude-<family>-<major>[.<minor>]`:
+  lowercase, a **dot** before an optional minor version (`claude-sonnet-5.5`,
+  `claude-opus-4.8`), a bare major for single-part versions (`claude-fable-5`). Underscores,
+  uppercase, and hyphenated minors (`claude-opus-4-8`) are never valid *source* IDs. A
+  harness *render* may hyphenate the minor (`claude-sonnet-5-5`) or add a provider prefix
+  where that harness requires it; the per-harness rendered ID is explicit data in
+  `config/models.yaml`, never an ad-hoc string transform.
+- **I2 — Single source of truth.** `config/models.yaml` (read through `scripts/models.py`)
+  is the only authoritative statement of which models exist, which model each role pins,
+  each role's effort and fallback chain, and each harness's rendered ID. Every other
+  occurrence (`.githooks/LOCKED_MODELS.sh`, the `src/AGENTS.md` roster, agent
+  frontmatter, `config/FRAMEWORK-MANIFEST.yaml`, `docs/MODELS.md`) is generated from it or
+  validated against it. Hand-edited copies that disagree are defects.
+- **I3 — Exact pins, no floating selection.** Every assigned role resolves to one exact
+  model ID. No floating tier alias (`sonnet`, `opus`, ...) and no "latest" is rendered for an
+  assigned role. A pin changes only by an explicit registry edit (Model Pin Change).
+- **I4 — User choice is never overwritten.** The installer never overwrites a model the user
+  chose (e.g. `settings.json["model"]`). It migrates a value only when the on-disk value
+  equals the value the installer itself recorded writing (the `MODEL_MARKER` semantics); a
+  legacy value with no marker is treated as user-chosen.
+- **I5 — Fallback is surfaced, never silent.** A role's fallback chain is declared in the
+  registry. Any use of a fallback MUST be reported (renderer warning or HANDBACK
+  `model_assessment`). Where a harness cannot verify availability at render time (Claude
+  Code), the chain is documentation plus the HANDBACK convention; the framework does not
+  claim runtime enforcement it does not have.
+- **I6 — Validators check shape and consistency, not a version allowlist.** Validators
+  enforce I1 shape, family consistency, registry membership (an ID absent from the registry
+  is an error, so typos are still caught), registry-to-generated-file agreement, and that no
+  role is pinned to a retired model. They do not embed a hard-coded list of approved
+  versions anywhere outside the registry.
 
-Canonical (source) model IDs use a **dot** in the two-part version
-(`claude-<tier>-<major>.<minor>`). Each harness transforms this at render time
-(see the Harness-Specific Model Format table below):
+### Model Tables
 
-| Model | Canonical (source) ID | Context Window | Max Output | Use Case |
-|-------|-----------------------|-----------------|------------|----------|
-| **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Engineer |
-| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
-| **Claude Sonnet 5.5** | `claude-sonnet-5.5` | 1M | 128K | Balanced; Orchestrator (routing). Two-part version — the dot is transformed to a hyphen in per-harness renders (`claude-sonnet-5-5` for Claude Code's full-ID pin, OpenCode's Anthropic provider, and Copilot's hyphenated form where applicable). |
-| **Claude Opus 5** | `claude-opus-5` | 1M | 128K | High capability; Principal Engineer. Single-part version — no transformation in any harness. |
-| **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer (unconditional default). Most expensive model in the roster ($10/$50 per MTok, 2x Opus 5) — a capability upgrade, never a cost saving. Single-part version — identical in every harness, no transformation. |
-| **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 128K | Still locked/approved; no longer assigned to a role |
-| **Claude Opus 4.6** | `claude-opus-4.6` | 1M | 64K | Still locked/approved; no longer assigned to a role |
-| **Claude Opus 4.7** | `claude-opus-4.7` | 1M | 128K | Still locked/approved; no longer assigned to a role |
-| **Claude Opus 4.8** | `claude-opus-4.8` | 1M | 128K | Emergency fallback tier. **Fallback for `security_engineer`** — used only if fable-5 is unavailable. |
-
-**CRITICAL RULE — canonical IDs:** the two-part version uses a **dot**
-(`claude-opus-4.8`), never an underscore or uppercase. The fully-hyphenated form
-(`claude-opus-4-8`) is **not** a source ID — it is the OpenCode / Anthropic-API
-render target produced by the dot→hyphen transformation below. A single-part
-version (`claude-fable-5`) has no dot to transform and is byte-identical in every
-harness.
-
-### Harness-Specific Model Format
-
-Each harness transforms the canonical ID for its runtime. Official sources: the
-[Anthropic Claude API](https://docs.anthropic.com/claude/docs/models-overview)
+The model list (context windows, output limits, status, price), the per-harness ID table,
+the role-to-model assignments, fallback chains, and pin history are in
+[`docs/MODELS.md`](MODELS.md), generated from `config/models.yaml` by
+`python3 scripts/models.py sync`. Codex does not carry a canonical Claude ID forward: it
+substitutes its own GPT-family model per agent-role tier via `CODEX_MODEL_BY_ROLE` in
+`renderer/scripts/render-codex.py` and never emits a `claude-*` ID. Official sources for
+model facts: the [Anthropic Claude API documentation](https://docs.anthropic.com/claude/docs/models-overview)
 and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/reference/ai-models/supported-models).
 
-| Harness | Canonical ID | Rendered Format | Transformation |
-|---------|--------------|-----------------|----------------|
-| **Claude (Claude Code)** | `claude-opus-5` | `opus` (tier alias) or full ID | Tier alias where the runtime accepts it; else no transformation (single-part) |
-| **Copilot CLI** | `claude-opus-5` | `claude-opus-5` | None (single-part) |
-| **Claude (Claude Code), two-part example** | `claude-sonnet-5.5` | `claude-sonnet-5-5` (full ID, never the floating `sonnet` alias) | Dot→hyphen, pinned: the Orchestrator's `settings.json` default and its agent frontmatter use the pinned full ID so the session does not float to whatever `sonnet` currently resolves to; every other Sonnet-tier role keeps the `sonnet` alias |
-| **OpenCode** | `claude-opus-5` | `anthropic/claude-opus-5` | `anthropic/` prefix (single-part, no dot→hyphen) |
-| **Codex** | *(not carried forward)* | `gpt-5.4-mini` (Orchestrator/Engineer) or `gpt-5.5` (all other roles) | Not a canonical-ID transform — Codex substitutes its own GPT-family model per agent-role tier (`CODEX_MODEL_BY_ROLE` in `renderer/scripts/render-codex.py`); it never emits a `claude-*` ID |
+Defensive-scope enforcement for the Security Engineer is a role convention — followed by the
+Security Engineer's own system prompt and cross-checked by operator/reviewer judgment, not
+by model routing and not mechanically enforced by
+`renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every
+specialist spawn), which validates DELEGATE structure only (handoff_type, agent, task_id
+format, scope word count, plan, success_criteria present; plus the optional depth/ancestry
+extension fields when present — see § Recursion Limits) and contains no scope/topic/content
+inspection. The Security Engineer's pin is whatever `config/models.yaml` assigns to
+`security-engineer`; its fallback is `claude-opus-4.8`, used only on unavailability of the
+pin and documented in HANDBACK.
 
-### Model Assignment by Agent Role
+### Model Pin Change (NOT a SPEC amendment)
 
-As of 2026-08-11:
+**Philosophy — positive enforcement.** Models are pinned by *explicit strategic choice*,
+not by forbidding patterns: the registry is the statement "these are the models we chose".
+Every change is auditable.
 
-- **Orchestrator:** `claude-sonnet-5.5` (routing)
-- **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
-- **Senior Engineer:** `claude-sonnet-5` (complex coding, unscoped work)
-- **Lead Engineer:** `claude-sonnet-5` (code review, architectural guidance)
-- **Quality Engineer:** `claude-sonnet-5` (quality gates, verification)
-- **Model Engineer:** `claude-sonnet-5` (metrics analysis, recommendations)
-- **Principal Engineer:** `claude-opus-5` (cross-service architecture)
-- **Security Engineer:** `claude-fable-5` (unconditional; highest capability for threat modeling, vulnerability analysis).
-  `ModelResolver.resolve('security_engineer')` unconditionally returns `claude-fable-5`.
-  Defensive-scope enforcement is a role convention — followed by the Security
-  Engineer's own system prompt and cross-checked by operator/reviewer judgment, not by
-  model routing and not mechanically enforced by
-  `renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every
-  specialist spawn), which validates DELEGATE structure only (handoff_type, agent,
-  task_id format, scope word count, plan, success_criteria present; plus the optional
-  depth/ancestry extension fields when present — see § Recursion Limits) and contains
-  no scope/topic/content inspection. Fallback to `claude-opus-5` if fable-5 is
-  unavailable (documented in HANDBACK).
+A Model Pin Change is any edit to a *value* in `config/models.yaml` that satisfies I1–I6:
+adding a model, changing which model a role pins, changing effort, or editing a fallback
+chain. It requires no SPEC amendment and no SPEC changelog entry. Process:
 
-### Model Governance: Locking & Switching
+1. Edit `config/models.yaml`: add the model block if it is new, change
+   `roles.<role>.model`, and append one `pin_history` line (date, role, from, to, approval).
+2. Run `make models-sync` (`python3 scripts/models.py sync`) to regenerate every derived
+   artifact (`.githooks/LOCKED_MODELS.sh`, the roster and per-role lines in `src/AGENTS.md`,
+   agent frontmatter, `config/FRAMEWORK-MANIFEST.yaml`, `docs/MODELS.md`).
+3. Run `make test`, then commit with a `Model-Pin-Approved-By: <approver>` trailer whenever a
+   role's pinned model changed. The pre-commit/commit-msg hooks require the trailer once the
+   enforcement work lands; `pin_history` plus the trailer is the audit trail. Adding a
+   model without assigning it needs no trailer.
+4. Re-run the installer so a managed Claude Code `settings.json` value migrates per I4.
 
-**Philosophy — positive enforcement.** Models are locked by *explicit strategic choice*,
-not by forbidding patterns — "these are the approved models" rather than a rejection
-blocklist. Users *can* request changes through the process below; every change is
-auditable.
-
-**Single source of truth — `.githooks/LOCKED_MODELS.sh`.** Contains `LOCKED_MODELS` (the
-canonical approved list), `AGENT_MODEL_ASSIGNMENTS` (which agent uses which model), and
-validation/display helpers. All hooks and validators source this file to stay consistent.
-
-**Model Switch Process:** Request (agent, requested model, reason, cost/quality-delta
-impact) → Evaluation (budget impact, task-profile fit, consistency, timeline) → Decision
-(✅ Approved → implement; ⏸️ Deferred → revisit; ❌ Denied → documented reason) →
-Implementation (update `LOCKED_MODELS` + `AGENT_MODEL_ASSIGNMENTS` in
-`.githooks/LOCKED_MODELS.sh`, PR with rationale/cost impact, merge so pre-commit enforces
-the new lock; keep `src/config/models.yaml`, if present, and this section in sync).
+The following are **not** Pin Changes and remain SPEC amendments: adding a model family,
+altering I1–I6, or changing the renderer's meaning of "pinned" (e.g. reintroducing
+floating aliases).
 
 ### Validation & Enforcement
 
-**Mandatory checks (all must pass):** source files (`src/agents/*.md` `model:` fields use
-hyphen format `claude-{family}-{version-with-hyphens}`, validated by
-`renderer/validate_agents.py`'s `KNOWN_MODELS`, which rejects dotted forms like
-`claude-opus-4.7`); documentation (`src/AGENTS.md`'s roster matches source agent files
-exactly, pre-commit enforced); rendered output (`dist/{copilot,claude,opencode}/agents/*`
-all use hyphen format — Codex is excluded from this check because it renders its own
-GPT-family models, not a `claude-*` ID, per the Harness-Specific Model Format table above).
-Dot-format regressions are caught by the pre-commit hook and CI
-(`test_model_naming_compliance.py`); Quality Engineer review is a further mandatory step.
-To add/update an approved model: verify the official source, update this section and
-`KNOWN_MODELS`, update `src/AGENTS.md`, run `make test`, commit citing the source.
+`scripts/models.py check` validates the registry (ID shape, family consistency, role set
+equals the agent set, fallbacks exist and are not retired, generated artifacts current).
+Source files (`src/agents/*.md` `model:` fields use the dotted canonical form and must
+equal the registry pin for their role, validated by `renderer/validate_agents.py`);
+documentation (`src/AGENTS.md`'s roster matches source agent files exactly, pre-commit
+enforced); rendered output (`dist/{copilot,claude,opencode}/agents/*` match the registry's
+per-harness IDs — Codex is excluded because it renders its own GPT-family models). Format
+regressions are caught by the pre-commit hook and CI (`test_model_naming_compliance.py`);
+Quality Engineer review is a further mandatory step. The enforcement tooling is being
+migrated from the legacy `.githooks/LOCKED_MODELS.sh` allowlist to the registry (see
+`docs/decisions/ADR-model-pin-registry.md`); until that lands, `.githooks/LOCKED_MODELS.sh`
+remains the enforced copy and must agree with `config/models.yaml`.
 
 ---
 
@@ -878,6 +884,7 @@ into `dist/<harness>/` and installed to each harness's home directory.
   as non-portable and undesirable — the same channel is the operator's emergency
   brake).
 - **2026-10-02:** [SPEC-2026-010 — lead-engineer, authorized_by: user-directive (Orchestrator default to Claude Sonnet 5.5; framework-wide governed amendment), routed via Orchestrator DELEGATE task orchestrator-sonnet-5-5-switch; full peer approval_chain not recorded because the user directive is the approval of record for this Model Switch] Model Switch under the Model Switch Process in the LOCKED "Model Naming & Harness Compatibility" section: the Orchestrator's assigned model moves from `claude-sonnet-5` to `claude-sonnet-5.5`. Only the Orchestrator changes; Engineer (`claude-haiku-4.5`), Senior/Lead/Quality/Model Engineer (`claude-sonnet-5`), Principal (`claude-opus-5`) and Security (`claude-fable-5`) are unchanged. `.githooks/LOCKED_MODELS.sh` updated first (`claude-sonnet-5.5` added to `LOCKED_MODELS`; `orchestrator-agent` reassigned in `AGENT_MODEL_ASSIGNMENTS`). Edits to this LOCKED section: (a) Official Model Names table gains a Claude Sonnet 5.5 row and the Sonnet 5 row drops "Orchestrator"; (b) Harness-Specific Model Format table gains a two-part-version row documenting that Claude Code receives the pinned full ID `claude-sonnet-5-5` for the Orchestrator rather than the floating `sonnet` alias; (c) Model Assignment by Agent Role Orchestrator line changes model only. The roster table row in "Agents & Roles" is updated to match. Naming rule is unchanged: Sonnet 5.5 is the first current-generation two-part version, so it uses the dot in source (`claude-sonnet-5.5`) and the hyphen only in per-harness renders. Rationale for pinning: `render-claude.sh` previously mapped every `*sonnet*` ID to the floating `sonnet` alias, which cannot express a specific minor version; the Orchestrator's `settings.json` default and agent frontmatter now map `claude-sonnet-5.5` to `claude-sonnet-5-5`. The installer's marker semantics are unchanged: a user-chosen `settings.json` model is never overwritten, and a value the installer itself wrote (the old `sonnet`) migrates to the new pin. Companion edits outside this section: `src/AGENTS.md`, `src/agents/orchestrator-agent.md`, `src/agents/model-engineer-agent.md`, `src/skills/orchestrator/SKILL.md`, `src/SKILLS.md`, `config/FRAMEWORK-MANIFEST.yaml`, `config/orchestration.yaml` (tokenizer re-baseline note), `README.md`, `docs/ENTRYPOINT.md`, `docs/CONTRIBUTING/README.md`, `renderer/validate_agents.py` (`KNOWN_MODELS`), `renderer/scripts/render-claude.sh`, and the affected tests. Cost note: the Sonnet 5.5 price and tokenizer are not asserted here; re-baseline `config/orchestration.yaml` budgets before relying on them.
+- **2026-10-02:** [SPEC-2026-011 — lead-engineer, authorized_by: user-directive (model-selection flexibility: replace the LOCKED version allowlist with a pinned registry; all design leans accepted by the user), routed via Orchestrator DELEGATE task wp0-model-pin-spec-amendment; full peer approval_chain NOT obtained — principal-engineer/security-engineer co-approval was not obtained and is recommended before the enforcement work (WP2/WP3) merges, since this is a change to a LOCKED section's meaning] Narrowed the LOCKED "Model Naming & Harness Compatibility" section from a value allowlist to six invariants: I1 canonical ID format (dot minor in source, hyphen only in per-harness renders — resolves the prior self-contradiction between the Official Model Names paragraph, which required dots, and Validation & Enforcement, which said source IDs are hyphenated); I2 single source of truth is `config/models.yaml` via `scripts/models.py`; I3 exact pins, no floating aliases for assigned roles; I4 the installer never overwrites a user-chosen model and migrates only values it wrote; I5 fallback must be surfaced, never silent; I6 validators check shape and consistency, not a version allowlist. The model table, harness-format table, and role-assignment list moved out of the spec to generated `docs/MODELS.md` (a pointer remains; the generator ships in a later work package). "Model Governance: Locking & Switching" and its Model Switch Process (edit `.githooks/LOCKED_MODELS.sh`) are replaced by a Model Pin Change process (edit `config/models.yaml`, append a `pin_history` line, run `make models-sync`, commit with a `Model-Pin-Approved-By:` trailer) that is explicitly NOT a SPEC amendment. The sentence claiming `ModelResolver.resolve('security_engineer')` returns `claude-fable-5` described code that does not exist and is reworded to refer to the registry pin; the `src/config/models.yaml` reference (also nonexistent) is replaced by `config/models.yaml`. Fallbacks recorded for the registry: `claude-opus-4.8` for Principal and Security (Security previously documented `claude-opus-5`; changed by user decision), `claude-sonnet-4.6` for the Sonnet-tier roles. Behaviour decision recorded: all Claude Code roles are pinned to exact IDs rather than floating tier aliases (supersedes the SPEC-2026-010 note that other Sonnet-tier roles keep the `sonnet` alias). Model assignments are UNCHANGED by this amendment (Orchestrator `claude-sonnet-5.5`; Engineer `claude-haiku-4.5`; Senior/Lead/Quality/Model Engineer `claude-sonnet-5`; Principal `claude-opus-5`; Security `claude-fable-5`). Realises and supersedes ADR-model-centralization (`ModelResolver`/`src/config/models.yaml` replaced by `scripts/models.py`/`config/models.yaml`); see `docs/decisions/ADR-model-pin-registry.md`. Companion: `src/skills/spec-management/SKILL.md` gains a carve-out so a registry Pin Change is outside the SPEC protocol. Sequencing note: until the registry (`config/models.yaml`, `scripts/models.py`) and the generated `docs/MODELS.md` land, `.githooks/LOCKED_MODELS.sh` stays the enforced copy; existing tests that parse LOCKED prose are for the enforcement work package to migrate, not to weaken.
 
 ---
 

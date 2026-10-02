@@ -114,10 +114,10 @@ The changelog entry (step 4) is written exactly as in the peer-approval path, e.
 `[SPEC-2026-006 — lead-engineer, framework slimdown follow-up C]` — there is no
 `approved by <role>` clause because none applies; the bracket names only the proposer.
 
-**When it does NOT apply:** any change to a LOCKED invariant's *meaning* — model list
-membership, the naming rule itself, recursion/depth limits, the
-`.githooks/LOCKED_MODELS.sh` single-source-of-truth clause, or anything that changes what
-a reader or validator must do differently. Those still require the full peer
+**When it does NOT apply:** any change to a LOCKED invariant's *meaning* — the model
+naming/pinning invariants (I1–I6), adding a model family, recursion/depth limits, the
+`config/models.yaml` single-source-of-truth clause, or anything that changes what a reader
+or validator must do differently. Those still require the full peer
 `approval_chain` from step 3, regardless of how narrow the diff looks — narrowness of the
 *edit* is not the same as narrowness of its *consequence*.
 
@@ -142,6 +142,19 @@ the sections touched, and any sanctioned deviations in the entry itself.
 To revert a change, propose a new SPEC-YYYY-NNN that restores the prior text —
 governed by the identical protocol above, not a special-cased "undo" path. The
 changelog entry for the reverting proposal must reference the change_id it reverts.
+
+### Carve-out: Model Pin Changes are not SPEC amendments
+
+Changing a *value* in `config/models.yaml` — adding a model, repointing a role's pinned
+model, changing effort, or editing a fallback chain — is a **Model Pin Change**, governed by
+the "Model Pin Change" process in the LOCKED "Model Naming & Harness Compatibility" section
+of `docs/SPEC.md`, and is OUTSIDE this protocol: no `SPEC-YYYY-NNN` proposal, no peer
+approval chain, no SPEC.md changelog entry. Its audit trail is the registry's `pin_history`
+plus a `Model-Pin-Approved-By:` commit trailer. The carve-out holds only while the change
+satisfies the LOCKED invariants (I1–I6). Anything that alters an invariant (ID format, the
+single-source rule, exact-pin/no-floating-alias, installer ownership of user-chosen models,
+fallback surfacing, validator scope) or adds a model *family* is still a SPEC amendment and
+follows steps 1–4 above in full.
 
 ## Why This Stays Prose
 
