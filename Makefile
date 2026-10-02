@@ -388,12 +388,12 @@ test-ci-shell: ## Open interactive shell in CI container for debugging
 
 models-sync: ## Regenerate derived model registry targets from config/models.yaml
 	@echo "🔄 Syncing model registry targets..."
-	@python3 "$(REPO_ROOT)/scripts/models.py" sync
+	@cd "$(REPO_ROOT)" && python3 scripts/models.py sync
 	@echo "✅ Model registry sync complete"
 
 models-check: ## Validate model registry and check that generated targets are current
 	@echo "🔍 Checking model registry and generated targets..."
-	@python3 "$(REPO_ROOT)/scripts/models.py" check
+	@cd "$(REPO_ROOT)" && python3 scripts/models.py check
 	@echo "✅ Model registry check passed"
 
 quality-gate: lint test verify validate-renders models-check ## Pre-push quality checks (lint + test + verify + render validation)
