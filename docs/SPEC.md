@@ -184,7 +184,7 @@ none owns dispatch, scheduling, or supervision:
 | `entropy_detector.py` | Entropy-based credential/secret detector (security gate) |
 | `check-gitconfig-no-tokens.sh` | Pre-commit check for tokens leaking into gitconfig |
 | `handback_rollup.py` | Advisory per-role HANDBACK cost/quality rollup (never gates); `--events` mode reads the clause-7 audit JSONL |
-| `check_model_registry.py` | Advisory models.dev drift check for LOCKED_MODELS.sh (never gates) |
+| `check_model_registry.py` | Advisory drift check against config/models.yaml (never gates) |
 | `audit_append.py` | Deterministic append helper for the clause-7 audit JSONL — agents invoke it to format/validate/append one event; never gates, never owns dispatch |
 
 ### ENFORCEMENT CLAUSE
