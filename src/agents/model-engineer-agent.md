@@ -1,7 +1,7 @@
 ---
 name: model-engineer
 description: Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 accepts:
   - DELEGATE
 returns:
@@ -17,10 +17,10 @@ tools: []
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Model Engineer  
-**Model**: claude-sonnet-5  
+**Model**: claude-sonnet-5.5  
 **Effort**: high
 
-**Why Sonnet-5**: Strong reasoning for model selection analysis and cost/quality tradeoff evaluation.
+**Why Sonnet-5.5**: Strong reasoning for model selection analysis and cost/quality tradeoff evaluation.
 
 ## Agent Logic
 
@@ -227,4 +227,4 @@ copilot --allow-all --autopilot --agent model-engineer "Model optimization"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-5.
+You are powered by the model named claude-sonnet-5.5.

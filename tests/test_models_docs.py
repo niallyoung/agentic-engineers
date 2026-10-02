@@ -54,6 +54,13 @@ class TestModelsDocGeneration:
         for model in models_list:
             assert f"`{model}`" in models_md, f"Missing model {model}"
 
+    def test_models_md_contains_family_floors(self):
+        """docs/MODELS.md documents each family's min_pin floor."""
+        models_md = (REPO_ROOT / "docs" / "MODELS.md").read_text()
+        assert "## Family Floors" in models_md
+        assert "| sonnet | `claude-sonnet-5.5` |" in models_md
+        assert "| opus | `claude-opus-5.5` |" in models_md
+
     def test_models_md_contains_pin_history(self):
         """docs/MODELS.md includes pin history summary."""
         models_md = (REPO_ROOT / "docs" / "MODELS.md").read_text()

@@ -5,18 +5,28 @@
 This document is generated from `config/models.yaml` and describes which model
 each role is pinned to, the properties of each model, and the pin change history.
 
+## Family Floors
+
+A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
+`scripts/models.py check` enforces this by numeric major.minor comparison).
+
+| Family | Min Pin |
+|--------|---------|
+| sonnet | `claude-sonnet-5.5` |
+| opus | `claude-opus-5.5` |
+
 ## Roles
 
 | Role | Model | Effort | Fallback |
 |------|-------|--------|----------|
 | **Engineer** | `claude-haiku-4.5` | high | claude-sonnet-5 |
 | **Orchestrator** | `claude-sonnet-5.5` | low | claude-sonnet-5 |
-| **Lead Engineer** | `claude-sonnet-5` | high | claude-sonnet-4.6 |
-| **Quality Engineer** | `claude-sonnet-5` | medium | claude-sonnet-4.6 |
-| **Senior Engineer** | `claude-sonnet-5` | high | claude-sonnet-4.6 |
-| **Model Engineer** | `claude-sonnet-5` | high | claude-sonnet-4.6 |
-| **Security Engineer** | `claude-fable-5` | max | claude-opus-4.8 |
-| **Principal Engineer** | `claude-opus-5` | high | claude-opus-4.8 |
+| **Lead Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
+| **Quality Engineer** | `claude-sonnet-5.5` | medium | claude-sonnet-5 |
+| **Senior Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
+| **Model Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
+| **Security Engineer** | `claude-fable-5` | max | claude-opus-5, claude-opus-4.8 |
+| **Principal Engineer** | `claude-opus-5.5` | high | claude-opus-5, claude-opus-4.8 |
 
 ## Models
 
@@ -25,12 +35,13 @@ each role is pinned to, the properties of each model, and the pin change history
 | `claude-haiku-4.5` | haiku | current | — | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
 | `claude-sonnet-4.5` | sonnet | supported | — | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
 | `claude-sonnet-4.6` | sonnet | supported | — | `claude-sonnet-4-6` | `claude-sonnet-4.6` | `claude-sonnet-4-6` |
-| `claude-sonnet-5` | sonnet | current | — | `claude-sonnet-5` | `claude-sonnet-5` | `claude-sonnet-5` |
+| `claude-sonnet-5` | sonnet | fallback | — | `claude-sonnet-5` | `claude-sonnet-5` | `claude-sonnet-5` |
 | `claude-sonnet-5.5` | sonnet | current | — | `claude-sonnet-5-5` | `claude-sonnet-5.5` | `claude-sonnet-5-5` |
 | `claude-opus-4.6` | opus | supported | — | `claude-opus-4-6` | `claude-opus-4.6` | `claude-opus-4-6` |
 | `claude-opus-4.7` | opus | supported | — | `claude-opus-4-7` | `claude-opus-4.7` | `claude-opus-4-7` |
 | `claude-opus-4.8` | opus | supported | — | `claude-opus-4-8` | `claude-opus-4.8` | `claude-opus-4-8` |
-| `claude-opus-5` | opus | current | — | `claude-opus-5` | `claude-opus-5` | `claude-opus-5` |
+| `claude-opus-5` | opus | fallback | — | `claude-opus-5` | `claude-opus-5` | `claude-opus-5` |
+| `claude-opus-5.5` | opus | current | — | `claude-opus-5-5` | `claude-opus-5.5` | `claude-opus-5-5` |
 | `claude-fable-5` | fable | current | — | `claude-fable-5` | `claude-fable-5` | `claude-fable-5` |
 
 ## Pin History
@@ -45,3 +56,8 @@ each role is pinned to, the properties of each model, and the pin change history
 | 2026-10-02 | security-engineer | None | `claude-fable-5` | baseline: seeded from tree at 5a9d247 |
 | 2026-10-02 | principal-engineer | None | `claude-opus-5` | baseline: seeded from tree at 5a9d247 |
 | 2026-10-02 | orchestrator | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, SPEC-2026-010 (commit 5a9d247) |
+| 2026-10-02 | lead-engineer | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
+| 2026-10-02 | quality-engineer | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
+| 2026-10-02 | senior-engineer | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
+| 2026-10-02 | model-engineer | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
+| 2026-10-02 | principal-engineer | claude-opus-5 | `claude-opus-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |

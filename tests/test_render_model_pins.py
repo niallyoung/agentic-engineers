@@ -205,9 +205,9 @@ class TestOpenCode:
         assert "model-fallback" not in r.stderr
 
     def test_absent_pin_falls_back_loudly_and_records(self, repo, tmp_path):
-        # Provider cache offering only one fallback per family: pins are absent.
+        # Provider cache offering only each role's declared fallback(s): pins are absent.
         cache = tmp_path / "cache.json"
-        have = {registry_id("engineer", "opencode"), "claude-sonnet-4-6", "claude-opus-4-8"}
+        have = {registry_id("engineer", "opencode"), "claude-sonnet-5", "claude-opus-4-8"}
         cache.write_text(json.dumps({"anthropic": {"models": {m: {} for m in have}}}))
         r = run("render-opencode.sh", repo, tmp_path / "o",
                 env={"OPENCODE_PROVIDER": "anthropic", "OPENCODE_MODELS_CACHE": str(cache)})
@@ -215,13 +215,15 @@ class TestOpenCode:
         # Visible WARN on stderr, never silent.
         assert "WARN model-fallback role=lead-engineer" in r.stderr
         assert "WARN model-fallback role=principal-engineer" in r.stderr
-        assert fm_model(tmp_path / "o" / "agents" / "lead-engineer.md") == "anthropic/claude-sonnet-4-6"
+        assert fm_model(tmp_path / "o" / "agents" / "lead-engineer.md") == "anthropic/claude-sonnet-5"
+        # Principal's first fallback (claude-opus-5) is also absent, so it walks to the second.
         assert fm_model(tmp_path / "o" / "agents" / "principal-engineer.md") == "anthropic/claude-opus-4-8"
         # The un-pinned engineer is available, so no fallback for it.
         assert fm_model(tmp_path / "o" / "agents" / "engineer.md") == "anthropic/" + registry_id("engineer", "opencode")
         rec = json.loads((repo / "dist" / "opencode" / "model-resolution.json").read_text())["roles"]
         assert rec["lead-engineer"]["fallback_used"] is True
-        assert rec["lead-engineer"]["used"] == "claude-sonnet-4.6"
+        assert rec["lead-engineer"]["used"] == "claude-sonnet-5"
+        assert rec["principal-engineer"]["used"] == "claude-opus-4.8"
         assert rec["engineer"]["fallback_used"] is False
 
     def test_nothing_available_skips_agent_with_warning(self, repo, tmp_path):

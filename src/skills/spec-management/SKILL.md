@@ -9,7 +9,7 @@ metadata:
   category: management
   role: principal-engineer
   authority: principal-engineer, security-engineer, lead-engineer
-  model: claude-opus-5
+  model: claude-opus-5.5
   effort: medium
   thinking: true
 ---

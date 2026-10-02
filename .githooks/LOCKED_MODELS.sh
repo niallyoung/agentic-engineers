@@ -33,6 +33,7 @@ LOCKED_MODELS=(
     "claude-opus-4.7"
     "claude-opus-4.8"
     "claude-opus-5"
+    "claude-opus-5.5"
     "claude-fable-5"
 )
 
@@ -53,12 +54,12 @@ LOCKED_MODELS=(
 AGENT_MODEL_ASSIGNMENTS=(
     "engineer-agent:claude-haiku-4.5"
     "orchestrator-agent:claude-sonnet-5.5"
-    "lead-engineer-agent:claude-sonnet-5"
-    "quality-engineer-agent:claude-sonnet-5"
-    "senior-engineer-agent:claude-sonnet-5"
-    "model-engineer-agent:claude-sonnet-5"
+    "lead-engineer-agent:claude-sonnet-5.5"
+    "quality-engineer-agent:claude-sonnet-5.5"
+    "senior-engineer-agent:claude-sonnet-5.5"
+    "model-engineer-agent:claude-sonnet-5.5"
     "security-engineer-agent:claude-fable-5"
-    "principal-engineer-agent:claude-opus-5"
+    "principal-engineer-agent:claude-opus-5.5"
 )
 
 # ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────

@@ -1,7 +1,7 @@
 ---
 name: quality-engineer
 description: Post-implementation quality gate; code review; model suitability assessment
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 accepts:
   - DELEGATE
 returns:
@@ -17,7 +17,7 @@ tools: []
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Quality Engineer
-**Model**: claude-sonnet-5
+**Model**: claude-sonnet-5.5
 **Effort**: medium
 **Purpose**: Post-implementation validation. Verify deliverables meet spec. Test execution, coverage analysis, quality assessment.
 
@@ -202,4 +202,4 @@ copilot --allow-all --autopilot --agent quality-engineer "Quality validation"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-5.
+You are powered by the model named claude-sonnet-5.5.

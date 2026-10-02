@@ -50,7 +50,7 @@ MANIFEST_REL = "config/FRAMEWORK-MANIFEST.yaml"
 SHA_REL = ".agents_verification_sha"
 MODELS_MD_REL = "docs/MODELS.md"
 
-STATUSES = ("current", "supported", "deprecated", "retired")
+STATUSES = ("current", "supported", "deprecated", "fallback", "retired")
 EFFORTS = ("low", "medium", "high", "max")
 HARNESS_RENDERS = ("pinned-id", "pass-through", "provider-prefixed", "role-tier-map")
 FRESHNESS_DAYS = 180
@@ -114,6 +114,32 @@ def _role_cfg(reg: dict, role: str) -> dict:
 def _model_ok(reg: dict, model: str) -> bool:
     m = (reg.get("models") or {}).get(model)
     return isinstance(m, dict) and m.get("status") != "retired"
+
+
+def _version_tuple(model_id: str) -> tuple[int, int]:
+    """Numeric (major, minor) from a canonical dotted model ID, for ordering.
+
+    Never compares lexically: 'claude-sonnet-5.10' is newer than
+    'claude-sonnet-5.5' even though the string '5.10' sorts before '5.5'.
+    """
+    m = re.match(r"^claude-[a-z]+-(\d+)(?:\.(\d+))?$", str(model_id))
+    if not m:
+        raise ValueError(f"not a canonical model ID: {model_id!r}")
+    return (int(m.group(1)), int(m.group(2) or 0))
+
+
+def _below_min_pin(reg: dict, model: str) -> str | None:
+    """Return the family's min_pin if *model* is a known model below it, else None."""
+    fam = (reg.get("models") or {}).get(model, {}).get("family")
+    floor = ((reg.get("families") or {}).get(fam) or {}).get("min_pin")
+    if not floor:
+        return None
+    try:
+        if _version_tuple(model) < _version_tuple(floor):
+            return floor
+    except ValueError:
+        return None
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -197,6 +223,22 @@ def render_models_md(reg: dict) -> str:
         "each role is pinned to, the properties of each model, and the pin change history.",
         "",
     ]
+
+    # Family floors
+    fams_with_floor = [(f, c.get("min_pin")) for f, c in (reg.get("families") or {}).items() if c and c.get("min_pin")]
+    if fams_with_floor:
+        lines.extend([
+            "## Family Floors",
+            "",
+            "A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;",
+            "`scripts/models.py check` enforces this by numeric major.minor comparison).",
+            "",
+            "| Family | Min Pin |",
+            "|--------|---------|",
+        ])
+        for fam, floor in fams_with_floor:
+            lines.append(f"| {fam} | `{floor}` |")
+        lines.append("")
 
     # Role table
     lines.extend([
@@ -391,6 +433,12 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
             errors.append(f"roles.{role}.model: '{model}' is retired")
         elif models[model].get("status") == "deprecated":
             warns.append(f"roles.{role}.model: '{model}' is deprecated")
+        elif models[model].get("status") == "fallback":
+            warns.append(f"roles.{role}.model: '{model}' is a fallback-only model, not a pin")
+        if model in models:
+            floor = _below_min_pin(reg, model)
+            if floor:
+                errors.append(f"roles.{role}.model: '{model}' is below its family's min_pin '{floor}'")
         if cfg.get("effort") not in EFFORTS:
             errors.append(f"roles.{role}.effort: must be one of {EFFORTS}, got {cfg.get('effort')!r}")
         fb = cfg.get("fallback")

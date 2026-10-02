@@ -100,19 +100,19 @@ class TestRegistryShape:
         assert got == {
             "engineer": ("claude-haiku-4.5", "high"),
             "orchestrator": ("claude-sonnet-5.5", "low"),
-            "lead-engineer": ("claude-sonnet-5", "high"),
-            "quality-engineer": ("claude-sonnet-5", "medium"),
-            "senior-engineer": ("claude-sonnet-5", "high"),
-            "model-engineer": ("claude-sonnet-5", "high"),
+            "lead-engineer": ("claude-sonnet-5.5", "high"),
+            "quality-engineer": ("claude-sonnet-5.5", "medium"),
+            "senior-engineer": ("claude-sonnet-5.5", "high"),
+            "model-engineer": ("claude-sonnet-5.5", "high"),
             "security-engineer": ("claude-fable-5", "max"),
-            "principal-engineer": ("claude-opus-5", "high"),
+            "principal-engineer": ("claude-opus-5.5", "high"),
         }
 
     def test_fallbacks_per_decision(self, reg):
         fb = {r: c["fallback"] for r, c in reg["roles"].items()}
-        assert fb["principal-engineer"] == fb["security-engineer"] == ["claude-opus-4.8"]
+        assert fb["principal-engineer"] == fb["security-engineer"] == ["claude-opus-5", "claude-opus-4.8"]
         for r in ("lead-engineer", "quality-engineer", "senior-engineer", "model-engineer"):
-            assert fb[r] == ["claude-sonnet-4.6"]
+            assert fb[r] == ["claude-sonnet-5"]
 
     def test_pin_history_latest_matches_pin(self, reg):
         last = {}
@@ -176,11 +176,11 @@ class TestCli:
     def test_get_model_effort_fallback_id(self):
         assert cli("get", "orchestrator").stdout.strip() == "claude-sonnet-5.5"
         assert cli("get", "security-engineer", "--field", "effort").stdout.strip() == "max"
-        assert cli("get", "principal-engineer", "--field", "fallback").stdout.strip() == "claude-opus-4.8"
+        assert cli("get", "principal-engineer", "--field", "fallback").stdout.strip() == "claude-opus-5 claude-opus-4.8"
         assert cli("get", "orchestrator", "--harness", "claude").stdout.strip() == "claude-sonnet-5-5"
         assert cli("get", "engineer", "--harness", "claude").stdout.strip() == "claude-haiku-4-5"
         assert cli("get", "engineer", "--harness", "copilot").stdout.strip() == "claude-haiku-4.5"
-        assert cli("get", "principal-engineer", "--harness", "opencode").stdout.strip() == "claude-opus-5"
+        assert cli("get", "principal-engineer", "--harness", "opencode").stdout.strip() == "claude-opus-5-5"
 
     def test_get_errors(self):
         assert cli("get", "nope").returncode == 2
@@ -264,10 +264,10 @@ class TestResolve:
         rec = tmp_path / "rec.json"
         r = cli("resolve", "principal-engineer", "--harness", "claude", "--available-from", str(avail), "--record", str(rec))
         assert r.returncode == 0 and r.stdout.strip() == "claude-opus-4-8"
-        assert "WARN model-fallback role=principal-engineer pinned=claude-opus-5 used=claude-opus-4.8" in r.stderr
+        assert "WARN model-fallback role=principal-engineer pinned=claude-opus-5.5 used=claude-opus-4.8" in r.stderr
         data = json.loads(rec.read_text())["roles"]["principal-engineer"]
-        assert data["fallback_used"] is True and data["pinned"] == "claude-opus-5" and data["used"] == "claude-opus-4.8"
-        assert [t["result"] for t in data["tried"]] == ["not available", "selected"]
+        assert data["fallback_used"] is True and data["pinned"] == "claude-opus-5.5" and data["used"] == "claude-opus-4.8"
+        assert [t["result"] for t in data["tried"]] == ["not available", "not available", "selected"]
 
     def test_nothing_available_fails_loudly_no_cross_family_substitution(self, tmp_path):
         avail = tmp_path / "a.json"
@@ -312,7 +312,7 @@ class TestBumpSimulation:
         assert any("pin_history" in e for e in errors)
 
         edit_registry(root, lambda r: r["pin_history"].append(
-            {"date": datetime.date(2026, 10, 3), "role": "senior-engineer", "from": "claude-sonnet-5",
+            {"date": datetime.date(2026, 10, 3), "role": "senior-engineer", "from": "claude-sonnet-5.5",
              "to": "claude-sonnet-9.9", "approval": "test"}))
         errors, _ = models.check(root)
         assert any("stale" in e for e in errors) and not any("pin_history" in e for e in errors)

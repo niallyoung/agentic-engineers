@@ -36,21 +36,22 @@ See [docs/decisions/ADR-model-pin-registry.md](../docs/decisions/ADR-model-pin-r
 |---|---|---|---|---|
 | **Orchestrator** | claude-sonnet-5.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-5 | high | opus-5 (default) \| 4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+| **Quality Engineer** | claude-sonnet-5.5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-5.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Lead Engineer** | claude-sonnet-5.5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Principal Engineer** | claude-opus-5.5 | high | opus-5.5 (default) \| opus-5, opus-4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
+| **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-5, opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Model Engineer** | claude-sonnet-5.5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
 > **This table is auto-generated, not hand-edited.** The Model and Effort columns are regenerated
 > by `python3 scripts/models.py sync` from `config/models.yaml`. To change a role's model, edit the registry
 > (not this table) and run sync.
 
-**Multi-Model column notes:** Principal Engineer uses `claude-opus-5` for all planning and
-cross-repo design; `claude-opus-4.8` is an emergency fallback only (opus-5 unavailable),
-documented in HANDBACK. Security Engineer uses `claude-fable-5` unconditionally;
-`claude-opus-4.8` is an emergency fallback only. The defensive-only scope constraint
+**Multi-Model column notes:** Principal Engineer uses `claude-opus-5.5` for all planning
+and cross-repo design; `claude-opus-5` then `claude-opus-4.8` are emergency fallbacks
+only (opus-5.5 unavailable), documented in HANDBACK. Security Engineer uses
+`claude-fable-5` unconditionally; `claude-opus-5` then `claude-opus-4.8` are emergency
+fallbacks only. The defensive-only scope constraint
 applies on **every** model, not just fable-5 — restricted-topic work is out of scope
 framework-wide. This is a role convention, not a mechanical gate: no runtime code
 inspects a DELEGATE's scope, topic, or content for offensive-vs-defensive framing.
@@ -172,7 +173,7 @@ surface.
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-5`, effort `high`. Plans unscoped work; handles multi-file
+**Model:** `claude-sonnet-5.5`, effort `high`. Plans unscoped work; handles multi-file
 implementations requiring architectural awareness — reads related files first,
 moderate-complexity refactors, CI/CD changes, breaking dependency updates, reviews
 Engineer output when QE flags it. **MUST NOT:** make cross-repo API contract decisions,
@@ -183,7 +184,7 @@ resolve inter-service architectural disputes, or conduct formal security audits.
 
 ### 4. Lead Engineer
 
-**Model:** `claude-sonnet-5`, effort `high`. Makes architecture decisions authoritatively
+**Model:** `claude-sonnet-5.5`, effort `high`. Makes architecture decisions authoritatively
 (API contracts, domain boundaries, data models), conducts 8-point code review
 (correctness, safety, patterns, performance, security surface, maintainability, test
 coverage, documentation), resolves competing-design conflicts, coordinates cross-repo
@@ -194,7 +195,7 @@ design decisions (auth flows, crypto selection).
 
 ### 5. Quality Engineer
 
-**Model:** `claude-sonnet-5`, effort `medium`. Post-implementation validation: verifies
+**Model:** `claude-sonnet-5.5`, effort `medium`. Post-implementation validation: verifies
 acceptance criteria against delivered changes, runs `make quality-gate` (lint + test + verify + validate-renders),
 assesses whether the model/effort tier was appropriate, populates
 `metrics.quality` in the HANDBACK, and flags regressions/missing tests. **MUST NOT:**
@@ -205,7 +206,7 @@ for a systemic pattern across multiple tasks.
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-5`, effort `high`. Analyses HANDBACK `metrics` blocks (tokens,
+**Model:** `claude-sonnet-5.5`, effort `high`. Analyses HANDBACK `metrics` blocks (tokens,
 cost, quality, duration_seconds) across task history, compares actual vs. estimated token
 usage, recommends model/effort adjustments, identifies mismatches, and writes
 recommendations. **MUST NOT:** implement code changes, or approve/reject tasks —
@@ -214,7 +215,7 @@ regression spanning multiple roles; **to Lead Engineer** for a contested recomme
 
 ### 7. Principal Engineer
 
-**Model:** `claude-opus-5` (fallback `claude-opus-4.8`), effort `high`. Cross-service
+**Model:** `claude-opus-5.5` (fallback `claude-opus-5`, then `claude-opus-4.8`), effort `high`. Cross-service
 architecture, hard debugging, critical design decisions — escalation only. Root-cause
 analysis across deep stack traces or multiple services, complex architectural analysis
 (data flow, race conditions, distributed semantics), takes over after Senior has ≥2 failed
@@ -225,7 +226,7 @@ decisions; otherwise top of the non-security chain — surface to the user if bl
 
 ### 8. Security Engineer
 
-**Model:** `claude-fable-5` (unconditional default; fallback `claude-opus-4.8`), effort
+**Model:** `claude-fable-5` (unconditional default; fallback `claude-opus-5`, then `claude-opus-4.8`), effort
 `max`. Threat modelling (STRIDE, attack surface), vulnerability assessment (OWASP Top 10,
 injection, broken auth, secrets exposure), compliance review (OAuth 2.0, zero-trust, GDPR
 surface), CLI permission policy review — always assigned for security-scoped work.

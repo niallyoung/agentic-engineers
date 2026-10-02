@@ -61,7 +61,7 @@ metadata:
   version: "1.0"
   category: orchestration | validation | monitoring | management | etc
   role: orchestrator | engineer | quality-engineer | lead-engineer | senior-engineer | principal-engineer | security-engineer
-  model: claude-haiku-4.5 | claude-sonnet-5 | claude-opus-5 | claude-fable-5
+  model: claude-haiku-4.5 | claude-sonnet-5 | claude-sonnet-5.5 | claude-opus-5 | claude-opus-5.5 | claude-fable-5
   effort: low | medium | high
 ---
 ```

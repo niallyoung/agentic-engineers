@@ -90,12 +90,12 @@ def test_expected_roles_present_with_correct_role_model_effort_tuples():
     expected = {
         "orchestrator": ("claude-sonnet-5.5", "low"),
         "engineer": ("claude-haiku-4.5", "high"),
-        "quality-engineer": ("claude-sonnet-5", "medium"),
-        "senior-engineer": ("claude-sonnet-5", "high"),
-        "lead-engineer": ("claude-sonnet-5", "high"),
-        "principal-engineer": ("claude-opus-5", "high"),
+        "quality-engineer": ("claude-sonnet-5.5", "medium"),
+        "senior-engineer": ("claude-sonnet-5.5", "high"),
+        "lead-engineer": ("claude-sonnet-5.5", "high"),
+        "principal-engineer": ("claude-opus-5.5", "high"),
         "security-engineer": ("claude-fable-5", "max"),
-        "model-engineer": ("claude-sonnet-5", "high"),
+        "model-engineer": ("claude-sonnet-5.5", "high"),
     }
 
     assert set(python_rows) == set(expected), (

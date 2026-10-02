@@ -72,3 +72,25 @@ bumps); making `src/AGENTS.md` the source of truth (brittle table parsing, no me
 
 `docs/SPEC.md` (SPEC-2026-011), `src/skills/spec-management/SKILL.md`,
 `docs/MODELS.md` (generated; created by a later work package).
+
+## Addendum (2026-10-02, SPEC-2026-012)
+
+By user directive, `claude-sonnet-5.5` and `claude-opus-5.5` became the *minimum* pins
+for the Sonnet and Opus families, rather than merely the current ones. The registry
+gained a per-family `min_pin` floor (`families.<family>.min_pin`), enforced by
+`scripts/models.py check` with a numeric `major.minor` comparison — never lexical, so a
+future `5.10` correctly reads as newer than `5.5`. A fallback is explicitly exempt from
+the floor: the whole point of a fallback is to be an older, more-available model a role
+can degrade to, so forbidding a below-floor fallback would defeat it. A family with no
+`min_pin` (haiku, fable) has no floor.
+
+Every Sonnet-family role (Lead/Quality/Senior/Model Engineer) moved to `claude-sonnet-5.5`
+and Principal Engineer to `claude-opus-5.5`; Engineer and Security keep their existing
+pins (`claude-haiku-4.5`, `claude-fable-5`). `claude-sonnet-5` and `claude-opus-5` are
+marked `status: fallback` — a new status alongside `current`/`supported`/`deprecated`/
+`retired` — to document that they remain valid, known IDs but are no longer eligible as a
+role's pin (only as a fallback rung), without retiring them. This is additive to the
+registry's shape, not a reversal of any point above: the registry stays the single source
+of truth, a Model Pin Change (not a SPEC amendment) is still how a pin moves, and I1–I6
+are unchanged. As with the original ADR, principal-engineer/security-engineer co-approval
+of this user-directed change was not obtained and is recommended.
