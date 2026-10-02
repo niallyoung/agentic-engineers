@@ -165,6 +165,71 @@ class TestCheckRules:
         assert cli("check", root=root).returncode == 1
 
 
+class TestFamilyFloor:
+    """Per-family min_pin: pins must be >= the floor, fallbacks are exempt."""
+
+    @staticmethod
+    def _reg(**fams):
+        return {
+            "families": {f: ({"min_pin": m} if m else {}) for f, m in fams.items()},
+            "models": {
+                "claude-sonnet-5": {"family": "sonnet"},
+                "claude-sonnet-5.5": {"family": "sonnet"},
+                "claude-sonnet-5.10": {"family": "sonnet"},
+                "claude-haiku-4.5": {"family": "haiku"},
+            },
+        }
+
+    @pytest.mark.parametrize("model,below", [
+        ("claude-sonnet-5", True),        # 5.0 < 5.5
+        ("claude-sonnet-5.5", False),     # exactly the floor is allowed
+        ("claude-sonnet-5.10", False),    # numeric, not lexical: 5.10 > 5.5
+    ])
+    def test_numeric_comparison(self, model, below):
+        reg = self._reg(sonnet="claude-sonnet-5.5", haiku=None)
+        assert (models._below_min_pin(reg, model) is not None) is below
+
+    def test_family_without_floor_is_never_below(self):
+        reg = self._reg(sonnet="claude-sonnet-5.5", haiku=None)
+        assert models._below_min_pin(reg, "claude-haiku-4.5") is None
+
+    def test_unknown_model_is_not_reported_as_below(self):
+        assert models._below_min_pin(self._reg(sonnet="claude-sonnet-5.5"), "claude-nope-1") is None
+
+    def test_real_registry_floors_match_the_directive(self, reg):
+        assert reg["families"]["sonnet"]["min_pin"] == "claude-sonnet-5.5"
+        assert reg["families"]["opus"]["min_pin"] == "claude-opus-5.5"
+
+    def test_real_registry_pins_all_meet_floor(self, reg):
+        for role, cfg in reg["roles"].items():
+            assert models._below_min_pin(reg, cfg["model"]) is None, role
+
+    @pytest.mark.parametrize("role,low", [
+        ("senior-engineer", "claude-sonnet-5"),
+        ("principal-engineer", "claude-opus-5"),
+    ])
+    def test_pin_below_floor_is_a_check_error(self, tmp_path, role, low):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["roles"][role].update(model=low))
+        errors, _ = models.check(root)
+        assert any(f"roles.{role}.model" in e and "min_pin" in e for e in errors), errors
+        assert cli("check", root=root).returncode == 1
+
+    def test_fallbacks_below_floor_are_allowed(self, reg):
+        """The shipped fallback chains deliberately sit below the floor and must stay valid."""
+        below = [(role, fb) for role, cfg in reg["roles"].items() for fb in cfg["fallback"]
+                 if models._below_min_pin(reg, fb)]
+        assert below, "expected at least one fallback below its family floor"
+        errors, _ = models.check(REPO_ROOT)
+        assert errors == []
+
+    def test_raising_the_floor_above_a_pin_fails_check(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["families"]["sonnet"].update(min_pin="claude-sonnet-5.10"))
+        errors, _ = models.check(root)
+        assert any("min_pin" in e for e in errors), errors
+
+
 # ------------------------------------------------------------------- CLI ---
 
 class TestCli:
