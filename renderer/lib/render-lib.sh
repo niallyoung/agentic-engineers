@@ -28,7 +28,7 @@
 #
 #   Utilities:
 #     - yaml_escape_inline <text>           — escape text for YAML inline values
-#     - map_model <model_id>                — map full model name to short form
+#     - map_model <role> <harness>          — registry-pinned model ID for a role (scripts/models.py)
 #
 #   Cleanup / pruning:
 #     - prune_excluded_cruft <dst_dir>      — remove tests//__pycache__/*.pyc cruft
@@ -211,19 +211,44 @@ yaml_escape_inline() {
 	tr '\n' ' ' | sed -e 's/\\/\\\\/g' -e 's/"/'\''/g' -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//'
 }
 
-# Map full model name to short form (for Claude Code, etc).
-# claude-haiku-4.5 → haiku, claude-sonnet-4.6 → sonnet, etc.
-# Usage: map_model <model_id>
+# Map a framework ROLE to the exact model ID a harness should be rendered with.
+# This is the ONE model-mapping implementation: every harness renderer calls it,
+# and it reads config/models.yaml through scripts/models.py (never parses the
+# registry itself, never hardcodes a model ID or a tier alias).
+#
+#   map_model <role> <harness>      harness: claude | copilot | opencode
+#
+# Prints the registry's pinned ID for that role+harness (e.g. claude-sonnet-5,
+# claude-haiku-4-5). Prints nothing (and returns 1) when the role or harness ID
+# is unknown, so a caller can warn and skip instead of guessing.
+#
+# Claude Code only: AGENTIC_CLAUDE_MODEL_RENDER=alias is an explicit, reversible
+# operator override that renders the floating family alias (haiku|sonnet|opus|
+# fable, from families.<f>.claude_alias in the registry) instead of the pin.
+# Default (unset or "pinned-id") is the exact pinned ID. The alias path exists
+# only so a rejected ID can be backed out without a code change; it is off by
+# default and documented in render-claude.sh.
+_models_py() {
+	printf '%s' "${MODELS_PY:-${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/scripts/models.py}"
+}
+
 map_model() {
-	case "$1" in
-		*haiku*)  echo "haiku" ;;
-		*sonnet*) echo "sonnet" ;;
-		*opus*)   echo "opus" ;;
-		*fable*)  echo "fable" ;;
-		gpt-5*)   echo "gpt-5" ;;
-		gpt-4*)   echo "gpt-4" ;;
-		*)        echo "" ;;
-	esac
+	local role="${1:-}" harness="${2:-}"
+	[ -n "$role" ] && [ -n "$harness" ] || return 1
+	local mp; mp=$(_models_py)
+	if [ "$harness" = "claude" ] && [ "${AGENTIC_CLAUDE_MODEL_RENDER:-pinned-id}" = "alias" ]; then
+		python3 - "$mp" "$role" <<'PY' 2>/dev/null || return 1
+import sys, importlib.util
+spec = importlib.util.spec_from_file_location("models", sys.argv[1])
+m = importlib.util.module_from_spec(spec); sys.modules["models"] = m; spec.loader.exec_module(m)
+reg = m.load_registry(m.Path(sys.argv[1]).resolve().parent.parent)
+model = m._role_cfg(reg, sys.argv[2])["model"]
+fam = reg["models"][model]["family"]
+print(reg["families"][fam]["claude_alias"])
+PY
+		return
+	fi
+	python3 "$mp" --root "$(dirname "$(dirname "$mp")")" get "$role" --harness "$harness" --field id 2>/dev/null
 }
 
 # Parse src/AGENTS.md canonical agent definitions table.
@@ -466,6 +491,32 @@ prune_orphaned_agents() {
 		echo "  🧹 pruned 0 orphaned managed agent(s)"
 	fi
 }
+
+# Alias-override banner. SPEC I3 forbids floating aliases for assigned roles, so
+# AGENTIC_CLAUDE_MODEL_RENDER=alias is NOT a supported configuration: it is an
+# operator-environment emergency back-out only (a Claude Code build rejected a
+# pinned ID). It is read ONLY from the process environment (never from a
+# committed file) and is LOUD: every Claude renderer run, including --status and
+# --uninstall, prints this block on stderr for as long as the variable is set.
+# Printed once, when render-claude.sh sources this lib; other harnesses ignore
+# the variable and are not warned.
+_alias_override_banner() {
+	[ "${AGENTIC_CLAUDE_MODEL_RENDER:-}" = "alias" ] || return 0
+	{
+		echo "================================================================================"
+		echo "WARNING: ALIAS OVERRIDE ACTIVE (AGENTIC_CLAUDE_MODEL_RENDER=alias)"
+		echo "  Claude roles are rendered as floating aliases (haiku|sonnet|opus|fable)."
+		echo "  Roles are NOT pinned to the registry's exact model IDs (SPEC I3), so the"
+		echo "  model behind each role can change silently under you."
+		echo "  This is an emergency back-out only. Fix the cause and unset it:"
+		echo "      unset AGENTIC_CLAUDE_MODEL_RENDER"
+		echo "  then re-run the install to restore the pins."
+		echo "================================================================================"
+	} >&2
+}
+case "$(basename "${BASH_SOURCE[1]:-}")" in
+	render-claude.sh) _alias_override_banner ;;
+esac
 
 # ============================================================================
 # END render-lib.sh

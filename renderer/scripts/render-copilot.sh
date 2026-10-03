@@ -55,6 +55,93 @@ write_agents_md() {
 # shellcheck source=../lib/render-lib.sh
 source "$(dirname "$0")/../lib/render-lib.sh"
 
+# --- settings.json ownership helpers (mirror render-claude.sh) ----------------
+# Records the settings.json "model" value THIS installer last wrote. Presence
+# plus content is the ONLY safe signal that the framework owns that key.
+MODEL_MARKER="$COPILOT/.agentic-engine-copilot-model"
+
+# _settings_edit SETTINGS_FILE OPERATION [ARGS...]   (set_model | remove_model)
+# Merge-edit one key. Exit 3 (file untouched, warning on stderr) when the file
+# is non-empty and not a strict-JSON object.
+_settings_edit() {
+	local settings="$1" operation="$2"; shift 2
+	python3 - "$settings" "$operation" "$@" <<'PY'
+import json, os, sys
+
+settings_file, operation, args = sys.argv[1], sys.argv[2], sys.argv[3:]
+try:
+	with open(settings_file) as f:
+		raw = f.read()
+except FileNotFoundError:
+	raw = ""
+if raw.strip() == "":
+	data = {}
+else:
+	try:
+		data = json.loads(raw)
+		if not isinstance(data, dict):
+			raise ValueError("top-level value is not a JSON object")
+	except ValueError as exc:
+		sys.stderr.write(
+			"  WARNING: %s is not valid JSON (%s) -- left untouched; "
+			"skipped '%s'. Fix the file (strict JSON: no comments or trailing "
+			"commas) and re-run.\n" % (settings_file, exc, operation)
+		)
+		sys.exit(3)
+
+if operation == "check":
+	sys.exit(0)  # validity probe only: never writes
+if operation == "set_model":
+	data["model"] = args[0]
+elif operation == "remove_model":
+	data.pop("model", None)
+
+tmp = settings_file + ".tmp"
+with open(tmp, "w") as f:
+	json.dump(data, f, indent=2)
+	f.write("\n")
+os.replace(tmp, settings_file)
+PY
+}
+
+# _settings_get_model FILE -> current "model" string, or empty
+_settings_get_model() {
+	[ -f "$1" ] || return 0
+	python3 - "$1" <<'PY'
+import json, sys
+try:
+	with open(sys.argv[1]) as f:
+		data = json.load(f)
+except (OSError, ValueError):
+	data = {}
+value = data.get("model") if isinstance(data, dict) else None
+print(value if isinstance(value, str) else "")
+PY
+}
+
+_model_marker_value() {
+	[ -f "$MODEL_MARKER" ] || return 0
+	head -n1 "$MODEL_MARKER" | tr -d '[:space:]'
+}
+
+inject_settings_model() { _settings_edit "$1" set_model "$2"; }
+remove_settings_model() { [ -f "$1" ] || return 0; _settings_edit "$1" remove_model; }
+
+# remove_settings_if_empty FILE: after uninstall, a settings.json that is
+# exactly {} is litter we created; remove it. Anything else is never touched.
+remove_settings_if_empty() {
+	[ -f "$1" ] || return 0
+	python3 - "$1" <<'PY'
+import json, os, sys
+try:
+	with open(sys.argv[1]) as fh:
+		data = json.load(fh)
+except (OSError, ValueError):
+	sys.exit(0)
+if data == {}:
+	os.remove(sys.argv[1])
+PY
+}
 
 case "$MODE" in
 	--uninstall)
@@ -78,6 +165,25 @@ case "$MODE" in
 			echo "  removed AGENTS.md"
 		elif [ -f "$DST_RULES" ]; then
 			echo "  ⚠️  keeping AGENTS.md — foreign (not managed by us)"
+		fi
+		# settings.json model: remove it (and the ownership marker) ONLY if the
+		# value on disk is still the one we wrote. A user-chosen value is never
+		# removed. AGENTIC_KEEP_MODEL=1 (as for `make fresh-install-claude`)
+		# leaves model + marker for an immediately following install.
+		if [ "${AGENTIC_KEEP_MODEL:-}" = "1" ]; then
+			echo "  keeping session model and ownership marker for the reinstall"
+		else
+			uninstall_model=$(_settings_get_model "$COPILOT/settings.json")
+			uninstall_marker=$(_model_marker_value)
+			if [ -n "$uninstall_model" ] && [ "$uninstall_model" = "$uninstall_marker" ]; then
+				if remove_settings_model "$COPILOT/settings.json"; then
+					echo "  removed model from settings.json"
+				fi
+			elif [ -n "$uninstall_model" ]; then
+				echo "  ℹ️  keeping session model ($uninstall_model) — set by you, not by the framework"
+			fi
+			rm -f "$MODEL_MARKER"
+			remove_settings_if_empty "$COPILOT/settings.json"
 		fi
 		echo "✅ Removed agents + $count managed skill(s) + docs"
 		;;
@@ -181,43 +287,48 @@ case "$MODE" in
 		echo "📖 Writing AGENTS.md → $DST_RULES ..."
 		write_agents_md
 
-		# 2b. settings.json — harness session model configuration. Written for
-		# both dist rendering and home install so the installed tree matches
-		# dist exactly.
-		echo "⚙️  Writing settings.json → $COPILOT/settings.json ..."
-
-		# Derive model from orchestrator row in canonical AGENTS.md
-		orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
-		if [ -n "$orchestrator_meta" ]; then
-			orchestrator_model_raw=$(echo "$orchestrator_meta" | cut -d'|' -f1)
-			orchestrator_model=$(map_model "$orchestrator_model_raw")
-			if [ -n "$orchestrator_model" ]; then
-				cat > "$COPILOT/settings.json" <<EOF
-{
-  "model": "$orchestrator_model",
-  "harness": "copilot"
-}
-EOF
-				echo "  ✅ settings.json (session model → $orchestrator_model from orchestrator)"
-			else
-				# Fallback if model mapping fails
-				cat > "$COPILOT/settings.json" <<'EOF'
-{
-  "model": "sonnet",
-  "harness": "copilot"
-}
-EOF
-				echo "  ✅ settings.json (fallback: sonnet)"
-			fi
+		# 2b. settings.json — harness session model configuration (invariant I4:
+		# the installer never overwrites a model the user chose). Same ownership
+		# semantics as render-claude.sh; MODEL_MARKER records the value WE last
+		# wrote and is the only signal that the framework owns the key:
+		#
+		#   file absent                    -> fresh install, the file is ours -> SET
+		#   file exists + value==marker    -> still exactly what we wrote     -> UPDATE
+		#   file exists + no "model" key   -> theirs (never had one / cleared) -> SKIP
+		#   file exists + value!=marker    -> user-chosen or hand-edited      -> SKIP
+		#   file not strict JSON           -> left byte-for-byte untouched, warned
+		#
+		# Other keys are always preserved (merge, never overwrite the file).
+		# Session model = the registry's pinned Copilot ID for the orchestrator
+		# (scripts/models.py via map_model). Never a floating alias.
+		echo "⚙️  Checking settings.json → $COPILOT/settings.json ..."
+		orchestrator_model=$(map_model "orchestrator" copilot || true)
+		if [ -z "$orchestrator_model" ]; then
+			echo "  ⚠️  no copilot ID for orchestrator in config/models.yaml — leaving settings.json model alone" >&2
 		else
-			# Fallback if lookup fails
-			cat > "$COPILOT/settings.json" <<'EOF'
-{
-  "model": "sonnet",
-  "harness": "copilot"
-}
-EOF
-			echo "  ✅ settings.json (fallback: sonnet — orchestrator not found in roster)"
+			settings_existed=0
+			[ -f "$COPILOT/settings.json" ] && settings_existed=1
+			current_model=$(_settings_get_model "$COPILOT/settings.json")
+			marker_model=$(_model_marker_value)
+			if [ "$settings_existed" -eq 0 ]; then
+				if inject_settings_model "$COPILOT/settings.json" "$orchestrator_model"; then
+					printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
+					echo "  ✅ Set session model → $orchestrator_model (orchestrator default, from registry)"
+				fi
+			elif [ -n "$current_model" ] && [ "$current_model" = "$marker_model" ]; then
+				if inject_settings_model "$COPILOT/settings.json" "$orchestrator_model"; then
+					printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
+					echo "  ✅ Session model → $orchestrator_model (orchestrator default, from registry)"
+				fi
+			elif [ -z "$current_model" ]; then
+				# Unparseable files also read as "no model": probe so the user is
+				# told (warning on stderr, rc 3) rather than silently skipped.
+				if _settings_edit "$COPILOT/settings.json" check; then
+					echo "  ℹ️  Leaving your session model unset (the framework will not add one to your settings.json)"
+				fi
+			else
+				echo "  ℹ️  Keeping your existing session model ($current_model) — set by you, not by the framework"
+			fi
 		fi
 
 		# 3. Git hooks: configure core.hooksPath and ensure hooks are executable

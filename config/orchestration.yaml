@@ -11,12 +11,20 @@
 # Token Budget (previously config/token_budget.yaml)
 # ---------------------------------------------------------------------------
 #
-# NOTE (model upgrade): these are USD ceilings, so they are unaffected by model
-# *naming* but are affected by the Sonnet 5 tokenizer. Sonnet 5 keeps Sonnet
-# 4.6's $3/$15 per MTok yet emits ~30% more tokens for the same text, so the
-# four Sonnet roles consume budget ~30% faster than the historical figures these
-# ceilings were set against. Re-baseline with count_tokens against the new model
-# before tightening or trusting them; do not scale old token counts.
+# NOTE (measured 2026-10-03, docs/model-evidence/sonnet-opus-5-5-measurement.md): these are
+# USD ceilings. Current pins: Orchestrator/Lead/Quality/Senior/Model Engineer on
+# claude-sonnet-5.5 ($2 input / $10 output per MTok), Principal on claude-opus-5.5 ($4 / $20)
+# (prices from config/models.yaml facts, official pricing page).
+# Measured on identical prompts through the real CLI (n=2, spot check, not a benchmark):
+#   * tokenizer, 5.5 vs 5: ratio 1.000 on both prompts, Sonnet and Opus. No re-baseline.
+#   * Sonnet 4.6 -> 5.x: 1.25x (1.4k-token prompt) to 1.48x (short prompt) input tokens, but the
+#     price fell from $3 to $2 input: input cost per text = (1.25..1.48) x 2/3 = 0.83..0.99x.
+#     The earlier claim that Sonnet 5 "keeps $3/$15" was wrong (official page: $2/$10).
+#   * output tokens vary +31% to -76% between versions per prompt, within run-to-run noise for
+#     some cells; too noisy to scale a budget from.
+# Decision: no meaningful measured increase in cost per identical input, so the ceilings below
+# are unchanged (previous value kept: session_usd 5.00, daily_usd 20.00). Re-measure with
+# count_tokens/real traffic before tightening them.
 budget:
   # Maximum USD spend per session (single orchestrator run)
   session_usd: 5.00

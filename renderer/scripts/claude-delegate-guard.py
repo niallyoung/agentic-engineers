@@ -327,6 +327,12 @@ def decide(payload):
 
     tool_input = payload.get("tool_input") or {}
     subagent_type = tool_input.get("subagent_type", "")
+    # Normalise: "Senior-Engineer" / " engineer " must be guarded exactly like
+    # "senior-engineer" (a case variant must not bypass the protocol).
+    if isinstance(subagent_type, str):
+        subagent_type = subagent_type.strip().lower()
+    else:
+        subagent_type = ""
     if subagent_type not in FRAMEWORK_ROLES:
         # Generic/utility agent (Explore, Plan, general-purpose, claude, ...)
         # — not bound by the DELEGATE/HANDBACK protocol.

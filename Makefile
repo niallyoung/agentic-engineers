@@ -1,10 +1,11 @@
 .PHONY: help install \
-        install-copilot install-claude install-opencode install-codex \
+        install-copilot install-claude install-opencode install-codex fresh-install-claude \
         uninstall-copilot uninstall-claude uninstall-all uninstall-opencode uninstall-codex \
         setup harness-toggle test-protocol-e2e \
         verify validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
         render-claude render-copilot render-opencode render-codex render-specs render-all \
-        lint test test-skills test-ci test-ci-force test-ci-shell quality-gate
+        lint test test-skills test-ci test-ci-force test-ci-shell quality-gate \
+        models-sync models-check
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 
@@ -57,6 +58,7 @@ help:
 	@echo "                      (override root for testing: make install DESTDIR=/tmp/ae-test)"
 	@echo "                      (interactive per-harness prompts: bash renderer/scripts/unified-install.sh --interactive)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
+	@echo "  fresh-install-claude  Wipe managed Claude files, then install clean (foreign files kept)"
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-opencode    Install agents & skills → ~/.config/opencode/ (OpenCode-compatible)"
 	@echo "  install-codex       Install Codex agents/config → ~/.codex/ and skills → ~/.codex/skills/"
@@ -95,6 +97,8 @@ help:
 	@echo "  test-ci             Run tests in CI container (simulates GitHub Actions, first run)"
 	@echo "  test-ci-force       Run tests in CI container (strict, must pass)"
 	@echo "  test-ci-shell       Open interactive shell in CI container for debugging"
+	@echo "  models-sync         Regenerate derived model registry targets from config/models.yaml"
+	@echo "  models-check        Validate model registry and check that generated targets are current"
 	@echo "  quality-gate        Pre-push quality checks (lint + test + verify + render validation)"
 
 setup: ## Install Git hooks (.githooks/ → .git/hooks) + verify setup
@@ -160,6 +164,11 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 	@# installs git hooks internally when the target is $(HOME).
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude"
 	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
+
+fresh-install-claude: ## Wipe managed Claude files, then install clean (uninstall-claude + install-claude; foreign files kept)
+	@echo "♻️  Fresh Claude install → $(DESTDIR)/.claude/ (managed files only; your own agents, skills and settings are kept)"
+	@AGENTIC_KEEP_MODEL=1 $(MAKE) --no-print-directory uninstall-claude
+	@$(MAKE) --no-print-directory install-claude
 
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)
 	@echo "🧹 Uninstalling from $(DESTDIR)/.copilot/..."
@@ -383,7 +392,17 @@ test-ci-shell: ## Open interactive shell in CI container for debugging
 	@echo ""
 	@echo "👋 Exited CI container"
 
-quality-gate: lint test verify validate-renders ## Pre-push quality checks (lint + test + verify + render validation)
+models-sync: ## Regenerate derived model registry targets from config/models.yaml
+	@echo "🔄 Syncing model registry targets..."
+	@cd "$(REPO_ROOT)" && python3 scripts/models.py sync
+	@echo "✅ Model registry sync complete"
+
+models-check: ## Validate model registry and check that generated targets are current
+	@echo "🔍 Checking model registry and generated targets..."
+	@cd "$(REPO_ROOT)" && python3 scripts/models.py check
+	@echo "✅ Model registry check passed"
+
+quality-gate: lint test verify validate-renders models-check ## Pre-push quality checks (lint + test + verify + render validation)
 	@echo ""
 	@echo "✅✅✅ Quality gate PASSED ✅✅✅"
 	@echo ""

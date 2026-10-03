@@ -1,63 +1,44 @@
 #!/usr/bin/env bash
 # .githooks/LOCKED_MODELS.sh
 #
-# Single source of truth for model locks (approved model choices).
-# These models are LOCKED by choice and cannot be changed without explicit Orchestrator approval.
+# GENERATED from config/models.yaml by scripts/models.py sync - do not edit by hand.
+# config/models.yaml is the source of truth; regenerate with: make models-sync.
+# To change pins, follow the Model Pin Change process in docs/SPEC.md.
 #
-# Philosophy: POSITIVE ENFORCEMENT
-# - "We chose these Claude models" (not "GPT is forbidden")
-# - Users CAN request model changes by contacting Orchestrator
-# - Changes are auditable and explicit
+# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,
+# get_agent_locked_model, show_locked_models, show_agent_assignments.
 #
-# Update this only when Orchestrator explicitly approves a model switch for a named agent.
-# Create a PR with:
-#   - Commit message: "Approved model switch for {agent} because {reason}"
-#   - Rationale in PR description (cost delta, capability improvement, etc)
-#
-# Bypass: SKIP_HOOKS=1 (for emergency situations only; document reason in commit msg)
+# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)
 
-# ─── LOCKED MODELS: Canonical list (only these are allowed in agents) ────────
-# Format: claude-{variant}-{major}.{minor}
-#
-# Note: Principal Engineer and Security Engineer support multi-model selection
-# within the opus family. The Orchestrator selects the appropriate opus variant
-# at DELEGATE-creation time based on task complexity and risk profile.
-# See docs/SPEC.md > Model Selection Architecture for the full decision tree.
 LOCKED_MODELS=(
     "claude-haiku-4.5"
     "claude-sonnet-4.5"
     "claude-sonnet-4.6"
     "claude-sonnet-5"
+    "claude-sonnet-5.5"
     "claude-opus-4.6"
     "claude-opus-4.7"
     "claude-opus-4.8"
     "claude-opus-5"
+    "claude-opus-5.5"
     "claude-fable-5"
 )
 
-# Note: If a locked model becomes unavailable, the harness will auto-select:
-# 1. Exact version (preferred)
-# 2. Adjacent version in same family (fallback)
-# 3. Any version in same family (fallback)
-# 4. Any Claude model (fallback)
-#
-# Examples:
-# - prefer claude-sonnet-4.6 → fallback to claude-sonnet-4.5 or claude-sonnet-5.0
-# - prefer claude-opus-4.6 → fallback to claude-opus-4.7
-# - prefer claude-haiku-4.5 → fallback to any other haiku release, then sonnet
+# Fallback behaviour when a pinned model is unavailable is defined per role in
+# config/models.yaml (see docs/MODELS.md); it is not decided in this file.
 
 # ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────
-# This is the canonical assignment. Agents MUST use a model from this mapping.
+# Generated from the roles section of config/models.yaml (role pins).
 # Format: agent-name:model-choice (space-separated for portability)
 AGENT_MODEL_ASSIGNMENTS=(
     "engineer-agent:claude-haiku-4.5"
-    "orchestrator-agent:claude-sonnet-5"
-    "lead-engineer-agent:claude-sonnet-5"
-    "quality-engineer-agent:claude-sonnet-5"
-    "senior-engineer-agent:claude-sonnet-5"
-    "model-engineer-agent:claude-sonnet-5"
+    "orchestrator-agent:claude-sonnet-5.5"
+    "lead-engineer-agent:claude-sonnet-5.5"
+    "quality-engineer-agent:claude-sonnet-5.5"
+    "senior-engineer-agent:claude-sonnet-5.5"
+    "model-engineer-agent:claude-sonnet-5.5"
     "security-engineer-agent:claude-fable-5"
-    "principal-engineer-agent:claude-opus-5"
+    "principal-engineer-agent:claude-opus-5.5"
 )
 
 # ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────

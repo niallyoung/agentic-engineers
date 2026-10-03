@@ -33,6 +33,8 @@ make install-claude
 
 This configures Claude Code with agent definitions, skills, and the DELEGATE/HANDBACK protocol. Configuration is installed to `~/.claude/`.
 
+To reinstall from a clean slate, use `make fresh-install-claude`: it wipes the managed Claude files, then installs clean. Your own agents, skills, settings keys and a user-chosen model are kept.
+
 ### Install Specific Harness
 
 ```bash
@@ -44,6 +46,9 @@ make install-copilot
 
 # Claude Code
 make install-claude
+
+# Claude Code, clean reinstall (managed files wiped first; your own files kept)
+make fresh-install-claude
 
 # Codex
 make install-codex
@@ -57,11 +62,16 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 
 | Harness | Internal Format | Transformed Format | Reason |
 |---------|-----------------|-------------------|--------|
-| Source Agents | `claude-haiku-4.5` (dots) | — | Canonical format in source |
-| OpenCode | `claude-haiku-4.5` | `claude-haiku-4-5` (hyphens) | CLI requirement |
-| Copilot CLI | `claude-haiku-4.5` | `claude-haiku-4.5` (pass-through) | Anthropic API format |
-| Claude Code | `claude-haiku-4.5` | `haiku` (short alias) | Web UI simplification |
-| Codex | `claude-haiku-4.5` role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
+| Source Agents | `claude-<family>-<major>.<minor>` (dots) | — | Canonical format in source |
+| OpenCode | dotted source ID | hyphenated ID (`claude-<family>-<major>-<minor>`) | CLI requirement |
+| Copilot CLI | dotted source ID | dotted source ID (pass-through) | Anthropic API format |
+| Claude Code | dotted source ID | registry-pinned full ID (hyphenated minor) | Exact pin; short alias only via `AGENTIC_CLAUDE_MODEL_RENDER=alias` |
+| Codex | registry family | family-based tier mapping | Codex model tiers derived from role registry family: haiku→mini (gpt-5.4-mini), sonnet→standard (gpt-5.5), opus/fable→top (gpt-5.5) |
+
+Claude Code renders the registry-pinned full ID, not a short alias. To fall back to the
+floating alias (`haiku`/`sonnet`/`opus`/`fable`) run the renderer or installer with
+`AGENTIC_CLAUDE_MODEL_RENDER=alias`. OpenCode records any fallback it had to use in
+`dist/opencode/model-resolution.json`. Current pins: [docs/MODELS.md](../../MODELS.md).
 
 ### Renderer Scripts
 

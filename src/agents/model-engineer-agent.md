@@ -1,7 +1,7 @@
 ---
 name: model-engineer
 description: Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 accepts:
   - DELEGATE
 returns:
@@ -17,10 +17,10 @@ tools: []
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Model Engineer  
-**Model**: claude-sonnet-5  
+**Model**: claude-sonnet-5.5  
 **Effort**: high
 
-**Why Sonnet-5**: Strong reasoning for model selection analysis and cost/quality tradeoff evaluation.
+**Why Sonnet-5.5**: Strong reasoning for model selection analysis and cost/quality tradeoff evaluation.
 
 ## Agent Logic
 
@@ -35,7 +35,7 @@ If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `ag
 Model Engineer runs after a Quality Engineer verdict (or directly on a batch of recent
 HANDBACKs), across the 8 framework roles in `src/AGENTS.md` (Orchestrator, Engineer,
 Senior Engineer, Lead Engineer, Principal Engineer, Security Engineer, Quality Engineer,
-Model Engineer). Orchestrator now uses claude-sonnet-5 for improved routing analysis:
+Model Engineer). Orchestrator now uses claude-sonnet-5.5 for improved routing analysis:
 
 1. For each role present, compute **efficiency** = `tokens_observed / tokens_estimate`.
 2. Apply thresholds: efficiency < 0.5 → suggest downgrading to a cheaper tier (confidence
@@ -79,7 +79,7 @@ itself.
 handoff_type: DELEGATE
 task_id: 2026-05-26-model-feedback-quality-gate
 agent: model-engineer
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 effort: high
 scope: >
   Analyse token efficiency and quality metrics from the most recent commit-quality-gate
@@ -127,7 +127,7 @@ recommendation:
   task_type: "commit-quality-gate"
   recommended_models:
     orchestrator:
-      model: claude-sonnet-5
+      model: claude-sonnet-5.5
       confidence: 0.92
       reasoning: "Used 850/1000 tokens (85% efficiency), appropriate"
     engineer:
@@ -135,7 +135,7 @@ recommendation:
       confidence: 0.85
       reasoning: "Used 2845/3000 tokens (95% efficiency), appropriate"
     senior_engineer:
-      model: claude-sonnet-5
+      model: claude-sonnet-5.5
       confidence: 0.90
       reasoning: "Used 5120/6000 tokens (85% efficiency), appropriate"
     security_engineer:
@@ -143,7 +143,7 @@ recommendation:
       confidence: 0.95
       reasoning: "Used 950/1500 tokens (63% efficiency), but quality was high — keep, don't downgrade a premium-tier role on efficiency alone"
     quality_engineer:
-      model: claude-sonnet-5
+      model: claude-sonnet-5.5
       confidence: 0.88
       reasoning: "Used 3200/4000 tokens (80% efficiency), appropriate"
   total_tokens_used: 12965
@@ -151,11 +151,11 @@ recommendation:
   decision_quality: 1.0
 confidence: 0.90
 next_suggested_models:
-  orchestrator: claude-sonnet-5
+  orchestrator: claude-sonnet-5.5
   engineer: claude-haiku-4.5
-  senior_engineer: claude-sonnet-5
+  senior_engineer: claude-sonnet-5.5
   security_engineer: claude-fable-5
-  quality_engineer: claude-sonnet-5
+  quality_engineer: claude-sonnet-5.5
 ---
 ```
 
@@ -227,4 +227,4 @@ copilot --allow-all --autopilot --agent model-engineer "Model optimization"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-5.
+You are powered by the model named claude-sonnet-5.5.

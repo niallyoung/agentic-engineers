@@ -1,36 +1,36 @@
 """
-Test: Model Naming Compliance (LOCKED CHOICES - Positive Enforcement)
+Test: Model Naming Compliance (registry-driven enforcement)
 
-Validates that all agent model definitions use LOCKED Claude models by choice:
-- SOURCE agents (src/agents/): Must use models from LOCKED_MODELS list
-  Locked models: claude-haiku-4.5, claude-sonnet-4.5, claude-sonnet-4.6, claude-opus-4.7
-- RENDERED agents (dist/*/): Transform per-harness based on platform requirements
-  - Copilot CLI: Pass-through (dots) → claude-opus-4.7
-  - OpenCode: Transform to hyphens → claude-opus-4-7
-  - Claude Code: Transform to short alias → opus
+config/models.yaml (read via scripts/models.py) is the single source of truth for
+which models exist and which model each role is pinned to (docs/SPEC.md I1-I6). This
+file holds NO model list: every expectation below is derived from the registry.
 
-Philosophy: POSITIVE ENFORCEMENT
-- We CHOSE these Claude models (not "GPT forbidden")
-- Users CAN request model changes via Orchestrator
-- Changes are explicit decisions with documented rationale
-- Single source of truth: .githooks/LOCKED_MODELS.sh
+- SOURCE agents (src/agents/): model must be a known registry id, canonical form
+  (dot-separated minor version: claude-opus-5.5; single-part: claude-opus-5)
+- RENDERED agents (dist/*/): the per-harness spelling is taken from the registry
+  - Copilot CLI: models[<pin>].ids.copilot (pass-through of the dotted form)
+  - OpenCode: provider-prefixed. github-copilot/ takes the dotted form (SPEC-2026-010);
+    other providers take models[<pin>].ids.opencode (hyphenated)
+  - Claude Code: models[<pin>].ids.claude (full pinned id, never a floating alias)
 
-Enforcement:
-1. Pre-commit hook (validates agents use locked models)
-2. CI pipeline (blocks merge on violation)
-3. Tests in this file (comprehensive compliance verification)
-4. Code comments (every agent/renderer explains transformation)
+Enforcement: pre-commit (`models.py check` / `is-known`), CI, and this file.
 
 Official sources:
 - Anthropic: https://docs.anthropic.com/claude/docs/models-overview (canonical format)
-- Copilot CLI: https://docs.github.com/en/copilot/reference/ai-models/supported-models (dots required)
-- OpenCode: GitHub issues & investigation (hyphens required)
+- Copilot CLI: https://docs.github.com/en/copilot/reference/ai-models/supported-models
 """
 
+import os
 import pytest
 import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import Set
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+import models as model_registry  # noqa: E402
 
 # Canonical source format for a Claude model id.
 #
@@ -41,19 +41,34 @@ from typing import Set
 # The invariant this enforces is "the version separator is a DOT, never a
 # hyphen" (claude-opus-4-7 is the forbidden per-harness render, not source).
 # It is NOT "the id contains a dot" — single-part versions have no dot at all.
-CANONICAL_MODEL_RE = re.compile(r"^claude-(haiku|sonnet|opus|fable)-\d+(\.\d+)?$")
+CANONICAL_MODEL_RE = model_registry.canonical_re(model_registry.load_registry())
 
-_LOCKED_MODELS_SH = Path(__file__).parent.parent / ".githooks" / "LOCKED_MODELS.sh"
+REPO_ROOT = Path(__file__).parent.parent
+REGISTRY = model_registry.load_registry(REPO_ROOT)
+ALIASES = {f["claude_alias"] for f in REGISTRY["families"].values() if f.get("claude_alias")}
 
 
 def _load_locked_models() -> Set[str]:
-    """Parse the LOCKED_MODELS bash array from the canonical source of truth."""
-    content = _LOCKED_MODELS_SH.read_text()
-    block = re.search(r"^LOCKED_MODELS=\((.*?)^\)", content, re.DOTALL | re.MULTILINE)
-    assert block, f"LOCKED_MODELS array not found in {_LOCKED_MODELS_SH}"
-    models = set(re.findall(r'"([^"]+)"', block.group(1)))
-    assert models, f"LOCKED_MODELS array is empty in {_LOCKED_MODELS_SH}"
+    """Known (non-retired) model ids from config/models.yaml, via scripts/models.py."""
+    models = {m for m, v in REGISTRY["models"].items() if v.get("status") != "retired"}
+    assert models, "config/models.yaml lists no usable models"
     return models
+
+
+def _frontmatter(path: Path):
+    m = re.match(r"^---\n(.*?)\n---", path.read_text(), re.DOTALL)
+    return m.group(1) if m else None
+
+
+def _opencode_expected(role: str, provider: str) -> str:
+    """The id OpenCode should be given for *role* under *provider*, from the registry."""
+    pin = REGISTRY["roles"][role]["model"]
+    ids = REGISTRY["models"][pin]["ids"]
+    if provider == "github-copilot":
+        return ids["copilot"]            # SPEC-2026-010: dotted
+    if provider == "openrouter":
+        return "anthropic/" + ids["copilot"]
+    return ids["opencode"]               # hyphenated for anthropic and most others
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -67,27 +82,19 @@ class TestModelNamingCompliance:
     """Test model naming compliance across entire codebase (positive enforcement).
     
     Verifies that agents use LOCKED Claude models by choice, not forbidden patterns.
-    Locked models are defined in .githooks/LOCKED_MODELS.sh and enforced by:
-    - Pre-commit hook validation
+    Known models are defined in config/models.yaml and enforced by:
+    - Pre-commit hook validation (scripts/models.py)
     - This test suite
     - CI/CD pipeline
     """
 
-    # Locked models are READ FROM .githooks/LOCKED_MODELS.sh rather than
-    # duplicated here. A hardcoded copy silently drifts from the hook the moment
-    # a model is approved, which is exactly how the fable-5/opus-5/sonnet-5
-    # upgrade broke CI while the pre-commit hook passed.
+    # Known models are READ FROM config/models.yaml (scripts/models.py) rather than
+    # duplicated here: a hardcoded copy silently drifts from the registry.
     LOCKED_MODELS = _load_locked_models()
 
-    # Approved = locked set plus legacy ids still valid in rendered/example
-    # output but no longer assigned to any agent.
-    # claude-haiku-4.6 was dropped from this set together with its removal from
-    # renderer/validate_agents.py::KNOWN_MODELS — it is a phantom id Anthropic
-    # never shipped and it no longer occurs anywhere in the repo, so approving it
-    # could only ever wave through a typo.
-    APPROVED_MODELS = LOCKED_MODELS | {
-        "claude-opus-4.5",
-    }
+    # Approved = every non-retired registry model. No extra legacy ids: an id the
+    # registry does not list is not approved.
+    APPROVED_MODELS = LOCKED_MODELS
 
     # Forbidden patterns (old hyphenated format, underscores, uppercase, etc.)
     FORBIDDEN_PATTERNS = [
@@ -177,34 +184,32 @@ class TestModelNamingCompliance:
                     )
 
     def test_validator_known_models_use_hyphen_format(self):
-        """renderer/validate_agents.py KNOWN_MODELS must use dots (Copilot CLI format)."""
-        validator_file = self.REPO_ROOT / "renderer" / "validate_agents.py"
-        assert validator_file.exists(), f"Validator not found: {validator_file}"
+        """renderer/validate_agents.py KNOWN_MODELS is derived from the registry:
+        exactly the registry model ids (canonical dotted). The family aliases are NOT source
+        models (SPEC I3): they live in RENDERED_ALIASES, accepted for rendered output only."""
+        sys.path.insert(0, str(self.REPO_ROOT / "renderer"))
+        import validate_agents
 
-        content = validator_file.read_text()
+        assert validate_agents.KNOWN_MODELS == self.LOCKED_MODELS
+        assert not ALIASES & validate_agents.KNOWN_MODELS
+        assert validate_agents.RENDERED_ALIASES == ALIASES
+        for model in validate_agents.KNOWN_MODELS:
+            assert CANONICAL_MODEL_RE.match(model), (
+                f"Validator: Model '{model}' is not a canonical Claude id "
+                f"(e.g. claude-opus-4.7 or claude-opus-5)"
+            )
 
-        # Extract KNOWN_MODELS set (may have comments and newlines)
-        match = re.search(
-            r'KNOWN_MODELS\s*=\s*\{(.*?)\n\}',
-            content,
-            re.DOTALL
-        )
-        assert match, "KNOWN_MODELS not found in validator"
+    def test_validator_rejects_unregistered_and_hyphenated_ids(self):
+        """The validator holds no version allowlist: ids absent from the registry, and
+        the hyphenated render form of a registered id, are not known."""
+        import validate_agents
 
-        known_models_text = match.group(1)
-
-        # Extract model names
-        model_names = re.findall(r'"(claude-[^"]+)"', known_models_text)
-        assert model_names, "No models found in KNOWN_MODELS"
-
-        for model in model_names:
-            if model in self.APPROVED_MODELS:
-                # Canonical shape: dot-separated version, or a single-part
-                # version (claude-opus-5) which has no separator at all.
-                assert CANONICAL_MODEL_RE.match(model), (
-                    f"Validator: Model '{model}' is not a canonical Claude id "
-                    f"(e.g. claude-opus-4.7 or claude-opus-5)"
-                )
+        pin = REGISTRY["roles"]["engineer"]["model"]
+        hyphenated = REGISTRY["models"][pin]["ids"]["claude"]
+        assert pin in validate_agents.KNOWN_MODELS
+        assert "claude-haiku-99.9" not in validate_agents.KNOWN_MODELS
+        if hyphenated != pin:
+            assert hyphenated not in validate_agents.KNOWN_MODELS
 
     def test_rendered_copilot_uses_hyphen_format(self):
         """Rendered Copilot files must use dot-format models (Copilot CLI requirement)."""
@@ -225,48 +230,65 @@ class TestModelNamingCompliance:
                 # Copilot CLI takes the canonical id through unchanged: a
                 # dotted version (claude-opus-4.7), a single-part version
                 # (claude-opus-5), or a bare short-form alias.
-                assert CANONICAL_MODEL_RE.match(model) or model in {
-                    "haiku",
-                    "sonnet",
-                    "opus",
-                    "fable",
-                }, (
+                assert CANONICAL_MODEL_RE.match(model) or model in ALIASES, (
                     f"dist/copilot/{agent_file.name}: Model '{model}' is not a "
                     f"canonical Claude id (e.g. claude-opus-4.7, claude-opus-5) "
                     f"or short form (opus)"
                 )
 
-    def test_rendered_opencode_uses_hyphen_format(self):
-        """Rendered OpenCode files must use hyphen-format models (frontmatter only)."""
-        opencode_dir = self.REPO_ROOT / "dist" / "opencode" / "agents"
-        assert opencode_dir.is_dir(), "dist/opencode/agents/ not present — run 'make render-all'"
+    @pytest.mark.parametrize("provider", ["anthropic", "github-copilot"])
+    def test_rendered_opencode_uses_hyphen_format(self, provider, tmp_path):
+        """Rendered OpenCode frontmatter model is provider/<id>, with the id spelled the
+        way that provider needs it, derived from the registry (not a fixed hyphen rule).
 
-        opencode_agents = list(opencode_dir.glob("*.md"))
-        assert opencode_agents, (
-            "No rendered OpenCode agents found in "
-            "dist/opencode/agents/ — run 'make render-all'"
+        github-copilot/ takes the dotted canonical id (SPEC-2026-010); anthropic and most
+        other providers take the registry's hyphenated ids.opencode.
+
+        The exact spelling is ALWAYS asserted: this test renders afresh into a temp dir with
+        HOME / XDG cache pointed at an empty temp dir and no models cache, so a developer's
+        ~/.cache/opencode/models.json (whose exact spelling the renderer would otherwise
+        copy) can never turn the assertion into a no-op.
+        """
+        home = tmp_path / "home"
+        home.mkdir()
+        cache = tmp_path / "xdg-cache" / "opencode" / "models.json"  # deliberately absent
+        assert not cache.exists()
+        repo = tmp_path / "repo"
+        shutil.copytree(
+            self.REPO_ROOT, repo,
+            ignore=shutil.ignore_patterns(".git", "dist", "__pycache__", ".pytest_cache", "*.pyc", "node_modules"),
+        )
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        target = tmp_path / "o"
+        env = {**os.environ, "NO_COLOR": "1", "HOME": str(home), "XDG_CACHE_HOME": str(tmp_path / "xdg-cache"),
+               "OPENCODE_MODELS_CACHE": str(cache), "OPENCODE_PROVIDER": provider}
+        r = subprocess.run(["bash", str(repo / "renderer" / "scripts" / "render-opencode.sh"), str(repo), str(target)],
+                           capture_output=True, text=True, env=env, timeout=300)
+        assert r.returncode == 0, r.stderr
+
+        opencode_agents = list((target / "agents").glob("*.md"))
+        assert opencode_agents, f"No rendered OpenCode agents found in {target / 'agents'}"
+
+        checked = 0
+        for agent_file in opencode_agents:
+            fm = _frontmatter(agent_file)
+            if not fm:
+                continue
+            m = re.search(r"^model:\s*(\S+)", fm, re.MULTILINE)
+            role = re.search(r"^\s+role:\s*(\S+)", fm, re.MULTILINE)
+            if not (m and role and role.group(1) in REGISTRY["roles"]):
+                continue
+            prov, _, model_id = m.group(1).partition("/")
+            assert model_id, f"{agent_file.name}: '{m.group(1)}' is not provider/model"
+            expected = _opencode_expected(role.group(1), provider)
+            assert model_id == expected, (
+                f"{agent_file.name}: '{model_id}' != registry form '{expected}' for provider '{provider}'"
+            )
+            checked += 1
+        assert checked == len(REGISTRY["roles"]), (
+            f"expected every registry role rendered, checked {checked}/{len(REGISTRY['roles'])}"
         )
 
-        for agent_file in opencode_agents:
-            content = agent_file.read_text()
-            # Only check frontmatter (body may contain example DELEGATE blocks with versioned IDs)
-            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
-            if not frontmatter_match:
-                continue
-            frontmatter = frontmatter_match.group(1)
-            # OpenCode uses github-copilot/ prefix but model ID must have hyphens
-            model_refs = re.findall(
-                r'github-copilot/(claude-[^\s\n"]+)|^model:\s*([^\s\n]+)',
-                frontmatter,
-                re.MULTILINE
-            )
-
-            for match in model_refs:
-                model = match[0] or match[1]
-                if model and "claude" in model:
-                    assert "." not in model, (
-                        f"dist/opencode/{agent_file.name}: Model '{model}' uses dots"
-                    )
 
 class TestModelNamingConsistency:
     """Test consistency of model names across files."""
@@ -274,30 +296,22 @@ class TestModelNamingConsistency:
     REPO_ROOT = Path(__file__).parent.parent
 
     def test_agent_files_match_validator(self):
-        """Models in agent files must be in validator's KNOWN_MODELS."""
-        # Get models from validator
-        validator_file = self.REPO_ROOT / "renderer" / "validate_agents.py"
-        validator_content = validator_file.read_text()
+        """Models in agent files must be in the validator's KNOWN_MODELS (registry-derived)
+        and equal their role's registry pin."""
+        sys.path.insert(0, str(self.REPO_ROOT / "renderer"))
+        import validate_agents
 
-        match = re.search(
-            r'KNOWN_MODELS\s*=\s*\{(.*?)\n\}',
-            validator_content,
-            re.DOTALL
-        )
-        validator_models = set(re.findall(r'"(claude-[^"]+)"', match.group(1)))
-
-        # Get models from agent files
-        agent_models = set()
         for agent_file in (self.REPO_ROOT / "src" / "agents").glob("*-agent.md"):
-            content = agent_file.read_text()
-            models = re.findall(r'model:\s*(claude-[^\s\n]+)', content)
-            agent_models.update(models)
-
-        # Agent models should be subset of validator models
-        extra_in_agents = agent_models - validator_models
-        assert not extra_in_agents, (
-            f"Agent files use models not in validator: {extra_in_agents}"
-        )
+            fm = _frontmatter(agent_file)
+            assert fm, f"{agent_file.name}: no frontmatter"
+            model = re.search(r"^model:\s*(\S+)", fm, re.MULTILINE).group(1).strip("\"'")
+            assert model in validate_agents.KNOWN_MODELS, (
+                f"{agent_file.name}: '{model}' not in validator KNOWN_MODELS"
+            )
+            role = agent_file.name[: -len("-agent.md")]
+            assert model == REGISTRY["roles"][role]["model"], (
+                f"{agent_file.name}: '{model}' != registry pin for role {role}"
+            )
 
     def test_agents_use_only_locked_models(self):
         """Verify agents use only LOCKED Claude models (positive enforcement).
