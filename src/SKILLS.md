@@ -71,7 +71,7 @@ metadata:
 *suggested tier for running this skill* (the role whose perspective the skill adopts and the
 model/effort that suffice for it). They are not required to equal that role's pin in
 `config/models.yaml`: for example `protocol-validator` is `role: orchestrator` with a cheaper
-`claude-haiku-4.5`. The only requirement is that `model` is a valid registry ID (the current
+Haiku-family model. The only requirement is that `model` is a valid registry ID (the current
 eight skills all are); nothing enforces a role/model pairing, and `renderer/validate_skills.py`
 checks shape only. The agent that invokes a skill still runs on its own role pin.
 

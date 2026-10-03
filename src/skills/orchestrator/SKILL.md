@@ -147,7 +147,7 @@ per-role duty table.
 
 ## Engineer HANDBACK Verification (MANDATORY)
 
-Before accepting an Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before step 6 above —
+Before accepting an Engineer HANDBACK — i.e. before step 6 above —
 independently check:
 
 1. **Phantom-success check** — claimed file changes exist on disk / in `git status`.

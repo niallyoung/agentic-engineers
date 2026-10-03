@@ -24,8 +24,8 @@
 **MODEL NAMING (LOCKED):** Models use canonical format with a DOT version separator,
 `claude-{variant}-{major}.{minor}` (e.g. in source: two-part versioned models like Opus 4.x). Current-generation
 models carry a **single-part version** and therefore have no separator at all (e.g. in source: Opus 5, Sonnet 5). 
-Sonnet 5.5 is the one current-generation model with a two-part version, so it uses the dot in source 
-and renders to `claude-sonnet-5-5` for Claude Code (hyphens are per-harness renders only, never source).
+Models with a two-part version (e.g. Sonnet 5.5) use the dot in source and render hyphenated for
+Claude Code (hyphens are per-harness renders only, never source); the exact IDs are in the registry.
 See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec) and [docs/MODELS.md](../docs/MODELS.md) for the complete model registry.
 
 **SINGLE SOURCE OF TRUTH:** Model assignments are defined in `config/models.yaml`. 
@@ -47,11 +47,11 @@ See [docs/decisions/ADR-model-pin-registry.md](../docs/decisions/ADR-model-pin-r
 > by `python3 scripts/models.py sync` from `config/models.yaml`. To change a role's model, edit the registry
 > (not this table) and run sync.
 
-**Multi-Model column notes:** Principal Engineer uses `claude-opus-5.5` for all planning
-and cross-repo design; `claude-opus-5` then `claude-opus-4.8` are emergency fallbacks
-only (opus-5.5 unavailable), documented in HANDBACK. Security Engineer uses
-`claude-fable-5` unconditionally; `claude-opus-5` then `claude-opus-4.8` are emergency
-fallbacks only. The defensive-only scope constraint
+**Multi-Model column notes:** Principal Engineer uses its registry pin for all planning
+and cross-repo design; the fallbacks declared for it in `config/models.yaml` (see
+[docs/MODELS.md](../docs/MODELS.md)) are emergency fallbacks only (pin unavailable),
+documented in HANDBACK. Security Engineer uses its registry pin unconditionally; its
+declared fallbacks are likewise emergency-only. The defensive-only scope constraint
 applies on **every** model, not just fable-5 — restricted-topic work is out of scope
 framework-wide. This is a role convention, not a mechanical gate: no runtime code
 inspects a DELEGATE's scope, topic, or content for offensive-vs-defensive framing.
@@ -437,7 +437,7 @@ re-delegate the ESCALATION block at the higher tier (direct spawn).
 Three self-reported "expected"/"pre-existing" test-failure classifications on 2026-08-13/
 14 turned out wrong and were only caught downstream — this codifies the catch as a
 standing duty rather than relying on it happening again by luck. Before accepting any
-Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before treating it as `success` and moving
+Engineer HANDBACK — i.e. before treating it as `success` and moving
 on per the table above — the spawning agent MUST independently verify:
 
 1. **Phantom-success check.** Every file change the HANDBACK claims actually exists on

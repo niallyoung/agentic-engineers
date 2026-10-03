@@ -572,7 +572,7 @@ validator or specification edits are required.
 rendering (dots for Copilot, hyphens for OpenCode, etc.) handled automatically by `scripts/models.py sync`.
 
 All agent models must exist in `config/models.yaml` before being used. The canonical
-format is dotted (e.g., `claude-sonnet-5.5`); harness-specific render IDs are specified
+format is dotted (`claude-<family>-<major>.<minor>`); harness-specific render IDs are specified
 in the registry's `ids` field. See [docs/MODELS.md](../MODELS.md) for the current pinned
 models and [docs/decisions/ADR-model-pin-registry.md](../decisions/ADR-model-pin-registry.md)
 for the policy.
