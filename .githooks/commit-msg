@@ -12,6 +12,18 @@
 #
 # Install: git config core.hooksPath .githooks
 # Bypass: SKIP_COMMIT_MSG_HOOK=true git commit
+#
+# Model Pin Change coverage and its limits (check 6): this hook is the EARLY,
+# local check only. It catches `git commit`, `git commit --amend`, `git rebase`
+# reword/(edit+amend), `git merge` (compared with the first parent, i.e. HEAD) and
+# `git cherry-pick --continue` (the amend-like rebase
+# actions are detected from GIT_REFLOG_ACTION, then the parent process, and are
+# compared against HEAD^). It cannot see commits git makes without running this
+# hook: `--no-verify`/`-n`, the final squash/fixup commit of `git rebase -i`,
+# `git cherry-pick -e`, `git revert`, or any other bypass flag. The
+# parent-process heuristic is best effort (it needs `ps` or /proc). The pre-push
+# hook and the CI "Model Pin Approval Scan" (both run scripts/check_pin_trailers.py,
+# merge commits included) are the authoritative backstop; CI cannot be bypassed.
 
 # Deliberately `set -uo pipefail` WITHOUT -e. This hook leans heavily on probes
 # whose non-zero exit is a normal outcome (`grep -q` misses, the many `|| true`
@@ -260,8 +272,14 @@ COMMIT_MSG_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # be silently dropped. When amending, compare against HEAD^ (or the empty tree for
 # a root commit). Detection: GIT_REFLOG_ACTION, else the parent process (the
 # `git commit` that spawned this hook) carrying --amend.
+# `git rebase` reword/squash/fixup likewise REPLACE HEAD (GIT_REFLOG_ACTION is
+# "rebase (reword)", "rebase -i (fixup)", ...), so they also compare against HEAD^.
+# Other rebase/cherry-pick commits (e.g. "rebase (continue)", cherry-pick) sit ON
+# TOP of HEAD and keep the plain HEAD comparison.
 _is_amend() {
-  case "${GIT_REFLOG_ACTION:-}" in *amend*) return 0 ;; esac
+  case "${GIT_REFLOG_ACTION:-}" in
+    *amend* | rebase*reword* | rebase*squash* | rebase*fixup*) return 0 ;;
+  esac
   local parent_args=""
   parent_args=$(ps -o args= -p "$PPID" 2>/dev/null || true)
   if [ -z "$parent_args" ] && [ -r "/proc/$PPID/cmdline" ]; then

@@ -298,6 +298,151 @@ class TestCommitMsgAmendPath:
         assert r.returncode != 0 and "Model-Pin-Approved-By" in out(r), out(r)
 
 
+class TestCommitMsgRebaseAndCherryPick:
+    """git rebase reword/squash/fixup and cherry-pick create commits that replace HEAD (rebase)
+    or sit on HEAD (cherry-pick). A reworded pin commit has an EMPTY registry diff against
+    HEAD, so the hook must compare against HEAD^ for the amend-like rebase actions (detected
+    from GIT_REFLOG_ACTION, independent of the parent-process heuristic).
+
+    Limit (documented in the hook header): git 2.43 does not run commit-msg at all for the
+    final squash/fixup commit, and `--no-verify`/`-n` skips it everywhere, so the pre-push
+    hook and the CI scanner are the authoritative backstop."""
+
+    PIN_MSG = SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe\n"
+    hooked_repo = staticmethod(TestCommitMsgAmendPath.hooked_repo)
+
+    @staticmethod
+    def editor(tmp_path, message):
+        """A GIT_EDITOR that replaces the whole message with *message*."""
+        (tmp_path / "newmsg").write_text(message)
+        script = tmp_path / "editor.sh"
+        script.write_text(f'#!/bin/sh\ncat "{tmp_path / "newmsg"}" > "$1"\n')
+        script.chmod(0o755)
+        return str(script)
+
+    def pin_then_plain(self, tmp_path):
+        repo, hooks = self.hooked_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        git(repo, "commit", "-q", "-m", self.PIN_MSG)  # hooks still disabled here
+        (repo / "x.txt").write_text("x")
+        git(repo, "add", "x.txt")
+        git(repo, "commit", "-q", "-m", "chore: unrelated change here")
+        git(repo, "config", "core.hooksPath", str(hooks))
+        return repo
+
+    @staticmethod
+    def rebase(repo, tmp_path, todo_edit, message):
+        env = {"GIT_SEQUENCE_EDITOR": todo_edit, "GIT_EDITOR": TestCommitMsgRebaseAndCherryPick.editor(tmp_path, message)}
+        return git(repo, "rebase", "-i", "HEAD~2", check=False, env=env)
+
+    def test_rebase_reword_of_pin_commit_dropping_trailer_is_rejected(self, tmp_path):
+        repo = self.pin_then_plain(tmp_path)
+        r = self.rebase(repo, tmp_path, "sed -i '1s/^pick/reword/'", SUBJECT + "\n")
+        assert r.returncode != 0, out(r)
+        assert "Model-Pin-Approved-By" in out(r) and f"{ROLE}: {ROLE_PIN} -> {ALT_PIN}" in out(r)
+        git(repo, "rebase", "--abort", check=False)
+        assert "Model-Pin-Approved-By: Jane Doe" in git(repo, "log", "-2", "--format=%B").stdout
+
+    def test_rebase_reword_of_pin_commit_keeping_trailer_is_accepted(self, tmp_path):
+        repo = self.pin_then_plain(tmp_path)
+        r = self.rebase(repo, tmp_path, "sed -i '1s/^pick/reword/'", SUBJECT + " (reworded)\n\nModel-Pin-Approved-By: Jane Doe\n")
+        assert r.returncode == 0, out(r)
+        assert "reworded" in git(repo, "log", "-2", "--format=%s").stdout
+
+    def test_rebase_reword_of_plain_commit_above_a_pin_commit_is_unaffected(self, tmp_path):
+        repo = self.pin_then_plain(tmp_path)
+        r = self.rebase(repo, tmp_path, "sed -i '2s/^pick/reword/'", "chore: unrelated change reworded\n")
+        assert r.returncode == 0, out(r)
+
+    @pytest.mark.parametrize("action", ["rebase (reword)", "rebase -i (reword)", "rebase (squash)",
+                                        "rebase (fixup)", "rebase -i (fixup)", "rebase (fixup -C)"])
+    def test_amend_like_rebase_actions_compare_against_head_parent(self, tmp_path, action):
+        """Env-only (no --amend in the parent process): GIT_REFLOG_ACTION alone must select HEAD^."""
+        repo = self.pin_then_plain(tmp_path)
+        git(repo, "reset", "-q", "--hard", "HEAD~1")  # HEAD is the pin commit, index == HEAD
+        r = run_commit_msg(repo, SUBJECT + "\n", GIT_REFLOG_ACTION=action)
+        assert r.returncode == 1 and "Model-Pin-Approved-By" in out(r), out(r)
+        ok = run_commit_msg(repo, self.PIN_MSG, GIT_REFLOG_ACTION=action)
+        assert ok.returncode == 0, out(ok)
+
+    @pytest.mark.parametrize("action", ["rebase (continue)", "rebase (pick)", "cherry-pick", "rebase (start)"])
+    def test_non_amend_actions_still_compare_against_head(self, tmp_path, action):
+        """A new commit ON TOP of a pin commit has no pin change of its own."""
+        repo = self.pin_then_plain(tmp_path)
+        git(repo, "reset", "-q", "--hard", "HEAD~1")
+        (repo / "y.txt").write_text("y")
+        git(repo, "add", "y.txt")
+        r = run_commit_msg(repo, "chore: another unrelated change\n", GIT_REFLOG_ACTION=action)
+        assert r.returncode == 0, out(r)
+
+    def cherry_source(self, tmp_path, message):
+        repo, hooks = self.hooked_repo(tmp_path)
+        main = git(repo, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        git(repo, "checkout", "-q", "-b", "side")
+        edit_registry(repo, change_pin)
+        git(repo, "commit", "-q", "-m", message)  # hooks still disabled here
+        sha = git(repo, "rev-parse", "HEAD").stdout.strip()
+        git(repo, "checkout", "-q", main)
+        git(repo, "config", "core.hooksPath", str(hooks))
+        return repo, sha
+
+    def test_cherry_pick_reworded_without_trailer_is_rejected_locally_or_caught_by_the_scanner(self, tmp_path):
+        """git does not run commit-msg for `cherry-pick -e`: the dropped trailer must then be
+        caught by the scanner (pre-push / CI), which is why it is the authoritative backstop."""
+        repo, sha = self.cherry_source(tmp_path, self.PIN_MSG)
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+        env = {"GIT_EDITOR": self.editor(tmp_path, SUBJECT + "\n")}
+        r = git(repo, "cherry-pick", "-e", sha, check=False, env=env)
+        if r.returncode == 0:
+            scan = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "check_pin_trailers.py")],
+                                  cwd=repo, capture_output=True, text=True)
+            assert scan.returncode == 1, out(scan)
+        else:
+            assert "Model-Pin-Approved-By" in out(r), out(r)
+
+    def test_cherry_pick_reworded_keeping_trailer_is_accepted(self, tmp_path):
+        repo, sha = self.cherry_source(tmp_path, self.PIN_MSG)
+        env = {"GIT_EDITOR": self.editor(tmp_path, SUBJECT + " (picked)\n\nModel-Pin-Approved-By: Jane Doe\n")}
+        r = git(repo, "cherry-pick", "-e", sha, check=False, env=env)
+        assert r.returncode == 0, out(r)
+
+    def test_cherry_pick_continue_after_conflict_needs_the_trailer(self, tmp_path):
+        """`cherry-pick --continue` makes a real `git commit` (hook runs, parent is HEAD)."""
+        repo, sha = self.cherry_source(tmp_path, self.PIN_MSG)
+        ALT2 = next(m for m, v in REGISTRY["models"].items() if m not in (ROLE_PIN, ALT_PIN) and v["status"] != "retired")
+        main_hooks = git(repo, "config", "core.hooksPath").stdout.strip()
+        git(repo, "config", "core.hooksPath", "/nonexistent")
+        edit_registry(repo, lambda t: t.replace(f"\n  {ROLE}:\n    model: {ROLE_PIN}\n", f"\n  {ROLE}:\n    model: {ALT2}\n", 1))
+        git(repo, "commit", "-q", "-m", "chore: other pin\n\nModel-Pin-Approved-By: Jane Doe")
+        git(repo, "config", "core.hooksPath", main_hooks)
+        assert git(repo, "cherry-pick", sha, check=False).returncode != 0, "expected a conflict"
+        reg = repo / "config" / "models.yaml"
+        reg.write_text(re.sub(r"<<<<<<<[^\n]*\n.*?=======\n(.*?)>>>>>>>[^\n]*\n", r"\1", reg.read_text(), flags=re.S))
+        git(repo, "add", "config/models.yaml")
+        (repo / ".git" / "MERGE_MSG").write_text(SUBJECT + "\n")  # the trailer is dropped here
+        r = git(repo, "cherry-pick", "--continue", check=False)
+        assert r.returncode != 0 and "Model-Pin-Approved-By" in out(r), out(r)
+        assert f"{ROLE}:" in out(r)
+
+    def test_squash_dropping_the_trailer_is_rejected_locally_or_caught_by_the_scanner(self, tmp_path):
+        """Whether or not this git runs commit-msg for the squash commit, a dropped trailer
+        never gets through unnoticed: the hook rejects it, or the scanner flags the result."""
+        repo = self.pin_then_plain(tmp_path)
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD~2")
+        r = self.rebase(repo, tmp_path, "sed -i '2s/^pick/squash/'", SUBJECT + "\n")
+        if r.returncode == 0:
+            scan = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "check_pin_trailers.py")],
+                                  cwd=repo, capture_output=True, text=True)
+            assert scan.returncode == 1, out(scan)
+        else:
+            assert "Model-Pin-Approved-By" in out(r), out(r)
+
+    def test_header_documents_that_pre_push_and_ci_are_the_authoritative_backstop(self):
+        header = COMMIT_MSG.read_text().split("set -uo pipefail")[0]
+        assert "authoritative" in header and "pre-push" in header and "CI" in header
+        assert "squash" in header and "--no-verify" in header
+
+
 class TestCommitMsgPrintfNotEcho:
     """S4: messages are printed verbatim; `echo -e` expanded backslash escapes in
     user-controlled text (a bypass reason) and mangled the output."""
