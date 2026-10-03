@@ -33,6 +33,8 @@ make install-claude
 
 This configures Claude Code with agent definitions, skills, and the DELEGATE/HANDBACK protocol. Configuration is installed to `~/.claude/`.
 
+To reinstall from a clean slate, use `make fresh-install-claude`: it wipes the managed Claude files, then installs clean. Your own agents, skills, settings keys and a user-chosen model are kept.
+
 ### Install Specific Harness
 
 ```bash
@@ -44,6 +46,9 @@ make install-copilot
 
 # Claude Code
 make install-claude
+
+# Claude Code, clean reinstall (managed files wiped first; your own files kept)
+make fresh-install-claude
 
 # Codex
 make install-codex

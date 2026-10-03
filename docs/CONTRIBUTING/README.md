@@ -67,6 +67,8 @@ After `make install`, the framework automatically:
    cd agentic-engineers
    make install        # Installs to all 4 harnesses
    # Or: make install-opencode (if using OpenCode only)
+   # Or: make fresh-install-claude (wipe managed Claude files, then install clean;
+   #     your own agents, skills, settings keys and a user-chosen model are kept)
    ```
 
 2. **Create a branch for your work:**

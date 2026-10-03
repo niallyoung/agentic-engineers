@@ -62,6 +62,7 @@ make install
 
 # Or a single harness:
 make install-claude
+make fresh-install-claude   # wipe managed Claude files, then install clean (your own agents, skills, settings keys and a user-chosen model are kept)
 make install-opencode
 make install-codex
 
