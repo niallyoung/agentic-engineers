@@ -172,6 +172,15 @@ rejects a pinned ID). OpenCode checks the provider's model cache; if a pin is un
 walks the role's fallback chain with a stderr warning and records the walk in
 `dist/opencode/model-resolution.json`. See [MODELS.md](MODELS.md) for the current pins.
 
+**Codex model tiers are family-derived.** Codex does not render registry model IDs directly
+(Codex has its own model tier system). Instead, `render-codex.py` maps each role's registry
+family to a Codex tier: haiku family → `gpt-5.4-mini` (mini tier), sonnet family → `gpt-5.5`
+(standard tier), opus/fable families → `gpt-5.5` (top tier, using standard). This rule is
+defined once in `CODEX_MODEL_BY_FAMILY` in `render-codex.py`, so changes to a role's registry
+family automatically propagate to its Codex tier without code edits. The orchestrator, being
+Sonnet-class, renders to the standard tier (`gpt-5.5`) with effort `low`; engineer (Haiku)
+remains on the mini tier (`gpt-5.4-mini`).
+
 ---
 
 ### Phase 3: Install-Time Deployment (`make install-*`)

@@ -61,7 +61,7 @@ Agentic Engineers uses a canonical model naming format internally (with dots), w
 | OpenCode | dotted source ID | hyphenated ID (`claude-<family>-<major>-<minor>`) | CLI requirement |
 | Copilot CLI | dotted source ID | dotted source ID (pass-through) | Anthropic API format |
 | Claude Code | dotted source ID | registry-pinned full ID (hyphenated minor) | Exact pin; short alias only via `AGENTIC_CLAUDE_MODEL_RENDER=alias` |
-| Codex | role tier | `gpt-5.5` / `gpt-5.4-mini` | Codex custom-agent model mapping |
+| Codex | registry family | family-based tier mapping | Codex model tiers derived from role registry family: haiku→mini (gpt-5.4-mini), sonnet→standard (gpt-5.5), opus/fable→top (gpt-5.5) |
 
 Claude Code renders the registry-pinned full ID, not a short alias. To fall back to the
 floating alias (`haiku`/`sonnet`/`opus`/`fable`) run the renderer or installer with
