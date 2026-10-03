@@ -11,14 +11,21 @@ fi
 
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
-# Installer + test dependencies
+# Installer + test dependencies. Failures here are deliberately NON-fatal (the
+# render below can still succeed with what is installed) but never silent: the
+# underlying tool's own output is replayed to stderr behind a WARNING line.
 if ! command -v rsync >/dev/null 2>&1; then
-  (apt-get install -y -qq rsync >/dev/null 2>&1 \
-    || { apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq rsync >/dev/null 2>&1; }) \
-    || echo "session-start: could not install rsync" >&2
+  if ! rsync_out=$(apt-get install -y -qq rsync 2>&1 \
+      || { apt-get update -qq 2>&1 && apt-get install -y -qq rsync 2>&1; }); then
+    echo "session-start: WARNING could not install rsync (continuing):" >&2
+    printf '%s\n' "$rsync_out" | sed 's/^/  /' >&2
+  fi
 fi
-python3 -m pip install -q pytest "pyyaml>=6.0" >/dev/null 2>&1 \
-  || echo "session-start: could not install python deps" >&2
+# pyyaml is pinned to the major range scripts/models.py is written against.
+if ! pip_out=$(python3 -m pip install -q pytest 'pyyaml>=6.0,<7' 2>&1); then
+  echo "session-start: WARNING could not install python deps (continuing):" >&2
+  printf '%s\n' "$pip_out" | sed 's/^/  /' >&2
+fi
 
 # Render + install agents/skills into ~/.claude (marker-aware, never clobbers foreign files)
 make install-claude
