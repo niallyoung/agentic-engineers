@@ -147,37 +147,125 @@ def _below_min_pin(reg: dict, model: str) -> str | None:
 # --------------------------------------------------------------------------- #
 
 def render_locked_models(text: str, reg: dict) -> str:
-    models = list((reg.get("models") or {}))
-    assigns = [f'    "{r}-agent:{c["model"]}"' for r, c in (reg.get("roles") or {}).items()]
-    locked_body = "\n".join(f'    "{m}"' for m in models)
+    """Generate the entire .githooks/LOCKED_MODELS.sh file from a template.
 
-    # Replace the header comment block with the GENERATED banner.
-    header = """#!/usr/bin/env bash
-# .githooks/LOCKED_MODELS.sh
-#
-# GENERATED from config/models.yaml by scripts/models.py sync - do not edit by hand.
-# config/models.yaml is the source of truth; regenerate with: make models-sync.
-# To change pins, follow the Model Pin Change process in docs/SPEC.md.
-#
-# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,
-# get_agent_locked_model, show_locked_models, show_agent_assignments.
-#
-# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)"""
+    The file is wholly generated; hand-edits are overwritten by sync.
+    The LOCKED_MODELS array, AGENT_MODEL_ASSIGNMENTS array, and all helper
+    functions are generated from the registry.
+    """
+    models_list = list((reg.get("models") or {}))
+    roles = reg.get("roles") or {}
 
-    # Find the end of the initial header (ends at the first code line or LOCKED_MODELS definition)
-    header_end = text.find("LOCKED_MODELS=(")
-    if header_end == -1:
-        header_end = text.find("# ─── LOCKED MODELS")
+    # Build array bodies
+    locked_body = "\n".join(f'    "{m}"' for m in models_list)
+    assigns = [f'    "{r}-agent:{c["model"]}"' for r, c in roles.items()]
+    assigns_body = "\n".join(assigns)
 
-    if header_end != -1:
-        # Keep everything from LOCKED_MODELS onwards
-        rest = text[header_end:]
-        text = header + "\n\n" + rest
+    # Build the complete file from template
+    lines = [
+        "#!/usr/bin/env bash",
+        "# .githooks/LOCKED_MODELS.sh",
+        "#",
+        "# GENERATED from config/models.yaml by scripts/models.py sync - do not edit by hand.",
+        "# config/models.yaml is the source of truth; regenerate with: make models-sync.",
+        "# To change pins, follow the Model Pin Change process in docs/SPEC.md.",
+        "#",
+        "# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,",
+        "# get_agent_locked_model, show_locked_models, show_agent_assignments.",
+        "#",
+        "# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)",
+        "",
+        "LOCKED_MODELS=(",
+    ]
+    for m in models_list:
+        lines.append(f'    "{m}"')
+    lines.extend([
+        ")",
+        "",
+        "# Fallback behaviour when a pinned model is unavailable is defined per role in",
+        "# config/models.yaml (see docs/MODELS.md); it is not decided in this file.",
+        "",
+        "# ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────",
+        "# Generated from the roles section of config/models.yaml (role pins).",
+        "# Format: agent-name:model-choice (space-separated for portability)",
+        "AGENT_MODEL_ASSIGNMENTS=(",
+    ])
+    for assign in assigns:
+        lines.append(assign)
+    lines.extend([
+        ")",
+        "",
+        "# ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────",
+        "is_model_locked() {",
+        "    local model=\"$1\"",
+        "    ",
+        "    for locked_model in \"${LOCKED_MODELS[@]}\"; do",
+        "        if [[ \"$model\" == \"$locked_model\" ]]; then",
+        "            return 0  # Model is locked (approved)",
+        "        fi",
+        "    done",
+        "    ",
+        "    return 1  # Model is NOT locked (not approved)",
+        "}",
+        "",
+        "# ─── INTERACTIVE / DIAGNOSTIC HELPERS ────────────────────────────────────────",
+        "# The three functions below (get_agent_locked_model, show_locked_models,",
+        "# show_agent_assignments) have NO caller anywhere in this repo — only",
+        "# is_model_locked() above is invoked by a hook (.githooks/pre-commit). They are",
+        "# kept, and exported, as the documented sourcing API for interactive use:",
+        "#   source .githooks/LOCKED_MODELS.sh && show_agent_assignments",
+        "# See LOCKED_MODELS_RATIONALE.md § \"Enforcement Mechanism\". Do not delete them",
+        "# expecting to remove dead code — delete them only alongside that documented API.",
+        "",
+        "# Get the locked model for a specific agent.",
+        "get_agent_locked_model() {",
+        "    local agent_role=\"$1\"",
+        "    ",
+        "    # Search for agent in assignments (format: \"agent-name:model\")",
+        "    for assignment in \"${AGENT_MODEL_ASSIGNMENTS[@]}\"; do",
+        "        local agent=\"${assignment%%:*}\"",
+        "        local model=\"${assignment##*:}\"",
+        "        if [[ \"$agent\" == \"$agent_role\" ]]; then",
+        "            echo \"$model\"",
+        "            return 0",
+        "        fi",
+        "    done",
+        "    ",
+        "    return 1  # Agent not found",
+        "}",
+        "",
+        "# ─── DISPLAY HELPERS ──────────────────────────────────────────────────────────",
+        "",
+        "# Show all locked models (for error messages)",
+        "show_locked_models() {",
+        "    echo \"Locked models (approved choices):\"",
+        "    for model in \"${LOCKED_MODELS[@]}\"; do",
+        "        echo \"  - $model\"",
+        "    done",
+        "}",
+        "",
+        "# Show agent-model assignments (for documentation)",
+        "show_agent_assignments() {",
+        "    echo \"Agent model assignments:\"",
+        "    for assignment in \"${AGENT_MODEL_ASSIGNMENTS[@]}\"; do",
+        "        local agent=\"${assignment%%:*}\"",
+        "        local model=\"${assignment##*:}\"",
+        "        echo \"  - $agent: $model\"",
+        "    done | sort",
+        "}",
+        "",
+        "# ─── EXPORT for sourcing in other hooks ───────────────────────────────────────",
+        "export LOCKED_MODELS",
+        "export AGENT_MODEL_ASSIGNMENTS",
+        "export -f is_model_locked",
+        "export -f get_agent_locked_model",
+        "export -f show_locked_models",
+        "export -f show_agent_assignments",
+        "",
+        "",
+    ])
 
-    text = re.sub(r"(?ms)^LOCKED_MODELS=\(\n.*?\n\)", lambda _m: f"LOCKED_MODELS=(\n{locked_body}\n)", text, count=1)
-    text = re.sub(r"(?ms)^AGENT_MODEL_ASSIGNMENTS=\(\n.*?\n\)",
-                  lambda _m: "AGENT_MODEL_ASSIGNMENTS=(\n" + "\n".join(assigns) + "\n)", text, count=1)
-    return text
+    return "\n".join(lines)
 
 
 def render_agents_md(text: str, reg: dict) -> str:
