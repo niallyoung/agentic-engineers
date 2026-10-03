@@ -26,6 +26,7 @@ rendered-output diff.
 """
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -37,6 +38,13 @@ LIB_DIR = REPO_ROOT / "renderer" / "lib"
 
 sys.path.insert(0, str(LIB_DIR))
 from agents_table import parse_agents_table  # type: ignore  # noqa: E402
+
+# Load scripts/models.py under a private name: no sys.path edit, no clash with any
+# other module called "models".
+_spec = importlib.util.spec_from_file_location("ae_models_parity", REPO_ROOT / "scripts" / "models.py")
+models = importlib.util.module_from_spec(_spec)
+sys.modules["ae_models_parity"] = models
+_spec.loader.exec_module(models)
 
 
 def _parse_via_bash(agents_md: Path) -> list[tuple[str, str, str, str]]:
@@ -83,21 +91,16 @@ def test_bash_and_python_parsers_agree_on_live_agents_md():
 
 
 def test_expected_roles_present_with_correct_role_model_effort_tuples():
-    """Sanity-anchor on the known roster so a parser that silently drops or
-    corrupts a row (not just diverges from its sibling) is also caught."""
+    """Sanity-anchor on the roster so a parser that silently drops or corrupts a row
+    (not just diverges from its sibling) is also caught.
+
+    The expectation is DRIVEN BY config/models.yaml (the single source of truth), so a
+    legitimate pin bump (registry edit + `models.py sync`) needs no edit here."""
     python_rows = {row[0]: row for row in _parse_via_python(AGENTS_MD)}
+    registry = models.load_registry(REPO_ROOT)
+    expected = {role: (cfg["model"], cfg["effort"]) for role, cfg in registry["roles"].items()}
 
-    expected = {
-        "orchestrator": ("claude-sonnet-5.5", "low"),
-        "engineer": ("claude-haiku-4.5", "high"),
-        "quality-engineer": ("claude-sonnet-5.5", "medium"),
-        "senior-engineer": ("claude-sonnet-5.5", "high"),
-        "lead-engineer": ("claude-sonnet-5.5", "high"),
-        "principal-engineer": ("claude-opus-5.5", "high"),
-        "security-engineer": ("claude-fable-5", "max"),
-        "model-engineer": ("claude-sonnet-5.5", "high"),
-    }
-
+    assert expected, "registry has no roles"
     assert set(python_rows) == set(expected), (
         f"roster mismatch: got {sorted(python_rows)}, expected {sorted(expected)}"
     )

@@ -55,6 +55,26 @@ def edit_registry(root, fn):
     path.write_text(yaml.safe_dump(reg, sort_keys=False))
 
 
+def verification_problem(verified, source):
+    """None if (verified, source) is a legal pair, else a human-readable problem."""
+    if verified is None and source is None:
+        return None
+    if verified is None or source is None:
+        return f"verified={verified!r} source={source!r}: record both or neither"
+    if isinstance(verified, datetime.date):
+        pass
+    elif not (isinstance(verified, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", verified)):
+        return f"verified={verified!r} is not an ISO date"
+    else:
+        try:
+            datetime.date.fromisoformat(verified)
+        except ValueError:
+            return f"verified={verified!r} is not a real date"
+    if not (isinstance(source, str) and re.fullmatch(r"https://[^\s/]+\S*", source)):
+        return f"source={source!r} is not an https URL"
+    return None
+
+
 @pytest.fixture(scope="module")
 def reg():
     return models.load_registry()
@@ -87,26 +107,47 @@ class TestRegistryShape:
         assert all("." not in i for i in ids)
 
     def test_unverified_facts_are_null_not_invented(self, reg):
-        for m in reg["models"].values():
-            assert m["verified"] is None and m["source"] is None
+        """A model either records NO verification (both null) or a complete, well-formed
+        one (ISO date + https source). Half-recorded or invented-looking values fail."""
+        for mid, m in reg["models"].items():
+            problem = verification_problem(m.get("verified"), m.get("source"))
+            assert problem is None, f"{mid}: {problem}"
+
+    @pytest.mark.parametrize("verified,source,ok", [
+        (None, None, True),
+        ("2026-05-14", "https://example.com/models", True),
+        (datetime.date(2026, 5, 14), "https://example.com/models", True),
+        ("2026-05-14", None, False),                       # verified without source
+        (None, "https://example.com/models", False),       # source without verified
+        ("yes", "https://example.com/models", False),      # invented-looking date
+        ("2026-13-45", "https://example.com/models", False),
+        ("2026-05-14", "see the vendor blog", False),      # not a URL
+        ("2026-05-14", "http://example.com/models", False),  # not https
+        ("", "", False),                                   # empty strings are not null
+    ])
+    def test_verification_rule_itself(self, verified, source, ok):
+        assert (verification_problem(verified, source) is None) is ok
 
     def test_roles_match_agents_dir_and_manifest(self, reg):
         on_disk = {p.name[:-len("-agent.md")] for p in (REPO_ROOT / "src/agents").glob("*-agent.md")}
         manifest = yaml.safe_load((REPO_ROOT / "config/FRAMEWORK-MANIFEST.yaml").read_text())
         assert set(reg["roles"]) == on_disk == set(manifest["agents"])
 
-    def test_seeded_pins_match_todays_assignments(self, reg):
-        got = {r: (c["model"], c["effort"]) for r, c in reg["roles"].items()}
-        assert got == {
-            "engineer": ("claude-haiku-4.5", "high"),
-            "orchestrator": ("claude-sonnet-5.5", "low"),
-            "lead-engineer": ("claude-sonnet-5.5", "high"),
-            "quality-engineer": ("claude-sonnet-5.5", "medium"),
-            "senior-engineer": ("claude-sonnet-5.5", "high"),
-            "model-engineer": ("claude-sonnet-5.5", "high"),
-            "security-engineer": ("claude-fable-5", "max"),
-            "principal-engineer": ("claude-opus-5.5", "high"),
-        }
+    def test_every_role_has_a_registered_pin_and_valid_effort(self, reg):
+        """Registry-driven: a legitimate pin bump (edit config/models.yaml + sync) must not
+        need any edit here. Today's concrete assignments live in the registry itself;
+        docs/agents/tests that restate them are checked against it, not the other way."""
+        assert reg["roles"], "registry has no roles"
+        for role, cfg in reg["roles"].items():
+            assert cfg["model"] in reg["models"], role
+            assert reg["models"][cfg["model"]]["status"] != "retired", role
+            assert cfg["effort"] in models.EFFORTS, role
+
+    def test_role_pins_agree_with_agent_frontmatter(self, reg):
+        for role, cfg in reg["roles"].items():
+            text = (REPO_ROOT / "src" / "agents" / f"{role}-agent.md").read_text()
+            m = re.search(r"(?m)^model:\s*(\S+)\s*$", text)
+            assert m and m.group(1) == cfg["model"], role
 
     def test_fallbacks_per_decision(self, reg):
         fb = {r: c["fallback"] for r, c in reg["roles"].items()}
@@ -165,6 +206,38 @@ class TestCheckRules:
         assert cli("check", root=root).returncode == 1
 
 
+class TestAdjacentFamilyFallbacks:
+    """fallback_policy.adjacent_families lets a pin fall back across one declared family
+    boundary (haiku -> sonnet, fable -> opus). The positive path was untested: only the
+    rejecting direction was."""
+
+    @staticmethod
+    def _model_of(reg, family):
+        for mid, m in reg["models"].items():
+            if m["family"] == family and m["status"] != "retired":
+                return mid
+        pytest.skip(f"registry has no live {family} model")
+
+    @pytest.mark.parametrize("pin_family,fallback_family", [("haiku", "sonnet"), ("fable", "opus")])
+    def test_declared_adjacent_family_fallback_is_accepted(self, tmp_path, reg, pin_family, fallback_family):
+        assert fallback_family in reg["fallback_policy"]["adjacent_families"][pin_family]
+        pin, fb = self._model_of(reg, pin_family), self._model_of(reg, fallback_family)
+        root = make_tree(tmp_path)
+        role = next(iter(reg["roles"]))
+        edit_registry(root, lambda r: r["roles"][role].update(model=pin, fallback=[fb]))
+        errors, _ = models.check(root)
+        assert not any("crosses family" in e for e in errors), errors
+
+    @pytest.mark.parametrize("pin_family,fallback_family", [("sonnet", "haiku"), ("opus", "fable")])
+    def test_adjacency_is_directional(self, tmp_path, reg, pin_family, fallback_family):
+        pin, fb = self._model_of(reg, pin_family), self._model_of(reg, fallback_family)
+        root = make_tree(tmp_path)
+        role = next(iter(reg["roles"]))
+        edit_registry(root, lambda r: r["roles"][role].update(model=pin, fallback=[fb]))
+        errors, _ = models.check(root)
+        assert any("crosses family" in e for e in errors), errors
+
+
 class TestFamilyFloor:
     """Per-family min_pin: pins must be >= the floor, fallbacks are exempt."""
 
@@ -197,6 +270,9 @@ class TestFamilyFloor:
         assert models._below_min_pin(self._reg(sonnet="claude-sonnet-5.5"), "claude-nope-1") is None
 
     def test_real_registry_floors_match_the_directive(self, reg):
+        # INTENTIONAL LOCK: the floors are a policy directive, not derived data. Changing
+        # one is a deliberate SPEC-level decision, so this test is meant to be edited
+        # together with it (unlike the pin tests, which are registry-driven).
         assert reg["families"]["sonnet"]["min_pin"] == "claude-sonnet-5.5"
         assert reg["families"]["opus"]["min_pin"] == "claude-opus-5.5"
 
