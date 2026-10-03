@@ -33,7 +33,7 @@ A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
 | Model ID | Family | Status | Verified | Claude | Copilot | OpenCode |
 |----------|--------|--------|----------|--------|---------|----------|
 | `claude-haiku-4.5` | haiku | current | 2026-10-03 | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
-| `claude-sonnet-4.5` | sonnet | supported | 2026-10-03 | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
+| `claude-sonnet-4.5` | sonnet | deprecated | 2026-10-03 | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
 | `claude-sonnet-4.6` | sonnet | supported | 2026-10-03 | `claude-sonnet-4-6` | `claude-sonnet-4.6` | `claude-sonnet-4-6` |
 | `claude-sonnet-5` | sonnet | fallback | 2026-10-03 | `claude-sonnet-5` | `claude-sonnet-5` | `claude-sonnet-5` |
 | `claude-sonnet-5.5` | sonnet | current | 2026-10-03 | `claude-sonnet-5-5` | `claude-sonnet-5.5` | `claude-sonnet-5-5` |
