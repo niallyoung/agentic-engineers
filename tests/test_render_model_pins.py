@@ -216,6 +216,61 @@ class TestMarkerSemantics:
         assert len(pre) == 1 and pre[0]["hooks"][0]["command"] == "echo mine"
 
 
+class TestNonStrictJsonSettings:
+    """S1 / invariant I4: a user's settings.json that is not strict JSON (JSONC
+    comments, trailing commas) must never be clobbered by the installer."""
+
+    JSONC = (
+        '// my settings\n'
+        '{\n'
+        '  "theme": "dark",\n'
+        '  "model": "opus", // my choice\n'
+        '  "permissions": {"allow": ["Bash(ls:*)",],},\n'
+        '}\n'
+    )
+
+    @pytest.mark.parametrize("content", [
+        JSONC,
+        '{"theme": "dark", "model": "opus",}',
+        '{"theme": "dark"',
+        '[1, 2, 3]',
+    ], ids=["jsonc", "trailing-comma", "truncated", "non-object"])
+    def test_install_leaves_invalid_settings_byte_identical_and_warns(self, repo, tmp_path, content):
+        c = tmp_path / "c"
+        c.mkdir()
+        raw = content.encode()
+        (c / "settings.json").write_bytes(raw)
+        r = run("render-claude.sh", repo, c)
+        assert r.returncode == 0, r.stderr  # a skipped step is a warning, not a failure
+        assert (c / "settings.json").read_bytes() == raw
+        out = r.stdout + r.stderr
+        assert "settings.json" in out and "not valid JSON" in out
+        assert "left untouched" in out
+        # We never claimed ownership of a model we did not write.
+        assert not (c / ".agentic-engine-claude-model").exists()
+        # The rest of the install still happened.
+        assert (c / "agents" / "engineer.md").exists()
+
+    def test_uninstall_leaves_invalid_settings_byte_identical(self, repo, tmp_path):
+        c = tmp_path / "c"
+        c.mkdir()
+        raw = self.JSONC.encode()
+        (c / "settings.json").write_bytes(raw)
+        r = run("render-claude.sh", repo, c, "--uninstall")
+        assert r.returncode == 0, r.stderr
+        assert (c / "settings.json").read_bytes() == raw
+
+    @pytest.mark.parametrize("content", ["", "  \n"], ids=["empty", "whitespace"])
+    def test_empty_settings_file_is_treated_as_absent(self, repo, tmp_path, content):
+        c = tmp_path / "c"
+        c.mkdir()
+        (c / "settings.json").write_text(content)
+        r = run("render-claude.sh", repo, c)
+        assert r.returncode == 0, r.stderr
+        data = json.loads((c / "settings.json").read_text())
+        assert "PreToolUse" in data["hooks"]
+
+
 # --------------------------------------------------------------------------- #
 # Copilot
 # --------------------------------------------------------------------------- #

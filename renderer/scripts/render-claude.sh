@@ -81,11 +81,29 @@ settings_file = sys.argv[1]
 operation = sys.argv[2]
 args = sys.argv[3:]
 
+# I4: never destroy a user's settings.json. Default to {} ONLY when the file is
+# absent or empty/whitespace. A non-empty file that is not a strict-JSON object
+# (JSONC comments, trailing commas, truncation, a top-level array...) is left
+# byte-for-byte untouched: warn and exit 3 so the caller can skip the edit.
 try:
 	with open(settings_file) as f:
-		data = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
+		raw = f.read()
+except FileNotFoundError:
+	raw = ""
+if raw.strip() == "":
 	data = {}
+else:
+	try:
+		data = json.loads(raw)
+		if not isinstance(data, dict):
+			raise ValueError("top-level value is not a JSON object")
+	except ValueError as exc:
+		sys.stderr.write(
+			"  WARNING: %s is not valid JSON (%s) -- left untouched; "
+			"skipped '%s'. Fix the file (strict JSON: no comments or trailing "
+			"commas) and re-run.\n" % (settings_file, exc, operation)
+		)
+		sys.exit(3)
 
 def set_model(model_alias):
 	data["model"] = model_alias
@@ -187,6 +205,7 @@ _model_marker_value() {
 inject_settings_model() {
 	local settings="$1" model_alias="$2"
 	_settings_edit "$settings" set_model "$model_alias"
+	# returns 3 (file left untouched) when settings.json is not strict JSON
 }
 
 # remove_settings_model SETTINGS_FILE
@@ -394,7 +413,7 @@ case "$MODE" in
 			rm -f "$DST_HOOK" "$HOOK_MARKER"
 			hook_removed=1
 		fi
-		remove_settings_hook "$CLAUDE/settings.json"
+		remove_settings_hook "$CLAUDE/settings.json" || true # rc 3: invalid JSON, left untouched (warned)
 		[ "$hook_removed" -eq 1 ] && echo "  removed DELEGATE protocol-guard hook"
 		# Remove session model — but ONLY if the value still on disk is the one
 		# we wrote (per MODEL_MARKER). A user-chosen value is never removed, for
@@ -402,8 +421,9 @@ case "$MODE" in
 		uninstall_model=$(_settings_get_model "$CLAUDE/settings.json")
 		uninstall_marker=$(_model_marker_value)
 		if [ -n "$uninstall_model" ] && [ "$uninstall_model" = "$uninstall_marker" ]; then
-			remove_settings_model "$CLAUDE/settings.json"
-			echo "  removed model from settings.json"
+			if remove_settings_model "$CLAUDE/settings.json"; then
+				echo "  removed model from settings.json"
+			fi
 		elif [ -n "$uninstall_model" ]; then
 			echo "  $(_yellow "ℹ️  keeping session model ($uninstall_model) — set by you, not by the framework")"
 		fi
@@ -722,13 +742,15 @@ PY
 				marker_model=$(_model_marker_value)
 
 				if [ "$settings_existed" -eq 0 ]; then
-					inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
-					printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
-					echo "✅ Set session model → $orchestrator_model (orchestrator default)"
+					if inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"; then
+						printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
+						echo "✅ Set session model → $orchestrator_model (orchestrator default)"
+					fi
 				elif [ -n "$current_model" ] && [ "$current_model" = "$marker_model" ]; then
-					inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"
-					printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
-					echo "✅ Session model → $orchestrator_model (orchestrator default)"
+					if inject_settings_model "$CLAUDE/settings.json" "$orchestrator_model"; then
+						printf '%s\n' "$orchestrator_model" > "$MODEL_MARKER"
+						echo "✅ Session model → $orchestrator_model (orchestrator default)"
+					fi
 				elif [ -z "$current_model" ]; then
 					echo "ℹ️  Leaving your session model unset (inheriting your account default)"
 				else
@@ -750,8 +772,11 @@ PY
 			cp "$SRC_HOOK" "$DST_HOOK"
 			chmod +x "$DST_HOOK"
 			date -u +"%Y-%m-%dT%H:%M:%SZ" > "$HOOK_MARKER"
-			inject_settings_hook "$CLAUDE/settings.json" "$DST_HOOK"
-			echo "  $(_green "✅") hook claude-delegate-guard.py (wired into settings.json PreToolUse)"
+			if inject_settings_hook "$CLAUDE/settings.json" "$DST_HOOK"; then
+				echo "  $(_green "✅") hook claude-delegate-guard.py (wired into settings.json PreToolUse)"
+			else
+				echo "  $(_yellow "⚠️  hook file installed but NOT wired into settings.json (left untouched, see warning above)")" >&2
+			fi
 		fi
 		;;
 
