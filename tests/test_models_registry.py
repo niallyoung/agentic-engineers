@@ -188,7 +188,9 @@ class TestCheckRules:
 
     def test_deprecated_pin_warns_not_errors(self, tmp_path):
         root = make_tree(tmp_path)
-        edit_registry(root, lambda r: r["models"]["claude-fable-5"].update(status="deprecated"))
+        # Derived from the registry (first role's pin), so a legitimate re-pin needs no edit here.
+        pinned = next(iter(models.load_registry(root)["roles"].values()))["model"]
+        edit_registry(root, lambda r: r["models"][pinned].update(status="deprecated"))
         cli("sync", root=root)  # Regenerate docs/MODELS.md after registry edit
         errors, warns = models.check(root)
         assert errors == [] and any("deprecated" in w for w in warns)
@@ -301,9 +303,94 @@ class TestFamilyFloor:
 
     def test_raising_the_floor_above_a_pin_fails_check(self, tmp_path):
         root = make_tree(tmp_path)
-        edit_registry(root, lambda r: r["families"]["sonnet"].update(min_pin="claude-sonnet-5.10"))
+        def mutate(r):
+            hi = copy.deepcopy(r["models"]["claude-sonnet-5.5"])
+            hi["ids"] = {"claude": "claude-sonnet-5-10", "copilot": "claude-sonnet-5.10", "opencode": "claude-sonnet-5-10"}
+            hi["cli_accepted"] = {"date": hi["cli_accepted"]["date"], "modelusage_key": "claude-sonnet-5-10"}
+            r["models"]["claude-sonnet-5.10"] = hi
+            r["families"]["sonnet"]["min_pin"] = "claude-sonnet-5.10"
+        edit_registry(root, mutate)
         errors, _ = models.check(root)
-        assert any("min_pin" in e for e in errors), errors
+        assert any("roles." in e and "is below its family's min_pin" in e for e in errors), errors
+        assert not any("families.sonnet.min_pin" in e for e in errors), errors
+
+    # C7: the floor itself is validated, never silently ignored.
+    @pytest.mark.parametrize("floor,needle", [
+        ("claude-opus-5-5", "not a canonical"),        # hyphen typo
+        ("claude-opus-5.55", "not in models"),         # well-formed but unknown
+        ("claude-sonnet-5.5", "family"),               # real model, wrong family
+        ("claude-opus-4.8", "retired"),                # same family, retired (set in mutate)
+    ])
+    def test_malformed_floor_is_a_check_error(self, tmp_path, floor, needle):
+        root = make_tree(tmp_path)
+
+        def mutate(r):
+            if needle == "retired":
+                r["models"]["claude-opus-4.8"]["status"] = "retired"
+                for cfg in r["roles"].values():
+                    cfg["fallback"] = [f for f in cfg["fallback"] if f != "claude-opus-4.8"]
+            r["families"]["opus"]["min_pin"] = floor
+        edit_registry(root, mutate)
+        errors, _ = models.check(root)
+        assert any("families.opus.min_pin" in e and needle in e for e in errors), errors
+        assert cli("check", root=root).returncode == 1
+
+    def test_floor_typo_with_low_pin_cannot_pass(self, tmp_path):
+        """Probe repro: hyphen-typo floor + a pin below the real floor must not yield 0 errors."""
+        root = make_tree(tmp_path)
+
+        def mutate(r):
+            r["families"]["opus"]["min_pin"] = "claude-opus-5-5"
+            r["roles"]["principal-engineer"]["model"] = "claude-opus-4.6"
+            r["pin_history"].append({"date": "2026-10-03", "role": "principal-engineer", "from": "claude-opus-5.5",
+                                     "to": "claude-opus-4.6", "approval": "test"})
+        edit_registry(root, mutate)
+        errors, _ = models.check(root)
+        assert any("families.opus.min_pin" in e for e in errors), errors
+
+    def test_cross_family_floor_gives_one_clear_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["families"]["sonnet"].update(min_pin="claude-opus-9.9"))
+        errors, _ = models.check(root)
+        assert any("families.sonnet.min_pin" in e for e in errors), errors
+        assert not any("roles." in e and "below its family's min_pin" in e for e in errors), errors
+
+    def test_valid_floor_still_passes(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["families"]["opus"].update(min_pin="claude-opus-5"))
+        cli("sync", root=root)  # docs/MODELS.md renders the floor
+        assert models.check(root)[0] == []
+
+    def test_below_min_pin_raises_on_malformed_floor(self):
+        reg = {"families": {"opus": {"min_pin": "claude-opus-5-5"}}, "models": {"claude-opus-4.6": {"family": "opus"}}}
+        with pytest.raises(ValueError):
+            models._below_min_pin(reg, "claude-opus-4.6")
+
+    # C8: status 'fallback' is never a pin.
+    @pytest.mark.parametrize("role,model", [
+        ("engineer", "claude-haiku-4.5"),            # family without a floor
+        ("senior-engineer", "claude-sonnet-5"),      # floored family
+        ("principal-engineer", "claude-opus-5"),
+    ])
+    def test_fallback_status_pin_is_an_error(self, tmp_path, role, model):
+        root = make_tree(tmp_path)
+
+        def mutate(r):
+            prev = [e["to"] for e in r["pin_history"] if e["role"] == role][-1]
+            r["models"][model]["status"] = "fallback"
+            r["roles"][role]["model"] = model
+            r["roles"][role]["fallback"] = [f for f in r["roles"][role]["fallback"] if f != model]
+            if not r["roles"][role]["fallback"]:
+                r["roles"][role]["fallback"] = ["claude-sonnet-4.6" if role != "engineer" else "claude-sonnet-5"]
+            r["pin_history"].append({"date": "2026-10-03", "role": role, "from": prev, "to": model, "approval": "test"})
+        edit_registry(root, mutate)
+        errors, _ = models.check(root)
+        assert any(f"roles.{role}.model" in e and "fallback" in e and "never a pin" in e for e in errors), errors
+
+    def test_fallback_status_model_in_chain_is_valid(self, reg):
+        chained = {f for c in reg["roles"].values() for f in c["fallback"]}
+        assert any(reg["models"][f]["status"] == "fallback" for f in chained)
+        assert models.check(REPO_ROOT)[0] == []
 
 
 # ------------------------------------------------------------------- CLI ---

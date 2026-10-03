@@ -129,16 +129,37 @@ def _version_tuple(model_id: str) -> tuple[int, int]:
 
 
 def _below_min_pin(reg: dict, model: str) -> str | None:
-    """Return the family's min_pin if *model* is a known model below it, else None."""
+    """Return the family's min_pin if *model* is a known model below it, else None.
+
+    An unknown model, or a family with no floor, is never "below". A MALFORMED floor
+    raises ValueError (never swallowed): `check` validates floors via _floor_problem
+    first and does not call this for a family whose floor is invalid.
+    """
     fam = (reg.get("models") or {}).get(model, {}).get("family")
+    if fam is None:
+        return None
     floor = ((reg.get("families") or {}).get(fam) or {}).get("min_pin")
     if not floor:
         return None
-    try:
-        if _version_tuple(model) < _version_tuple(floor):
-            return floor
-    except ValueError:
+    return floor if _version_tuple(model) < _version_tuple(floor) else None
+
+
+def _floor_problem(reg: dict, fam: str) -> str | None:
+    """Why family *fam*'s min_pin is invalid, or None (also None when it has no floor)."""
+    floor = ((reg.get("families") or {}).get(fam) or {}).get("min_pin")
+    if floor is None:
         return None
+    try:
+        _version_tuple(floor)
+    except ValueError:
+        return f"'{floor}' is not a canonical dotted model ID (claude-<family>-<major>[.<minor>])"
+    entry = (reg.get("models") or {}).get(floor)
+    if not isinstance(entry, dict):
+        return f"'{floor}' is not in models"
+    if entry.get("family") != fam:
+        return f"'{floor}' belongs to family '{entry.get('family')}', not '{fam}'"
+    if entry.get("status") == "retired":
+        return f"'{floor}' is retired"
     return None
 
 
@@ -631,6 +652,15 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
                 warns.append(f"models.{mid}: verified {vd} is more than {FRESHNESS_DAYS} days old")
         errors.extend(_evidence_problems(mid, m, today))
 
+    # 3b: every family floor must itself be valid (canonical, known, same family, not retired)
+    bad_floor_families: set[str] = set()
+    for fam, fcfg in families.items():
+        if isinstance(fcfg, dict) and "min_pin" in fcfg:
+            problem = _floor_problem(reg, fam)
+            if problem:
+                errors.append(f"families.{fam}.min_pin: {problem}")
+                bad_floor_families.add(fam)
+
     # 4-5: roles and fallbacks
     for role, cfg in roles.items():
         if not isinstance(cfg, dict):
@@ -644,8 +674,9 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
         elif models[model].get("status") == "deprecated":
             warns.append(f"roles.{role}.model: '{model}' is deprecated")
         elif models[model].get("status") == "fallback":
-            warns.append(f"roles.{role}.model: '{model}' is a fallback-only model, not a pin")
-        if model in models:
+            errors.append(f"roles.{role}.model: '{model}' has status 'fallback' and is never a pin; "
+                          f"it is only valid in a fallback chain")
+        if model in models and (models[model] or {}).get("family") not in bad_floor_families:
             floor = _below_min_pin(reg, model)
             if floor:
                 errors.append(f"roles.{role}.model: '{model}' is below its family's min_pin '{floor}'")
