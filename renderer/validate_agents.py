@@ -44,7 +44,12 @@ except ImportError:
 # ACCEPTED:
 #   - Every non-retired registry model id (canonical source form, version separated
 #     by a DOT: claude-{variant}-{major}.{minor}; single-part versions have no dot)
-#   - Claude Code short aliases, one per registry family (haiku, sonnet, opus, fable)
+#
+# The families' claude_alias values (haiku, sonnet, opus, fable) are NOT in KNOWN_MODELS:
+# SPEC invariant I3 forbids floating aliases for assigned roles in source. They live in
+# RENDERED_ALIASES and are accepted only when validating rendered output
+# (validate_agent_file(..., rendered=True) / the --rendered CLI flag), which is where the
+# AGENTIC_CLAUDE_MODEL_RENDER=alias override legitimately produces them.
 #
 # REJECTED (reported as a WARNING, or an ERROR under --strict):
 #   - Non-Claude models, retired or unregistered ids
@@ -73,14 +78,20 @@ def _load_known_models() -> set[str]:
         mid for mid, m in (reg.get("models") or {}).items()
         if isinstance(m, dict) and m.get("status") != "retired"
     }
-    known |= {
-        f["claude_alias"] for f in (reg.get("families") or {}).values()
-        if isinstance(f, dict) and f.get("claude_alias")
-    }
     return known
 
 
+def _load_rendered_aliases() -> set[str]:
+    import models as model_registry  # already importable (see _load_known_models)
+    reg = model_registry.load_registry()
+    return {
+        f["claude_alias"] for f in (reg.get("families") or {}).values()
+        if isinstance(f, dict) and f.get("claude_alias")
+    }
+
+
 KNOWN_MODELS = _load_known_models()
+RENDERED_ALIASES = _load_rendered_aliases()
 
 REQUIRED_FIELDS = {"name", "description", "model"}
 
@@ -149,8 +160,14 @@ def validate_agent_file(
     path: Path,
     agents_md_content: str,
     strict: bool = False,
+    rendered: bool = False,
 ) -> list[ValidationError]:
-    """Validate a single agent markdown file."""
+    """Validate a single agent markdown file.
+
+    rendered=False (default) validates SOURCE: only canonical registry ids are allowed
+    and a bare floating alias is an ERROR (SPEC I3). rendered=True validates rendered
+    output, where the family aliases may legitimately appear (AGENTIC_CLAUDE_MODEL_RENDER=alias).
+    """
     errors: list[ValidationError] = []
 
     text = path.read_text(encoding="utf-8")
@@ -173,7 +190,13 @@ def validate_agent_file(
 
     # 3. Model validation
     model = fm.get("model", "")
-    if model and model not in KNOWN_MODELS:
+    if model and not rendered and model in RENDERED_ALIASES:
+        errors.append(ValidationError(
+            path, "ERROR",
+            f"Floating alias '{model}' is not allowed in source (SPEC I3); "
+            f"use the canonical registry id (e.g. claude-<family>-<major>.<minor>)"
+        ))
+    elif model and model not in KNOWN_MODELS and not (rendered and model in RENDERED_ALIASES):
         level = "ERROR" if strict else "WARNING"
         errors.append(ValidationError(
             path, level,
@@ -211,6 +234,7 @@ def validate_agents(
     agents_dir: Path,
     src_dir: Path,
     strict: bool = False,
+    rendered: bool = False,
 ) -> tuple[int, int]:
     """Validate all agent files.
 
@@ -227,7 +251,7 @@ def validate_agents(
     checked = 0
 
     for agent_file in agent_files:
-        findings = validate_agent_file(agent_file, agents_md, strict=strict)
+        findings = validate_agent_file(agent_file, agents_md, strict=strict, rendered=rendered)
         all_errors.extend(findings)
         checked += 1
 
@@ -324,6 +348,12 @@ def main() -> int:
         action="store_true",
         help="Treat warnings as errors",
     )
+    parser.add_argument(
+        "--rendered",
+        action="store_true",
+        help="Validate RENDERED output: also accept the floating family aliases "
+             "(AGENTIC_CLAUDE_MODEL_RENDER=alias). Never use for src/.",
+    )
     args = parser.parse_args()
 
     # Resolve paths relative to repo root (two levels up from renderer/)
@@ -338,7 +368,7 @@ def main() -> int:
     if not _YAML_AVAILABLE:
         print("⚠️  PyYAML not installed — using minimal frontmatter parser (pip install pyyaml for full validation)")
 
-    error_count, warning_count = validate_agents(agents_dir, src_dir, strict=args.strict)
+    error_count, warning_count = validate_agents(agents_dir, src_dir, strict=args.strict, rendered=args.rendered)
 
     if error_count > 0:
         return 1

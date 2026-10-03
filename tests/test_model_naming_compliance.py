@@ -185,12 +185,15 @@ class TestModelNamingCompliance:
 
     def test_validator_known_models_use_hyphen_format(self):
         """renderer/validate_agents.py KNOWN_MODELS is derived from the registry:
-        every registry model id plus the family aliases, nothing else, canonical dotted ids."""
+        exactly the registry model ids (canonical dotted). The family aliases are NOT source
+        models (SPEC I3): they live in RENDERED_ALIASES, accepted for rendered output only."""
         sys.path.insert(0, str(self.REPO_ROOT / "renderer"))
         import validate_agents
 
-        assert validate_agents.KNOWN_MODELS == self.LOCKED_MODELS | ALIASES
-        for model in validate_agents.KNOWN_MODELS - ALIASES:
+        assert validate_agents.KNOWN_MODELS == self.LOCKED_MODELS
+        assert not ALIASES & validate_agents.KNOWN_MODELS
+        assert validate_agents.RENDERED_ALIASES == ALIASES
+        for model in validate_agents.KNOWN_MODELS:
             assert CANONICAL_MODEL_RE.match(model), (
                 f"Validator: Model '{model}' is not a canonical Claude id "
                 f"(e.g. claude-opus-4.7 or claude-opus-5)"

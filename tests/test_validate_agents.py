@@ -64,7 +64,7 @@ def minimal_agent_frontmatter():
     return """---
 name: test-agent
 description: Test agent
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
 
@@ -95,7 +95,7 @@ class TestFrontmatterParsing:
         result = _parse_frontmatter(minimal_agent_frontmatter)
         assert result is not None
         assert result["name"] == "test-agent"
-        assert result["model"] == "sonnet"
+        assert result["model"] == "claude-sonnet-4.6"
 
     def test_no_frontmatter(self):
         """Test file without frontmatter returns None."""
@@ -127,7 +127,7 @@ Content here"""
         text = """---
 name: test
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 extra_field: value
 complexity: high
 ---
@@ -141,7 +141,7 @@ complexity: high
         text = """---
 name: test
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 capabilities:
   - code-review
   - testing
@@ -212,7 +212,7 @@ class TestValidateAgentFile:
         
         content = """---
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
         agent_file.write_text(content)
@@ -228,7 +228,7 @@ model: sonnet
         
         content = """---
 name: test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
         agent_file.write_text(content)
@@ -316,7 +316,7 @@ model: unknown-model
         content = """---
 name: correct
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
         agent_file.write_text(content)
@@ -332,7 +332,7 @@ model: sonnet
         content = """---
 name: correct
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
         agent_file.write_text(content)
@@ -350,7 +350,7 @@ model: sonnet
         content = """---
 name: test
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
         agent_file.write_text(content)
@@ -369,7 +369,7 @@ model: sonnet
         content = """---
 name: test
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
         agent_file.write_text(content)
@@ -427,7 +427,7 @@ class TestFullValidation:
         agent_file.write_text("""---
 name: engineer
 description: Implementation tasks
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """)
         
@@ -602,7 +602,7 @@ def test_filename_convention_parametrized(temp_repo, agent_name, expected_filena
     content = f"""---
 name: {agent_name}
 description: Test
-model: sonnet
+model: claude-sonnet-4.6
 ---
 """
     agent_file.write_text(content)
@@ -632,7 +632,7 @@ def test_required_fields_validation(temp_repo, missing_field):
     all_fields = {
         "name": "test",
         "description": "Test agent",
-        "model": "sonnet",
+        "model": "claude-sonnet-4.6",
     }
     del all_fields[missing_field]
     
@@ -646,6 +646,62 @@ def test_required_fields_validation(temp_repo, missing_field):
     errors = validate_agent_file(agent_file, "")
     
     assert any(missing_field in e.message.lower() for e in errors)
+
+
+# ============================================================================
+# Unit Tests: floating aliases are rendered-output only (SPEC invariant I3)
+# ============================================================================
+
+import importlib.util as _ilu
+import subprocess as _subprocess
+
+_mspec = _ilu.spec_from_file_location("ae_models_va", Path(__file__).parent.parent / "scripts" / "models.py")
+_models_mod = _ilu.module_from_spec(_mspec)
+_mspec.loader.exec_module(_models_mod)
+_REG = _models_mod.load_registry()
+_ALIASES = sorted({f["claude_alias"] for f in _REG["families"].values() if f.get("claude_alias")})
+_PINS = sorted({c["model"] for c in _REG["roles"].values()})
+
+
+def _write_agent(agents_dir, model):
+    f = agents_dir / "test-agent.md"
+    f.write_text(f"---\nname: test\ndescription: Test\nmodel: {model}\n---\n")
+    return f
+
+
+class TestAliasesAreRenderedOnly:
+    @pytest.mark.parametrize("alias", _ALIASES)
+    def test_bare_alias_in_source_is_an_error(self, temp_repo, alias):
+        f = _write_agent(temp_repo["agents_dir"], alias)
+        errors = validate_agent_file(f, "test")  # default: source validation, non-strict
+        assert any(e.level == "ERROR" and alias in e.message and "alias" in e.message.lower() for e in errors), errors
+
+    @pytest.mark.parametrize("model", _PINS)
+    def test_canonical_registry_id_passes_in_source(self, temp_repo, model):
+        f = _write_agent(temp_repo["agents_dir"], model)
+        assert [e for e in validate_agent_file(f, "test") if "model" in e.message.lower()] == []
+
+    def test_known_models_excludes_registry_aliases(self):
+        assert not set(_ALIASES) & set(KNOWN_MODELS)
+        assert set(KNOWN_MODELS) == {m for m, v in _REG["models"].items() if v.get("status") != "retired"}
+
+    @pytest.mark.parametrize("alias", _ALIASES)
+    def test_alias_accepted_for_rendered_output_only(self, temp_repo, alias):
+        f = _write_agent(temp_repo["agents_dir"], alias)
+        errors = validate_agent_file(f, "test", rendered=True)
+        assert [e for e in errors if "model" in e.message.lower()] == []
+
+    def test_rendered_mode_still_rejects_unknown_models(self, temp_repo):
+        f = _write_agent(temp_repo["agents_dir"], "gpt-4")
+        errors = validate_agent_file(f, "test", rendered=True, strict=True)
+        assert any(e.level == "ERROR" and "Unknown model" in e.message for e in errors)
+
+    def test_cli_rendered_flag_scopes_alias_acceptance(self, temp_repo):
+        _write_agent(temp_repo["agents_dir"], "sonnet")
+        base = [sys.executable, str(Path(__file__).parent.parent / "renderer" / "validate_agents.py"),
+                "--agents-dir", str(temp_repo["agents_dir"]), "--src-dir", str(temp_repo["src_dir"])]
+        assert _subprocess.run(base, capture_output=True, text=True).returncode == 1
+        assert _subprocess.run(base + ["--rendered"], capture_output=True, text=True).returncode == 0
 
 
 if __name__ == "__main__":
