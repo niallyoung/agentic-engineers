@@ -1,158 +1,135 @@
 #!/usr/bin/env python3
-"""Test Makefile model registry targets (models-sync, models-check).
+"""Makefile wiring for the model registry (models-sync, models-check).
 
-Tests the integration of model registry management into the Makefile,
-ensuring that generated targets stay current and drift is detected.
+Scope: the Makefile targets exist, are documented in `make help`, are wired into
+the quality gate, and `models-check` really fails on stale generated targets.
+The registry's own drift/idempotence behaviour is covered by
+tests/test_models_registry.py::TestSync and is deliberately not repeated here.
+
+Anything that mutates files runs in a lightweight temp copy (just the files the
+registry reads plus the Makefile; no .git, no dist/), never in the real tree.
 """
 
-import subprocess
-import tempfile
+import importlib.util
+import re
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+import yaml
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+MAKEFILE = REPO_ROOT / "Makefile"
+LOCKED_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
+
+# Everything `make models-check` / `models-sync` reads.
+COPY_PATHS = ["Makefile", "scripts/models.py", "config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml",
+              "src/AGENTS.md", "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha",
+              "docs/MODELS.md"]
+
+_spec = importlib.util.spec_from_file_location("ae_models_makefile", REPO_ROOT / "scripts" / "models.py")
+models = importlib.util.module_from_spec(_spec)
+sys.modules["ae_models_makefile"] = models
+_spec.loader.exec_module(models)
+
+
+def make(target, cwd=REPO_ROOT):
+    return subprocess.run(["make", target], cwd=cwd, capture_output=True, text=True, timeout=120)
+
+
+def light_copy(dst: Path) -> Path:
+    for rel in COPY_PATHS:
+        src, out = REPO_ROOT / rel, dst / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(src, out) if src.is_dir() else shutil.copy2(src, out)
+    return dst
+
+
+@pytest.fixture(scope="module")
+def help_text():
+    result = make("help")
+    assert result.returncode == 0, f"make help failed: {result.stderr}"
+    return result.stdout
 
 
 class TestMakefileModelsTargets:
-    """Test models-sync and models-check Makefile targets."""
+    @pytest.mark.parametrize("target", ["models-sync", "models-check"])
+    def test_target_is_documented_in_help(self, help_text, target):
+        assert re.search(rf"^\s+{target}\s{{2,}}\S", help_text, re.MULTILINE), f"{target} not in make help"
 
-    def test_models_sync_in_help(self):
-        """models-sync target appears in make help."""
-        result = subprocess.run(
-            ["make", "help"],
-            cwd=Path(__file__).parent.parent,
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0, f"make help failed: {result.stderr}"
-        assert "models-sync" in result.stdout, "models-sync not in make help"
-        assert "Regenerate derived model registry targets" in result.stdout
+    @pytest.mark.parametrize("target", ["models-sync", "models-check"])
+    def test_target_exists_and_is_phony(self, target):
+        text = MAKEFILE.read_text()
+        assert re.search(rf"^{target}:", text, re.MULTILINE), f"no `{target}:` rule"
+        joined = text.replace("\\\n", " ")  # fold backslash continuations
+        phony = " ".join(re.findall(r"^\.PHONY:(.*)$", joined, re.MULTILINE))
+        assert target in phony.split(), f"{target} missing from .PHONY"
 
-    def test_models_check_in_help(self):
-        """models-check target appears in make help."""
-        result = subprocess.run(
-            ["make", "help"],
-            cwd=Path(__file__).parent.parent,
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0, f"make help failed: {result.stderr}"
-        assert "models-check" in result.stdout, "models-check not in make help"
-        assert "Validate model registry" in result.stdout
+    def test_models_check_is_wired_into_the_quality_gate(self):
+        m = re.search(r"^quality-gate:(.*)$", MAKEFILE.read_text(), re.MULTILINE)
+        assert m, "no quality-gate rule"
+        prereqs = m.group(1).split("##")[0].split()
+        assert "models-check" in prereqs
 
     def test_models_check_passes_on_clean_tree(self):
-        """make models-check passes on a synced tree (no drift)."""
-        result = subprocess.run(
-            ["make", "models-check"],
-            cwd=Path(__file__).parent.parent,
-            capture_output=True,
-            text=True,
-        )
+        """Read-only on the real tree: validates, never rewrites."""
+        result = make("models-check")
         assert result.returncode == 0, f"make models-check failed: {result.stderr}\nstdout: {result.stdout}"
         assert "Model registry check passed" in result.stdout
 
-    def test_models_check_fails_on_drift(self):
-        """make models-check fails when a role pin is changed without sync (temp copy)."""
-        repo_root = Path(__file__).parent.parent
+    def test_models_check_fails_on_stale_generated_targets(self, tmp_path):
+        """A LEGAL re-pin (>= family floor, with its pin_history entry) whose generated
+        targets were not synced must fail purely because the targets are stale; syncing
+        then makes the very same registry pass."""
+        root = light_copy(tmp_path / "repo")
+        reg_path = root / "config" / "models.yaml"
+        reg = yaml.safe_load(reg_path.read_text())
 
-        # Create a temp copy of the repo
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir) / "test-repo"
-            # Copy the entire repo
-            shutil.copytree(repo_root, tmpdir_path, dirs_exist_ok=True)
+        role, cfg = next(iter(reg["roles"].items()))
+        alt = next(
+            (mid for mid, m in reg["models"].items()
+             if mid != cfg["model"] and m["status"] in ("current", "supported")
+             and models._below_min_pin(reg, mid) is None),
+            None,
+        )
+        assert alt, "registry offers no alternative legal pin to re-pin to"
+        cfg["model"] = alt
+        reg["pin_history"].append({"date": "2026-10-03", "role": role, "from": cfg_prev(reg, role),
+                                   "to": alt, "approval": "test: legal re-pin without sync"})
+        reg_path.write_text(yaml.safe_dump(reg, sort_keys=False))
+        assert models.check(root)[0], "precondition: the unsynced tree must have errors"
 
-            # Edit a role pin in config/models.yaml (change engineer pin)
-            models_yaml = tmpdir_path / "config" / "models.yaml"
-            content = models_yaml.read_text(encoding="utf-8")
-            # Change engineer pin from claude-haiku-4.5 to claude-sonnet-5
-            modified = content.replace(
-                'model: claude-haiku-4.5',
-                'model: claude-sonnet-5',
-                1  # Only replace the first occurrence (engineer role)
-            )
-            models_yaml.write_text(modified, encoding="utf-8")
+        result = make("models-check", cwd=root)
+        output = result.stdout + result.stderr
+        assert result.returncode != 0, f"models-check passed on stale targets:\n{output}"
+        assert "stale" in output, output
+        for unrelated in ("min_pin", "pin_history", "not in models", "crosses family"):
+            assert unrelated not in output, f"failed for the wrong reason ({unrelated}):\n{output}"
 
-            # Don't run sync - this should cause drift
-            # Now run models-check on the modified repo
-            result = subprocess.run(
-                ["make", "models-check"],
-                cwd=tmpdir_path,
-                capture_output=True,
-                text=True,
-            )
+        assert make("models-sync", cwd=root).returncode == 0
+        healed = make("models-check", cwd=root)
+        assert healed.returncode == 0, healed.stdout + healed.stderr
 
-            # models-check should fail because generated targets are stale
-            assert result.returncode != 0, (
-                f"make models-check should have failed on drift, but passed.\n"
-                f"stdout: {result.stdout}\nstderr: {result.stderr}"
-            )
-            assert "error" in result.stderr.lower() or "stale" in result.stderr.lower(), (
-                f"Expected error or stale in stderr, got:\nstderr: {result.stderr}\nstdout: {result.stdout}"
-            )
 
-    def test_models_sync_produces_zero_diff_when_idempotent(self):
-        """Running models-sync twice produces zero diff (idempotent)."""
-        repo_root = Path(__file__).parent.parent
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir) / "test-repo"
-            shutil.copytree(repo_root, tmpdir_path, dirs_exist_ok=True)
-
-            # Run sync once
-            result1 = subprocess.run(
-                ["make", "models-sync"],
-                cwd=tmpdir_path,
-                capture_output=True,
-                text=True,
-            )
-            assert result1.returncode == 0, f"First sync failed: {result1.stderr}"
-
-            # Run sync again
-            result2 = subprocess.run(
-                ["make", "models-sync"],
-                cwd=tmpdir_path,
-                capture_output=True,
-                text=True,
-            )
-            assert result2.returncode == 0, f"Second sync failed: {result2.stderr}"
-            # Second sync should show zero files updated (idempotent)
-            assert "0 file(s) updated" in result2.stdout, (
-                f"Second sync should be idempotent (0 files), got: {result2.stdout}"
-            )
+def cfg_prev(reg, role):
+    """The pin_history 'from' for a new entry: the latest recorded 'to' for the role."""
+    return [e["to"] for e in reg["pin_history"] if e["role"] == role][-1]
 
 
 class TestLockedModelsShBanner:
-    """Test that LOCKED_MODELS.sh has the correct GENERATED banner."""
-
     def test_locked_models_sh_has_generated_banner(self):
-        """LOCKED_MODELS.sh contains the GENERATED banner."""
-        repo_root = Path(__file__).parent.parent
-        locked_sh = repo_root / ".githooks" / "LOCKED_MODELS.sh"
-
-        content = locked_sh.read_text(encoding="utf-8")
-        assert "GENERATED from config/models.yaml" in content, (
-            "LOCKED_MODELS.sh should contain GENERATED banner"
-        )
-        assert "do not edit" in content, "LOCKED_MODELS.sh should warn not to edit"
+        """Wording is owned by the generator's header template; only the contract
+        (it announces being GENERATED) is asserted here."""
+        assert "GENERATED" in LOCKED_SH.read_text(encoding="utf-8")
 
     def test_locked_models_arrays_source_correctly(self):
-        """LOCKED_MODELS and AGENT_MODEL_ASSIGNMENTS arrays can be sourced."""
-        repo_root = Path(__file__).parent.parent
-        locked_sh = repo_root / ".githooks" / "LOCKED_MODELS.sh"
-
-        # Test sourcing the script and checking arrays are populated
+        """Sourcing the script yields the exported arrays."""
         result = subprocess.run(
-            [
-                "bash",
-                "-c",
-                f"source {locked_sh} && "
-                "declare -p LOCKED_MODELS | grep -q 'declare -ax' && "
-                "declare -p AGENT_MODEL_ASSIGNMENTS | grep -q 'declare -ax'",
-            ],
-            capture_output=True,
-            text=True,
+            ["bash", "-c",
+             f'source "{LOCKED_SH}" && declare -p LOCKED_MODELS | grep -q "declare -ax" '
+             f'&& declare -p AGENT_MODEL_ASSIGNMENTS | grep -q "declare -ax"'],
+            capture_output=True, text=True,
         )
-        assert result.returncode == 0, (
-            f"Failed to source LOCKED_MODELS.sh or arrays not exported: "
-            f"stderr={result.stderr}"
-        )
+        assert result.returncode == 0, f"arrays not exported: {result.stderr}"
