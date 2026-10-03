@@ -135,12 +135,13 @@ class TestCommitMsgModelPinTrailer:
         assert r.returncode == 0, out(r)
         assert "Model-Pin-Approved-By" not in out(r)
 
-    def test_fallback_only_change_needs_no_trailer(self, tmp_path):
+    def test_fallback_only_change_now_needs_the_trailer(self, tmp_path):
+        """The approval gate covers the whole pin policy (roles.*.fallback included)."""
         repo = make_repo(tmp_path)
         edit_registry(repo, change_fallback_only)
         r = run_commit_msg(repo, "chore: change a fallback list only\n")
-        assert r.returncode == 0, out(r)
-        assert "Model-Pin-Approved-By" not in out(r)
+        assert r.returncode == 1, out(r)
+        assert "Model-Pin-Approved-By" in out(r)
 
     def test_missing_pyyaml_fails_loudly(self, tmp_path):
         """With a registry change staged and no PyYAML the hook must not silently pass."""

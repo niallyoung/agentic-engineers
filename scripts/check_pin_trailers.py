@@ -2,9 +2,15 @@
 """
 scripts/check_pin_trailers.py - Model Pin Change approval scanner.
 
-docs/SPEC.md (Model Pin Change): every commit that changes a role's pin
-(roles.<role>.model in config/models.yaml) must carry a non-empty
-`Model-Pin-Approved-By:` trailer at the START of a line in its message.
+docs/SPEC.md (Model Pin Change): every commit that changes the model-pin POLICY in
+config/models.yaml must carry a non-empty `Model-Pin-Approved-By:` trailer at the START of
+a line in its message. The policy fingerprint is
+{roles.*.model, roles.*.fallback, roles.*.effort, families.*.min_pin, fallback_policy};
+comments, model facts, ids and pin_history appends are not part of it.
+
+Separately, pin_history is append-only: for every commit touching the registry the
+parent's pin_history must be a PREFIX of the child's. That rule is NOT waivable by the
+trailer (a forged-history rewrite is caught even with approval).
 
 This is the single scanner used by the CI "Model Pin Approval Scan" step and by
 .githooks/pre-push. It is the authoritative backstop for the commit-msg hook, which
@@ -63,7 +69,7 @@ def fatal(msg: str) -> "None":
     raise SystemExit(2)
 
 
-_PIN_CACHE: dict[str, dict] = {}
+_REG_CACHE: dict[str, dict | None] = {}
 
 
 def blob_id(rev: str) -> str | None:
@@ -71,33 +77,56 @@ def blob_id(rev: str) -> str | None:
     return r.stdout.strip() if r.returncode == 0 else None
 
 
-def pins_of(blob: str | None) -> dict:
-    """roles.<role>.model for a registry blob ({} when absent or unparseable)."""
+def registry_of(blob: str | None) -> dict | None:
+    """Parsed registry for a blob (None when absent or unparseable)."""
     if blob is None:
-        return {}
-    if blob in _PIN_CACHE:
-        return _PIN_CACHE[blob]
+        return None
+    if blob in _REG_CACHE:
+        return _REG_CACHE[blob]
     text = git("cat-file", "blob", blob).stdout
-    result: dict = {}
+    reg: dict | None = None
     with tempfile.TemporaryDirectory() as root:
         os.makedirs(os.path.join(root, "config"))
         with open(os.path.join(root, REGISTRY), "w", encoding="utf-8") as fh:
             fh.write(text)
         try:
             reg = models.load_registry(root)
-            result = {r: (c or {}).get("model") for r, c in (reg.get("roles") or {}).items()}
         except models.RegistryError:
-            result = {}
-    _PIN_CACHE[blob] = result
-    return result
+            reg = None
+    _REG_CACHE[blob] = reg
+    return reg
 
 
-def changed_roles(old: dict, new: dict) -> list[str]:
-    return [r for r in sorted(set(old) | set(new)) if old.get(r) != new.get(r)]
+def fingerprint(reg: dict | None) -> dict:
+    """Flat {item path: value} of everything the Model Pin Change approval gates."""
+    fp: dict = {}
+    if not reg:
+        return fp
+    for role, cfg in (reg.get("roles") or {}).items():
+        cfg = cfg or {}
+        for key in ("model", "fallback", "effort"):
+            fp["roles.%s.%s" % (role, key)] = cfg.get(key)
+    for fam, cfg in (reg.get("families") or {}).items():
+        fp["families.%s.min_pin" % fam] = (cfg or {}).get("min_pin")
+    fp["fallback_policy"] = reg.get("fallback_policy")
+    return fp
+
+
+def changed_items(old: dict, new: dict) -> list[str]:
+    return [k for k in sorted(set(old) | set(new)) if old.get(k) != new.get(k)]
+
+
+def history_is_append_only(old_reg: dict | None, new_reg: dict | None) -> bool:
+    """True when old pin_history is a prefix of new pin_history (entries only appended)."""
+    old_h = list((old_reg or {}).get("pin_history") or [])
+    if new_reg is None:
+        return not old_h  # an unparseable child cannot be shown to preserve history
+    new_h = list(new_reg.get("pin_history") or [])
+    return new_h[:len(old_h)] == old_h and len(new_h) >= len(old_h)
 
 
 def check_commit(sha: str, parents: list[str]):
-    """Return (kind, roles, message) for an unapproved pin change, else None."""
+    """Return (kind, items) for an unapproved change / history rewrite, else None."""
     if not parents:
         return None  # root commit: it introduces the registry, if at all
     first = parents[0]
@@ -106,21 +135,24 @@ def check_commit(sha: str, parents: list[str]):
         return None  # the registry is introduced here: seeding it is not a pin change
     if old_blob == new_blob:
         return None
-    old, new = pins_of(old_blob), pins_of(new_blob)
-    roles = changed_roles(old, new)
-    if not roles:
+    old_reg, new_reg = registry_of(old_blob), registry_of(new_blob)
+    if old_reg is not None and not history_is_append_only(old_reg, new_reg):
+        return "history", ["pin_history"]  # not waivable by a trailer
+    old, new = fingerprint(old_reg), fingerprint(new_reg)
+    items = changed_items(old, new)
+    if not items:
         return None
     msg = git("log", "-1", "--format=%B", sha).stdout
     if TRAILER.search(msg):
         return None
     is_merge = len(parents) > 1
     if is_merge:
-        side_pins = [pins_of(blob_id(p)) for p in parents[1:]]
-        roles = [r for r in roles if not any(sp.get(r) == new.get(r) for sp in side_pins)]
-        if not roles:
+        side = [fingerprint(registry_of(blob_id(p))) for p in parents[1:]]
+        items = [i for i in items if not any(sp.get(i) == new.get(i) for sp in side)]
+        if not items:
             return None
     kind = "merge" if is_merge else ("revert" if REVERT.search(msg) else "commit")
-    return kind, roles
+    return kind, items
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -151,11 +183,13 @@ def main(argv: list[str] | None = None) -> int:
             bad.append((sha[:12],) + verdict)
 
     notes = {
-        "commit": "changes role model pin(s) %s without a Model-Pin-Approved-By trailer",
-        "merge": "is a merge commit that changes role model pin(s) %s (not introduced by an "
+        "history": "rewrites %s (existing entries must stay an unchanged prefix: append only; "
+                   "a trailer does not waive this)",
+        "commit": "changes model pin policy item(s) %s without a Model-Pin-Approved-By trailer",
+        "merge": "is a merge commit that changes model pin policy item(s) %s (not introduced by an "
                  "approved side commit, e.g. conflict resolution) without a Model-Pin-Approved-By "
                  "trailer on the merge",
-        "revert": "is a revert that changes role model pin(s) %s without a Model-Pin-Approved-By "
+        "revert": "is a revert that changes model pin policy item(s) %s without a Model-Pin-Approved-By "
                   "trailer (a revert that restores a previous pin is still a pin change and "
                   "needs approval)",
     }

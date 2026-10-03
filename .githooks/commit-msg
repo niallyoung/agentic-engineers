@@ -259,9 +259,11 @@ fi
 # ────────────────────────────────────────────────────────────────────────────────
 # 7b. VALIDATE: Model Pin Change approval (docs/SPEC.md, Model Pin Change)
 # ────────────────────────────────────────────────────────────────────────────────
-# When the staged diff changes any roles.<role>.model in config/models.yaml, the
-# commit must carry a non-empty `Model-Pin-Approved-By:` trailer. Only the role PIN
-# is gated: fallback lists, effort, comments and other registry edits need none.
+# When the staged diff changes the pin policy in config/models.yaml
+# ({roles.*.model, roles.*.fallback, roles.*.effort, families.*.min_pin, fallback_policy}),
+# the commit must carry a non-empty `Model-Pin-Approved-By:` trailer. Comments and other
+# registry edits need none. pin_history is append-only: a rewrite is rejected even WITH
+# the trailer (same rules as scripts/check_pin_trailers.py, the authoritative backstop).
 # The registry is parsed only through scripts/models.py (load_registry).
 
 COMMIT_MSG_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -319,17 +321,40 @@ except SystemExit:
     print("NOYAML")
     raise SystemExit(0)
 
-def pins(root):
+def load(root):
     try:
-        reg = models.load_registry(root)
+        return models.load_registry(root)
     except models.RegistryError:
-        return {}
-    return {r: (c or {}).get("model") for r, c in (reg.get("roles") or {}).items()}
+        return None
 
-old, new = pins(sys.argv[2] + "/old"), pins(sys.argv[2] + "/new")
-for role in sorted(set(old) | set(new)):
-    if old.get(role) != new.get(role):
-        print(f"{role}: {old.get(role) or '(none)'} -> {new.get(role) or '(removed)'}")
+def fingerprint(reg):
+    # Same gated fingerprint as scripts/check_pin_trailers.py: roles.*.{model,fallback,effort},
+    # families.*.min_pin and fallback_policy. Comments and other registry content are not gated.
+    fp = {}
+    for role, cfg in ((reg or {}).get("roles") or {}).items():
+        for key in ("model", "fallback", "effort"):
+            fp[f"roles.{role}.{key}"] = (cfg or {}).get(key)
+    for fam, cfg in ((reg or {}).get("families") or {}).items():
+        fp[f"families.{fam}.min_pin"] = (cfg or {}).get("min_pin")
+    fp["fallback_policy"] = (reg or {}).get("fallback_policy")
+    return fp
+
+old_reg, new_reg = load(sys.argv[2] + "/old"), load(sys.argv[2] + "/new")
+# pin_history is append-only: the old list must be an unchanged prefix of the new one.
+# This is reported regardless of any trailer.
+if old_reg is not None:
+    oh = list(old_reg.get("pin_history") or [])
+    nh = list((new_reg or {}).get("pin_history") or [])
+    if nh[:len(oh)] != oh or len(nh) < len(oh):
+        print("HISTORY: pin_history is append-only (existing entries edited, reordered or removed)")
+old, new = fingerprint(old_reg), fingerprint(new_reg)
+for key in sorted(set(old) | set(new)):
+    if old.get(key) != new.get(key):
+        if key.endswith(".model"):
+            role = key.split(".")[1]
+            print(f"{role}: {old.get(key) or '(none)'} -> {new.get(key) or '(removed)'}")
+        else:
+            print(f"{key}: changed")
 PY
   ) || PIN_OUT="PYFAIL: $PIN_OUT"
   rm -rf "$PIN_TMP"
@@ -339,13 +364,17 @@ PY
     echo "   Fix: python3 -m pip install pyyaml"
   elif [[ "$PIN_OUT" == PYFAIL:* ]]; then
     fail "Could not compare config/models.yaml pins: ${PIN_OUT#PYFAIL: }"
+  elif [[ "$PIN_OUT" == *HISTORY:* ]]; then
+    fail "pin_history in config/models.yaml is append-only; a Model-Pin-Approved-By trailer does not waive this"
+    echo "$PIN_OUT" | grep '^HISTORY:' | sed 's/^/   /'
+    echo "   Append new entries only; never edit, reorder or remove existing ones."
   elif [ -n "$PIN_OUT" ]; then
     if echo "$COMMIT_MSG" | grep -v '^#' | grep -qE '^Model-Pin-Approved-By:[[:space:]]*[^[:space:]]'; then
       success "Model Pin Change approved (Model-Pin-Approved-By trailer present)"
     elif [ "${SKIP_HOOKS:-}" = "1" ] && echo "$COMMIT_MSG" | grep -qiE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:[[:space:]]*[^[:space:]]{1}.{8,}'; then
       warn "Model Pin Change approval bypassed via documented SKIP_HOOKS=1"
     else
-      fail "Role model pin changed in config/models.yaml without a Model-Pin-Approved-By trailer"
+      fail "Model pin policy changed in config/models.yaml without a Model-Pin-Approved-By trailer"
       echo "$PIN_OUT" | sed 's/^/   /'
       echo "   Add a non-empty trailer line at the start of a line in the commit message:"
       echo "     Model-Pin-Approved-By: <name of the approver>"
