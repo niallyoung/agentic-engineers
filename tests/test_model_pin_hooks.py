@@ -216,6 +216,193 @@ class TestCommitMsgModelPinTrailer:
         assert data["roles"][ROLE]["model"] == ALT_PIN
 
 
+class TestCommitMsgAmendPath:
+    """S2: `git commit --amend` of a pin-changing commit has an EMPTY index diff
+    against HEAD for the registry, so a naive hook sees no pin change and lets the
+    approval trailer be dropped. The hook must compare against HEAD^ when amending.
+
+    These run real `git commit --amend` so git itself invokes the hook."""
+
+    PIN_MSG = SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe\n"
+
+    @staticmethod
+    def hooked_repo(tmp_path, commit_registry=True):
+        (tmp_path / "repo").mkdir()
+        repo = make_repo(tmp_path / "repo", commit_registry=commit_registry)
+        hooks = tmp_path / "hooks"
+        hooks.mkdir()
+        shutil.copy(COMMIT_MSG, hooks / "commit-msg")
+        # The hook resolves ../scripts/models.py next to itself.
+        (tmp_path / "scripts").symlink_to(REPO_ROOT / "scripts")
+        return repo, hooks
+
+    def commit_pin(self, repo):
+        edit_registry(repo, change_pin)
+        git(repo, "commit", "-q", "-m", self.PIN_MSG)  # hooks still disabled here
+
+    @staticmethod
+    def amend(repo, hooks, message):
+        git(repo, "config", "core.hooksPath", str(hooks))
+        return git(repo, "commit", "--amend", "-q", "-m", message, check=False)
+
+    def test_amend_of_pin_commit_dropping_trailer_is_rejected(self, tmp_path):
+        repo, hooks = self.hooked_repo(tmp_path)
+        self.commit_pin(repo)
+        r = self.amend(repo, hooks, SUBJECT)
+        assert r.returncode != 0, out(r)
+        assert "Model-Pin-Approved-By" in out(r)
+        assert f"{ROLE}: {ROLE_PIN} -> {ALT_PIN}" in out(r)
+        # The commit was not rewritten.
+        assert "Model-Pin-Approved-By: Jane Doe" in git(repo, "log", "-1", "--format=%B").stdout
+
+    def test_amend_of_pin_commit_keeping_trailer_is_accepted(self, tmp_path):
+        repo, hooks = self.hooked_repo(tmp_path)
+        self.commit_pin(repo)
+        r = self.amend(repo, hooks, SUBJECT + " (reworded)\n\nModel-Pin-Approved-By: Jane Doe")
+        assert r.returncode == 0, out(r)
+        assert "reworded" in git(repo, "log", "-1", "--format=%s").stdout
+
+    def test_amend_of_non_pin_commit_is_unaffected(self, tmp_path):
+        repo, hooks = self.hooked_repo(tmp_path)
+        self.commit_pin(repo)
+        (repo / "x.txt").write_text("x")
+        git(repo, "add", "x.txt")
+        git(repo, "commit", "-q", "-m", "chore: unrelated change here")
+        r = self.amend(repo, hooks, "chore: unrelated change reworded")
+        assert r.returncode == 0, out(r)
+
+    def test_new_unrelated_commit_after_pin_commit_needs_no_trailer(self, tmp_path):
+        """Guard against over-correcting: only an AMEND compares against HEAD^."""
+        repo, hooks = self.hooked_repo(tmp_path)
+        self.commit_pin(repo)
+        (repo / "x.txt").write_text("x")
+        git(repo, "add", "x.txt")
+        git(repo, "config", "core.hooksPath", str(hooks))
+        r = git(repo, "commit", "-q", "-m", "chore: unrelated follow-up", check=False)
+        assert r.returncode == 0, out(r)
+
+    def test_amend_that_adds_a_pin_change_to_a_plain_commit_needs_trailer(self, tmp_path):
+        repo, hooks = self.hooked_repo(tmp_path)
+        (repo / "x.txt").write_text("x")
+        git(repo, "add", "x.txt")
+        git(repo, "commit", "-q", "-m", "chore: unrelated change here")
+        edit_registry(repo, change_pin)  # staged, then folded in by the amend
+        r = self.amend(repo, hooks, "chore: unrelated change here")
+        assert r.returncode != 0 and "Model-Pin-Approved-By" in out(r), out(r)
+
+    def test_amend_of_registry_introducing_root_commit_needs_trailer(self, tmp_path):
+        repo, hooks = self.hooked_repo(tmp_path, commit_registry=False)
+        git(repo, "add", "config/models.yaml")
+        git(repo, "commit", "-q", "-m", "chore: add the model registry file\n\nModel-Pin-Approved-By: Jane")
+        r = self.amend(repo, hooks, "chore: add the model registry file")
+        assert r.returncode != 0 and "Model-Pin-Approved-By" in out(r), out(r)
+
+
+# ── CI: pin-approval scan over origin/main..HEAD + workflow permissions ───────
+
+CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+
+
+def _ci():
+    return yaml.safe_load(CI_YML.read_text())
+
+
+def _scan_step_run():
+    steps = _ci()["jobs"]["quality-gate"]["steps"]
+    named = [s for s in steps if s.get("name") == "Model Pin Approval Scan"]
+    assert len(named) == 1, "CI must have exactly one 'Model Pin Approval Scan' step"
+    return named[0]["run"]
+
+
+class TestCiPinApprovalScan:
+    @staticmethod
+    def scan_repo(tmp_path):
+        """Scratch repo: seed commit on a fake origin/main, scripts/ alongside."""
+        repo = make_repo(tmp_path)
+        (repo / "scripts").symlink_to(REPO_ROOT / "scripts")
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+        return repo
+
+    @staticmethod
+    def run_scan(repo, **env):
+        return subprocess.run(["bash", "-e", "-c", _scan_step_run()], cwd=repo, capture_output=True,
+                              text=True, timeout=60, env={**os.environ, **env})
+
+    def commit(self, repo, message):
+        git(repo, "commit", "-q", "-m", message)
+
+    def test_pin_commit_without_trailer_fails_the_scan(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        self.commit(repo, SUBJECT)
+        r = self.run_scan(repo)
+        assert r.returncode == 1, out(r)
+        assert ROLE in out(r) and "Model-Pin-Approved-By" in out(r)
+
+    def test_pin_commit_with_trailer_passes(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        self.commit(repo, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
+        assert self.run_scan(repo).returncode == 0
+
+    def test_empty_trailer_fails_the_scan(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        self.commit(repo, SUBJECT + "\n\nModel-Pin-Approved-By:   ")
+        assert self.run_scan(repo).returncode == 1
+
+    def test_amended_away_trailer_is_caught_even_though_the_hook_was_skipped(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        self.commit(repo, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
+        git(repo, "commit", "--amend", "-q", "-m", SUBJECT)  # hooks disabled == --no-verify
+        assert self.run_scan(repo).returncode == 1
+
+    def test_non_pin_registry_commit_and_unrelated_commit_pass(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        edit_registry(repo, change_effort_only)
+        self.commit(repo, "chore: comment-only registry edit")
+        (repo / "x.txt").write_text("x")
+        git(repo, "add", "x.txt")
+        self.commit(repo, "chore: unrelated")
+        assert self.run_scan(repo).returncode == 0
+
+    def test_only_commits_after_base_are_scanned(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        edit_registry(repo, change_pin)
+        self.commit(repo, SUBJECT)  # unapproved pin change ...
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")  # ... already on main
+        assert self.run_scan(repo).returncode == 0
+
+    def test_missing_base_ref_skips_with_notice(self, tmp_path):
+        repo = self.scan_repo(tmp_path)
+        r = self.run_scan(repo, MODEL_PIN_SCAN_BASE="origin/does-not-exist")
+        assert r.returncode == 0 and "skipping" in out(r)
+
+    def test_untrusted_text_never_reaches_workflow_expressions(self):
+        run = _scan_step_run()
+        assert "${{" not in run
+
+
+class TestCiWorkflowPermissions:
+    def test_workflow_parses_and_top_level_permissions_are_read_only(self):
+        wf = _ci()
+        assert wf["permissions"] == {"contents": "read"}
+
+    def test_every_write_job_declares_its_own_permissions(self):
+        wf = _ci()
+        for name, job in wf["jobs"].items():
+            if name == "auto-tag":
+                assert job["permissions"] == {"contents": "write"}
+            else:
+                assert "write" not in str(job.get("permissions", "")), name
+
+    def test_quality_gate_checks_out_full_history_for_the_scan(self):
+        steps = _ci()["jobs"]["quality-gate"]["steps"]
+        checkout = next(s for s in steps if str(s.get("uses", "")).startswith("actions/checkout"))
+        assert checkout["with"]["fetch-depth"] == 0
+
+
 # ── pre-commit: registry-driven model checks (no version allowlist) ───────────
 
 def make_full_registry_repo(tmp_path):

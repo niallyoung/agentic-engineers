@@ -253,11 +253,40 @@ fi
 # The registry is parsed only through scripts/models.py (load_registry).
 
 COMMIT_MSG_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if git diff --cached --name-only 2>/dev/null | grep -qx 'config/models\.yaml'; then
+
+# `git commit --amend` rewrites HEAD, so the commit being created replaces HEAD and
+# its true parent is HEAD^. Diffing the index against HEAD would show an EMPTY
+# registry diff for an amend of a pin-changing commit and let the approval trailer
+# be silently dropped. When amending, compare against HEAD^ (or the empty tree for
+# a root commit). Detection: GIT_REFLOG_ACTION, else the parent process (the
+# `git commit` that spawned this hook) carrying --amend.
+_is_amend() {
+  case "${GIT_REFLOG_ACTION:-}" in *amend*) return 0 ;; esac
+  local parent_args=""
+  parent_args=$(ps -o args= -p "$PPID" 2>/dev/null || true)
+  if [ -z "$parent_args" ] && [ -r "/proc/$PPID/cmdline" ]; then
+    parent_args=$(tr '\0' ' ' < "/proc/$PPID/cmdline" 2>/dev/null || true)
+  fi
+  case " $parent_args " in *" --amend "* | *" --amend="*) return 0 ;; esac
+  return 1
+}
+
+PIN_OLD_REF="HEAD"
+if ! git rev-parse --verify -q HEAD >/dev/null 2>&1; then
+  PIN_OLD_REF="4b825dc642cb6eb9a060e54bf8d69288fbee4904" # initial commit: empty tree
+elif _is_amend; then
+  if git rev-parse --verify -q "HEAD^" >/dev/null 2>&1; then
+    PIN_OLD_REF="HEAD^"
+  else
+    PIN_OLD_REF="4b825dc642cb6eb9a060e54bf8d69288fbee4904" # the empty tree
+  fi
+fi
+
+if git diff --cached --name-only "$PIN_OLD_REF" 2>/dev/null | grep -qx 'config/models\.yaml'; then
   PIN_TOP=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
   PIN_TMP=$(mktemp -d)
   mkdir -p "$PIN_TMP/old/config" "$PIN_TMP/new/config"
-  git show "HEAD:config/models.yaml" > "$PIN_TMP/old/config/models.yaml" 2>/dev/null || rm -f "$PIN_TMP/old/config/models.yaml"
+  git show "$PIN_OLD_REF:config/models.yaml" > "$PIN_TMP/old/config/models.yaml" 2>/dev/null || rm -f "$PIN_TMP/old/config/models.yaml"
   git show ":config/models.yaml" > "$PIN_TMP/new/config/models.yaml" 2>/dev/null || rm -f "$PIN_TMP/new/config/models.yaml"
   # models.py lives next to this hook's repo; when the hook is a copy (e.g. .git/hooks/),
   # fall back to the committing repo's own scripts/.
