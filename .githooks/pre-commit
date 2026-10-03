@@ -42,12 +42,12 @@ ERRORS=0
 WARNINGS=0
 
 fail() {
-  echo "❌ $1"
+  printf '%s\n' "❌ $1"
   ERRORS=$((ERRORS + 1))
 }
 
 warn() {
-  echo "⚠️  $1"
+  printf '%s\n' "⚠️  $1"
   WARNINGS=$((WARNINGS + 1))
 }
 
@@ -486,8 +486,9 @@ echo "✅ Source file integrity check passed"
 #      shape, fallback policy, per-family min_pin floor, pin_history consistency, and
 #      generated targets current (stale targets => run `models.py sync`).
 #
-# The check runs against the working tree of the repo being committed (--root), so it
-# also works in scratch repos. A missing PyYAML is a hard failure with a clear
+# The checks run against a snapshot of the INDEX (git checkout-index into a temp
+# dir, passed as --root), so exactly what is staged is validated, and it works in
+# scratch repos. A missing PyYAML is a hard failure with a clear
 # message, never a silent pass.
 #
 # Philosophy: POSITIVE ENFORCEMENT — models are pinned by choice in the registry.
@@ -502,12 +503,27 @@ MODELS_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/models.py"
 [ -f "$MODELS_PY" ] || MODELS_PY="$MODEL_REG_TOP/scripts/models.py"
 MODEL_ERRORS=0
 
-STAGED_MODEL_REL=$(git diff --cached --name-only --diff-filter=ACMRD \
+STAGED_MODEL_REL=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD \
     | grep -E '^(config/models\.yaml|config/FRAMEWORK-MANIFEST\.yaml|src/AGENTS\.md|src/agents/[^/]+-agent\.md|\.githooks/LOCKED_MODELS\.sh|docs/MODELS\.md|\.agents_verification_sha|scripts/models\.py)$' || true)
+
+# The model checks run against a snapshot of the INDEX (what is about to be
+# committed), not the working tree, so unstaged edits can neither mask a staged
+# error nor cause a spurious failure. If the snapshot cannot be taken (e.g. an
+# unmerged index) the checks fall back to the working tree and say so.
+MODEL_ROOT="$MODEL_REG_TOP"
+MODEL_SNAPSHOT=""
+if [ -n "$STAGED_MODEL_REL" ]; then
+    MODEL_SNAPSHOT=$(mktemp -d 2>/dev/null || true)
+    if [ -n "$MODEL_SNAPSHOT" ] && git checkout-index -a --prefix="$MODEL_SNAPSHOT/" >/dev/null 2>&1; then
+        MODEL_ROOT="$MODEL_SNAPSHOT"
+    else
+        warn "could not snapshot the index for model checks; validating the working tree instead"
+    fi
+fi
 
 if [ -z "$STAGED_MODEL_REL" ]; then
     echo "✅ Model registry check skipped (no registry-related files staged)"
-elif [ ! -f "$MODEL_REG_TOP/config/models.yaml" ]; then
+elif [ ! -f "$MODEL_ROOT/config/models.yaml" ]; then
     # Only reachable for a tree without a registry; staged registry deletion is caught here too.
     fail "model registry violation: config/models.yaml is missing but registry-related files are staged"
     MODEL_ERRORS=$((MODEL_ERRORS + 1))
@@ -519,13 +535,16 @@ elif ! python3 -c 'import yaml' >/dev/null 2>&1; then
     echo "   Fix: python3 -m pip install pyyaml   (or SKIP_HOOKS=1 with a documented reason)"
     MODEL_ERRORS=$((MODEL_ERRORS + 1))
 else
-    # 1. Staged source agents: model must be a known registry ID.
-    for file in $(printf '%s\n' "$STAGED_MODEL_REL" | grep -E '^src/agents/' || true); do
+    # 1. Staged source agents: model must be a known registry ID. One filename per
+    #    line (IFS= read -r), so names containing spaces are checked as one file
+    #    instead of being word-split into non-existent paths that skip the check.
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
         staged_content=$(git show ":$file" 2>/dev/null) || continue   # deleted
         model=$( { printf '%s\n' "$staged_content" | grep -E '^model:[[:space:]]*' | head -1 \
                    | awk '{print $2}' | tr -d "\"'"; } || true)
         [ -n "$model" ] || continue   # no model field: not a full agent file
-        if ! python3 "$MODELS_PY" --root "$MODEL_REG_TOP" is-known "$model" >/dev/null 2>&1; then
+        if ! python3 "$MODELS_PY" --root "$MODEL_ROOT" is-known "$model" >/dev/null 2>&1; then
             fail "model registry violation: Model not in the registry: $file"
             echo "   Model: $model"
             echo "   Known models: python3 scripts/models.py list-ids"
@@ -533,24 +552,25 @@ else
             echo "   python3 scripts/models.py sync (see docs/SPEC.md, Model Pin Change)"
             MODEL_ERRORS=$((MODEL_ERRORS + 1))
         fi
-    done
+    done < <(printf '%s\n' "$STAGED_MODEL_REL" | grep -E '^src/agents/' || true)
 
     # 2. Registry shape, floor, history and generated-target consistency.
     CHECK_RC=0
-    CHECK_OUT=$(python3 "$MODELS_PY" --root "$MODEL_REG_TOP" check 2>&1) || CHECK_RC=$?
+    CHECK_OUT=$(python3 "$MODELS_PY" --root "$MODEL_ROOT" check 2>&1) || CHECK_RC=$?
     if [ "$CHECK_RC" -ne 0 ]; then
         fail "model registry violation: models.py check failed"
         printf '%s\n' "$CHECK_OUT" | sed 's/^/   /'
         MODEL_ERRORS=$((MODEL_ERRORS + 1))
     fi
     SYNC_RC=0
-    SYNC_OUT=$(python3 "$MODELS_PY" --root "$MODEL_REG_TOP" sync --check 2>&1) || SYNC_RC=$?
+    SYNC_OUT=$(python3 "$MODELS_PY" --root "$MODEL_ROOT" sync --check 2>&1) || SYNC_RC=$?
     if [ "$SYNC_RC" -ne 0 ] && [ "$CHECK_RC" -eq 0 ]; then
         fail "model registry violation: generated targets are stale; run python3 scripts/models.py sync"
         printf '%s\n' "$SYNC_OUT" | sed 's/^/   /'
         MODEL_ERRORS=$((MODEL_ERRORS + 1))
     fi
 fi
+[ -z "$MODEL_SNAPSHOT" ] || rm -rf "$MODEL_SNAPSHOT"
 
 if [ "$MODEL_ERRORS" -gt 0 ]; then
     echo ""

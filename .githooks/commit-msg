@@ -40,24 +40,24 @@ WARNINGS=0
 
 fail() {
   local message=$1
-  echo -e "${RED}✗${NC} $message"
+  printf '%b%s%b %s\n' "$RED" '✗' "$NC" "$message"
   ((ERRORS++))
 }
 
 warn() {
   local message=$1
-  echo -e "${YELLOW}⚠${NC} $message"
+  printf '%b%s%b %s\n' "$YELLOW" '⚠' "$NC" "$message"
   ((WARNINGS++))
 }
 
 success() {
   local message=$1
-  echo -e "${GREEN}✓${NC} $message"
+  printf '%b%s%b %s\n' "$GREEN" '✓' "$NC" "$message"
 }
 
 info() {
   local message=$1
-  echo -e "${BLUE}ℹ${NC} $message"
+  printf '%b%s%b %s\n' "$BLUE" 'ℹ' "$NC" "$message"
 }
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -354,7 +354,7 @@ echo ""
 echo "─────────────────────────────────────────────────────────────────────────────"
 
 if [ "$ERRORS" -gt 0 ]; then
-  echo -e "${RED}❌ commit-msg: $ERRORS error(s) found${NC}"
+  printf '%b%s%b\n' "$RED" "❌ commit-msg: $ERRORS error(s) found" "$NC"
   echo ""
   echo "Fix the errors above and retry:"
   echo "  git commit --amend"
@@ -365,14 +365,14 @@ if [ "$ERRORS" -gt 0 ]; then
 fi
 
 if [ "$WARNINGS" -gt 0 ]; then
-  echo -e "${YELLOW}⚠️  commit-msg: $WARNINGS warning(s) found${NC}"
+  printf '%b%s%b\n' "$YELLOW" "⚠️  commit-msg: $WARNINGS warning(s) found" "$NC"
   echo ""
   echo "Warnings are informational. Commit will proceed."
   echo "Address warnings in future commits for better practices."
   echo ""
 fi
 
-echo -e "${GREEN}✅ commit-msg: validation passed${NC}"
+printf '%b%s%b\n' "$GREEN" "✅ commit-msg: validation passed" "$NC"
 echo "   Subject: $FIRST_LINE"
 if [ -n "$MSG_BODY_REST" ]; then
   BODY_LINES=$(echo "$MSG_BODY_REST" | wc -l)

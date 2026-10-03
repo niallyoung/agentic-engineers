@@ -298,6 +298,21 @@ class TestCommitMsgAmendPath:
         assert r.returncode != 0 and "Model-Pin-Approved-By" in out(r), out(r)
 
 
+class TestCommitMsgPrintfNotEcho:
+    """S4: messages are printed verbatim; `echo -e` expanded backslash escapes in
+    user-controlled text (a bypass reason) and mangled the output."""
+
+    def test_backslash_sequences_in_user_text_are_printed_literally(self, tmp_path):
+        repo = make_repo(tmp_path)
+        r = run_commit_msg(repo, "chore: document a bypass reason here\n\nSKIP_HOOKS: a\\nb\\tc\n",
+                           SKIP_HOOKS="1")
+        assert r.returncode == 1, out(r)
+        assert "('a\\nb\\tc')" in out(r)
+
+    def test_no_echo_dash_e_left_in_the_hook(self):
+        assert "echo -e" not in COMMIT_MSG.read_text()
+
+
 # ── CI: pin-approval scan over origin/main..HEAD + workflow permissions ───────
 
 CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
@@ -490,6 +505,42 @@ class TestPreCommitRegistryEnforcement:
         r = run_pre_commit(repo)
         assert r.returncode != 0, out(r)
         assert "models.py check failed" in out(r)
+
+    # -- S3: filenames with spaces must not make the per-file check fail open --
+
+    def test_staged_agent_file_with_space_in_name_is_still_checked(self, tmp_path):
+        repo = make_full_registry_repo(tmp_path)
+        src = (repo / "src" / "agents" / f"{ROLE}-agent.md").read_text()
+        bad = re.sub(r"(?m)^model: .*$", "model: claude-haiku-9.9", src, count=1)
+        odd = repo / "src" / "agents" / "my odd name-agent.md"
+        odd.write_text(bad)
+        git(repo, "add", "src/agents/my odd name-agent.md")
+        r = run_pre_commit(repo)
+        assert r.returncode != 0, out(r)
+        assert "Model not in the registry" in out(r)
+        assert "my odd name-agent.md" in out(r)
+
+    # -- S4: checks run against the INDEX, not the working tree --
+
+    def test_staged_registry_error_is_caught_even_if_worktree_is_fixed(self, tmp_path):
+        repo = make_full_registry_repo(tmp_path)
+        good = (repo / "config" / "models.yaml").read_text()
+        edit_registry(repo, lambda t: t.replace(f"  {ROLE}:\n    model: {ROLE_PIN}",
+                                                f"  {ROLE}:\n    model: claude-nonexistent-1", 1))
+        (repo / "config" / "models.yaml").write_text(good)  # worktree "fixed", index still broken
+        r = run_pre_commit(repo)
+        assert r.returncode != 0, out(r)
+        assert "models.py check failed" in out(r)
+
+    def test_unstaged_worktree_breakage_does_not_fail_a_clean_index(self, tmp_path):
+        repo = make_full_registry_repo(tmp_path)
+        agent = repo / "src" / "agents" / f"{ROLE}-agent.md"
+        agent.write_text(agent.read_text() + "\n")  # a real, staged, registry-related change ...
+        git(repo, "add", str(agent.relative_to(repo)))
+        # ... then break the registry in the working tree only, never staged.
+        (repo / "config" / "models.yaml").write_text("schema_version: 1\nroles: [broken\n")
+        r = run_pre_commit(repo)
+        assert "model registry violation" not in out(r), out(r)
 
 
 def _floored_role_and_low_model():
