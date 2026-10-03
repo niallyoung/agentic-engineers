@@ -84,7 +84,23 @@ jobs:
         # .githooks/pre-push; tests/test_check_pin_trailers.py). Commit messages
         # are read by python via git, never interpolated with GitHub expressions;
         # only short SHAs and role names are printed.
-        run: python3 scripts/check_pin_trailers.py --base origin/main --head HEAD
+        #
+        # On a push, github.event.before is the base, so a direct push to the
+        # default branch (where origin/main..HEAD is empty) is scanned over the
+        # pushed range. It reaches the script only through env:, never through an
+        # expression inside run:. Pull requests, new branches (all-zeros before)
+        # and a base this clone does not have fall back to origin/main.
+        env:
+          MODEL_PIN_SCAN_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: |
+          base="${MODEL_PIN_SCAN_BASE:-}"
+          if [ -z "$base" ] || printf '%s' "$base" | grep -Eq '^0+$'; then
+            base=origin/main
+          elif ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "::notice::pushed base not present in this clone; scanning origin/main..HEAD instead"
+            base=origin/main
+          fi
+          python3 scripts/check_pin_trailers.py --base "$base" --head HEAD
 
       # ── Skill/render gates ───────────────────────────────────────────────
 

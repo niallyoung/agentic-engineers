@@ -483,7 +483,10 @@ class TestCiPinApprovalScan:
         run = _scan_step_run()
         assert "scripts/check_pin_trailers.py" in run
         assert "python3 -" not in run and "<<" not in run, "no inline python in the workflow step"
-        assert len([ln for ln in run.splitlines() if ln.strip()]) <= 2
+        # Only a small shell preamble that picks the scan base (the scan itself is the script):
+        # a push scans the pushed range, everything else falls back to origin/main.
+        assert len([ln for ln in run.splitlines() if ln.strip()]) <= 12
+        assert "python3 scripts/check_pin_trailers.py" in run
 
     def test_untrusted_text_never_reaches_workflow_expressions(self):
         assert "${{" not in _scan_step_run()
