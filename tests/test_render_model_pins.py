@@ -172,6 +172,49 @@ class TestMarkerSemantics:
         self.seed(c2, "opus", "sonnet")
         assert "stale managed value" not in run("render-claude.sh", repo, c2, "--status").stdout
 
+    # -- uninstall (mutant "o": uninstall must never delete a user-chosen model) --
+
+    def test_uninstall_keeps_user_chosen_model_and_says_so(self, repo, tmp_path):
+        c = tmp_path / "c"
+        self.seed(c, "opus", "sonnet")  # value != marker => user-chosen
+        r = run("render-claude.sh", repo, c, "--uninstall")
+        assert r.returncode == 0, r.stderr
+        assert settings_model(c) == "opus"
+        assert "keeping session model (opus)" in r.stdout
+        assert "removed model from settings.json" not in r.stdout
+        assert not (c / ".agentic-engine-claude-model").exists()
+
+    def test_uninstall_keeps_legacy_value_without_marker(self, repo, tmp_path):
+        c = tmp_path / "c"
+        self.seed(c, "sonnet", None)
+        run("render-claude.sh", repo, c, "--uninstall")
+        assert settings_model(c) == "sonnet"
+
+    def test_uninstall_removes_managed_model_and_marker_keeps_foreign(self, repo, tmp_path):
+        c = tmp_path / "c"
+        run("render-claude.sh", repo, c)
+        data = json.loads((c / "settings.json").read_text())
+        assert data["model"] == registry_id("orchestrator", "claude")
+        assert "PreToolUse" in data["hooks"]
+        # A user adds foreign keys and their own hooks after our install.
+        data["theme"] = "dark"
+        data["permissions"] = {"allow": ["Bash(ls:*)"]}
+        data["hooks"]["PreToolUse"].append(
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo mine"}]}
+        )
+        data["hooks"]["SessionStart"] = [{"hooks": [{"type": "command", "command": "echo hi"}]}]
+        (c / "settings.json").write_text(json.dumps(data))
+        r = run("render-claude.sh", repo, c, "--uninstall")
+        assert r.returncode == 0, r.stderr
+        after = json.loads((c / "settings.json").read_text())
+        assert "model" not in after
+        assert not (c / ".agentic-engine-claude-model").exists()
+        assert after["theme"] == "dark"
+        assert after["permissions"] == {"allow": ["Bash(ls:*)"]}
+        assert after["hooks"]["SessionStart"] == data["hooks"]["SessionStart"]
+        pre = after["hooks"]["PreToolUse"]
+        assert len(pre) == 1 and pre[0]["hooks"][0]["command"] == "echo mine"
+
 
 # --------------------------------------------------------------------------- #
 # Copilot
