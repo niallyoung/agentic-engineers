@@ -216,6 +216,29 @@ remove_settings_model() {
 	_settings_edit "$settings" remove_model
 }
 
+# remove_settings_if_empty SETTINGS_FILE
+# After --uninstall strips the keys this installer owns, a settings.json that is
+# exactly {} is litter we created: remove it. Left behind, the next install reads
+# "file exists, no model key" as the operator deliberately inheriting their account
+# default (see the settings block in the install branch) and never restores the
+# Orchestrator pin, so uninstall + install would not equal a first install. A file
+# with any other content, or one that is not valid JSON, is never touched.
+remove_settings_if_empty() {
+	local settings="$1"
+	[ -f "$settings" ] || return 0
+	python3 - "$settings" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+try:
+    with open(path) as fh:
+        data = json.load(fh)
+except (OSError, ValueError):
+    sys.exit(0)
+if data == {}:
+    os.remove(path)
+PY
+}
+
 # inject_settings_hook SETTINGS_FILE HOOK_SCRIPT_ABS_PATH
 # Non-destructively merges a PreToolUse hook entry (matching the Agent/Task
 # tool) into the JSON settings file's "hooks" key, so the guard fires on
@@ -428,6 +451,7 @@ case "$MODE" in
 			echo "  $(_yellow "ℹ️  keeping session model ($uninstall_model) — set by you, not by the framework")"
 		fi
 		rm -f "$MODEL_MARKER"
+		remove_settings_if_empty "$CLAUDE/settings.json"
 		echo "✅ Removed $count_s skill(s), $count_a agent(s), $count_d doc(s)"
 		;;
 

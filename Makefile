@@ -1,5 +1,5 @@
 .PHONY: help install \
-        install-copilot install-claude install-opencode install-codex \
+        install-copilot install-claude install-opencode install-codex fresh-install-claude \
         uninstall-copilot uninstall-claude uninstall-all uninstall-opencode uninstall-codex \
         setup harness-toggle test-protocol-e2e \
         verify validate-opencode validate-codex validate-agents validate-skills validate-renders validate-specs clean \
@@ -58,6 +58,7 @@ help:
 	@echo "                      (override root for testing: make install DESTDIR=/tmp/ae-test)"
 	@echo "                      (interactive per-harness prompts: bash renderer/scripts/unified-install.sh --interactive)"
 	@echo "  install-claude      Install rendered agents → ~/.claude/"
+	@echo "  fresh-install-claude  Wipe managed Claude files, then install clean (foreign files kept)"
 	@echo "  install-copilot     Install rendered agents + skills → ~/.copilot/ (full agent support)"
 	@echo "  install-opencode    Install agents & skills → ~/.config/opencode/ (OpenCode-compatible)"
 	@echo "  install-codex       Install Codex agents/config → ~/.codex/ and skills → ~/.codex/skills/"
@@ -163,6 +164,11 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 	@# installs git hooks internally when the target is $(HOME).
 	@bash "$(REPO_ROOT)/renderer/scripts/render-claude.sh" "$(REPO_ROOT)" "$(DESTDIR)/.claude"
 	@echo "✅ Installation to $(DESTDIR)/.claude/ complete"
+
+fresh-install-claude: ## Wipe managed Claude files, then install clean (uninstall-claude + install-claude; foreign files kept)
+	@echo "♻️  Fresh Claude install → $(DESTDIR)/.claude/ (managed files only; your own agents, skills and settings are kept)"
+	@$(MAKE) --no-print-directory uninstall-claude
+	@$(MAKE) --no-print-directory install-claude
 
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)
 	@echo "🧹 Uninstalling from $(DESTDIR)/.copilot/..."
