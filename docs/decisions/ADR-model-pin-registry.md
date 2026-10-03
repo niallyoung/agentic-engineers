@@ -108,3 +108,43 @@ edits" above. Both are now registry-driven (`test_every_role_has_a_registered_pi
 The invariant is: no test hard-codes a role's pin, model or effort; tests derive expected
 values from `config/models.yaml` through `scripts/models.py`. The one deliberate exception is
 the family-floor directive test, which locks the SPEC-2026-012 floors on purpose.
+
+## Addendum (2026-10-03, SPEC-2026-014: co-reviews and dispositions)
+
+Two agent-role co-reviews were recorded in SPEC-2026-014: a Principal Engineer co-review
+(agent role) and a Security Engineer co-review (agent role), both of SPEC-2026-010..013 and
+this ADR. Both are agent-role reviews, **not human approval**; the repository owner remains
+the final authority. Outcome: SPEC-2026-010 ratified as is; SPEC-2026-011/-012/-013 and this
+ADR approved with conditions. Full verbatim texts and the complete disposition table are in
+the SPEC-2026-014 changelog entry in `docs/SPEC.md`.
+
+Dispositions, Principal conditions (C1-C14): C1 I5 reworded in the spec (`model_used` vs the
+DELEGATE model; mechanical only for OpenCode; an advisory HANDBACK check deferred as a possible
+follow-up). C2 fixed in code (malformed `min_pin` is an error, not a silent no-floor). C3 the
+alias render is the one sanctioned emergency back-out, loud, operator environment only. C4
+explicit Codex exception (tier derived from registry family). C5 spec text fixed. C6 fixed in
+code (approval gate covers the whole pin-policy fingerprint; `pin_history` append-only). C7
+fixed (source agents reject floating aliases). C8 fixed (fallback-status error; Copilot
+ownership marker). C9 fixed (merge commits and pushed ranges scanned, `.githooks/pre-push`
+added; residual limits stated). C10 SPEC-2026-014 is the ratifying entry. C11 model facts
+sourced and CLI-verified. C12 and C14 are this addendum (below). C13 tests derive pins from the
+registry.
+
+Dispositions, Security findings (F1-F8): F1 `.github/CODEOWNERS` added (branch protection is
+GitHub-side and recommended, not verifiable from the repository). F2 and F3 fixed (merge-commit
+and direct-push scan gaps). F4 accepted residual risk (the trailer is unauthenticated
+attribution text; organisational). F5 the session hook pins `pyyaml>=6.0,<7`; an exact pin with
+hashes is recommended and not done. F6 new invariant I7 (Security scope and fallback policy).
+F7 accepted (CI is the gate; owner review of workflow and script changes assumed). F8 accepted
+(the delegate guard is a structure gate, fail-open by design). Security also found that no
+Security Engineer safeguard was lost, because the defensive-only gate was never mechanical.
+
+**Correction to Decision #4 (appended; the original text above is not rewritten).** Decision
+#4 recorded the fallbacks as `claude-opus-4.8` for Principal and Security and
+`claude-sonnet-4.6` for the Sonnet-tier roles. As the registry stands (and since SPEC-2026-012),
+the fallbacks are `claude-sonnet-5` for the Sonnet roles and `claude-opus-5` then
+`claude-opus-4.8` for Principal and Security. Use is still always surfaced, never silent.
+
+**Note on the Status line.** The "co-approval was not obtained" sentence in Status was true at
+decision time. It is superseded by the 2026-10-03 agent-role co-reviews above (agent-role, not
+human approval; the owner remains the final authority).
