@@ -32,17 +32,37 @@ A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
 
 | Model ID | Family | Status | Verified | Claude | Copilot | OpenCode |
 |----------|--------|--------|----------|--------|---------|----------|
-| `claude-haiku-4.5` | haiku | current | — | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
-| `claude-sonnet-4.5` | sonnet | supported | — | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
-| `claude-sonnet-4.6` | sonnet | supported | — | `claude-sonnet-4-6` | `claude-sonnet-4.6` | `claude-sonnet-4-6` |
-| `claude-sonnet-5` | sonnet | fallback | — | `claude-sonnet-5` | `claude-sonnet-5` | `claude-sonnet-5` |
-| `claude-sonnet-5.5` | sonnet | current | — | `claude-sonnet-5-5` | `claude-sonnet-5.5` | `claude-sonnet-5-5` |
-| `claude-opus-4.6` | opus | supported | — | `claude-opus-4-6` | `claude-opus-4.6` | `claude-opus-4-6` |
-| `claude-opus-4.7` | opus | supported | — | `claude-opus-4-7` | `claude-opus-4.7` | `claude-opus-4-7` |
-| `claude-opus-4.8` | opus | supported | — | `claude-opus-4-8` | `claude-opus-4.8` | `claude-opus-4-8` |
-| `claude-opus-5` | opus | fallback | — | `claude-opus-5` | `claude-opus-5` | `claude-opus-5` |
-| `claude-opus-5.5` | opus | current | — | `claude-opus-5-5` | `claude-opus-5.5` | `claude-opus-5-5` |
-| `claude-fable-5` | fable | current | — | `claude-fable-5` | `claude-fable-5` | `claude-fable-5` |
+| `claude-haiku-4.5` | haiku | current | 2026-10-03 | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
+| `claude-sonnet-4.5` | sonnet | supported | 2026-10-03 | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
+| `claude-sonnet-4.6` | sonnet | supported | 2026-10-03 | `claude-sonnet-4-6` | `claude-sonnet-4.6` | `claude-sonnet-4-6` |
+| `claude-sonnet-5` | sonnet | fallback | 2026-10-03 | `claude-sonnet-5` | `claude-sonnet-5` | `claude-sonnet-5` |
+| `claude-sonnet-5.5` | sonnet | current | 2026-10-03 | `claude-sonnet-5-5` | `claude-sonnet-5.5` | `claude-sonnet-5-5` |
+| `claude-opus-4.6` | opus | supported | 2026-10-03 | `claude-opus-4-6` | `claude-opus-4.6` | `claude-opus-4-6` |
+| `claude-opus-4.7` | opus | supported | 2026-10-03 | `claude-opus-4-7` | `claude-opus-4.7` | `claude-opus-4-7` |
+| `claude-opus-4.8` | opus | supported | 2026-10-03 | `claude-opus-4-8` | `claude-opus-4.8` | `claude-opus-4-8` |
+| `claude-opus-5` | opus | fallback | 2026-10-03 | `claude-opus-5` | `claude-opus-5` | `claude-opus-5` |
+| `claude-opus-5.5` | opus | current | 2026-10-03 | `claude-opus-5-5` | `claude-opus-5.5` | `claude-opus-5-5` |
+| `claude-fable-5` | fable | current | 2026-10-03 | `claude-fable-5` | `claude-fable-5` | `claude-fable-5` |
+
+## Model Facts
+
+Figures read from the official page named in Source on the Verified date (USD per
+MTok; blank = not recorded). CLI accepted = date a real `claude -p` run returned the
+model's `modelUsage` key. Never inferred; see `docs/model-evidence/`.
+
+| Model ID | Price in / out | Cache read | Context | Max output | Cutoff | Verified | CLI accepted | Source |
+|----------|----------------|------------|---------|------------|--------|----------|--------------|--------|
+| `claude-haiku-4.5` | $1 / $5 | $0.1 | 200,000 | 64,000 | 2025-02 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/about-claude/models/overview |
+| `claude-sonnet-4.5` | $3 / $15 | $0.3 | 200,000 | 64,000 | 2025-01 | 2026-10-03 | — | https://platform.claude.com/docs/en/models/sonnet-4-5/overview |
+| `claude-sonnet-4.6` | $3 / $15 | $0.3 | 1,000,000 | 128,000 | 2025-08 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/sonnet-4-6/overview |
+| `claude-sonnet-5` | $2 / $10 | $0.2 | 1,000,000 | 128,000 | 2026-01 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/sonnet-5/overview |
+| `claude-sonnet-5.5` | $2 / $10 | $0.2 | 1,000,000 | 128,000 | 2026-06 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/sonnet-5-5/overview |
+| `claude-opus-4.6` | $5 / $25 | $0.5 | 1,000,000 | 128,000 | 2025-05 | 2026-10-03 | — | https://platform.claude.com/docs/en/models/opus-4-6/overview |
+| `claude-opus-4.7` | $5 / $25 | $0.5 | 1,000,000 | 128,000 | 2026-01 | 2026-10-03 | — | https://platform.claude.com/docs/en/models/opus-4-7/overview |
+| `claude-opus-4.8` | $5 / $25 | $0.5 | 1,000,000 | 128,000 | 2026-01 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/opus-4-8/overview |
+| `claude-opus-5` | $5 / $25 | $0.5 | 1,000,000 | 128,000 | 2026-05 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/opus-5/overview |
+| `claude-opus-5.5` | $4 / $20 | $0.2 | 1,000,000 | 128,000 | 2026-06 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/opus-5-5/overview |
+| `claude-fable-5` | $10 / $50 | $1 | 1,000,000 | 128,000 | 2026-01 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/fable-5/overview |
 
 ## Pin History
 

@@ -386,6 +386,33 @@ def render_models_md(reg: dict) -> str:
         )
     lines.append("")
 
+    # Sourced facts + CLI acceptance (only models that carry evidence)
+    with_facts = [(mid, m) for mid, m in (reg.get("models") or {}).items() if m.get("facts") or m.get("cli_accepted")]
+    if with_facts:
+        lines.extend([
+            "## Model Facts",
+            "",
+            "Figures read from the official page named in Source on the Verified date (USD per",
+            "MTok; blank = not recorded). CLI accepted = date a real `claude -p` run returned the",
+            "model's `modelUsage` key. Never inferred; see `docs/model-evidence/`.",
+            "",
+            "| Model ID | Price in / out | Cache read | Context | Max output | Cutoff | Verified | CLI accepted | Source |",
+            "|----------|----------------|------------|---------|------------|--------|----------|--------------|--------|",
+        ])
+        for mid, m in with_facts:
+            f = m.get("facts") or {}
+            pr = f.get("price_per_mtok") or {}
+            price = f"${pr['input']:g} / ${pr['output']:g}" if pr.get("input") is not None and pr.get("output") is not None else "—"
+            cr = f"${pr['cache_read']:g}" if pr.get("cache_read") is not None else "—"
+            ctx = f"{f['context_tokens']:,}" if f.get("context_tokens") else "—"
+            mx = f"{f['max_output_tokens']:,}" if f.get("max_output_tokens") else "—"
+            acc = (m.get("cli_accepted") or {}).get("date")
+            lines.append(
+                f"| `{mid}` | {price} | {cr} | {ctx} | {mx} | {f.get('knowledge_cutoff', '—')} | "
+                f"{m.get('verified') or '—'} | {acc or '—'} | {m.get('source') or '—'} |"
+            )
+        lines.append("")
+
     # Pin history summary
     lines.extend([
         "## Pin History",
@@ -466,6 +493,76 @@ def sync(root: Path | str | None = None, check_only: bool = False) -> list[str]:
 # check
 # --------------------------------------------------------------------------- #
 
+FACT_PRICE_KEYS = ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h")
+FACT_KEYS = ("price_per_mtok", "context_tokens", "max_output_tokens", "knowledge_cutoff")
+
+
+def _is_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _evidence_problems(mid: str, m: dict, today: _dt.date) -> list[str]:
+    """Validate the optional models.<id>.facts and .cli_accepted evidence blocks.
+
+    facts (price/context/output/cutoff) are legal only beside a complete verified date +
+    https source; null/absent facts are always legal. cli_accepted records a real Claude CLI
+    run: a past-or-today date and the modelUsage key, which must equal ids.claude.
+    """
+    out: list[str] = []
+    facts = m.get("facts")
+    if facts is not None:
+        if not isinstance(facts, dict):
+            out.append(f"models.{mid}.facts: must be a mapping or null")
+        else:
+            for k in facts:
+                if k not in FACT_KEYS:
+                    out.append(f"models.{mid}.facts.{k}: unknown fact (allowed: {FACT_KEYS})")
+            price = facts.get("price_per_mtok")
+            if price is not None:
+                if not isinstance(price, dict):
+                    out.append(f"models.{mid}.facts.price_per_mtok: must be a mapping")
+                else:
+                    for k, v in price.items():
+                        if k not in FACT_PRICE_KEYS:
+                            out.append(f"models.{mid}.facts.price_per_mtok.{k}: unknown key (allowed: {FACT_PRICE_KEYS})")
+                        elif not _is_num(v) or v <= 0:
+                            out.append(f"models.{mid}.facts.price_per_mtok.{k}: must be a positive number, got {v!r}")
+                    for k in ("input", "output"):
+                        if k not in price:
+                            out.append(f"models.{mid}.facts.price_per_mtok.{k}: required when price_per_mtok is set")
+            for k in ("context_tokens", "max_output_tokens"):
+                v = facts.get(k)
+                if k in facts and (not isinstance(v, int) or isinstance(v, bool) or v <= 0):
+                    out.append(f"models.{mid}.facts.{k}: must be a positive integer, got {v!r}")
+            if "knowledge_cutoff" in facts:
+                kc = facts["knowledge_cutoff"]
+                if not (isinstance(kc, str) and re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", kc)):
+                    out.append(f"models.{mid}.facts.knowledge_cutoff: must be a YYYY-MM string, got {kc!r}")
+            if facts:
+                src = m.get("source")
+                if not isinstance(m.get("verified"), _dt.date):
+                    out.append(f"models.{mid}.facts: present but verified is not an ISO date (facts need verified + source)")
+                if not (isinstance(src, str) and re.fullmatch(r"https://[^\s/]+\S*", src)):
+                    out.append(f"models.{mid}.facts: present but source is not an https URL (facts need verified + source)")
+    acc = m.get("cli_accepted")
+    if acc is not None:
+        if not isinstance(acc, dict):
+            out.append(f"models.{mid}.cli_accepted: must be a mapping or null")
+        else:
+            d = acc.get("date")
+            if not isinstance(d, _dt.date):
+                out.append(f"models.{mid}.cli_accepted.date: must be a date, got {d!r}")
+            elif d > today:
+                out.append(f"models.{mid}.cli_accepted.date: {d} is in the future")
+            want = (m.get("ids") or {}).get("claude")
+            if acc.get("modelusage_key") != want:
+                out.append(f"models.{mid}.cli_accepted.modelusage_key: {acc.get('modelusage_key')!r} must equal ids.claude {want!r}")
+            for k in acc:
+                if k not in ("date", "modelusage_key", "note"):
+                    out.append(f"models.{mid}.cli_accepted.{k}: unknown key")
+    return out
+
+
 def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
     """Validate the registry and generated targets. Returns (errors, warnings)."""
     root = Path(root or REPO_ROOT)
@@ -532,6 +629,7 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
                 errors.append(f"models.{mid}.verified: must be a date or null")
             elif (today - vd).days > FRESHNESS_DAYS:
                 warns.append(f"models.{mid}: verified {vd} is more than {FRESHNESS_DAYS} days old")
+        errors.extend(_evidence_problems(mid, m, today))
 
     # 4-5: roles and fallbacks
     for role, cfg in roles.items():

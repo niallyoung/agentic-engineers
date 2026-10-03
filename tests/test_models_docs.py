@@ -70,3 +70,39 @@ class TestModelsDocGeneration:
         assert floored, "registry declares no family floors"
         for family, floor in floored.items():
             assert f"| {family} | `{floor}` |" in section, f"floor row for {family} missing"
+
+
+class TestModelFactsSection:
+    """docs/MODELS.md must surface the sourced facts and CLI acceptance from the registry."""
+
+    def _section(self):
+        text = MODELS_MD.read_text()
+        assert "## Model Facts" in text
+        return text.split("## Model Facts", 1)[1].split("\n## ", 1)[0]
+
+    def test_every_model_with_facts_has_a_row_with_its_prices_and_source(self):
+        section = self._section()
+        reg = models.load_registry()
+        with_facts = {mid: m for mid, m in reg["models"].items() if m.get("facts")}
+        assert with_facts, "registry carries no sourced facts"
+        for mid, m in with_facts.items():
+            row = next((ln for ln in section.splitlines() if ln.startswith(f"| `{mid}` |")), None)
+            assert row, f"{mid} missing from Model Facts"
+            price = m["facts"]["price_per_mtok"]
+            assert f"${price['input']:g} / ${price['output']:g}" in row
+            assert m["source"] in row
+
+    def test_cli_acceptance_date_is_shown(self):
+        section = self._section()
+        reg = models.load_registry()
+        for mid, m in reg["models"].items():
+            if m.get("cli_accepted"):
+                row = next(ln for ln in section.splitlines() if ln.startswith(f"| `{mid}` |"))
+                assert str(m["cli_accepted"]["date"]) in row
+
+    def test_models_without_facts_are_not_listed(self):
+        section = self._section()
+        reg = models.load_registry()
+        for mid, m in reg["models"].items():
+            if not m.get("facts"):
+                assert f"| `{mid}` |" not in section
