@@ -585,7 +585,7 @@ When adding an agent to `src/agents/`, use the canonical format with DOTS from t
 ---
 name: my-agent
 description: Agent description
-model: claude-sonnet-5  # ← Must match a key in config/models.yaml
+model: claude-sonnet-5.5  # ← Must match a key in config/models.yaml
 ---
 ```
 
@@ -600,7 +600,7 @@ To change a role's pinned model:
 
 ### Workflow
 
-1. **Choose model** → Pick from locked list (canonical format with DOTS)
+1. **Choose model** → Pick from the registry (`python3 scripts/models.py list-ids`; canonical format with DOTS)
    ```yaml
    model: claude-haiku-4.5  # correct
    ```
@@ -615,7 +615,7 @@ To change a role's pinned model:
    ```bash
    git add src/agents/my-agent.md
    git commit -m "feat: add my-agent"
-   # Pre-commit validates model is in locked set and format is correct
+   # Pre-commit validates the model is in the registry and the generated files are current
    ```
 
 4. **Render & test** → Ensure all harnesses render correctly
@@ -627,27 +627,25 @@ To change a role's pinned model:
 ### If Pre-Commit Rejects Your Model
 
 ```
-❌ Model not in locked set: src/agents/my-agent.md
+❌ model registry violation: Model not in the registry: src/agents/my-agent.md
    Model: claude-gpt-4
-   Locked models (approved choices):
-     - claude-haiku-4.5
-     - claude-sonnet-4.5
-     - claude-sonnet-4.6
-     - claude-opus-4.6
-     - claude-opus-4.7
-     - claude-opus-4.8
-   To request a model change, contact the Orchestrator
+   Known models: python3 scripts/models.py list-ids
+   To change a role's pin: edit config/models.yaml, then run
+   python3 scripts/models.py sync (see docs/SPEC.md, Model Pin Change)
 ```
 
+If the registry itself is inconsistent you will instead see `model registry violation:
+models.py check failed` or `generated targets are stale; run python3 scripts/models.py sync`.
+
 **Options:**
-1. Use a locked model (recommended for standard tasks)
-2. Request new model from Orchestrator (include reason and impact)
-3. Discuss with team (if locked models don't fit your use case)
+1. Use a model already in the registry (recommended for standard tasks)
+2. Request a new model or pin change from the Orchestrator (include reason and impact)
+3. Discuss with the team (if the registered models don't fit your use case)
 
 ### See Also
 
 - **Lock rationale:** `.githooks/LOCKED_MODELS_RATIONALE.md`
-- **Locked models:** `.githooks/LOCKED_MODELS.sh`
+- **Locked models shim (generated):** `.githooks/LOCKED_MODELS.sh`; source of truth `config/models.yaml`
 - **Full architecture:** `docs/SPEC.md` — "Approved Claude Models" section
 - **Tests:** `tests/test_model_naming_compliance.py` — compliance verification
 - **Agent registry:** `src/AGENTS.md` — model assignments by role

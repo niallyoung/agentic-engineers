@@ -143,7 +143,7 @@ renderer/
 │       ├── extract_body_model  # read the model named in an agent body
 │       ├── validate_frontmatter   # check required fields for entity type
 │       ├── yaml_escape_inline  # safe YAML string escaping
-│       ├── map_model           # short model name mapping (haiku/sonnet/opus)
+│       ├── map_model           # registry-pinned full model ID (alias only if AGENTIC_CLAUDE_MODEL_RENDER=alias)
 │       ├── parse_agents_md     # parse the roster table in src/AGENTS.md
 │       ├── lookup_agent_metadata  # role -> model/effort from that roster
 │       ├── is_safe_entity_name # reject unsafe skill/agent names before pruning
@@ -162,6 +162,15 @@ renderer/
 ```
 
 **All render scripts source `lib.sh` (shim), which delegates to `render-lib.sh`.**
+
+**Model IDs are registry-driven.** Every renderer takes the role's model from
+`config/models.yaml` through `scripts/models.py` (`map_model <role> <harness>`). Claude Code
+receives the registry-pinned full ID (for example the hyphenated render of the pin), never a
+floating tier alias. The short alias (`haiku`/`sonnet`/`opus`/`fable`) is rendered only when
+you set `AGENTIC_CLAUDE_MODEL_RENDER=alias` (a reversible back-out if a Claude Code build
+rejects a pinned ID). OpenCode checks the provider's model cache; if a pin is unavailable it
+walks the role's fallback chain with a stderr warning and records the walk in
+`dist/opencode/model-resolution.json`. See [MODELS.md](MODELS.md) for the current pins.
 
 ---
 

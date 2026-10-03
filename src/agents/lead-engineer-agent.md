@@ -103,7 +103,7 @@ the actual work.
 handoff_type: DELEGATE
 task_id: 2026-06-02-lead-review-auth-refresh
 agent: lead-engineer
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 effort: high
 scope: >
   Code review: OAuth2 refresh token rotation in {example-service}.

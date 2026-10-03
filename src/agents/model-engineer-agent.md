@@ -79,7 +79,7 @@ itself.
 handoff_type: DELEGATE
 task_id: 2026-05-26-model-feedback-quality-gate
 agent: model-engineer
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 effort: high
 scope: >
   Analyse token efficiency and quality metrics from the most recent commit-quality-gate
@@ -127,7 +127,7 @@ recommendation:
   task_type: "commit-quality-gate"
   recommended_models:
     orchestrator:
-      model: claude-sonnet-5
+      model: claude-sonnet-5.5
       confidence: 0.92
       reasoning: "Used 850/1000 tokens (85% efficiency), appropriate"
     engineer:
@@ -135,7 +135,7 @@ recommendation:
       confidence: 0.85
       reasoning: "Used 2845/3000 tokens (95% efficiency), appropriate"
     senior_engineer:
-      model: claude-sonnet-5
+      model: claude-sonnet-5.5
       confidence: 0.90
       reasoning: "Used 5120/6000 tokens (85% efficiency), appropriate"
     security_engineer:
@@ -143,7 +143,7 @@ recommendation:
       confidence: 0.95
       reasoning: "Used 950/1500 tokens (63% efficiency), but quality was high — keep, don't downgrade a premium-tier role on efficiency alone"
     quality_engineer:
-      model: claude-sonnet-5
+      model: claude-sonnet-5.5
       confidence: 0.88
       reasoning: "Used 3200/4000 tokens (80% efficiency), appropriate"
   total_tokens_used: 12965
@@ -153,9 +153,9 @@ confidence: 0.90
 next_suggested_models:
   orchestrator: claude-sonnet-5.5
   engineer: claude-haiku-4.5
-  senior_engineer: claude-sonnet-5
+  senior_engineer: claude-sonnet-5.5
   security_engineer: claude-fable-5
-  quality_engineer: claude-sonnet-5
+  quality_engineer: claude-sonnet-5.5
 ---
 ```
 

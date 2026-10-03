@@ -100,7 +100,7 @@ work under review, and record the determination in the HANDBACK's `validation_ch
 handoff_type: DELEGATE
 task_id: 2026-06-02-quality-validate-oauth-impl
 agent: quality-engineer
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 effort: medium
 scope: >
   Validate OAuth2 refresh token rotation implementation.

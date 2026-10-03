@@ -256,7 +256,7 @@ task_id: my-task-identifier    # kebab-case, 3-50 chars (^[a-z0-9][a-z0-9-]{1,48
 handoff_type: DELEGATE         # canonical discriminator (NOT type:)
 agent: senior-engineer         # hyphenated role name — see VALID_AGENTS below
 skill: senior-engineer         # skill name resolving to src/skills/<skill>/
-model: claude-sonnet-5         # must be explicit — no implicit defaults
+model: claude-sonnet-5.5       # must be explicit — no implicit defaults
 effort: high                   # low | medium | high
 
 scope: |
@@ -323,7 +323,7 @@ metrics:                       # ALL four sub-fields are REQUIRED
   duration_seconds: 42         # non-negative float, wall-clock execution seconds
 
 # --- Optional extension fields (forward-compatible) ---
-model_used: claude-sonnet-5
+model_used: claude-sonnet-5.5
 effort_actual: medium
 confidence: 0.9                # 0.0–1.0
 flags: []                      # advisory flags / anomalies
@@ -375,14 +375,14 @@ Every agent MUST emit an ACK as its **first output** before performing any work.
 Missing: [list of what's missing or unclear]
 Request: [what information is needed to proceed]
 
-❌ MODEL_MISMATCH — expected claude-sonnet-5, got claude-haiku-4.5   # Wrong model
+❌ MODEL_MISMATCH — expected claude-sonnet-5.5, got claude-haiku-4.5   # Wrong model
 Stopping. Orchestrator must re-delegate with the correct model.
 ```
 
 Every agent MUST include in its final output a completion footer:
 
 ```
-MODEL_USED: claude-sonnet-5   # actual model used (not the requested model)
+MODEL_USED: claude-sonnet-5.5   # actual model used (not the requested model)
 ```
 
 ---
@@ -673,7 +673,7 @@ Invocation is a single CLI call per event, e.g.:
 ```bash
 python3 scripts/audit_append.py --event delegate_issued \
   --task-id my-task --parent-task-id orchestrator-root --depth 1 \
-  --agent-role senior-engineer --agent-model claude-sonnet-5 --status success
+  --agent-role senior-engineer --agent-model claude-sonnet-5.5 --status success
 ```
 
 **Failures are warnings, never blockers.** `audit_append.py` exits 2 only for a
