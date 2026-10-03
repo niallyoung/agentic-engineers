@@ -367,6 +367,176 @@ class TestCiWorkflowPermissions:
         assert checkout["with"]["fetch-depth"] == 0
 
 
+# ── pre-push: local backstop scan of the commits being pushed ─────────────────
+
+PRE_PUSH = REPO_ROOT / ".githooks" / "pre-push"
+ZERO_SHA = "0" * 40
+
+
+class TestPrePushPinScan:
+    """pre-push runs scripts/check_pin_trailers.py over the commits being pushed (ref lines
+    on stdin, githooks(5)): the local backstop for `--no-verify` commits and rebases. Real
+    bare remote; git itself invokes the hook for the push tests."""
+
+    @staticmethod
+    def world(tmp_path):
+        remote = tmp_path / "remote.git"
+        remote.mkdir()
+        git(remote, "init", "-q", "--bare")
+        work = tmp_path / "work"
+        work.mkdir()
+        make_repo(work)
+        for rel, text in {"docs/SPEC.md": "# Spec\nversion: 1.0\n", "docs/AGENTS.md": "# Agents\n",
+                          "README.md": "# Readme\n"}.items():
+            (work / rel).parent.mkdir(exist_ok=True)
+            (work / rel).write_text(text)
+        git(work, "add", "docs", "README.md")
+        git(work, "commit", "-q", "-m", "chore: docs for the pre-push fixture")
+        git(work, "branch", "-M", "main")
+        git(work, "remote", "add", "origin", str(remote))
+        git(work, "push", "-q", "origin", "main")  # hooks are still disabled here
+        # The scanner and its registry loader, as the hook finds them next to the repo root.
+        (work / "scripts").mkdir()
+        for name in ("check_pin_trailers.py", "models.py"):
+            shutil.copy(REPO_ROOT / "scripts" / name, work / "scripts" / name)
+        hooks = tmp_path / "hooks"
+        hooks.mkdir()
+        shutil.copy(PRE_PUSH, hooks / "pre-push")
+        git(work, "config", "core.hooksPath", str(hooks))
+        git(work, "checkout", "-q", "-b", "feat")
+        return work, remote
+
+    @staticmethod
+    def pin_commit(work, message):
+        edit_registry(work, change_pin)
+        git(work, "commit", "-q", "--no-verify", "-m", message)
+
+    @staticmethod
+    def push(work, *args, **env):
+        return git(work, "push", *args, "origin", "feat", check=False, env=env)
+
+    @staticmethod
+    def remote_has(remote, branch="feat"):
+        return git(remote, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).returncode == 0
+
+    @staticmethod
+    def run_hook(work, stdin, **env):
+        return subprocess.run([str(work.parent / "hooks" / "pre-push"), "origin", "x"], cwd=work, input=stdin, capture_output=True,
+                              text=True, timeout=60, env={**os.environ, **env})
+
+    def test_unapproved_pin_commit_push_is_rejected(self, tmp_path):
+        work, remote = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT)
+        r = self.push(work)
+        assert r.returncode != 0, out(r)
+        assert "Model-Pin-Approved-By" in out(r) and ROLE in out(r)
+        assert not self.remote_has(remote), "the rejected push must not reach the remote"
+
+    def test_approved_pin_commit_push_passes(self, tmp_path):
+        work, remote = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
+        r = self.push(work)
+        assert r.returncode == 0, out(r)
+        assert self.remote_has(remote)
+
+    def test_later_unapproved_commit_on_an_existing_remote_branch_is_rejected(self, tmp_path):
+        work, remote = self.world(tmp_path)
+        (work / "x.txt").write_text("x")
+        git(work, "add", "x.txt")
+        git(work, "commit", "-q", "--no-verify", "-m", "chore: unrelated change")
+        assert self.push(work).returncode == 0
+        self.pin_commit(work, SUBJECT)
+        r = self.push(work)  # range remote_sha..local_sha
+        assert r.returncode != 0, out(r)
+
+    def test_force_push_of_a_rewritten_commit_without_the_trailer_is_rejected(self, tmp_path):
+        work, remote = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
+        assert self.push(work).returncode == 0
+        git(work, "commit", "--amend", "--no-verify", "-q", "-m", SUBJECT)  # rebase/amend dropped it
+        r = self.push(work, "--force")
+        assert r.returncode != 0, out(r)
+
+    def test_evil_merge_push_is_rejected(self, tmp_path):
+        work, remote = self.world(tmp_path)
+        git(work, "checkout", "-q", "-b", "side", "main")
+        (work / "side.txt").write_text("s")
+        git(work, "add", "side.txt")
+        git(work, "commit", "-q", "--no-verify", "-m", "chore: side change")
+        git(work, "checkout", "-q", "feat")
+        (work / "f.txt").write_text("f")
+        git(work, "add", "f.txt")
+        git(work, "commit", "-q", "--no-verify", "-m", "chore: feat change")
+        git(work, "merge", "--no-ff", "--no-commit", "side")
+        edit_registry(work, change_pin)
+        git(work, "commit", "-q", "--no-verify", "-m", "merge: side")
+        r = self.push(work)
+        assert r.returncode != 0 and ROLE in out(r), out(r)
+
+    def test_unrelated_push_passes_and_deleting_a_branch_is_not_scanned(self, tmp_path):
+        work, remote = self.world(tmp_path)
+        (work / "x.txt").write_text("x")
+        git(work, "add", "x.txt")
+        git(work, "commit", "-q", "--no-verify", "-m", "chore: unrelated change")
+        assert self.push(work).returncode == 0
+        r = git(work, "push", "origin", ":feat", check=False)
+        assert r.returncode == 0, out(r)
+        assert not self.remote_has(remote)
+
+    def test_unknown_remote_sha_falls_back_to_origin_main(self, tmp_path):
+        """A force-push over a remote tip this clone never fetched: range is origin/main..local."""
+        work, _ = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT)
+        sha = git(work, "rev-parse", "HEAD").stdout.strip()
+        r = self.run_hook(work, f"refs/heads/feat {sha} refs/heads/feat {'a' * 40}\n")
+        assert r.returncode == 1 and ROLE in out(r), out(r)
+
+    def test_new_remote_ref_scans_origin_main_to_local_sha(self, tmp_path):
+        work, _ = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT)
+        sha = git(work, "rev-parse", "HEAD").stdout.strip()
+        r = self.run_hook(work, f"refs/heads/feat {sha} refs/heads/feat {ZERO_SHA}\n")
+        assert r.returncode == 1 and "Model-Pin-Approved-By" in out(r), out(r)
+
+    def test_missing_pyyaml_fails_loudly(self, tmp_path):
+        work, _ = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
+        sha = git(work, "rev-parse", "HEAD").stdout.strip()
+        shim = tmp_path / "shim"
+        shim.mkdir()
+        (shim / "yaml.py").write_text("raise ImportError('no yaml here')\n")
+        r = self.run_hook(work, f"refs/heads/feat {sha} refs/heads/feat {ZERO_SHA}\n", PYTHONPATH=str(shim))
+        assert r.returncode == 1, out(r)
+        assert "PyYAML" in out(r)
+
+    def test_missing_scanner_script_fails_loudly(self, tmp_path):
+        work, _ = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT)
+        (work / "scripts" / "check_pin_trailers.py").unlink()
+        sha = git(work, "rev-parse", "HEAD").stdout.strip()
+        r = self.run_hook(work, f"refs/heads/feat {sha} refs/heads/feat {ZERO_SHA}\n")
+        assert r.returncode == 1 and "check_pin_trailers" in out(r), out(r)
+
+    def test_skip_hooks_bypasses_like_the_other_hooks_and_ci_still_catches_it(self, tmp_path):
+        """SKIP_HOOKS=1 / GIT_SKIP_HOOKS=1 skip pre-push entirely (documented emergency bypass);
+        the CI scan is the authoritative backstop for such a push."""
+        work, remote = self.world(tmp_path)
+        self.pin_commit(work, SUBJECT)
+        r = self.push(work, SKIP_HOOKS="1")
+        assert r.returncode == 0, out(r)
+        assert self.remote_has(remote)
+        scan = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "check_pin_trailers.py")], cwd=work,
+                              capture_output=True, text=True)
+        assert scan.returncode == 1
+        text = PRE_PUSH.read_text()
+        assert "SKIP_HOOKS=1" in text.split("set -euo pipefail")[0]
+        assert "CI" in text.split("set -euo pipefail")[0]
+
+    def test_hook_header_documents_the_pin_scan(self):
+        header = PRE_PUSH.read_text().split("set -euo pipefail")[0]
+        assert "check_pin_trailers" in header and "Model-Pin-Approved-By" in header
+
+
 # ── pre-commit: registry-driven model checks (no version allowlist) ───────────
 
 def make_full_registry_repo(tmp_path):
