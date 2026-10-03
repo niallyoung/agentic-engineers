@@ -58,8 +58,9 @@ Separate invariants (stay in the spec) from values (one registry file).
 - Claude Code fallback cannot be enforced at runtime; it is reported, not guaranteed.
 - Risk: Claude Code must accept each exact pinned ID. Verify before flipping the default;
   the rollout keeps the render mode reversible by data until verified.
-- Until the enforcement work packages land, `.githooks/LOCKED_MODELS.sh` remains the
-  enforced copy, and some tests still parse the old structure.
+- (Historical, at decision time.) Until the enforcement work packages landed,
+  `.githooks/LOCKED_MODELS.sh` remained the enforced copy and some tests parsed the old
+  structure. The enforcement has since landed; see the 2026-10-03 addendum.
 
 ## Rejected alternatives
 
@@ -94,3 +95,16 @@ registry's shape, not a reversal of any point above: the registry stays the sing
 of truth, a Model Pin Change (not a SPEC amendment) is still how a pin moves, and I1–I6
 are unchanged. As with the original ADR, principal-engineer/security-engineer co-approval
 of this user-directed change was not obtained and is recommended.
+
+## Addendum (2026-10-03, SPEC-2026-013)
+
+Enforcement has landed (`.githooks/commit-msg`, `.githooks/pre-commit`,
+`tests/test_model_pin_hooks.py`), and `.githooks/LOCKED_MODELS.sh` is a generated shim, not
+an enforced copy. An independent verification showed two tests that hard-coded the current
+pins (`test_seeded_pins_match_todays_assignments` and the agents-table parity roster test)
+and so failed after a legitimate pin bump, contradicting "no validator, spec, or test
+edits" above. The intended invariant is: no test hard-codes a role's pin, model or effort;
+tests derive expected values from `config/models.yaml` through `scripts/models.py`. The one
+deliberate exception is the family-floor directive test, which locks the SPEC-2026-012
+floors on purpose. Those two tests are being made registry-driven in a parallel fix
+package; until that lands the claim above is aspirational for them.
