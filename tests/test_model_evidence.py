@@ -199,3 +199,41 @@ class TestCliAcceptedValidation:
         mutate(root, lambda r: r["models"]["claude-fable-5"].update(
             cli_accepted={"date": TODAY, "modelusage_key": "claude-fable-5"}))
         assert errors_for(root) == []
+
+
+class TestBudgetNoteMatchesRegistry:
+    """config/orchestration.yaml carries a measured-result note; it must name the pins and
+    sourced prices the registry actually holds, so a re-pin makes it visibly stale."""
+
+    PATH = REPO_ROOT / "config" / "orchestration.yaml"
+
+    def _note(self):
+        lines, grab = [], False
+        for ln in self.PATH.read_text().splitlines():
+            if ln.startswith("# NOTE (measured"):
+                grab = True
+            elif grab and not ln.startswith("#"):
+                break
+            if grab:
+                lines.append(ln)
+        assert lines, "measured NOTE block missing"
+        return "\n".join(lines)
+
+    def test_budget_file_parses_with_numeric_ceilings(self):
+        cfg = yaml.safe_load(self.PATH.read_text())
+        b = cfg["budget"]
+        assert b["session_usd"] > 0 and b["daily_usd"] >= b["session_usd"]
+        assert 0 < b["warn_pct"] < b["critical_pct"] <= b["block_pct"]
+
+    @pytest.mark.parametrize("role", ["orchestrator", "principal-engineer"])
+    def test_note_names_the_registry_pin_and_its_sourced_prices(self, reg, role):
+        pin = reg["roles"][role]["model"]
+        price = reg["models"][pin]["facts"]["price_per_mtok"]
+        note = self._note()
+        assert pin in note, f"note does not mention {role} pin {pin}"
+        assert f"${price['input']:g} input / ${price['output']:g} output" in note.replace("($", "$").replace(")", "") \
+            or f"(${price['input']:g} / ${price['output']:g})" in note
+
+    def test_note_points_at_the_measurement_doc_which_exists(self):
+        assert "docs/model-evidence/sonnet-opus-5-5-measurement.md" in self._note()
+        assert (REPO_ROOT / "docs" / "model-evidence" / "sonnet-opus-5-5-measurement.md").is_file()
