@@ -75,74 +75,16 @@ jobs:
           echo "✅ Model registry is current and consistent"
 
       - name: Model Pin Approval Scan
-        # Backstop for the commit-msg hook (which `git commit --no-verify` or a
-        # rebase can bypass): every non-merge commit in origin/main..HEAD that
-        # changes a roles.<role>.model pin in config/models.yaml must carry a
-        # non-empty Model-Pin-Approved-By trailer (docs/SPEC.md, Model Pin Change).
-        # The commit that first introduces the registry is not a pin change.
-        # Commit messages are read by python via git, never interpolated into
-        # the workflow with ${{ }}; only short SHAs and registry IDs are printed.
-        run: |
-          python3 - <<'PY'
-          import os, re, subprocess, sys, tempfile
-
-          sys.path.insert(0, "scripts")
-          try:
-              import models
-          except SystemExit:
-              print("::error::PyYAML unavailable, cannot scan model pin changes")
-              sys.exit(1)
-
-          base = os.environ.get("MODEL_PIN_SCAN_BASE", "origin/main")
-          TRAILER = re.compile(r"^Model-Pin-Approved-By:[ \t]*\S", re.MULTILINE)
-
-
-          def git(*args):
-              return subprocess.run(["git", *args], capture_output=True, text=True)
-
-
-          def pins(rev):
-              blob = git("show", rev + ":config/models.yaml")
-              if blob.returncode != 0:
-                  return {}
-              with tempfile.TemporaryDirectory() as root:
-                  os.makedirs(os.path.join(root, "config"))
-                  with open(os.path.join(root, "config", "models.yaml"), "w") as fh:
-                      fh.write(blob.stdout)
-                  try:
-                      reg = models.load_registry(root)
-                  except models.RegistryError:
-                      return {}
-              return {r: (c or {}).get("model") for r, c in (reg.get("roles") or {}).items()}
-
-
-          if git("rev-parse", "--verify", "-q", base).returncode != 0:
-              print("::notice::%s not found; skipping model pin approval scan" % base)
-              sys.exit(0)
-
-          bad = []
-          commits = git("rev-list", "--no-merges", "--reverse", base + "..HEAD").stdout.split()
-          for sha in commits:
-              touched = git("diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha).stdout.split()
-              if "config/models.yaml" not in touched:
-                  continue
-              if git("cat-file", "-e", sha + "^:config/models.yaml").returncode != 0:
-                  continue  # the registry is introduced here: seeding it is not a pin change
-              old, new = pins(sha + "^"), pins(sha)
-              changed = [r for r in sorted(set(old) | set(new)) if old.get(r) != new.get(r)]
-              if not changed:
-                  continue
-              if TRAILER.search(git("log", "-1", "--format=%B", sha).stdout):
-                  continue
-              bad.append((sha[:12], changed))
-
-          for sha, changed in bad:
-              print("::error::commit %s changes role model pin(s) %s without a Model-Pin-Approved-By trailer"
-                    % (sha, ", ".join(changed)))
-          if bad:
-              sys.exit(1)
-          print("Model pin approval scan: %d commit(s) checked, all pin changes approved" % len(commits))
-          PY
+        # Backstop for the commit-msg and pre-push hooks (which `git commit
+        # --no-verify`, a rebase or a merge can bypass): every commit in
+        # origin/main..HEAD, merge commits included, that changes a
+        # roles.<role>.model pin in config/models.yaml must carry a non-empty
+        # Model-Pin-Approved-By trailer (docs/SPEC.md, Model Pin Change). All
+        # logic lives in scripts/check_pin_trailers.py (one scanner shared with
+        # .githooks/pre-push; tests/test_check_pin_trailers.py). Commit messages
+        # are read by python via git, never interpolated with GitHub expressions;
+        # only short SHAs and role names are printed.
+        run: python3 scripts/check_pin_trailers.py --base origin/main --head HEAD
 
       # ── Skill/render gates ───────────────────────────────────────────────
 

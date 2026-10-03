@@ -330,92 +330,22 @@ def _scan_step_run():
 
 
 class TestCiPinApprovalScan:
-    @staticmethod
-    def scan_repo(tmp_path):
-        """Scratch repo: seed commit on a fake origin/main, scripts/ alongside."""
-        repo = make_repo(tmp_path)
-        (repo / "scripts").symlink_to(REPO_ROOT / "scripts")
-        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
-        return repo
+    """The scan logic lives in scripts/check_pin_trailers.py (tests/test_check_pin_trailers.py);
+    the workflow step must only invoke it."""
 
-    @staticmethod
-    def run_scan(repo, **env):
-        return subprocess.run(["bash", "-e", "-c", _scan_step_run()], cwd=repo, capture_output=True,
-                              text=True, timeout=60, env={**os.environ, **env})
-
-    def commit(self, repo, message):
-        git(repo, "commit", "-q", "-m", message)
-
-    def test_pin_commit_without_trailer_fails_the_scan(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        edit_registry(repo, change_pin)
-        self.commit(repo, SUBJECT)
-        r = self.run_scan(repo)
-        assert r.returncode == 1, out(r)
-        assert ROLE in out(r) and "Model-Pin-Approved-By" in out(r)
-
-    def test_pin_commit_with_trailer_passes(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        edit_registry(repo, change_pin)
-        self.commit(repo, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
-        assert self.run_scan(repo).returncode == 0
-
-    def test_empty_trailer_fails_the_scan(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        edit_registry(repo, change_pin)
-        self.commit(repo, SUBJECT + "\n\nModel-Pin-Approved-By:   ")
-        assert self.run_scan(repo).returncode == 1
-
-    def test_amended_away_trailer_is_caught_even_though_the_hook_was_skipped(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        edit_registry(repo, change_pin)
-        self.commit(repo, SUBJECT + "\n\nModel-Pin-Approved-By: Jane Doe")
-        git(repo, "commit", "--amend", "-q", "-m", SUBJECT)  # hooks disabled == --no-verify
-        assert self.run_scan(repo).returncode == 1
-
-    def test_non_pin_registry_commit_and_unrelated_commit_pass(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        edit_registry(repo, change_effort_only)
-        self.commit(repo, "chore: comment-only registry edit")
-        (repo / "x.txt").write_text("x")
-        git(repo, "add", "x.txt")
-        self.commit(repo, "chore: unrelated")
-        assert self.run_scan(repo).returncode == 0
-
-    def test_introducing_the_registry_is_not_a_pin_change(self, tmp_path):
-        """Seeding config/models.yaml from nothing must not demand a trailer (a PR that
-        adds the registry would otherwise fail on its own first commit), but the NEXT
-        pin change without one must still be caught."""
-        repo = make_repo(tmp_path, commit_registry=False)
-        (repo / "README.md").write_text("x")
-        git(repo, "add", "README.md")
-        self.commit(repo, "chore: base without a registry")
-        (repo / "scripts").symlink_to(REPO_ROOT / "scripts")
-        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
-        git(repo, "add", "config/models.yaml")
-        self.commit(repo, "feat: introduce the model registry")  # no trailer, parent has no registry
-        assert self.run_scan(repo).returncode == 0
-        edit_registry(repo, change_pin)
-        self.commit(repo, SUBJECT)
-        r = self.run_scan(repo)
-        assert r.returncode == 1, out(r)
-        assert ROLE in out(r)
-
-    def test_only_commits_after_base_are_scanned(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        edit_registry(repo, change_pin)
-        self.commit(repo, SUBJECT)  # unapproved pin change ...
-        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")  # ... already on main
-        assert self.run_scan(repo).returncode == 0
-
-    def test_missing_base_ref_skips_with_notice(self, tmp_path):
-        repo = self.scan_repo(tmp_path)
-        r = self.run_scan(repo, MODEL_PIN_SCAN_BASE="origin/does-not-exist")
-        assert r.returncode == 0 and "skipping" in out(r)
+    def test_step_just_invokes_the_script(self):
+        run = _scan_step_run()
+        assert "scripts/check_pin_trailers.py" in run
+        assert "python3 -" not in run and "<<" not in run, "no inline python in the workflow step"
+        assert len([ln for ln in run.splitlines() if ln.strip()]) <= 2
 
     def test_untrusted_text_never_reaches_workflow_expressions(self):
-        run = _scan_step_run()
-        assert "${{" not in run
+        assert "${{" not in _scan_step_run()
+
+    def test_scanner_script_exists_and_is_executable_python(self):
+        script = REPO_ROOT / "scripts" / "check_pin_trailers.py"
+        assert script.is_file()
+        assert script.read_text().startswith("#!/usr/bin/env python3")
 
 
 class TestCiWorkflowPermissions:
