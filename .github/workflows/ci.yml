@@ -79,6 +79,7 @@ jobs:
         # rebase can bypass): every non-merge commit in origin/main..HEAD that
         # changes a roles.<role>.model pin in config/models.yaml must carry a
         # non-empty Model-Pin-Approved-By trailer (docs/SPEC.md, Model Pin Change).
+        # The commit that first introduces the registry is not a pin change.
         # Commit messages are read by python via git, never interpolated into
         # the workflow with ${{ }}; only short SHAs and registry IDs are printed.
         run: |
@@ -125,6 +126,8 @@ jobs:
               touched = git("diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha).stdout.split()
               if "config/models.yaml" not in touched:
                   continue
+              if git("cat-file", "-e", sha + "^:config/models.yaml").returncode != 0:
+                  continue  # the registry is introduced here: seeding it is not a pin change
               old, new = pins(sha + "^"), pins(sha)
               changed = [r for r in sorted(set(old) | set(new)) if old.get(r) != new.get(r)]
               if not changed:

@@ -382,6 +382,25 @@ class TestCiPinApprovalScan:
         self.commit(repo, "chore: unrelated")
         assert self.run_scan(repo).returncode == 0
 
+    def test_introducing_the_registry_is_not_a_pin_change(self, tmp_path):
+        """Seeding config/models.yaml from nothing must not demand a trailer (a PR that
+        adds the registry would otherwise fail on its own first commit), but the NEXT
+        pin change without one must still be caught."""
+        repo = make_repo(tmp_path, commit_registry=False)
+        (repo / "README.md").write_text("x")
+        git(repo, "add", "README.md")
+        self.commit(repo, "chore: base without a registry")
+        (repo / "scripts").symlink_to(REPO_ROOT / "scripts")
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+        git(repo, "add", "config/models.yaml")
+        self.commit(repo, "feat: introduce the model registry")  # no trailer, parent has no registry
+        assert self.run_scan(repo).returncode == 0
+        edit_registry(repo, change_pin)
+        self.commit(repo, SUBJECT)
+        r = self.run_scan(repo)
+        assert r.returncode == 1, out(r)
+        assert ROLE in out(r)
+
     def test_only_commits_after_base_are_scanned(self, tmp_path):
         repo = self.scan_repo(tmp_path)
         edit_registry(repo, change_pin)
