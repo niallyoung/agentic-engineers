@@ -167,7 +167,7 @@ install-claude: ## Install rendered agents → ~/.claude/ (marker-aware: never o
 
 fresh-install-claude: ## Wipe managed Claude files, then install clean (uninstall-claude + install-claude; foreign files kept)
 	@echo "♻️  Fresh Claude install → $(DESTDIR)/.claude/ (managed files only; your own agents, skills and settings are kept)"
-	@$(MAKE) --no-print-directory uninstall-claude
+	@AGENTIC_KEEP_MODEL=1 $(MAKE) --no-print-directory uninstall-claude
 	@$(MAKE) --no-print-directory install-claude
 
 uninstall-copilot: ## Remove from ~/.copilot/ (managed only; honors DESTDIR)

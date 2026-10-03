@@ -438,20 +438,30 @@ case "$MODE" in
 		fi
 		remove_settings_hook "$CLAUDE/settings.json" || true # rc 3: invalid JSON, left untouched (warned)
 		[ "$hook_removed" -eq 1 ] && echo "  removed DELEGATE protocol-guard hook"
-		# Remove session model — but ONLY if the value still on disk is the one
-		# we wrote (per MODEL_MARKER). A user-chosen value is never removed, for
-		# the same reason install never overwrites one.
-		uninstall_model=$(_settings_get_model "$CLAUDE/settings.json")
-		uninstall_marker=$(_model_marker_value)
-		if [ -n "$uninstall_model" ] && [ "$uninstall_model" = "$uninstall_marker" ]; then
-			if remove_settings_model "$CLAUDE/settings.json"; then
-				echo "  removed model from settings.json"
+		# AGENTIC_KEEP_MODEL=1 (set by `make fresh-install-claude`): the wipe is followed by
+		# an immediate install, so leave the session model AND its ownership marker alone.
+		# Install then applies its normal rule (value == marker -> refresh to the current
+		# pin; user-chosen value -> keep). Stripping them here would make the install read
+		# "settings.json exists, no model key" as the operator's own choice and drop a pin
+		# this framework already manages.
+		if [ "${AGENTIC_KEEP_MODEL:-}" = "1" ]; then
+			echo "  keeping session model and ownership marker for the reinstall"
+		else
+			# Remove session model — but ONLY if the value still on disk is the one
+			# we wrote (per MODEL_MARKER). A user-chosen value is never removed, for
+			# the same reason install never overwrites one.
+			uninstall_model=$(_settings_get_model "$CLAUDE/settings.json")
+			uninstall_marker=$(_model_marker_value)
+			if [ -n "$uninstall_model" ] && [ "$uninstall_model" = "$uninstall_marker" ]; then
+				if remove_settings_model "$CLAUDE/settings.json"; then
+					echo "  removed model from settings.json"
+				fi
+			elif [ -n "$uninstall_model" ]; then
+				echo "  $(_yellow "ℹ️  keeping session model ($uninstall_model) — set by you, not by the framework")"
 			fi
-		elif [ -n "$uninstall_model" ]; then
-			echo "  $(_yellow "ℹ️  keeping session model ($uninstall_model) — set by you, not by the framework")"
+			rm -f "$MODEL_MARKER"
+			remove_settings_if_empty "$CLAUDE/settings.json"
 		fi
-		rm -f "$MODEL_MARKER"
-		remove_settings_if_empty "$CLAUDE/settings.json"
 		echo "✅ Removed $count_s skill(s), $count_a agent(s), $count_d doc(s)"
 		;;
 
