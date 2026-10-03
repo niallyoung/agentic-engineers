@@ -442,8 +442,9 @@ codex --profile {ORCHESTRATOR_PROFILE} --sandbox workspace-write --ask-for-appro
 
 - Orchestrator-only: the root Codex session acts as dispatcher, not worker.
 - Structured protocol: use DELEGATE YAML for assigned work and HANDBACK YAML for results.
-- Cheap-first routing: Orchestrator and Engineer use `{CHEAP_CODEX_MODEL}`; planning,
-  review, security, quality, and model optimization use `{STRONG_CODEX_MODEL}`.
+- Family-derived model tiers: Codex models are derived from role registry families;
+  haiku family (Engineer) uses `{CHEAP_CODEX_MODEL}` (mini), sonnet family (Orchestrator, others) use
+  `{STRONG_CODEX_MODEL}` (standard), opus/fable families use `{STRONG_CODEX_MODEL}` (top).
 - Parallelize independent work, but keep git history, migrations, and same-file edits coordinated.
 - Pause for genuine product/security decisions. Do not invent work when there is nothing pending or in flight.
 {STRICT_ORCHESTRATOR_MODE}
@@ -516,13 +517,16 @@ You are operating as the agentic-engineers Orchestrator for this Codex session.
             print(f"  {_yellow('WARNING')} skipping {dst.name} - foreign at {dst}")
             return
 
+        # Derive orchestrator model from registry family
+        orch_model = self._codex_model_for_role("orchestrator")
+
         dst.write_text(
             f"""{CONFIG_SENTINEL}
 # Startup profile for agentic-engineers Orchestrator mode.
 # Select with:
 #   codex --profile {ORCHESTRATOR_PROFILE}
 
-model = "{CHEAP_CODEX_MODEL}"
+model = "{orch_model}"
 model_reasoning_effort = "low"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
@@ -550,11 +554,14 @@ job_max_runtime_seconds = 1800
             out = self.codex_home / "agentic-engineers.config.toml"
             print(f"  {_yellow('WARNING')} foreign config.toml found - managed reference written to {out.name}")
 
+        # Use strong model for default config (suitable for interactive use)
+        default_model = STRONG_CODEX_MODEL
+
         out.write_text(
             f"""{CONFIG_SENTINEL}
 # Merge these settings into config.toml if this file was written as a reference.
 
-model = "{CHEAP_CODEX_MODEL}"
+model = "{default_model}"
 model_reasoning_effort = "medium"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
