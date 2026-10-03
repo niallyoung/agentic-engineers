@@ -43,6 +43,18 @@ ORCHESTRATOR_PROFILE = "agentic-engineers-orchestrator"
 CHEAP_CODEX_MODEL = "gpt-5.4-mini"
 STRONG_CODEX_MODEL = "gpt-5.5"
 
+# Codex model tiers derived from registry families.
+# Instead of a hand-written per-role dict, derive from family -> tier rule:
+#   haiku  -> gpt-5.4-mini (mini tier)
+#   sonnet -> gpt-5.5 (standard tier)
+#   opus   -> gpt-5.5 (top tier, using standard for now)
+#   fable  -> gpt-5.5 (top tier, using standard for now)
+CODEX_MODEL_BY_FAMILY = {
+    "haiku": CHEAP_CODEX_MODEL,      # mini tier
+    "sonnet": STRONG_CODEX_MODEL,    # standard tier
+    "opus": STRONG_CODEX_MODEL,      # top tier
+    "fable": STRONG_CODEX_MODEL,     # top tier
+}
 
 ROLE_ROUTING_TABLE = """- orchestrator: intake, routing, task management, synthesis, metrics.
 - engineer: bounded implementation with a clear plan and low/medium complexity.
@@ -106,18 +118,6 @@ AGENT_NAME_TO_REGISTRY_ROLE = {
     "principal-engineer": "principal_engineer",
     "security-engineer": "security_engineer",
     "model-engineer": "model_engineer",
-}
-
-
-CODEX_MODEL_BY_ROLE = {
-    "general_orchestrator": CHEAP_CODEX_MODEL,
-    "engineer": CHEAP_CODEX_MODEL,
-    "senior_engineer": STRONG_CODEX_MODEL,
-    "lead_engineer": STRONG_CODEX_MODEL,
-    "quality_engineer": STRONG_CODEX_MODEL,
-    "principal_engineer": STRONG_CODEX_MODEL,
-    "security_engineer": STRONG_CODEX_MODEL,
-    "model_engineer": STRONG_CODEX_MODEL,
 }
 
 
@@ -304,13 +304,57 @@ class CodexRenderer:
         role = AGENT_NAME_TO_REGISTRY_ROLE.get(agent.name, agent.name.replace("-", "_"))
         effort = docs_meta.get("effort", "medium")
         description = docs_meta.get("description", "")
+
+        # Derive the Codex model tier from the role's registry family
+        codex_model = self._codex_model_for_role(role)
+
         return {
             "role": role,
             "effort": effort,
             "description": description,
-            "model": CODEX_MODEL_BY_ROLE.get(role, STRONG_CODEX_MODEL),
+            "model": codex_model,
             "reasoning": REASONING_BY_EFFORT.get(effort, "medium"),
         }
+
+    def _codex_model_for_role(self, role: str) -> str:
+        """Get the Codex model tier for a role based on its registry family.
+
+        The mapping is: family -> Codex model tier. This is defined once in
+        CODEX_MODEL_BY_FAMILY, so changes to role families automatically propagate
+        to Codex without editing this code.
+        """
+        # Load the registry to get role -> model and model -> family mappings
+        try:
+            reg_path = self.repo_root / "config" / "models.yaml"
+            registry = yaml.safe_load(reg_path.read_text(encoding="utf-8"))
+        except Exception:
+            # Fallback to the default strong model if registry load fails
+            return STRONG_CODEX_MODEL
+
+        roles = registry.get("roles", {})
+        models = registry.get("models", {})
+
+        # Get the role's pinned model from the registry
+        role_cfg = roles.get(role)
+        if not role_cfg:
+            # Unknown role, use strong model as default
+            return STRONG_CODEX_MODEL
+
+        model_id = role_cfg.get("model")
+        if not model_id:
+            return STRONG_CODEX_MODEL
+
+        # Get the model's family
+        model_info = models.get(model_id)
+        if not model_info:
+            return STRONG_CODEX_MODEL
+
+        family = model_info.get("family")
+        if not family:
+            return STRONG_CODEX_MODEL
+
+        # Map family -> Codex tier
+        return CODEX_MODEL_BY_FAMILY.get(family, STRONG_CODEX_MODEL)
 
     def agent_instructions(self, agent: AgentSource, meta: dict[str, str]) -> str:
         accepts = agent.frontmatter.get("accepts") or []
