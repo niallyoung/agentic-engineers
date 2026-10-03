@@ -518,6 +518,35 @@ PRE_PUSH = REPO_ROOT / ".githooks" / "pre-push"
 ZERO_SHA = "0" * 40
 
 
+class TestPrePushPrintfNotEcho:
+    """pre-push printed user-influenced text (file names, scanner output) through `echo -e`,
+    which expands backslash escapes; colour codes now go through printf %b only."""
+
+    def test_backslash_sequences_in_a_file_name_are_printed_literally(self, tmp_path):
+        make_repo(tmp_path)
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "SPEC.md").write_text("# Spec\nversion: 1.0\n")
+        (tmp_path / "docs" / "AGENTS.md").write_text("# Agents\n")
+        (tmp_path / "README.md").write_text("# Readme\n")
+        agents = tmp_path / "src" / "agents"
+        agents.mkdir(parents=True)
+        (agents / "x\\ty\\nz.md").write_text("---\nname: [unclosed\nmodel: m\n---\nbody\n")
+        r = subprocess.run([str(PRE_PUSH), "origin", "x"], cwd=tmp_path, input="", capture_output=True,
+                           text=True, timeout=30)
+        assert r.returncode == 1, out(r)
+        assert "x\\ty\\nz.md" in out(r)
+        assert "\t" not in out(r).split("Invalid YAML frontmatter in agent:")[1].split("\n")[0]
+
+    def test_no_echo_dash_e_left_in_any_githooks_file(self):
+        offenders = []
+        for path in sorted((REPO_ROOT / ".githooks").iterdir()):
+            if path.is_file() and path.suffix != ".md":
+                for n, line in enumerate(path.read_text().splitlines(), 1):
+                    if re.search(r"\becho\s+-[A-Za-z]*e", line) and not line.lstrip().startswith("#"):
+                        offenders.append(f"{path.name}:{n}: {line.strip()}")
+        assert not offenders, offenders
+
+
 class TestPrePushPinScan:
     """pre-push runs scripts/check_pin_trailers.py over the commits being pushed (ref lines
     on stdin, githooks(5)): the local backstop for `--no-verify` commits and rebases. Real
