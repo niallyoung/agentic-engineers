@@ -492,6 +492,32 @@ prune_orphaned_agents() {
 	fi
 }
 
+# Alias-override banner. SPEC I3 forbids floating aliases for assigned roles, so
+# AGENTIC_CLAUDE_MODEL_RENDER=alias is NOT a supported configuration: it is an
+# operator-environment emergency back-out only (a Claude Code build rejected a
+# pinned ID). It is read ONLY from the process environment (never from a
+# committed file) and is LOUD: every Claude renderer run, including --status and
+# --uninstall, prints this block on stderr for as long as the variable is set.
+# Printed once, when render-claude.sh sources this lib; other harnesses ignore
+# the variable and are not warned.
+_alias_override_banner() {
+	[ "${AGENTIC_CLAUDE_MODEL_RENDER:-}" = "alias" ] || return 0
+	{
+		echo "================================================================================"
+		echo "WARNING: ALIAS OVERRIDE ACTIVE (AGENTIC_CLAUDE_MODEL_RENDER=alias)"
+		echo "  Claude roles are rendered as floating aliases (haiku|sonnet|opus|fable)."
+		echo "  Roles are NOT pinned to the registry's exact model IDs (SPEC I3), so the"
+		echo "  model behind each role can change silently under you."
+		echo "  This is an emergency back-out only. Fix the cause and unset it:"
+		echo "      unset AGENTIC_CLAUDE_MODEL_RENDER"
+		echo "  then re-run the install to restore the pins."
+		echo "================================================================================"
+	} >&2
+}
+case "$(basename "${BASH_SOURCE[1]:-}")" in
+	render-claude.sh) _alias_override_banner ;;
+esac
+
 # ============================================================================
 # END render-lib.sh
 # ============================================================================

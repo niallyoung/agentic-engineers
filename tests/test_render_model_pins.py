@@ -83,6 +83,67 @@ def settings_model(claude: Path):
 # Claude Code
 # --------------------------------------------------------------------------- #
 
+class TestAliasOverrideIsLoud:
+    """SPEC I3 forbids floating aliases for assigned roles. AGENTIC_CLAUDE_MODEL_RENDER=alias
+    survives ONLY as an operator-environment emergency back-out: never committed, and LOUD
+    on every Claude render/install/status/uninstall so it cannot linger unnoticed."""
+
+    ENV = {"AGENTIC_CLAUDE_MODEL_RENDER": "alias"}
+
+    @pytest.mark.parametrize("extra", [(), ("--status",), ("--uninstall",)], ids=["install", "status", "uninstall"])
+    def test_active_override_prints_prominent_warning_on_stderr(self, repo, tmp_path, extra):
+        r = run("render-claude.sh", repo, tmp_path / "c", *extra, env=self.ENV)
+        assert r.returncode == 0, r.stderr
+        assert "ALIAS OVERRIDE ACTIVE" in r.stderr
+        assert "AGENTIC_CLAUDE_MODEL_RENDER=alias" in r.stderr
+        assert "NOT pinned" in r.stderr
+        assert "unset" in r.stderr.lower()
+        assert "WARNING" in r.stderr
+        assert len([ln for ln in r.stderr.splitlines() if ln.strip()]) >= 4  # multi-line, not a one-liner
+
+    def test_status_reports_override_active(self, repo, tmp_path):
+        r = run("render-claude.sh", repo, tmp_path / "c", "--status", env=self.ENV)
+        assert "ALIAS OVERRIDE ACTIVE" in r.stdout + r.stderr
+
+    @pytest.mark.parametrize("env", [None, {"AGENTIC_CLAUDE_MODEL_RENDER": "pinned-id"}], ids=["unset", "pinned-id"])
+    @pytest.mark.parametrize("extra", [(), ("--status",)], ids=["install", "status"])
+    def test_silent_when_not_active(self, repo, tmp_path, extra, env):
+        r = run("render-claude.sh", repo, tmp_path / "c", *extra, env=env)
+        assert "ALIAS OVERRIDE" not in r.stdout + r.stderr
+        assert "AGENTIC_CLAUDE_MODEL_RENDER" not in r.stdout + r.stderr
+
+    def test_other_harnesses_are_not_warned(self, repo, tmp_path):
+        r = run("render-copilot.sh", repo, tmp_path / "p", env=self.ENV)
+        assert "ALIAS OVERRIDE" not in r.stdout + r.stderr
+
+    def test_override_is_read_only_from_the_process_environment(self):
+        """No committed config path may enable it: outside the lib/renderer/docs/tests
+        nothing in the repo's executable or config surface mentions the variable."""
+        allowed = {
+            "renderer/lib/render-lib.sh", "renderer/scripts/render-claude.sh",
+            "tests/test_render_model_pins.py",
+        }
+        offenders = []
+        for sub in ("renderer", "scripts", "config", ".githooks", ".github", "Makefile", "setup.py"):
+            base = REPO_ROOT / sub
+            files = [base] if base.is_file() else (base.rglob("*") if base.is_dir() else [])
+            for f in files:
+                if not f.is_file() or "__pycache__" in f.parts or f.suffix == ".pyc":
+                    continue
+                rel = f.relative_to(REPO_ROOT).as_posix()
+                if rel in allowed:
+                    continue
+                if "AGENTIC_CLAUDE_MODEL_RENDER" in f.read_text(errors="ignore"):
+                    offenders.append(rel)
+        assert offenders == [], f"alias override referenced from committed config: {offenders}"
+
+    def test_lib_reads_it_only_via_environment(self):
+        text = (REPO_ROOT / "renderer" / "lib" / "render-lib.sh").read_text()
+        for line in text.splitlines():
+            if "AGENTIC_CLAUDE_MODEL_RENDER" in line and not line.lstrip().startswith(("#", "echo")):
+                assert "${AGENTIC_CLAUDE_MODEL_RENDER" in line, line
+
+
 class TestClaudePinnedIds:
     def test_every_role_is_the_exact_registry_pin(self, repo, tmp_path):
         r = run("render-claude.sh", repo, tmp_path / "c")
