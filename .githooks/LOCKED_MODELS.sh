@@ -1,18 +1,14 @@
 #!/usr/bin/env bash
 # .githooks/LOCKED_MODELS.sh
 #
-# GENERATED from config/models.yaml by scripts/models.py sync - do not edit
-# To change model pins, edit config/models.yaml and run: python3 scripts/models.py sync
+# GENERATED from config/models.yaml by scripts/models.py sync - do not edit by hand.
+# config/models.yaml is the source of truth; regenerate with: make models-sync.
+# To change pins, follow the Model Pin Change process in docs/SPEC.md.
 #
-# Single source of truth for model locks (approved model choices).
-# These models are LOCKED by choice and cannot be changed without explicit Orchestrator approval.
+# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,
+# get_agent_locked_model, show_locked_models, show_agent_assignments.
 #
-# Philosophy: POSITIVE ENFORCEMENT
-# - "We chose these Claude models" (not "GPT is forbidden")
-# - Users CAN request model changes by contacting Orchestrator
-# - Changes are auditable and explicit
-#
-# Bypass: SKIP_HOOKS=1 (for emergency situations only; document reason in commit msg)
+# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)
 
 LOCKED_MODELS=(
     "claude-haiku-4.5"
@@ -28,19 +24,11 @@ LOCKED_MODELS=(
     "claude-fable-5"
 )
 
-# Note: If a locked model becomes unavailable, the harness will auto-select:
-# 1. Exact version (preferred)
-# 2. Adjacent version in same family (fallback)
-# 3. Any version in same family (fallback)
-# 4. Any Claude model (fallback)
-#
-# Examples:
-# - prefer claude-sonnet-4.6 → fallback to claude-sonnet-4.5 or claude-sonnet-5.0
-# - prefer claude-opus-4.6 → fallback to claude-opus-4.7
-# - prefer claude-haiku-4.5 → fallback to any other haiku release, then sonnet
+# Fallback behaviour when a pinned model is unavailable is defined per role in
+# config/models.yaml (see docs/MODELS.md); it is not decided in this file.
 
 # ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────
-# This is the canonical assignment. Agents MUST use a model from this mapping.
+# Generated from the roles section of config/models.yaml (role pins).
 # Format: agent-name:model-choice (space-separated for portability)
 AGENT_MODEL_ASSIGNMENTS=(
     "engineer-agent:claude-haiku-4.5"

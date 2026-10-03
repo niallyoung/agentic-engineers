@@ -151,23 +151,18 @@ def render_locked_models(text: str, reg: dict) -> str:
     assigns = [f'    "{r}-agent:{c["model"]}"' for r, c in (reg.get("roles") or {}).items()]
     locked_body = "\n".join(f'    "{m}"' for m in models)
 
-    # Replace the header comment block with GENERATED banner
-    # This replaces the old "Single source of truth" / "Update this only when Orchestrator approves" text
+    # Replace the header comment block with the GENERATED banner.
     header = """#!/usr/bin/env bash
 # .githooks/LOCKED_MODELS.sh
 #
-# GENERATED from config/models.yaml by scripts/models.py sync - do not edit
-# To change model pins, edit config/models.yaml and run: python3 scripts/models.py sync
+# GENERATED from config/models.yaml by scripts/models.py sync - do not edit by hand.
+# config/models.yaml is the source of truth; regenerate with: make models-sync.
+# To change pins, follow the Model Pin Change process in docs/SPEC.md.
 #
-# Single source of truth for model locks (approved model choices).
-# These models are LOCKED by choice and cannot be changed without explicit Orchestrator approval.
+# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,
+# get_agent_locked_model, show_locked_models, show_agent_assignments.
 #
-# Philosophy: POSITIVE ENFORCEMENT
-# - "We chose these Claude models" (not "GPT is forbidden")
-# - Users CAN request model changes by contacting Orchestrator
-# - Changes are auditable and explicit
-#
-# Bypass: SKIP_HOOKS=1 (for emergency situations only; document reason in commit msg)"""
+# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)"""
 
     # Find the end of the initial header (ends at the first code line or LOCKED_MODELS definition)
     header_end = text.find("LOCKED_MODELS=(")
