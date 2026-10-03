@@ -103,8 +103,8 @@ Enforcement has landed (`.githooks/commit-msg`, `.githooks/pre-commit`,
 an enforced copy. An independent verification showed two tests that hard-coded the current
 pins (`test_seeded_pins_match_todays_assignments` and the agents-table parity roster test)
 and so failed after a legitimate pin bump, contradicting "no validator, spec, or test
-edits" above. The intended invariant is: no test hard-codes a role's pin, model or effort;
-tests derive expected values from `config/models.yaml` through `scripts/models.py`. The one
-deliberate exception is the family-floor directive test, which locks the SPEC-2026-012
-floors on purpose. Those two tests are being made registry-driven in a parallel fix
-package; until that lands the claim above is aspirational for them.
+edits" above. Both are now registry-driven (`test_every_role_has_a_registered_pin_and_valid_effort`,
+`test_role_pins_agree_with_agent_frontmatter` and the parity roster test), so the claim holds.
+The invariant is: no test hard-codes a role's pin, model or effort; tests derive expected
+values from `config/models.yaml` through `scripts/models.py`. The one deliberate exception is
+the family-floor directive test, which locks the SPEC-2026-012 floors on purpose.
