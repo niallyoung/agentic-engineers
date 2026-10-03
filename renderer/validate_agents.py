@@ -49,7 +49,7 @@ except ImportError:
 # SPEC invariant I3 forbids floating aliases for assigned roles in source. They live in
 # RENDERED_ALIASES and are accepted only when validating rendered output
 # (validate_agent_file(..., rendered=True) / the --rendered CLI flag), which is where the
-# AGENTIC_CLAUDE_MODEL_RENDER=alias override legitimately produces them.
+# Claude renderer alias override (see renderer/lib/render-lib.sh) legitimately produces them.
 #
 # REJECTED (reported as a WARNING, or an ERROR under --strict):
 #   - Non-Claude models, retired or unregistered ids
@@ -166,7 +166,7 @@ def validate_agent_file(
 
     rendered=False (default) validates SOURCE: only canonical registry ids are allowed
     and a bare floating alias is an ERROR (SPEC I3). rendered=True validates rendered
-    output, where the family aliases may legitimately appear (AGENTIC_CLAUDE_MODEL_RENDER=alias).
+    output, where the family aliases may legitimately appear (the Claude renderer's explicit alias override).
     """
     errors: list[ValidationError] = []
 
@@ -352,7 +352,7 @@ def main() -> int:
         "--rendered",
         action="store_true",
         help="Validate RENDERED output: also accept the floating family aliases "
-             "(AGENTIC_CLAUDE_MODEL_RENDER=alias). Never use for src/.",
+             "(the Claude renderer's explicit alias override). Never use for src/.",
     )
     args = parser.parse_args()
 
