@@ -23,6 +23,8 @@ Official sources:
 import os
 import pytest
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Set
@@ -231,25 +233,38 @@ class TestModelNamingCompliance:
                     f"or short form (opus)"
                 )
 
-    def test_rendered_opencode_uses_hyphen_format(self):
+    @pytest.mark.parametrize("provider", ["anthropic", "github-copilot"])
+    def test_rendered_opencode_uses_hyphen_format(self, provider, tmp_path):
         """Rendered OpenCode frontmatter model is provider/<id>, with the id spelled the
         way that provider needs it, derived from the registry (not a fixed hyphen rule).
 
         github-copilot/ takes the dotted canonical id (SPEC-2026-010); anthropic and most
-        other providers take the registry's hyphenated ids.opencode. When a provider model
-        cache is present the renderer takes the cache's exact spelling, so only the pin's
-        identity is asserted then; with no cache the exact spelling is asserted.
-        """
-        opencode_dir = self.REPO_ROOT / "dist" / "opencode" / "agents"
-        assert opencode_dir.is_dir(), "dist/opencode/agents/ not present — run 'make render-all'"
+        other providers take the registry's hyphenated ids.opencode.
 
-        opencode_agents = list(opencode_dir.glob("*.md"))
-        assert opencode_agents, (
-            "No rendered OpenCode agents found in "
-            "dist/opencode/agents/ — run 'make render-all'"
+        The exact spelling is ALWAYS asserted: this test renders afresh into a temp dir with
+        HOME / XDG cache pointed at an empty temp dir and no models cache, so a developer's
+        ~/.cache/opencode/models.json (whose exact spelling the renderer would otherwise
+        copy) can never turn the assertion into a no-op.
+        """
+        home = tmp_path / "home"
+        home.mkdir()
+        cache = tmp_path / "xdg-cache" / "opencode" / "models.json"  # deliberately absent
+        assert not cache.exists()
+        repo = tmp_path / "repo"
+        shutil.copytree(
+            self.REPO_ROOT, repo,
+            ignore=shutil.ignore_patterns(".git", "dist", "__pycache__", ".pytest_cache", "*.pyc", "node_modules"),
         )
-        cache = Path(os.environ.get("OPENCODE_MODELS_CACHE")
-                     or Path.home() / ".cache" / "opencode" / "models.json")
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        target = tmp_path / "o"
+        env = {**os.environ, "NO_COLOR": "1", "HOME": str(home), "XDG_CACHE_HOME": str(tmp_path / "xdg-cache"),
+               "OPENCODE_MODELS_CACHE": str(cache), "OPENCODE_PROVIDER": provider}
+        r = subprocess.run(["bash", str(repo / "renderer" / "scripts" / "render-opencode.sh"), str(repo), str(target)],
+                           capture_output=True, text=True, env=env, timeout=300)
+        assert r.returncode == 0, r.stderr
+
+        opencode_agents = list((target / "agents").glob("*.md"))
+        assert opencode_agents, f"No rendered OpenCode agents found in {target / 'agents'}"
 
         checked = 0
         for agent_file in opencode_agents:
@@ -260,25 +275,16 @@ class TestModelNamingCompliance:
             role = re.search(r"^\s+role:\s*(\S+)", fm, re.MULTILINE)
             if not (m and role and role.group(1) in REGISTRY["roles"]):
                 continue
-            provider, _, model_id = m.group(1).partition("/")
-            assert model_id, f"dist/opencode/{agent_file.name}: '{m.group(1)}' is not provider/model"
-            cfg = REGISTRY["roles"][role.group(1)]
-            # Pin, or a registered fallback when the provider lacks the pin (never silent:
-            # the renderer records that in model-resolution.json).
-            allowed = [cfg["model"], *cfg["fallback"]]
-            assert any(
-                model_registry.normalize_id(model_id) == model_registry.normalize_id(
-                    REGISTRY["models"][a]["ids"]["opencode"]) for a in allowed
-            ), f"dist/opencode/{agent_file.name}: '{model_id}' is not the pin or a fallback of {role.group(1)}"
-            pin_form = REGISTRY["models"][cfg["model"]]["ids"]["opencode"]
-            if not cache.exists() and model_registry.normalize_id(model_id) == model_registry.normalize_id(pin_form):
-                expected = _opencode_expected(role.group(1), provider)
-                assert model_id == expected, (
-                    f"dist/opencode/{agent_file.name}: '{model_id}' != registry form "
-                    f"'{expected}' for provider '{provider}'"
-                )
+            prov, _, model_id = m.group(1).partition("/")
+            assert model_id, f"{agent_file.name}: '{m.group(1)}' is not provider/model"
+            expected = _opencode_expected(role.group(1), provider)
+            assert model_id == expected, (
+                f"{agent_file.name}: '{model_id}' != registry form '{expected}' for provider '{provider}'"
+            )
             checked += 1
-        assert checked, "no OpenCode agent frontmatter with a registry role was checked"
+        assert checked == len(REGISTRY["roles"]), (
+            f"expected every registry role rendered, checked {checked}/{len(REGISTRY['roles'])}"
+        )
 
 
 class TestModelNamingConsistency:
