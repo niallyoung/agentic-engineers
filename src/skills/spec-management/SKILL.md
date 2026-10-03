@@ -115,7 +115,7 @@ The changelog entry (step 4) is written exactly as in the peer-approval path, e.
 `approved by <role>` clause because none applies; the bracket names only the proposer.
 
 **When it does NOT apply:** any change to a LOCKED invariant's *meaning* — the model
-naming/pinning invariants (I1–I6), adding a model family, recursion/depth limits, the
+naming/pinning invariants (I1–I7), adding a model family, recursion/depth limits, the
 `config/models.yaml` single-source-of-truth clause, or anything that changes what a reader
 or validator must do differently. Those still require the full peer
 `approval_chain` from step 3, regardless of how narrow the diff looks — narrowness of the
@@ -151,9 +151,10 @@ the "Model Pin Change" process in the LOCKED "Model Naming & Harness Compatibili
 of `docs/SPEC.md`, and is OUTSIDE this protocol: no `SPEC-YYYY-NNN` proposal, no peer
 approval chain, no SPEC.md changelog entry. Its audit trail is the registry's `pin_history`
 plus a `Model-Pin-Approved-By:` commit trailer. The carve-out holds only while the change
-satisfies the LOCKED invariants (I1–I6). Anything that alters an invariant (ID format, the
+satisfies the LOCKED invariants (I1–I7). Anything that alters an invariant (ID format, the
 single-source rule, exact-pin/no-floating-alias, installer ownership of user-chosen models,
-fallback surfacing, validator scope) or adds a model *family* is still a SPEC amendment and
+fallback surfacing, validator scope, the Security Engineer's defensive-only scope and fallback
+policy) or adds a model *family* is still a SPEC amendment and
 follows steps 1–4 above in full.
 
 ## Why This Stays Prose
