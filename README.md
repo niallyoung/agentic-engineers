@@ -45,12 +45,13 @@ Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy 
 
 ## The Roster
 
-Eight roles: **Orchestrator** (routing, `claude-sonnet-5`), **Engineer** (well-scoped
-implementation, `claude-haiku-4.5`), **Senior Engineer**, **Lead Engineer**,
-**Quality Engineer**, **Model Engineer** (all `claude-sonnet-5`), **Principal
-Engineer** (`claude-opus-5`), and **Security Engineer** (`claude-fable-5`). Full
-definitions, routing rules, and escalation paths live in
-[src/AGENTS.md](src/AGENTS.md). Skills are cataloged in
+Eight roles, each pinned to a specific model: **Orchestrator** (routing, low effort),
+**Engineer** (well-scoped implementation, high effort), **Senior Engineer**,
+**Lead Engineer**, **Quality Engineer**, **Model Engineer** (all high complexity),
+**Principal Engineer** (cross-service architecture), and **Security Engineer**
+(defensive security analysis). Model assignments and effort levels are defined in
+[docs/MODELS.md](docs/MODELS.md); full role definitions, routing rules, and escalation
+paths live in [src/AGENTS.md](src/AGENTS.md). Skills are cataloged in
 [src/SKILLS.md](src/SKILLS.md).
 
 ## Quick Start
@@ -61,6 +62,7 @@ make install
 
 # Or a single harness:
 make install-claude
+make fresh-install-claude   # wipe managed Claude files, then install clean (your own agents, skills, settings keys and a user-chosen model are kept)
 make install-opencode
 make install-codex
 

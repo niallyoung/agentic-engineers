@@ -67,7 +67,7 @@ happens to it once written:
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
 agent: engineer | senior-engineer | lead-engineer | principal-engineer | security-engineer | quality-engineer | model-engineer | orchestrator
-model: claude-haiku-4.5 | claude-sonnet-5 | claude-opus-5 | claude-fable-5
+model: <the role's registry pin from config/models.yaml; see docs/MODELS.md>
 effort: low | medium | high | max
 scope: |
   Clear, one-sentence description of what the task is.

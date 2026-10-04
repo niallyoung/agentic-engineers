@@ -1,0 +1,264 @@
+---
+# config/models.yaml
+#
+# Single source of truth for model selection: which models exist, which model
+# each role is pinned to, per-harness render IDs, fallback chains, and an
+# append-only pin history. Read ONLY through scripts/models.py (never regex it).
+#
+# Seeded from the tree at commit 5a9d247 (Orchestrator on claude-sonnet-5.5) so
+# that `python3 scripts/models.py sync` produces zero diff against that tree.
+#
+# Workflow to re-pin a role:
+#   1. edit roles.<role>.model here (add the models.<id> block first if new)
+#   2. append one pin_history entry for the role (required by `check`)
+#   3. python3 scripts/models.py sync
+#   4. python3 scripts/models.py check
+#
+# `verified: null` means "the ID form has not been confirmed against an official
+# source for that harness"; it is never guessed. `source: null` likewise.
+#
+# Evidence (validated by `scripts/models.py check`):
+#   facts:        sourced price (USD per MTok), context_tokens, max_output_tokens and
+#                 knowledge_cutoff (YYYY-MM, "reliable knowledge cutoff"). Legal ONLY beside
+#                 a complete `verified` date + https `source` (the page the figures were read
+#                 from). Omit a fact the official page does not state; never infer it.
+#   cli_accepted: a real `claude -p ok --model <id> --max-turns 1 --output-format json` run:
+#                 {date, modelusage_key}; modelusage_key must equal ids.claude (the key the
+#                 CLI printed in modelUsage). Absent = not tested.
+#   See docs/model-evidence/sourced-facts.md and sonnet-opus-5-5-measurement.md.
+schema_version: 1
+
+# Families: shape rules. Adding a NEW family is the only change that needs a
+# schema/validator edit. claude_alias is the floating tier alias Claude Code
+# understands; it is accepted in rendered output only and never pinned.
+# min_pin (optional): the floor for roles.<role>.model in this family, compared
+# numerically on major.minor (never lexically — 5.10 > 5.5). `check` fails any
+# role PIN below its family's min_pin. A FALLBACK entry is explicitly exempt:
+# fallbacks may sit below the floor (that is the point of a fallback). A family
+# with no min_pin (haiku, fable) has no floor.
+families:
+  haiku:
+    claude_alias: haiku
+  sonnet:
+    claude_alias: sonnet
+    min_pin: claude-sonnet-5.5
+  opus:
+    claude_alias: opus
+    min_pin: claude-opus-5.5
+  fable:
+    claude_alias: fable
+
+# Fallback policy: a fallback must be in the pinned model's own family, or in a
+# family listed here as adjacent. Prevents e.g. fable silently falling to haiku.
+fallback_policy:
+  adjacent_families:
+    haiku: [sonnet]
+    fable: [opus]
+
+# Every model the framework knows. Canonical ID: claude-<family>-<major>[.<minor>]
+# (dot in source, never a hyphen separator). status: current | supported |
+# deprecated | fallback | retired. `fallback` marks a model kept only as a
+# documented fallback target (never a role's pin) while remaining a valid known
+# ID elsewhere in the registry (fallback chains, is-known, etc). ids.<harness>
+# are explicit render IDs.
+#   claude:   full pinned Claude Code ID (hyphenated)
+#   copilot:  GitHub Copilot CLI ID (pass-through of the canonical dotted form)
+#   opencode: OpenCode family token; the renderer adds the provider prefix
+# Codex maps roles to gpt-* tiers inside render-codex.py and is not model-keyed.
+models:
+  claude-haiku-4.5:
+    family: haiku
+    status: current
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/about-claude/models/overview
+    facts:
+      price_per_mtok: {input: 1, output: 5, cache_read: 0.1, cache_write_5m: 1.25, cache_write_1h: 2}
+      context_tokens: 200000
+      max_output_tokens: 64000
+      knowledge_cutoff: "2025-02"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-haiku-4-5}
+    ids: {claude: claude-haiku-4-5, copilot: claude-haiku-4.5, opencode: claude-haiku-4-5}
+  claude-sonnet-4.5:
+    family: sonnet
+    # Official page says Deprecated, retiring 2026-11-30 (docs/model-evidence/sourced-facts.md).
+    status: deprecated
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/sonnet-4-5/overview
+    facts:
+      price_per_mtok: {input: 3, output: 15, cache_read: 0.3, cache_write_5m: 3.75, cache_write_1h: 6}
+      context_tokens: 200000
+      max_output_tokens: 64000
+      knowledge_cutoff: "2025-01"
+    ids: {claude: claude-sonnet-4-5, copilot: claude-sonnet-4.5, opencode: claude-sonnet-4-5}
+  claude-sonnet-4.6:
+    family: sonnet
+    status: supported
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/sonnet-4-6/overview
+    facts:
+      price_per_mtok: {input: 3, output: 15, cache_read: 0.3, cache_write_5m: 3.75, cache_write_1h: 6}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2025-08"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-sonnet-4-6}
+    ids: {claude: claude-sonnet-4-6, copilot: claude-sonnet-4.6, opencode: claude-sonnet-4-6}
+  claude-sonnet-5:
+    family: sonnet
+    status: fallback
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/sonnet-5/overview
+    facts:
+      price_per_mtok: {input: 2, output: 10, cache_read: 0.2, cache_write_5m: 2.5, cache_write_1h: 4}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-01"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-sonnet-5}
+    ids: {claude: claude-sonnet-5, copilot: claude-sonnet-5, opencode: claude-sonnet-5}
+  claude-sonnet-5.5:
+    family: sonnet
+    status: current
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+    facts:
+      price_per_mtok: {input: 2, output: 10, cache_read: 0.2, cache_write_5m: 2.5, cache_write_1h: 4}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-06"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-sonnet-5-5}
+    ids: {claude: claude-sonnet-5-5, copilot: claude-sonnet-5.5, opencode: claude-sonnet-5-5}
+  claude-opus-4.6:
+    family: opus
+    status: supported
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/opus-4-6/overview
+    facts:
+      price_per_mtok: {input: 5, output: 25, cache_read: 0.5, cache_write_5m: 6.25, cache_write_1h: 10}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2025-05"
+    ids: {claude: claude-opus-4-6, copilot: claude-opus-4.6, opencode: claude-opus-4-6}
+  claude-opus-4.7:
+    family: opus
+    status: supported
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/opus-4-7/overview
+    facts:
+      price_per_mtok: {input: 5, output: 25, cache_read: 0.5, cache_write_5m: 6.25, cache_write_1h: 10}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-01"
+    ids: {claude: claude-opus-4-7, copilot: claude-opus-4.7, opencode: claude-opus-4-7}
+  claude-opus-4.8:
+    family: opus
+    status: supported
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/opus-4-8/overview
+    facts:
+      price_per_mtok: {input: 5, output: 25, cache_read: 0.5, cache_write_5m: 6.25, cache_write_1h: 10}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-01"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-opus-4-8}
+    ids: {claude: claude-opus-4-8, copilot: claude-opus-4.8, opencode: claude-opus-4-8}
+  claude-opus-5:
+    family: opus
+    status: fallback
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/opus-5/overview
+    facts:
+      price_per_mtok: {input: 5, output: 25, cache_read: 0.5, cache_write_5m: 6.25, cache_write_1h: 10}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-05"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-opus-5}
+    ids: {claude: claude-opus-5, copilot: claude-opus-5, opencode: claude-opus-5}
+  claude-opus-5.5:
+    family: opus
+    status: current
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/opus-5-5/overview
+    facts:
+      price_per_mtok: {input: 4, output: 20, cache_read: 0.2, cache_write_5m: 5, cache_write_1h: 8}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-06"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-opus-5-5}
+    ids: {claude: claude-opus-5-5, copilot: claude-opus-5.5, opencode: claude-opus-5-5}
+  claude-fable-5:
+    family: fable
+    status: current
+    verified: 2026-10-03
+    source: https://platform.claude.com/docs/en/models/fable-5/overview
+    facts:
+      price_per_mtok: {input: 10, output: 50, cache_read: 1, cache_write_5m: 12.5, cache_write_1h: 20}
+      context_tokens: 1000000
+      max_output_tokens: 128000
+      knowledge_cutoff: "2026-01"
+    cli_accepted: {date: 2026-10-03, modelusage_key: claude-fable-5}
+    ids: {claude: claude-fable-5, copilot: claude-fable-5, opencode: claude-fable-5}
+
+# Role -> pinned model + effort + explicit fallback chain.
+# Order is meaningful: it is the order of AGENT_MODEL_ASSIGNMENTS in the generated
+# .githooks/LOCKED_MODELS.sh shim.
+roles:
+  engineer:
+    model: claude-haiku-4.5
+    effort: high
+    fallback: [claude-sonnet-5]
+  orchestrator:
+    model: claude-sonnet-5.5
+    effort: low
+    fallback: [claude-sonnet-5]
+  lead-engineer:
+    model: claude-sonnet-5.5
+    effort: high
+    fallback: [claude-sonnet-5]
+  quality-engineer:
+    model: claude-sonnet-5.5
+    effort: medium
+    fallback: [claude-sonnet-5]
+  senior-engineer:
+    model: claude-sonnet-5.5
+    effort: high
+    fallback: [claude-sonnet-5]
+  model-engineer:
+    model: claude-sonnet-5.5
+    effort: high
+    fallback: [claude-sonnet-5]
+  security-engineer:
+    model: claude-fable-5
+    effort: max
+    fallback: [claude-opus-5, claude-opus-4.8]
+  principal-engineer:
+    model: claude-opus-5.5
+    effort: high
+    fallback: [claude-opus-5, claude-opus-4.8]
+
+# Per-harness render rules: HOW to render, never WHICH version.
+harnesses:
+  claude:
+    render: pinned-id          # every role gets models[<m>].ids.claude, never a floating alias
+  copilot:
+    render: pass-through       # models[<m>].ids.copilot
+  opencode:
+    render: provider-prefixed  # provider/ + models[<m>].ids.opencode, resolved via models.dev cache
+    resolve_via_cache: true
+  codex:
+    render: role-tier-map      # unchanged: CODEX_MODEL_BY_ROLE stays in render-codex.py
+
+# Append-only audit trail of pin changes. `check` requires every role to have at
+# least one entry and the latest entry per role to equal the current pin.
+pin_history:
+  - {date: 2026-10-02, role: engineer, from: null, to: claude-haiku-4.5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: lead-engineer, from: null, to: claude-sonnet-5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: quality-engineer, from: null, to: claude-sonnet-5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: senior-engineer, from: null, to: claude-sonnet-5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: model-engineer, from: null, to: claude-sonnet-5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: security-engineer, from: null, to: claude-fable-5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: principal-engineer, from: null, to: claude-opus-5, approval: "baseline: seeded from tree at 5a9d247"}
+  - {date: 2026-10-02, role: orchestrator, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, SPEC-2026-010 (commit 5a9d247)"}
+  - {date: 2026-10-02, role: lead-engineer, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
+  - {date: 2026-10-02, role: quality-engineer, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
+  - {date: 2026-10-02, role: senior-engineer, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
+  - {date: 2026-10-02, role: model-engineer, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
+  - {date: 2026-10-02, role: principal-engineer, from: claude-opus-5, to: claude-opus-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}

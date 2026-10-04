@@ -8,8 +8,10 @@ on:
   pull_request:
     branches: '**'
 
+# Least privilege: the quality gate only reads. Jobs that must write declare
+# their own `permissions:` block (see auto-tag below).
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   quality-gate:
@@ -17,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the model-pin approval scan walks origin/main..HEAD.
+          fetch-depth: 0
 
       - name: Preserve symlinks
         run: git config --global core.symlinks true
@@ -43,12 +48,6 @@ jobs:
               chmod +x ".git/hooks/$hook"
             fi
           done
-          # Copy hook dependencies (e.g., LOCKED_MODELS.sh sourced by pre-commit)
-          for dep in LOCKED_MODELS.sh LOCKED_MODELS_RATIONALE.md; do
-            if [ -f ".githooks/$dep" ]; then
-              cp ".githooks/$dep" ".git/hooks/$dep"
-            fi
-          done
           echo "Git hooks configured:"
           git config core.hooksPath
           ls -lh .git/hooks/{pre-commit,commit-msg,post-merge,pre-push} 2>/dev/null || echo "Some hooks missing"
@@ -67,6 +66,41 @@ jobs:
 
       - name: Lint
         run: make lint
+
+      - name: Model Registry Check
+        run: |
+          # Check model registry consistency and verify generated targets are current
+          python3 scripts/models.py check
+          python3 scripts/models.py sync --check
+          echo "✅ Model registry is current and consistent"
+
+      - name: Model Pin Approval Scan
+        # Backstop for the commit-msg and pre-push hooks (which `git commit
+        # --no-verify`, a rebase or a merge can bypass): every commit in
+        # origin/main..HEAD, merge commits included, that changes a
+        # roles.<role>.model pin in config/models.yaml must carry a non-empty
+        # Model-Pin-Approved-By trailer (docs/SPEC.md, Model Pin Change). All
+        # logic lives in scripts/check_pin_trailers.py (one scanner shared with
+        # .githooks/pre-push; tests/test_check_pin_trailers.py). Commit messages
+        # are read by python via git, never interpolated with GitHub expressions;
+        # only short SHAs and role names are printed.
+        #
+        # On a push, github.event.before is the base, so a direct push to the
+        # default branch (where origin/main..HEAD is empty) is scanned over the
+        # pushed range. It reaches the script only through env:, never through an
+        # expression inside run:. Pull requests, new branches (all-zeros before)
+        # and a base this clone does not have fall back to origin/main.
+        env:
+          MODEL_PIN_SCAN_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: |
+          base="${MODEL_PIN_SCAN_BASE:-}"
+          if [ -z "$base" ] || printf '%s' "$base" | grep -Eq '^0+$'; then
+            base=origin/main
+          elif ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "::notice::pushed base not present in this clone; scanning origin/main..HEAD instead"
+            base=origin/main
+          fi
+          python3 scripts/check_pin_trailers.py --base "$base" --head HEAD
 
       # ── Skill/render gates ───────────────────────────────────────────────
 

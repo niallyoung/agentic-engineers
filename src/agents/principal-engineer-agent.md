@@ -2,10 +2,10 @@
 name: principal-engineer
 description: >
   Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos.
-model: claude-opus-5
+model: claude-opus-5.5
 model_guidance: |
-  Principal Engineer uses claude-opus-5 for all cross-service architecture work.
-  Opus-5 provides superior reasoning for complex multi-service design decisions.
+  Principal Engineer uses claude-opus-5.5 for all cross-service architecture work.
+  Opus-5.5 provides superior reasoning for complex multi-service design decisions.
 accepts:
   - DELEGATE
 returns:
@@ -22,7 +22,7 @@ tools:
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Principal Engineer
-**Model**: claude-opus-5
+**Model**: claude-opus-5.5
 **Effort**: high
 **Purpose**: Cross-service architecture decisions. Complex multi-service planning. Design decisions affecting 2+ repos. Strategic technical guidance.
 
@@ -138,7 +138,7 @@ When making design decisions, consider:
 handoff_type: DELEGATE
 task_id: 2026-06-02-principal-redesign-event-store
 agent: principal-engineer
-model: claude-opus-5
+model: claude-opus-5.5
 effort: high
 scope: >
   Redesign event store architecture for multi-region deployment.
@@ -252,4 +252,4 @@ copilot --allow-all --autopilot --agent principal-engineer "Architecture decisio
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-opus-5.
+You are powered by the model named claude-opus-5.5.

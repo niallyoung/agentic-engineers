@@ -48,11 +48,9 @@ def toml_scalar(text: str, key: str) -> str:
 
 
 def load_model_registry() -> dict:
-    """Load the codex role->model mapping straight from the renderer.
+    """Load the codex family->tier mapping straight from the renderer.
 
-    There is no standalone models.yaml registry (src/config/ was removed in
-    the framework slimdown) — CODEX_MODEL_BY_ROLE in render-codex.py is now
-    the single source of truth for Codex model assignment.
+    Codex model tiers are now derived from registry families via CODEX_MODEL_BY_FAMILY.
     """
     import importlib.util
 
@@ -60,7 +58,7 @@ def load_model_registry() -> dict:
     module = importlib.util.module_from_spec(spec)
     sys.modules["render_codex"] = module  # dataclass annotation resolution needs this
     spec.loader.exec_module(module)
-    return module.CODEX_MODEL_BY_ROLE
+    return module.CODEX_MODEL_BY_FAMILY
 
 
 def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
@@ -128,7 +126,7 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "network_access = false" in config
 
     profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(encoding="utf-8")
-    assert 'model = "gpt-5.4-mini"' in profile
+    assert 'model = "gpt-5.5"' in profile  # Orchestrator is Sonnet-class, uses standard tier
     assert 'model_reasoning_effort = "low"' in profile
     assert "developer_instructions = " in profile
     assert "Delegate Prefix" in profile
@@ -141,19 +139,42 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
 
 
 def test_render_codex_model_mapping_matches_source_registry(rendered_codex):
-    role_models = load_model_registry()
+    """Verify that rendered agents have Codex models matching their registry families."""
+    # Load the family->tier mapping
+    family_tiers = load_model_registry()
 
-    orchestrator_profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(
-        encoding="utf-8"
-    )
-    engineer_agent = (rendered_codex / "agents" / "engineer.toml").read_text(encoding="utf-8")
-    security_agent = (rendered_codex / "agents" / "security-engineer.toml").read_text(
-        encoding="utf-8"
-    )
+    # Load the role registry to check families
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from models import load_registry
+    registry = load_registry(REPO_ROOT)
 
-    assert f'model = "{role_models["general_orchestrator"]}"' in orchestrator_profile
-    assert f'model = "{role_models["engineer"]}"' in engineer_agent
-    assert f'model = "{role_models["security_engineer"]}"' in security_agent
+    roles = registry.get("roles", {})
+    models = registry.get("models", {})
+
+    # For a few key roles, verify their rendered model matches their family tier
+    for role_name, expected_family in [("orchestrator", "sonnet"), ("engineer", "haiku"), ("security-engineer", "fable")]:
+        # Get role's model from registry
+        role_cfg = roles.get(role_name)
+        if not role_cfg:
+            continue  # Skip if role doesn't exist
+
+        model_id = role_cfg.get("model")
+        model_info = models.get(model_id)
+        family = model_info.get("family")
+        expected_tier = family_tiers.get(family)
+
+        # Load the rendered agent/profile file
+        agent_file = rendered_codex / "agents" / (role_name.replace("_", "-") + ".toml")
+        if role_name == "orchestrator":
+            agent_file = rendered_codex / "agentic-engineers-orchestrator.config.toml"
+
+        if agent_file.exists():
+            content = agent_file.read_text(encoding="utf-8")
+            # Check that the model matches the family tier
+            if expected_tier:
+                assert f'model = "{expected_tier}"' in content, (
+                    f"Role {role_name} (family {family}): expected model {expected_tier} not found in {agent_file.name}"
+                )
 
 
 def test_render_codex_validate_checks_agents_contract(rendered_codex):

@@ -36,49 +36,62 @@ except ImportError:
 
 # KNOWN_MODELS — the set of model ids a source agent may declare.
 #
-# See docs/SPEC.md § "Model Naming & Harness Compatibility (LOCKED SPEC)" for the
-# architecture, and .githooks/LOCKED_MODELS.sh for the models actually assigned to
-# agents (the pre-commit hook enforces that narrower set). This set is deliberately
-# a superset of LOCKED_MODELS: it also accepts ids that are still legal in rendered
-# or example output but are no longer assigned to any agent.
+# DERIVED from config/models.yaml through scripts/models.py (docs/SPEC.md, invariant
+# I6); this module holds no model list and no version allowlist, so registering,
+# re-pinning or retiring a model never needs an edit here. See docs/SPEC.md § "Model
+# Naming & Harness Compatibility" for the naming architecture.
 #
 # ACCEPTED:
-#   - Canonical source ids, version separated by a DOT: claude-{variant}-{major}.{minor}
-#     (single-part versions have no dot at all: claude-opus-5, claude-fable-5)
-#   - Claude Code short aliases, no version: haiku, sonnet, opus, fable
+#   - Every non-retired registry model id (canonical source form, version separated
+#     by a DOT: claude-{variant}-{major}.{minor}; single-part versions have no dot)
+#
+# The families' claude_alias values (haiku, sonnet, opus, fable) are NOT in KNOWN_MODELS:
+# SPEC invariant I3 forbids floating aliases for assigned roles in source. They live in
+# RENDERED_ALIASES and are accepted only when validating rendered output
+# (validate_agent_file(..., rendered=True) / the --rendered CLI flag), which is where the
+# Claude renderer alias override (see renderer/lib/render-lib.sh) legitimately produces them.
 #
 # REJECTED (reported as a WARNING, or an ERROR under --strict):
-#   - Non-Claude models
-#   - Hyphenated versions (claude-opus-4-7) — that is a per-harness RENDER format
-#     produced by the OpenCode renderer, never a valid source id
+#   - Non-Claude models, retired or unregistered ids
+#   - Hyphenated versions (claude-opus-4-7) — a per-harness RENDER format, never a
+#     valid source id
 #   - Uppercase, underscores, or any other shape
 #
-# Anything added here must exist in the Anthropic API model list. Keep it in step
-# with .githooks/LOCKED_MODELS.sh when a model is approved or retired — a phantom
-# id here silently green-lights an agent that can never actually be spawned.
+# Without PyYAML the registry cannot be read: this fails loudly rather than
+# validating against an empty or stale set.
 
-KNOWN_MODELS = {
-    # Versioned Claude models (canonical source format)
-    # SOURCE: https://docs.anthropic.com/claude/docs/models-overview
-    # Format: claude-{variant}-{major}.{minor} or claude-{variant}-{major} (for single-part versions)
-    "claude-haiku-4.5",
-    "claude-sonnet-4.5",
-    "claude-sonnet-4.6",
-    "claude-sonnet-5",
-    "claude-opus-4.5",
-    "claude-opus-4.6",
-    "claude-opus-4.7",
-    "claude-opus-4.8",
-    "claude-opus-5",
-    "claude-fable-5",
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent / "scripts")
 
-    # Short aliases (Claude Code harness only, NO DOTS)
-    # Used in dist/claude/agents/ after transformation from canonical format
-    "haiku",
-    "sonnet",
-    "opus",
-    "fable",
-}
+
+def _load_known_models() -> set[str]:
+    if _SCRIPTS_DIR not in sys.path:
+        sys.path.insert(0, _SCRIPTS_DIR)
+    try:
+        import models as model_registry  # exits with a clear message without PyYAML
+    except SystemExit as exc:
+        raise RuntimeError(
+            "renderer/validate_agents.py needs PyYAML to read config/models.yaml "
+            "(pip install pyyaml)"
+        ) from exc
+    reg = model_registry.load_registry()
+    known = {
+        mid for mid, m in (reg.get("models") or {}).items()
+        if isinstance(m, dict) and m.get("status") != "retired"
+    }
+    return known
+
+
+def _load_rendered_aliases() -> set[str]:
+    import models as model_registry  # already importable (see _load_known_models)
+    reg = model_registry.load_registry()
+    return {
+        f["claude_alias"] for f in (reg.get("families") or {}).values()
+        if isinstance(f, dict) and f.get("claude_alias")
+    }
+
+
+KNOWN_MODELS = _load_known_models()
+RENDERED_ALIASES = _load_rendered_aliases()
 
 REQUIRED_FIELDS = {"name", "description", "model"}
 
@@ -147,8 +160,14 @@ def validate_agent_file(
     path: Path,
     agents_md_content: str,
     strict: bool = False,
+    rendered: bool = False,
 ) -> list[ValidationError]:
-    """Validate a single agent markdown file."""
+    """Validate a single agent markdown file.
+
+    rendered=False (default) validates SOURCE: only canonical registry ids are allowed
+    and a bare floating alias is an ERROR (SPEC I3). rendered=True validates rendered
+    output, where the family aliases may legitimately appear (the Claude renderer's explicit alias override).
+    """
     errors: list[ValidationError] = []
 
     text = path.read_text(encoding="utf-8")
@@ -171,7 +190,13 @@ def validate_agent_file(
 
     # 3. Model validation
     model = fm.get("model", "")
-    if model and model not in KNOWN_MODELS:
+    if model and not rendered and model in RENDERED_ALIASES:
+        errors.append(ValidationError(
+            path, "ERROR",
+            f"Floating alias '{model}' is not allowed in source (SPEC I3); "
+            f"use the canonical registry id (e.g. claude-<family>-<major>.<minor>)"
+        ))
+    elif model and model not in KNOWN_MODELS and not (rendered and model in RENDERED_ALIASES):
         level = "ERROR" if strict else "WARNING"
         errors.append(ValidationError(
             path, level,
@@ -209,6 +234,7 @@ def validate_agents(
     agents_dir: Path,
     src_dir: Path,
     strict: bool = False,
+    rendered: bool = False,
 ) -> tuple[int, int]:
     """Validate all agent files.
 
@@ -225,7 +251,7 @@ def validate_agents(
     checked = 0
 
     for agent_file in agent_files:
-        findings = validate_agent_file(agent_file, agents_md, strict=strict)
+        findings = validate_agent_file(agent_file, agents_md, strict=strict, rendered=rendered)
         all_errors.extend(findings)
         checked += 1
 
@@ -322,6 +348,12 @@ def main() -> int:
         action="store_true",
         help="Treat warnings as errors",
     )
+    parser.add_argument(
+        "--rendered",
+        action="store_true",
+        help="Validate RENDERED output: also accept the floating family aliases "
+             "(the Claude renderer's explicit alias override). Never use for src/.",
+    )
     args = parser.parse_args()
 
     # Resolve paths relative to repo root (two levels up from renderer/)
@@ -336,7 +368,7 @@ def main() -> int:
     if not _YAML_AVAILABLE:
         print("⚠️  PyYAML not installed — using minimal frontmatter parser (pip install pyyaml for full validation)")
 
-    error_count, warning_count = validate_agents(agents_dir, src_dir, strict=args.strict)
+    error_count, warning_count = validate_agents(agents_dir, src_dir, strict=args.strict, rendered=args.rendered)
 
     if error_count > 0:
         return 1

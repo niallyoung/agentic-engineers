@@ -2,34 +2,35 @@
 """
 tests/test_config_naming_consistency.py — Model-naming consistency guard.
 
-Validates model-naming consistency across SURVIVING canonical sources:
+config/models.yaml (via scripts/models.py) is the single source of truth. This guard
+asserts that every GENERATED copy agrees with it, per role:
   1. src/AGENTS.md roster table
-  2. .githooks/LOCKED_MODELS.sh (LOCKED_MODELS list + AGENT_MODEL_ASSIGNMENTS)
+  2. .githooks/LOCKED_MODELS.sh (LOCKED_MODELS list + AGENT_MODEL_ASSIGNMENTS),
+     evaluated by bash itself rather than scraped
   3. src/agents/*-agent.md frontmatter 'model:' lines
 
 Asserts:
-  - All three sources agree per role
-  - Every model matches claude-{variant}-{major}[.{minor}] format
-  - orchestrator=claude-sonnet-5 and engineer=claude-haiku-4.5 are consistent
+  - each copy equals the registry pin for every role (and covers every role)
+  - every registry model matches the registry's own canonical shape
+  - no model literal is hard-coded here: roles and pins come from the registry
 """
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+import models as model_registry  # noqa: E402
+
 AGENTS_MD = REPO_ROOT / "src" / "AGENTS.md"
 LOCKED_MODELS_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
 AGENTS_DIR = REPO_ROOT / "src" / "agents"
 
-# Full-version names carry a numeric version suffix.
-# claude-haiku-4.5, claude-sonnet-5, claude-opus-5, claude-fable-5
-FULL_VERSION = re.compile(
-    r"^claude-(?:haiku)-\d+\.\d+$|^claude-(?:sonnet|opus|fable)-\d+(?:\.\d+)?$"
-)
-
-
-def _is_full_version(name: str) -> bool:
-    return bool(FULL_VERSION.match(name))
+REGISTRY = model_registry.load_registry(REPO_ROOT)
+PINS = {role: cfg["model"] for role, cfg in REGISTRY["roles"].items()}
+CANONICAL = model_registry.canonical_re(REGISTRY)
 
 
 def _parse_agents_md_roster() -> dict:
@@ -67,20 +68,6 @@ def _parse_agents_md_roster() -> dict:
     return roster
 
 
-def _parse_locked_models_assignments() -> dict:
-    """Parse AGENT_MODEL_ASSIGNMENTS array from LOCKED_MODELS.sh."""
-    text = LOCKED_MODELS_SH.read_text()
-    block = re.search(
-        r"AGENT_MODEL_ASSIGNMENTS=\((.*?)\)", text, re.DOTALL
-    )
-    assert block, "AGENT_MODEL_ASSIGNMENTS array not found in LOCKED_MODELS.sh"
-    out = {}
-    for m in re.finditer(r'"([\w-]+):(claude-[\w.\-]+)"', block.group(1)):
-        out[m.group(1)] = m.group(2)
-    assert out, "no agent assignments parsed from LOCKED_MODELS.sh"
-    return out
-
-
 def _parse_agent_frontmatter() -> dict:
     """Parse model: field from src/agents/*-agent.md frontmatter."""
     models = {}
@@ -96,47 +83,48 @@ def _parse_agent_frontmatter() -> dict:
     return models
 
 
-def test_locked_models_sh_uses_full_versions():
-    """Every model in LOCKED_MODELS.sh must be a full-version name."""
-    text = LOCKED_MODELS_SH.read_text()
-    locked_block = re.search(r"LOCKED_MODELS=\((.*?)\)", text, re.DOTALL)
-    assert locked_block, "LOCKED_MODELS array not found"
-    locked = set(re.findall(r'"(claude-[\w.\-]+)"', locked_block.group(1)))
-    assert locked, "No models found in LOCKED_MODELS"
+def _bash_array(name: str) -> list:
+    """Evaluate LOCKED_MODELS.sh in bash and return the named array's elements."""
+    out = subprocess.run(
+        ["bash", "-c", f'source "{LOCKED_MODELS_SH}" && printf "%s\\n" "${{{name}[@]}}"'],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return [line for line in out.splitlines() if line]
 
-    for model in locked:
-        assert _is_full_version(model), (
-            f"LOCKED_MODELS contains {model!r} which is not a full-version name "
-            f"(expected e.g. 'claude-haiku-4.5' or 'claude-sonnet-5')"
+
+def _locked_assignments() -> dict:
+    out = {}
+    for entry in _bash_array("AGENT_MODEL_ASSIGNMENTS"):
+        agent, _, model = entry.partition(":")
+        out[agent[: -len("-agent")] if agent.endswith("-agent") else agent] = model
+    assert out, "no agent assignments evaluated from LOCKED_MODELS.sh"
+    return out
+
+
+def test_registry_models_use_canonical_shape():
+    """Every registry model id is claude-<family>-<major>[.<minor>] (dot separator)."""
+    for mid in REGISTRY["models"]:
+        assert CANONICAL.match(mid), f"{mid!r} is not a canonical model id"
+
+
+def test_locked_models_sh_matches_registry():
+    """The generated LOCKED_MODELS array lists exactly the registry's models."""
+    assert set(_bash_array("LOCKED_MODELS")) == set(REGISTRY["models"])
+
+
+def test_all_sources_agree_with_registry_per_role():
+    """AGENTS.md, LOCKED_MODELS.sh and agent frontmatter all equal the registry pin per role."""
+    sources = {
+        "src/AGENTS.md": {r.replace("_", "-"): m for r, m in _parse_agents_md_roster().items()},
+        ".githooks/LOCKED_MODELS.sh": _locked_assignments(),
+        "src/agents/*-agent.md": _parse_agent_frontmatter(),
+    }
+    for name, assigned in sources.items():
+        assert set(assigned) == set(PINS), (
+            f"{name} covers roles {sorted(assigned)} but the registry has {sorted(PINS)}"
         )
-
-
-def test_all_three_sources_agree_per_role():
-    """All three canonical sources agree on model assignments per role."""
-    agents_md_models = _parse_agents_md_roster()
-    locked_assignments = _parse_locked_models_assignments()
-    agent_frontmatter = _parse_agent_frontmatter()
-
-    # Collect all roles across all three sources
-    all_roles = set(agents_md_models.keys()) | set(locked_assignments.keys()) | set(agent_frontmatter.keys())
-
-    for role in all_roles:
-        md_model = agents_md_models.get(role)
-        locked_model = locked_assignments.get(role)
-        fm_model = agent_frontmatter.get(role)
-
-        # All three should have a value for the role
-        assert md_model or locked_model or fm_model, (
-            f"Role {role!r} has no model assignment in any source"
-        )
-
-        # All present sources should agree
-        models_present = [m for m in [md_model, locked_model, fm_model] if m]
-        if len(models_present) > 1:
-            assert len(set(models_present)) == 1, (
-                f"Role {role!r} has conflicting models: "
-                f"AGENTS.md={md_model}, LOCKED_MODELS.sh={locked_model}, "
-                f"*-agent.md={fm_model}"
+        for role, model in assigned.items():
+            assert model == PINS[role], (
+                f"{name}: role {role!r} is {model!r}, registry pin is {PINS[role]!r}; "
+                f"run python3 scripts/models.py sync"
             )
-
-

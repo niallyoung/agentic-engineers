@@ -22,36 +22,36 @@
 ## Agent Roster
 
 **MODEL NAMING (LOCKED):** Models use canonical format with a DOT version separator,
-`claude-{variant}-{major}.{minor}` (e.g. `claude-haiku-4.5`, `claude-opus-4.8`). Current-generation
-models carry a **single-part version** and therefore have no separator at all:
-`claude-opus-5`, `claude-sonnet-5`, `claude-fable-5`. The invariant is "never a hyphen as the
-version separator" (`claude-opus-4-7` is a per-harness render, never source).
-See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec).
+`claude-{variant}-{major}.{minor}` (e.g. in source: two-part versioned models like Opus 4.x). Current-generation
+models carry a **single-part version** and therefore have no separator at all (e.g. in source: Opus 5, Sonnet 5). 
+Models with a two-part version (e.g. Sonnet 5.5) use the dot in source and render hyphenated for
+Claude Code (hyphens are per-harness renders only, never source); the exact IDs are in the registry.
+See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec) and [docs/MODELS.md](../docs/MODELS.md) for the complete model registry.
 
-**SINGLE SOURCE OF TRUTH:** Model assignments are defined in `.githooks/LOCKED_MODELS.sh`
-(`LOCKED_MODELS` + `AGENT_MODEL_ASSIGNMENTS`). All hooks, validators, and this table must
-stay synchronized with it — see [SPEC.md > Model Governance: Locking & Switching](../docs/SPEC.md#model-governance-locking--switching)
-for the switch process.
+**SINGLE SOURCE OF TRUTH:** Model assignments are defined in `config/models.yaml`. 
+All generated targets (frontmatter, manifests, hooks, tables) are kept synchronized via `python3 scripts/models.py sync`.
+See [docs/decisions/ADR-model-pin-registry.md](../docs/decisions/ADR-model-pin-registry.md) for the governance model and [docs/MODELS.md](../docs/MODELS.md) for the current roster.
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
-| **Orchestrator** | claude-sonnet-5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Orchestrator** | claude-sonnet-5.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
 | **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
-| **Quality Engineer** | claude-sonnet-5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
-| **Senior Engineer** | claude-sonnet-5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
-| **Lead Engineer** | claude-sonnet-5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
-| **Principal Engineer** | claude-opus-5 | high | opus-5 (default) \| 4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
-| **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
-| **Model Engineer** | claude-sonnet-5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
+| **Quality Engineer** | claude-sonnet-5.5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
+| **Senior Engineer** | claude-sonnet-5.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
+| **Lead Engineer** | claude-sonnet-5.5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
+| **Principal Engineer** | claude-opus-5.5 | high | opus-5.5 (default) \| opus-5, opus-4.8 (fallback) | Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos |
+| **Security Engineer** | claude-fable-5 | max | fable-5 (default) \| opus-5, opus-4.8 (fallback) | Security analysis; threat modeling; vulnerability audits; final escalation path |
+| **Model Engineer** | claude-sonnet-5.5 | high | — | Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations for future similar tasks |
 
-> **This table is load-bearing, not documentation.** `renderer/lib/render-lib.sh:parse_agents_md()`
-> reads the Model and Effort columns to render the Claude Code and OpenCode harnesses. Editing an
-> agent's frontmatter without editing this row ships the *old* model to those two harnesses.
+> **This table is auto-generated, not hand-edited.** The Model and Effort columns are regenerated
+> by `python3 scripts/models.py sync` from `config/models.yaml`. To change a role's model, edit the registry
+> (not this table) and run sync.
 
-**Multi-Model column notes:** Principal Engineer uses `claude-opus-5` for all planning and
-cross-repo design; `claude-opus-4.8` is an emergency fallback only (opus-5 unavailable),
-documented in HANDBACK. Security Engineer uses `claude-fable-5` unconditionally;
-`claude-opus-4.8` is an emergency fallback only. The defensive-only scope constraint
+**Multi-Model column notes:** Principal Engineer uses its registry pin for all planning
+and cross-repo design; the fallbacks declared for it in `config/models.yaml` (see
+[docs/MODELS.md](../docs/MODELS.md)) are emergency fallbacks only (pin unavailable),
+documented in HANDBACK. Security Engineer uses its registry pin unconditionally; its
+declared fallbacks are likewise emergency-only. The defensive-only scope constraint
 applies on **every** model, not just fable-5 — restricted-topic work is out of scope
 framework-wide. This is a role convention, not a mechanical gate: no runtime code
 inspects a DELEGATE's scope, topic, or content for offensive-vs-defensive framing.
@@ -123,7 +123,7 @@ confidence: 0.95                   # 0.0-1.0 float
 
 ```
 User / External Trigger
-  └─► Orchestrator  (sonnet-5 — routing)
+  └─► Orchestrator  (sonnet-5.5 — routing)
         ├─► Engineer               ← well-scoped tasks with full plans
         ├─► Senior Engineer        ← unscoped or multi-file work
         │     ├─► Lead Engineer    ← architecture decisions, code review
@@ -148,7 +148,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 1. Orchestrator
 
-**Model:** `claude-sonnet-5`, effort `low`. Entry point for all user requests; routes via
+**Model:** `claude-sonnet-5.5`, effort `low`. Entry point for all user requests; routes via
 the decision tree above; never implements. Parses requests into DELEGATE blocks, spawns
 the target agent directly (Agent/Task tool), fans out up to 5 concurrent spawns for
 independent work, and receives each HANDBACK in-context — the session transcript is the
@@ -173,7 +173,7 @@ surface.
 
 ### 3. Senior Engineer
 
-**Model:** `claude-sonnet-5`, effort `high`. Plans unscoped work; handles multi-file
+**Model:** `claude-sonnet-5.5`, effort `high`. Plans unscoped work; handles multi-file
 implementations requiring architectural awareness — reads related files first,
 moderate-complexity refactors, CI/CD changes, breaking dependency updates, reviews
 Engineer output when QE flags it. **MUST NOT:** make cross-repo API contract decisions,
@@ -184,7 +184,7 @@ resolve inter-service architectural disputes, or conduct formal security audits.
 
 ### 4. Lead Engineer
 
-**Model:** `claude-sonnet-5`, effort `high`. Makes architecture decisions authoritatively
+**Model:** `claude-sonnet-5.5`, effort `high`. Makes architecture decisions authoritatively
 (API contracts, domain boundaries, data models), conducts 8-point code review
 (correctness, safety, patterns, performance, security surface, maintainability, test
 coverage, documentation), resolves competing-design conflicts, coordinates cross-repo
@@ -195,7 +195,7 @@ design decisions (auth flows, crypto selection).
 
 ### 5. Quality Engineer
 
-**Model:** `claude-sonnet-5`, effort `medium`. Post-implementation validation: verifies
+**Model:** `claude-sonnet-5.5`, effort `medium`. Post-implementation validation: verifies
 acceptance criteria against delivered changes, runs `make quality-gate` (lint + test + verify + validate-renders),
 assesses whether the model/effort tier was appropriate, populates
 `metrics.quality` in the HANDBACK, and flags regressions/missing tests. **MUST NOT:**
@@ -206,7 +206,7 @@ for a systemic pattern across multiple tasks.
 
 ### 6. Model Engineer
 
-**Model:** `claude-sonnet-5`, effort `high`. Analyses HANDBACK `metrics` blocks (tokens,
+**Model:** `claude-sonnet-5.5`, effort `high`. Analyses HANDBACK `metrics` blocks (tokens,
 cost, quality, duration_seconds) across task history, compares actual vs. estimated token
 usage, recommends model/effort adjustments, identifies mismatches, and writes
 recommendations. **MUST NOT:** implement code changes, or approve/reject tasks —
@@ -215,7 +215,7 @@ regression spanning multiple roles; **to Lead Engineer** for a contested recomme
 
 ### 7. Principal Engineer
 
-**Model:** `claude-opus-5` (fallback `claude-opus-4.8`), effort `high`. Cross-service
+**Model:** `claude-opus-5.5` (fallback `claude-opus-5`, then `claude-opus-4.8`), effort `high`. Cross-service
 architecture, hard debugging, critical design decisions — escalation only. Root-cause
 analysis across deep stack traces or multiple services, complex architectural analysis
 (data flow, race conditions, distributed semantics), takes over after Senior has ≥2 failed
@@ -226,7 +226,7 @@ decisions; otherwise top of the non-security chain — surface to the user if bl
 
 ### 8. Security Engineer
 
-**Model:** `claude-fable-5` (unconditional default; fallback `claude-opus-4.8`), effort
+**Model:** `claude-fable-5` (unconditional default; fallback `claude-opus-5`, then `claude-opus-4.8`), effort
 `max`. Threat modelling (STRIDE, attack surface), vulnerability assessment (OWASP Top 10,
 injection, broken auth, secrets exposure), compliance review (OAuth 2.0, zero-trust, GDPR
 surface), CLI permission policy review — always assigned for security-scoped work.
@@ -256,7 +256,7 @@ task_id: my-task-identifier    # kebab-case, 3-50 chars (^[a-z0-9][a-z0-9-]{1,48
 handoff_type: DELEGATE         # canonical discriminator (NOT type:)
 agent: senior-engineer         # hyphenated role name — see VALID_AGENTS below
 skill: senior-engineer         # skill name resolving to src/skills/<skill>/
-model: claude-sonnet-5         # must be explicit — no implicit defaults
+model: claude-sonnet-5.5       # must be explicit — no implicit defaults
 effort: high                   # low | medium | high
 
 scope: |
@@ -323,7 +323,7 @@ metrics:                       # ALL four sub-fields are REQUIRED
   duration_seconds: 42         # non-negative float, wall-clock execution seconds
 
 # --- Optional extension fields (forward-compatible) ---
-model_used: claude-sonnet-5
+model_used: claude-sonnet-5.5
 effort_actual: medium
 confidence: 0.9                # 0.0–1.0
 flags: []                      # advisory flags / anomalies
@@ -375,14 +375,14 @@ Every agent MUST emit an ACK as its **first output** before performing any work.
 Missing: [list of what's missing or unclear]
 Request: [what information is needed to proceed]
 
-❌ MODEL_MISMATCH — expected claude-sonnet-5, got claude-haiku-4.5   # Wrong model
+❌ MODEL_MISMATCH — expected claude-sonnet-5.5, got claude-haiku-4.5   # Wrong model
 Stopping. Orchestrator must re-delegate with the correct model.
 ```
 
 Every agent MUST include in its final output a completion footer:
 
 ```
-MODEL_USED: claude-sonnet-5   # actual model used (not the requested model)
+MODEL_USED: claude-sonnet-5.5   # actual model used (not the requested model)
 ```
 
 ---
@@ -437,7 +437,7 @@ re-delegate the ESCALATION block at the higher tier (direct spawn).
 Three self-reported "expected"/"pre-existing" test-failure classifications on 2026-08-13/
 14 turned out wrong and were only caught downstream — this codifies the catch as a
 standing duty rather than relying on it happening again by luck. Before accepting any
-Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before treating it as `success` and moving
+Engineer HANDBACK — i.e. before treating it as `success` and moving
 on per the table above — the spawning agent MUST independently verify:
 
 1. **Phantom-success check.** Every file change the HANDBACK claims actually exists on
@@ -673,7 +673,7 @@ Invocation is a single CLI call per event, e.g.:
 ```bash
 python3 scripts/audit_append.py --event delegate_issued \
   --task-id my-task --parent-task-id orchestrator-root --depth 1 \
-  --agent-role senior-engineer --agent-model claude-sonnet-5 --status success
+  --agent-role senior-engineer --agent-model claude-sonnet-5.5 --status success
 ```
 
 **Failures are warnings, never blockers.** `audit_append.py` exits 2 only for a

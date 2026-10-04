@@ -1,187 +1,78 @@
 # Model Lock Rationale
 
+This note explains *why* model selection is a positive, auditable choice. It does not list
+the current models: `config/models.yaml` is the source of truth and
+[`docs/MODELS.md`](../docs/MODELS.md) is the generated, always-current view of which model
+each role pins, the fallbacks, floors and pin history.
+
 ## Philosophy: Positive Enforcement
 
-We use **positive enforcement** (locked choices) instead of **negative enforcement** (forbidden patterns).
+We use **positive enforcement** (explicit pins) instead of **negative enforcement**
+(forbidden patterns).
 
-### Why?
-
-**Positive ("We chose these models"):**
-- ✅ Clear intent: "These are our approved models"
-- ✅ User choice preserved: Model CAN be changed by contacting Orchestrator
-- ✅ Auditable: When changes happen, they're explicit decisions with rationale
-- ✅ Simpler code: One list of approved models, not multiple rejection patterns
+**Positive ("we chose these models"):**
+- Clear intent: the registry is the statement of approved models.
+- User choice preserved: a user-chosen Claude Code model is never overwritten by the installer.
+- Auditable: a pin change is an explicit registry edit with a `pin_history` entry and an approver.
+- Simpler code: one registry, validators check shape and consistency instead of a version list.
 
 **Negative ("GPT is forbidden"):**
-- ❌ Defensive posture: Sounds like we're preventing user choice
-- ❌ Hard to maintain: Must update rejection patterns every time a new model appears
-- ❌ Less clear intent: "Forbidden" implies restriction, not strategic choice
-
-## Locked Models Today
-
-| Model | Agents | Rationale | Cost/Task |
-|-------|--------|-----------|-----------|
-| **claude-haiku-4.5** | engineer, orchestrator | Fast, cost-effective for standard tasks | $0.03-0.05 |
-| **claude-sonnet-5** | model-engineer, lead, quality, senior | Complex tasks, higher quality, cost-optimized | $0.12 |
-| **claude-opus-5** | principal | High-stakes, cross-service decisions | $0.18 |
-| **claude-fable-5** | security | Defensive security analysis only | $0.36 |
+- Defensive posture that reads as restricting choice.
+- Hard to maintain: rejection patterns must change whenever a new model appears.
+- Less clear intent: "forbidden" implies restriction rather than strategic choice.
 
 ## Model Switch Process
 
-Models are locked by **explicit choice**, not by chance or restriction. To change:
+Models are pinned by explicit choice. The authoritative procedure is the **Model Pin
+Change** section of [`docs/SPEC.md`](../docs/SPEC.md). In outline:
 
-### 1. Request Phase
-Contact Orchestrator with:
-- **Agent name** (e.g., `engineer-agent`)
-- **Requested model** (e.g., `claude-sonnet-4.5`)
-- **Reason** (e.g., "Current model too slow for code review tasks")
-- **Expected impact** (e.g., "Cost +$0.02/task, quality +15%")
+### 1. Request and evaluation
+Contact the Orchestrator with the role, the requested model, the reason and the expected
+impact (cost, quality, latency). The Orchestrator weighs cost delta, capability gain,
+consistency with other roles and timing, then approves, defers or denies.
 
-### 2. Evaluation Phase
-Orchestrator evaluates:
-- Cost delta (is budget available?)
-- Capability improvement (does the task profile justify the switch?)
-- Conflict with other agents (does this create inconsistency?)
-- Timeline (when does the change take effect?)
+### 2. Implementation (if approved)
+1. Edit `config/models.yaml`: add the `models.<id>` block if the model is new and change
+   `roles.<role>.model` (respecting the family `min_pin` floor).
+2. Append one line at the end of the `pin_history` list (date, role, from, to, approval).
+3. Run `make models-sync` (`python3 scripts/models.py sync`) to regenerate every derived
+   file, including `.githooks/LOCKED_MODELS.sh`. Never hand-edit generated files.
+4. Run `make test`, then commit with a `Model-Pin-Approved-By: <approver>` trailer. The
+   `commit-msg` hook rejects a pin change without it; adding an unassigned model needs no trailer.
+5. Re-run the installer; a managed Claude Code `settings.json` value migrates, a
+   user-chosen value is left alone.
 
-### 3. Decision
-One of:
-- ✅ **Approved**: Proceed to implementation
-- ⏸️ **Deferred**: Consider later (e.g., next budget cycle)
-- ❌ **Denied**: Explain why (e.g., budget constraint, capability not needed)
+## Enforcement Mechanism
 
-### 4. Implementation (if approved)
-1. Update `.githooks/LOCKED_MODELS.sh`:
-   - Add new model to `LOCKED_MODELS` array (if not already present)
-   - Update `AGENT_MODEL_MAPPING` for the agent
-2. Create PR with:
-   - Commit message: `"Approved model switch for {agent}: {reason}"`
-   - PR description: Full rationale, cost impact, expected outcome
-3. Merge triggers pre-commit hook validation
-4. New lock is enforced from that commit forward
-
-## Examples
-
-### ✅ Approved: "Switch engineer-agent to sonnet for higher quality"
+- `.githooks/LOCKED_MODELS.sh` is a **generated shim** from `config/models.yaml`. It exposes
+  `LOCKED_MODELS`, `AGENT_MODEL_ASSIGNMENTS` and the helpers `is_model_locked`,
+  `get_agent_locked_model`, `show_locked_models`, `show_agent_assignments`.
+- `.githooks/pre-commit` validates staged agent files against the registry and rejects stale
+  generated targets (`python3 scripts/models.py check` and `sync --check`).
+- `.githooks/commit-msg` requires the `Model-Pin-Approved-By` trailer on a role pin change.
+- Hooks and scripts that need the model set may source the shim:
 
 ```bash
-# Scenario: Engineer agent is struggling with code review quality
-# Request: Switch from haiku-4.5 to sonnet-4.5
-# Cost impact: +$0.025/task × 50 tasks/day = +$1.25/day budget
-# Timeline: Immediate
-
-# Decision: APPROVED (budget available, quality improvement justified)
-
-# Implementation:
-# 1. Edit .githooks/LOCKED_MODELS.sh
-#    AGENT_MODEL_MAPPING[engineer-agent]="claude-sonnet-4.5"
-# 2. Create PR with commit message:
-#    "Approved model switch for engineer-agent to sonnet-4.5 (code review quality)"
-# 3. Merge, hook validates, new lock takes effect
-```
-
-### ⏸️ Deferred: "Consider GPT-4 for principal engineer"
-
-```bash
-# Scenario: Principal engineer wants access to GPT-4
-# Request: Add gpt-4 to locked models
-# Cost impact: Different billing provider, contract negotiation needed
-# Timeline: 2-3 months
-
-# Decision: DEFERRED
-# Reason: "GPT-4 not in current approved provider contract.
-#         Revisit when Anthropic Opus reaches feature parity with GPT-4."
-# Action: Document in TODO.md for budget cycle review
-```
-
-### ❌ Denied: "Switch all agents to opus for maximum quality"
-
-```bash
-# Scenario: User wants all agents to run on Opus
-# Request: Change all LOCKED_MODELS to claude-opus-4.7
-# Cost impact: ~5x budget increase
-# Timeline: Immediate
-
-# Decision: DENIED
-# Reason: "Budget constraint. Total monthly cost would increase from $2K to $10K.
-#         Revisit if we identify tasks that specifically need Opus.
-#         Orchestrator can still delegate high-stakes work to principal-engineer (opus)."
-```
-
-## Single Source of Truth
-
-The `.githooks/LOCKED_MODELS.sh` file is the **canonical source** for:
-- `LOCKED_MODELS` — all approved models (only these pass pre-commit)
-- `AGENT_MODEL_MAPPING` — which agent uses which model (for documentation)
-
-### Importing in Other Scripts
-
-Any hook or script that needs to validate models should source this file:
-
-```bash
-#!/usr/bin/env bash
 HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HOOKS_DIR/LOCKED_MODELS.sh"
-
-# Now available:
-# - LOCKED_MODELS array
-# - AGENT_MODEL_MAPPING associative array
-# - is_model_locked "$model" function
-# - get_agent_locked_model "$agent" function
-# - show_locked_models function
-# - show_agent_assignments function
+is_model_locked "$model" && echo approved
+show_agent_assignments
 ```
 
-## Maintaining Locks
-
-### When to Update
-
-- ✅ Orchestrator approves a model switch → update LOCKED_MODELS.sh
-- ✅ New model version released → discuss in team, decide collectively
-- ❌ Don't update just because a new model is available
-- ❌ Don't remove old models arbitrarily (existing agents may still use them)
-
-### When to Add a New Model
-
-1. Wait for Orchestrator approval
-2. Add to `LOCKED_MODELS` array (alphabetically)
-3. Add to `AGENT_MODEL_MAPPING` for the affected agent(s)
-4. Update this documentation
-5. Commit with message explaining the change
-
-### When to Deprecate
-
-If an old model is no longer used:
-1. Verify NO agents use it (grep all agent files)
-2. Document in commit message
-3. Remove from LOCKED_MODELS (keep in commit history for audit trail)
-
-## Rationale Comments
-
-Every model lock decision should have context. Examples in commit messages:
-
-```
-Approved model switch for security-engineer: claude-opus-4.7
-
-Reason: Security analysis requires high reasoning capability
-  - Previous model (sonnet) missed subtle vulnerabilities in 3% of audits
-  - Opus adds +$0.08/task cost (~$2/day)
-  - Approved by Security Lead and Orchestrator
-  
-Cost approved for Q2 2025 security initiative.
-Revisit in Q3 if vulnerability detection improves in Sonnet.
-```
+The interactive helpers have no caller in the repo other than `is_model_locked`; they are
+the documented sourcing API and are kept deliberately.
 
 ## Governance
 
-- **Approval authority**: Orchestrator (with input from role leads)
-- **Appeal**: If denied, request review in next budget cycle
-- **Transparency**: All model decisions documented in commit messages
-- **Audit trail**: Git history shows who, what, when, why
-- **Enforcement**: Pre-commit hook validates compliance
+- **Approval authority**: Orchestrator (with input from role leads).
+- **Appeal**: if denied, request review in the next budget cycle.
+- **Transparency**: every pin change carries a `pin_history` entry and an approver trailer.
+- **Audit trail**: git history shows who, what, when, why.
 
 ## See Also
 
-- [LOCKED_MODELS.sh](./LOCKED_MODELS.sh) — Canonical model list
-- [SPEC.md](../SPEC.md#approved-claude-models) — Architectural documentation
-- [CONTRIBUTING.md](../CONTRIBUTING.md#model-selection) — Contributor guide
+- [config/models.yaml](../config/models.yaml) - source of truth
+- [docs/MODELS.md](../docs/MODELS.md) - generated model and pin tables
+- [LOCKED_MODELS.sh](./LOCKED_MODELS.sh) - generated shim
+- [SPEC.md](../docs/SPEC.md) - Model Pin Change process and invariants I1-I6
+- [CONTRIBUTING](../docs/CONTRIBUTING/README.md) - contributor guide

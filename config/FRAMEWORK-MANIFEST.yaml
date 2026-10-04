@@ -28,7 +28,7 @@ agents:
 
   lead-engineer:
     name: Lead Engineer
-    model: claude-sonnet-5
+    model: claude-sonnet-5.5
     type: review
     status: active
     effort: high
@@ -38,7 +38,7 @@ agents:
 
   model-engineer:
     name: Model Engineer
-    model: claude-sonnet-5
+    model: claude-sonnet-5.5
     type: optimization
     status: active
     effort: high
@@ -48,7 +48,7 @@ agents:
 
   orchestrator:
     name: Orchestrator
-    model: claude-sonnet-5
+    model: claude-sonnet-5.5
     type: routing
     status: active
     effort: low
@@ -58,7 +58,7 @@ agents:
 
   principal-engineer:
     name: Principal Engineer
-    model: claude-opus-5
+    model: claude-opus-5.5
     type: architecture
     status: active
     effort: high
@@ -68,7 +68,7 @@ agents:
 
   quality-engineer:
     name: Quality Engineer
-    model: claude-sonnet-5
+    model: claude-sonnet-5.5
     type: validation
     status: active
     effort: medium
@@ -88,7 +88,7 @@ agents:
 
   senior-engineer:
     name: Senior Engineer
-    model: claude-sonnet-5
+    model: claude-sonnet-5.5
     type: implementation
     status: active
     effort: high
