@@ -3,7 +3,7 @@ Test: Model Naming Compliance (LOCKED CHOICES - Positive Enforcement)
 
 Validates that all agent model definitions use LOCKED Claude models by choice:
 - SOURCE agents (src/agents/): Must use models from LOCKED_MODELS list
-  Locked models: claude-haiku-4.5, claude-sonnet-4.5, claude-sonnet-4.6, claude-opus-4.7
+  Locked models: claude-haiku-5.5, claude-sonnet-4.5, claude-sonnet-4.6, claude-opus-4.7
 - RENDERED agents (dist/*/): Transform per-harness based on platform requirements
   - Copilot CLI: Pass-through (dots) → claude-opus-4.7
   - OpenCode: Transform to hyphens → claude-opus-4-7
@@ -35,7 +35,7 @@ from typing import Set
 # Canonical source format for a Claude model id.
 #
 # Two version shapes are valid, because Anthropic ships both:
-#   - two-part  e.g. claude-haiku-4.5, claude-opus-4.8   (DOT separator)
+#   - two-part  e.g. claude-haiku-5.5, claude-opus-4.8   (DOT separator)
 #   - one-part  e.g. claude-opus-5, claude-sonnet-5, claude-fable-5
 #
 # The invariant this enforces is "the version separator is a DOT, never a
@@ -91,7 +91,7 @@ class TestModelNamingCompliance:
 
     # Forbidden patterns (old hyphenated format, underscores, uppercase, etc.)
     FORBIDDEN_PATTERNS = [
-        r"claude-haiku-4-5",   # Old hyphenated format
+        r"claude-haiku-5-5",   # Old hyphenated format
         r"claude-haiku-4-6",  # kept: guards the hyphen-vs-dot render format, not
                               # the existence of a 4.6 model (see APPROVED_MODELS above)
         r"claude-sonnet-4-5",

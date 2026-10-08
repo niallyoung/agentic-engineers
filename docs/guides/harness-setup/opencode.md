@@ -44,7 +44,7 @@ OpenCode's rendered config lives in `~/.config/opencode/` and includes `AGENTS.m
 
 ### Model Names
 
-OpenCode uses hyphenated model names (e.g., `claude-haiku-4-5` instead of `claude-haiku-4.5`).
+OpenCode uses hyphenated model names (e.g., `claude-haiku-5-5` instead of `claude-haiku-5.5`).
 
 The renderer automatically transforms model names during installation.
 
@@ -67,7 +67,7 @@ The Orchestrator processes tasks autonomously by:
 
 ## Known Limitations
 
-- Model names use hyphenated format (e.g., `claude-haiku-4-5`)
+- Model names use hyphenated format (e.g., `claude-haiku-5-5`)
 - Each session is independently isolated for concurrent operation — there is no shared queue state to coordinate
 
 ## Compatibility Notes
@@ -80,7 +80,7 @@ The Orchestrator processes tasks autonomously by:
 
 ### Model not recognized
 
-**Symptom:** `Error: Model 'claude-haiku-4.5' not found`
+**Symptom:** `Error: Model 'claude-haiku-5.5' not found`
 
 **Cause:** OpenCode expects hyphenated model names.
 

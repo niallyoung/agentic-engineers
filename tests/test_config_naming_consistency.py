@@ -10,7 +10,7 @@ Validates model-naming consistency across SURVIVING canonical sources:
 Asserts:
   - All three sources agree per role
   - Every model matches claude-{variant}-{major}[.{minor}] format
-  - orchestrator=claude-sonnet-5 and engineer=claude-haiku-4.5 are consistent
+  - orchestrator=claude-haiku-5.5 and engineer=claude-haiku-5.5 are consistent
 """
 
 import re
@@ -22,7 +22,7 @@ LOCKED_MODELS_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
 AGENTS_DIR = REPO_ROOT / "src" / "agents"
 
 # Full-version names carry a numeric version suffix.
-# claude-haiku-4.5, claude-sonnet-5, claude-opus-5, claude-fable-5
+# claude-haiku-5.5, claude-sonnet-5, claude-opus-5, claude-fable-5
 FULL_VERSION = re.compile(
     r"^claude-(?:haiku)-\d+\.\d+$|^claude-(?:sonnet|opus|fable)-\d+(?:\.\d+)?$"
 )
@@ -107,7 +107,7 @@ def test_locked_models_sh_uses_full_versions():
     for model in locked:
         assert _is_full_version(model), (
             f"LOCKED_MODELS contains {model!r} which is not a full-version name "
-            f"(expected e.g. 'claude-haiku-4.5' or 'claude-sonnet-5')"
+            f"(expected e.g. 'claude-haiku-5.5' or 'claude-sonnet-5')"
         )
 
 

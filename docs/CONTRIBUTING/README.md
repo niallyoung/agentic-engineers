@@ -90,7 +90,7 @@ After `make install`, the framework automatically:
      handoff_type: DELEGATE
      task_id: 2026-05-29-add-postal-validation
      role: engineer
-     model: claude-haiku-4.5
+     model: claude-haiku-5.5
      effort: high
      scope: Add AU PostalCode validation rule to the address validator. PostalCode is optional but when present must be exactly 4 digits.
      context:
@@ -609,7 +609,7 @@ All changes are backward-compatible. Validators and tests require no updates for
 **CRITICAL: Model choices are LOCKED by strategic decision and enforced by pre-commit hooks.**
 
 We have chosen these Claude models today for cost-quality alignment:
-- **claude-haiku-4.5** — engineers, orchestrator (fast, cost-effective)
+- **claude-haiku-5.5** — engineers, orchestrator (fast, cost-effective)
 - **claude-sonnet-5** — model-engineer, quality, lead, senior engineers (complex tasks)
 - **claude-opus-5** — principal-engineer (cross-service architecture)
 - **claude-fable-5** — security-engineer (unconditional; highest capability for security tasks)
@@ -630,12 +630,12 @@ When adding an agent to `src/agents/`, use the canonical format with DOTS:
 ---
 name: my-agent
 description: Agent description
-model: claude-{variant}-{major}.{minor}  # ← REQUIRED format (e.g., claude-haiku-4.5)
+model: claude-{variant}-{major}.{minor}  # ← REQUIRED format (e.g., claude-haiku-5.5)
 ---
 ```
 
 **Locked models** (pick one):
-- ✅ `claude-haiku-4.5`
+- ✅ `claude-haiku-5.5`
 - ✅ `claude-sonnet-4.5`
 - ✅ `claude-sonnet-4.6`
 - ✅ `claude-opus-4.6`
@@ -691,13 +691,13 @@ Note: Principal and Security Engineer roles support multi-model selection. Orche
 
 1. **Choose model** → Pick from locked list (canonical format with DOTS)
    ```yaml
-   model: claude-haiku-4.5  # correct
+   model: claude-haiku-5.5  # correct
    ```
 
 2. **Add comment** → Explain why this model fits your agent
    ```
    Agent Purpose: Fast routing/analysis (low cost, low latency)
-   Model Choice: claude-haiku-4.5 (Haiku is fastest; 4.5 is stable)
+   Model Choice: claude-haiku-5.5 (Haiku is fastest; 5.5 is the current Haiku release)
    ```
 
 3. **Verify format** → Pre-commit hook validates automatically
@@ -719,7 +719,7 @@ Note: Principal and Security Engineer roles support multi-model selection. Orche
 ❌ Model not in locked set: src/agents/my-agent.md
    Model: claude-gpt-4
    Locked models (approved choices):
-     - claude-haiku-4.5
+     - claude-haiku-5.5
      - claude-sonnet-4.5
      - claude-sonnet-4.6
      - claude-opus-4.6

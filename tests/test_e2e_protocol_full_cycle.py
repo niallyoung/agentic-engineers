@@ -146,7 +146,7 @@ class TestGuardAllowsCanonicalDelegate:
     def test_guard_allows_delegate_with_extended_fields(self):
         """Guard allows DELEGATE with optional extension fields (model, effort, etc)."""
         delegate = _delegate_yaml(
-            model="claude-haiku-4.5",
+            model="claude-haiku-5.5",
             effort="high",
             estimated_tokens=2000,
         )

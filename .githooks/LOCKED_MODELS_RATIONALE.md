@@ -21,7 +21,7 @@ We use **positive enforcement** (locked choices) instead of **negative enforceme
 
 | Model | Agents | Rationale | Cost/Task |
 |-------|--------|-----------|-----------|
-| **claude-haiku-4.5** | engineer, orchestrator | Fast, cost-effective for standard tasks | $0.03-0.05 |
+| **claude-haiku-5.5** | engineer, orchestrator | Fast, cost-effective for standard tasks | $0.03-0.05 |
 | **claude-sonnet-5** | model-engineer, lead, quality, senior | Complex tasks, higher quality, cost-optimized | $0.12 |
 | **claude-opus-5** | principal | High-stakes, cross-service decisions | $0.18 |
 | **claude-fable-5** | security | Defensive security analysis only | $0.36 |
@@ -66,7 +66,7 @@ One of:
 
 ```bash
 # Scenario: Engineer agent is struggling with code review quality
-# Request: Switch from haiku-4.5 to sonnet-4.5
+# Request: Switch from haiku-5.5 to sonnet-4.5
 # Cost impact: +$0.025/task × 50 tasks/day = +$1.25/day budget
 # Timeline: Immediate
 

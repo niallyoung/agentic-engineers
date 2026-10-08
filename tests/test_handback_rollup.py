@@ -204,23 +204,23 @@ EVENTS_FIXTURE_MIXED_TYPES = "\n".join([
     json.dumps({
         "ts": "2026-08-14T10:00:00.000Z", "event": "delegate_issued",
         "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
-        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+        "agent_role": "engineer", "agent_model": "claude-haiku-5.5", "status": "success",
     }),
     json.dumps({
         "ts": "2026-08-14T10:00:05.000Z", "event": "subagent_spawned",
         "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
-        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+        "agent_role": "engineer", "agent_model": "claude-haiku-5.5", "status": "success",
     }),
     json.dumps({
         "ts": "2026-08-14T10:01:00.000Z", "event": "handback_received",
         "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
-        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+        "agent_role": "engineer", "agent_model": "claude-haiku-5.5", "status": "success",
         "tokens": 1500, "cost": 0.04, "quality": 0.92, "duration_seconds": 300,
     }),
     json.dumps({
         "ts": "2026-08-14T10:01:01.000Z", "event": "gate_result",
         "task_id": "ev1-task", "parent_task_id": "root", "depth": 1,
-        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+        "agent_role": "engineer", "agent_model": "claude-haiku-5.5", "status": "success",
     }),
     json.dumps({
         "ts": "2026-08-14T10:05:00.000Z", "event": "handback_received",
@@ -248,7 +248,7 @@ EVENTS_FIXTURE_MIXED_TYPES = "\n".join([
 EVENTS_FIXTURE_NO_METRICS = json.dumps({
     "ts": "2026-08-14T11:00:00.000Z", "event": "handback_received",
     "task_id": "ev6-bare", "parent_task_id": "root", "depth": 1,
-    "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "success",
+    "agent_role": "engineer", "agent_model": "claude-haiku-5.5", "status": "success",
 })
 
 EVENTS_FIXTURE_WITH_MALFORMED_LINE = "\n".join([
@@ -262,7 +262,7 @@ EVENTS_FIXTURE_WITH_MALFORMED_LINE = "\n".join([
     json.dumps({
         "ts": "2026-08-14T12:05:00.000Z", "event": "handback_received",
         "task_id": "ev8-bad-status", "parent_task_id": "root", "depth": 1,
-        "agent_role": "engineer", "agent_model": "claude-haiku-4.5", "status": "complete",
+        "agent_role": "engineer", "agent_model": "claude-haiku-5.5", "status": "complete",
         "tokens": 100, "cost": 0.01,
     }),
 ])
@@ -595,7 +595,7 @@ def test_cli_events_only_no_positional_sources_does_not_read_stdin(tmp_path, cap
 def test_cost_target_distribution_matches_spec():
     spec_text = (REPO_ROOT / "docs" / "SPEC.md").read_text(encoding="utf-8")
     m = re.search(
-        r"\*\*Cost Target Distribution:\*\*\s*(.+?)\.\s*\(Rebalanced",
+        r"\*\*Cost Target Distribution:\*\*\s*(.+?)\.\s*\(Targets set",
         spec_text,
         re.DOTALL,
     )

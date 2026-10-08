@@ -61,7 +61,7 @@ KNOWN_MODELS = {
     # Versioned Claude models (canonical source format)
     # SOURCE: https://docs.anthropic.com/claude/docs/models-overview
     # Format: claude-{variant}-{major}.{minor} or claude-{variant}-{major} (for single-part versions)
-    "claude-haiku-4.5",
+    "claude-haiku-5.5",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
     "claude-sonnet-5",

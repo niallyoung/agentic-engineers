@@ -394,7 +394,7 @@ model: sonnet
 # string now appears nowhere in the repo. Asserting a phantom id is "recognized"
 # pinned a validator bug in place as if it were the contract.
 @pytest.mark.parametrize("model", [
-    "claude-haiku-4.5",
+    "claude-haiku-5.5",
     "claude-sonnet-4.5",
     "claude-sonnet-4.6",
     "claude-opus-4.5",

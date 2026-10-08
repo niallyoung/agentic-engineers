@@ -245,7 +245,7 @@ metrics:
   cost: 0.012
   duration_seconds: 38
 confidence: 0.93
-model_used: claude-haiku-4.5
+model_used: claude-haiku-5.5
 ```
 
 ### 4.3 Schema-Parity Verification

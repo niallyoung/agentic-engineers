@@ -18,7 +18,7 @@ validation_rules:
 agents:
   engineer:
     name: Engineer
-    model: claude-haiku-4.5
+    model: claude-haiku-5.5
     type: implementation
     status: active
     effort: high

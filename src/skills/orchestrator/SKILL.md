@@ -8,7 +8,7 @@ metadata:
   version: "2.0"
   category: orchestration
   role: orchestrator
-  model: claude-sonnet-5
+  model: claude-haiku-5.5
   effort: low
   thinking: false
 ---
@@ -138,7 +138,7 @@ JSONL line per lifecycle event to
 ```bash
 python3 scripts/audit_append.py --event delegate_issued \
   --task-id my-task-001 --parent-task-id orchestrator-root --depth 1 \
-  --agent-role engineer --agent-model claude-haiku-4.5 --status success
+  --agent-role engineer --agent-model claude-haiku-5.5 --status success
 ```
 
 A failed append (exit 1 or 2, stderr message) is a warning only — log it and continue;
@@ -147,7 +147,7 @@ per-role duty table.
 
 ## Engineer HANDBACK Verification (MANDATORY)
 
-Before accepting an Engineer (`claude-haiku-4.5`) HANDBACK — i.e. before step 6 above —
+Before accepting an Engineer (`claude-haiku-5.5`) HANDBACK — i.e. before step 6 above —
 independently check:
 
 1. **Phantom-success check** — claimed file changes exist on disk / in `git status`.
