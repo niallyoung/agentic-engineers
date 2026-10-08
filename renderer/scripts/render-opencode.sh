@@ -85,7 +85,7 @@ detect_opencode_provider() {
 	echo "anthropic"
 }
 
-# Normalize a raw model token to a family suffix like "haiku-4-5" or "sonnet-4-6".
+# Normalize a raw model token to a family suffix like "haiku-5-5" or "sonnet-4-6".
 # Strips provider prefix, dots→hyphens, date stamps, and the "claude-" prefix.
 _opencode_family_token() {
 	echo "$1" \
@@ -100,8 +100,8 @@ _opencode_family_token() {
 }
 
 # Map a canonical agentic-engineers model token → fully-qualified "provider/model-id"
-# that OpenCode accepts.  Accepts both hyphen (claude-haiku-4-5) and dot
-# (claude-haiku-4.5) input formats.
+# that OpenCode accepts.  Accepts both hyphen (claude-haiku-5-5) and dot
+# (claude-haiku-5.5) input formats.
 #
 # Resolution order:
 #  1. Detect provider from environment / installed config.
@@ -156,15 +156,15 @@ PY
 
 		case "$provider" in
 			github-copilot)
-				# GitHub Copilot registry uses dotted version: claude-haiku-4.5.
+				# GitHub Copilot registry uses dotted version: claude-haiku-5.5.
 				id=$(_to_dotted_format "$family")
 				;;
 			openrouter)
-				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash).
+				# OpenRouter uses anthropic/claude-haiku-5.5 (note: nested slash).
 				id="anthropic/$(_to_dotted_format "$family")"
 				;;
 			*)
-				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-4-5
+				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-5-5
 				id="claude-$family"
 				;;
 		esac
@@ -343,9 +343,8 @@ write_config() {
 	# Derive the default model from the Orchestrator's roster row in
 	# src/AGENTS.md, the same way render-claude.sh/render-copilot.sh derive
 	# their own settings.json session model — never a hardcoded literal,
-	# which drifts silently the moment the roster changes (was hardcoded to
-	# claude-haiku-4-5 while the roster's orchestrator model had moved to
-	# claude-sonnet-5).
+	# which drifts silently the moment the roster changes (a stale
+	# hardcoded fallback once disagreed with the roster's orchestrator model).
 	local default_model orchestrator_meta orchestrator_model_raw
 	orchestrator_meta=$(lookup_agent_metadata "orchestrator" <(parse_agents_md "$SRC_AGENTS_MD") 2>/dev/null || true)
 	if [ -n "$orchestrator_meta" ]; then
@@ -354,7 +353,7 @@ write_config() {
 	fi
 	# Fallback only if the roster lookup fails outright (missing/unparseable
 	# src/AGENTS.md) — keeps write_config() from emitting an empty "model" key.
-	[ -n "${default_model:-}" ] || default_model=$(map_model_opencode "claude-haiku-4-5")
+	[ -n "${default_model:-}" ] || default_model=$(map_model_opencode "claude-haiku-5-5")
 
 	cat > "$out" <<EOF
 // _managed_by: agentic-engineers renderer/scripts/render-opencode.sh — do not edit; will be overwritten on re-install

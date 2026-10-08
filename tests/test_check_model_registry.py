@@ -25,8 +25,8 @@ SCRIPT_PATH = REPO_ROOT / "scripts" / "check_model_registry.py"
 FIXTURE_REGISTRY_DATA = {
     "models": [
         {
-            "id": "claude-haiku-4.5",
-            "name": "Claude Haiku 4.5",
+            "id": "claude-haiku-5.5",
+            "name": "Claude Haiku 5.5",
             "provider": "anthropic",
             "status": None,
             "limit": {"context": 200000, "output": 8192},
@@ -131,7 +131,7 @@ def test_parse_locked_models(script):
 
     # Should have the expected locked models
     expected = {
-        "claude-haiku-4.5",
+        "claude-haiku-5.5",
         "claude-sonnet-4.5",
         "claude-sonnet-4.6",
         "claude-sonnet-5",
@@ -154,10 +154,10 @@ def test_parse_agent_assignments(script):
 
     # Should have expected agents
     assert "engineer-agent" in assignments
-    assert assignments["engineer-agent"] == "claude-haiku-4.5"
+    assert assignments["engineer-agent"] == "claude-haiku-5.5"
 
     assert "orchestrator-agent" in assignments
-    assert assignments["orchestrator-agent"] == "claude-sonnet-5"
+    assert assignments["orchestrator-agent"] == "claude-haiku-5.5"
 
     assert "security-engineer-agent" in assignments
     assert assignments["security-engineer-agent"] == "claude-fable-5"
@@ -171,12 +171,12 @@ def test_build_model_index():
     index = _build_model_index(FIXTURE_REGISTRY_DATA)
 
     # Should have all fixture models
-    assert "claude-haiku-4.5" in index
+    assert "claude-haiku-5.5" in index
     assert "claude-sonnet-5" in index
     assert "claude-opus-5" in index
 
     # Check fields
-    haiku_info = index["claude-haiku-4.5"]
+    haiku_info = index["claude-haiku-5.5"]
     assert haiku_info.provider == "anthropic"
     assert haiku_info.cost_input == 0.80
     # 200000 is limit.context; the model's limit.output is 8192. Asserting the
@@ -207,10 +207,10 @@ def test_check_found_model():
     from check_model_registry import check_model_against_registry, _build_model_index
 
     index = _build_model_index(FIXTURE_REGISTRY_DATA)
-    result = check_model_against_registry("claude-haiku-4.5", index)
+    result = check_model_against_registry("claude-haiku-5.5", index)
 
     assert result.found
-    assert result.in_registry_as == "claude-haiku-4.5"
+    assert result.in_registry_as == "claude-haiku-5.5"
     assert result.cost_input == 0.80
     assert result.context_window == 200000  # limit.context, not limit.output (8192)
 

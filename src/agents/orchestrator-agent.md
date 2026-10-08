@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: All entry points; routing decisions; task management; metrics collection; model recommendations
-model: claude-sonnet-5
+model: claude-haiku-5.5
 accepts:
   - DELEGATE
 returns:
@@ -115,7 +115,7 @@ task_id: task-2026-06-08-auth-grace-period
 handoff_type: DELEGATE
 agent: engineer
 skill: engineer
-model: claude-haiku-4.5
+model: claude-haiku-5.5
 effort: high
 
 scope: |
@@ -165,7 +165,7 @@ metrics:
   cost: 0.019
   duration_seconds: 34
 
-model_used: claude-haiku-4.5
+model_used: claude-haiku-5.5
 confidence: 0.95
 escalations: 0
 ```

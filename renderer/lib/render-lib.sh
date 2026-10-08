@@ -212,7 +212,7 @@ yaml_escape_inline() {
 }
 
 # Map full model name to short form (for Claude Code, etc).
-# claude-haiku-4.5 → haiku, claude-sonnet-4.6 → sonnet, etc.
+# claude-haiku-5.5 → haiku, claude-sonnet-4.6 → sonnet, etc.
 # Usage: map_model <model_id>
 map_model() {
 	case "$1" in

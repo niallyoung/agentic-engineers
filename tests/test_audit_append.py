@@ -106,7 +106,7 @@ def test_validate_event_rejects_negative_depth():
 def test_validate_event_rejects_non_numeric_tokens():
     errors = validate_event({"event": "handback_received", "task_id": "t1", "parent_task_id": "p1",
                               "depth": 1, "agent_role": "engineer",
-                              "agent_model": "claude-haiku-4.5", "status": "success",
+                              "agent_model": "claude-haiku-5.5", "status": "success",
                               "tokens": "a lot"})
     assert any("tokens" in e for e in errors)
 

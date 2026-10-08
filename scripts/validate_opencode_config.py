@@ -437,7 +437,7 @@ class OpenCodeConfigValidator:
                 code="OC026",
                 severity=Severity.WARN,
                 message="Top-level `model` not set — agents without an explicit model will fail",
-                hint='Set "model": "github-copilot/claude-haiku-4.5" or similar.',
+                hint='Set "model": "github-copilot/claude-haiku-5.5" or similar.',
             ))
             return
         v = data["model"]

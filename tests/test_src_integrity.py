@@ -26,7 +26,7 @@ SRC_SKILLS = REPO_ROOT / "src" / "skills"
 AGENTS_MD = REPO_ROOT / "src" / "AGENTS.md"
 
 # Canonical source format for a Claude model id. Two version shapes are valid:
-#   - two-part  claude-haiku-4.5, claude-opus-4.8   (DOT separator)
+#   - two-part  claude-haiku-5.5, claude-opus-4.8   (DOT separator)
 #   - one-part  claude-opus-5, claude-sonnet-5, claude-fable-5
 # The invariant is "the version separator is a DOT, never a hyphen". A
 # single-part version has no separator at all, so it need not contain a dot.

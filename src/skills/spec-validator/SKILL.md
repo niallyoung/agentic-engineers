@@ -8,7 +8,7 @@ metadata:
   version: "1.0"
   category: validation
   role: quality-engineer
-  model: claude-haiku-4.5
+  model: claude-haiku-5.5
   effort: medium
   trigger: pre-merge | on-demand | post-merge-audit
 ---

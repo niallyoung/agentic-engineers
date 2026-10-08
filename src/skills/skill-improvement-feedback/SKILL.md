@@ -13,7 +13,7 @@ metadata:
   version: "1.0"
   category: meta-skill
   role: orchestrator
-  model: claude-haiku-4.5
+  model: claude-haiku-5.5
   effort: low
   thinking: false
   trigger: on-demand

@@ -8,7 +8,7 @@ metadata:
   version: "1.0"
   category: validation
   role: orchestrator
-  model: claude-haiku-4.5
+  model: claude-haiku-5.5
   effort: high
   thinking: false
   dependencies:

@@ -1,11 +1,11 @@
 ---
 name: engineer
 description: Well-scoped task with pre-written plan; low-medium complexity coding/implementation
-# model: claude-haiku-4.5 — LOCKED CANONICAL FORMAT
+# model: claude-haiku-5.5 — LOCKED CANONICAL FORMAT
 # Source agents use versioned Claude with DOTS (Copilot CLI format)
 # Renderers transform per-harness: OpenCode→hyphens, Claude Code→alias only, Copilot CLI→pass-through
 # See docs/SPEC.md "Model Naming Architecture" for complete per-harness transformation rules
-model: claude-haiku-4.5
+model: claude-haiku-5.5
 accepts:
   - DELEGATE
 returns:
@@ -21,7 +21,7 @@ tools: []
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Engineer
-**Model**: claude-haiku-4.5
+**Model**: claude-haiku-5.5
 **Effort**: high
 **Purpose**: Execute well-scoped, medium-complexity tasks that have a pre-written plan. Code edits, feature implementation, bug fixes, straightforward refactoring.
 
@@ -124,7 +124,7 @@ Engineer will ESCALATE if:
 handoff_type: DELEGATE
 task_id: 2026-06-02-engineer-fix-token-timeout
 agent: engineer
-model: claude-haiku-4.5
+model: claude-haiku-5.5
 effort: high
 scope: >
   Fix token validation timeout in {example-service} service.
@@ -246,4 +246,4 @@ copilot --allow-all --autopilot --agent engineer "Implementation task"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-haiku-4.5. The exact model ID is github-copilot/claude-haiku-4.5
+You are powered by the model named claude-haiku-5.5. The exact model ID is github-copilot/claude-haiku-5.5

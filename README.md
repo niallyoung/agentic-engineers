@@ -45,8 +45,8 @@ Agentic-engineers is one layer in a three-tier orchestration landscape: **heavy 
 
 ## The Roster
 
-Eight roles: **Orchestrator** (routing, `claude-sonnet-5`), **Engineer** (well-scoped
-implementation, `claude-haiku-4.5`), **Senior Engineer**, **Lead Engineer**,
+Eight roles: **Orchestrator** (routing, `claude-haiku-5.5`), **Engineer** (well-scoped
+implementation, `claude-haiku-5.5`), **Senior Engineer**, **Lead Engineer**,
 **Quality Engineer**, **Model Engineer** (all `claude-sonnet-5`), **Principal
 Engineer** (`claude-opus-5`), and **Security Engineer** (`claude-fable-5`). Full
 definitions, routing rules, and escalation paths live in

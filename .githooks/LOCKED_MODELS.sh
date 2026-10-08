@@ -24,7 +24,7 @@
 # at DELEGATE-creation time based on task complexity and risk profile.
 # See docs/SPEC.md > Model Selection Architecture for the full decision tree.
 LOCKED_MODELS=(
-    "claude-haiku-4.5"
+    "claude-haiku-5.5"
     "claude-sonnet-4.5"
     "claude-sonnet-4.6"
     "claude-sonnet-5"
@@ -44,14 +44,14 @@ LOCKED_MODELS=(
 # Examples:
 # - prefer claude-sonnet-4.6 → fallback to claude-sonnet-4.5 or claude-sonnet-5.0
 # - prefer claude-opus-4.6 → fallback to claude-opus-4.7
-# - prefer claude-haiku-4.5 → fallback to any other haiku release, then sonnet
+# - prefer claude-haiku-5.5 → fallback to any other haiku release, then sonnet
 
 # ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────
 # This is the canonical assignment. Agents MUST use a model from this mapping.
 # Format: agent-name:model-choice (space-separated for portability)
 AGENT_MODEL_ASSIGNMENTS=(
-    "engineer-agent:claude-haiku-4.5"
-    "orchestrator-agent:claude-sonnet-5"
+    "engineer-agent:claude-haiku-5.5"
+    "orchestrator-agent:claude-haiku-5.5"
     "lead-engineer-agent:claude-sonnet-5"
     "quality-engineer-agent:claude-sonnet-5"
     "senior-engineer-agent:claude-sonnet-5"

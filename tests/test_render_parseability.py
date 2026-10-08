@@ -385,7 +385,7 @@ class TestSettingsJSONConsistency:
             assert model_val, f"{harness}/settings.json: missing or empty 'model' field"
 
             # The settings.json values are often short aliases (haiku, sonnet, opus, fable)
-            # or full canonical ids (claude-haiku-4.5, etc). The src/AGENTS.md row has the
+            # or full canonical ids (claude-haiku-5.5, etc). The src/AGENTS.md row has the
             # canonical id. This test just checks they refer to the same tier/generation.
             # For now, we'll accept if either:
             #   1. They match exactly, or
@@ -405,7 +405,7 @@ class TestSettingsJSONConsistency:
         FIX 2 regression pin (task-2026-08-15-fix-renderer-bugs): dist/opencode/
         opencode.jsonc's top-level "model" (the OpenCode default model) must be
         derived from the Orchestrator's roster row in src/AGENTS.md, not a
-        hardcoded literal. It was previously hardcoded to "claude-haiku-4-5"
+        hardcoded literal (a stale hardcode once disagreed with the roster),
         regardless of what the roster's orchestrator row actually said.
 
         opencode.jsonc's model is a fully-qualified provider-prefixed string
@@ -440,7 +440,10 @@ class TestSettingsJSONConsistency:
 
         model_id = model_val.rsplit("/", 1)[1]
         normalized = model_id.replace(".", "-")
-        assert normalized == orchestrator_model, (
+        # Normalize BOTH sides: two-part versions (claude-haiku-5.5) are dotted in
+        # the roster but hyphenated by map_model_opencode(); single-part versions
+        # (claude-sonnet-5) have no dot to normalize.
+        assert normalized == orchestrator_model.replace(".", "-"), (
             f"opencode.jsonc model-id '{model_id}' (from '{model_val}', normalized "
             f"'{normalized}') does not match src/AGENTS.md orchestrator model "
             f"'{orchestrator_model}'"
@@ -458,7 +461,7 @@ class TestMutationDetection:
         """Verify suite catches empty description in markdown frontmatter."""
         agent_copy = tmp_path / "test-agent.md"
         agent_copy.write_text(
-            "---\nname: test\nmodel: claude-haiku-4.5\ndescription: \n---\n# Content\n"
+            "---\nname: test\nmodel: claude-haiku-5.5\ndescription: \n---\n# Content\n"
         )
 
         text = agent_copy.read_text(encoding="utf-8")

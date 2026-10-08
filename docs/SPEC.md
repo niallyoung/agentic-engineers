@@ -204,8 +204,8 @@ decision tree below to delegate to specialists.
 
 | Role | Model | Effort | Purpose |
 |------|-------|--------|---------|
-| **Orchestrator** | claude-sonnet-5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
-| **Engineer** | claude-haiku-4.5 | high | Execute well-scoped tasks with pre-written plans |
+| **Orchestrator** | claude-haiku-5.5 | low | Entry point; routing decisions; direct sub-agent dispatch; metrics collection |
+| **Engineer** | claude-haiku-5.5 | high | Execute well-scoped tasks with pre-written plans |
 | **Senior Engineer** | claude-sonnet-5 | high | Complex coding without a plan; diagnosis; planning |
 | **Lead Engineer** | claude-sonnet-5 | high | Code review; quality verification; unblock stuck tasks |
 | **Quality Engineer** | claude-sonnet-5 | medium | Tier 1 quality checks; model suitability assessment |
@@ -215,8 +215,9 @@ decision tree below to delegate to specialists.
 
 **Cost Target Distribution:** Orchestrator 55% · Engineer 18% · Senior Engineer 8% ·
 Quality Engineer 8% · Lead Engineer 3% · Model Engineer 3% · Principal Engineer 3% ·
-Security Engineer 2%. (Rebalanced from the prior Haiku-Orchestrator distribution now that
-Orchestrator runs on Sonnet-tier; see Update Log SPEC-2026-005.)
+Security Engineer 2%. (Targets set in SPEC-2026-005 when the Orchestrator ran on Sonnet-tier; left
+unchanged by the 2026-10 return of the Orchestrator to claude-haiku-5.5 — revisit with
+rollup data.)
 
 ---
 
@@ -378,8 +379,8 @@ Canonical (source) model IDs use a **dot** in the two-part version
 
 | Model | Canonical (source) ID | Context Window | Max Output | Use Case |
 |-------|-----------------------|-----------------|------------|----------|
-| **Claude Haiku 4.5** | `claude-haiku-4.5` | 200K | 64K | Fast, low-cost; Engineer |
-| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Orchestrator, Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
+| **Claude Haiku 5.5** | `claude-haiku-5.5` | 200K | 64K | Fast, low-cost; Orchestrator, Engineer |
+| **Claude Sonnet 5** | `claude-sonnet-5` | 1M | 128K | Balanced; Senior Engineer, Lead Engineer, Quality Engineer, Model Engineer. Same $3/$15 per MTok as Sonnet 4.6, but ~30% more tokens for the same text. Single-part version — no transformation in any harness. |
 | **Claude Opus 5** | `claude-opus-5` | 1M | 128K | High capability; Principal Engineer. Single-part version — no transformation in any harness. |
 | **Claude Fable 5** | `claude-fable-5` | 1M | 128K | Highest-capability tier; Security Engineer (unconditional default). Most expensive model in the roster ($10/$50 per MTok, 2x Opus 5) — a capability upgrade, never a cost saving. Single-part version — identical in every harness, no transformation. |
 | **Claude Sonnet 4.6** | `claude-sonnet-4.6` | 1M | 128K | Still locked/approved; no longer assigned to a role |
@@ -409,10 +410,10 @@ and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/refer
 
 ### Model Assignment by Agent Role
 
-As of 2026-08-11:
+As of 2026-10-08:
 
-- **Orchestrator:** `claude-sonnet-5` (routing)
-- **Engineer:** `claude-haiku-4.5` (fast, pre-planned tasks)
+- **Orchestrator:** `claude-haiku-5.5` (routing)
+- **Engineer:** `claude-haiku-5.5` (fast, pre-planned tasks)
 - **Senior Engineer:** `claude-sonnet-5` (complex coding, unscoped work)
 - **Lead Engineer:** `claude-sonnet-5` (code review, architectural guidance)
 - **Quality Engineer:** `claude-sonnet-5` (quality gates, verification)
@@ -511,7 +512,7 @@ into `dist/<harness>/` and installed to each harness's home directory.
 - **2026-06-13:** [SPEC-2026-002 — lead-engineer] Fixed residuals from the 2026-06-11 queue-path reversal (CU-4): four spots still presented the old `{session-id}/{harness}` order as current. All now show the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/`. Legacy *source* paths in the migration table intentionally unchanged (they document deprecated paths).
 - **2026-06-13:** [SPEC-2026-003 — principal-engineer, approved by security-engineer] Replaced a stale `AutomationController` reference (removed in the 2026-05-17 daemon-removal refactor) with a description of harness-initiated idle-loop polling as the then-current mechanism. Superseded by SPEC-2026-004 below.
 - **2026-08-09:** [SPEC-2026-004 — principal-engineer, approved by security-engineer + lead-engineer] Execution Model redesign: replaced queue-polling dispatch (never functional — a 2026-08-09 sweep of 16 live session partitions found zero tasks ever traversed the queue that way) with direct sub-agent spawn as the canonical ORCHESTRATOR-FIRST mechanism. Queue paths (LOCKED section) unchanged; the queue's role narrows to durable inbox + audit substrate. Governance-only; no code changed by the proposal itself.
-- **2026-08-11:** [SPEC-2026-005 — lead-engineer, framework slimdown WP-4] Consolidated rewrite, 2,035 → ~650 lines. LOCKED sections carried over near-verbatim with exactly two sanctioned edits: (a) Queue Architecture & Paths — "MUST initialize queue polling ONLY from" → "MUST read and write queue records ONLY from" (path unchanged); (b) Model Naming & Harness Compatibility — Orchestrator's assigned model changed from `claude-haiku-4.5` to `claude-sonnet-5` (commit 2b6e268). Deleted sections describing subsystems removed elsewhere in this slimdown: Phase 5.10 Span Capture & Indexing, Observability & Monitoring, Model Selection Architecture (opus-variant facts folded into a short non-LOCKED context note ahead of the LOCKED model section), Phase 3 Token Visibility, Optimization Feedback Loop, Agent Implementations, the Option-1a Dual-Layer Orchestrator Architecture and pre-direct-spawn Queue-Based Delegation Mechanics sections, Legacy Tiers, Next Steps (Phase 6), a duplicated vestigial tail, and a duplicate second SDLC-hooks section. Rewrote Repository Structure as an accurate ~20-line tree and COMPLETE SCRIPT INVENTORY from the actual surviving `scripts/` + `renderer/scripts/`. Authorizes the interim permissive floor in `renderer/scripts/check_test_regression.py` for the duration of the slimdown (WP-5 re-baselines from measured actuals).
+- **2026-08-11:** [SPEC-2026-005 — lead-engineer, framework slimdown WP-4] Consolidated rewrite, 2,035 → ~650 lines. LOCKED sections carried over near-verbatim with exactly two sanctioned edits: (a) Queue Architecture & Paths — "MUST initialize queue polling ONLY from" → "MUST read and write queue records ONLY from" (path unchanged); (b) Model Naming & Harness Compatibility — Orchestrator's assigned model changed from `claude-haiku-5.5` to `claude-sonnet-5` (commit 2b6e268). Deleted sections describing subsystems removed elsewhere in this slimdown: Phase 5.10 Span Capture & Indexing, Observability & Monitoring, Model Selection Architecture (opus-variant facts folded into a short non-LOCKED context note ahead of the LOCKED model section), Phase 3 Token Visibility, Optimization Feedback Loop, Agent Implementations, the Option-1a Dual-Layer Orchestrator Architecture and pre-direct-spawn Queue-Based Delegation Mechanics sections, Legacy Tiers, Next Steps (Phase 6), a duplicated vestigial tail, and a duplicate second SDLC-hooks section. Rewrote Repository Structure as an accurate ~20-line tree and COMPLETE SCRIPT INVENTORY from the actual surviving `scripts/` + `renderer/scripts/`. Authorizes the interim permissive floor in `renderer/scripts/check_test_regression.py` for the duration of the slimdown (WP-5 re-baselines from measured actuals).
 - **2026-08-12:** [SPEC-2026-006 — lead-engineer, framework slimdown follow-up C] Corrected the harness enumeration in the LOCKED "Queue Architecture & Paths" section, which still listed `pi` (the pi harness was dropped elsewhere in the 2026-08-11 slimdown; `renderer/scripts/render-pi*.py` and its dist output no longer exist) and omitted `codex` (a supported render target since commit 1361afa, 2026-06-17 — added after this section's 2026-05-26 lock date, so its earlier absence here was accurate at the time, not an oversight). Four surgical string replacements only — the harness-directory tree comment, the "Supported Harnesses" bullet list, the subdirectory-coverage sentence, and the harness-renderers compliance sentence — each swapping the literal `pi` for `codex` in place, preserving position, count ("four harnesses"), and every other word. Path template, ordering rules, state-dir list, and the Unsupported Legacy Paths migration table are byte-identical to SPEC-2026-005. The sibling LOCKED "Model Naming & Harness Compatibility" section (which also still references `pi`/`pi.dev`) is explicitly out of scope for this proposal.
 - **2026-08-12:** [SPEC-2026-007 — lead-engineer] Corrected the remaining `pi`/`pi.dev` references in the LOCKED "Model Naming & Harness Compatibility" section, left explicitly out of scope by SPEC-2026-006. The Harness-Specific Model Format table's `Pi (pi.dev)` row is replaced with a `Codex` row — not a like-for-like swap, since Codex does not carry the canonical Claude ID forward at all: it substitutes its own GPT-family model per agent-role tier (`gpt-5.4-mini` for Orchestrator/Engineer, `gpt-5.5` for all other roles) via `CODEX_MODEL_BY_ROLE` in `renderer/scripts/render-codex.py`, confirmed against rendered `dist/codex/agents/*.toml`. The Validation & Enforcement hyphen-format check's harness list drops `pi` and does NOT add `codex` in its place (`tests/test_model_naming_compliance.py` checks only `dist/{copilot,claude,opencode}/`; Codex output was never `claude-*` IDs to check), with a one-clause note explaining the exclusion. Model list, naming invariant, `.githooks/LOCKED_MODELS.sh` single-source-of-truth clause, and Model Switch Process are byte-identical.
 - **2026-08-13:** [SPEC-2026-008 — lead-engineer] Corrected the LOCKED "Queue Architecture & Paths" section's Enforcement Rules, which still mandated implementation details of code deleted by the 2026-08-11 slimdown — a `QueueManager` class and a standalone `queue-isolation` skill, neither of which exists anymore (path isolation is inlined into `src/skills/queue-management/scripts/queue_ops.py`). The two bullets are restated implementation-neutrally, preserving the same invariant (queue writes MUST be confined to the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/` root; a write that cannot be validated as isolated MUST fail immediately, never fall back) while naming the surviving enforcement point instead of the deleted class/skill names. Verified `queue_ops.py`'s `get_queue_path()`/`_validate_path_component()` actually raise before any write on an invalid `session_id`/`harness` — the invariant is enforced by the surviving code, not weakened to match it. The other two bullets in the same rule, and the rest of the LOCKED section, are byte-identical.
@@ -875,6 +876,18 @@ into `dist/<harness>/` and installed to each harness's home directory.
   operator from an options analysis (option C, accept-and-govern; prevention rejected
   as non-portable and undesirable — the same channel is the operator's emergency
   brake).
+
+- **2026-10-08:** [senior-engineer, task haiku-5-5-integration, authorized_by: operator
+  directive routed via Orchestrator: "integrate Haiku5.5 into agentic-engineers, replacing
+  haiku4.5 entirely -> switch back to haiku5.5 for Orchestrator and the lowest base
+  Engineer"] Approved model switch for orchestrator and engineer because the operator
+  directed a return to the Haiku tier on the new `claude-haiku-5.5` release. Changes:
+  `claude-haiku-4.5` replaced by `claude-haiku-5.5` repo-wide (LOCKED_MODELS list,
+  Agent Roster, Model Specifications, docs, tests); Orchestrator reassigned from
+  `claude-sonnet-5` to `claude-haiku-5.5` (effort `low` unchanged); Engineer stays on the
+  Haiku tier (effort `high` unchanged). No other role changed. Cost Target Distribution
+  percentages left as-is pending rollup data. Earlier Update Log entries that mention
+  `claude-haiku-4.5` are historical and intentionally unedited.
 
 ---
 
