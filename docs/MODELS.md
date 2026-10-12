@@ -32,7 +32,7 @@ A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
 
 | Model ID | Family | Status | Verified | Claude | Copilot | OpenCode |
 |----------|--------|--------|----------|--------|---------|----------|
-| `claude-haiku-5.5` | haiku | current | — | `claude-haiku-5-5` | `claude-haiku-5.5` | `claude-haiku-5-5` |
+| `claude-haiku-5.5` | haiku | provisional | — | `claude-haiku-5-5` | `claude-haiku-5.5` | `claude-haiku-5-5` |
 | `claude-haiku-4.5` | haiku | supported | 2026-10-03 | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
 | `claude-sonnet-4.5` | sonnet | deprecated | 2026-10-03 | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
 | `claude-sonnet-4.6` | sonnet | supported | 2026-10-03 | `claude-sonnet-4-6` | `claude-sonnet-4.6` | `claude-sonnet-4-6` |
@@ -85,3 +85,4 @@ model's `modelUsage` key. Never inferred; see `docs/model-evidence/`.
 | 2026-10-02 | principal-engineer | claude-opus-5 | `claude-opus-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
 | 2026-10-12 | engineer | claude-haiku-4.5 | `claude-haiku-5.5` | user-directive (operator: replace haiku-4.5 with haiku-5.5), PR #78 |
 | 2026-10-12 | orchestrator | claude-sonnet-5.5 | `claude-haiku-5.5` | user-directive (operator: Orchestrator back to Haiku tier on haiku-5.5), PR #78 |
+| 2026-10-12 | status of `claude-haiku-5.5` | current | `provisional` | user-directive (operator: claude-haiku-5.5 is provisional until sourced facts are recorded), PR #78 |

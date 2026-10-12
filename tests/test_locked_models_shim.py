@@ -147,20 +147,20 @@ class TestLockedModelsShFullGeneration:
             f"AGENT_MODEL_ASSIGNMENTS mismatch:\n  bash: {sorted(bash_assigns)}\n  expected: {sorted(expected_assigns)}"
 
     def test_helper_functions_still_exist_and_work(self, tmp_path):
-        """is_model_locked, get_agent_locked_model, show_* functions work."""
+        """is_known_model, get_agent_locked_model, show_* functions work."""
         root = make_tree(tmp_path)
         locked_sh = root / ".githooks" / "LOCKED_MODELS.sh"
 
         cli("sync", root=root)
 
-        # Test is_model_locked
+        # Test is_known_model
         result = subprocess.run(
             ["bash", "-c",
-             f'source "{locked_sh}" && is_model_locked "claude-haiku-4.5" && echo "OK"'],
+             f'source "{locked_sh}" && is_known_model "claude-haiku-4.5" && echo "OK"'],
             capture_output=True, text=True,
         )
         assert result.returncode == 0 and "OK" in result.stdout, \
-            f"is_model_locked failed: {result.stderr}"
+            f"is_known_model failed: {result.stderr}"
 
         # Test get_agent_locked_model
         result = subprocess.run(

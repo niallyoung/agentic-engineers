@@ -45,7 +45,7 @@ consistency with other roles and timing, then approves, defers or denies.
 ## Enforcement Mechanism
 
 - `.githooks/LOCKED_MODELS.sh` is a **generated shim** from `config/models.yaml`. It exposes
-  `LOCKED_MODELS`, `AGENT_MODEL_ASSIGNMENTS` and the helpers `is_model_locked`,
+  `LOCKED_MODELS`, `AGENT_MODEL_ASSIGNMENTS` and the helpers `is_known_model`,
   `get_agent_locked_model`, `show_locked_models`, `show_agent_assignments`.
 - `.githooks/pre-commit` validates staged agent files against the registry and rejects stale
   generated targets (`python3 scripts/models.py check` and `sync --check`).
@@ -55,11 +55,11 @@ consistency with other roles and timing, then approves, defers or denies.
 ```bash
 HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HOOKS_DIR/LOCKED_MODELS.sh"
-is_model_locked "$model" && echo approved
+is_known_model "$model" && echo known
 show_agent_assignments
 ```
 
-The interactive helpers have no caller in the repo other than `is_model_locked`; they are
+The interactive helpers have no caller in the repo other than `is_known_model`; they are
 the documented sourcing API and are kept deliberately.
 
 ## Governance
