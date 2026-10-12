@@ -178,3 +178,49 @@ def _get_codex_effort_for_role(repo_root: Path, role: str) -> str:
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])
+
+
+def _load_render_codex():
+    import importlib.util
+    path = Path(__file__).parent.parent / "renderer" / "scripts" / "render-codex.py"
+    spec = importlib.util.spec_from_file_location("render_codex_under_test", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(path.parent))
+    sys.modules[spec.name] = mod  # dataclasses resolves its module through sys.modules
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _source_agent_names(repo_root: Path) -> list[str]:
+    names = []
+    for md in sorted((repo_root / "src" / "agents").glob("*.md")):
+        text = md.read_text(encoding="utf-8")
+        assert text.startswith("---"), md
+        front = yaml.safe_load(text.split("---", 2)[1])
+        names.append(front["name"])
+    return names
+
+
+def test_every_source_agent_name_resolves_in_the_registry(capsys):
+    """A misspelt or renamed agent must not silently land on the default tier."""
+    repo_root = Path(__file__).parent.parent
+    registry = load_registry(repo_root)
+    mod = _load_render_codex()
+    renderer = mod.CodexRenderer.__new__(mod.CodexRenderer)
+    renderer.repo_root = repo_root
+    names = _source_agent_names(repo_root)
+    assert names, "no source agents found"
+    for name in names:
+        assert name in registry["roles"], f"src/agents agent {name!r} is not a registry role"
+        renderer._codex_model_for_role(name)
+    assert "warning" not in capsys.readouterr().err
+
+
+def test_unknown_role_warns_on_stderr_and_uses_the_default_tier(capsys):
+    repo_root = Path(__file__).parent.parent
+    mod = _load_render_codex()
+    renderer = mod.CodexRenderer.__new__(mod.CodexRenderer)
+    renderer.repo_root = repo_root
+    assert renderer._codex_model_for_role("no-such-role") == mod.STRONG_CODEX_MODEL
+    err = capsys.readouterr().err
+    assert "warning" in err and "no-such-role" in err

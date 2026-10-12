@@ -375,7 +375,7 @@ Every agent MUST emit an ACK as its **first output** before performing any work.
 Missing: [list of what's missing or unclear]
 Request: [what information is needed to proceed]
 
-❌ MODEL_MISMATCH — expected claude-sonnet-5.5, got claude-haiku-4.5   # Wrong model
+❌ MODEL_MISMATCH — expected claude-sonnet-5.5, got claude-haiku-5.5   # Wrong model
 Stopping. Orchestrator must re-delegate with the correct model.
 ```
 
