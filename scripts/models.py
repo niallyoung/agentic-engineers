@@ -440,6 +440,9 @@ def render_models_md(reg: dict) -> str:
     lines.extend([
         "## Pin History",
         "",
+        "Append-only. Pin changes and model status changes are both logged here; a status",
+        "change appears as a `status of <model>` row (From and To are statuses).",
+        "",
         "| Date | Role | From | To | Approval |",
         "|------|------|------|-----|----------|",
     ])

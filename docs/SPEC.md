@@ -417,8 +417,9 @@ not a SPEC amendment. Changing an invariant below IS a SPEC amendment and goes t
   registry IDs. Its tier is derived from each role's registry family by
   `CODEX_MODEL_BY_FAMILY` in `renderer/scripts/render-codex.py` (haiku to the mini tier,
   sonnet to the standard tier, opus and fable to the top tier), so a family change moves the
-  tier without code edits. The Orchestrator is on the standard tier at low effort, a higher
-  per-token cost than the mini tier; no cost figure is claimed here.
+  tier without code edits. Which Codex tier any role, the Orchestrator included, lands on
+  follows that role's registry family (see `docs/MODELS.md`), so it moves when the pin's
+  family moves; no cost figure is claimed here.
 - **I7 — Security Engineer scope and fallback policy.** The `security-engineer` role's
   defensive-only scope (see "Model Fallback & Defensive-Scope Notes") and its fallback policy
   (the chain declared per the registry; the fable family may fall back only to an adjacent
@@ -976,23 +977,42 @@ into `dist/<harness>/` and installed to each harness's home directory.
 
   **Compatibility.** No model assignment, effort or fallback value changes in this entry. Companion edits outside this file: `docs/decisions/ADR-model-pin-registry.md` addendum and correction, `.github/CODEOWNERS`, `tests/test_codeowners.py`, `config/models.yaml` (status only), and `make fresh-install-claude` documented in `README.md`, `docs/CONTRIBUTING/README.md` and `docs/guides/harness-setup/README.md`.
 
-- **2026-10-08:** [senior-engineer, task haiku-5-5-integration, authorized_by: operator
+- **2026-10-12:** [senior-engineer, task haiku-5-5-integration (first logged as 2026-10-08), authorized_by: operator
   directive routed via Orchestrator: "integrate Haiku5.5 into agentic-engineers, replacing
   haiku4.5 entirely -> switch back to haiku5.5 for Orchestrator and the lowest base
   Engineer"; reconciled onto the pin registry 2026-10-12, task 2026-10-12-pr78-merge-main]
   Approved model switch for orchestrator and engineer because the operator directed a return
   to the Haiku tier on the new `claude-haiku-5.5` release. Applied as a Model Pin Change
   (not a SPEC amendment) on top of the SPEC-2026-011 pin registry: `claude-haiku-5.5` added
-  to `config/models.yaml` (no sourced facts or CLI-acceptance evidence recorded yet),
+  to `config/models.yaml` (real `claude` CLI acceptance recorded 2026-10-12; no sourced price,
+  context, output or cutoff facts, so its status is `provisional`),
   `roles.engineer` and `roles.orchestrator` re-pinned to it with `pin_history` entries
   (effort unchanged: Orchestrator `low`, Engineer `high`), `claude-haiku-4.5` retained in
   the registry as a `supported` model, and every derived artifact regenerated with
   `scripts/models.py sync`. No other role changed. Cost Target Distribution percentages left
   as-is pending rollup data. Earlier Update Log entries that mention `claude-haiku-4.5` are
-  historical and intentionally unedited. Noted, not changed here: the I6 sentence stating the
-  Orchestrator is on the Codex standard tier predates this pin (the haiku family maps to the
-  mini tier) and needs a separate SPEC amendment through `spec-management`. Pin applied under
+  historical and intentionally unedited. The I6 sentence stating the Orchestrator is on the
+  Codex standard tier predated this pin (the haiku family maps to the mini tier); it is
+  reworded by SPEC-2026-015 below. Pin applied under
   the operator's direct directive; principal/security co-approval was not sought.
+
+- **2026-10-12:** [SPEC-2026-015 — senior-engineer (executing a routed DELEGATE, task
+  pr78-apply-confirmed-decisions; the `spec-management` authority list names Lead, Principal
+  and Security Engineer, so the DELEGATE and the operator directive are the authorization of
+  record), authorized_by: user-directive. The Orchestrator relayed the operator's confirmation
+  in that DELEGATE as: "I6 family-neutral reword through spec-management, and fix
+  docs/RENDERING.md" (relayed text, not verbatim operator wording). This was a
+  spec-management change with NO peer co-review: no Lead, Principal or Security Engineer
+  reviewed or approved it, and none is claimed. The repository owner remains the final
+  authority.] Rewords the LOCKED invariant I6 and the matching paragraph in
+  `docs/RENDERING.md` so they no longer name a fixed Codex tier for the Orchestrator. Both now
+  say that a role's Codex tier follows its registry family (see `docs/MODELS.md`). Reason: the
+  Orchestrator is pinned to a haiku-family model since the haiku-5.5 pin, which
+  `CODEX_MODEL_BY_FAMILY` maps to the mini tier, so "the Orchestrator is on the standard tier
+  at low effort" had become false; wording tied to family cannot go stale on a re-pin. No
+  invariant is added or removed, no validator behaviour changes, and no model assignment,
+  effort or `CODEX_MODEL_BY_FAMILY` value changes. Also removes the unsupported claim of a
+  higher per-token cost for that tier. SPEC-2026-014 and earlier entries are untouched.
 
 ---
 
