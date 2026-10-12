@@ -611,3 +611,15 @@ def test_cost_target_distribution_matches_spec():
     }
     assert spec_distribution == COST_TARGET_DISTRIBUTION
     assert sum(COST_TARGET_DISTRIBUTION.values()) == pytest.approx(100.0)
+
+
+def test_cost_target_note_states_pending_rebaseline_trigger():
+    """SPEC note and the script's mirror comment must both state the re-baselining trigger."""
+    spec_text = (REPO_ROOT / "docs" / "SPEC.md").read_text(encoding="utf-8")
+    script_text = (REPO_ROOT / "scripts" / "handback_rollup.py").read_text(encoding="utf-8")
+    flat_spec = " ".join(spec_text.split())
+    assert "pending re-baselining" in flat_spec
+    assert "at least 20 HANDBACKs each for the Orchestrator and Engineer" in flat_spec
+    flat_script = " ".join(script_text.split())
+    assert "pending re-baselining" in flat_script
+    assert ">= 20 HANDBACKs each for the Orchestrator and Engineer" in flat_script

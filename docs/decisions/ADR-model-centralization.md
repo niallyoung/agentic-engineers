@@ -7,6 +7,12 @@ date: 2025-05-15
 
 # ADR: Centralized Model Naming Architecture
 
+> **Status update (2026-10-12):** This ADR is retained as written and describes the model
+> state at decision time. The Orchestrator and Engineer assignments it references
+> (including `claude-haiku-4.5`) were superseded by `claude-haiku-5.5` on 2026-10-08; see
+> the 2026-10-08 entry in the `docs/SPEC.md` Update Log. The centralization decision itself
+> still stands.
+
 ## Status
 **APPROVED** — Ready for implementation
 
@@ -23,7 +29,7 @@ This creates **high maintenance burden**: changing a model requires updates in 3
 
 ### Current State
 - **models.yaml** exists with comprehensive role → model mappings but is NOT being used
-- Agent files use dot notation (claude-haiku-5.5) inconsistently
+- Agent files use dot notation (claude-haiku-4.5) inconsistently
 - No mechanism for environment-specific overrides
 - No format conversion strategy between agentic-engineers and Copilot CLI
 - render/main.py has partial ModelResolver implementation but not integrated
@@ -256,7 +262,7 @@ See: docs/model-implementation-roadmap.md
 
 ### Role to Model Mapping
 ```yaml
-engineer: claude-haiku-5.5
+engineer: claude-haiku-4.5
 senior_engineer: claude-sonnet-4.6
 security_engineer: claude-opus-4.7
 principal_engineer: claude-opus-4.7

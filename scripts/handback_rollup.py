@@ -70,8 +70,11 @@ import yaml
 
 # -----------------------------------------------------------------------------
 # Cost Target Distribution — cited from docs/SPEC.md § Agent Roster table, as of
-# SPEC-2026-005 (targets set when the Orchestrator ran on Sonnet-tier; unchanged
-# by its move back to claude-haiku-5.5). Percentages are share of total COST.
+# SPEC-2026-005 (targets set when the Orchestrator ran on Sonnet-tier; deliberately
+# unchanged by its move back to claude-haiku-5.5 and pending re-baselining once this
+# script has recorded >= 20 HANDBACKs each for the Orchestrator and Engineer on
+# claude-haiku-5.5 — mirrors the note in docs/SPEC.md). Percentages are share of
+# total COST.
 #
 # Deliberately a hardcoded literal, not parsed from docs/SPEC.md at runtime — this
 # script is a pure function of its stdin/file input and must not depend on repo

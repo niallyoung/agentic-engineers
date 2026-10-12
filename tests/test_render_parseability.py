@@ -109,6 +109,24 @@ def _get_frontmatter(text: str) -> str:
     return text[3:end]
 
 
+def _normalize_model_id(model_id: str) -> str:
+    """Dotted and hyphenated version separators compare equal (claude-haiku-5.5 == claude-haiku-5-5)."""
+    return model_id.replace(".", "-")
+
+
+@pytest.mark.parametrize(
+    "rendered,roster",
+    [
+        ("claude-haiku-5-5", "claude-haiku-5.5"),   # two-part version: dotted roster, hyphenated render
+        ("claude-haiku.5.5", "claude-haiku-5.5"),   # provider that dots the whole version
+        ("claude-sonnet-5", "claude-sonnet-5"),     # single-part version: nothing to normalize
+    ],
+)
+def test_opencode_model_normalization_handles_dotted_versions(rendered, roster):
+    """Pins the latent bug: comparing a hyphenated render against a dotted roster id must agree."""
+    assert _normalize_model_id(rendered) == _normalize_model_id(roster)
+
+
 def _parse_agents_table(agents_md: Path) -> dict[str, str]:
     """
     Parse the Agent Roster table from src/AGENTS.md.
@@ -439,11 +457,11 @@ class TestSettingsJSONConsistency:
         assert "/" in model_val, f"opencode.jsonc: model '{model_val}' is not provider-qualified"
 
         model_id = model_val.rsplit("/", 1)[1]
-        normalized = model_id.replace(".", "-")
+        normalized = _normalize_model_id(model_id)
         # Normalize BOTH sides: two-part versions (claude-haiku-5.5) are dotted in
         # the roster but hyphenated by map_model_opencode(); single-part versions
         # (claude-sonnet-5) have no dot to normalize.
-        assert normalized == orchestrator_model.replace(".", "-"), (
+        assert normalized == _normalize_model_id(orchestrator_model), (
             f"opencode.jsonc model-id '{model_id}' (from '{model_val}', normalized "
             f"'{normalized}') does not match src/AGENTS.md orchestrator model "
             f"'{orchestrator_model}'"
