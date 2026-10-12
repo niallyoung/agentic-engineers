@@ -36,7 +36,7 @@ The emerging niche where agentic-engineers sits: Markdown-sourced agent/skill de
 | wshobson/agents | Multi-harness plugin marketplace (content) | Markdown-only + render scripts | 6 coding CLIs from single source | 16 orchestrator agents; no structured handoff schema | Tier-based assignment | MIT | 38.8k stars, 4.1k forks |
 | obra/superpowers | SDLC methodology as composable skills | Markdown skills + hooks, near-zero deps | 8 harnesses | Skill-driven subagent execution; no YAML protocol | Inherits harness model choice | open source (verify) | Anthropic marketplace Jan 2026; stars disputed (57k-224k, flag) |
 | dotagents / AgentSync / ai-rules-sync | Config-sync "dotfiles for agents" | Tiny (single binary / toml) | 5-11 tools each | None — sync only | None | OSS various | Active micro-genre |
-| **agentic-engineers** | Portable orchestration protocol + roster across 4 CLIs | Markdown + tiny advisory Python, render pipeline; no runtime infra | 4 harnesses; Claude-family + Codex GPT substitution | **DELEGATE/HANDBACK YAML + direct spawn, depth/fan-out limits, metrics** | LOCKED_MODELS.sh + per-harness render transform | MIT | n/a |
+| **agentic-engineers** | Portable orchestration protocol + roster across 4 CLIs | Markdown + tiny advisory Python, render pipeline; no runtime infra | 4 harnesses; Claude-family + Codex GPT substitution | **DELEGATE/HANDBACK YAML + direct spawn, depth/fan-out limits, metrics** | `config/models.yaml` registry + per-harness render transform | MIT | n/a |
 
 ---
 
@@ -107,7 +107,7 @@ The following items represent observed demand signals and low-cost extensions. *
 | 4 | Subagent cost guardrail | Runaway-cost is loudest pain in niche; our metrics fields exist | M | `PROTOCOL.md`, orchestrator skill | ✓ 2026-08-14: Convention documented on existing `tokens_estimate`/`budget` DELEGATE extensions + Orchestrator refusal pattern (`docs/PROTOCOL.md` §6, `src/AGENTS.md`, orchestrator `SKILL.md`); no wire-format or hook change |
 | 5 | Gemini CLI + Cursor render targets | Peers cover 6-8 harnesses; we cover 4; Gemini CLI is highest-value | M per harness | `renderer/scripts/` | |
 | 6 | /fleet-aware Copilot rendering | Investigated 2026-08-14: NOT adoptable due to architectural mismatch (single-prompt /fleet vs. per-agent DELEGATE blocks) | S | `docs/RENDERING.md` | |
-| 7 | models.dev-backed advisory drift check | Pure-function script diffing `LOCKED_MODELS.sh` against models.dev JSON (context, pricing, deprecation) | S | `scripts/` | |
+| 7 | models.dev-backed advisory drift check | Pure-function script diffing `config/models.yaml` against models.dev JSON (context, pricing, deprecation) | S | `scripts/` | |
 | 8 | Render pipeline storytelling | "One source → N harnesses" is wshobson's 38.8k-star selling point; our differentiator is protocol + metrics | S | `docs/LANDSCAPE.md` + README Positioning | |
 | 9 | MCP-expose deterministic skill scripts (thin, optional) | Stateless-core spec lowers the bar; validate demand first | M | Generated MCP manifest | |
 | 10 | HANDBACK cost rollup report | Session-transcript-derived cost/quality summary per role; #1 asked-for capability | M | Post-session analysis | ✓ 2026-08-14: `scripts/handback_rollup.py` — advisory per-role cost/quality report from HANDBACK YAML, compared against `docs/SPEC.md`'s Cost Target Distribution; `tests/test_handback_rollup.py` (36 tests incl. drift check) |
@@ -122,15 +122,15 @@ Tier/alias indirection (opus/sonnet/haiku) is consensus best practice across the
 
 ### Three cheap borrows (candidates, not commitments)
 
-1. **Per-tier fallback pools** — A tier maps to an ordered pool with fallback, not one ID. LiteLLM Auto Router v2 (v1.94.x, Jul 2026) formalizes this as `tier_pools` and `model_group_alias`. We already have exactly this for security_engineer (fable-5 → opus-4.8 fallback); generalizing per-tier is ~10 lines of LOCKED_MODELS.sh.
+1. **Per-tier fallback pools** — A tier maps to an ordered pool with fallback, not one ID. LiteLLM Auto Router v2 (v1.94.x, Jul 2026) formalizes this as `tier_pools` and `model_group_alias`. We now have this per role: `config/models.yaml` declares an ordered `fallback` chain for every role (and `scripts/models.py resolve` walks it), so the remaining work is surfacing it in more harnesses.
 
-2. **Review-by dates** — Set a review date per locked model at lock time (ValueStream lifecycle guidance; OpenAI retired 15 model entries on Jul 23, 2026 alone). LOCKED_MODELS.sh could carry `REVIEW_BY_<model>` dates checked by pre-commit — zero runtime cost.
+2. **Review-by dates** — Set a review date per locked model at lock time (ValueStream lifecycle guidance; OpenAI retired 15 model entries on Jul 23, 2026 alone). `config/models.yaml` could carry `review_by` dates per model, checked by `scripts/models.py check` — zero runtime cost.
 
-3. **models.dev advisory drift check** — Pure-function script diffing LOCKED_MODELS.sh against models.dev's JSON (capabilities, context, pricing, deprecation tracking). Advisory-only (no enforcement), leveraging OpenCode's open TOML/JSON model database as the lightweight external registry.
+3. **models.dev advisory drift check** — Pure-function script diffing `config/models.yaml` against models.dev's JSON (capabilities, context, pricing, deprecation tracking). Advisory-only (no enforcement), leveraging OpenCode's open TOML/JSON model database as the lightweight external registry.
 
 ### What to avoid
 
-Proxy-based routers and provider-hosted virtual-model services add operational coupling; nothing in the field is lighter-and-better than LOCKED_MODELS.sh + per-harness render transform.
+Proxy-based routers and provider-hosted virtual-model services add operational coupling; nothing in the field is lighter-and-better than the `config/models.yaml` registry + per-harness render transform.
 
 ---
 

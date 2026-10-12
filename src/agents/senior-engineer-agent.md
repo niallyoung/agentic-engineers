@@ -1,7 +1,7 @@
 ---
 name: senior-engineer
 description: Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 accepts:
   - DELEGATE
 returns:
@@ -18,7 +18,7 @@ tools:
 If the DELEGATE you received is missing `handoff_type: DELEGATE`, `task_id`, `agent`, a `scope` of at least 15 words, `plan`, or `success_criteria`, do not proceed. Return a HANDBACK with `status: failure` explaining what's missing. This is a backstop, not the primary gate: the PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`) already checks DELEGATE structure before a spawn reaches you.
 
 **Role**: Senior Engineer
-**Model**: claude-sonnet-5
+**Model**: claude-sonnet-5.5
 **Effort**: high
 **Purpose**: Complex coding tasks without pre-written plans. Writes plans first, then executes or delegates. Diagnoses root causes. Handles ambiguous requirements.
 
@@ -161,7 +161,7 @@ the actual work.
 handoff_type: DELEGATE
 task_id: 2026-06-02-senior-refactor-event-store
 agent: senior-engineer
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 effort: high
 scope: >
   Refactor {example-service} DynamoDB event store to support new delta-token-based sync.
@@ -266,4 +266,4 @@ copilot --allow-all --autopilot --agent senior-engineer "Planning & analysis"
 ```
 
 Can be automatically invoked by orchestrator agents via Task tool.
-You are powered by the model named claude-sonnet-5.
+You are powered by the model named claude-sonnet-5.5.

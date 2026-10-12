@@ -13,7 +13,7 @@
 #   - opencode.jsonc schema validation (when staged)
 #   - No --no-verify / SKIP_HOOKS=1 bypass markers in committed code (warning only)
 #   - Source file integrity (no orphaned bytecode, no missing test sources)
-#   - Model naming compliance (LOCKED models)
+#   - Model registry compliance (scripts/models.py check / is-known)
 #   - DELEGATE/HANDBACK protocol validation
 #
 # 2026-08-13 infra consolidation: dropped the former pylint/mypy/contract-
@@ -42,12 +42,12 @@ ERRORS=0
 WARNINGS=0
 
 fail() {
-  echo "❌ $1"
+  printf '%s\n' "❌ $1"
   ERRORS=$((ERRORS + 1))
 }
 
 warn() {
-  echo "⚠️  $1"
+  printf '%s\n' "⚠️  $1"
   WARNINGS=$((WARNINGS + 1))
 }
 
@@ -474,75 +474,113 @@ echo "✅ Source file integrity check passed"
 
 # ─── End: Orphaned Bytecode Check ──────────────────────────────────────────────
 
-# ─── Section: Model Naming Compliance Enforcement ────────────────────────────────
-# SPEC locked: 2026-05-26 (docs/SPEC.md - Model Naming Architecture)
+# ─── Section: Model Registry Enforcement ─────────────────────────────────────────
+# config/models.yaml is the single source of truth for model pins (docs/SPEC.md,
+# Model Pin Change; invariants I1-I6; docs/decisions/ADR-model-pin-registry.md).
+# This hook holds NO model list and NO version allowlist: every decision is made by
+# scripts/models.py, so adding or re-pinning a model never needs a hook edit (I6).
 #
-# Enforcement: Model naming is PERMANENTLY LOCKED via:
-#   1. Source agents MUST use canonical format: claude-{variant}-\d+\.\d+ (DOTS)
-#   2. NO GPT models allowed anywhere
-#   3. NO unversioned models (claude-opus without -4.7)
-#   4. Tests validate all renderers transform correctly per-harness
+#   1. Staged src/agents/*-agent.md `model:` must be a known, non-retired registry ID
+#      (`models.py is-known`; hyphenated render forms are rejected as source IDs).
+#   2. When registry-related files are staged, `models.py check` must pass: registry
+#      shape, fallback policy, per-family min_pin floor, pin_history consistency, and
+#      generated targets current (stale targets => run `models.py sync`).
 #
-# Rationale: Model naming has broken repeatedly; this is non-negotiable.
-# Philosophy: POSITIVE ENFORCEMENT — we enforce locked models by choice, not forbidden patterns.
+# The checks run against a snapshot of the INDEX (git checkout-index into a temp
+# dir, passed as --root), so exactly what is staged is validated, and it works in
+# scratch repos. A missing PyYAML is a hard failure with a clear
+# message, never a silent pass.
 #
+# Philosophy: POSITIVE ENFORCEMENT — models are pinned by choice in the registry.
 
 echo ""
-echo "🔒 Validating model naming compliance (LOCKED models)..."
+echo "🔒 Validating model registry compliance..."
 
-# Source locked models configuration
-HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=.githooks/LOCKED_MODELS.sh
-source "$HOOKS_DIR/LOCKED_MODELS.sh" 2>/dev/null || {
-    echo "⚠️  pre-commit: could not source LOCKED_MODELS.sh — skipping model compliance check" >&2
-}
-
+MODEL_REG_TOP=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+# models.py lives next to this hook's repo; when the hook is a copy (e.g. .git/hooks/),
+# fall back to the committing repo's own scripts/.
+MODELS_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/models.py"
+[ -f "$MODELS_PY" ] || MODELS_PY="$MODEL_REG_TOP/scripts/models.py"
 MODEL_ERRORS=0
 
-# Validate source agents use models from LOCKED_MODELS (only if models are locked)
-if declare -f is_model_locked >/dev/null 2>&1; then
-    STAGED_MODEL_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|py|yaml|yml)$' || true)
-    for file in $STAGED_MODEL_FILES; do
-        [ -f "$file" ] || continue
+STAGED_MODEL_REL=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD \
+    | grep -E '^(config/models\.yaml|config/FRAMEWORK-MANIFEST\.yaml|src/AGENTS\.md|src/agents/[^/]+-agent\.md|\.githooks/LOCKED_MODELS\.sh|docs/MODELS\.md|\.agents_verification_sha|scripts/models\.py)$' || true)
 
-        # Only check source agent files
-        if [[ "$file" != src/agents/* ]]; then
-            continue
-        fi
-
-        # Extract model from staged content (from frontmatter)
-        staged_content=$(git show ":$file" 2>/dev/null)
-        # Guard: grep -E returns 1 when no match; under pipefail+set-e this would abort.
-        model=$( { echo "$staged_content" | grep -E '^model:\s*' | head -1 | awk '{print $2}' | tr -d '"'"'"''; } || true)
-
-        if [ -z "$model" ]; then
-            # No model field found — skip (might not be a full agent file)
-            continue
-        fi
-
-        # Check if model is in locked set
-        if ! is_model_locked "$model"; then
-            fail "❌ Model not in locked set: $file"
-            fail "   Model: $model"
-            fail "   Locked models (approved choices):"
-            for locked_model in "${LOCKED_MODELS[@]}"; do
-                fail "     - $locked_model"
-            done
-            fail "   To request a model change, contact the Orchestrator"
-            fail "   → Include: agent name and reason for the change"
-            MODEL_ERRORS=$((MODEL_ERRORS + 1))
-        fi
-    done
-
-    if [ "$MODEL_ERRORS" -gt 0 ]; then
-        echo ""
-        echo "❌ pre-commit: $MODEL_ERRORS model compliance violation(s) found"
-        fail "Models are LOCKED by choice. See .githooks/LOCKED_MODELS.sh for approved models"
-        ERRORS=$((ERRORS + MODEL_ERRORS))
+# The model checks run against a snapshot of the INDEX (what is about to be
+# committed), not the working tree, so unstaged edits can neither mask a staged
+# error nor cause a spurious failure. If the snapshot cannot be taken (e.g. an
+# unmerged index) the checks fall back to the working tree and say so.
+MODEL_ROOT="$MODEL_REG_TOP"
+MODEL_SNAPSHOT=""
+if [ -n "$STAGED_MODEL_REL" ]; then
+    MODEL_SNAPSHOT=$(mktemp -d 2>/dev/null || true)
+    if [ -n "$MODEL_SNAPSHOT" ] && git checkout-index -a --prefix="$MODEL_SNAPSHOT/" >/dev/null 2>&1; then
+        MODEL_ROOT="$MODEL_SNAPSHOT"
+    else
+        warn "could not snapshot the index for model checks; validating the working tree instead"
     fi
 fi
 
-# ─── End: Model Naming Compliance Enforcement ────────────────────────────────
+if [ -z "$STAGED_MODEL_REL" ]; then
+    echo "✅ Model registry check skipped (no registry-related files staged)"
+elif [ ! -f "$MODEL_ROOT/config/models.yaml" ]; then
+    # Only reachable for a tree without a registry; staged registry deletion is caught here too.
+    fail "model registry violation: config/models.yaml is missing but registry-related files are staged"
+    MODEL_ERRORS=$((MODEL_ERRORS + 1))
+elif [ ! -f "$MODELS_PY" ]; then
+    fail "model registry violation: $MODELS_PY not found; cannot validate models"
+    MODEL_ERRORS=$((MODEL_ERRORS + 1))
+elif ! python3 -c 'import yaml' >/dev/null 2>&1; then
+    fail "model registry violation: python3 has no PyYAML, so config/models.yaml cannot be validated"
+    echo "   Fix: python3 -m pip install pyyaml   (or SKIP_HOOKS=1 with a documented reason)"
+    MODEL_ERRORS=$((MODEL_ERRORS + 1))
+else
+    # 1. Staged source agents: model must be a known registry ID. One filename per
+    #    line (IFS= read -r), so names containing spaces are checked as one file
+    #    instead of being word-split into non-existent paths that skip the check.
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        staged_content=$(git show ":$file" 2>/dev/null) || continue   # deleted
+        model=$( { printf '%s\n' "$staged_content" | grep -E '^model:[[:space:]]*' | head -1 \
+                   | awk '{print $2}' | tr -d "\"'"; } || true)
+        [ -n "$model" ] || continue   # no model field: not a full agent file
+        if ! python3 "$MODELS_PY" --root "$MODEL_ROOT" is-known "$model" >/dev/null 2>&1; then
+            fail "model registry violation: Model not in the registry: $file"
+            echo "   Model: $model"
+            echo "   Known models: python3 scripts/models.py list-ids"
+            echo "   To change a role's pin: edit config/models.yaml, then run"
+            echo "   python3 scripts/models.py sync (see docs/SPEC.md, Model Pin Change)"
+            MODEL_ERRORS=$((MODEL_ERRORS + 1))
+        fi
+    done < <(printf '%s\n' "$STAGED_MODEL_REL" | grep -E '^src/agents/' || true)
+
+    # 2. Registry shape, floor, history and generated-target consistency.
+    CHECK_RC=0
+    CHECK_OUT=$(python3 "$MODELS_PY" --root "$MODEL_ROOT" check 2>&1) || CHECK_RC=$?
+    if [ "$CHECK_RC" -ne 0 ]; then
+        fail "model registry violation: models.py check failed"
+        printf '%s\n' "$CHECK_OUT" | sed 's/^/   /'
+        MODEL_ERRORS=$((MODEL_ERRORS + 1))
+    fi
+    SYNC_RC=0
+    SYNC_OUT=$(python3 "$MODELS_PY" --root "$MODEL_ROOT" sync --check 2>&1) || SYNC_RC=$?
+    if [ "$SYNC_RC" -ne 0 ] && [ "$CHECK_RC" -eq 0 ]; then
+        fail "model registry violation: generated targets are stale; run python3 scripts/models.py sync"
+        printf '%s\n' "$SYNC_OUT" | sed 's/^/   /'
+        MODEL_ERRORS=$((MODEL_ERRORS + 1))
+    fi
+fi
+[ -z "$MODEL_SNAPSHOT" ] || rm -rf "$MODEL_SNAPSHOT"
+
+if [ "$MODEL_ERRORS" -gt 0 ]; then
+    echo ""
+    echo "❌ pre-commit: $MODEL_ERRORS model registry violation(s) found"
+    ERRORS=$((ERRORS + MODEL_ERRORS))
+elif [ -n "$STAGED_MODEL_REL" ]; then
+    echo "✅ Model registry check passed"
+fi
+
+# ─── End: Model Registry Enforcement ─────────────────────────────────────────────
 
 # ─── DELEGATE/HANDBACK Protocol Validation ─────────────────────────────────────
 # Validates DELEGATE and HANDBACK YAML files committed to ensure protocol compliance.

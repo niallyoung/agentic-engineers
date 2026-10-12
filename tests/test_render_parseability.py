@@ -412,10 +412,16 @@ class TestSettingsJSONConsistency:
             # Example: AGENTS.md says "claude-sonnet-5", settings.json might say "sonnet".
             # This is acceptable because "sonnet" is the short form of the Orchestrator model.
             expected_tier = orchestrator_model.split("-")[1]  # e.g., "sonnet" from "claude-sonnet-5"
-            if model_val != orchestrator_model and model_val != expected_tier:
+            # Two-part versions (e.g. claude-sonnet-5.5, SPEC-2026-010) render to the pinned
+            # hyphenated full ID (claude-sonnet-5-5) in Claude Code, not a floating alias.
+            pinned = orchestrator_model.replace(".", "-")
+            accepted = {orchestrator_model, expected_tier, pinned}
+            if "." in orchestrator_model and harness == "claude":
+                accepted = {pinned}  # the Claude Code pin must be exact, never a floating alias
+            if model_val not in accepted:
                 pytest.fail(
                     f"{harness}/settings.json model '{model_val}' does not match "
-                    f"src/AGENTS.md orchestrator model '{orchestrator_model}' (expected tier: {expected_tier})"
+                    f"src/AGENTS.md orchestrator model '{orchestrator_model}' (accepted: {sorted(accepted)})"
                 )
 
     def test_opencode_default_model_agrees_with_agents_table(self):
@@ -423,7 +429,7 @@ class TestSettingsJSONConsistency:
         FIX 2 regression pin (task-2026-08-15-fix-renderer-bugs): dist/opencode/
         opencode.jsonc's top-level "model" (the OpenCode default model) must be
         derived from the Orchestrator's roster row in src/AGENTS.md, not a
-        hardcoded literal (a stale hardcode once disagreed with the roster),
+        hardcoded literal. It was previously hardcoded to "claude-haiku-4-5"
         regardless of what the roster's orchestrator row actually said.
 
         opencode.jsonc's model is a fully-qualified provider-prefixed string
@@ -458,9 +464,7 @@ class TestSettingsJSONConsistency:
 
         model_id = model_val.rsplit("/", 1)[1]
         normalized = _normalize_model_id(model_id)
-        # Normalize BOTH sides: two-part versions (claude-haiku-5.5) are dotted in
-        # the roster but hyphenated by map_model_opencode(); single-part versions
-        # (claude-sonnet-5) have no dot to normalize.
+        # Source ids may be two-part dotted (claude-haiku-5.5); normalize both sides.
         assert normalized == _normalize_model_id(orchestrator_model), (
             f"opencode.jsonc model-id '{model_id}' (from '{model_val}', normalized "
             f"'{normalized}') does not match src/AGENTS.md orchestrator model "

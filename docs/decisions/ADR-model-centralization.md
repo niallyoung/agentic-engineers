@@ -1,20 +1,17 @@
 ---
 title: Architecture Decision Record - Model Centralization
 type: ADR
-decision: APPROVED
+decision: SUPERSEDED
+superseded_by: ADR-model-pin-registry.md
 date: 2025-05-15
 ---
 
 # ADR: Centralized Model Naming Architecture
 
-> **Status update (2026-10-12):** This ADR is retained as written and describes the model
-> state at decision time. The Orchestrator and Engineer assignments it references
-> (including `claude-haiku-4.5`) were superseded by `claude-haiku-5.5` on 2026-10-08; see
-> the 2026-10-08 entry in the `docs/SPEC.md` Update Log. The centralization decision itself
-> still stands.
-
 ## Status
-**APPROVED** — Ready for implementation
+**SUPERSEDED** by [ADR-model-pin-registry](ADR-model-pin-registry.md) (2026-10-02). The single-source-of-truth goal was kept; the `ModelResolver` class and `src/config/models.yaml` it describes were never built and are replaced by `scripts/models.py` and `config/models.yaml`. Retained below for history.
+
+_Original status: APPROVED — Ready for implementation._
 
 ## Context
 

@@ -8,7 +8,7 @@ metadata:
   version: "1.0.1"
   category: meta-skill
   role: quality-engineer
-  model: claude-sonnet-5
+  model: claude-sonnet-5.5
   effort: medium
 ---
 

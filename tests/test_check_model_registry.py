@@ -3,7 +3,7 @@
 tests/test_check_model_registry.py — Advisory model-registry drift checker tests.
 
 Tests:
-1. Parsing of real LOCKED_MODELS.sh
+1. Parsing of the real config/models.yaml registry
 2. Drift detection against fixtures
 3. --offline flag handling
 4. --json output shape
@@ -25,6 +25,15 @@ SCRIPT_PATH = REPO_ROOT / "scripts" / "check_model_registry.py"
 FIXTURE_REGISTRY_DATA = {
     "models": [
         {
+            "id": "claude-haiku-4.5",
+            "name": "Claude Haiku 4.5",
+            "provider": "anthropic",
+            "status": None,
+            "limit": {"context": 200000, "output": 8192},
+            "cost": {"input": 0.80, "output": 4.00},
+        },
+        {
+            # Synthetic fixture row (the test never hits the network); values are not sourced facts.
             "id": "claude-haiku-5.5",
             "name": "Claude Haiku 5.5",
             "provider": "anthropic",
@@ -73,7 +82,7 @@ FIXTURE_REGISTRY_DATA = {
             "limit": {"context": 200000, "output": 16384},
             "cost": {"input": 15.00, "output": 75.00},
         },
-        # Model that exists but isn't in our LOCKED_MODELS
+        # Model that exists but isn't in our registry
         {
             "id": "claude-sonnet-4.6",
             "name": "Claude Sonnet 4.6",
@@ -122,45 +131,32 @@ def test_script_is_executable(script):
 
 
 def test_parse_locked_models(script):
-    """Test parsing LOCKED_MODELS from real .githooks/LOCKED_MODELS.sh."""
-    # Import and test directly
+    """_parse_locked_models follows config/models.yaml (no fixed expectation)."""
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     from check_model_registry import _parse_locked_models
+    import models as model_registry
 
     models = _parse_locked_models()
 
-    # Should have the expected locked models
-    expected = {
-        "claude-haiku-5.5",
-        "claude-sonnet-4.5",
-        "claude-sonnet-4.6",
-        "claude-sonnet-5",
-        "claude-opus-4.6",
-        "claude-opus-4.7",
-        "claude-opus-4.8",
-        "claude-opus-5",
-        "claude-fable-5",
-    }
-
-    assert set(models) == expected, f"Parsed models {set(models)} != expected {expected}"
+    reg = model_registry.load_registry(REPO_ROOT)
+    expected = {m for m, v in reg["models"].items() if v["status"] != "retired"}
+    assert set(models) == expected, f"Parsed models {set(models)} != registry {expected}"
+    assert len(models) == len(set(models)), "duplicate model ids"
+    # Every pinned role model must be among the checked models.
+    for cfg in reg["roles"].values():
+        assert cfg["model"] in models
 
 
 def test_parse_agent_assignments(script):
-    """Test parsing AGENT_MODEL_ASSIGNMENTS from real LOCKED_MODELS.sh."""
+    """_parse_agent_assignments mirrors roles.<role>.model in config/models.yaml."""
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     from check_model_registry import _parse_agent_assignments
+    import models as model_registry
 
     assignments = _parse_agent_assignments()
 
-    # Should have expected agents
-    assert "engineer-agent" in assignments
-    assert assignments["engineer-agent"] == "claude-haiku-5.5"
-
-    assert "orchestrator-agent" in assignments
-    assert assignments["orchestrator-agent"] == "claude-haiku-5.5"
-
-    assert "security-engineer-agent" in assignments
-    assert assignments["security-engineer-agent"] == "claude-fable-5"
+    reg = model_registry.load_registry(REPO_ROOT)
+    assert assignments == {f"{role}-agent": cfg["model"] for role, cfg in reg["roles"].items()}
 
 
 def test_build_model_index():
@@ -171,12 +167,12 @@ def test_build_model_index():
     index = _build_model_index(FIXTURE_REGISTRY_DATA)
 
     # Should have all fixture models
-    assert "claude-haiku-5.5" in index
+    assert "claude-haiku-4.5" in index
     assert "claude-sonnet-5" in index
     assert "claude-opus-5" in index
 
     # Check fields
-    haiku_info = index["claude-haiku-5.5"]
+    haiku_info = index["claude-haiku-4.5"]
     assert haiku_info.provider == "anthropic"
     assert haiku_info.cost_input == 0.80
     # 200000 is limit.context; the model's limit.output is 8192. Asserting the
@@ -207,10 +203,10 @@ def test_check_found_model():
     from check_model_registry import check_model_against_registry, _build_model_index
 
     index = _build_model_index(FIXTURE_REGISTRY_DATA)
-    result = check_model_against_registry("claude-haiku-5.5", index)
+    result = check_model_against_registry("claude-haiku-4.5", index)
 
     assert result.found
-    assert result.in_registry_as == "claude-haiku-5.5"
+    assert result.in_registry_as == "claude-haiku-4.5"
     assert result.cost_input == 0.80
     assert result.context_window == 200000  # limit.context, not limit.output (8192)
 

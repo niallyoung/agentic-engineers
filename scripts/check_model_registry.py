@@ -2,7 +2,8 @@
 """
 scripts/check_model_registry.py — Advisory model-registry drift checker.
 
-Compares LOCKED_MODELS.sh against models.dev's public registry.
+Compares the models in config/models.yaml (read through scripts/models.py, the
+single source of truth) against models.dev's public registry.
 Reports: found/not-found, deprecation status, pricing, context window.
 
 ADVISORY-ONLY: exits 0 always (except real crashes); no CI gating.
@@ -18,7 +19,8 @@ from dataclasses import dataclass, asdict
 import urllib.request
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LOCKED_MODELS_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import models as model_registry  # noqa: E402  (exits with a clear message without PyYAML)
 
 # models.dev endpoint
 MODELS_DEV_API = "https://models.dev/api.json"
@@ -52,31 +54,21 @@ class RegistryCheckResult:
 
 
 def _parse_locked_models() -> List[str]:
-    """Extract LOCKED_MODELS array from .githooks/LOCKED_MODELS.sh."""
-    text = LOCKED_MODELS_SH.read_text()
-    block = re.search(r"LOCKED_MODELS=\((.*?)\)", text, re.DOTALL)
-    if not block:
-        raise ValueError("LOCKED_MODELS array not found in LOCKED_MODELS.sh")
-
-    models = []
-    for m in re.finditer(r'"(claude-[\w.\-]+)"', block.group(1)):
-        models.append(m.group(1))
-
-    return models
+    """Known (non-retired) model IDs from config/models.yaml, in registry order."""
+    reg = model_registry.load_registry(REPO_ROOT)
+    return [
+        mid for mid, m in (reg.get("models") or {}).items()
+        if (m or {}).get("status") != "retired"
+    ]
 
 
 def _parse_agent_assignments() -> Dict[str, str]:
-    """Extract AGENT_MODEL_ASSIGNMENTS from .githooks/LOCKED_MODELS.sh."""
-    text = LOCKED_MODELS_SH.read_text()
-    block = re.search(r"AGENT_MODEL_ASSIGNMENTS=\((.*?)\)", text, re.DOTALL)
-    if not block:
-        raise ValueError("AGENT_MODEL_ASSIGNMENTS array not found in LOCKED_MODELS.sh")
-
-    assignments = {}
-    for m in re.finditer(r'"([\w-]+):(claude-[\w.\-]+)"', block.group(1)):
-        assignments[m.group(1)] = m.group(2)
-
-    return assignments
+    """Map '<role>-agent' to its pinned model, from config/models.yaml roles."""
+    reg = model_registry.load_registry(REPO_ROOT)
+    return {
+        model_registry.role_filename(role)[: -len(".md")]: cfg["model"]
+        for role, cfg in (reg.get("roles") or {}).items()
+    }
 
 
 def _fetch_models_dev_registry() -> Optional[Dict]:
@@ -124,7 +116,7 @@ def _match_tier(registry_id: str, locked_id: str) -> Optional[int]:
 
     0  exact id
     1  dot/dash spelling variant (Anthropic publishes claude-opus-4-7 where
-       LOCKED_MODELS.sh writes claude-opus-4.7)
+       the registry writes claude-opus-4.7)
     2  trailing ".0" variant
     3  family + major only — LOSSY: claude-opus-4.6, 4.7 and 4.8 all share the
        base claude-opus-4, so this tier must never outrank tier 1, or a lookup
@@ -228,7 +220,7 @@ def check_model_against_registry(
 
     models.dev lists the same model under dozens of reseller providers, whose
     reported limits and pricing differ from Anthropic's own. Anthropic also
-    publishes dashed ids (``claude-opus-4-7``) where ``LOCKED_MODELS.sh`` uses
+    publishes dashed ids (``claude-opus-4-7``) where ``config/models.yaml`` uses
     dotted ones (``claude-opus-4.7``), so an exact id hit is usually a reseller.
 
     Candidates are therefore ranked (canonical provider first, then exact id)
@@ -340,7 +332,7 @@ def format_output_text(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Check LOCKED_MODELS.sh against models.dev registry"
+        description="Check config/models.yaml models against models.dev registry"
     )
     parser.add_argument(
         "--json", action="store_true",

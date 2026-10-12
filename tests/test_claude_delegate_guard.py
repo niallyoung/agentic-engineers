@@ -121,6 +121,41 @@ class TestMissingOrMalformedFieldsDenied:
         assert "task_id" in decision["permissionDecisionReason"]
 
 
+class TestDiscriminatorRequired:
+    """Mutant i2: a block without a valid handoff_type: DELEGATE
+    discriminator must be treated as "no DELEGATE block at all"."""
+
+    def test_missing_handoff_type_line_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT.replace("handoff_type: DELEGATE\n", "")
+        assert "handoff_type" not in prompt
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "requires a canonical" in decision["permissionDecisionReason"]
+
+    def test_handoff_type_handback_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT.replace(
+            "handoff_type: DELEGATE", "handoff_type: HANDBACK"
+        )
+        decision = run_guard(_task_payload("engineer", prompt))
+        assert decision["permissionDecision"] == "deny"
+        assert "requires a canonical" in decision["permissionDecisionReason"]
+
+
+class TestSubagentTypeCaseInsensitive:
+    @pytest.mark.parametrize("spelling", ["Engineer", "ENGINEER", " engineer "])
+    def test_framework_role_is_guarded_regardless_of_case(self, spelling):
+        decision = run_guard(_task_payload(spelling, "no delegate block here"))
+        assert decision is not None and decision["permissionDecision"] == "deny"
+
+    def test_hyphenated_role_case_variant_is_guarded(self):
+        decision = run_guard(_task_payload("Senior-Engineer", "just do it"))
+        assert decision["permissionDecision"] == "deny"
+        assert "requires a canonical" in decision["permissionDecisionReason"]
+
+    def test_case_variant_with_valid_delegate_is_allowed(self):
+        assert run_guard(_task_payload("Engineer", VALID_DELEGATE_PROMPT)) is None
+
+
 class TestNonFrameworkAgentsIgnored:
     @pytest.mark.parametrize(
         "subagent_type", ["Explore", "general-purpose", "Plan", "claude", "statusline-setup"]
