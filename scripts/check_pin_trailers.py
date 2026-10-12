@@ -22,7 +22,9 @@ Usage:
 Scans every commit in <base>..<head> (default origin/main..HEAD), merges included:
 
   * normal commit: its pins are compared with its parent's;
-  * merge commit: its pins are compared with its FIRST parent's. A change there is
+  * merge commit: its pins are compared with its FIRST parent's (or, when the first parent
+    has no registry, with the first parent that has one, so a pre-registry branch cannot
+    skip the scan). A change there is
     accepted when the merge message carries the trailer, or when each changed role's new
     pin is exactly the pin of another parent (a side branch), because the commits that
     introduced it on that side are scanned (or are already in <base>). A pin that
@@ -33,8 +35,8 @@ Scans every commit in <base>..<head> (default origin/main..HEAD), merges include
 Output names only the short SHA and role(s): commit messages and model IDs are never
 echoed. Annotations (`::error::`) are emitted only when GITHUB_ACTIONS=true.
 
-Exit codes: 0 ok (or base ref not found: notice, nothing scanned), 1 unapproved pin
-change found, 2 environment/usage problem (PyYAML or git unavailable, bad --head).
+Exit codes: 0 ok, 1 unapproved pin change found, 2 environment/usage problem (PyYAML or
+git unavailable, base ref not found, bad --head). A missing base never passes silently.
 """
 
 from __future__ import annotations
@@ -129,8 +131,19 @@ def check_commit(sha: str, parents: list[str]):
     """Return (kind, items) for an unapproved change / history rewrite, else None."""
     if not parents:
         return None  # root commit: it introduces the registry, if at all
-    first = parents[0]
-    old_blob, new_blob = blob_id(first), blob_id(sha)
+    new_blob = blob_id(sha)
+    # The baseline is the first parent. For a merge whose first parent has no registry
+    # (a branch that predates it) the baseline is the first parent that does have one:
+    # otherwise the whole merge would be skipped and fail open. Only a root or non-merge
+    # commit whose parent lacks the registry is the "introduction" exemption.
+    base_idx = 0
+    old_blob = blob_id(parents[0])
+    if old_blob is None and len(parents) > 1:
+        for i, p in enumerate(parents[1:], start=1):
+            b = blob_id(p)
+            if b is not None:
+                base_idx, old_blob = i, b
+                break
     if old_blob is None:
         return None  # the registry is introduced here: seeding it is not a pin change
     if old_blob == new_blob:
@@ -147,7 +160,8 @@ def check_commit(sha: str, parents: list[str]):
         return None
     is_merge = len(parents) > 1
     if is_merge:
-        side = [fingerprint(registry_of(blob_id(p))) for p in parents[1:]]
+        side = [fingerprint(registry_of(blob_id(p)))
+                for i, p in enumerate(parents) if i != base_idx]
         items = [i for i in items if not any(sp.get(i) == new.get(i) for sp in side)]
         if not items:
             return None
@@ -165,9 +179,10 @@ def main(argv: list[str] | None = None) -> int:
     if git("rev-parse", "--git-dir").returncode != 0:
         fatal("not inside a git repository")
     if git("rev-parse", "--verify", "-q", args.base + "^{commit}").returncode != 0:
-        print("%snotice: %s not found; skipping model pin approval scan"
-              % ("::notice::" if annotate else "", args.base))
-        return 0
+        sys.stderr.write("%serror: base ref %s not found; cannot scan model pin approval "
+                         "(fetch it, or pass --base)\n"
+                         % ("::error::" if annotate else "", args.base))
+        return 2
     if git("rev-parse", "--verify", "-q", args.head + "^{commit}").returncode != 0:
         fatal("head ref %r is not a commit" % args.head)
 
