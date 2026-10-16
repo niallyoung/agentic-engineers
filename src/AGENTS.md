@@ -34,8 +34,8 @@ See [docs/decisions/ADR-model-pin-registry.md](../docs/decisions/ADR-model-pin-r
 
 | Role | Model | Effort | Multi-Model? | Use When |
 |---|---|---|---|---|
-| **Orchestrator** | claude-sonnet-5.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
-| **Engineer** | claude-haiku-4.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
+| **Orchestrator** | claude-haiku-5.5 | low | — | All entry points; routing decisions; task management; metrics collection; model recommendations |
+| **Engineer** | claude-haiku-5.5 | high | — | Well-scoped task with pre-written plan; low-medium complexity coding/implementation |
 | **Quality Engineer** | claude-sonnet-5.5 | medium | — | Post-implementation quality gate; code review; model suitability assessment |
 | **Senior Engineer** | claude-sonnet-5.5 | high | — | Complex coding tasks; implementation without fully pre-planned spec; diagnosis of root causes |
 | **Lead Engineer** | claude-sonnet-5.5 | high | — | Code review; quality decisions; medium-complexity planning; architectural guidance |
@@ -123,7 +123,7 @@ confidence: 0.95                   # 0.0-1.0 float
 
 ```
 User / External Trigger
-  └─► Orchestrator  (sonnet-5.5 — routing)
+  └─► Orchestrator  (haiku-5.5 — routing)
         ├─► Engineer               ← well-scoped tasks with full plans
         ├─► Senior Engineer        ← unscoped or multi-file work
         │     ├─► Lead Engineer    ← architecture decisions, code review
@@ -148,7 +148,7 @@ Detailed capabilities, boundaries, and escalation triggers for each role.
 
 ### 1. Orchestrator
 
-**Model:** `claude-sonnet-5.5`, effort `low`. Entry point for all user requests; routes via
+**Model:** `claude-haiku-5.5`, effort `low`. Entry point for all user requests; routes via
 the decision tree above; never implements. Parses requests into DELEGATE blocks, spawns
 the target agent directly (Agent/Task tool), fans out up to 5 concurrent spawns for
 independent work, and receives each HANDBACK in-context — the session transcript is the
@@ -161,7 +161,7 @@ outstanding spawns.
 
 ### 2. Engineer
 
-**Model:** `claude-haiku-4.5`, effort `high`. Executes well-scoped tasks at known
+**Model:** `claude-haiku-5.5`, effort `high`. Executes well-scoped tasks at known
 file:line addresses — the cheapest implementation role. Single-file or straightforward
 multi-file edits (≤3 files, same package), unit tests to a clear spec, documentation
 updates, dependency bumps, simple bug fixes with a clear root cause. **MUST NOT:**
@@ -375,7 +375,7 @@ Every agent MUST emit an ACK as its **first output** before performing any work.
 Missing: [list of what's missing or unclear]
 Request: [what information is needed to proceed]
 
-❌ MODEL_MISMATCH — expected claude-sonnet-5.5, got claude-haiku-4.5   # Wrong model
+❌ MODEL_MISMATCH — expected claude-sonnet-5.5, got claude-haiku-5.5   # Wrong model
 Stopping. Orchestrator must re-delegate with the correct model.
 ```
 

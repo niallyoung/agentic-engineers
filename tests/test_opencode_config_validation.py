@@ -50,10 +50,10 @@ MIN_VALID = """\
 // agentic-engineers OpenCode configuration
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "github-copilot/claude-haiku-4.5",
+  "model": "github-copilot/claude-haiku-5.5",
   "compaction": {"auto": true, "reserved": 30000},
   "permission": {"read": "allow", "edit": "allow", "bash": "allow"},
-  "agent": {"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}},
+  "agent": {"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}},
   "default_agent": "orchestrator",
   "command": {
     "sdlc-check": {
@@ -66,9 +66,9 @@ MIN_VALID = """\
   "provider": {
     "github-copilot": {
       "models": {
-        "claude-haiku-4.5": {
-          "id": "claude-haiku-4.5",
-          "name": "Claude Haiku 4.5",
+        "claude-haiku-5.5": {
+          "id": "claude-haiku-5.5",
+          "name": "Claude Haiku 5.5",
           "limit": {"context": 200000, "output": 8192}
         }
       }
@@ -196,8 +196,8 @@ class TestSchemaRules:
     def test_oc013_secret_detection(self):
         text = _replace(
             MIN_VALID,
-            '"model": "github-copilot/claude-haiku-4.5"',
-            '"model": "github-copilot/claude-haiku-4.5",\n  "leak": "api_key: \\"AKIAABCDEFGHIJKLMNOP\\""',  # pragma: allowlist secret
+            '"model": "github-copilot/claude-haiku-5.5"',
+            '"model": "github-copilot/claude-haiku-5.5",\n  "leak": "api_key: \\"AKIAABCDEFGHIJKLMNOP\\""',  # pragma: allowlist secret
         )
         r = _v(text)
         assert any(e.code == "OC013" for e in r.errors)
@@ -231,12 +231,12 @@ class TestSchemaRules:
         assert any(e.code == "OC025" for e in r.errors)
 
     def test_oc026_missing_global_model_warn(self):
-        text = _replace(MIN_VALID, '"model": "github-copilot/claude-haiku-4.5",\n  ', "")
+        text = _replace(MIN_VALID, '"model": "github-copilot/claude-haiku-5.5",\n  ', "")
         r = _v(text)
         assert any(w.code == "OC026" for w in r.warnings)
 
     def test_oc027_bad_model_id(self):
-        text = _replace(MIN_VALID, '"model": "github-copilot/claude-haiku-4.5"',
+        text = _replace(MIN_VALID, '"model": "github-copilot/claude-haiku-5.5"',
                         '"model": "no-provider-prefix"')
         r = _v(text)
         assert any(e.code == "OC027" for e in r.errors)
@@ -284,7 +284,7 @@ class TestSchemaRules:
 
     def test_oc050_agent_not_object(self):
         text = _replace(MIN_VALID,
-                        '"agent": {"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}}',
+                        '"agent": {"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}}',
                         '"agent": []')
         r = _v(text)
         assert any(e.code == "OC050" for e in r.errors)
@@ -301,22 +301,22 @@ class TestSchemaRules:
 
     def test_oc052_agent_spec_not_object(self):
         text = _replace(MIN_VALID,
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}',
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}',
                         '"orchestrator": "haiku"')
         r = _v(text)
         assert any(e.code == "OC052" for e in r.errors)
 
     def test_oc053_agent_model_invalid(self):
         text = _replace(MIN_VALID,
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}',
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}',
                         '"orchestrator": {"model": "no-provider"}')
         r = _v(text)
         assert any(e.code == "OC053" for e in r.errors)
 
     def test_oc054_unknown_mode_warns(self):
         text = _replace(MIN_VALID,
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}',
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5", "mode": "wild"}')
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}',
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5", "mode": "wild"}')
         r = _v(text)
         assert any(w.code == "OC054" for w in r.warnings)
 
@@ -438,18 +438,18 @@ class TestCrossRefs:
 
     def test_oc082_global_model_not_in_provider(self):
         # Swap the global model so it doesn't match any declared provider model
-        text = _replace(MIN_VALID, '"model": "github-copilot/claude-haiku-4.5",',
+        text = _replace(MIN_VALID, '"model": "github-copilot/claude-haiku-5.5",',
                         '"model": "openai/gpt-5",')
         # also update orchestrator's per-agent model to a declared one
         text = _replace(text,
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}',
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}')
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}',
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}')
         r = _v(text)
         assert any(w.code == "OC082" for w in r.warnings)
 
     def test_oc083_agent_model_not_in_provider(self):
         text = _replace(MIN_VALID,
-                        '"orchestrator": {"model": "github-copilot/claude-haiku-4.5"}',
+                        '"orchestrator": {"model": "github-copilot/claude-haiku-5.5"}',
                         '"orchestrator": {"model": "openai/gpt-5"}')
         r = _v(text)
         assert any(w.code == "OC083" for w in r.warnings)
@@ -651,7 +651,7 @@ class TestEdgeCases:
         text = MIN_VALID.split('"provider"')[0].rstrip(", \n") + "\n}\n"
         # Build a minimal config without provider block
         cfg = ('// hdr\n{"$schema":"https://opencode.ai/config.json",'
-               '"model":"github-copilot/claude-haiku-4.5"}')
+               '"model":"github-copilot/claude-haiku-5.5"}')
         r = _v(cfg)
         # No errors, may have warnings about missing sections
         assert r.ok

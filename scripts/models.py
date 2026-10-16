@@ -50,7 +50,9 @@ MANIFEST_REL = "config/FRAMEWORK-MANIFEST.yaml"
 SHA_REL = ".agents_verification_sha"
 MODELS_MD_REL = "docs/MODELS.md"
 
-STATUSES = ("current", "supported", "deprecated", "fallback", "retired")
+# provisional: a legal role pin whose sourced facts are not yet recorded (CLI acceptance
+# only). Every status change is logged in pin_history as a status entry (see check, rule 9).
+STATUSES = ("current", "provisional", "supported", "deprecated", "fallback", "retired")
 EFFORTS = ("low", "medium", "high", "max")
 HARNESS_RENDERS = ("pinned-id", "pass-through", "provider-prefixed", "role-tier-map")
 FRESHNESS_DAYS = 180
@@ -191,7 +193,7 @@ def render_locked_models(text: str, reg: dict) -> str:
         "# config/models.yaml is the source of truth; regenerate with: make models-sync.",
         "# To change pins, follow the Model Pin Change process in docs/SPEC.md.",
         "#",
-        "# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,",
+        "# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_known_model,",
         "# get_agent_locked_model, show_locked_models, show_agent_assignments.",
         "#",
         "# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)",
@@ -216,23 +218,23 @@ def render_locked_models(text: str, reg: dict) -> str:
     lines.extend([
         ")",
         "",
-        "# ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────",
-        "is_model_locked() {",
+        "# ─── VALIDATION HELPER: Check if a model id is in the registry ───────────────",
+        "is_known_model() {",
         "    local model=\"$1\"",
         "    ",
         "    for locked_model in \"${LOCKED_MODELS[@]}\"; do",
         "        if [[ \"$model\" == \"$locked_model\" ]]; then",
-        "            return 0  # Model is locked (approved)",
+        "            return 0  # Model id is in the registry (known; says nothing about pin approval)",
         "        fi",
         "    done",
         "    ",
-        "    return 1  # Model is NOT locked (not approved)",
+        "    return 1  # Model id is not in the registry",
         "}",
         "",
         "# ─── INTERACTIVE / DIAGNOSTIC HELPERS ────────────────────────────────────────",
         "# The three functions below (get_agent_locked_model, show_locked_models,",
         "# show_agent_assignments) have NO caller anywhere in this repo — only",
-        "# is_model_locked() above is invoked by a hook (.githooks/pre-commit). They are",
+        "# is_known_model() above is invoked by a hook (.githooks/pre-commit). They are",
         "# kept, and exported, as the documented sourcing API for interactive use:",
         "#   source .githooks/LOCKED_MODELS.sh && show_agent_assignments",
         "# See LOCKED_MODELS_RATIONALE.md § \"Enforcement Mechanism\". Do not delete them",
@@ -278,7 +280,7 @@ def render_locked_models(text: str, reg: dict) -> str:
         "# ─── EXPORT for sourcing in other hooks ───────────────────────────────────────",
         "export LOCKED_MODELS",
         "export AGENT_MODEL_ASSIGNMENTS",
-        "export -f is_model_locked",
+        "export -f is_known_model",
         "export -f get_agent_locked_model",
         "export -f show_locked_models",
         "export -f show_agent_assignments",
@@ -438,11 +440,18 @@ def render_models_md(reg: dict) -> str:
     lines.extend([
         "## Pin History",
         "",
+        "Append-only. Pin changes and model status changes are both logged here; a status",
+        "change appears as a `status of <model>` row (From and To are statuses).",
+        "",
         "| Date | Role | From | To | Approval |",
         "|------|------|------|-----|----------|",
     ])
     for e in (reg.get("pin_history") or []):
         date = e.get("date", "")
+        if "model" in e and "role" not in e:  # status entry
+            lines.append(f"| {date} | status of `{e['model']}` | {e.get('status_from', '—')} | "
+                         f"`{e.get('status_to', '')}` | {e.get('approval', '')} |")
+            continue
         role = e.get("role", "")
         from_model = e.get("from", "—")
         to_model = e.get("to", "")
@@ -720,10 +729,27 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
         except yaml.YAMLError as exc:
             errors.append(f"{MANIFEST_REL}: invalid YAML: {exc}")
 
-    # 9: pin_history
+    # 9: pin_history. Two entry shapes, both append-only:
+    #   pin entry:    {date, role, from, to, approval}                 (a role's pin changed)
+    #   status entry: {date, model, status_from, status_to, approval}  (a model's status changed)
     hist = reg.get("pin_history") or []
     last: dict[str, str] = {}
+    last_status: dict[str, str] = {}
     for i, e in enumerate(hist):
+        if isinstance(e, dict) and "model" in e and "role" not in e:
+            if not {"date", "model", "status_from", "status_to", "approval"} <= set(e):
+                errors.append(f"pin_history[{i}]: a status entry needs date, model, status_from, status_to, approval")
+                continue
+            if e["model"] not in models:
+                errors.append(f"pin_history[{i}]: '{e['model']}' is not in models")
+            for key in ("status_from", "status_to"):
+                if e[key] not in STATUSES:
+                    errors.append(f"pin_history[{i}]: {key} '{e[key]}' is not one of {STATUSES}")
+            if e["model"] in last_status and e["status_from"] != last_status[e["model"]]:
+                errors.append(f"pin_history[{i}]: status_from '{e['status_from']}' != previous status "
+                              f"'{last_status[e['model']]}' for {e['model']}")
+            last_status[e["model"]] = e["status_to"]
+            continue
         if not isinstance(e, dict) or not {"date", "role", "to", "approval"} <= set(e):
             errors.append(f"pin_history[{i}]: needs date, role, to, approval (and from)")
             continue
@@ -734,6 +760,11 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
         if e["role"] in last and e.get("from") != last[e["role"]]:
             errors.append(f"pin_history[{i}]: from '{e.get('from')}' != previous pin '{last[e['role']]}' for {e['role']}")
         last[e["role"]] = e["to"]
+    for mid, st in last_status.items():
+        cur = (models.get(mid) or {}).get("status")
+        if mid in models and cur != st:
+            errors.append(f"pin_history: latest status entry for '{mid}' is '{st}' but its status is '{cur}'; "
+                          f"append a status entry for every status change")
     for role, cfg in roles.items():
         if role not in last:
             errors.append(f"pin_history: no entry for role '{role}'")

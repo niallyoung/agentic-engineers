@@ -104,5 +104,7 @@ class TestModelFactsSection:
         section = self._section()
         reg = models.load_registry()
         for mid, m in reg["models"].items():
-            if not m.get("facts"):
+            # A model is listed when it carries sourced facts OR a real CLI-acceptance record
+            # (claude-haiku-5.5 has only the latter); one with neither has nothing to show.
+            if not m.get("facts") and not m.get("cli_accepted"):
                 assert f"| `{mid}` |" not in section

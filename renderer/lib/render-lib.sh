@@ -219,7 +219,7 @@ yaml_escape_inline() {
 #   map_model <role> <harness>      harness: claude | copilot | opencode
 #
 # Prints the registry's pinned ID for that role+harness (e.g. claude-sonnet-5,
-# claude-haiku-4-5). Prints nothing (and returns 1) when the role or harness ID
+# claude-haiku-5-5). Prints nothing (and returns 1) when the role or harness ID
 # is unknown, so a caller can warn and skip instead of guessing.
 #
 # Claude Code only: AGENTIC_CLAUDE_MODEL_RENDER=alias is an explicit, reversible

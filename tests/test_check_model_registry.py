@@ -33,6 +33,15 @@ FIXTURE_REGISTRY_DATA = {
             "cost": {"input": 0.80, "output": 4.00},
         },
         {
+            # Synthetic fixture row (the test never hits the network); values are not sourced facts.
+            "id": "claude-haiku-5.5",
+            "name": "Claude Haiku 5.5",
+            "provider": "anthropic",
+            "status": None,
+            "limit": {"context": 200000, "output": 8192},
+            "cost": {"input": 0.80, "output": 4.00},
+        },
+        {
             "id": "claude-sonnet-5",
             "name": "Claude Sonnet 5",
             "provider": "anthropic",

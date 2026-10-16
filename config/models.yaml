@@ -14,6 +14,15 @@
 #   3. python3 scripts/models.py sync
 #   4. python3 scripts/models.py check
 #
+# Workflow to change a model's STATUS (current/provisional/supported/...):
+#   1. edit models.<id>.status here
+#   2. append one status entry to pin_history:
+#        {date, model, status_from, status_to, approval}
+#      Every status change is logged; pin_history is append-only (never edit or
+#      reorder earlier lines). `check` fails if a model's latest status entry
+#      disagrees with its status.
+#   3. python3 scripts/models.py sync, then check
+#
 # `verified: null` means "the ID form has not been confirmed against an official
 # source for that harness"; it is never guessed. `source: null` likewise.
 #
@@ -66,9 +75,18 @@ fallback_policy:
 #   opencode: OpenCode family token; the renderer adds the provider prefix
 # Codex maps roles to gpt-* tiers inside render-codex.py and is not model-keyed.
 models:
+  claude-haiku-5.5:
+    family: haiku
+    status: provisional  # CLI acceptance only; becomes current once sourced facts are recorded
+    # No sourced facts recorded yet (price/context/output/cutoff need an official page; nothing is inferred).
+    # cli_accepted is a real `claude -p ok --model claude-haiku-5-5 --max-turns 1 --output-format json` run on 2026-10-12.
+    verified: null
+    source: null
+    cli_accepted: {date: 2026-10-12, modelusage_key: claude-haiku-5-5}
+    ids: {claude: claude-haiku-5-5, copilot: claude-haiku-5.5, opencode: claude-haiku-5-5}
   claude-haiku-4.5:
     family: haiku
-    status: current
+    status: supported
     verified: 2026-10-03
     source: https://platform.claude.com/docs/en/about-claude/models/overview
     facts:
@@ -202,11 +220,11 @@ models:
 # .githooks/LOCKED_MODELS.sh shim.
 roles:
   engineer:
-    model: claude-haiku-4.5
+    model: claude-haiku-5.5
     effort: high
     fallback: [claude-sonnet-5]
   orchestrator:
-    model: claude-sonnet-5.5
+    model: claude-haiku-5.5
     effort: low
     fallback: [claude-sonnet-5]
   lead-engineer:
@@ -262,3 +280,6 @@ pin_history:
   - {date: 2026-10-02, role: senior-engineer, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
   - {date: 2026-10-02, role: model-engineer, from: claude-sonnet-5, to: claude-sonnet-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
   - {date: 2026-10-02, role: principal-engineer, from: claude-opus-5, to: claude-opus-5.5, approval: "user-directive, minimum 5.5, SPEC-2026-012"}
+  - {date: 2026-10-12, role: engineer, from: claude-haiku-4.5, to: claude-haiku-5.5, approval: "user-directive (operator: replace haiku-4.5 with haiku-5.5), PR #78"}
+  - {date: 2026-10-12, role: orchestrator, from: claude-sonnet-5.5, to: claude-haiku-5.5, approval: "user-directive (operator: Orchestrator back to Haiku tier on haiku-5.5), PR #78"}
+  - {date: 2026-10-12, model: claude-haiku-5.5, status_from: current, status_to: provisional, approval: "user-directive (operator: claude-haiku-5.5 is provisional until sourced facts are recorded), PR #78"}

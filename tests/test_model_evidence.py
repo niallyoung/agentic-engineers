@@ -225,12 +225,18 @@ class TestBudgetNoteMatchesRegistry:
         assert b["session_usd"] > 0 and b["daily_usd"] >= b["session_usd"]
         assert 0 < b["warn_pct"] < b["critical_pct"] <= b["block_pct"]
 
-    @pytest.mark.parametrize("role", ["orchestrator", "principal-engineer"])
+    @pytest.mark.parametrize("role", ["orchestrator", "lead-engineer", "principal-engineer"])
     def test_note_names_the_registry_pin_and_its_sourced_prices(self, reg, role):
         pin = reg["roles"][role]["model"]
-        price = reg["models"][pin]["facts"]["price_per_mtok"]
         note = self._note()
         assert pin in note, f"note does not mention {role} pin {pin}"
+        facts = reg["models"][pin].get("facts")
+        if not facts:
+            # A pin with no sourced facts (e.g. claude-haiku-5.5) must be named in the note but
+            # must not have a price claimed for it; the note has to say none is recorded.
+            assert "no sourced price" in note, f"{pin} has no sourced facts; note must say so"
+            return
+        price = facts["price_per_mtok"]
         assert f"${price['input']:g} input / ${price['output']:g} output" in note.replace("($", "$").replace(")", "") \
             or f"(${price['input']:g} / ${price['output']:g})" in note
 

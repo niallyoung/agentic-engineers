@@ -59,7 +59,7 @@ source "$(dirname "$0")/../lib/render-lib.sh"
 
 # Model IDs: map_model <role> claude (renderer/lib/render-lib.sh) is the single
 # registry-driven mapper. It prints the EXACT pinned Claude Code ID from
-# config/models.yaml via scripts/models.py (e.g. claude-sonnet-5, claude-haiku-4-5,
+# config/models.yaml via scripts/models.py (e.g. claude-sonnet-5, claude-haiku-5-5,
 # claude-sonnet-5-5). There is no floating tier alias and no per-version special
 # case in this script.
 #

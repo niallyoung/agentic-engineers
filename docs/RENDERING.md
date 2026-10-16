@@ -177,9 +177,10 @@ walks the role's fallback chain with a stderr warning and records the walk in
 family to a Codex tier: haiku family → `gpt-5.4-mini` (mini tier), sonnet family → `gpt-5.5`
 (standard tier), opus/fable families → `gpt-5.5` (top tier, using standard). This rule is
 defined once in `CODEX_MODEL_BY_FAMILY` in `render-codex.py`, so changes to a role's registry
-family automatically propagate to its Codex tier without code edits. The orchestrator, being
-Sonnet-class, renders to the standard tier (`gpt-5.5`) with effort `low`; engineer (Haiku)
-remains on the mini tier (`gpt-5.4-mini`).
+family automatically propagate to its Codex tier without code edits. Each role's Codex tier, the orchestrator's included, therefore
+follows the family of its registry pin (see [MODELS.md](MODELS.md)): a haiku-family pin renders to
+the mini tier (`gpt-5.4-mini`) and a sonnet-family pin to the standard tier (`gpt-5.5`), and
+re-pinning a role to another family moves its tier.
 
 ---
 

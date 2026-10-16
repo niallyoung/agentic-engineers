@@ -133,10 +133,10 @@ class TestLinearHistory:
         git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")  # ... already on main
         assert run_scan(repo).returncode == 0
 
-    def test_missing_base_ref_skips_with_notice(self, tmp_path):
+    def test_missing_base_ref_fails_closed(self, tmp_path):
         repo = scan_repo(tmp_path)
         r = run_scan(repo, "--base", "origin/does-not-exist")
-        assert r.returncode == 0 and "skipping" in out(r)
+        assert r.returncode == 2 and "not found" in out(r)
 
     def test_default_base_is_origin_main_and_head_is_selectable(self, tmp_path):
         repo = scan_repo(tmp_path)
@@ -418,3 +418,51 @@ class TestReverts:
         edit_registry(repo, change_pin)
         commit(repo, SUBJECT)
         assert "revert" not in out(run_scan(repo)).lower()
+
+
+# ── merge whose first parent predates the registry (fail-open regression) ─────
+
+class TestPreRegistryFirstParent:
+    """A branch that predates config/models.yaml merges a side that has it. The merge must
+    be measured against the side, not skipped because the first parent has no registry."""
+
+    def _setup(self, tmp_path):
+        repo = make_repo(tmp_path, commit_registry=False)
+        (repo / "README.md").write_text("x")
+        git(repo, "add", "README.md")
+        commit(repo, "chore: base without a registry")
+        base_branch = branch(repo)
+        git(repo, "checkout", "-q", "-b", "feature")
+        touch_commit(repo, "feature.txt")
+        git(repo, "checkout", "-q", base_branch)
+        git(repo, "add", "config/models.yaml")
+        commit(repo, "feat: introduce the model registry")  # plays the role of main
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+        git(repo, "checkout", "-q", "feature")
+        return repo
+
+    def _merge(self, repo, message, mutate=None):
+        git(repo, "merge", "--no-ff", "--no-commit", "origin/main")
+        if mutate:
+            edit_registry(repo, mutate)
+        git(repo, "add", "-A")
+        commit(repo, message)
+
+    def test_unapproved_pin_change_in_the_merge_is_flagged(self, tmp_path):
+        repo = self._setup(tmp_path)
+        self._merge(repo, "merge: main into feature", change_pin)
+        r = run_scan(repo)
+        assert r.returncode == 1, out(r)
+        assert ROLE in out(r)
+
+    def test_same_merge_with_a_trailer_passes(self, tmp_path):
+        repo = self._setup(tmp_path)
+        self._merge(repo, "merge: main into feature\n\n" + TRAILER, change_pin)
+        r = run_scan(repo)
+        assert r.returncode == 0, out(r)
+
+    def test_merging_mains_pins_unchanged_passes(self, tmp_path):
+        repo = self._setup(tmp_path)
+        self._merge(repo, "merge: main into feature")
+        r = run_scan(repo)
+        assert r.returncode == 0, out(r)

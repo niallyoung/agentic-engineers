@@ -306,7 +306,9 @@ class CodexRenderer:
         description = docs_meta.get("description", "")
 
         # Derive the Codex model tier from the role's registry family
-        codex_model = self._codex_model_for_role(role)
+        # Registry roles are keyed by the hyphenated agent name (e.g. 'lead-engineer', 'orchestrator'),
+        # not by the underscored display role above, so look up by agent.name.
+        codex_model = self._codex_model_for_role(agent.name)
 
         return {
             "role": role,
@@ -327,9 +329,8 @@ class CodexRenderer:
         try:
             reg_path = self.repo_root / "config" / "models.yaml"
             registry = yaml.safe_load(reg_path.read_text(encoding="utf-8"))
-        except Exception:
-            # Fallback to the default strong model if registry load fails
-            return STRONG_CODEX_MODEL
+        except Exception as exc:
+            return self._codex_fallback(role, "registry unreadable (%s)" % type(exc).__name__)
 
         roles = registry.get("roles", {})
         models = registry.get("models", {})
@@ -337,24 +338,34 @@ class CodexRenderer:
         # Get the role's pinned model from the registry
         role_cfg = roles.get(role)
         if not role_cfg:
-            # Unknown role, use strong model as default
-            return STRONG_CODEX_MODEL
+            return self._codex_fallback(role, "agent name is not a role in config/models.yaml")
 
         model_id = role_cfg.get("model")
         if not model_id:
-            return STRONG_CODEX_MODEL
+            return self._codex_fallback(role, "role has no model pin")
 
         # Get the model's family
         model_info = models.get(model_id)
         if not model_info:
-            return STRONG_CODEX_MODEL
+            return self._codex_fallback(role, "pinned model is not in the registry")
 
         family = model_info.get("family")
         if not family:
-            return STRONG_CODEX_MODEL
+            return self._codex_fallback(role, "pinned model has no family")
 
         # Map family -> Codex tier
-        return CODEX_MODEL_BY_FAMILY.get(family, STRONG_CODEX_MODEL)
+        tier = CODEX_MODEL_BY_FAMILY.get(family)
+        if tier is None:
+            return self._codex_fallback(role, "family %r has no Codex tier in CODEX_MODEL_BY_FAMILY" % family)
+        return tier
+
+    @staticmethod
+    def _codex_fallback(role: str, reason: str) -> str:
+        """Default to the strong tier, but never silently: the role is on the wrong tier
+        if this fired for a real agent."""
+        sys.stderr.write("warning: render-codex: role %r rendered on the default %s tier: %s\n"
+                         % (role, STRONG_CODEX_MODEL, reason))
+        return STRONG_CODEX_MODEL
 
     def agent_instructions(self, agent: AgentSource, meta: dict[str, str]) -> str:
         accepts = agent.frontmatter.get("accepts") or []
@@ -443,7 +454,7 @@ codex --profile {ORCHESTRATOR_PROFILE} --sandbox workspace-write --ask-for-appro
 - Orchestrator-only: the root Codex session acts as dispatcher, not worker.
 - Structured protocol: use DELEGATE YAML for assigned work and HANDBACK YAML for results.
 - Family-derived model tiers: Codex models are derived from role registry families;
-  haiku family (Engineer) uses `{CHEAP_CODEX_MODEL}` (mini), sonnet family (Orchestrator, others) use
+  haiku family (Orchestrator, Engineer) uses `{CHEAP_CODEX_MODEL}` (mini), sonnet family (others) use
   `{STRONG_CODEX_MODEL}` (standard), opus/fable families use `{STRONG_CODEX_MODEL}` (top).
 - Parallelize independent work, but keep git history, migrations, and same-file edits coordinated.
 - Pause for genuine product/security decisions. Do not invent work when there is nothing pending or in flight.

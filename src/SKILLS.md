@@ -61,7 +61,7 @@ metadata:
   version: "1.0"
   category: orchestration | validation | monitoring | management | etc
   role: orchestrator | engineer | quality-engineer | lead-engineer | senior-engineer | principal-engineer | security-engineer
-  model: <any model ID in config/models.yaml, e.g. claude-haiku-4.5>   # see docs/MODELS.md
+  model: <any model ID in config/models.yaml, e.g. claude-haiku-5.5>   # see docs/MODELS.md
   effort: low | medium | high
 ---
 ```

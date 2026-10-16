@@ -5,12 +5,13 @@
 # config/models.yaml is the source of truth; regenerate with: make models-sync.
 # To change pins, follow the Model Pin Change process in docs/SPEC.md.
 #
-# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_model_locked,
+# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_known_model,
 # get_agent_locked_model, show_locked_models, show_agent_assignments.
 #
 # Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)
 
 LOCKED_MODELS=(
+    "claude-haiku-5.5"
     "claude-haiku-4.5"
     "claude-sonnet-4.5"
     "claude-sonnet-4.6"
@@ -31,8 +32,8 @@ LOCKED_MODELS=(
 # Generated from the roles section of config/models.yaml (role pins).
 # Format: agent-name:model-choice (space-separated for portability)
 AGENT_MODEL_ASSIGNMENTS=(
-    "engineer-agent:claude-haiku-4.5"
-    "orchestrator-agent:claude-sonnet-5.5"
+    "engineer-agent:claude-haiku-5.5"
+    "orchestrator-agent:claude-haiku-5.5"
     "lead-engineer-agent:claude-sonnet-5.5"
     "quality-engineer-agent:claude-sonnet-5.5"
     "senior-engineer-agent:claude-sonnet-5.5"
@@ -41,23 +42,23 @@ AGENT_MODEL_ASSIGNMENTS=(
     "principal-engineer-agent:claude-opus-5.5"
 )
 
-# ─── VALIDATION HELPER: Check if model is in locked set ──────────────────────
-is_model_locked() {
+# ─── VALIDATION HELPER: Check if a model id is in the registry ───────────────
+is_known_model() {
     local model="$1"
     
     for locked_model in "${LOCKED_MODELS[@]}"; do
         if [[ "$model" == "$locked_model" ]]; then
-            return 0  # Model is locked (approved)
+            return 0  # Model id is in the registry (known; says nothing about pin approval)
         fi
     done
     
-    return 1  # Model is NOT locked (not approved)
+    return 1  # Model id is not in the registry
 }
 
 # ─── INTERACTIVE / DIAGNOSTIC HELPERS ────────────────────────────────────────
 # The three functions below (get_agent_locked_model, show_locked_models,
 # show_agent_assignments) have NO caller anywhere in this repo — only
-# is_model_locked() above is invoked by a hook (.githooks/pre-commit). They are
+# is_known_model() above is invoked by a hook (.githooks/pre-commit). They are
 # kept, and exported, as the documented sourcing API for interactive use:
 #   source .githooks/LOCKED_MODELS.sh && show_agent_assignments
 # See LOCKED_MODELS_RATIONALE.md § "Enforcement Mechanism". Do not delete them
@@ -103,7 +104,7 @@ show_agent_assignments() {
 # ─── EXPORT for sourcing in other hooks ───────────────────────────────────────
 export LOCKED_MODELS
 export AGENT_MODEL_ASSIGNMENTS
-export -f is_model_locked
+export -f is_known_model
 export -f get_agent_locked_model
 export -f show_locked_models
 export -f show_agent_assignments

@@ -22,6 +22,15 @@ REQUIRED_PATHS = [
     "/docs/decisions/",
     "/renderer/scripts/",
     "/renderer/lib/",
+    "/renderer/validate_agents.py",
+    "/Makefile",
+    "/tests/test_model_pin_hooks.py",
+    "/tests/test_check_pin_trailers.py",
+    "/tests/test_codeowners.py",
+    "/.claude/settings.json",
+    "/.claude/hooks/session-start.sh",
+    "/config/orchestration.yaml",
+    "/src/agents/",
 ]
 HANDLE = re.compile(r"^@[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 

@@ -109,6 +109,24 @@ def _get_frontmatter(text: str) -> str:
     return text[3:end]
 
 
+def _normalize_model_id(model_id: str) -> str:
+    """Dotted and hyphenated version separators compare equal (claude-haiku-5.5 == claude-haiku-5-5)."""
+    return model_id.replace(".", "-")
+
+
+@pytest.mark.parametrize(
+    "rendered,roster",
+    [
+        ("claude-haiku-5-5", "claude-haiku-5.5"),   # two-part version: dotted roster, hyphenated render
+        ("claude-haiku.5.5", "claude-haiku-5.5"),   # provider that dots the whole version
+        ("claude-sonnet-5", "claude-sonnet-5"),     # single-part version: nothing to normalize
+    ],
+)
+def test_opencode_model_normalization_handles_dotted_versions(rendered, roster):
+    """Pins the latent bug: comparing a hyphenated render against a dotted roster id must agree."""
+    assert _normalize_model_id(rendered) == _normalize_model_id(roster)
+
+
 def _parse_agents_table(agents_md: Path) -> dict[str, str]:
     """
     Parse the Agent Roster table from src/AGENTS.md.
@@ -385,7 +403,7 @@ class TestSettingsJSONConsistency:
             assert model_val, f"{harness}/settings.json: missing or empty 'model' field"
 
             # The settings.json values are often short aliases (haiku, sonnet, opus, fable)
-            # or full canonical ids (claude-haiku-4.5, etc). The src/AGENTS.md row has the
+            # or full canonical ids (claude-haiku-5.5, etc). The src/AGENTS.md row has the
             # canonical id. This test just checks they refer to the same tier/generation.
             # For now, we'll accept if either:
             #   1. They match exactly, or
@@ -445,9 +463,9 @@ class TestSettingsJSONConsistency:
         assert "/" in model_val, f"opencode.jsonc: model '{model_val}' is not provider-qualified"
 
         model_id = model_val.rsplit("/", 1)[1]
-        normalized = model_id.replace(".", "-")
-        # Source ids may be two-part dotted (claude-sonnet-5.5); normalize both sides.
-        assert normalized == orchestrator_model.replace(".", "-"), (
+        normalized = _normalize_model_id(model_id)
+        # Source ids may be two-part dotted (claude-haiku-5.5); normalize both sides.
+        assert normalized == _normalize_model_id(orchestrator_model), (
             f"opencode.jsonc model-id '{model_id}' (from '{model_val}', normalized "
             f"'{normalized}') does not match src/AGENTS.md orchestrator model "
             f"'{orchestrator_model}'"
@@ -465,7 +483,7 @@ class TestMutationDetection:
         """Verify suite catches empty description in markdown frontmatter."""
         agent_copy = tmp_path / "test-agent.md"
         agent_copy.write_text(
-            "---\nname: test\nmodel: claude-haiku-4.5\ndescription: \n---\n# Content\n"
+            "---\nname: test\nmodel: claude-haiku-5.5\ndescription: \n---\n# Content\n"
         )
 
         text = agent_copy.read_text(encoding="utf-8")

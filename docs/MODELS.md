@@ -19,8 +19,8 @@ A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
 
 | Role | Model | Effort | Fallback |
 |------|-------|--------|----------|
-| **Engineer** | `claude-haiku-4.5` | high | claude-sonnet-5 |
-| **Orchestrator** | `claude-sonnet-5.5` | low | claude-sonnet-5 |
+| **Engineer** | `claude-haiku-5.5` | high | claude-sonnet-5 |
+| **Orchestrator** | `claude-haiku-5.5` | low | claude-sonnet-5 |
 | **Lead Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
 | **Quality Engineer** | `claude-sonnet-5.5` | medium | claude-sonnet-5 |
 | **Senior Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
@@ -32,7 +32,8 @@ A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
 
 | Model ID | Family | Status | Verified | Claude | Copilot | OpenCode |
 |----------|--------|--------|----------|--------|---------|----------|
-| `claude-haiku-4.5` | haiku | current | 2026-10-03 | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
+| `claude-haiku-5.5` | haiku | provisional | — | `claude-haiku-5-5` | `claude-haiku-5.5` | `claude-haiku-5-5` |
+| `claude-haiku-4.5` | haiku | supported | 2026-10-03 | `claude-haiku-4-5` | `claude-haiku-4.5` | `claude-haiku-4-5` |
 | `claude-sonnet-4.5` | sonnet | deprecated | 2026-10-03 | `claude-sonnet-4-5` | `claude-sonnet-4.5` | `claude-sonnet-4-5` |
 | `claude-sonnet-4.6` | sonnet | supported | 2026-10-03 | `claude-sonnet-4-6` | `claude-sonnet-4.6` | `claude-sonnet-4-6` |
 | `claude-sonnet-5` | sonnet | fallback | 2026-10-03 | `claude-sonnet-5` | `claude-sonnet-5` | `claude-sonnet-5` |
@@ -52,6 +53,7 @@ model's `modelUsage` key. Never inferred; see `docs/model-evidence/`.
 
 | Model ID | Price in / out | Cache read | Context | Max output | Cutoff | Verified | CLI accepted | Source |
 |----------|----------------|------------|---------|------------|--------|----------|--------------|--------|
+| `claude-haiku-5.5` | — | — | — | — | — | — | 2026-10-12 | — |
 | `claude-haiku-4.5` | $1 / $5 | $0.1 | 200,000 | 64,000 | 2025-02 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/about-claude/models/overview |
 | `claude-sonnet-4.5` | $3 / $15 | $0.3 | 200,000 | 64,000 | 2025-01 | 2026-10-03 | — | https://platform.claude.com/docs/en/models/sonnet-4-5/overview |
 | `claude-sonnet-4.6` | $3 / $15 | $0.3 | 1,000,000 | 128,000 | 2025-08 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/sonnet-4-6/overview |
@@ -65,6 +67,9 @@ model's `modelUsage` key. Never inferred; see `docs/model-evidence/`.
 | `claude-fable-5` | $10 / $50 | $1 | 1,000,000 | 128,000 | 2026-01 | 2026-10-03 | 2026-10-03 | https://platform.claude.com/docs/en/models/fable-5/overview |
 
 ## Pin History
+
+Append-only. Pin changes and model status changes are both logged here; a status
+change appears as a `status of <model>` row (From and To are statuses).
 
 | Date | Role | From | To | Approval |
 |------|------|------|-----|----------|
@@ -81,3 +86,6 @@ model's `modelUsage` key. Never inferred; see `docs/model-evidence/`.
 | 2026-10-02 | senior-engineer | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
 | 2026-10-02 | model-engineer | claude-sonnet-5 | `claude-sonnet-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
 | 2026-10-02 | principal-engineer | claude-opus-5 | `claude-opus-5.5` | user-directive, minimum 5.5, SPEC-2026-012 |
+| 2026-10-12 | engineer | claude-haiku-4.5 | `claude-haiku-5.5` | user-directive (operator: replace haiku-4.5 with haiku-5.5), PR #78 |
+| 2026-10-12 | orchestrator | claude-sonnet-5.5 | `claude-haiku-5.5` | user-directive (operator: Orchestrator back to Haiku tier on haiku-5.5), PR #78 |
+| 2026-10-12 | status of `claude-haiku-5.5` | current | `provisional` | user-directive (operator: claude-haiku-5.5 is provisional until sourced facts are recorded), PR #78 |

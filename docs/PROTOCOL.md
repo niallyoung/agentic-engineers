@@ -439,7 +439,7 @@ and append one event. It is advisory Python under [§1](#1-what-this-protocol-is
 ```bash
 python3 scripts/audit_append.py --event delegate_issued \
   --task-id my-task-001 --parent-task-id orchestrator-root --depth 1 \
-  --agent-role engineer --agent-model claude-haiku-4.5 --status success
+  --agent-role engineer --agent-model claude-haiku-5.5 --status success
 ```
 
 **Validation is the one permitted failure mode.** An unknown `event` name or a missing

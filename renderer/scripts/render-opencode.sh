@@ -85,7 +85,7 @@ detect_opencode_provider() {
 	echo "anthropic"
 }
 
-# Normalize a raw model token to a family suffix like "haiku-4-5" or "sonnet-4-6".
+# Normalize a raw model token to a family suffix like "haiku-5-5" or "sonnet-4-6".
 # Strips provider prefix, dots→hyphens, date stamps, and the "claude-" prefix.
 _opencode_family_token() {
 	echo "$1" \
@@ -193,7 +193,7 @@ PY
 	# Offline fallback: synthesize from the family token using the provider's known format.
 	if [ -z "${id:-}" ]; then
 		# Helper: convert family (hyphenated) to dotted format for github-copilot/openrouter.
-		# Only the MINOR separator becomes a dot: haiku-4-5 -> claude-haiku-4.5,
+		# Only the MINOR separator becomes a dot: haiku-5-5 -> claude-haiku-5.5,
 		# sonnet-5-5 -> claude-sonnet-5.5. The family/major hyphen stays, and
 		# single-part-version families (fable-5, opus-5, sonnet-5) are unchanged.
 		_to_dotted_format() {
@@ -202,15 +202,15 @@ PY
 
 		case "$provider" in
 			github-copilot)
-				# GitHub Copilot registry uses dotted version: claude-haiku-4.5.
+				# GitHub Copilot registry uses dotted version: claude-haiku-5.5.
 				id=$(_to_dotted_format "$family")
 				;;
 			openrouter)
-				# OpenRouter uses anthropic/claude-haiku-4.5 (note: nested slash).
+				# OpenRouter uses anthropic/claude-haiku-5.5 (note: nested slash).
 				id="anthropic/$(_to_dotted_format "$family")"
 				;;
 			*)
-				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-4-5
+				# anthropic, opencode, and most others use bare hyphenated: claude-haiku-5-5
 				id="claude-$family"
 				;;
 		esac

@@ -126,7 +126,7 @@ def test_render_codex_outputs_docs_config_and_skills(rendered_codex):
     assert "network_access = false" in config
 
     profile = (rendered_codex / "agentic-engineers-orchestrator.config.toml").read_text(encoding="utf-8")
-    assert 'model = "gpt-5.5"' in profile  # Orchestrator is Sonnet-class, uses standard tier
+    assert 'model = "gpt-5.4-mini"' in profile  # Orchestrator is Haiku-class (claude-haiku-5.5), uses mini tier
     assert 'model_reasoning_effort = "low"' in profile
     assert "developer_instructions = " in profile
     assert "Delegate Prefix" in profile

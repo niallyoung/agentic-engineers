@@ -158,7 +158,8 @@ class TestRegistryShape:
     def test_pin_history_latest_matches_pin(self, reg):
         last = {}
         for e in reg["pin_history"]:
-            last[e["role"]] = e["to"]
+            if "role" in e:  # status entries have no role
+                last[e["role"]] = e["to"]
         assert last == {r: c["model"] for r, c in reg["roles"].items()}
 
 
@@ -190,7 +191,12 @@ class TestCheckRules:
         root = make_tree(tmp_path)
         # Derived from the registry (first role's pin), so a legitimate re-pin needs no edit here.
         pinned = next(iter(models.load_registry(root)["roles"].values()))["model"]
-        edit_registry(root, lambda r: r["models"][pinned].update(status="deprecated"))
+        def deprecate(r):
+            was = r["models"][pinned]["status"]
+            r["models"][pinned]["status"] = "deprecated"
+            r["pin_history"].append({"date": datetime.date(2026, 10, 12), "model": pinned,
+                                     "status_from": was, "status_to": "deprecated", "approval": "test"})
+        edit_registry(root, deprecate)
         cli("sync", root=root)  # Regenerate docs/MODELS.md after registry edit
         errors, warns = models.check(root)
         assert errors == [] and any("deprecated" in w for w in warns)
@@ -198,7 +204,9 @@ class TestCheckRules:
     def test_stale_frontmatter_is_an_error(self, tmp_path):
         root = make_tree(tmp_path)
         f = root / "src/agents/engineer-agent.md"
-        f.write_text(f.read_text().replace("\nmodel: claude-haiku-4.5\n", "\nmodel: claude-sonnet-5\n", 1))
+        pinned = models.load_registry(root)["roles"]["engineer"]["model"]
+        assert f"\nmodel: {pinned}\n" in f.read_text()
+        f.write_text(f.read_text().replace(f"\nmodel: {pinned}\n", "\nmodel: claude-sonnet-5\n", 1))
         errors, _ = models.check(root)
         assert any("engineer-agent.md" in e and "stale" in e for e in errors)
 
@@ -376,7 +384,7 @@ class TestFamilyFloor:
         root = make_tree(tmp_path)
 
         def mutate(r):
-            prev = [e["to"] for e in r["pin_history"] if e["role"] == role][-1]
+            prev = [e["to"] for e in r["pin_history"] if e.get("role") == role][-1]
             r["models"][model]["status"] = "fallback"
             r["roles"][role]["model"] = model
             r["roles"][role]["fallback"] = [f for f in r["roles"][role]["fallback"] if f != model]
@@ -402,12 +410,12 @@ class TestCli:
         assert "0 error(s)" in r.stdout
 
     def test_get_model_effort_fallback_id(self):
-        assert cli("get", "orchestrator").stdout.strip() == "claude-sonnet-5.5"
+        assert cli("get", "orchestrator").stdout.strip() == "claude-haiku-5.5"
         assert cli("get", "security-engineer", "--field", "effort").stdout.strip() == "max"
         assert cli("get", "principal-engineer", "--field", "fallback").stdout.strip() == "claude-opus-5 claude-opus-4.8"
-        assert cli("get", "orchestrator", "--harness", "claude").stdout.strip() == "claude-sonnet-5-5"
-        assert cli("get", "engineer", "--harness", "claude").stdout.strip() == "claude-haiku-4-5"
-        assert cli("get", "engineer", "--harness", "copilot").stdout.strip() == "claude-haiku-4.5"
+        assert cli("get", "orchestrator", "--harness", "claude").stdout.strip() == "claude-haiku-5-5"
+        assert cli("get", "engineer", "--harness", "claude").stdout.strip() == "claude-haiku-5-5"
+        assert cli("get", "engineer", "--harness", "copilot").stdout.strip() == "claude-haiku-5.5"
         assert cli("get", "principal-engineer", "--harness", "opencode").stdout.strip() == "claude-opus-5-5"
 
     def test_get_errors(self):
@@ -467,7 +475,7 @@ class TestSync:
         diff = [(a, b) for a, b in zip(old, new) if a != b]
         assert len(old) == len(new) and 1 <= len(diff) <= 2
         assert any("| high |" in b and "Quality Engineer" in b for _, b in diff)
-        assert "# model: claude-haiku-4.5" in (root / "src/agents/engineer-agent.md").read_text()
+        assert "# model: claude-haiku-5.5" in (root / "src/agents/engineer-agent.md").read_text()
 
 
 # --------------------------------------------------------------- resolve ---
@@ -475,14 +483,14 @@ class TestSync:
 class TestResolve:
     def test_no_availability_info_returns_pin(self, tmp_path):
         r = cli("resolve", "orchestrator", "--harness", "claude", "--no-record")
-        assert r.returncode == 0 and r.stdout.strip() == "claude-sonnet-5-5" and r.stderr == ""
+        assert r.returncode == 0 and r.stdout.strip() == "claude-haiku-5-5" and r.stderr == ""
 
     def test_pin_available(self, tmp_path):
         avail = tmp_path / "a.json"
-        avail.write_text(json.dumps({"anthropic": {"models": {"claude-sonnet-5-5": {}}}}))
+        avail.write_text(json.dumps({"anthropic": {"models": {"claude-haiku-5-5": {}}}}))
         rec = tmp_path / "rec.json"
         r = cli("resolve", "orchestrator", "--harness", "opencode", "--available-from", str(avail), "--record", str(rec))
-        assert r.returncode == 0 and r.stdout.strip() == "claude-sonnet-5-5" and "WARN" not in r.stderr
+        assert r.returncode == 0 and r.stdout.strip() == "claude-haiku-5-5" and "WARN" not in r.stderr
         data = json.loads(rec.read_text())["roles"]["orchestrator"]
         assert data["fallback_used"] is False
 
@@ -572,3 +580,55 @@ class TestBumpSimulation:
         edit_registry(root, mut)
         errors, _ = models.check(root)
         assert any("retired" in e for e in errors)
+
+
+# ------------------------------------------------------- status changes ---
+
+class TestStatusHistory:
+    """A model status change is logged in pin_history as a status entry."""
+
+    MODEL = "claude-haiku-4.5"  # supported, not pinned to the entry under test
+
+    @staticmethod
+    def _entry(model, frm, to):
+        return {"date": datetime.date(2026, 10, 12), "model": model, "status_from": frm,
+                "status_to": to, "approval": "test"}
+
+    def test_provisional_is_a_legal_status_and_pin(self, tmp_path):
+        root = make_tree(tmp_path)
+        assert "provisional" in models.STATUSES
+        pinned = models.load_registry(root)["roles"]["engineer"]["model"]
+        was = models.load_registry(root)["models"][pinned]["status"]
+        edit_registry(root, lambda r: (r["models"][pinned].update(status="provisional"),
+                                       r["pin_history"].append(self._entry(pinned, was, "provisional"))))
+        errors, _ = models.check(root)
+        assert not any("status" in e and "pin_history" in e for e in errors), errors
+        assert not any("must be one of" in e for e in errors), errors
+
+    def test_latest_status_entry_must_match_the_model_status(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["pin_history"].append(self._entry(self.MODEL, "supported", "deprecated")))
+        errors, _ = models.check(root)
+        assert any("latest status entry" in e and self.MODEL in e for e in errors), errors
+
+    def test_status_entry_chain_must_be_continuous(self, tmp_path):
+        root = make_tree(tmp_path)
+
+        def mutate(r):
+            r["models"][self.MODEL]["status"] = "deprecated"
+            r["pin_history"].append(self._entry(self.MODEL, "supported", "provisional"))
+            r["pin_history"].append(self._entry(self.MODEL, "current", "deprecated"))
+        edit_registry(root, mutate)
+        errors, _ = models.check(root)
+        assert any("status_from" in e for e in errors), errors
+
+    def test_status_entry_needs_its_fields(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["pin_history"].append({"date": datetime.date(2026, 10, 12), "model": self.MODEL}))
+        errors, _ = models.check(root)
+        assert any("status entry needs" in e for e in errors), errors
+
+    def test_generated_models_md_lists_the_status_entry(self):
+        reg = models.load_registry(REPO_ROOT)
+        text = models.render_models_md(reg)
+        assert "status of `claude-haiku-5.5`" in text

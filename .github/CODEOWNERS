@@ -10,3 +10,12 @@
 /docs/decisions/ @niallyoung
 /renderer/scripts/ @niallyoung
 /renderer/lib/ @niallyoung
+/renderer/validate_agents.py @niallyoung
+/Makefile @niallyoung
+/tests/test_model_pin_hooks.py @niallyoung
+/tests/test_check_pin_trailers.py @niallyoung
+/tests/test_codeowners.py @niallyoung
+/.claude/settings.json @niallyoung
+/.claude/hooks/session-start.sh @niallyoung
+/config/orchestration.yaml @niallyoung
+/src/agents/ @niallyoung

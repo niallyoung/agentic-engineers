@@ -115,7 +115,7 @@ class TestMakefileModelsTargets:
 
 def cfg_prev(reg, role):
     """The pin_history 'from' for a new entry: the latest recorded 'to' for the role."""
-    return [e["to"] for e in reg["pin_history"] if e["role"] == role][-1]
+    return [e["to"] for e in reg["pin_history"] if e.get("role") == role][-1]
 
 
 class TestLockedModelsShBanner:

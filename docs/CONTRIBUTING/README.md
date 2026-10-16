@@ -92,7 +92,7 @@ After `make install`, the framework automatically:
      handoff_type: DELEGATE
      task_id: 2026-05-29-add-postal-validation
      role: engineer
-     model: claude-haiku-4.5
+     model: claude-haiku-5.5
      effort: high
      scope: Add AU PostalCode validation rule to the address validator. PostalCode is optional but when present must be exactly 4 digits.
      context:
@@ -604,13 +604,13 @@ To change a role's pinned model:
 
 1. **Choose model** → Pick from the registry (`python3 scripts/models.py list-ids`; canonical format with DOTS)
    ```yaml
-   model: claude-haiku-4.5  # correct
+   model: claude-haiku-5.5  # correct
    ```
 
 2. **Add comment** → Explain why this model fits your agent
    ```
    Agent Purpose: Fast routing/analysis (low cost, low latency)
-   Model Choice: claude-haiku-4.5 (Haiku is fastest; 4.5 is stable)
+   Model Choice: claude-haiku-5.5 (Haiku is fastest; 5.5 is the current Haiku)
    ```
 
 3. **Verify format** → Pre-commit hook validates automatically

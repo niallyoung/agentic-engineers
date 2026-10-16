@@ -12,9 +12,11 @@
 # ---------------------------------------------------------------------------
 #
 # NOTE (measured 2026-10-03, docs/model-evidence/sonnet-opus-5-5-measurement.md): these are
-# USD ceilings. Current pins: Orchestrator/Lead/Quality/Senior/Model Engineer on
-# claude-sonnet-5.5 ($2 input / $10 output per MTok), Principal on claude-opus-5.5 ($4 / $20)
-# (prices from config/models.yaml facts, official pricing page).
+# USD ceilings. Current pins: Lead/Quality/Senior/Model Engineer on claude-sonnet-5.5
+# ($2 input / $10 output per MTok), Principal on claude-opus-5.5 ($4 / $20) (prices from
+# config/models.yaml facts, official pricing page). Orchestrator and Engineer are on
+# claude-haiku-5.5 (2026-10-12 pin change): no sourced price is recorded for it yet and it was
+# NOT part of the measurement below, so the ceilings were not re-derived for that move.
 # Measured on identical prompts through the real CLI (n=2, spot check, not a benchmark):
 #   * tokenizer, 5.5 vs 5: ratio 1.000 on both prompts, Sonnet and Opus. No re-baseline.
 #   * Sonnet 4.6 -> 5.x: 1.25x (1.4k-token prompt) to 1.48x (short prompt) input tokens, but the
