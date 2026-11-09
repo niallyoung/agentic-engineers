@@ -1,8 +1,7 @@
 """tests/test_codeowners.py - .github/CODEOWNERS must cover the governance-critical paths.
 
-Pin-change approval evidence (the Model-Pin-Approved-By trailer) is unauthenticated text;
-identity binding comes from CODEOWNERS plus GitHub branch protection (GitHub-side, not
-verifiable here). This test only guards the repository half: the file exists, covers
+Governance-critical paths get owner review via CODEOWNERS plus GitHub branch protection
+(GitHub-side, not verifiable here). This test only guards the repository half: the file exists, covers
 every governance path with a pattern that matches a real path, and names one well-formed owner.
 """
 
@@ -15,7 +14,9 @@ CODEOWNERS = REPO_ROOT / ".github" / "CODEOWNERS"
 REQUIRED_PATHS = [
     "/config/models.yaml",
     "/scripts/models.py",
-    "/scripts/check_pin_trailers.py",
+    "/scripts/check_pin_history.py",
+    "/tests/test_pin_policy_fingerprint.py",
+    "/tests/test_models_registry.py",
     "/.githooks/",
     "/.github/workflows/",
     "/docs/SPEC.md",

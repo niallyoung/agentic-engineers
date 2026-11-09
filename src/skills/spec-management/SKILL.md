@@ -147,11 +147,11 @@ changelog entry for the reverting proposal must reference the change_id it rever
 
 Changing a *value* in `config/models.yaml` — adding a model, repointing a role's pinned
 model, changing effort, or editing a fallback chain — is a **Model Pin Change**, governed by
-the "Model Pin Change" process in the LOCKED "Model Naming & Harness Compatibility" section
+the "Model Pin Change" process in the "Model Naming & Harness Compatibility" section
 of `docs/SPEC.md`, and is OUTSIDE this protocol: no `SPEC-YYYY-NNN` proposal, no peer
 approval chain, no SPEC.md changelog entry. Its audit trail is the registry's `pin_history`
-plus a `Model-Pin-Approved-By:` commit trailer. The carve-out holds only while the change
-satisfies the LOCKED invariants (I1–I7). Anything that alters an invariant (ID format, the
+(its `approval` field records who directed the change; no commit trailer is required). The carve-out holds only while the change
+satisfies the invariants (I1–I7). Anything that alters an invariant (ID format, the
 single-source rule, exact-pin/no-floating-alias, installer ownership of user-chosen models,
 fallback surfacing, validator scope, the Security Engineer's defensive-only scope and fallback
 policy) or adds a model *family* is still a SPEC amendment and

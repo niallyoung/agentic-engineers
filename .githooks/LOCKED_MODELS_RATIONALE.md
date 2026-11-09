@@ -37,8 +37,8 @@ consistency with other roles and timing, then approves, defers or denies.
 2. Append one line at the end of the `pin_history` list (date, role, from, to, approval).
 3. Run `make models-sync` (`python3 scripts/models.py sync`) to regenerate every derived
    file, including `.githooks/LOCKED_MODELS.sh`. Never hand-edit generated files.
-4. Run `make test`, then commit with a `Model-Pin-Approved-By: <approver>` trailer. The
-   `commit-msg` hook rejects a pin change without it; adding an unassigned model needs no trailer.
+4. Run `make test`, then commit normally. No approval trailer is required (SPEC-2026-015);
+   the consistency checks (`models.py check`, `sync --check`) still run in pre-commit and CI.
 5. Re-run the installer; a managed Claude Code `settings.json` value migrates, a
    user-chosen value is left alone.
 
@@ -49,7 +49,7 @@ consistency with other roles and timing, then approves, defers or denies.
   `get_agent_locked_model`, `show_locked_models`, `show_agent_assignments`.
 - `.githooks/pre-commit` validates staged agent files against the registry and rejects stale
   generated targets (`python3 scripts/models.py check` and `sync --check`).
-- `.githooks/commit-msg` requires the `Model-Pin-Approved-By` trailer on a role pin change.
+- `.githooks/commit-msg` (inline check) and `.githooks/pre-push` (`scripts/check_pin_history.py`) only warn when `pin_history` history is rewritten; they never require a trailer.
 - Hooks and scripts that need the model set may source the shim:
 
 ```bash
@@ -66,7 +66,7 @@ the documented sourcing API and are kept deliberately.
 
 - **Approval authority**: Orchestrator (with input from role leads).
 - **Appeal**: if denied, request review in the next budget cycle.
-- **Transparency**: every pin change carries a `pin_history` entry and an approver trailer.
+- **Transparency**: every pin change carries a `pin_history` entry whose `approval` field records who directed it.
 - **Audit trail**: git history shows who, what, when, why.
 
 ## See Also

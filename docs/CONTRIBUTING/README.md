@@ -598,7 +598,7 @@ To change a role's pinned model:
 1. Edit `config/models.yaml`: update `roles.<role>.model` and append a `pin_history` entry
 2. Run `python3 scripts/models.py sync` to regenerate all derived files
 3. Run `python3 scripts/models.py check` to validate the change
-4. Commit with a conventional message and a `Model-Pin-Approved-By:` trailer (see ADR for details)
+4. Commit with a conventional message. No approval trailer is needed; the `pin_history` entry (its `approval` field says who directed the change) is the audit record
 
 ### Workflow
 

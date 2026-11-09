@@ -26,7 +26,7 @@
 models carry a **single-part version** and therefore have no separator at all (e.g. in source: Opus 5, Sonnet 5). 
 Models with a two-part version (e.g. Sonnet 5.5) use the dot in source and render hyphenated for
 Claude Code (hyphens are per-harness renders only, never source); the exact IDs are in the registry.
-See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility-locked-spec) and [docs/MODELS.md](../docs/MODELS.md) for the complete model registry.
+See [SPEC.md > Model Naming & Harness Compatibility](../docs/SPEC.md#model-naming--harness-compatibility) and [docs/MODELS.md](../docs/MODELS.md) for the complete model registry.
 
 **SINGLE SOURCE OF TRUTH:** Model assignments are defined in `config/models.yaml`. 
 All generated targets (frontmatter, manifests, hooks, tables) are kept synchronized via `python3 scripts/models.py sync`.

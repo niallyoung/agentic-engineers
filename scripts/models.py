@@ -661,6 +661,12 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
                 errors.append(f"families.{fam}.min_pin: {problem}")
                 bad_floor_families.add(fam)
 
+    # I7 (FIXED, not configurable): the fable family never falls back to haiku. This is
+    # deliberately independent of fallback_policy so editing the policy cannot widen it.
+    if "haiku" in (adjacent.get("fable") or []):
+        errors.append("fallback_policy.adjacent_families.fable: must not contain 'haiku' "
+                      "(I7: fable never falls back to haiku)")
+
     # 4-5: roles and fallbacks
     for role, cfg in roles.items():
         if not isinstance(cfg, dict):
@@ -696,6 +702,9 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
             if f == model:
                 errors.append(f"roles.{role}.fallback: '{f}' is the pin itself")
             ffam = models[f].get("family")
+            if pfam == "fable" and ffam == "haiku":
+                errors.append(f"roles.{role}.fallback: '{f}' is a haiku-family model in the chain of "
+                              f"fable-family pin '{model}' (I7: fable never falls back to haiku)")
             if pfam and ffam != pfam and ffam not in (adjacent.get(pfam) or []):
                 errors.append(f"roles.{role}.fallback: '{f}' (family {ffam}) crosses family from pin '{model}' ({pfam}); "
                               f"allow it via fallback_policy.adjacent_families if intended")
@@ -727,6 +736,8 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
         if not isinstance(e, dict) or not {"date", "role", "to", "approval"} <= set(e):
             errors.append(f"pin_history[{i}]: needs date, role, to, approval (and from)")
             continue
+        if not isinstance(e["approval"], str) or not e["approval"].strip():
+            errors.append(f"pin_history[{i}]: approval must be a non-empty string")
         if e["role"] not in roles:
             errors.append(f"pin_history[{i}]: role '{e['role']}' is not a registry role")
         if e["to"] not in models:

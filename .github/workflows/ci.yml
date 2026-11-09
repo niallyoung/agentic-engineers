@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history: the model-pin approval scan walks origin/main..HEAD.
+          # Full history: the advisory pin_history audit walks origin/main..HEAD.
           fetch-depth: 0
 
       - name: Preserve symlinks
@@ -74,16 +74,17 @@ jobs:
           python3 scripts/models.py sync --check
           echo "✅ Model registry is current and consistent"
 
-      - name: Model Pin Approval Scan
-        # Backstop for the commit-msg and pre-push hooks (which `git commit
-        # --no-verify`, a rebase or a merge can bypass): every commit in
-        # origin/main..HEAD, merge commits included, that changes a
-        # roles.<role>.model pin in config/models.yaml must carry a non-empty
-        # Model-Pin-Approved-By trailer (docs/SPEC.md, Model Pin Change). All
-        # logic lives in scripts/check_pin_trailers.py (one scanner shared with
-        # .githooks/pre-push; tests/test_check_pin_trailers.py). Commit messages
-        # are read by python via git, never interpolated with GitHub expressions;
-        # only short SHAs and role names are printed.
+      - name: Model Pin History Audit (advisory)
+        # Advisory audit (never fails the build, including when the scanner cannot run:
+        # exit 2, an environment problem such as missing PyYAML, is turned into a
+        # ::warning::, matching .githooks/pre-push): warns when a commit in
+        # origin/main..HEAD, merge commits included, rewrites existing pin_history
+        # entries in config/models.yaml (an append-only audit record). Pin changes
+        # themselves need no approval; strict registry consistency is the "Model
+        # Registry Check" step. All logic lives in scripts/check_pin_history.py
+        # (shared with .githooks/pre-push; tests/test_check_pin_history.py). Commit
+        # messages are never interpolated with GitHub expressions; only short SHAs
+        # are printed.
         #
         # On a push, github.event.before is the base, so a direct push to the
         # default branch (where origin/main..HEAD is empty) is scanned over the
@@ -100,7 +101,13 @@ jobs:
             echo "::notice::pushed base not present in this clone; scanning origin/main..HEAD instead"
             base=origin/main
           fi
-          python3 scripts/check_pin_trailers.py --base "$base" --head HEAD
+          rc=0
+          python3 scripts/check_pin_history.py --base "$base" --head HEAD || rc=$?
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning::pin_history audit could not run (scanner exit 2: environment problem); skipped"
+          elif [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
 
       # ── Skill/render gates ───────────────────────────────────────────────
 
