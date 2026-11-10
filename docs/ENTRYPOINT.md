@@ -3,11 +3,12 @@
 **Canonical workflow for running agentic-engineers**
 
 **Dispatch is direct sub-agent spawn — there is no filesystem queue.** The Orchestrator
-builds a DELEGATE and spawns the target agent directly (Agent/Task tool), reading the
-HANDBACK back as the tool result in the same turn:
-- All harnesses (Copilot, Claude, OpenCode, Codex) use identical DELEGATE/HANDBACK
-  protocol and identical dispatch mechanics
-- Where the harness supports it (Claude Code via `SendMessage`, Codex via `resume`/`fork`),
+builds a DELEGATE and spawns the target agent directly (the harness's sub-agent spawn),
+reading the HANDBACK back as the spawn result in the same turn:
+- All harnesses (Copilot, Claude, OpenCode, Codex) use the identical DELEGATE/HANDBACK
+  protocol and the same dispatch model (DELEGATE as spawn prompt, HANDBACK as spawn
+  result); each supplies that spawn through its own mechanism
+- Where the harness supports it (see the [Harness Mechanism Map](guides/harness-setup/README.md#harness-mechanism-map)),
   the Orchestrator MAY *continue* an existing sub-agent that already holds the needed
   context instead of cold-spawning a fresh one — same DELEGATE/HANDBACK contract, no extra
   delegation-tree depth. See [src/AGENTS.md > Sub-Agent
@@ -54,8 +55,8 @@ delegate: Fix the race condition in claude-delegate-guard.py (see ISSUE #42)
 ```
 
 The Orchestrator:
-1. Builds a DELEGATE block from your request (`agent`, `model`, `effort`, `scope`, `context`, `plan`, `success_criteria` — see `src/AGENTS.md` for the full format)
-2. Spawns the target role directly (Agent/Task tool), passing the DELEGATE as the sub-agent's prompt — this spawn, recorded in the harness session transcript, is the audit record
+1. Builds a DELEGATE block from your request (`agent`, `effort`, `scope`, `context`, `plan`, `success_criteria` — see `src/AGENTS.md` for the full format)
+2. Spawns the target role directly (sub-agent spawn), passing the DELEGATE as the sub-agent's prompt — this spawn, recorded in the harness session transcript, is the audit record
 3. Reads the HANDBACK back as the result of the spawn call itself, synchronously and in-context
 4. Repeats for any further work (re-delegation, escalation) until it has no pending DELEGATEs and no outstanding spawns — then it **pauses** (see [src/AGENTS.md > Pause Condition](../src/AGENTS.md#pause-condition))
 
@@ -188,17 +189,15 @@ See `src/AGENTS.md` for the full agent roster, routing decision tree, and role d
 **Note on enforcement:** these limits are a documented contract each agent's own
 definition observes (via its `tools:` frontmatter grant — see
 [src/AGENTS.md > Tools-Frontmatter Permission Model](../src/AGENTS.md#tools-frontmatter-permission-model)),
-*plus* a partial mechanical check on the Claude harness. Its `PreToolUse` guard,
-`renderer/scripts/claude-delegate-guard.py`, blocks a DELEGATE that declares
-`depth` > 3 or that names its own target role in `ancestry`. Because both fields are
-optional and the guard sees one spawn at a time, a DELEGATE omitting them is unchecked
-and over-wide fan-out is never blocked. No other harness has an equivalent guard.
+*plus* a partial mechanical check on any harness whose renderer installs a pre-spawn
+DELEGATE guard. What that guard checks, and what it cannot see, is defined once in
+[src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits). Which harnesses install the guard is listed in the [Harness Mechanism Map](guides/harness-setup/README.md#harness-mechanism-map).
 
 ---
 
 ## 🔀 Multi-Session Isolation
 
-When multiple Copilot or Claude instances run concurrently, each is its own independent
+When multiple harness instances run concurrently, each is its own independent
 harness session — spawning sub-agents and reading HANDBACKs entirely within its own
 context, with no shared state and no cross-contamination between sessions. Each session's
 transcript is scoped to that session, ensuring isolation by design.
@@ -227,7 +226,7 @@ See `docs/SPEC.md` for full architectural constraints.
 
 ## 🚀 TL;DR
 
-1. **Tell the Orchestrator what you want** → it builds the DELEGATE for you and spawns the right agent directly (Agent/Task tool)
+1. **Tell the Orchestrator what you want** → it builds the DELEGATE for you and spawns the right agent directly (sub-agent spawn)
 2. **Orchestrator handles everything** → routes, spawns, reads the HANDBACK back in-context, and aggregates results — the spawn/result pair in the session transcript is already the audit record
    - Multi-session support: each harness session is independently isolated, with nothing shared between concurrent sessions
 3. **Check results** → the outcome is reported to you directly, plus generated files

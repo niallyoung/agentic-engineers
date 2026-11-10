@@ -83,6 +83,27 @@ Each harness uses a dedicated renderer script to handle these transformations:
 
 Run `make install` for the default harness set, or use individual `make install-{harness}` targets when you need a specific harness, including `make install-codex`.
 
+## Harness Mechanism Map
+
+The framework (`src/AGENTS.md`, `docs/PROTOCOL.md`, the role and skill sources) states
+its requirements in harness-neutral terms: *spawn a sub-agent with a DELEGATE*,
+*continue a sub-agent that holds context where the harness supports it, otherwise spawn
+fresh*, *a pre-spawn DELEGATE guard where one is installed*, *leaf roles must not
+spawn*. This table is where those capabilities map to each harness's concrete
+mechanism. No harness's mechanism is a framework requirement for any other.
+
+| Capability | Claude Code | Codex | OpenCode | Copilot CLI |
+|---|---|---|---|---|
+| Sub-agent spawn (DELEGATE as prompt, HANDBACK as result) | `Agent`/`Task` tool | Custom-agent subagents ([codex.md](codex.md)); subagents spawn only when explicitly requested (`delegate:`; see [docs/RENDERING.md](../../RENDERING.md) § Phase 4) | Agent/Task spawn ([opencode.md](opencode.md)) | Custom agents, as documented; spawn-result semantics unverified. `/fleet` is not compatible (one prompt, no per-agent DELEGATE; see [docs/RENDERING.md](../../RENDERING.md) § Copilot CLI Harness Notes) |
+| Sub-agent continuation | Supported: `SendMessage` to a live or recently-completed sub-agent (by id or name) resumes it with its context intact. A new `Agent`/`Task` call is always cold; `subagent_type: fork` inherits the caller's context, not a specialist's, so it is not specialist continuation | Session-level only: `codex resume` / `codex fork` / `codex exec resume` re-enter a prior CLI session ([codex.md](codex.md)). In-session sub-agent continuation is not documented; spawn fresh with a context-rich DELEGATE unless verified | Not first-class (as documented): spawn fresh with a context-rich DELEGATE | Not first-class: spawn fresh with a context-rich DELEGATE |
+| Pre-spawn DELEGATE guard | `PreToolUse` hook `renderer/scripts/claude-delegate-guard.py`, matcher `Task\|Agent\|SendMessage`: checks DELEGATE structure, derives depth from `ancestry` (max 3 roles), refuses a `depth` that disagrees with it, a target already in `ancestry`, repeated `ancestry:`/`depth:` keys, and a bare positive `depth` with no ancestry. Governs only the seven framework role names; does not check a `SendMessage` to an opaque agent id that carries no DELEGATE block; fails open (always exits 0, so a hook bug allows the call). Sees one spawn at a time; cannot count fan-out | None | None | None |
+| Leaf-role tool denial (`tools: []` in source) | Enforced: `render-claude.sh` writes `disallowedTools: Agent, Task, SendMessage` | Convention only | Convention only: `render-opencode.sh` uses uniform allow-all permissions by design (social constraint model) | Convention only |
+| Session id for the audit log | `CLAUDE_CODE_SESSION_ID` (verified); `CLAUDE_SESSION_ID` (unverified fallback) | None detected. Export `AGENTIC_SESSION_ID` and `AGENTIC_HARNESS`; otherwise each append gets a fresh UUID and harness `gpt` or `local`. | None detected. Export `AGENTIC_SESSION_ID` and `AGENTIC_HARNESS`; otherwise each append gets a fresh UUID and harness `gpt` or `local`. | `COPILOT_SESSION_ID` (unverified fallback) |
+
+`AGENTIC_SESSION_ID` / `AGENTIC_HARNESS` override detection on every harness; the full
+resolution order and which variables are verified is in `scripts/audit_append.py`'s
+module docstring.
+
 ## Troubleshooting
 
 ### Common Issues by Harness

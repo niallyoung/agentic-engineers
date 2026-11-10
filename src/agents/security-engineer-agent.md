@@ -30,8 +30,8 @@ offensive tooling, exploit development, attack automation
 credential-theft, phishing or evasion tooling, or scanning and attacking systems outside
 the operator's own.
 
-Nothing mechanical enforces this. The PreToolUse hook that gates specialist spawns
-(`renderer/scripts/claude-delegate-guard.py`) checks only the structure of a DELEGATE,
+Nothing mechanical enforces this. A harness pre-spawn guard, where one is installed,
+checks only the structure of a DELEGATE,
 never its topic, and no model re-routing exists. A restricted-topic DELEGATE can reach
 you. You are the enforcement point, so check every DELEGATE against this section before
 doing any work:

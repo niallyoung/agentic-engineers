@@ -87,9 +87,11 @@ Orchestrator's own agent context, not in external tooling or background processe
    `event`, `task_id`, `parent_task_id`, `depth`, `agent_role`, `agent_model`, `status`,
    and token/cost fields where applicable. An optional `resolves_task_id` MAY link a
    remediation event chain to the failed/blocked task it addresses. Session/harness
-   auto-detection resolves against `CLAUDE_CODE_SESSION_ID` (the verified real Claude
-   Code CLI env var), not `CLAUDE_SESSION_ID` (see `scripts/audit_append.py` module
-   docstring). Agents append; they
+   auto-detection reads the explicit overrides `AGENTIC_SESSION_ID` / `AGENTIC_HARNESS`
+   first, then harness-specific session variables. The resolution order, and which
+   variables are empirically verified, are recorded in the `scripts/audit_append.py`
+   module docstring. A harness-specific variable MUST NOT be added without empirical
+   confirmation of its name. Agents append; they
    MUST NOT rewrite, reorder, truncate, or delete prior lines — corrections are new events,
    never edits. No metric may be reported that is not grounded in a logged event.
 8. **No External Scripts, Tools, or Cron Jobs (Agent Operations).** No Python owns queue
@@ -452,12 +454,10 @@ and GitHub's [Copilot Supported Models](https://docs.github.com/en/copilot/refer
 
 Defensive-scope enforcement for the Security Engineer (the I7 invariant; it was never a mechanical gate, and this paragraph now sits in a non-LOCKED section of the spec body) is a role convention — followed by the
 Security Engineer's own system prompt and cross-checked by operator/reviewer judgment, not
-by model routing and not mechanically enforced by
-`renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every
-specialist spawn), which validates DELEGATE structure only (handoff_type, agent, task_id
-format, scope word count, plan, success_criteria present; plus the optional depth/ancestry
-extension fields when present — see § Recursion Limits) and contains no scope/topic/content
-inspection. The Security Engineer's pin is whatever `config/models.yaml` assigns to
+by model routing and not by any mechanical gate on scope or content. Where a harness renderer installs a
+pre-spawn DELEGATE guard (see `docs/guides/harness-setup/README.md` § Harness Mechanism
+Map), that guard validates DELEGATE structure only and performs no scope, topic or content
+inspection. A harness without such a guard has no mechanical check at all. The Security Engineer's pin is whatever `config/models.yaml` assigns to
 `security-engineer`; its fallback chain is declared there too (see `docs/MODELS.md`), used
 only on unavailability of the pin and documented in HANDBACK.
 

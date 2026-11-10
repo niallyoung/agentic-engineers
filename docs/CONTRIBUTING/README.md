@@ -538,8 +538,8 @@ read an empty file that was still being written by a writer thread.
 `src/orchestration/agents/invoke_agent.py` and its file poller have since been removed
 as part of the move to the
 `src/AGENTS.md` (“Direct Sub-Agent Spawn Execution Model” section):
-a spawned sub-agent's HANDBACK is now returned directly as the result of the Agent/Task
-tool call, in-context, with no separate file poller reading it. As of SPEC-2026-009
+a spawned sub-agent's HANDBACK is now returned directly as the result of the sub-agent
+spawn, in-context, with no separate file poller reading it. As of SPEC-2026-009
 (2026-08-13) the filesystem queue itself — and the `enqueue()` calls that used to record
 DELEGATE/HANDBACK to it for audit purposes — no longer exist either; the harness session
 transcript is the durable audit record for protocol validity (a separate, queryable
