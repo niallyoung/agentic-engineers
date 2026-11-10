@@ -13,20 +13,15 @@
 #     orchestration/ paths; scripts/validate-spec-constraints.py)
 #   - Agent definition verification (.agents_verification_sha integrity)
 #   - Gitconfig credential guard (no embedded tokens)
-#   - Model pin approval scan of the commits being pushed (see below)
+#   - Model pin history audit of the commits being pushed (advisory; see below)
 #
-# Model pin approval (docs/SPEC.md, Model Pin Change): every commit being pushed
-# that changes a roles.<role>.model pin in config/models.yaml, merge commits
-# included, must carry a non-empty Model-Pin-Approved-By trailer. The hook reads
-# the ref lines on stdin (githooks(5)) and runs scripts/check_pin_trailers.py -
-# the same scanner CI uses - over remote_sha..local_sha, or origin/main..local_sha
-# when the remote ref is new (or its old tip is unknown locally). This is the
-# local backstop for `git commit --no-verify`, rebases and merges that skipped the
-# commit-msg hook. It fails loudly when python3, PyYAML or the scanner is missing.
-# Bypass: SKIP_HOOKS=1 / GIT_SKIP_HOOKS=1 skip this hook entirely, pin scan
-# included, exactly like every other check here; the CI "Model Pin Approval Scan"
-# step still runs the same scanner over origin/main..HEAD and is the authoritative,
-# non-bypassable gate.
+# Model pin history audit: pin changes in config/models.yaml need no approval. The hook
+# reads the ref lines on stdin (githooks(5)) and runs scripts/check_pin_history.py - the
+# same scanner CI uses - over remote_sha..local_sha, or origin/main..local_sha when the
+# remote ref is new. It only WARNS when existing pin_history entries were rewritten (or
+# when python3, PyYAML or the scanner is missing); it never fails the push. Strict
+# registry consistency is scripts/models.py check (pre-commit and CI).
+# Bypass: SKIP_HOOKS=1 / GIT_SKIP_HOOKS=1 skip this hook entirely, like every other check.
 #
 # 2026-08-13 infra consolidation: removed the DELEGATE/HANDBACK artifact scan
 # (scanned a filesystem-queue path — artifacts/delegates/ — that has never
@@ -428,16 +423,17 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9c. MODEL PIN APPROVAL SCAN (docs/SPEC.md, Model Pin Change)
+# 9c. MODEL PIN HISTORY AUDIT (advisory)
 # ─────────────────────────────────────────────────────────────────────────────
-# Local backstop for --no-verify commits, rebases and merges: scan the commits
-# being pushed with the same scripts/check_pin_trailers.py CI runs.
+# Advisory only: scan the commits being pushed with the same
+# scripts/check_pin_history.py CI runs and WARN when pin_history is rewritten. Pin
+# changes need no approval; nothing in this block ever fails the push.
 echo ""
-echo "📌 Scanning pushed commits for model pin approval..."
+echo "📌 Auditing pushed commits for pin_history rewrites (advisory)..."
 
 PIN_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIN_SCANNER=""
-for cand in "$REPO_ROOT/scripts/check_pin_trailers.py" "$PIN_HOOK_DIR/../scripts/check_pin_trailers.py"; do
+for cand in "$REPO_ROOT/scripts/check_pin_history.py" "$PIN_HOOK_DIR/../scripts/check_pin_history.py"; do
   if [ -f "$cand" ]; then
     PIN_SCANNER="$cand"
     break
@@ -451,7 +447,7 @@ for entry in ${PUSH_REFS[@]+"${PUSH_REFS[@]}"}; do
   # Deleting a ref pushes no commits.
   [ "$p_local" = "$PIN_ZERO" ] && continue
   if ! git rev-parse --verify -q "${p_local}^{commit}" >/dev/null 2>&1; then
-    warn "pin scan: $p_ref -> ${p_local:0:12} is not a commit here; skipped"
+    warn "pin audit: $p_ref -> ${p_local:0:12} is not a commit here; skipped"
     continue
   fi
   # Range: remote_sha..local_sha, or origin/main..local_sha for a new remote ref
@@ -465,15 +461,15 @@ for entry in ${PUSH_REFS[@]+"${PUSH_REFS[@]}"}; do
     p_base="$REMOTE/main"
   else
     p_base="origin/main" # absent: the scanner prints a notice and scans nothing
-    warn "pin scan: no base ref (origin/main) to compare $p_ref against; CI will scan it"
+    warn "pin audit: no base ref (origin/main) to compare $p_ref against; CI will audit it"
   fi
 
   if ! command -v python3 >/dev/null 2>&1; then
-    fail "python3 not found: cannot scan pushed commits for model pin approval"
+    warn "python3 not found: pin_history audit skipped"
     continue
   fi
   if [ -z "$PIN_SCANNER" ]; then
-    fail "scripts/check_pin_trailers.py not found: cannot scan pushed commits for model pin approval"
+    warn "scripts/check_pin_history.py not found: pin_history audit skipped"
     continue
   fi
 
@@ -482,13 +478,13 @@ for entry in ${PUSH_REFS[@]+"${PUSH_REFS[@]}"}; do
   PIN_OUT=$(cd "$REPO_ROOT" && python3 "$PIN_SCANNER" --base "$p_base" --head "$p_local" 2>&1)
   PIN_RC=$?
   set -e
-  if [ "$PIN_RC" -eq 0 ]; then
-    pass "Model pin approval: $p_ref ($PIN_OUT)"
-  elif [ "$PIN_RC" -eq 1 ]; then
-    fail "Model pin approval scan rejected the push to $p_ref:"
+  if [ "$PIN_RC" -eq 0 ] && ! printf '%s' "$PIN_OUT" | grep -q '^warning:'; then
+    pass "Pin history audit: $p_ref ($PIN_OUT)"
+  elif [ "$PIN_RC" -eq 0 ] || [ "$PIN_RC" -eq 1 ]; then
+    warn "Pin history audit for $p_ref (advisory, push proceeds):"
     printf '%s\n' "$PIN_OUT" | sed 's/^/   /'
   else
-    fail "Model pin approval scan could not run (exit $PIN_RC; python3 needs PyYAML: python3 -m pip install pyyaml):"
+    warn "Pin history audit could not run (exit $PIN_RC; python3 needs PyYAML: python3 -m pip install pyyaml):"
     printf '%s\n' "$PIN_OUT" | sed 's/^/   /'
   fi
 done

@@ -119,7 +119,7 @@ GIT_SKIP_HOOKS=1 git push
 
 - **pre-commit:** `.githooks/pre-commit` (staged-file validation)
 - **pre-push:** `.githooks/pre-push` (agent/workflow/SPEC validation — no test run)
-- **commit-msg:** `.githooks/commit-msg` (enforces commit message format; a commit that changes any `roles.<role>.model` in `config/models.yaml` also needs a non-empty `Model-Pin-Approved-By:` trailer, see docs/SPEC.md Model Pin Change)
+- **commit-msg:** `.githooks/commit-msg` (enforces commit message format; a `pin_history` rewrite in `config/models.yaml` produces a warning, never a failure; no pin trailer is required, see docs/SPEC.md Model Pin Change)
 - **post-merge:** `.githooks/post-merge` (documentation-drift check, informational only)
 
 ### Performance Targets

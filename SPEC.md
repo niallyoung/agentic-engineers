@@ -30,6 +30,6 @@ This file previously held a forked, drifting copy of the specification. As of
 **2026-06-12** its remaining unique content — the model-governance sections
 (positive-enforcement philosophy, the `.githooks/LOCKED_MODELS.sh` single source
 of truth, and the Model Switch Process) — was migrated into `docs/SPEC.md` under
-the *Model Naming & Harness Compatibility (LOCKED SPEC)* section via
+the *Model Naming & Harness Compatibility* section (formerly labelled LOCKED SPEC) via
 spec-management proposal **SPEC-2026-001**, and this file was reduced to the
 pointer you are reading. See the Update Log in `docs/SPEC.md` for details.

@@ -248,6 +248,61 @@ class TestAdjacentFamilyFallbacks:
         assert any("crosses family" in e for e in errors), errors
 
 
+class TestFableNeverFallsBackToHaikuI7:
+    """I7 is a FIXED rule in check(): it does not depend on the mutable fallback_policy."""
+
+    @staticmethod
+    def _live(reg, family):
+        for mid, m in reg["models"].items():
+            if m["family"] == family and m["status"] not in ("retired", "fallback"):
+                return mid
+        pytest.skip(f"registry has no live {family} model")
+
+    def test_real_registry_passes(self):
+        errors, _ = models.check(REPO_ROOT)
+        assert not [e for e in errors if "I7" in e], errors
+
+    def test_widening_fable_adjacency_to_haiku_is_an_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["fallback_policy"]["adjacent_families"]["fable"].append("haiku"))
+        errors, _ = models.check(root)
+        assert any("I7" in e and "adjacent_families.fable" in e for e in errors), errors
+
+    def test_fable_pinned_role_with_haiku_fallback_is_an_error_even_if_adjacency_allows_it(self, tmp_path, reg):
+        root = make_tree(tmp_path)
+        fable, haiku = self._live(reg, "fable"), self._live(reg, "haiku")
+        role = next(r for r, c in reg["roles"].items() if reg["models"][c["model"]]["family"] == "fable")
+
+        def mutate(r):
+            r["fallback_policy"]["adjacent_families"]["fable"] = ["opus", "haiku"]
+            r["roles"][role]["fallback"] = [haiku]
+        edit_registry(root, mutate)
+        errors, _ = models.check(root)
+        assert sum("I7" in e for e in errors) == 2, errors
+        assert any(f"roles.{role}.fallback" in e and "I7" in e for e in errors), errors
+
+    def test_haiku_fallback_on_a_non_fable_pin_is_not_an_i7_error(self, tmp_path, reg):
+        root = make_tree(tmp_path)
+        haiku = self._live(reg, "haiku")
+        role = next(r for r, c in reg["roles"].items() if reg["models"][c["model"]]["family"] == "sonnet")
+        edit_registry(root, lambda r: r["roles"][role].update(fallback=[haiku]))
+        errors, _ = models.check(root)
+        assert not any("I7" in e for e in errors), errors
+
+
+class TestPinHistoryApproval:
+    @pytest.mark.parametrize("bad", ["", "   ", None, 7])
+    def test_non_string_or_empty_approval_is_an_error(self, tmp_path, bad):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["pin_history"][0].update(approval=bad))
+        errors, _ = models.check(root)
+        assert any("approval must be a non-empty string" in e for e in errors), errors
+
+    def test_real_registry_approvals_are_accepted(self):
+        errors, _ = models.check(REPO_ROOT)
+        assert not any("approval" in e for e in errors), errors
+
+
 class TestFamilyFloor:
     """Per-family min_pin: pins must be >= the floor, fallbacks are exempt."""
 
