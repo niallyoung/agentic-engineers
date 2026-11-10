@@ -516,7 +516,7 @@ DELEGATE/HANDBACK contract is identical either way.
 | Harness | Sub-agent continuation | Mechanism / fallback |
 |---|---|---|
 | **Claude Code** | Supported today | `SendMessage` to a live or recently-completed sub-agent (by id or name) resumes it with its context intact; `ListAgents` enumerates the candidates. A plain new `Agent`/`Task` call is always cold. `subagent_type: fork` inherits the *caller's* context, not a specialist's — a different mechanism, not specialist continuation. |
-| **Codex** | Supported | `codex resume` and `codex fork` session subcommands, and `codex exec resume`, re-enter a prior session (`docs/guides/harness-setup/codex.md`); the `codex-agent-cleanup` skill already assumes resumable sub-agents (`wait_agent`, `close_agent`, "resume active work"). |
+| **Codex** | Supported | `codex resume` and `codex fork` session subcommands, and `codex exec resume`, re-enter a prior session (`docs/guides/harness-setup/codex.md`). |
 | **OpenCode** | Not first-class (as documented) | No documented sub-agent continuation primitive (`docs/guides/harness-setup/opencode.md`). Fall back to a fresh spawn with a context-rich DELEGATE. |
 | **Copilot** | Not first-class | `/fleet` decomposes a single prompt into work items with no per-agent prompt or continuation channel (`docs/RENDERING.md` § Copilot CLI Harness Notes). Fall back to a fresh spawn with a context-rich DELEGATE. |
 

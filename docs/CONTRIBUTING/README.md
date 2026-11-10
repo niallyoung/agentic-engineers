@@ -199,7 +199,7 @@ consistent prefixes so related skills group together and are easy to discover.
 |--------|--------|------------------|
 | `spec-*` | SPEC.md governance | spec-management |
 | `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator |
-| `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup |
+| `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator |
 
 All skills are part of the public skill catalog in `src/skills/`.
 

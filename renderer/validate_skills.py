@@ -65,11 +65,12 @@ FRONTMATTER_EXEMPT_PATTERNS = {
 # are deleted. 8 -> 6 skills. audit-trail-review meta-skill added (2026-08-14,
 # task-2026-08-14-delegation-audit-skill). 6 -> 7 skills. self-healing-review
 # meta-skill added (2026-08-15, task-2026-08-15-self-healing-skill). 7 -> 8 skills.
+# codex-agent-cleanup removed (2026-11-10): a Codex-only routine does not belong in a
+# harness-neutral framework. 6 -> 5 skills.
 ACTIVE_SKILLS: list[str] = [
     "orchestrator",
     "protocol-validator",
     "spec-management",
-    "codex-agent-cleanup",
     "audit-trail-review",
     "self-healing-review",
 ]

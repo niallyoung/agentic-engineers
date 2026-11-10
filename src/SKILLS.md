@@ -11,7 +11,6 @@
 | **orchestrator** | `src/skills/orchestrator/SKILL.md` | Direct sub-agent spawn dispatch, HANDBACK correlation, crash recovery, implementing the DELEGATE/HANDBACK protocol lifecycle. | orchestrator | low |
 | **protocol-validator** | `src/skills/protocol-validator/SKILL.md` | Runtime protocol validation for DELEGATEs/HANDBACKs against protocol-core-v1. | orchestrator | high |
 | **spec-management** | `src/skills/spec-management/SKILL.md` | Maintains SPEC.md and tracks implementation compliance across the framework. | principal-engineer | medium |
-| **codex-agent-cleanup** | `src/skills/codex-agent-cleanup/SKILL.md` | Codex session hygiene: close completed sub-agents, resume active work, keep agent capacity available. | orchestrator | medium |
 | **audit-trail-review** | `src/skills/audit-trail-review/SKILL.md` | Reviews orchestration ledger (JSONL) for unfinished delegations, orphaned work, and status inconsistencies. Prose-only meta-skill. | quality-engineer | medium |
 | **self-healing-review** | `src/skills/self-healing-review/SKILL.md` | Repeatable investigate-fix-verify quality cycle: fan out read-only QE investigations, consolidate findings, dispatch disjoint fix packages by severity/file ownership, independently verify every HANDBACK, run the full battery, commit. Prose-only meta-skill. | orchestrator | low |
 
@@ -31,7 +30,7 @@ src/skills/<name>/
 
 `__init__.py` is required only where the skill ships importable Python. Three skills
 have one (`audit-trail-review`, `protocol-validator`, `self-healing-review`); the
-other three (`codex-agent-cleanup`, `orchestrator`, `spec-management`) correctly have none.
+other two (`orchestrator`, `spec-management`) correctly have none.
 
 Script-backed skills also include:
 
@@ -91,12 +90,11 @@ Validates:
 
 ## Quick Reference by Role
 
-All 6 skills appear exactly once below, grouped by the `role` in their frontmatter.
+All 5 skills appear exactly once below, grouped by the `role` in their frontmatter.
 
 ### Orchestrator
 - `orchestrator/SKILL.md` — direct sub-agent spawn dispatch
 - `protocol-validator/SKILL.md` — DELEGATE/HANDBACK runtime validation
-- `codex-agent-cleanup/SKILL.md` — session cleanup
 - `self-healing-review/SKILL.md` — investigate-fix-verify quality cycle
 
 ### Quality Engineer

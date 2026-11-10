@@ -6,7 +6,7 @@ run_skill_tests.py — Execute every src/skills/**/tests/ suite in CI.
 
 `pytest.ini` sets `testpaths = tests`, so tests living under `src/skills/*/tests/`
 are never collected by `make test` / CI on their own — each surviving skill's
-test files need their own CI visibility via this runner. Of the 6 skills, only
+test files need their own CI visibility via this runner. Of the 5 skills, only
 protocol-validator is script-backed and carries a tests/ suite.
 
 The obvious fix — add `src/skills` to `testpaths` and run one big `pytest`

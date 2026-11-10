@@ -538,8 +538,8 @@ agentic-engineers/
 │   ├── SKILLS.md                  # canonical skill roster & role workflows
 │   ├── TODO.md.template
 │   ├── agents/                    # 7 role definitions: *-agent.md
-│   └── skills/                    # 6 skills (each a SKILL.md dir): orchestrator,
-│       protocol-validator, spec-management, codex-agent-cleanup,
+│   └── skills/                    # 5 skills (each a SKILL.md dir): orchestrator,
+│       protocol-validator, spec-management,
 │       audit-trail-review, self-healing-review
 ├── docs/                          # SPEC.md (this file), PROTOCOL.md,
 │                                   # specs/, decisions/, guides/, INDEX.md
