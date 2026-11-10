@@ -204,11 +204,20 @@ class TestCommitMsgPinChangesAreFree:
         assert r.returncode == 0, out(r)
         assert "pin_history" not in out(r)
 
-    def test_skip_commit_msg_hook_bypasses_everything(self, tmp_path):
+    def test_skip_hooks_bypasses_the_advisory_audit(self, tmp_path):
+        """SKIP_HOOKS=1 is the single bypass; it needs a documented reason and skips the audit."""
         repo = make_repo(tmp_path)
         edit_registry(repo, rewrite_history)
-        r = run_commit_msg(repo, SUBJECT + "\n", SKIP_COMMIT_MSG_HOOK="true")
+        r = run_commit_msg(repo, SUBJECT + "\n\nSKIP_HOOKS: incident INC-1234 outage rollback\n",
+                           SKIP_HOOKS="1")
         assert r.returncode == 0 and "pin_history" not in out(r), out(r)
+
+    def test_old_skip_commit_msg_hook_variable_is_gone(self, tmp_path):
+        repo = make_repo(tmp_path)
+        edit_registry(repo, rewrite_history)
+        r = run_commit_msg(repo, SUBJECT + "\n", SKIP_COMMIT_MSG_HOOK="true", SKIP_HOOKS="")
+        assert "pin_history" in out(r), out(r)
+        assert "SKIP_COMMIT_MSG_HOOK" not in COMMIT_MSG.read_text()
 
     def test_existing_rules_unchanged_for_registry_commits(self, tmp_path):
         """Other commit-message rules still apply to registry commits."""

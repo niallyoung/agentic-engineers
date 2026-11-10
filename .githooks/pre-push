@@ -9,8 +9,7 @@
 #   - Agent YAML frontmatter validation (src/agents/*.md)
 #   - Workflow YAML validation (.github/workflows/*.yml)
 #   - Documentation consistency (SPEC.md, AGENTS.md, README.md presence)
-#   - SPEC architectural compliance (no external scripts/cron in
-#     orchestration/ paths; scripts/validate-spec-constraints.py)
+#   - SPEC architectural compliance (scripts/validate-spec-constraints.py)
 #   - Agent definition verification (.agents_verification_sha integrity)
 #   - Gitconfig credential guard (no embedded tokens)
 #   - Model pin history audit of the commits being pushed (advisory; see below)
@@ -21,7 +20,7 @@
 # remote ref is new. It only WARNS when existing pin_history entries were rewritten (or
 # when python3, PyYAML or the scanner is missing); it never fails the push. Strict
 # registry consistency is scripts/models.py check (pre-commit and CI).
-# Bypass: SKIP_HOOKS=1 / GIT_SKIP_HOOKS=1 skip this hook entirely, like every other check.
+# Bypass: SKIP_HOOKS=1 skips this hook entirely, like every other check.
 #
 # 2026-08-13 infra consolidation: removed the DELEGATE/HANDBACK artifact scan
 # (scanned a filesystem-queue path — artifacts/delegates/ — that has never
@@ -32,12 +31,12 @@
 # 180s for that). See inline NOTEs at each removal site.
 #
 # Install: git config core.hooksPath .githooks
-# Bypass (emergency only): SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push
+# Bypass (emergency only): SKIP_HOOKS=1 git push  (the one documented bypass variable)
 
 set -euo pipefail
 
-if [ "${SKIP_HOOKS:-}" = "1" ] || [ "${GIT_SKIP_HOOKS:-}" = "1" ]; then
-  echo "⚠️  SKIP_HOOKS=1 or GIT_SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⚠️  SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
   exit 0
 fi
 
@@ -259,32 +258,19 @@ fi
 # (2026-08-13 infra consolidation) — run `make test` yourself before pushing.
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. VALIDATE SPEC COMPLIANCE (No external scripts except renderer/)
+# 8. VALIDATE SPEC COMPLIANCE
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "🔐 Validating SPEC compliance..."
 
 SPEC_ERRORS=0
 
-# Check for orchestration/scripts/ (should not exist)
-if [ -d "orchestration/scripts" ] && [ "$(find orchestration/scripts -type f \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | wc -l)" -gt 0 ]; then
-  fail "External scripts found in orchestration/scripts/ — violates SPEC.md"
-  SPEC_ERRORS=$((SPEC_ERRORS + 1))
-fi
+# NOTE (hook cleanup): the orchestration/scripts/, orchestration/config/*.cron and
+# Makefile-script-invocation checks that used to live here are removed.
+# orchestration/ no longer exists and the Makefile check matched nothing real; the
+# re-introduction guard is scripts/validate-spec-constraints.py, run below.
 
-# Check for orchestration/config/*.cron (should not exist)
-if [ -d "orchestration/config" ] && [ "$(find orchestration/config -name "*.cron" -type f 2>/dev/null | wc -l)" -gt 0 ]; then
-  fail "Cron files found in orchestration/config/ — violates SPEC.md"
-  SPEC_ERRORS=$((SPEC_ERRORS + 1))
-fi
-
-# Check Makefile for direct script invocations (except renderer/)
-if grep -E "^\s+@(bash|sh|python).*scripts" Makefile 2>/dev/null | grep -v "renderer/scripts" | grep -q . ; then
-  fail "Makefile invokes external scripts (not in renderer/) — violates SPEC.md"
-  SPEC_ERRORS=$((SPEC_ERRORS + 1))
-fi
-
-# NEW: Validate SPEC architectural constraints (generic system for all rules)
+# Validate SPEC architectural constraints (generic system for all rules)
 # Uses scripts/validate-spec-constraints.py which enforces rules defined in docs/SPEC.md
 # Makes it easy to add new constraints without modifying this hook.
 if command -v python3 >/dev/null 2>&1 && [ -f "scripts/validate-spec-constraints.py" ]; then
@@ -506,7 +492,7 @@ echo ""
 if [ "$ERRORS" -gt 0 ]; then
   printf '%b%s%b\n' "$RED" "❌ pre-push: $ERRORS error(s) found. Fix and retry." "$NC"
   echo ""
-  echo "   Emergency bypass: SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push"
+  echo "   Emergency bypass: SKIP_HOOKS=1 git push"
   echo ""
   exit 1
 fi

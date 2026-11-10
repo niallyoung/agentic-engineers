@@ -232,8 +232,3 @@ To run this unattended (e.g. overnight):
 
 At the end of a significant change campaign, before a merge, on explicit
 request, or on a recurring autonomous schedule per the operator's preference.
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in HANDBACK when this skill's dimension menu, routing rules, or diminishing-returns guidance need refinement.

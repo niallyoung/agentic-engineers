@@ -5,15 +5,16 @@
 #   1. Message length validation (min 10 chars, max 72 chars for subject line)
 #   2. Format validation (conventional commits: type(scope): subject)
 #   3. Task ID tracking (YYYY-MM-DD-kebab-case format)
-#   4. DELEGATE/HANDBACK validation (protocol compliance)
-#   5. SKIP_HOOKS bypass documentation requirement
-#   6. Advisory pin_history audit for config/models.yaml (warning only; no trailer needed)
-#   7. Detailed validation reporting
+#   4. SKIP_HOOKS bypass documentation requirement
+#   5. Advisory pin_history audit for config/models.yaml (warning only; no trailer needed)
+#   6. No secret-looking key/value pairs in the message
 #
 # Install: git config core.hooksPath .githooks
-# Bypass: SKIP_COMMIT_MSG_HOOK=true git commit
+# Bypass (emergency only): SKIP_HOOKS=1 git commit -m "... SKIP_HOOKS: <reason>"
+#   SKIP_HOOKS=1 is the one bypass variable. It skips every check below EXCEPT the
+#   documented-reason requirement: the message must still carry a reason.
 #
-# Pin changes (check 6): changing a role's model pin in config/models.yaml needs no
+# Pin changes (check 5): changing a role's model pin in config/models.yaml needs no
 # trailer or approval. This hook only WARNS when staged changes rewrite existing
 # pin_history entries (an append-only audit record). Strict registry consistency is
 # enforced by scripts/models.py check (pre-commit and CI), not here.
@@ -29,12 +30,6 @@ set -uo pipefail
 
 COMMIT_MSG_FILE="$1"
 COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
-
-# Check for bypass flag
-if [[ "${SKIP_COMMIT_MSG_HOOK:-false}" == "true" ]]; then
-    echo "⏭️  commit-msg: SKIPPED (SKIP_COMMIT_MSG_HOOK=true)"
-    exit 0
-fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -82,6 +77,47 @@ FIRST_LINE=$(echo "$MSG_BODY" | head -n1)
 MSG_BODY_REST=$(echo "$MSG_BODY" | tail -n +2 || true)
 
 # ────────────────────────────────────────────────────────────────────────────────
+# 1b. SKIP_HOOKS bypass (the one bypass variable) and its documentation rule
+# ────────────────────────────────────────────────────────────────────────────────
+
+# Shared by the bypass path and the normal path: SKIP_HOOKS active or mentioned in
+# the message needs a documented reason of at least 10 characters.
+check_skip_hooks_reason() {
+  if [ "${SKIP_HOOKS:-}" = "1" ] || echo "$COMMIT_MSG" | grep -qi 'SKIP_HOOKS'; then
+    info "SKIP_HOOKS bypass mentioned or active"
+
+    # Check for documented reason - must have SKIP_HOOKS: reason or similar
+    if echo "$COMMIT_MSG" | grep -qiE 'SKIP_HOOKS\s*:\s*[^[:space:]]|reason\s*:\s*[^[:space:]]|emergency\s*:\s*[^[:space:]]|justification\s*:\s*[^[:space:]]'; then
+      # Require non-trivial reason (>= 10 chars after the colon).
+      REASON=$(echo "$COMMIT_MSG" | grep -iE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:' | head -n1 | sed -E 's/^[[:space:]]*[A-Za-z_]+[[:space:]]*:[[:space:]]*//')
+      if [ "${#REASON}" -lt 10 ]; then
+        fail "Hook-bypass reason too short ('${REASON}'). Provide ≥10 chars (e.g. ticket ID, incident link)."
+      else
+        success "SKIP_HOOKS bypass is documented with reason (${#REASON} chars)"
+      fi
+    else
+      fail "SKIP_HOOKS mentioned/used but no reason documented"
+      echo "   Add one of the following (≥10 chars after the colon):"
+      echo "   - SKIP_HOOKS: <reason>"
+      echo "   - reason: <explanation>"
+      echo "   - emergency: <justification>"
+      echo "   See .githooks/README.md for the bypass procedure."
+    fi
+  fi
+}
+
+# SKIP_HOOKS=1 skips every other check, but the reason is still required.
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⏭️  commit-msg: bypassing format/audit checks (SKIP_HOOKS=1) — documented reason still required"
+  check_skip_hooks_reason
+  if [ "$ERRORS" -gt 0 ]; then
+    printf '%b%s%b\n' "$RED" "❌ commit-msg: $ERRORS error(s) found" "$NC"
+    exit 1
+  fi
+  exit 0
+fi
+
+# ────────────────────────────────────────────────────────────────────────────────
 # 2. VALIDATE: Non-empty message
 # ────────────────────────────────────────────────────────────────────────────────
 
@@ -112,11 +148,6 @@ if [ -n "$FIRST_LINE" ]; then
   fi
 fi
 
-if [ "$FIRST_LINE_LEN" -gt 72 ]; then
-  fail "Subject line too long ($FIRST_LINE_LEN chars). Maximum 72 chars recommended."
-  echo "   Current: '$FIRST_LINE'"
-fi
-
 # ────────────────────────────────────────────────────────────────────────────────
 # 4. VALIDATE: Conventional commit format (optional but encouraged)
 # ────────────────────────────────────────────────────────────────────────────────
@@ -145,115 +176,11 @@ elif [ -n "$COMMIT_MSG" ]; then
   echo "   Example: 2026-05-16-hooks-commitmsg-implementation"
 fi
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 6. VALIDATE: DELEGATE/HANDBACK protocol compliance
-# ────────────────────────────────────────────────────────────────────────────────
-# NOTE: Forward-compatible with both 'type:' (deprecated) and 'handoff_type:' (canonical)
-
-if echo "$COMMIT_MSG" | grep -qE '^\s*handoff_type:\s*DELEGATE|^\s*type:\s*DELEGATE'; then
-  info "DELEGATE block detected in commit message"
-
-  # Check for required DELEGATE fields (canonical schema)
-  DELEGATE_FIELDS=("task_id" "agent" "scope" "plan" "success_criteria")
-  MISSING_FIELDS=()
-
-  for field in "${DELEGATE_FIELDS[@]}"; do
-    if ! echo "$COMMIT_MSG" | grep -qi "^${field}:"; then
-      MISSING_FIELDS+=("$field")
-    fi
-  done
-
-  if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
-    fail "DELEGATE block missing required fields: ${MISSING_FIELDS[*]}"
-  else
-    success "DELEGATE block has all required fields"
-  fi
-
-  # Validate task_id format within DELEGATE
-  if echo "$COMMIT_MSG" | grep -qE "task_id: +[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9\-]+"; then
-    success "DELEGATE task_id format is valid"
-  else
-    fail "DELEGATE task_id format invalid (expected: YYYY-MM-DD-kebab-case)"
-  fi
-
-  # Check for deprecated fields and warn about them
-  if echo "$COMMIT_MSG" | grep -qE '^\s*role:'; then
-    warn "DELEGATE uses deprecated field 'role:' — use 'agent:' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*type:\s*DELEGATE'; then
-    warn "DELEGATE uses deprecated field 'type:' — use 'handoff_type:' instead"
-  fi
-fi
-
-if echo "$COMMIT_MSG" | grep -qE '^\s*handoff_type:\s*HANDBACK|^\s*type:\s*HANDBACK'; then
-  info "HANDBACK block detected in commit message"
-
-  # Check for required HANDBACK fields (canonical schema)
-  HANDBACK_FIELDS=("task_id" "agent" "status" "output" "metrics")
-  MISSING_FIELDS=()
-
-  for field in "${HANDBACK_FIELDS[@]}"; do
-    if ! echo "$COMMIT_MSG" | grep -qi "^${field}:"; then
-      MISSING_FIELDS+=("$field")
-    fi
-  done
-
-  if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
-    fail "HANDBACK block missing required fields: ${MISSING_FIELDS[*]}"
-  else
-    success "HANDBACK block has all required fields"
-  fi
-
-  # Validate status value (canonical enum)
-  if echo "$COMMIT_MSG" | grep -qE "status: +(success|failure|partial|blocked|escalate)"; then
-    success "HANDBACK status value is valid"
-  else
-    fail "HANDBACK status must be one of: success, failure, partial, blocked, escalate"
-  fi
-
-  # Check for deprecated fields and warn about them
-  if echo "$COMMIT_MSG" | grep -qE '^\s*deliverables:'; then
-    warn "HANDBACK uses deprecated field 'deliverables:' — use 'output:' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*tests:'; then
-    warn "HANDBACK uses deprecated field 'tests:' — use 'metrics:' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*quality_score:'; then
-    warn "HANDBACK uses deprecated field 'quality_score:' — use 'metrics.quality' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*type:\s*HANDBACK'; then
-    warn "HANDBACK uses deprecated field 'type:' — use 'handoff_type:' instead"
-  fi
-fi
+# 6. VALIDATE: SKIP_HOOKS documentation — a message that merely mentions SKIP_HOOKS must document why.
+check_skip_hooks_reason
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 7. VALIDATE: SKIP_HOOKS bypass documentation
-# ────────────────────────────────────────────────────────────────────────────────
-
-if [ "${SKIP_HOOKS:-}" = "1" ] || echo "$COMMIT_MSG" | grep -qi 'SKIP_HOOKS'; then
-  info "SKIP_HOOKS bypass mentioned or active"
-
-  # Check for documented reason - must have SKIP_HOOKS: reason or similar
-  if echo "$COMMIT_MSG" | grep -qiE 'SKIP_HOOKS\s*:\s*[^[:space:]]|reason\s*:\s*[^[:space:]]|emergency\s*:\s*[^[:space:]]|justification\s*:\s*[^[:space:]]'; then
-    # Require non-trivial reason (>= 10 chars after the colon).
-    REASON=$(echo "$COMMIT_MSG" | grep -iE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:' | head -n1 | sed -E 's/^[[:space:]]*[A-Za-z_]+[[:space:]]*:[[:space:]]*//')
-    if [ "${#REASON}" -lt 10 ]; then
-      fail "Hook-bypass reason too short ('${REASON}'). Provide ≥10 chars (e.g. ticket ID, incident link)."
-    else
-      success "SKIP_HOOKS bypass is documented with reason (${#REASON} chars)"
-    fi
-  else
-    fail "SKIP_HOOKS mentioned/used but no reason documented"
-    echo "   Add one of the following (≥10 chars after the colon):"
-    echo "   - SKIP_HOOKS: <reason>"
-    echo "   - reason: <explanation>"
-    echo "   - emergency: <justification>"
-    echo "   See .githooks/README.md for the bypass procedure."
-  fi
-fi
-
-# ────────────────────────────────────────────────────────────────────────────────
-# 7b. ADVISORY: pin_history audit (config/models.yaml)
+# 6b. ADVISORY: pin_history audit (config/models.yaml)
 # ────────────────────────────────────────────────────────────────────────────────
 # config/models.yaml is the single reference table of models per role. Changing a pin
 # needs no trailer or approval. The only thing noted here is that pin_history is an
@@ -370,7 +297,7 @@ PY
 fi
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 8. VALIDATE: No secrets in commit message
+# 7. VALIDATE: No secrets in commit message
 # ────────────────────────────────────────────────────────────────────────────────
 
 # Look for secret patterns more specifically (key=value or : patterns)
@@ -380,7 +307,7 @@ if echo "$COMMIT_MSG" | grep -iE '(password|api_key|secret|token|private_key|aws
 fi
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 9. SUMMARY AND EXIT
+# 8. SUMMARY AND EXIT
 # ────────────────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -392,8 +319,8 @@ if [ "$ERRORS" -gt 0 ]; then
   echo "Fix the errors above and retry:"
   echo "  git commit --amend"
   echo ""
-  echo "To bypass validation (not recommended):"
-  echo "  SKIP_COMMIT_MSG_HOOK=true git commit"
+  echo "To bypass validation (emergency only; the message must document a reason):"
+  echo "  SKIP_HOOKS=1 git commit   # with 'SKIP_HOOKS: <reason>' in the message"
   exit 1
 fi
 

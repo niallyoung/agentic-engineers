@@ -94,8 +94,8 @@ when the terms appear in all capitals).
 - **roster** — the recognized agent roles a deployment permits as a
   DELEGATE's `agent` target. This document's examples use an eight-role
   roster (`orchestrator`, `engineer`, `senior-engineer`, `lead-engineer`,
-  `principal-engineer`, `security-engineer`, `quality-engineer`,
-  `model-engineer`); the roster itself is deployment-defined, not part of
+  `principal-engineer`, `security-engineer`, `quality-engineer`);
+  the roster itself is deployment-defined, not part of
   this protocol's normative core.
 - **harness** — the surrounding agentic coding environment (CLI, IDE
   extension, SDK runtime) providing the primitive used to dispatch a
@@ -122,14 +122,12 @@ list despite their use in the reference implementation's own docs/examples.
 
 ### 4.1 DELEGATE
 
-**Core fields — 9, all REQUIRED:**
+**Core fields — 7, all REQUIRED** (`skill` and `spec_version` are optional extensions, listed below):
 
 | Field | Type | Rule |
 |---|---|---|
 | `task_id` | string | Kebab-case, 3–50 chars: `^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$` |
-| `spec_version` | string | Protocol schema version authorizing this task (e.g. `"1.0"`) |
 | `handoff_type` | string | MUST equal `DELEGATE` — the message-type discriminator |
-| `skill` | string | Name resolving to an installed skill/capability the receiver will load |
 | `agent` | string | Target role, drawn from the deployment's roster |
 | `scope` | string | What/to what/out-of-scope boundaries. MUST be >= 15 words |
 | `success_criteria` | array\<string\> | Non-empty; measurable outcomes defining "done" |
@@ -140,6 +138,8 @@ list despite their use in the reference implementation's own docs/examples.
 
 | Field | Type | Purpose |
 |---|---|---|
+| `skill` | string | Optional name of a skill/capability the receiver SHOULD load; a DELEGATE that omits it is valid |
+| `spec_version` | string | Optional protocol schema version authorizing this task (e.g. `"1.0"`) |
 | `model` | string | Specific model identifier requested |
 | `effort` | enum | `low`\|`medium`\|`high`\|`max` — reasoning-effort tier |
 | `parent_task_id` | string | `task_id` of the DELEGATE that spawned this one |
@@ -188,12 +188,11 @@ effort: medium
 
 ### 4.2 HANDBACK
 
-**Core fields — 6, all REQUIRED:**
+**Core fields — 5, all REQUIRED** (`spec_version` is an optional extension):
 
 | Field | Type | Rule |
 |---|---|---|
 | `task_id` | string | MUST exactly match the originating DELEGATE's `task_id` |
-| `spec_version` | string | Protocol schema version used during execution |
 | `handoff_type` | string | MUST equal `HANDBACK` |
 | `status` | enum | `success`\|`failure`\|`partial`\|`blocked`\|`escalate` (§5.5) |
 | `output` | any | Result payload; key MUST be present, value MAY be any type |
@@ -203,6 +202,7 @@ effort: medium
 
 | Field | Type | Purpose |
 |---|---|---|
+| `spec_version` | string | Optional protocol schema version used during execution |
 | `token_usage` | object | Structured input/output/cached/total breakdown, superseding flat `metrics.tokens`. (Schema-wise this is a `core_fields` entry that is not in `required` — optional in practice, listed here with the other optional fields.) |
 | `escalations` | integer | Count of times this task was escalated during execution |
 | `model_assessment` | string | Reviewer's judgement on whether the model tier fit the task |
@@ -256,10 +256,10 @@ hand-transcription:
 ```python
 import yaml
 schema = yaml.safe_load(open("docs/specs/protocol-core-v1.0.yaml"))
-schema["delegate"]["required"]            # -> the 9 required DELEGATE fields
-schema["delegate"]["extensions"].keys()   # -> the 11 DELEGATE extensions
-schema["handback"]["required"]            # -> the 6 required HANDBACK fields
-schema["handback"]["extensions"].keys()   # -> the 12 HANDBACK extensions
+schema["delegate"]["required"]            # -> the 7 required DELEGATE fields
+schema["delegate"]["extensions"].keys()   # -> the 13 DELEGATE extensions
+schema["handback"]["required"]            # -> the 5 required HANDBACK fields
+schema["handback"]["extensions"].keys()   # -> the 13 HANDBACK extensions
 ```
 
 `ancestry`, `skill_feedback`, and `escalation` (singular) were confirmed
@@ -399,17 +399,15 @@ overlapping rather than one complete gate:
 
 | Reference enforcer | Core-field coverage | Runs |
 |---|---|---|
-| `protocol-validator` skill (`protocol_validator.py`) | `task_id`, `skill`, `agent`, `scope`, `success_criteria`, `plan`, `context` on DELEGATE; `task_id`, `status`, `output`, `metrics` on HANDBACK | On demand, in-process |
+| `protocol-validator` skill (`protocol_validator.py`) | `task_id`, `agent`, `scope`, `success_criteria`, `plan`, `context` on DELEGATE; `task_id`, `status`, `output`, `metrics` on HANDBACK | On demand, in-process |
 | Commit-time hook (regex-based) | `task_id`, `agent`, `handoff_type` on DELEGATE; `status`, `metrics` sub-fields, `handoff_type` on HANDBACK; plus a secret-pattern scan | `git commit`, on staged files |
 | Spawn-time guard (dependency-free, fails open) | `handoff_type`, `task_id` (kebab-case, 3–50 chars), `agent`, `scope` (>=15 words), `plan`, `success_criteria` on DELEGATE only; plus `depth` <= 3 and `ancestry` cycle detection when those optional fields are declared | Every in-session agent-spawn call |
 
-**An honest gap, not an oversight:** `spec_version` is a required core field
-(§4.1, §4.2) but is not currently checked for presence or format by any of
-the three reference enforcers above — confirmed by inspecting each
-enforcer's implementation directly. `handoff_type` fares better: it functions
-as each enforcer's *discriminator* (the field used to recognize a message as
-a DELEGATE or HANDBACK at all) even where not separately asserted as
-"present and correct". A new enforcer aiming for full conformance should not
+**A note on `spec_version`:** it is an optional extension on both DELEGATE and
+HANDBACK (no reference enforcer checks it, and no live message sends it).
+`handoff_type` functions as each enforcer's *discriminator* (the field used to
+recognize a message as a DELEGATE or HANDBACK at all) even where not
+separately asserted as "present and correct". A new enforcer aiming for full conformance should not
 assume today's reference enforcers already achieve it — they are best-effort
 and independently improvable.
 

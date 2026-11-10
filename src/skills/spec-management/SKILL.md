@@ -24,9 +24,8 @@ approval → changelog → audit trail — and names who is authorized to run th
 Only **Principal Engineer**, **Security Engineer**, and **Lead Engineer** may propose or
 approve a SPEC.md change; every other agent treats SPEC.md as read-only.
 
-This is the mirror image of `spec-validator` (which is Python and CI-blocking):
-spec-validator checks that *implementation* complies with the current SPEC.md;
-spec-management governs changes *to* SPEC.md itself.
+It governs changes *to* SPEC.md itself; whether implementation complies with the
+current SPEC.md is a matter for code review and the CI/hook gates.
 
 ## The Protocol
 
@@ -166,11 +165,5 @@ a script enforcing it at runtime. A prior version of this skill had ~2,900 LOC o
 Python (`spec_manager.py`, `authorizer.py`, `impact_analyzer.py`, `audit_logger.py`,
 etc.) implementing exactly this workflow in code; it was never wired into any
 CI gate or invoked by the runtime protocol validators, so it added maintenance
-surface without adding enforcement. The actual enforcement mechanisms are:
-`spec-validator` (CI-blocking, checks implementation against SPEC.md) and human/agent
-review discipline on every PR that touches `docs/SPEC.md`.
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in HANDBACK when this skill significantly affects your task.
+surface without adding enforcement. The actual enforcement mechanism is
+human/agent review discipline on every PR that touches `docs/SPEC.md`.

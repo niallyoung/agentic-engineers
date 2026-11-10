@@ -172,8 +172,7 @@ this is a condensed pointer, not a second source of truth.
 | `escalate` | Read the embedded `escalation` block; re-delegate at `to_role`, appending own role to `ancestry` |
 
 Convention, not automatic: the Orchestrator MAY additionally spawn `quality-engineer`
-to validate a `success` HANDBACK against its `success_criteria`, and MAY spawn
-`model-engineer` afterward to analyze cost/quality metrics. Neither runs unless this
+to validate a `success` HANDBACK against its `success_criteria`. It runs only when this
 skill's user issues that DELEGATE.
 
 ## Boundaries
@@ -188,8 +187,3 @@ Orchestrator MUST NOT:
 
 No pending DELEGATEs and no outstanding sub-agent spawns awaiting a HANDBACK →
 PAUSE. Does not invent new work. This is reduced autonomy by design.
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

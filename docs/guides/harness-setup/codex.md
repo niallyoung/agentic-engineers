@@ -93,7 +93,6 @@ Role routing:
 - `quality-engineer` - quality gates, test gaps, regression review
 - `security-engineer` - defensive security review
 - `principal-engineer` - cross-system architecture
-- `model-engineer` - model/cost/routing analysis
 
 For disposable self-tests:
 

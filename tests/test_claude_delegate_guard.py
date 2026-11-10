@@ -282,7 +282,12 @@ class TestDepthAndAncestryOptionalFields:
     never set these fields) still pass byte-identically."""
 
     def test_depth_within_limit_is_allowed(self):
-        prompt = VALID_DELEGATE_PROMPT + "depth: 3\n"
+        # depth is no longer trusted on its own: it must agree with the
+        # ancestry length, so the max-depth case carries a 3-role ancestry.
+        prompt = (
+            VALID_DELEGATE_PROMPT
+            + "depth: 3\nancestry: [orchestrator, senior-engineer, lead-engineer]\n"
+        )
         payload = _task_payload("engineer", prompt)
         assert run_guard(payload) is None, "depth == max (3) must be allowed"
 
@@ -343,6 +348,265 @@ class TestDepthAndAncestryOptionalFields:
         assert result.returncode == 0, "guard must exit 0 (fail open) even when denying"
         decision = json.loads(result.stdout.strip())["hookSpecificOutput"]
         assert decision["permissionDecision"] == "deny"
+
+
+def _deny_reason(payload):
+    decision = run_guard(payload)
+    assert decision is not None, "expected a deny decision, but the guard allowed the call"
+    assert decision["permissionDecision"] == "deny"
+    return decision["permissionDecisionReason"]
+
+
+class TestDepthDerivedFromAncestry:
+    """The delegation depth is derived from the ancestry length (ancestry is
+    the root-to-parent role chain, so the spawned agent sits at depth
+    len(ancestry)). A self-declared ``depth`` is only ever a cross-check: it
+    can make a DELEGATE fail, never make an over-deep one pass."""
+
+    SIX_ROLES = (
+        "orchestrator, senior-engineer, lead-engineer, "
+        "principal-engineer, security-engineer, quality-engineer"
+    )
+
+    def test_six_role_ancestry_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [%s]\n" % self.SIX_ROLES
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_four_role_ancestry_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, senior-engineer, lead-engineer, principal-engineer]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_block_list_ancestry_longer_than_max_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry:\n  - orchestrator\n  - senior-engineer\n"
+            "  - lead-engineer\n  - principal-engineer\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_three_role_ancestry_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, senior-engineer, lead-engineer]\n"
+        )
+        assert run_guard(_task_payload("engineer", prompt)) is None
+
+    def test_low_declared_depth_cannot_mask_long_ancestry(self):
+        # The reported bypass: depth 1 declared alongside 5 ancestors.
+        prompt = VALID_DELEGATE_PROMPT + (
+            "depth: 1\nancestry: [orchestrator, senior-engineer, lead-engineer, "
+            "principal-engineer, security-engineer]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_declared_depth_disagreeing_with_ancestry_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 1\nancestry: [orchestrator, senior-engineer]\n"
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "does not match" in reason
+
+    def test_declared_depth_above_ancestry_length_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 3\nancestry: [orchestrator]\n"
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "does not match" in reason
+
+    def test_declared_depth_matching_ancestry_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 2\nancestry: [orchestrator, senior-engineer]\n"
+        assert run_guard(_task_payload("engineer", prompt)) is None
+
+    def test_positive_depth_without_ancestry_is_denied(self):
+        # ancestry is REQUIRED at depth > 0 (src/AGENTS.md § Recursion
+        # Limits); a bare positive depth is unverifiable.
+        prompt = VALID_DELEGATE_PROMPT + "depth: 2\n"
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "does not match" in reason
+
+    def test_depth_zero_without_ancestry_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 0\n"
+        assert run_guard(_task_payload("engineer", prompt)) is None
+
+    def test_cycle_check_ignores_case_of_ancestry_items(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator, Engineer]\n"
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "cycle detected" in reason
+
+    def test_inline_ancestry_with_trailing_content_is_denied(self):
+        # Only the first [...] used to be read; anything after it was ignored.
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator] [senior-engineer, lead-engineer, principal-engineer]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "ancestry" in reason
+
+    def test_inline_ancestry_followed_by_block_items_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator]\n  - senior-engineer\n  - lead-engineer\n"
+            "  - principal-engineer\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "ancestry" in reason
+
+    @pytest.mark.parametrize(
+        "tail",
+        [
+            "ancestry: [orchestrator]\n---\n",
+            "ancestry:\n  - orchestrator\n---\n",
+            "ancestry: [orchestrator]\n\nThanks, report back when done.\n",
+            "ancestry: [orchestrator]       # chain of agent roles from root\n"
+            "                                # to the spawning parent, inclusive.\n",
+            "ancestry: [\n  orchestrator,\n  senior-engineer\n]\n",
+        ],
+    )
+    def test_text_after_the_ancestry_field_is_not_part_of_it(self, tail):
+        # ancestry is usually the last key, so it collects whatever follows
+        # the block (document terminator, prose, comment lines).
+        assert run_guard(_task_payload("engineer", VALID_DELEGATE_PROMPT + tail)) is None
+
+    def test_delegate_in_document_markers_with_long_ancestry_is_denied(self):
+        prompt = (
+            "---\n" + VALID_DELEGATE_PROMPT
+            + "ancestry:\n  - orchestrator\n  - senior-engineer\n"
+            "  - lead-engineer\n  - principal-engineer\n---\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_column_zero_block_list_ancestry_is_counted(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry:\n- orchestrator\n- senior-engineer\n- lead-engineer\n"
+            "- principal-engineer\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_inline_ancestry_with_trailing_comment_is_allowed(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator]   # root only\n"
+        assert run_guard(_task_payload("engineer", prompt)) is None
+
+
+class TestDuplicateRecursionKeysDenied:
+    """A second ``ancestry:`` / ``depth:`` line used to silently override the
+    first (last one wins), so a short decoy could follow — or precede — the
+    real chain. Any repeat is now refused outright."""
+
+    def test_duplicate_ancestry_short_last_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, senior-engineer, lead-engineer, "
+            "principal-engineer, security-engineer]\n"
+            "ancestry: [orchestrator]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "duplicate" in reason and "ancestry" in reason
+
+    def test_duplicate_ancestry_hiding_a_cycle_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, engineer]\nancestry: [orchestrator]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "duplicate" in reason
+
+    def test_duplicate_identical_ancestry_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "ancestry: [orchestrator]\nancestry: [orchestrator]\n"
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "duplicate" in reason
+
+    def test_duplicate_depth_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 9\ndepth: 0\n"
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "duplicate" in reason and "depth" in reason
+
+    def test_indented_second_ancestry_is_denied(self):
+        # An indented repeat is swallowed into the preceding field by the
+        # flat parser, but a reader of the prompt still sees two chains.
+        prompt = VALID_DELEGATE_PROMPT + (
+            "  ancestry: [orchestrator, senior-engineer, lead-engineer, principal-engineer]\n"
+            "ancestry: [orchestrator]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "duplicate" in reason
+
+    def test_duplicate_ancestry_outside_fenced_block_is_denied(self):
+        prompt = (
+            "```yaml\n" + VALID_DELEGATE_PROMPT + "ancestry: [orchestrator]\n```\n"
+            "ancestry: [orchestrator, senior-engineer, lead-engineer, principal-engineer]\n"
+        )
+        reason = _deny_reason(_task_payload("engineer", prompt))
+        assert "duplicate" in reason
+
+    def test_single_ancestry_and_single_depth_is_not_a_duplicate(self):
+        prompt = VALID_DELEGATE_PROMPT + "depth: 1\nancestry: [orchestrator]\n"
+        assert run_guard(_task_payload("engineer", prompt)) is None
+
+
+def _send_payload(to, message):
+    return {"tool_name": "SendMessage", "tool_input": {"to": to, "message": message}}
+
+
+class TestSendMessagePayloads:
+    """SendMessage resumes a live or completed sub-agent (src/AGENTS.md §
+    Sub-Agent Reuse), so it is a second delegation channel. It used to skip
+    the guard entirely because only Task/Agent were inspected."""
+
+    def test_valid_delegate_to_role_named_agent_is_allowed(self):
+        assert run_guard(_send_payload("engineer", VALID_DELEGATE_PROMPT)) is None
+
+    def test_prose_to_role_named_agent_is_denied(self):
+        reason = _deny_reason(_send_payload("engineer", "now also wire it into the call sites"))
+        assert "requires a canonical" in reason
+
+    @pytest.mark.parametrize("to", ["Engineer", " engineer ", "engineer [3fa9c1]"])
+    def test_role_named_recipient_variants_are_guarded(self, to):
+        reason = _deny_reason(_send_payload(to, "just keep going"))
+        assert "requires a canonical" in reason
+
+    def test_malformed_delegate_to_role_named_agent_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT.replace(
+            "task_id: fix-login-timeout-bug", "task_id: NOT_kebab_case!"
+        )
+        reason = _deny_reason(_send_payload("engineer", prompt))
+        assert "task_id" in reason
+
+    def test_delegate_agent_mismatch_with_role_named_recipient_is_denied(self):
+        reason = _deny_reason(_send_payload("lead-engineer", VALID_DELEGATE_PROMPT))
+        assert "mismatch" in reason
+
+    def test_over_deep_delegate_via_sendmessage_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, senior-engineer, lead-engineer, "
+            "principal-engineer, security-engineer, quality-engineer]\n"
+        )
+        reason = _deny_reason(_send_payload("engineer", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_duplicate_ancestry_via_sendmessage_is_denied(self):
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, engineer]\nancestry: [orchestrator]\n"
+        )
+        reason = _deny_reason(_send_payload("engineer", prompt))
+        assert "duplicate" in reason
+
+    def test_delegate_to_opaque_agent_id_is_still_validated(self):
+        # The recipient is an opaque id, so the role cannot be cross-checked,
+        # but a DELEGATE block in the message is validated all the same.
+        prompt = VALID_DELEGATE_PROMPT + (
+            "ancestry: [orchestrator, senior-engineer, lead-engineer, principal-engineer]\n"
+        )
+        reason = _deny_reason(_send_payload("a1b2c3d4-e5f6", prompt))
+        assert "exceeds max delegation depth" in reason
+
+    def test_valid_delegate_to_opaque_agent_id_is_allowed(self):
+        assert run_guard(_send_payload("a1b2c3d4-e5f6", VALID_DELEGATE_PROMPT)) is None
+
+    @pytest.mark.parametrize("to", ["main", "researcher", "a1b2c3d4-e5f6"])
+    def test_plain_message_to_non_role_recipient_is_allowed(self, to):
+        assert run_guard(_send_payload(to, "tests are green on my side")) is None
+
+    def test_missing_or_non_string_fields_do_not_crash_or_block(self):
+        assert run_guard({"tool_name": "SendMessage", "tool_input": {}}) is None
+        assert run_guard({"tool_name": "SendMessage", "tool_input": {"to": 7, "message": None}}) is None
 
 
 class TestInstalledPathExecution:

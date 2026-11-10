@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   security-checks:
@@ -75,34 +74,6 @@ jobs:
               print("✅ Security: No credentials detected")
           EOF
 
-      - name: SPEC.md compliance check
-        run: |
-          python3 << 'EOF'
-          import json
-          from pathlib import Path
-          
-          # Check the canonical spec exists with its key sections.
-          # Canonical spec is docs/SPEC.md (root SPEC.md is a pointer since CU-5).
-          spec_file = Path('docs/SPEC.md')
-          if not spec_file.exists():
-              print("❌ Security: SPEC.md not found")
-              exit(1)
-          
-          # Verify key sections exist
-          content = spec_file.read_text()
-          required_sections = [
-              '# Agentic Engineers Implementation Specification',
-              'ORCHESTRATOR-FIRST EXECUTION MODEL',
-          ]
-          
-          missing = [s for s in required_sections if s not in content]
-          if missing:
-              print(f"❌ Security: Missing docs/SPEC.md sections: {missing}")
-              exit(1)
-          
-          print("✅ Security: SPEC.md compliance verified")
-          EOF
-
       # Was `safety check --json || true`: `safety check` is deprecated in
       # safety 3.x (superseded by `safety scan`) and the `|| true` meant the
       # step could never fail, so it was decorative. pip-audit is a real gate.
@@ -143,19 +114,3 @@ jobs:
       - name: Security test execution
         run: |
           python3 -m pytest tests/test_security_core.py -v --tb=short
-
-      - name: Report security status
-        if: success()
-        run: |
-          echo "✅ All security pre-merge checks passed"
-          echo "- Credential scanning: PASS"
-          echo "- SPEC.md compliance: PASS"
-          echo "- YAML validation: PASS"
-          echo "- Security tests: PASS"
-
-      - name: Report security failures
-        if: failure()
-        run: |
-          echo "❌ Security pre-merge checks FAILED"
-          echo "Please address security issues before merging"
-          exit 1

@@ -17,7 +17,7 @@ is the file that:
 
 - is protected by the `spec-management` skill (all changes go through a
   proposal → analysis → approval → changelog → audit workflow),
-- is validated by `spec-validator` and the git hooks (pre-commit, commit-msg,
+- is validated by the git hooks (pre-commit, commit-msg,
   pre-push), and
 - is deployed by the render pipeline to `dist/specs/SPEC.md`.
 

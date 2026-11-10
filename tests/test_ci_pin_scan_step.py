@@ -48,6 +48,33 @@ def run_step(repo, base_env, strict_stub=False):
                           text=True, timeout=60, env=env)
 
 
+WORKFLOWS = REPO_ROOT / ".github" / "workflows"
+
+
+class TestWorkflowHygiene:
+    def test_workflows_parse_and_have_no_gate5_stub_or_two_string_spec_check(self):
+        for name in ("ci.yml", "security-gate.yml"):
+            text = (WORKFLOWS / name).read_text()
+            assert yaml.safe_load(text)["jobs"]
+            assert "Gate 5" not in text
+            assert "SPEC.md compliance check" not in text
+
+    def test_security_gate_has_no_unused_security_events_permission(self):
+        wf = yaml.safe_load((WORKFLOWS / "security-gate.yml").read_text())
+        assert "security-events" not in (wf.get("permissions") or {})
+
+    def test_contents_write_job_actions_are_sha_pinned(self):
+        import re
+        wf = yaml.safe_load((WORKFLOWS / "ci.yml").read_text())
+        for job in wf["jobs"].values():
+            if (job.get("permissions") or {}).get("contents") != "write":
+                continue
+            for step in job["steps"]:
+                uses = step.get("uses", "")
+                if uses and not uses.startswith("actions/"):
+                    assert re.search(r"@[0-9a-f]{40}$", uses), "unpinned third-party action: " + uses
+
+
 class TestStepIsInjectionSafe:
     def test_run_script_has_no_expression_interpolation(self):
         assert "${{" not in load_step()["run"]

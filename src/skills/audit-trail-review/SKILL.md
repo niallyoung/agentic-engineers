@@ -263,8 +263,3 @@ Items that are historical and exempt from "slop" findings:
 - LOCKED SPEC sections (unchanged unless by spec-management proposal)
 - Backlog-marked task_ids with an explicit WP-* reference
 - Escalation events (refusal, limit_exceeded) when followed by a corrective re-route within the same session
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in audit report when this meta-skill's ledger reconciliation or campaign procedures need refinement.

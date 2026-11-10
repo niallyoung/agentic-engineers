@@ -67,7 +67,7 @@ class TestFreshInstall:
         r = make("fresh-install-claude", dest)
         assert r.returncode == 0, r.stdout + r.stderr
         assert settings(dest)["model"] == pin()
-        assert len(list((dest / ".claude" / "agents").glob("*.md"))) == 8
+        assert len(list((dest / ".claude" / "agents").glob("*.md"))) == 7
 
     def test_uninstall_leaves_no_empty_settings_file_behind(self, dest):
         """Root cause of the dog-food finding: a leftover {} read as 'operator owns the model'."""

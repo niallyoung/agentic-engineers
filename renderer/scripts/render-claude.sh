@@ -114,7 +114,10 @@ def remove_model():
 def inject_hook(hook_path, hook_name):
 	command = "python3 %s" % hook_path
 	entry = {
-		"matcher": "Task|Agent",
+		# Task/Agent spawn a sub-agent; SendMessage resumes one. All three can
+		# deliver a DELEGATE, so all three go through the guard. Keep in sync
+		# with SPAWN_TOOLS/CONTINUE_TOOLS in claude-delegate-guard.py.
+		"matcher": "Task|Agent|SendMessage",
 		"hooks": [
 			{"type": "command", "command": command, "timeout": 10}
 		],
@@ -352,7 +355,6 @@ auditability, and the DELEGATE/HANDBACK coordination layer.
 | `@quality-engineer` | Post-implementation validation |
 | `@principal-engineer` | Cross-service architecture, hard debugging |
 | `@security-engineer` | Security audits, threat modelling |
-| `@model-engineer` | Cost/quality optimisation recommendations |
 
 ## Canonical DELEGATE/HANDBACK schema
 

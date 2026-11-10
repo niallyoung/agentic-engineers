@@ -6,9 +6,8 @@ run_skill_tests.py — Execute every src/skills/**/tests/ suite in CI.
 
 `pytest.ini` sets `testpaths = tests`, so tests living under `src/skills/*/tests/`
 are never collected by `make test` / CI on their own — each surviving skill's
-test files need their own CI visibility via this runner. Of the 8 skills, 3 are
-script-backed and carry a tests/ suite: protocol-validator, spec-validator and
-skill-improvement-feedback.
+test files need their own CI visibility via this runner. Of the 6 skills, only
+protocol-validator is script-backed and carries a tests/ suite.
 
 The obvious fix — add `src/skills` to `testpaths` and run one big `pytest`
 session — does NOT work correctly here: many skills use the identical
@@ -52,10 +51,14 @@ SKILLS_ROOT = REPO_ROOT / "src" / "skills"
 # tests dir went missing, got excluded, etc.) — fail loudly rather than
 # silently reporting a shrinking number.
 #
-# Floor is ~95% of the measured actual (289 tests across the 3 script-backed
-# skills), matching renderer/scripts/check_test_regression.py's convention.
+# Floor is ~95% of the measured actual (186 tests; protocol-validator is now the
+# only script-backed skill with a suite), matching
+# renderer/scripts/check_test_regression.py's convention. Re-baselined
+# 2026-11-10 from 274 (289 * 0.95) after the spec-validator (99 tests) and
+# skill-improvement-feedback (3 tests) skills were deleted as dead weight:
+# 186 * 0.95 = 176.7 -> 176. See docs/REGRESSION-GATE-POLICY.md.
 # Rationale and re-baselining rules: docs/REGRESSION-GATE-POLICY.md.
-MIN_EXPECTED_TESTS = 274
+MIN_EXPECTED_TESTS = 176
 
 # Some skill suites exercise the real repository tree end-to-end rather than an
 # isolated fixture, so they run slower than a typical unit suite. Bounded.

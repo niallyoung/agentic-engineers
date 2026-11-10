@@ -144,9 +144,19 @@ import re
 
 # Baselines — update only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
 #
-# Re-baselined 2026-09-03 (post-slimdown cleanup, task_id cleanup-fix-d-tests).
-#   Measured actual: 689 tests collected by `python3 -m pytest tests/ --collect-only -q`
-#   Derivation:      689 * 0.95 = 654.55 -> floor 654 (floor(), per this gate's convention)
+# Re-baselined 2026-11-10 (skills-package cleanup, task_id 2026-11-10-w4a-skills-package).
+#   Old floor:       654 (from 689 measured on 2026-09-03)
+#   Measured actual: 1213 tests collected by `python3 -m pytest tests/ --collect-only -q`
+#   Derivation:      1213 * 0.95 = 1152.35 -> floor 1152
+#   REASON: the 654 floor was stale again (the suite had grown to 1137, so the
+#   gate ran at ~58% of actual). This change itself moved tests/ from 1137 to
+#   1135 (-2: tests/test_validate_skills.py lost the Self-Improvement-warning
+#   test along with the check it exercised; the other -1 is a registry-driven
+#   count); sibling work in the same tree then added tests, giving the 1213
+#   measured at the end of this task. The spec-validator and skill-improvement-feedback suites live
+#   outside tests/ and are floored separately by scripts/run_skill_tests.py.
+#   The floor is restored to ~95% of measured actual; no coverage was removed
+#   to hit a number.
 #
 # WHY THIS MOVED: the floor had been left at 532 — set from a measured 560 back
 # in WP-R3-05 — while the suite grew to 689. 532/689 = 77%, so a 157-test
@@ -162,7 +172,7 @@ import re
 BASELINES = {
     "full_suite": {
         "path": "tests/",
-        "minimum": 654,
+        "minimum": 1152,
         "label": "Full test suite",
     },
 }

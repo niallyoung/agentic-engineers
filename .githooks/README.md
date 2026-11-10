@@ -32,8 +32,12 @@ This command:
    - **Blocks commit:** ❌ Yes (syntax errors are hard failures)
 
 2. **Secrets Detection**
-   - Patterns: API keys, passwords, tokens, AWS keys, literal-valued sensitive env vars
-   - Checks: all staged files (skips binaries/images)
+   - Patterns: API keys, passwords, tokens, AWS keys, Anthropic keys (`sk-ant-`),
+     GitHub tokens (`ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`, `github_pat_`), `client_secret`
+     assignments, PEM private-key headers, literal-valued sensitive env vars
+   - Checks: the staged content of every added, copied, modified or **renamed**
+     file (`--diff-filter=ACMR`); filenames are NUL-separated so names with spaces
+     are scanned. Binary files are skipped by content; executable scripts are scanned.
    - **Blocks commit:** ❌ Yes (secrets in git = permanent exposure)
 
 3. **File Permissions**
@@ -43,15 +47,20 @@ This command:
 
 **Additional Checks (beyond the 3 core):**
 
-- **SPEC Constraints:** No external scripts in orchestration/scripts/ or orchestration/config/*.cron
 - **Agent Frontmatter:** Consistency between src/agents/*-agent.md model/effort and src/AGENTS.md
 - **YAML/JSON Validation:** Well-formedness checks
 - **Bypass Markers:** Warns if --no-verify or SKIP_HOOKS=1 in committed code
-- **Orphaned Bytecode:** Detects .pyc without .py source
+- **Bytecode:** Rejects staged `.pyc` files
 - **Model Registry:** Staged `src/agents/*-agent.md` models must be known registry IDs (`scripts/models.py is-known`); when registry-related files are staged, `models.py check` (shape, fallback policy, family `min_pin` floor, pin_history, generated targets current) and `sync --check` must pass. No version allowlist lives in the hook; needs PyYAML (fails loudly without it)
 - **OpenCode Config:** Validates opencode.jsonc structure (when staged)
-- **DELEGATE/HANDBACK Protocol:** Required fields on staged protocol YAML files
 
+> **Hook cleanup:** removed the DELEGATE/HANDBACK protocol-file validation
+> (pre-commit) and the DELEGATE/HANDBACK commit-message validation (commit-msg),
+> since no protocol YAML is ever committed; the orchestration/ re-introduction
+> checks (pre-commit and pre-push; the guard now lives only in
+> `scripts/validate-spec-constraints.py`); and the warn-only bytecode timestamp and
+> test-without-implementation sub-checks.
+>
 > **2026-08-13 infra consolidation:** removed the former pylint and mypy
 > checks (both optional — skipped entirely when the tool wasn't installed —
 > and warn-only even when they ran, so neither could ever block a commit)
@@ -71,8 +80,7 @@ blocking gate within minutes of every push.
 - **Agent YAML Validation:** All src/agents/*.md have valid YAML frontmatter
 - **Workflow Files:** GitHub Actions YAML (.github/workflows/) well-formedness
 - **Documentation:** SPEC.md, AGENTS.md, README.md existence and structure
-- **Spec Compliance:** No SPEC.md drift (external scripts, cron files,
-  Makefile violations); `scripts/validate-spec-constraints.py`
+- **Spec Compliance:** `scripts/validate-spec-constraints.py`
 - **Agent Definition Verification:** `.agents_verification_sha` matches
   `src/AGENTS.md` content
 - **Gitconfig Credential Guard:** No embedded tokens in `~/.gitconfig` /
@@ -91,21 +99,23 @@ blocking gate within minutes of every push.
 
 ## Emergency Override
 
-Both hooks can be bypassed for emergency situations (use sparingly!):
+There is exactly **one** bypass variable: `SKIP_HOOKS=1`. It applies to every
+hook (use sparingly!). The former `GIT_SKIP_HOOKS`, `BYPASS_HOOK_VALIDATION` and
+`SKIP_COMMIT_MSG_HOOK` variables no longer do anything.
 
 ```bash
-# Skip pre-commit (commit without validation)
-SKIP_HOOKS=1 git commit -m "Emergency: <reason>"
+# Skip pre-commit (commit without validation). commit-msg still requires a
+# documented reason of 10+ characters in the message (see below).
+SKIP_HOOKS=1 git commit -m "fix: hotfix" -m "SKIP_HOOKS: P0 outage, rolling back release 1.2.3"
 
-# OR use consistent environment variable
-GIT_SKIP_HOOKS=1 git commit -m "Emergency: <reason>"
-
-# Skip pre-push (push without tests/validation)
+# Skip pre-push (push without validation)
 SKIP_HOOKS=1 git push
-
-# OR use consistent environment variable
-GIT_SKIP_HOOKS=1 git push
 ```
+
+Under `SKIP_HOOKS=1`: pre-commit and pre-push exit immediately (including the model
+registry checks); post-merge skips; commit-msg skips its format and audit checks but
+still fails unless the message carries `SKIP_HOOKS: <reason>` (or `reason:`,
+`emergency:`, `justification:`) with at least 10 characters after the colon.
 
 **Guidelines for emergency bypass:**
 - ✅ Use: Critical hotfix, fire, data loss prevention
@@ -119,8 +129,8 @@ GIT_SKIP_HOOKS=1 git push
 
 - **pre-commit:** `.githooks/pre-commit` (staged-file validation)
 - **pre-push:** `.githooks/pre-push` (agent/workflow/SPEC validation — no test run)
-- **commit-msg:** `.githooks/commit-msg` (enforces commit message format; a `pin_history` rewrite in `config/models.yaml` produces a warning, never a failure; no pin trailer is required, see docs/SPEC.md Model Pin Change)
-- **post-merge:** `.githooks/post-merge` (documentation-drift check, informational only)
+- **commit-msg:** `.githooks/commit-msg` (enforces commit message format and the `SKIP_HOOKS` reason rule; a `pin_history` rewrite in `config/models.yaml` produces a warning, never a failure; no pin trailer is required, see docs/SPEC.md Model Pin Change)
+- **post-merge:** `.githooks/post-merge` (documentation-drift check on `docs/SPEC.md` and `src/AGENTS.md`, informational only)
 
 ### Performance Targets
 
@@ -158,11 +168,8 @@ git config core.hooksPath .githooks
 
 ### Per-Hook Control
 
-Some hooks support environment variables to disable specific checks:
-
-- **SKIP_HOOKS=1**: Bypass all hook checks (emergency only)
-- **GIT_SKIP_HOOKS=1**: Alias for SKIP_HOOKS=1
-- **BYPASS_HOOK_VALIDATION=true**: Skip agent frontmatter / opencode.jsonc / protocol validation
+- **SKIP_HOOKS=1**: the single documented bypass for all hooks (emergency only; see
+  Emergency Override above). There are no per-check bypass variables.
 
 ## Troubleshooting
 

@@ -139,10 +139,9 @@ effort: high
 `model_used`, `effort_actual`, `children_created`, `children_results`, `flags`,
 `criteria_results`, `error`, `interjections` (operator interjections received
 mid-task, each with `ts`, `source`, `directive`, `disposition`). `skill_feedback` (structured per-skill feedback
-consumed by the `skill-improvement-feedback` pattern) is accepted at runtime as a
+reserved for a future skill-feedback loop) is accepted at runtime as a
 forward-compatible field — see `protocol_validator.py`'s
-`KNOWN_HANDBACK_RUNTIME_FIELDS` and `src/skills/skill-improvement-feedback/SKILL.md`
-for its shape.
+`KNOWN_HANDBACK_RUNTIME_FIELDS` for its shape.
 
 ```yaml
 handoff_type: HANDBACK

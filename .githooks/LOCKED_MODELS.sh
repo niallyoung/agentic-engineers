@@ -37,7 +37,6 @@ AGENT_MODEL_ASSIGNMENTS=(
     "lead-engineer-agent:claude-sonnet-5.5"
     "quality-engineer-agent:claude-sonnet-5.5"
     "senior-engineer-agent:claude-sonnet-5.5"
-    "model-engineer-agent:claude-sonnet-5.5"
     "security-engineer-agent:claude-fable-5"
     "principal-engineer-agent:claude-opus-5.5"
 )

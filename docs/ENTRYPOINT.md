@@ -66,7 +66,7 @@ happens to it once written:
 ```yaml
 handoff_type: DELEGATE
 task_id: 2026-05-02-my-task
-agent: engineer | senior-engineer | lead-engineer | principal-engineer | security-engineer | quality-engineer | model-engineer | orchestrator
+agent: engineer | senior-engineer | lead-engineer | principal-engineer | security-engineer | quality-engineer | orchestrator
 model: <the role's registry pin from config/models.yaml; see docs/MODELS.md>
 effort: low | medium | high | max
 scope: |

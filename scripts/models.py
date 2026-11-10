@@ -741,6 +741,7 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
     # 9: pin_history. Two entry shapes, both append-only:
     #   pin entry:    {date, role, from, to, approval}                 (a role's pin changed)
     #   status entry: {date, model, status_from, status_to, approval}  (a model's status changed)
+    retired = set(reg.get("retired_roles") or [])
     hist = reg.get("pin_history") or []
     last: dict[str, str] = {}
     last_status: dict[str, str] = {}
@@ -764,7 +765,7 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
             continue
         if not isinstance(e["approval"], str) or not e["approval"].strip():
             errors.append(f"pin_history[{i}]: approval must be a non-empty string")
-        if e["role"] not in roles:
+        if e["role"] not in roles and e["role"] not in retired:
             errors.append(f"pin_history[{i}]: role '{e['role']}' is not a registry role")
         if e["to"] not in models:
             errors.append(f"pin_history[{i}]: '{e['to']}' is not in models")
@@ -777,6 +778,8 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
             errors.append(f"pin_history: latest status entry for '{mid}' is '{st}' but its status is '{cur}'; "
                           f"append a status entry for every status change")
     for role, cfg in roles.items():
+        if role in retired:
+            errors.append(f"roles.{role}: is listed in retired_roles and must not be an active role")
         if role not in last:
             errors.append(f"pin_history: no entry for role '{role}'")
         elif isinstance(cfg, dict) and last[role] != cfg.get("model"):

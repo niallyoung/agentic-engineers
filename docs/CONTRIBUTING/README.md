@@ -81,7 +81,7 @@ After `make install`, the framework automatically:
       of an existing one (e.g. `src/agents/engineer-agent.md`), then register it in
       `src/AGENTS.md` and `config/FRAMEWORK-MANIFEST.yaml`.
     - New skill? Author a `src/skills/<category>/<name>/SKILL.md` directly, following the
-      structure of an existing one (e.g. `spec-validator`), then register it in
+      structure of an existing one (e.g. `protocol-validator`), then register it in
       `src/SKILLS.md` and `config/FRAMEWORK-MANIFEST.yaml`. See "Creating New Skills" below.
     - Code changes? Delegate to the Orchestrator!
 
@@ -165,7 +165,7 @@ author them directly.
   `src/AGENTS.md` + `config/FRAMEWORK-MANIFEST.yaml`. The glob-based renderer discovers
   it automatically — no manual per-harness wiring needed.
 - **New skill?** Create `src/skills/<category>/<name>/SKILL.md` following the structure
-  of an existing skill (e.g. `spec-validator`), then register it in `src/SKILLS.md` +
+  of an existing skill (e.g. `protocol-validator`), then register it in `src/SKILLS.md` +
   `config/FRAMEWORK-MANIFEST.yaml`. The glob-based renderer discovers it automatically.
 - **Code review?** Use the `Lead Engineer` agent for architectural guidance.
 - **Complex planning?** Use the `Senior Engineer` agent to plan unscoped work.
@@ -197,9 +197,9 @@ consistent prefixes so related skills group together and are easy to discover.
 
 | Prefix | Domain | Existing members |
 |--------|--------|------------------|
-| `spec-*` | SPEC.md governance | spec-validator, spec-management |
+| `spec-*` | SPEC.md governance | spec-management |
 | `protocol-*` | DELEGATE/HANDBACK schema validation | protocol-validator |
-| `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup, skill-improvement-feedback |
+| `agent-*` / `skill-*` | Scaffolding and utilities | orchestrator, codex-agent-cleanup |
 
 All skills are part of the public skill catalog in `src/skills/`.
 
@@ -267,7 +267,7 @@ within cost targets.
   reviving the deleted docs.
 - **Model selection drives cost** — pick the cheapest model that meets the
   quality bar (see [Model Selection (Locked)](#model-selection-locked)); the
-  `model-engineer` agent recommends cost-quality-optimal routing.
+  registry (`config/models.yaml`) is the single place routing is set.
 
 **Contributor guidance:** when adding a skill or agent, set a realistic token
 budget in its examples, prefer lower-cost models where quality allows, and never
@@ -446,7 +446,7 @@ src/skills/<skill-name>/
 ```
 
 Author the skill/agent directly by following the structure of an existing one
-(e.g. `spec-validator` for a skill, `engineer-agent.md` for an agent) — see
+(e.g. `protocol-validator` for a skill, `engineer-agent.md` for an agent) — see
 `src/SKILLS.md` / `src/AGENTS.md` for the registration steps.
 
 ### Gate: Skill Template Conformance Report (Audit Trail)

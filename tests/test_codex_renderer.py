@@ -25,7 +25,6 @@ EXPECTED_AGENTS = {
     "quality-engineer",
     "principal-engineer",
     "security-engineer",
-    "model-engineer",
 }
 
 

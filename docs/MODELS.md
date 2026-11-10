@@ -24,7 +24,6 @@ A role's pin may never sit below its family's `min_pin` (fallbacks are exempt;
 | **Lead Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
 | **Quality Engineer** | `claude-sonnet-5.5` | medium | claude-sonnet-5 |
 | **Senior Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
-| **Model Engineer** | `claude-sonnet-5.5` | high | claude-sonnet-5 |
 | **Security Engineer** | `claude-fable-5` | max | claude-opus-5, claude-opus-4.8 |
 | **Principal Engineer** | `claude-opus-5.5` | high | claude-opus-5, claude-opus-4.8 |
 

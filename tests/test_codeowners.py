@@ -31,6 +31,12 @@ REQUIRED_PATHS = [
     "/.claude/hooks/session-start.sh",
     "/config/orchestration.yaml",
     "/src/agents/",
+    "/src/AGENTS.md",
+    "/src/skills/",
+    "/docs/specs/protocol-core-v1.0.yaml",
+    "/.agents_verification_sha",
+    "/scripts/audit_append.py",
+    "/.github/CODEOWNERS",
 ]
 HANDLE = re.compile(r"^@[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 

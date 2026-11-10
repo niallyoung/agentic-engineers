@@ -122,11 +122,6 @@ jobs:
           python renderer/validate_skills.py
           echo "::notice::Run 'python renderer/validate_skills.py --strict' locally to see warnings"
 
-      - name: "Gate 2: Skill template conformance report"
-        # Generate a non-failing annotated report for the PR review audit trail.
-        # The report is emitted as a GitHub step summary for visibility.
-        run: python renderer/validate_skills.py --json | python scripts/format_skill_report.py >> "$GITHUB_STEP_SUMMARY" || true
-
       - name: "Gate 3: Orphaned bytecode check"
         # Folded in from the former validate-sources.yml (2026-08-13 infra
         # consolidation) — fails if any .pyc is tracked in git or if
@@ -175,25 +170,6 @@ jobs:
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
         run: python renderer/scripts/check_test_regression.py
 
-      - name: "Gate 5 (stub): AAIF AGENTS.md v1.0 conformance"
-        # AAIF's public roadmap lists "AGENTS.md v1.0 — first stable behavioral
-        # spec" with planned goose-based validation tooling, but as of this
-        # writing (2026-08-14) agentsmd/agents.md has never cut a release
-        # (github.com/agentsmd/agents.md/releases is empty) and no validator
-        # CLI has shipped — see docs/RENDERING.md "AGENTS.md v1.0 readiness"
-        # for citations. This step is a forward-looking stub only: it probes
-        # for a `goose` binary with an `agents-md validate` subcommand and
-        # runs it against src/AGENTS.md if found, else prints a dated skip
-        # notice. It must NEVER fail the build while the tooling is
-        # unreleased — flip to a hard gate once AAIF ships v1.0 tooling.
-        run: |
-          if command -v goose >/dev/null 2>&1 && goose agents-md validate --help >/dev/null 2>&1; then
-            echo "::notice::goose AGENTS.md validator detected — running against src/AGENTS.md"
-            goose agents-md validate src/AGENTS.md || echo "::warning::AAIF validator reported issues (non-blocking pending v1.0 GA)"
-          else
-            echo "::notice::[2026-08-14] AAIF AGENTS.md v1.0 validation tooling not yet released (no agentsmd/agents.md GitHub release, no goose validator subcommand found). Skipping — see AAIF roadmap at https://aaif.io and docs/RENDERING.md. This step will activate automatically once a 'goose' binary exposing 'agents-md validate' is on PATH."
-          fi
-
       - name: Verify
         run: make verify
 
@@ -211,7 +187,7 @@ jobs:
 
       - name: Create semantic version tag
         id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
@@ -220,7 +196,7 @@ jobs:
           custom_release_rules: "feat:minor:✨ Features,fix:patch:🐛 Bug Fixes,docs:patch:📚 Documentation,chore:patch:🔧 Chores,refactor:patch:♻️ Refactoring,perf:patch:⚡ Performance,security:patch:🔒 Security"
 
       - name: Create GitHub Release
-        uses: ncipollo/release-action@v1.14.0
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5 # v1.14.0
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: ${{ steps.tag_version.outputs.new_tag }}

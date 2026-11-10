@@ -62,8 +62,7 @@ ROLE_ROUTING_TABLE = """- orchestrator: intake, routing, task management, synthe
 - lead-engineer: planning review, integration review, and medium architectural guidance.
 - quality-engineer: post-change quality gates, test gaps, regression review.
 - security-engineer: defensive security review and vulnerability analysis.
-- principal-engineer: cross-system architecture and high-impact design choices.
-- model-engineer: model/cost/routing analysis and A/B experiment design."""
+- principal-engineer: cross-system architecture and high-impact design choices."""
 
 
 STRICT_ORCHESTRATOR_MODE = """- The root Codex session is an orchestrator only; it does not implement user tasks itself.
@@ -117,7 +116,6 @@ AGENT_NAME_TO_REGISTRY_ROLE = {
     "quality-engineer": "quality_engineer",
     "principal-engineer": "principal_engineer",
     "security-engineer": "security_engineer",
-    "model-engineer": "model_engineer",
 }
 
 

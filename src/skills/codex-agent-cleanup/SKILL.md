@@ -67,8 +67,3 @@ This skill keeps the orchestrator healthy by routinely:
 - Clean up completed agents before starting new parallel tasks.
 - Treat sub-agent hygiene as part of normal Codex orchestration, not optional housekeeping.
 - Prefer small cleanup cycles instead of waiting for a backlog.
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

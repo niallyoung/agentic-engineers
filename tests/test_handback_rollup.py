@@ -427,7 +427,7 @@ def test_render_table_includes_distribution_comparison():
     out = render_table(stats, [])
     assert "Cost Target Distribution comparison" in out
     assert "engineer" in out
-    assert "18.0%" in out  # engineer's target share
+    assert "20.0%" in out  # engineer's target share
 
 
 def test_render_table_includes_warnings_section():
@@ -443,7 +443,7 @@ def test_render_json_roundtrips_and_has_expected_shape():
     payload = json.loads(render_json(stats, warnings))
     assert payload["totals"]["count"] == 2
     assert "orchestrator" in payload["roles"]
-    assert payload["roles"]["orchestrator"]["target_cost_pct"] == 55.0
+    assert payload["roles"]["orchestrator"]["target_cost_pct"] == 56.0
     assert payload["warnings"] == []
 
 

@@ -5,7 +5,7 @@ Validates the inputs the render pipeline consumes, independent of any harness:
 
   - all 8 src/agents/*-agent.md have required frontmatter
     (name, model, description, role, accepts, returns)
-  - the src/AGENTS.md roster table lists all 8 roles with canonical dotted
+  - the src/AGENTS.md roster table lists all 7 roles (model-engineer retired) with canonical dotted
     Claude model ids and a non-empty effort column (never blank)
   - every user-facing src/skills/*/SKILL.md has required frontmatter
     (name, description)
@@ -41,7 +41,6 @@ EXPECTED_TABLE_ROLES = {
     "Lead Engineer",
     "Principal Engineer",
     "Security Engineer",
-    "Model Engineer",
 }
 
 AGENT_FILES = sorted(SRC_AGENTS.glob("*-agent.md"))
@@ -129,7 +128,7 @@ def _roster_rows():
     return rows
 
 
-def test_agents_md_table_lists_all_8_roles():
+def test_agents_md_table_lists_all_7_roles():
     roles = {r["role"] for r in _roster_rows()}
     assert roles == EXPECTED_TABLE_ROLES, (
         f"src/AGENTS.md roster roles {sorted(roles)} != expected "

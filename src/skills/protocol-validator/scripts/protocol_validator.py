@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # Valid agents per Phase 3 spec (uses hyphenated names, unlike old underscore names)
 VALID_AGENTS = {
     'orchestrator', 'engineer', 'senior-engineer', 'lead-engineer',
-    'principal-engineer', 'security-engineer', 'quality-engineer', 'model-engineer'
+    'principal-engineer', 'security-engineer', 'quality-engineer'
 }
 
 # CANONICAL HANDBACK status enum — single source of truth.

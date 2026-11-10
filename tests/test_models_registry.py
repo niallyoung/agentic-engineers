@@ -152,7 +152,7 @@ class TestRegistryShape:
     def test_fallbacks_per_decision(self, reg):
         fb = {r: c["fallback"] for r, c in reg["roles"].items()}
         assert fb["principal-engineer"] == fb["security-engineer"] == ["claude-opus-5", "claude-opus-4.8"]
-        for r in ("lead-engineer", "quality-engineer", "senior-engineer", "model-engineer"):
+        for r in ("lead-engineer", "quality-engineer", "senior-engineer"):
             assert fb[r] == ["claude-sonnet-5"]
 
     def test_pin_history_latest_matches_pin(self, reg):
@@ -160,6 +160,8 @@ class TestRegistryShape:
         for e in reg["pin_history"]:
             if "role" in e:  # status entries have no role
                 last[e["role"]] = e["to"]
+        for retired in reg.get("retired_roles") or []:
+            last.pop(retired, None)  # retired roles keep history but have no active pin
         assert last == {r: c["model"] for r, c in reg["roles"].items()}
 
 
@@ -523,6 +525,13 @@ class TestSync:
 
     def test_sync_preserves_prose_and_comments(self, tmp_path):
         root = make_tree(tmp_path)
+        # Plant a comment in the copied engineer file so the assertion does not depend
+        # on the wording of the real agent prompt (agent bodies carry no model literals).
+        agent = root / "src/agents/engineer-agent.md"
+        lines = agent.read_text().splitlines(keepends=True)
+        idx = next(i for i, ln in enumerate(lines) if ln.startswith("model:"))
+        lines.insert(idx + 1, "# model: claude-haiku-5.5\n")
+        agent.write_text("".join(lines))
         edit_registry(root, lambda r: r["roles"]["quality-engineer"].update(effort="high"))
         cli("sync", root=root)
         old = (REPO_ROOT / "src/AGENTS.md").read_text().splitlines()
@@ -530,7 +539,7 @@ class TestSync:
         diff = [(a, b) for a, b in zip(old, new) if a != b]
         assert len(old) == len(new) and 1 <= len(diff) <= 2
         assert any("| high |" in b and "Quality Engineer" in b for _, b in diff)
-        assert "# model: claude-haiku-5.5" in (root / "src/agents/engineer-agent.md").read_text()
+        assert "# model: claude-haiku-5.5" in agent.read_text()
 
 
 # --------------------------------------------------------------- resolve ---
@@ -687,3 +696,31 @@ class TestStatusHistory:
         reg = models.load_registry(REPO_ROOT)
         text = models.render_models_md(reg)
         assert "status of `claude-haiku-5.5`" in text
+
+
+class TestRetiredRoles:
+    """A retired role keeps its append-only pin_history but is not an active role."""
+
+    def test_model_engineer_is_retired_not_active(self, reg):
+        assert "model-engineer" in reg["retired_roles"]
+        assert "model-engineer" not in reg["roles"]
+        assert any(e.get("role") == "model-engineer" for e in reg["pin_history"])
+
+    def test_history_for_retired_role_is_accepted(self, tmp_path):
+        root = make_tree(tmp_path)
+        errors, _ = models.check(root)
+        assert errors == [], errors
+
+    def test_history_for_unknown_role_is_still_an_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["pin_history"].append(
+            {"date": "2026-10-03", "role": "ghost-engineer", "from": None,
+             "to": "claude-sonnet-5", "approval": "test"}))
+        errors, _ = models.check(root)
+        assert any("ghost-engineer" in e and "not a registry role" in e for e in errors), errors
+
+    def test_history_for_unlisted_formerly_retired_role_is_an_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r.update(retired_roles=[]))
+        errors, _ = models.check(root)
+        assert any("model-engineer" in e and "not a registry role" in e for e in errors), errors
