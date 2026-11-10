@@ -24,7 +24,7 @@ sys.modules["ae_models_evidence"] = models
 _spec.loader.exec_module(models)
 
 COPY_PATHS = ["config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml", "src/AGENTS.md",
-              "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha", "docs/MODELS.md"]
+              "src/agents", ".agents_verification_sha", "docs/MODELS.md"]
 TODAY = datetime.date(2026, 10, 3)
 URL = "https://platform.claude.com/docs/en/models/sonnet-5-5/overview"
 GOOD_FACTS = {

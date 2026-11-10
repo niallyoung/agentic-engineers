@@ -25,7 +25,7 @@ _spec.loader.exec_module(models)
 CLI = [sys.executable, str(REPO_ROOT / "scripts" / "models.py")]
 MODELS_MD = REPO_ROOT / "docs" / "MODELS.md"
 COPY_PATHS = ["config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml", "src/AGENTS.md",
-              "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha", "docs/MODELS.md"]
+              "src/agents", ".agents_verification_sha", "docs/MODELS.md"]
 
 
 def cli(*args, root=REPO_ROOT):

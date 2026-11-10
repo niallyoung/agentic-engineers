@@ -55,11 +55,16 @@ def installed(tmp_path_factory, render_all):
     — a stale-artifact false positive, not an install defect.
     """
     destdir = tmp_path_factory.mktemp("pe-install")
+    # OPENCODE_MODELS_CACHE points at a path that does not exist, so the OpenCode
+    # renderer never reads the developer's ~/.cache/opencode/models.json. A stale local
+    # cache otherwise drops agents or leaves the model empty.
+    env = {**os.environ, "OPENCODE_MODELS_CACHE": str(destdir / "no-opencode-cache.json")}
     result = subprocess.run(
         ["make", "install", f"DESTDIR={destdir}", "BACKUP=never"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        env=env,
     )
     assert result.returncode == 0, (
         "make install failed:\n"

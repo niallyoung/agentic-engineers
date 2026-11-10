@@ -63,7 +63,7 @@ I confirm I have reviewed and understand the following before taking on tasks:
 
 - [✓] `docs/PROTOCOL.md` (Sections 2–5 minimum — estimated 20 min read)
 - [✓] My agent role in `src/AGENTS.md`
-- [✓] Examples in `docs/CORE-PROTOCOL-QUICKSTART.md` (at least one example reviewed)
+- [✓] Schema examples in `docs/PROTOCOL.md` § 2 (at least one example reviewed)
 - [✓] Escalation paths in `docs/PROTOCOL.md` Section 5
 - [✓] How metrics are reported in `docs/PROTOCOL.md` Section 2.2
 

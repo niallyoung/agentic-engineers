@@ -670,15 +670,17 @@ NOT stop a DELEGATE, a spawn, or a HANDBACK from being applied.
 
 ### Tools-Frontmatter Permission Model
 
-The `tools:` key in each agent's source frontmatter (`src/agents/<name>-agent.md`) states
-which roles are *meant* to spawn sub-agents — a convention, not an enforced permission.
-Neither harness renderer enforces it: Claude Code's `render-claude.sh` drops `tools:`
-entirely (every rendered sub-agent gets full default tool access); OpenCode's
-`render-opencode.sh` uses uniform allow-all permissions by design (social constraint
-model, not technical). The PreToolUse hook (`renderer/scripts/claude-delegate-guard.py`)
-only checks that a spawn call carries a well-formed DELEGATE block — not the calling
-agent's role, ancestry, depth, or fan-out. Compliance below is the spawning agent's own
-judgment call.
+The `tools:` key in each agent's source frontmatter (`src/agents/<name>-agent.md`) states which
+roles are *meant* to spawn sub-agents. The leaf roles declare `tools: []`, and that declaration is
+enforced on Claude Code: `render-claude.sh` writes `disallowedTools: Agent, Task, SendMessage` into
+the rendered frontmatter of every agent whose source declares an empty `tools:` list (Engineer and
+Quality Engineer today). Spawning agents keep the default tool set on Claude Code, so their spawn
+authority is a convention, not an enforced permission. The other harness renderers do not enforce
+`tools:`: OpenCode's `render-opencode.sh` uses uniform allow-all permissions by design (social
+constraint model), and Copilot and Codex follow the same convention. The PreToolUse hook
+(`renderer/scripts/claude-delegate-guard.py`) checks only that a spawn call carries a well-formed
+DELEGATE block, not the calling agent's role, ancestry, depth or fan-out. Compliance for the
+spawning roles is the spawning agent's own judgment call.
 
 | Role | Spawns sub-agents? | Why |
 |---|---|---|

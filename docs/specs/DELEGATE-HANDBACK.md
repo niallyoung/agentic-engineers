@@ -529,8 +529,6 @@ match.
   this document narrates
 - [`../PROTOCOL.md`](../PROTOCOL.md) — this implementation's internal
   validation/enforcement reference (audience: contributors to this repository)
-- [`../CORE-PROTOCOL-QUICKSTART.md`](../CORE-PROTOCOL-QUICKSTART.md) — a
-  30-minute quickstart covering the core-field subset
 - [`../../src/AGENTS.md`](../../src/AGENTS.md) — this implementation's roster,
   routing rules, and role definitions (deployment-specific, not part of this
   protocol's normative core)

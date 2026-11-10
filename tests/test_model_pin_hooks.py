@@ -701,7 +701,7 @@ def make_full_registry_repo(tmp_path):
     git(tmp_path, "config", "user.email", "t@example.com")
     git(tmp_path, "config", "user.name", "T")
     for rel in ("config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml", "src/AGENTS.md",
-                ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha", "docs/MODELS.md"):
+                ".agents_verification_sha", "docs/MODELS.md"):
         if not (REPO_ROOT / rel).exists():  # docs/MODELS.md lands with the generator
             continue
         dest = tmp_path / rel

@@ -216,8 +216,7 @@ models:
     ids: {claude: claude-fable-5, copilot: claude-fable-5, opencode: claude-fable-5}
 
 # Role -> pinned model + effort + explicit fallback chain.
-# Order is meaningful: it is the order of AGENT_MODEL_ASSIGNMENTS in the generated
-# .githooks/LOCKED_MODELS.sh shim.
+# Order is meaningful: it is the order roles are rendered in generated targets.
 roles:
   engineer:
     model: claude-haiku-5.5

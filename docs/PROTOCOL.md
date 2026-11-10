@@ -481,8 +481,6 @@ as the rest of §7: it reports, it never gates.
   Guardrail, ACK Protocol
 - [`docs/specs/protocol-core-v1.0.yaml`](specs/protocol-core-v1.0.yaml) — the
   normative schema
-- [`docs/CORE-PROTOCOL-QUICKSTART.md`](CORE-PROTOCOL-QUICKSTART.md) — a 30-minute
-  quickstart covering only the core-field subset
 - [`scripts/handback_rollup.py`](../scripts/handback_rollup.py) — the HANDBACK cost
   rollup script (§7), including its `--events` JSONL mode (§7a)
 - [`scripts/audit_append.py`](../scripts/audit_append.py) — the clause-7 audit event

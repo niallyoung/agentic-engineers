@@ -287,12 +287,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture(scope="session")
 def render_all():
-    """Render every harness into dist/ exactly once per test session."""
+    """Render every harness into dist/ exactly once per test session.
+
+    The OpenCode renderer reads the developer's ~/.cache/opencode/models.json unless
+    OPENCODE_MODELS_CACHE says otherwise. A stale local cache changes the rendered
+    output, so dist/ is rendered against a path that does not exist, the same as the
+    install fixtures. See tests/test_install_correctness.py.
+    """
+    # dist/ is gitignored build output. The renderers do not prune orphans, so a
+    # file from a retired role would survive every render and fail the comparison.
+    shutil.rmtree(REPO_ROOT / "dist", ignore_errors=True)
+    env = {**os.environ, "OPENCODE_MODELS_CACHE": str(REPO_ROOT / "dist" / ".no-opencode-cache.json")}
     result = subprocess.run(
         ["make", "render-all"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        env=env,
     )
     assert result.returncode == 0, (
         "make render-all failed:\n"

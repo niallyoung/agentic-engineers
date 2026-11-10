@@ -646,8 +646,7 @@ models.py check failed` or `generated targets are stale; run python3 scripts/mod
 
 ### See Also
 
-- **Lock rationale:** `.githooks/LOCKED_MODELS_RATIONALE.md`
-- **Locked models shim (generated):** `.githooks/LOCKED_MODELS.sh`; source of truth `config/models.yaml`
+- **Model registry (source of truth):** `config/models.yaml`; generated roster in `docs/MODELS.md`
 - **Full architecture:** `docs/SPEC.md` — "Approved Claude Models" section
 - **Tests:** `tests/test_model_naming_compliance.py` — compliance verification
 - **Agent registry:** `src/AGENTS.md` — model assignments by role

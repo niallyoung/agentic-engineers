@@ -14,12 +14,11 @@ Subcommands
   resolve ROLE --harness H [--available-from FILE] [--record FILE | --no-record]
 
 Generated targets (all edited in place; hand-written prose is never touched)
-  .githooks/LOCKED_MODELS.sh   the LOCKED_MODELS and AGENT_MODEL_ASSIGNMENTS array bodies
   src/AGENTS.md                Model and Effort cells of the roster table, and the
                                "**Model:** `id`, effort `x`" lead of each role section
   src/agents/*-agent.md        the frontmatter `model:` line
   config/FRAMEWORK-MANIFEST.yaml  `model:` and `effort:` of each agent entry
-  .agents_verification_sha     regenerated only when src/AGENTS.md changed
+  .agents_verification_sha     digest of src/AGENTS.md, refreshed whenever that file changes
   docs/MODELS.md               role table, model table, and pin history (generated from registry)
 
 Stdlib + PyYAML only. No network.
@@ -43,7 +42,6 @@ except ImportError:  # pragma: no cover
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_REL = "config/models.yaml"
-LOCKED_SH_REL = ".githooks/LOCKED_MODELS.sh"
 AGENTS_MD_REL = "src/AGENTS.md"
 AGENTS_DIR_REL = "src/agents"
 MANIFEST_REL = "config/FRAMEWORK-MANIFEST.yaml"
@@ -168,128 +166,6 @@ def _floor_problem(reg: dict, fam: str) -> str | None:
 # --------------------------------------------------------------------------- #
 # Generated targets: pure text transforms (text in, text out)
 # --------------------------------------------------------------------------- #
-
-def render_locked_models(text: str, reg: dict) -> str:
-    """Generate the entire .githooks/LOCKED_MODELS.sh file from a template.
-
-    The file is wholly generated; hand-edits are overwritten by sync.
-    The LOCKED_MODELS array, AGENT_MODEL_ASSIGNMENTS array, and all helper
-    functions are generated from the registry.
-    """
-    models_list = list((reg.get("models") or {}))
-    roles = reg.get("roles") or {}
-
-    # Build array bodies
-    locked_body = "\n".join(f'    "{m}"' for m in models_list)
-    assigns = [f'    "{r}-agent:{c["model"]}"' for r, c in roles.items()]
-    assigns_body = "\n".join(assigns)
-
-    # Build the complete file from template
-    lines = [
-        "#!/usr/bin/env bash",
-        "# .githooks/LOCKED_MODELS.sh",
-        "#",
-        "# GENERATED from config/models.yaml by scripts/models.py sync - do not edit by hand.",
-        "# config/models.yaml is the source of truth; regenerate with: make models-sync.",
-        "# To change pins, follow the Model Pin Change process in docs/SPEC.md.",
-        "#",
-        "# Sourcing API (stable): LOCKED_MODELS, AGENT_MODEL_ASSIGNMENTS, is_known_model,",
-        "# get_agent_locked_model, show_locked_models, show_agent_assignments.",
-        "#",
-        "# Bypass: SKIP_HOOKS=1 (emergency only; document the reason in the commit message)",
-        "",
-        "LOCKED_MODELS=(",
-    ]
-    for m in models_list:
-        lines.append(f'    "{m}"')
-    lines.extend([
-        ")",
-        "",
-        "# Fallback behaviour when a pinned model is unavailable is defined per role in",
-        "# config/models.yaml (see docs/MODELS.md); it is not decided in this file.",
-        "",
-        "# ─── AGENT-MODEL MAPPING: Which agent uses which model ──────────────────────",
-        "# Generated from the roles section of config/models.yaml (role pins).",
-        "# Format: agent-name:model-choice (space-separated for portability)",
-        "AGENT_MODEL_ASSIGNMENTS=(",
-    ])
-    for assign in assigns:
-        lines.append(assign)
-    lines.extend([
-        ")",
-        "",
-        "# ─── VALIDATION HELPER: Check if a model id is in the registry ───────────────",
-        "is_known_model() {",
-        "    local model=\"$1\"",
-        "    ",
-        "    for locked_model in \"${LOCKED_MODELS[@]}\"; do",
-        "        if [[ \"$model\" == \"$locked_model\" ]]; then",
-        "            return 0  # Model id is in the registry (known; says nothing about pin approval)",
-        "        fi",
-        "    done",
-        "    ",
-        "    return 1  # Model id is not in the registry",
-        "}",
-        "",
-        "# ─── INTERACTIVE / DIAGNOSTIC HELPERS ────────────────────────────────────────",
-        "# The three functions below (get_agent_locked_model, show_locked_models,",
-        "# show_agent_assignments) have NO caller anywhere in this repo — only",
-        "# is_known_model() above is invoked by a hook (.githooks/pre-commit). They are",
-        "# kept, and exported, as the documented sourcing API for interactive use:",
-        "#   source .githooks/LOCKED_MODELS.sh && show_agent_assignments",
-        "# See LOCKED_MODELS_RATIONALE.md § \"Enforcement Mechanism\". Do not delete them",
-        "# expecting to remove dead code — delete them only alongside that documented API.",
-        "",
-        "# Get the locked model for a specific agent.",
-        "get_agent_locked_model() {",
-        "    local agent_role=\"$1\"",
-        "    ",
-        "    # Search for agent in assignments (format: \"agent-name:model\")",
-        "    for assignment in \"${AGENT_MODEL_ASSIGNMENTS[@]}\"; do",
-        "        local agent=\"${assignment%%:*}\"",
-        "        local model=\"${assignment##*:}\"",
-        "        if [[ \"$agent\" == \"$agent_role\" ]]; then",
-        "            echo \"$model\"",
-        "            return 0",
-        "        fi",
-        "    done",
-        "    ",
-        "    return 1  # Agent not found",
-        "}",
-        "",
-        "# ─── DISPLAY HELPERS ──────────────────────────────────────────────────────────",
-        "",
-        "# Show all locked models (for error messages)",
-        "show_locked_models() {",
-        "    echo \"Locked models (approved choices):\"",
-        "    for model in \"${LOCKED_MODELS[@]}\"; do",
-        "        echo \"  - $model\"",
-        "    done",
-        "}",
-        "",
-        "# Show agent-model assignments (for documentation)",
-        "show_agent_assignments() {",
-        "    echo \"Agent model assignments:\"",
-        "    for assignment in \"${AGENT_MODEL_ASSIGNMENTS[@]}\"; do",
-        "        local agent=\"${assignment%%:*}\"",
-        "        local model=\"${assignment##*:}\"",
-        "        echo \"  - $agent: $model\"",
-        "    done | sort",
-        "}",
-        "",
-        "# ─── EXPORT for sourcing in other hooks ───────────────────────────────────────",
-        "export LOCKED_MODELS",
-        "export AGENT_MODEL_ASSIGNMENTS",
-        "export -f is_known_model",
-        "export -f get_agent_locked_model",
-        "export -f show_locked_models",
-        "export -f show_agent_assignments",
-        "",
-        "",
-    ])
-
-    return "\n".join(lines)
-
 
 def render_agents_md(text: str, reg: dict) -> str:
     roles = reg.get("roles") or {}
@@ -479,9 +355,6 @@ def compute_targets(root: Path, reg: dict) -> dict[str, tuple[str | None, str]]:
         p = root / rel
         return p.read_text(encoding="utf-8") if p.is_file() else None
 
-    cur = rd(LOCKED_SH_REL)
-    if cur is not None:
-        targets[LOCKED_SH_REL] = (cur, render_locked_models(cur, reg))
     agents_cur = rd(AGENTS_MD_REL)
     if agents_cur is not None:
         agents_new = render_agents_md(agents_cur, reg)
@@ -498,7 +371,10 @@ def compute_targets(root: Path, reg: dict) -> dict[str, tuple[str | None, str]]:
     models_cur = rd(MODELS_MD_REL)
     models_new = render_models_md(reg)
     targets[MODELS_MD_REL] = (models_cur, models_new)
-    if agents_cur is not None and targets[AGENTS_MD_REL][0] != targets[AGENTS_MD_REL][1]:
+    if agents_cur is not None:
+        # The digest tracks the whole file, not just the roster lines sync rewrites: any
+        # edit to src/AGENTS.md (a governed baseline) must refresh it, or the pre-push
+        # tamper check fails. _sha_text returns the previous text when the digest is unchanged.
         prev = rd(SHA_REL)
         targets[SHA_REL] = (prev, _sha_text(targets[AGENTS_MD_REL][1], prev))
     return targets
@@ -791,7 +667,7 @@ def check(root: Path | str | None = None) -> tuple[list[str], list[str]]:
         for rel, (cur, new) in compute_targets(root, reg).items():
             if cur != new:
                 errors.append(f"{rel}: stale; run `python3 scripts/models.py sync`")
-        for rel in (LOCKED_SH_REL, AGENTS_MD_REL, MANIFEST_REL):
+        for rel in (AGENTS_MD_REL, MANIFEST_REL):
             if not (root / rel).is_file():
                 errors.append(f"{rel}: missing")
     return errors, warns

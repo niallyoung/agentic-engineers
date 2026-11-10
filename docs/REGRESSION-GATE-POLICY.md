@@ -49,6 +49,12 @@ that makes the `tests/`-scope drop (766 → 560) auditable as a relocation, not 
 coverage loss: bare `pytest --collect-only` (both scopes combined) moved
 935 → 849, i.e. 560 + 289.
 
+**Operator sign-off, companion floor 274 → 176 (2026-11-10):** the repository owner approved
+the deliberate deletion of the 103 skill tests that went with `spec-validator` and
+`skill-improvement-feedback`. This is recorded as operator approval, not as an independent
+Quality Engineer pass; the reviewer of the framework-reduction PR is asked to confirm the
+floor before merge. The companion floor is 176 and the measured count is 186.
+
 **Out-of-band deviation, reviewed and superseded:** WP-R3-04's 697 floor (row
 above) was set without going through this file's governance owner and is
 recorded here for audit continuity, not as a standing baseline. It was

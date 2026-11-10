@@ -59,4 +59,4 @@ python3 -m pytest src/skills/protocol-validator/tests -q
 ## References
 
 - `docs/specs/protocol-core-v1.0.yaml` - canonical protocol specification
-- `docs/CORE-PROTOCOL-QUICKSTART.md` - protocol overview
+- `docs/PROTOCOL.md` - protocol overview

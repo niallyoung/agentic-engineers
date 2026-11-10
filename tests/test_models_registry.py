@@ -28,7 +28,7 @@ _spec.loader.exec_module(models)
 
 CLI = [sys.executable, str(REPO_ROOT / "scripts" / "models.py")]
 COPY_PATHS = ["config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml", "src/AGENTS.md",
-              "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha", "docs/MODELS.md"]
+              "src/agents", ".agents_verification_sha", "docs/MODELS.md"]
 
 
 def cli(*args, root=REPO_ROOT):
@@ -485,11 +485,8 @@ class TestCli:
         assert cli("is-known", "claude-sonnet-5.55").returncode == 1
         assert cli("is-known", "claude-sonnet-5-5").returncode == 1  # hyphen form is a render, not source
 
-    def test_list_ids_matches_locked_models_shim(self, reg):
-        ids = cli("list-ids").stdout.split()
-        shim = (REPO_ROOT / ".githooks/LOCKED_MODELS.sh").read_text()
-        block = re.search(r"(?ms)^LOCKED_MODELS=\(\n(.*?)\n\)", shim).group(1)
-        assert ids == re.findall(r'"([^"]+)"', block) == list(reg["models"])
+    def test_list_ids_matches_registry(self, reg):
+        assert cli("list-ids").stdout.split() == list(reg["models"])
 
     def test_list_ids_harness_and_retired(self, tmp_path):
         assert "claude-sonnet-5-5" in cli("list-ids", "--harness", "claude").stdout.split()
@@ -505,13 +502,24 @@ class TestCli:
 class TestSync:
     def test_zero_diff_on_real_tree(self):
         """sync on the committed tree changes nothing (git sees no diff in generated targets)."""
-        targets = [".githooks/LOCKED_MODELS.sh", "src/AGENTS.md", "src/agents", "config/FRAMEWORK-MANIFEST.yaml",
+        targets = ["src/AGENTS.md", "src/agents", "config/FRAMEWORK-MANIFEST.yaml",
                    ".agents_verification_sha"]
         before = subprocess.run(["git", "diff", "--", *targets], cwd=REPO_ROOT, capture_output=True, text=True).stdout
         r = cli("sync")
         assert r.returncode == 0 and "0 file(s) updated" in r.stdout, r.stdout + r.stderr
         after = subprocess.run(["git", "diff", "--", *targets], cwd=REPO_ROOT, capture_output=True, text=True).stdout
         assert before == after
+
+    def test_prose_edit_to_agents_md_refreshes_verification_sha(self, tmp_path):
+        """A prose-only edit to src/AGENTS.md (no roster change) must refresh the digest."""
+        import hashlib
+        root = make_tree(tmp_path)
+        agents = root / "src/AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8") + "\nA prose-only edit.\n", encoding="utf-8")
+        assert cli("sync", root=root).returncode == 0
+        digest = hashlib.sha256(agents.read_bytes()).hexdigest()
+        assert f"agent_sha256={digest}" in (root / ".agents_verification_sha").read_text()
+        assert cli("sync", "--check", root=root).returncode == 0
 
     def test_sync_check_clean_and_idempotent(self, tmp_path):
         assert cli("sync", "--check").returncode == 0
@@ -622,10 +630,8 @@ class TestBumpSimulation:
 
         after = snapshot(root)
         changed = {p for p in after if before.get(p) != after[p]}
-        assert changed == self.GENERATED | {"config/models.yaml", ".githooks/LOCKED_MODELS.sh"}
+        assert changed == self.GENERATED | {"config/models.yaml"}
 
-        shim = (root / ".githooks/LOCKED_MODELS.sh").read_text()
-        assert '"claude-sonnet-9.9"' in shim and '"senior-engineer-agent:claude-sonnet-9.9"' in shim
         assert "\nmodel: claude-sonnet-9.9\n" in (root / "src/agents/senior-engineer-agent.md").read_text()
         assert cli("get", "senior-engineer", "--harness", "claude", root=root).stdout.strip() == "claude-sonnet-9-9"
         # Nothing else in the tree (other agent files, other roles) moved.

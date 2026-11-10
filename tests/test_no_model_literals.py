@@ -19,7 +19,7 @@ Everything else (including inline code spans, table rows and lines that merely s
 link to docs/MODELS.md.
 
 Where literals are allowed outright (not scanned): config/models.yaml, docs/MODELS.md,
-.githooks/LOCKED_MODELS.sh, docs/decisions/, tests/.
+docs/decisions/, tests/.
 """
 
 import re
@@ -43,7 +43,6 @@ PROSE_FILES = [
     "docs/guides/harness-setup/README.md",
     "docs/RENDERING.md",
     "docs/SPEC.md",
-    ".githooks/LOCKED_MODELS_RATIONALE.md",
     "src/SKILLS.md",
     "src/AGENTS.md",
 ]
@@ -126,7 +125,6 @@ class TestNoBareLiterals:
         """Source-of-truth and generated files exist and carry the expected content."""
         assert (REPO_ROOT / "config/models.yaml").is_file()
         assert (REPO_ROOT / "docs/MODELS.md").is_file()
-        assert (REPO_ROOT / ".githooks/LOCKED_MODELS.sh").is_file()
         models_md = (REPO_ROOT / "docs/MODELS.md").read_text()
         assert "<!-- GENERATED FILE" in models_md
         assert "claude-sonnet" in models_md

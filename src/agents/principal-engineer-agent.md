@@ -3,9 +3,6 @@ name: principal-engineer
 description: >
   Cross-service architecture; complex multi-step planning; design decisions affecting >2 repos.
 model: claude-opus-5.5
-model_guidance: |
-  Principal Engineer uses claude-opus-5.5 for all cross-service architecture work.
-  Opus-5.5 provides superior reasoning for complex multi-service design decisions.
 accepts:
   - DELEGATE
 returns:

@@ -445,7 +445,7 @@ MODELS_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/models.py"
 MODEL_ERRORS=0
 
 STAGED_MODEL_REL=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD \
-    | grep -E '^(config/models\.yaml|config/FRAMEWORK-MANIFEST\.yaml|src/AGENTS\.md|src/agents/[^/]+-agent\.md|\.githooks/LOCKED_MODELS\.sh|docs/MODELS\.md|\.agents_verification_sha|scripts/models\.py)$' || true)
+    | grep -E '^(config/models\.yaml|config/FRAMEWORK-MANIFEST\.yaml|src/AGENTS\.md|src/agents/[^/]+-agent\.md|docs/MODELS\.md|\.agents_verification_sha|scripts/models\.py)$' || true)
 
 # The model checks run against a snapshot of the INDEX (what is about to be
 # committed), not the working tree, so unstaged edits can neither mask a staged

@@ -392,7 +392,7 @@ invariants below is a SPEC amendment and goes through the `spec-management` skil
   is the only authoritative statement of which models exist, which model each role pins,
   each role's effort and fallback chain, and each harness's rendered ID. (Codex is the one exception: it has no per-model registry IDs,
   see I6.) Every other
-  occurrence (`.githooks/LOCKED_MODELS.sh`, the `src/AGENTS.md` roster, agent
+  occurrence (the `src/AGENTS.md` roster, agent
   frontmatter, `config/FRAMEWORK-MANIFEST.yaml`, `docs/MODELS.md`) is generated from it or
   validated against it. Hand-edited copies that disagree are defects.
 - **I3 — Exact pins, no floating selection.** Every assigned role resolves to one exact
@@ -489,7 +489,7 @@ with a change to I1–I7 themselves.
    who directed the change and why (for example `user-directive, <reason>`); its content is
    not verified, so it is data, not a gate.
 2. Run `make models-sync` (`python3 scripts/models.py sync`) to regenerate every derived
-   artifact (`.githooks/LOCKED_MODELS.sh` (wholly generated; hand edits are overwritten), the roster and per-role lines in `src/AGENTS.md`,
+   artifact (the roster and per-role lines in `src/AGENTS.md`,
    agent frontmatter, `config/FRAMEWORK-MANIFEST.yaml`, `docs/MODELS.md`).
 3. Run `make test`, then commit normally. No trailer and no hook bypass are needed.
    What still blocks a commit or CI run is a **consistency failure**, all enforced by
@@ -560,7 +560,7 @@ into `dist/<harness>/` and installed to each harness's home directory.
 - **`src/AGENTS.md`** — canonical agent roster, routing decision tree, recursion limits, tools-frontmatter permission model; **`src/SKILLS.md`** — canonical skill roster and role workflows
 - **[PROTOCOL.md](PROTOCOL.md)** — DELEGATE/HANDBACK validation, scoring, escalation reference
 - **[RENDERING.md](RENDERING.md)** — render/install pipeline
-- **[ONBOARDING.md](ONBOARDING.md)**, **[CORE-PROTOCOL-QUICKSTART.md](CORE-PROTOCOL-QUICKSTART.md)** — developer/agent onboarding
+- **[ONBOARDING.md](ONBOARDING.md)** — developer/agent onboarding
 
 ---
 

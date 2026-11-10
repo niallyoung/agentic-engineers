@@ -247,7 +247,6 @@ git push
 ---
 
 - `config/models.yaml` + `scripts/models.py`: the model pin registry the hooks enforce
-- `.githooks/LOCKED_MODELS.sh`: GENERATED compatibility copy (`python3 scripts/models.py sync`); not read by the hooks
 - `docs/SPEC.md`: Architecture and constraints enforced by hooks
 - `docs/AGENTS.md`: Agent definitions and SDLC guidelines
 - `Makefile`: Hook installation via `make setup`
