@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 MODELS = REPO_ROOT / "scripts" / "models.py"
 ROLES = (
     "engineer", "orchestrator", "lead-engineer", "quality-engineer",
-    "senior-engineer", "model-engineer", "security-engineer", "principal-engineer",
+    "senior-engineer", "security-engineer", "principal-engineer",
 )
 ALIASES = {"haiku", "sonnet", "opus", "fable"}
 

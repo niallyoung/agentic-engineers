@@ -36,16 +36,6 @@ agents:
     created: "2026-01-15"
     last_deployed: "2026-08-11"
 
-  model-engineer:
-    name: Model Engineer
-    model: claude-sonnet-5.5
-    type: optimization
-    status: active
-    effort: high
-    description: "Analyzes quality/cost feedback from QE; recommends optimal model/effort combinations"
-    created: "2026-04-24"
-    last_deployed: "2026-08-11"
-
   orchestrator:
     name: Orchestrator
     model: claude-haiku-5.5
@@ -97,14 +87,6 @@ agents:
     last_deployed: "2026-08-11"
 
 skills:
-  codex-agent-cleanup:
-    name: codex-agent-cleanup
-    status: active
-    description: "Routine maintenance for Codex sessions: monitor active sub-agent state, close completed sub-agents, resume or escalate active work, and keep agent capacity available."
-    created: "2026-02-01"
-    required_by:
-      - orchestrator
-
   orchestrator:
     name: orchestrator
     status: active
@@ -121,14 +103,6 @@ skills:
     required_by:
       - orchestrator
 
-  skill-improvement-feedback:
-    name: skill-improvement-feedback
-    status: active
-    description: "Canonical pattern for the skill self-improvement feedback loop: structured skill_feedback in HANDBACKs, accumulation into improvement tasks"
-    created: "2026-02-01"
-    required_by:
-      - orchestrator
-
   spec-management:
     name: spec-management
     status: active
@@ -138,15 +112,6 @@ skills:
       - lead-engineer
       - principal-engineer
       - security-engineer
-
-  spec-validator:
-    name: spec-validator
-    status: active
-    description: "Validates implementation compliance with docs/SPEC.md; detects violations and rollbacks; pre-merge/post-merge gate"
-    created: "2026-02-01"
-    required_by:
-      - lead-engineer
-      - principal-engineer
 
   audit-trail-review:
     name: audit-trail-review

@@ -9,24 +9,18 @@
 #   - Agent YAML frontmatter validation (src/agents/*.md)
 #   - Workflow YAML validation (.github/workflows/*.yml)
 #   - Documentation consistency (SPEC.md, AGENTS.md, README.md presence)
-#   - SPEC architectural compliance (no external scripts/cron in
-#     orchestration/ paths; scripts/validate-spec-constraints.py)
+#   - SPEC architectural compliance (scripts/validate-spec-constraints.py)
 #   - Agent definition verification (.agents_verification_sha integrity)
 #   - Gitconfig credential guard (no embedded tokens)
-#   - Model pin approval scan of the commits being pushed (see below)
+#   - Model pin history audit of the commits being pushed (advisory; see below)
 #
-# Model pin approval (docs/SPEC.md, Model Pin Change): every commit being pushed
-# that changes a roles.<role>.model pin in config/models.yaml, merge commits
-# included, must carry a non-empty Model-Pin-Approved-By trailer. The hook reads
-# the ref lines on stdin (githooks(5)) and runs scripts/check_pin_trailers.py -
-# the same scanner CI uses - over remote_sha..local_sha, or origin/main..local_sha
-# when the remote ref is new (or its old tip is unknown locally). This is the
-# local backstop for `git commit --no-verify`, rebases and merges that skipped the
-# commit-msg hook. It fails loudly when python3, PyYAML or the scanner is missing.
-# Bypass: SKIP_HOOKS=1 / GIT_SKIP_HOOKS=1 skip this hook entirely, pin scan
-# included, exactly like every other check here; the CI "Model Pin Approval Scan"
-# step still runs the same scanner over origin/main..HEAD and is the authoritative,
-# non-bypassable gate.
+# Model pin history audit: pin changes in config/models.yaml need no approval. The hook
+# reads the ref lines on stdin (githooks(5)) and runs scripts/check_pin_history.py - the
+# same scanner CI uses - over remote_sha..local_sha, or origin/main..local_sha when the
+# remote ref is new. It only WARNS when existing pin_history entries were rewritten (or
+# when python3, PyYAML or the scanner is missing); it never fails the push. Strict
+# registry consistency is scripts/models.py check (pre-commit and CI).
+# Bypass: SKIP_HOOKS=1 skips this hook entirely, like every other check.
 #
 # 2026-08-13 infra consolidation: removed the DELEGATE/HANDBACK artifact scan
 # (scanned a filesystem-queue path — artifacts/delegates/ — that has never
@@ -37,12 +31,12 @@
 # 180s for that). See inline NOTEs at each removal site.
 #
 # Install: git config core.hooksPath .githooks
-# Bypass (emergency only): SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push
+# Bypass (emergency only): SKIP_HOOKS=1 git push  (the one documented bypass variable)
 
 set -euo pipefail
 
-if [ "${SKIP_HOOKS:-}" = "1" ] || [ "${GIT_SKIP_HOOKS:-}" = "1" ]; then
-  echo "⚠️  SKIP_HOOKS=1 or GIT_SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⚠️  SKIP_HOOKS=1 set — bypassing pre-push enforcement (emergency only)"
   exit 0
 fi
 
@@ -264,32 +258,19 @@ fi
 # (2026-08-13 infra consolidation) — run `make test` yourself before pushing.
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. VALIDATE SPEC COMPLIANCE (No external scripts except renderer/)
+# 8. VALIDATE SPEC COMPLIANCE
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "🔐 Validating SPEC compliance..."
 
 SPEC_ERRORS=0
 
-# Check for orchestration/scripts/ (should not exist)
-if [ -d "orchestration/scripts" ] && [ "$(find orchestration/scripts -type f \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | wc -l)" -gt 0 ]; then
-  fail "External scripts found in orchestration/scripts/ — violates SPEC.md"
-  SPEC_ERRORS=$((SPEC_ERRORS + 1))
-fi
+# NOTE (hook cleanup): the orchestration/scripts/, orchestration/config/*.cron and
+# Makefile-script-invocation checks that used to live here are removed.
+# orchestration/ no longer exists and the Makefile check matched nothing real; the
+# re-introduction guard is scripts/validate-spec-constraints.py, run below.
 
-# Check for orchestration/config/*.cron (should not exist)
-if [ -d "orchestration/config" ] && [ "$(find orchestration/config -name "*.cron" -type f 2>/dev/null | wc -l)" -gt 0 ]; then
-  fail "Cron files found in orchestration/config/ — violates SPEC.md"
-  SPEC_ERRORS=$((SPEC_ERRORS + 1))
-fi
-
-# Check Makefile for direct script invocations (except renderer/)
-if grep -E "^\s+@(bash|sh|python).*scripts" Makefile 2>/dev/null | grep -v "renderer/scripts" | grep -q . ; then
-  fail "Makefile invokes external scripts (not in renderer/) — violates SPEC.md"
-  SPEC_ERRORS=$((SPEC_ERRORS + 1))
-fi
-
-# NEW: Validate SPEC architectural constraints (generic system for all rules)
+# Validate SPEC architectural constraints (generic system for all rules)
 # Uses scripts/validate-spec-constraints.py which enforces rules defined in docs/SPEC.md
 # Makes it easy to add new constraints without modifying this hook.
 if command -v python3 >/dev/null 2>&1 && [ -f "scripts/validate-spec-constraints.py" ]; then
@@ -428,16 +409,17 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9c. MODEL PIN APPROVAL SCAN (docs/SPEC.md, Model Pin Change)
+# 9c. MODEL PIN HISTORY AUDIT (advisory)
 # ─────────────────────────────────────────────────────────────────────────────
-# Local backstop for --no-verify commits, rebases and merges: scan the commits
-# being pushed with the same scripts/check_pin_trailers.py CI runs.
+# Advisory only: scan the commits being pushed with the same
+# scripts/check_pin_history.py CI runs and WARN when pin_history is rewritten. Pin
+# changes need no approval; nothing in this block ever fails the push.
 echo ""
-echo "📌 Scanning pushed commits for model pin approval..."
+echo "📌 Auditing pushed commits for pin_history rewrites (advisory)..."
 
 PIN_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIN_SCANNER=""
-for cand in "$REPO_ROOT/scripts/check_pin_trailers.py" "$PIN_HOOK_DIR/../scripts/check_pin_trailers.py"; do
+for cand in "$REPO_ROOT/scripts/check_pin_history.py" "$PIN_HOOK_DIR/../scripts/check_pin_history.py"; do
   if [ -f "$cand" ]; then
     PIN_SCANNER="$cand"
     break
@@ -451,7 +433,7 @@ for entry in ${PUSH_REFS[@]+"${PUSH_REFS[@]}"}; do
   # Deleting a ref pushes no commits.
   [ "$p_local" = "$PIN_ZERO" ] && continue
   if ! git rev-parse --verify -q "${p_local}^{commit}" >/dev/null 2>&1; then
-    warn "pin scan: $p_ref -> ${p_local:0:12} is not a commit here; skipped"
+    warn "pin audit: $p_ref -> ${p_local:0:12} is not a commit here; skipped"
     continue
   fi
   # Range: remote_sha..local_sha, or origin/main..local_sha for a new remote ref
@@ -465,15 +447,15 @@ for entry in ${PUSH_REFS[@]+"${PUSH_REFS[@]}"}; do
     p_base="$REMOTE/main"
   else
     p_base="origin/main" # absent: the scanner prints a notice and scans nothing
-    warn "pin scan: no base ref (origin/main) to compare $p_ref against; CI will scan it"
+    warn "pin audit: no base ref (origin/main) to compare $p_ref against; CI will audit it"
   fi
 
   if ! command -v python3 >/dev/null 2>&1; then
-    fail "python3 not found: cannot scan pushed commits for model pin approval"
+    warn "python3 not found: pin_history audit skipped"
     continue
   fi
   if [ -z "$PIN_SCANNER" ]; then
-    fail "scripts/check_pin_trailers.py not found: cannot scan pushed commits for model pin approval"
+    warn "scripts/check_pin_history.py not found: pin_history audit skipped"
     continue
   fi
 
@@ -482,13 +464,13 @@ for entry in ${PUSH_REFS[@]+"${PUSH_REFS[@]}"}; do
   PIN_OUT=$(cd "$REPO_ROOT" && python3 "$PIN_SCANNER" --base "$p_base" --head "$p_local" 2>&1)
   PIN_RC=$?
   set -e
-  if [ "$PIN_RC" -eq 0 ]; then
-    pass "Model pin approval: $p_ref ($PIN_OUT)"
-  elif [ "$PIN_RC" -eq 1 ]; then
-    fail "Model pin approval scan rejected the push to $p_ref:"
+  if [ "$PIN_RC" -eq 0 ] && ! printf '%s' "$PIN_OUT" | grep -q '^warning:'; then
+    pass "Pin history audit: $p_ref ($PIN_OUT)"
+  elif [ "$PIN_RC" -eq 0 ] || [ "$PIN_RC" -eq 1 ]; then
+    warn "Pin history audit for $p_ref (advisory, push proceeds):"
     printf '%s\n' "$PIN_OUT" | sed 's/^/   /'
   else
-    fail "Model pin approval scan could not run (exit $PIN_RC; python3 needs PyYAML: python3 -m pip install pyyaml):"
+    warn "Pin history audit could not run (exit $PIN_RC; python3 needs PyYAML: python3 -m pip install pyyaml):"
     printf '%s\n' "$PIN_OUT" | sed 's/^/   /'
   fi
 done
@@ -510,7 +492,7 @@ echo ""
 if [ "$ERRORS" -gt 0 ]; then
   printf '%b%s%b\n' "$RED" "❌ pre-push: $ERRORS error(s) found. Fix and retry." "$NC"
   echo ""
-  echo "   Emergency bypass: SKIP_HOOKS=1 git push OR GIT_SKIP_HOOKS=1 git push"
+  echo "   Emergency bypass: SKIP_HOOKS=1 git push"
   echo ""
   exit 1
 fi

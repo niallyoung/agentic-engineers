@@ -93,7 +93,6 @@ Role routing:
 - `quality-engineer` - quality gates, test gaps, regression review
 - `security-engineer` - defensive security review
 - `principal-engineer` - cross-system architecture
-- `model-engineer` - model/cost/routing analysis
 
 For disposable self-tests:
 
@@ -137,18 +136,6 @@ Refresh this capture after Codex upgrades or CLI surface changes:
 1. Re-run the help commands listed above.
 2. Update the command/options snapshot here.
 3. Keep `docs/guides/harness-setup/README.md` and the top-level harness table in sync.
-
-### Related Maintenance Skill
-
-The canonical `codex-agent-cleanup` skill lives at
-[`src/skills/codex-agent-cleanup/SKILL.md`](../../../src/skills/codex-agent-cleanup/SKILL.md).
-It renders through the standard framework flow into the Codex install path, so
-new skill work should be created under `src/skills/` first and then rendered into
-`dist/codex/` and the Codex user install locations by `make install-codex`.
-
-Use it to keep completed sub-agents closed and agent capacity free for new
-parallel work. It is the Codex-specific hygiene routine for agent lifecycle
-cleanup.
 
 ## Next Steps
 

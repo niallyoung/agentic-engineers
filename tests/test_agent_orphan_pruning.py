@@ -30,6 +30,7 @@ tests/test_install_orphan_pruning.py's direct-script-invocation pattern.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Callable
@@ -96,7 +97,10 @@ def _render(cmd_prefix: list[str], home: Path) -> subprocess.CompletedProcess:
     # (no flag) is already install.
     if cmd_prefix[0] == "bash":
         cmd.append("install")
-    result = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+    # Isolate the OpenCode renderer from the developer's local models cache (see
+    # tests/test_install_correctness.py); a missing cache path is the hermetic default.
+    env = {**os.environ, "OPENCODE_MODELS_CACHE": str(home / "no-opencode-cache.json")}
+    result = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, env=env)
     assert result.returncode == 0, (
         f"render failed: {cmd}\n"
         f"STDOUT:\n{result.stdout[-3000:]}\n\nSTDERR:\n{result.stderr[-3000:]}"

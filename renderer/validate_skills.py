@@ -14,8 +14,7 @@ Also runs a deeper compliance audit (merged from the former
 scripts/validate_skills.py — 2026-08-13 infra consolidation) against the
 canonical ACTIVE_SKILLS list: required frontmatter metadata keys (author,
 version, category, role, model, effort), required directory structure
-(scripts/ + tests/ + __init__.py for script-backed skills), and presence of
-a ## Self-Improvement section. This audit only covers ACTIVE_SKILLS; the
+(scripts/ + tests/ + __init__.py for script-backed skills). This audit only covers ACTIVE_SKILLS; the
 frontmatter/registry checks above cover every SKILL.md on disk.
 
 Usage:
@@ -23,7 +22,7 @@ Usage:
     python3 renderer/validate_skills.py --strict
     python3 renderer/validate_skills.py --skills-dir path/to/skills
     python3 renderer/validate_skills.py --json          # compliance audit as JSON
-    python3 renderer/validate_skills.py --skill spec-validator   # single skill
+    python3 renderer/validate_skills.py --skill protocol-validator   # single skill
 """
 
 from __future__ import annotations
@@ -66,13 +65,12 @@ FRONTMATTER_EXEMPT_PATTERNS = {
 # are deleted. 8 -> 6 skills. audit-trail-review meta-skill added (2026-08-14,
 # task-2026-08-14-delegation-audit-skill). 6 -> 7 skills. self-healing-review
 # meta-skill added (2026-08-15, task-2026-08-15-self-healing-skill). 7 -> 8 skills.
+# codex-agent-cleanup removed (2026-11-10): a Codex-only routine does not belong in a
+# harness-neutral framework. 6 -> 5 skills.
 ACTIVE_SKILLS: list[str] = [
     "orchestrator",
     "protocol-validator",
-    "spec-validator",
     "spec-management",
-    "skill-improvement-feedback",
-    "codex-agent-cleanup",
     "audit-trail-review",
     "self-healing-review",
 ]
@@ -130,18 +128,6 @@ def _compliance_get_value(frontmatter: str, key: str, *, indent: int = 0) -> str
     prefix = r"^\s{" + str(indent) + r"}" if indent else r"^"
     m = re.search(rf"{prefix}{re.escape(key)}:\s*(.+)$", frontmatter, re.MULTILINE)
     return m.group(1).strip() if m else None
-
-
-def _check_self_improvement_section(skill_md_text: str) -> str | None:
-    """Return a warning string if SKILL.md is missing ## Self-Improvement, else None.
-
-    Takes the already-read SKILL.md text rather than a directory: the only caller
-    has the content in hand, and re-opening the file here made the audit read every
-    SKILL.md twice.
-    """
-    if "## Self-Improvement" not in skill_md_text:
-        return "SKILL.md missing ## Self-Improvement section"
-    return None
 
 
 def audit_skill_compliance(skill_name: str, skills_dir: Path) -> SkillComplianceResult:
@@ -218,10 +204,6 @@ def audit_skill_compliance(skill_name: str, skills_dir: Path) -> SkillCompliance
     category_val = _compliance_get_value(fm_text, "category", indent=2)
     if category_val and category_val not in COMPLIANCE_ALLOWED_CATEGORIES:
         result.warnings.append(f"metadata.category {category_val!r} not in allowed set {sorted(COMPLIANCE_ALLOWED_CATEGORIES)}")
-
-    self_improvement_warning = _check_self_improvement_section(raw_text)
-    if self_improvement_warning:
-        result.warnings.append(self_improvement_warning)
 
     return result
 

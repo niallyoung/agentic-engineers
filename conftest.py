@@ -3,10 +3,10 @@ conftest.py — pytest configuration for agentic-engineers
 
 Ensures the repo root and src/skills paths are on sys.path so that:
   - from src.orchestration.agents.X import Y
-  - from spec-validator.scripts.spec_validator import ...  # from skill
+  - from protocol-validator.scripts.protocol_validator import ...  # from skill
 works when running tests from the repo root or any subdirectory.
 
-Key insight: Skills with hyphenated names (spec-validator, spec-management, etc.)
+Key insight: Skills with hyphenated names (protocol-validator, spec-management, etc.)
 are importable via importlib.import_module() when src/skills/ is in sys.path,
 which works around Python's inability to import hyphenated names directly.
 """

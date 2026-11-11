@@ -28,7 +28,7 @@ _spec.loader.exec_module(models)
 
 CLI = [sys.executable, str(REPO_ROOT / "scripts" / "models.py")]
 COPY_PATHS = ["config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml", "src/AGENTS.md",
-              "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha", "docs/MODELS.md"]
+              "src/agents", ".agents_verification_sha", "docs/MODELS.md"]
 
 
 def cli(*args, root=REPO_ROOT):
@@ -152,7 +152,7 @@ class TestRegistryShape:
     def test_fallbacks_per_decision(self, reg):
         fb = {r: c["fallback"] for r, c in reg["roles"].items()}
         assert fb["principal-engineer"] == fb["security-engineer"] == ["claude-opus-5", "claude-opus-4.8"]
-        for r in ("lead-engineer", "quality-engineer", "senior-engineer", "model-engineer"):
+        for r in ("lead-engineer", "quality-engineer", "senior-engineer"):
             assert fb[r] == ["claude-sonnet-5"]
 
     def test_pin_history_latest_matches_pin(self, reg):
@@ -160,6 +160,8 @@ class TestRegistryShape:
         for e in reg["pin_history"]:
             if "role" in e:  # status entries have no role
                 last[e["role"]] = e["to"]
+        for retired in reg.get("retired_roles") or []:
+            last.pop(retired, None)  # retired roles keep history but have no active pin
         assert last == {r: c["model"] for r, c in reg["roles"].items()}
 
 
@@ -246,6 +248,61 @@ class TestAdjacentFamilyFallbacks:
         edit_registry(root, lambda r: r["roles"][role].update(model=pin, fallback=[fb]))
         errors, _ = models.check(root)
         assert any("crosses family" in e for e in errors), errors
+
+
+class TestFableNeverFallsBackToHaikuI7:
+    """I7 is a FIXED rule in check(): it does not depend on the mutable fallback_policy."""
+
+    @staticmethod
+    def _live(reg, family):
+        for mid, m in reg["models"].items():
+            if m["family"] == family and m["status"] not in ("retired", "fallback"):
+                return mid
+        pytest.skip(f"registry has no live {family} model")
+
+    def test_real_registry_passes(self):
+        errors, _ = models.check(REPO_ROOT)
+        assert not [e for e in errors if "I7" in e], errors
+
+    def test_widening_fable_adjacency_to_haiku_is_an_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["fallback_policy"]["adjacent_families"]["fable"].append("haiku"))
+        errors, _ = models.check(root)
+        assert any("I7" in e and "adjacent_families.fable" in e for e in errors), errors
+
+    def test_fable_pinned_role_with_haiku_fallback_is_an_error_even_if_adjacency_allows_it(self, tmp_path, reg):
+        root = make_tree(tmp_path)
+        fable, haiku = self._live(reg, "fable"), self._live(reg, "haiku")
+        role = next(r for r, c in reg["roles"].items() if reg["models"][c["model"]]["family"] == "fable")
+
+        def mutate(r):
+            r["fallback_policy"]["adjacent_families"]["fable"] = ["opus", "haiku"]
+            r["roles"][role]["fallback"] = [haiku]
+        edit_registry(root, mutate)
+        errors, _ = models.check(root)
+        assert sum("I7" in e for e in errors) == 2, errors
+        assert any(f"roles.{role}.fallback" in e and "I7" in e for e in errors), errors
+
+    def test_haiku_fallback_on_a_non_fable_pin_is_not_an_i7_error(self, tmp_path, reg):
+        root = make_tree(tmp_path)
+        haiku = self._live(reg, "haiku")
+        role = next(r for r, c in reg["roles"].items() if reg["models"][c["model"]]["family"] == "sonnet")
+        edit_registry(root, lambda r: r["roles"][role].update(fallback=[haiku]))
+        errors, _ = models.check(root)
+        assert not any("I7" in e for e in errors), errors
+
+
+class TestPinHistoryApproval:
+    @pytest.mark.parametrize("bad", ["", "   ", None, 7])
+    def test_non_string_or_empty_approval_is_an_error(self, tmp_path, bad):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["pin_history"][0].update(approval=bad))
+        errors, _ = models.check(root)
+        assert any("approval must be a non-empty string" in e for e in errors), errors
+
+    def test_real_registry_approvals_are_accepted(self):
+        errors, _ = models.check(REPO_ROOT)
+        assert not any("approval" in e for e in errors), errors
 
 
 class TestFamilyFloor:
@@ -428,11 +485,8 @@ class TestCli:
         assert cli("is-known", "claude-sonnet-5.55").returncode == 1
         assert cli("is-known", "claude-sonnet-5-5").returncode == 1  # hyphen form is a render, not source
 
-    def test_list_ids_matches_locked_models_shim(self, reg):
-        ids = cli("list-ids").stdout.split()
-        shim = (REPO_ROOT / ".githooks/LOCKED_MODELS.sh").read_text()
-        block = re.search(r"(?ms)^LOCKED_MODELS=\(\n(.*?)\n\)", shim).group(1)
-        assert ids == re.findall(r'"([^"]+)"', block) == list(reg["models"])
+    def test_list_ids_matches_registry(self, reg):
+        assert cli("list-ids").stdout.split() == list(reg["models"])
 
     def test_list_ids_harness_and_retired(self, tmp_path):
         assert "claude-sonnet-5-5" in cli("list-ids", "--harness", "claude").stdout.split()
@@ -448,13 +502,24 @@ class TestCli:
 class TestSync:
     def test_zero_diff_on_real_tree(self):
         """sync on the committed tree changes nothing (git sees no diff in generated targets)."""
-        targets = [".githooks/LOCKED_MODELS.sh", "src/AGENTS.md", "src/agents", "config/FRAMEWORK-MANIFEST.yaml",
+        targets = ["src/AGENTS.md", "src/agents", "config/FRAMEWORK-MANIFEST.yaml",
                    ".agents_verification_sha"]
         before = subprocess.run(["git", "diff", "--", *targets], cwd=REPO_ROOT, capture_output=True, text=True).stdout
         r = cli("sync")
         assert r.returncode == 0 and "0 file(s) updated" in r.stdout, r.stdout + r.stderr
         after = subprocess.run(["git", "diff", "--", *targets], cwd=REPO_ROOT, capture_output=True, text=True).stdout
         assert before == after
+
+    def test_prose_edit_to_agents_md_refreshes_verification_sha(self, tmp_path):
+        """A prose-only edit to src/AGENTS.md (no roster change) must refresh the digest."""
+        import hashlib
+        root = make_tree(tmp_path)
+        agents = root / "src/AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8") + "\nA prose-only edit.\n", encoding="utf-8")
+        assert cli("sync", root=root).returncode == 0
+        digest = hashlib.sha256(agents.read_bytes()).hexdigest()
+        assert f"agent_sha256={digest}" in (root / ".agents_verification_sha").read_text()
+        assert cli("sync", "--check", root=root).returncode == 0
 
     def test_sync_check_clean_and_idempotent(self, tmp_path):
         assert cli("sync", "--check").returncode == 0
@@ -468,6 +533,13 @@ class TestSync:
 
     def test_sync_preserves_prose_and_comments(self, tmp_path):
         root = make_tree(tmp_path)
+        # Plant a comment in the copied engineer file so the assertion does not depend
+        # on the wording of the real agent prompt (agent bodies carry no model literals).
+        agent = root / "src/agents/engineer-agent.md"
+        lines = agent.read_text().splitlines(keepends=True)
+        idx = next(i for i, ln in enumerate(lines) if ln.startswith("model:"))
+        lines.insert(idx + 1, "# model: claude-haiku-5.5\n")
+        agent.write_text("".join(lines))
         edit_registry(root, lambda r: r["roles"]["quality-engineer"].update(effort="high"))
         cli("sync", root=root)
         old = (REPO_ROOT / "src/AGENTS.md").read_text().splitlines()
@@ -475,7 +547,7 @@ class TestSync:
         diff = [(a, b) for a, b in zip(old, new) if a != b]
         assert len(old) == len(new) and 1 <= len(diff) <= 2
         assert any("| high |" in b and "Quality Engineer" in b for _, b in diff)
-        assert "# model: claude-haiku-5.5" in (root / "src/agents/engineer-agent.md").read_text()
+        assert "# model: claude-haiku-5.5" in agent.read_text()
 
 
 # --------------------------------------------------------------- resolve ---
@@ -558,10 +630,8 @@ class TestBumpSimulation:
 
         after = snapshot(root)
         changed = {p for p in after if before.get(p) != after[p]}
-        assert changed == self.GENERATED | {"config/models.yaml", ".githooks/LOCKED_MODELS.sh"}
+        assert changed == self.GENERATED | {"config/models.yaml"}
 
-        shim = (root / ".githooks/LOCKED_MODELS.sh").read_text()
-        assert '"claude-sonnet-9.9"' in shim and '"senior-engineer-agent:claude-sonnet-9.9"' in shim
         assert "\nmodel: claude-sonnet-9.9\n" in (root / "src/agents/senior-engineer-agent.md").read_text()
         assert cli("get", "senior-engineer", "--harness", "claude", root=root).stdout.strip() == "claude-sonnet-9-9"
         # Nothing else in the tree (other agent files, other roles) moved.
@@ -632,3 +702,31 @@ class TestStatusHistory:
         reg = models.load_registry(REPO_ROOT)
         text = models.render_models_md(reg)
         assert "status of `claude-haiku-5.5`" in text
+
+
+class TestRetiredRoles:
+    """A retired role keeps its append-only pin_history but is not an active role."""
+
+    def test_model_engineer_is_retired_not_active(self, reg):
+        assert "model-engineer" in reg["retired_roles"]
+        assert "model-engineer" not in reg["roles"]
+        assert any(e.get("role") == "model-engineer" for e in reg["pin_history"])
+
+    def test_history_for_retired_role_is_accepted(self, tmp_path):
+        root = make_tree(tmp_path)
+        errors, _ = models.check(root)
+        assert errors == [], errors
+
+    def test_history_for_unknown_role_is_still_an_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r["pin_history"].append(
+            {"date": "2026-10-03", "role": "ghost-engineer", "from": None,
+             "to": "claude-sonnet-5", "approval": "test"}))
+        errors, _ = models.check(root)
+        assert any("ghost-engineer" in e and "not a registry role" in e for e in errors), errors
+
+    def test_history_for_unlisted_formerly_retired_role_is_an_error(self, tmp_path):
+        root = make_tree(tmp_path)
+        edit_registry(root, lambda r: r.update(retired_roles=[]))
+        errors, _ = models.check(root)
+        assert any("model-engineer" in e and "not a registry role" in e for e in errors), errors

@@ -5,25 +5,22 @@
 #   1. Message length validation (min 10 chars, max 72 chars for subject line)
 #   2. Format validation (conventional commits: type(scope): subject)
 #   3. Task ID tracking (YYYY-MM-DD-kebab-case format)
-#   4. DELEGATE/HANDBACK validation (protocol compliance)
-#   5. SKIP_HOOKS bypass documentation requirement
-#   6. Model Pin Change approval (Model-Pin-Approved-By trailer when a role pin changes)
-#   7. Detailed validation reporting
+#   4. SKIP_HOOKS bypass documentation requirement
+#   5. Advisory pin_history audit for config/models.yaml (warning only; no trailer needed)
+#   6. No secret-looking key/value pairs in the message
 #
 # Install: git config core.hooksPath .githooks
-# Bypass: SKIP_COMMIT_MSG_HOOK=true git commit
+# Bypass (emergency only): SKIP_HOOKS=1 git commit -m "... SKIP_HOOKS: <reason>"
+#   SKIP_HOOKS=1 is the one bypass variable. It skips every check below EXCEPT the
+#   documented-reason requirement: the message must still carry a reason.
 #
-# Model Pin Change coverage and its limits (check 6): this hook is the EARLY,
-# local check only. It catches `git commit`, `git commit --amend`, `git rebase`
-# reword/(edit+amend), `git merge` (compared with the first parent, i.e. HEAD) and
-# `git cherry-pick --continue` (the amend-like rebase
-# actions are detected from GIT_REFLOG_ACTION, then the parent process, and are
-# compared against HEAD^). It cannot see commits git makes without running this
-# hook: `--no-verify`/`-n`, the final squash/fixup commit of `git rebase -i`,
-# `git cherry-pick -e`, `git revert`, or any other bypass flag. The
-# parent-process heuristic is best effort (it needs `ps` or /proc). The pre-push
-# hook and the CI "Model Pin Approval Scan" (both run scripts/check_pin_trailers.py,
-# merge commits included) are the authoritative backstop; CI cannot be bypassed.
+# Pin changes (check 5): changing a role's model pin in config/models.yaml needs no
+# trailer or approval. This hook only WARNS when staged changes rewrite existing
+# pin_history entries (an append-only audit record). Strict registry consistency is
+# enforced by scripts/models.py check (pre-commit and CI), not here.
+# `git commit --amend` / rebase reword/squash/fixup are compared against HEAD^.
+# The pre-push hook and the CI "Model Pin History Audit (advisory)" step run
+# scripts/check_pin_history.py over pushed commits; they are advisory too.
 
 # Deliberately `set -uo pipefail` WITHOUT -e. This hook leans heavily on probes
 # whose non-zero exit is a normal outcome (`grep -q` misses, the many `|| true`
@@ -33,12 +30,6 @@ set -uo pipefail
 
 COMMIT_MSG_FILE="$1"
 COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
-
-# Check for bypass flag
-if [[ "${SKIP_COMMIT_MSG_HOOK:-false}" == "true" ]]; then
-    echo "⏭️  commit-msg: SKIPPED (SKIP_COMMIT_MSG_HOOK=true)"
-    exit 0
-fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -86,6 +77,47 @@ FIRST_LINE=$(echo "$MSG_BODY" | head -n1)
 MSG_BODY_REST=$(echo "$MSG_BODY" | tail -n +2 || true)
 
 # ────────────────────────────────────────────────────────────────────────────────
+# 1b. SKIP_HOOKS bypass (the one bypass variable) and its documentation rule
+# ────────────────────────────────────────────────────────────────────────────────
+
+# Shared by the bypass path and the normal path: SKIP_HOOKS active or mentioned in
+# the message needs a documented reason of at least 10 characters.
+check_skip_hooks_reason() {
+  if [ "${SKIP_HOOKS:-}" = "1" ] || echo "$COMMIT_MSG" | grep -qi 'SKIP_HOOKS'; then
+    info "SKIP_HOOKS bypass mentioned or active"
+
+    # Check for documented reason - must have SKIP_HOOKS: reason or similar
+    if echo "$COMMIT_MSG" | grep -qiE 'SKIP_HOOKS\s*:\s*[^[:space:]]|reason\s*:\s*[^[:space:]]|emergency\s*:\s*[^[:space:]]|justification\s*:\s*[^[:space:]]'; then
+      # Require non-trivial reason (>= 10 chars after the colon).
+      REASON=$(echo "$COMMIT_MSG" | grep -iE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:' | head -n1 | sed -E 's/^[[:space:]]*[A-Za-z_]+[[:space:]]*:[[:space:]]*//')
+      if [ "${#REASON}" -lt 10 ]; then
+        fail "Hook-bypass reason too short ('${REASON}'). Provide ≥10 chars (e.g. ticket ID, incident link)."
+      else
+        success "SKIP_HOOKS bypass is documented with reason (${#REASON} chars)"
+      fi
+    else
+      fail "SKIP_HOOKS mentioned/used but no reason documented"
+      echo "   Add one of the following (≥10 chars after the colon):"
+      echo "   - SKIP_HOOKS: <reason>"
+      echo "   - reason: <explanation>"
+      echo "   - emergency: <justification>"
+      echo "   See .githooks/README.md for the bypass procedure."
+    fi
+  fi
+}
+
+# SKIP_HOOKS=1 skips every other check, but the reason is still required.
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⏭️  commit-msg: bypassing format/audit checks (SKIP_HOOKS=1) — documented reason still required"
+  check_skip_hooks_reason
+  if [ "$ERRORS" -gt 0 ]; then
+    printf '%b%s%b\n' "$RED" "❌ commit-msg: $ERRORS error(s) found" "$NC"
+    exit 1
+  fi
+  exit 0
+fi
+
+# ────────────────────────────────────────────────────────────────────────────────
 # 2. VALIDATE: Non-empty message
 # ────────────────────────────────────────────────────────────────────────────────
 
@@ -116,11 +148,6 @@ if [ -n "$FIRST_LINE" ]; then
   fi
 fi
 
-if [ "$FIRST_LINE_LEN" -gt 72 ]; then
-  fail "Subject line too long ($FIRST_LINE_LEN chars). Maximum 72 chars recommended."
-  echo "   Current: '$FIRST_LINE'"
-fi
-
 # ────────────────────────────────────────────────────────────────────────────────
 # 4. VALIDATE: Conventional commit format (optional but encouraged)
 # ────────────────────────────────────────────────────────────────────────────────
@@ -149,129 +176,23 @@ elif [ -n "$COMMIT_MSG" ]; then
   echo "   Example: 2026-05-16-hooks-commitmsg-implementation"
 fi
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 6. VALIDATE: DELEGATE/HANDBACK protocol compliance
-# ────────────────────────────────────────────────────────────────────────────────
-# NOTE: Forward-compatible with both 'type:' (deprecated) and 'handoff_type:' (canonical)
-
-if echo "$COMMIT_MSG" | grep -qE '^\s*handoff_type:\s*DELEGATE|^\s*type:\s*DELEGATE'; then
-  info "DELEGATE block detected in commit message"
-
-  # Check for required DELEGATE fields (canonical schema)
-  DELEGATE_FIELDS=("task_id" "agent" "scope" "plan" "success_criteria")
-  MISSING_FIELDS=()
-
-  for field in "${DELEGATE_FIELDS[@]}"; do
-    if ! echo "$COMMIT_MSG" | grep -qi "^${field}:"; then
-      MISSING_FIELDS+=("$field")
-    fi
-  done
-
-  if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
-    fail "DELEGATE block missing required fields: ${MISSING_FIELDS[*]}"
-  else
-    success "DELEGATE block has all required fields"
-  fi
-
-  # Validate task_id format within DELEGATE
-  if echo "$COMMIT_MSG" | grep -qE "task_id: +[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9\-]+"; then
-    success "DELEGATE task_id format is valid"
-  else
-    fail "DELEGATE task_id format invalid (expected: YYYY-MM-DD-kebab-case)"
-  fi
-
-  # Check for deprecated fields and warn about them
-  if echo "$COMMIT_MSG" | grep -qE '^\s*role:'; then
-    warn "DELEGATE uses deprecated field 'role:' — use 'agent:' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*type:\s*DELEGATE'; then
-    warn "DELEGATE uses deprecated field 'type:' — use 'handoff_type:' instead"
-  fi
-fi
-
-if echo "$COMMIT_MSG" | grep -qE '^\s*handoff_type:\s*HANDBACK|^\s*type:\s*HANDBACK'; then
-  info "HANDBACK block detected in commit message"
-
-  # Check for required HANDBACK fields (canonical schema)
-  HANDBACK_FIELDS=("task_id" "agent" "status" "output" "metrics")
-  MISSING_FIELDS=()
-
-  for field in "${HANDBACK_FIELDS[@]}"; do
-    if ! echo "$COMMIT_MSG" | grep -qi "^${field}:"; then
-      MISSING_FIELDS+=("$field")
-    fi
-  done
-
-  if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
-    fail "HANDBACK block missing required fields: ${MISSING_FIELDS[*]}"
-  else
-    success "HANDBACK block has all required fields"
-  fi
-
-  # Validate status value (canonical enum)
-  if echo "$COMMIT_MSG" | grep -qE "status: +(success|failure|partial|blocked|escalate)"; then
-    success "HANDBACK status value is valid"
-  else
-    fail "HANDBACK status must be one of: success, failure, partial, blocked, escalate"
-  fi
-
-  # Check for deprecated fields and warn about them
-  if echo "$COMMIT_MSG" | grep -qE '^\s*deliverables:'; then
-    warn "HANDBACK uses deprecated field 'deliverables:' — use 'output:' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*tests:'; then
-    warn "HANDBACK uses deprecated field 'tests:' — use 'metrics:' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*quality_score:'; then
-    warn "HANDBACK uses deprecated field 'quality_score:' — use 'metrics.quality' instead"
-  fi
-  if echo "$COMMIT_MSG" | grep -qE '^\s*type:\s*HANDBACK'; then
-    warn "HANDBACK uses deprecated field 'type:' — use 'handoff_type:' instead"
-  fi
-fi
+# 6. VALIDATE: SKIP_HOOKS documentation — a message that merely mentions SKIP_HOOKS must document why.
+check_skip_hooks_reason
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 7. VALIDATE: SKIP_HOOKS bypass documentation
+# 6b. ADVISORY: pin_history audit (config/models.yaml)
 # ────────────────────────────────────────────────────────────────────────────────
-
-if [ "${SKIP_HOOKS:-}" = "1" ] || echo "$COMMIT_MSG" | grep -qi 'SKIP_HOOKS'; then
-  info "SKIP_HOOKS bypass mentioned or active"
-
-  # Check for documented reason - must have SKIP_HOOKS: reason or similar
-  if echo "$COMMIT_MSG" | grep -qiE 'SKIP_HOOKS\s*:\s*[^[:space:]]|reason\s*:\s*[^[:space:]]|emergency\s*:\s*[^[:space:]]|justification\s*:\s*[^[:space:]]'; then
-    # Require non-trivial reason (>= 10 chars after the colon).
-    REASON=$(echo "$COMMIT_MSG" | grep -iE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:' | head -n1 | sed -E 's/^[[:space:]]*[A-Za-z_]+[[:space:]]*:[[:space:]]*//')
-    if [ "${#REASON}" -lt 10 ]; then
-      fail "Hook-bypass reason too short ('${REASON}'). Provide ≥10 chars (e.g. ticket ID, incident link)."
-    else
-      success "SKIP_HOOKS bypass is documented with reason (${#REASON} chars)"
-    fi
-  else
-    fail "SKIP_HOOKS mentioned/used but no reason documented"
-    echo "   Add one of the following (≥10 chars after the colon):"
-    echo "   - SKIP_HOOKS: <reason>"
-    echo "   - reason: <explanation>"
-    echo "   - emergency: <justification>"
-    echo "   See .githooks/README.md for the bypass procedure."
-  fi
-fi
-
-# ────────────────────────────────────────────────────────────────────────────────
-# 7b. VALIDATE: Model Pin Change approval (docs/SPEC.md, Model Pin Change)
-# ────────────────────────────────────────────────────────────────────────────────
-# When the staged diff changes the pin policy in config/models.yaml
-# ({roles.*.model, roles.*.fallback, roles.*.effort, families.*.min_pin, fallback_policy}),
-# the commit must carry a non-empty `Model-Pin-Approved-By:` trailer. Comments and other
-# registry edits need none. pin_history is append-only: a rewrite is rejected even WITH
-# the trailer (same rules as scripts/check_pin_trailers.py, the authoritative backstop).
+# config/models.yaml is the single reference table of models per role. Changing a pin
+# needs no trailer or approval. The only thing noted here is that pin_history is an
+# append-only audit record: a staged rewrite of existing entries prints a WARNING and
+# never fails the commit (scripts/models.py check stays the strict consistency gate).
 # The registry is parsed only through scripts/models.py (load_registry).
 
 COMMIT_MSG_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # `git commit --amend` rewrites HEAD, so the commit being created replaces HEAD and
 # its true parent is HEAD^. Diffing the index against HEAD would show an EMPTY
-# registry diff for an amend of a pin-changing commit and let the approval trailer
-# be silently dropped. When amending, compare against HEAD^ (or the empty tree for
+# registry diff for an amend of a history-rewriting commit and hide the warning. When amending, compare against HEAD^ (or the empty tree for
 # a root commit). Detection: GIT_REFLOG_ACTION, else the parent process (the
 # `git commit` that spawned this hook) carrying --amend.
 # `git rebase` reword/squash/fixup likewise REPLACE HEAD (GIT_REFLOG_ACTION is
@@ -327,64 +248,56 @@ def load(root):
     except models.RegistryError:
         return None
 
-def fingerprint(reg):
-    # Same gated fingerprint as scripts/check_pin_trailers.py: roles.*.{model,fallback,effort},
-    # families.*.min_pin and fallback_policy. Comments and other registry content are not gated.
-    fp = {}
-    for role, cfg in ((reg or {}).get("roles") or {}).items():
-        for key in ("model", "fallback", "effort"):
-            fp[f"roles.{role}.{key}"] = (cfg or {}).get(key)
-    for fam, cfg in ((reg or {}).get("families") or {}).items():
-        fp[f"families.{fam}.min_pin"] = (cfg or {}).get("min_pin")
-    fp["fallback_policy"] = (reg or {}).get("fallback_policy")
-    return fp
-
 old_reg, new_reg = load(sys.argv[2] + "/old"), load(sys.argv[2] + "/new")
-# pin_history is append-only: the old list must be an unchanged prefix of the new one.
-# This is reported regardless of any trailer.
+# pin_history is append-only: the old list should be an unchanged prefix of the new one.
 if old_reg is not None:
     oh = list(old_reg.get("pin_history") or [])
     nh = list((new_reg or {}).get("pin_history") or [])
     if nh[:len(oh)] != oh or len(nh) < len(oh):
         print("HISTORY: pin_history is append-only (existing entries edited, reordered or removed)")
-old, new = fingerprint(old_reg), fingerprint(new_reg)
-for key in sorted(set(old) | set(new)):
-    if old.get(key) != new.get(key):
-        if key.endswith(".model"):
-            role = key.split(".")[1]
-            print(f"{role}: {old.get(key) or '(none)'} -> {new.get(key) or '(removed)'}")
-        else:
-            print(f"{key}: changed")
+
+    # Informational only: name which policy fields the staged registry changes.
+    if new_reg is not None and old_reg is not None:
+        def policy(reg):
+            out = {}
+            for r, c in sorted((reg.get("roles") or {}).items()):
+                c = c if isinstance(c, dict) else {}
+                for k in ("model", "fallback", "effort"):
+                    out["roles.%s.%s" % (r, k)] = c.get(k)
+            for f, c in sorted((reg.get("families") or {}).items()):
+                out["families.%s.min_pin" % f] = (c if isinstance(c, dict) else {}).get("min_pin")
+            fp = reg.get("fallback_policy") or {}
+            for k in sorted(fp):
+                out["fallback_policy.%s" % k] = fp[k]
+            return out
+        o, n = policy(old_reg), policy(new_reg)
+        for key in sorted(set(o) | set(n)):
+            if o.get(key) != n.get(key):
+                print("POLICY: %s" % key)
 PY
   ) || PIN_OUT="PYFAIL: $PIN_OUT"
   rm -rf "$PIN_TMP"
 
+  # Informational summary (never a failure, no trailer): which policy fields changed.
+  PIN_POLICY=$(printf '%s\n' "$PIN_OUT" | grep '^POLICY: ' | sed 's/^POLICY: //' | tr '\n' ' ' || true)
+  if [ -n "$PIN_POLICY" ]; then
+    info "Registry policy changed in config/models.yaml: ${PIN_POLICY}"
+    info "   Consistency (incl. the fixed fable-never-falls-back-to-haiku rule) is enforced by scripts/models.py check."
+  fi
+
   if [[ "$PIN_OUT" == *NOYAML* ]]; then
-    fail "config/models.yaml is staged but python3 has no PyYAML, so pin changes cannot be checked"
-    echo "   Fix: python3 -m pip install pyyaml"
+    warn "config/models.yaml is staged but python3 has no PyYAML, so pin_history was not audited (python3 -m pip install pyyaml)"
   elif [[ "$PIN_OUT" == PYFAIL:* ]]; then
-    fail "Could not compare config/models.yaml pins: ${PIN_OUT#PYFAIL: }"
+    warn "Could not audit config/models.yaml pin_history: ${PIN_OUT#PYFAIL: }"
   elif [[ "$PIN_OUT" == *HISTORY:* ]]; then
-    fail "pin_history in config/models.yaml is append-only; a Model-Pin-Approved-By trailer does not waive this"
-    echo "$PIN_OUT" | grep '^HISTORY:' | sed 's/^/   /'
-    echo "   Append new entries only; never edit, reorder or remove existing ones."
-  elif [ -n "$PIN_OUT" ]; then
-    if echo "$COMMIT_MSG" | grep -v '^#' | grep -qE '^Model-Pin-Approved-By:[[:space:]]*[^[:space:]]'; then
-      success "Model Pin Change approved (Model-Pin-Approved-By trailer present)"
-    elif [ "${SKIP_HOOKS:-}" = "1" ] && echo "$COMMIT_MSG" | grep -qiE '^[[:space:]]*(SKIP_HOOKS|reason|emergency|justification)[[:space:]]*:[[:space:]]*[^[:space:]]{1}.{8,}'; then
-      warn "Model Pin Change approval bypassed via documented SKIP_HOOKS=1"
-    else
-      fail "Model pin policy changed in config/models.yaml without a Model-Pin-Approved-By trailer"
-      echo "$PIN_OUT" | sed 's/^/   /'
-      echo "   Add a non-empty trailer line at the start of a line in the commit message:"
-      echo "     Model-Pin-Approved-By: <name of the approver>"
-      echo "   See docs/SPEC.md, Model Pin Change."
-    fi
+    warn "pin_history in config/models.yaml should be append-only (audit record)"
+    printf '%s\n' "$PIN_OUT" | grep '^HISTORY:' | sed 's/^/   /'
+    echo "   Prefer appending new entries; editing or removing existing ones loses the audit trail."
   fi
 fi
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 8. VALIDATE: No secrets in commit message
+# 7. VALIDATE: No secrets in commit message
 # ────────────────────────────────────────────────────────────────────────────────
 
 # Look for secret patterns more specifically (key=value or : patterns)
@@ -394,7 +307,7 @@ if echo "$COMMIT_MSG" | grep -iE '(password|api_key|secret|token|private_key|aws
 fi
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 9. SUMMARY AND EXIT
+# 8. SUMMARY AND EXIT
 # ────────────────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -406,8 +319,8 @@ if [ "$ERRORS" -gt 0 ]; then
   echo "Fix the errors above and retry:"
   echo "  git commit --amend"
   echo ""
-  echo "To bypass validation (not recommended):"
-  echo "  SKIP_COMMIT_MSG_HOOK=true git commit"
+  echo "To bypass validation (emergency only; the message must document a reason):"
+  echo "  SKIP_HOOKS=1 git commit   # with 'SKIP_HOOKS: <reason>' in the message"
   exit 1
 fi
 

@@ -31,6 +31,14 @@ Re-baseline history (each floor is ~95% of the measured actual at that time):
 | **Round 3 batch 3, WP-R3-11 (2026-08-13) — governed re-baseline** | Lead Engineer review of the WP-R3-04 deviation above, per `spec-management`, with Quality Engineer sign-off (task_id `task-2026-08-13-r3-wp11-spec-floor`). Round-3 batch 2 added tests between WP-R3-04 and this review, so honest current actual (766) is higher than WP-R3-04's 734. This entry supersedes WP-R3-04's 697 floor | 766 | ~~727~~ *superseded below* |
 | **Round 3 batch 4, WP-R3-05 (2026-08-13) — governed retrospective re-baseline** | Test-layer consolidation (task_id `task-2026-08-13-r3-wp05-test-consolidation`), the change WP-R3-11 deliberately left un-forecast. `tests/test_core_protocol_validator.py` and `tests/test_spec_validator.py` (the `tests/`-scope duplicate layers) were deleted; coverage migrated into skill-local suites, not dropped (companion floor below moved 169 → 274 in the same change). Re-baselined per this table's own ~95%-of-measured-actual convention, applied by Lead Engineer under WP-R3-11's standing governance authority over this file — see "QE sign-off" note below | 560 | ~~532~~ *superseded below* |
 | **Post-slimdown cleanup (2026-09-04) — staleness correction** | No tests deleted for coverage reasons. The floor had been left at 532 (set from WP-R3-05's measured 560) while the suite grew back to 689, leaving the gate at 77% headroom instead of the documented ~95% — a ~157-test deletion would have passed. Re-measured with the gate's own methodology (`pytest tests/ --collect-only -q`) LAST, after this task's test changes and the concurrent sibling dead-code deletions had all landed. Net from the 691 measured at task start: five dead non-strict xfails in `tests/test_git_hooks.py` inverted into positive enforcement tests (count-neutral, 5 xfail → 5 pass); the phantom model id `claude-haiku-4.6` parametrize case removed with it from `renderer/validate_agents.py` (−1); and `test_validate_skill_file_strict_mode` deleted after the `strict` parameter it exercised was removed from `validate_skill_file()` (−1). Derivation: 689 * 0.95 = 654.55 → **654** | 689 | **654** |
+| **Skills-package cleanup (2026-11-10)** | task_id `2026-11-10-w4a-skills-package`. The `spec-validator` and `skill-improvement-feedback` skills were deleted as dead weight (plus `continuous-compliance.yml`). `tests/` moved 1137 → 1135 from this change (the Self-Improvement-warning test removed with its check). The old 654 floor had also gone stale (suite had grown well past 689); re-measured with the gate's own methodology (`pytest tests/ --collect-only -q`) and floored at ~95%: 1213 * 0.95 = 1152.35 → | 1213 | 654 → `1152` |
+
+**Companion floor, 2026-11-10 re-baseline:** with `spec-validator` (99 tests) and
+`skill-improvement-feedback` (3 tests) deleted, `protocol-validator` is the only
+skill with a suite. `MIN_EXPECTED_TESTS` in `scripts/run_skill_tests.py` moved
+274 → `176` (186 measured * 0.95 = 176.7 → 176). This is a deliberate deletion
+of dead skills, not a coverage regression; `pytest.ini`'s `testpaths` now names
+only `tests` and `src/skills/protocol-validator/tests`.
 
 A companion floor, `scripts/run_skill_tests.py`'s `MIN_EXPECTED_TESTS`, moved in
 the same WP-R3-05 change: 289 measured skill-local tests across the 3
@@ -40,6 +48,12 @@ raised 169 → `274` (289 * 0.95 = 274.55 → 274). This is the compensating gat
 that makes the `tests/`-scope drop (766 → 560) auditable as a relocation, not a
 coverage loss: bare `pytest --collect-only` (both scopes combined) moved
 935 → 849, i.e. 560 + 289.
+
+**Operator sign-off, companion floor 274 → 176 (2026-11-10):** the repository owner approved
+the deliberate deletion of the 103 skill tests that went with `spec-validator` and
+`skill-improvement-feedback`. This is recorded as operator approval, not as an independent
+Quality Engineer pass; the reviewer of the framework-reduction PR is asked to confirm the
+floor before merge. The companion floor is 176 and the measured count is 186.
 
 **Out-of-band deviation, reviewed and superseded:** WP-R3-04's 697 floor (row
 above) was set without going through this file's governance owner and is

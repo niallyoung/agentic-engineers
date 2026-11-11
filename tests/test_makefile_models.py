@@ -22,11 +22,10 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MAKEFILE = REPO_ROOT / "Makefile"
-LOCKED_SH = REPO_ROOT / ".githooks" / "LOCKED_MODELS.sh"
 
 # Everything `make models-check` / `models-sync` reads.
 COPY_PATHS = ["Makefile", "scripts/models.py", "config/models.yaml", "config/FRAMEWORK-MANIFEST.yaml",
-              "src/AGENTS.md", "src/agents", ".githooks/LOCKED_MODELS.sh", ".agents_verification_sha",
+              "src/AGENTS.md", "src/agents", ".agents_verification_sha",
               "docs/MODELS.md"]
 
 _spec = importlib.util.spec_from_file_location("ae_models_makefile", REPO_ROOT / "scripts" / "models.py")
@@ -118,18 +117,3 @@ def cfg_prev(reg, role):
     return [e["to"] for e in reg["pin_history"] if e.get("role") == role][-1]
 
 
-class TestLockedModelsShBanner:
-    def test_locked_models_sh_has_generated_banner(self):
-        """Wording is owned by the generator's header template; only the contract
-        (it announces being GENERATED) is asserted here."""
-        assert "GENERATED" in LOCKED_SH.read_text(encoding="utf-8")
-
-    def test_locked_models_arrays_source_correctly(self):
-        """Sourcing the script yields the exported arrays."""
-        result = subprocess.run(
-            ["bash", "-c",
-             f'source "{LOCKED_SH}" && declare -p LOCKED_MODELS | grep -q "declare -ax" '
-             f'&& declare -p AGENT_MODEL_ASSIGNMENTS | grep -q "declare -ax"'],
-            capture_output=True, text=True,
-        )
-        assert result.returncode == 0, f"arrays not exported: {result.stderr}"

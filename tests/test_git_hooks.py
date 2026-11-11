@@ -9,7 +9,7 @@ Tests all three hooks across 4 harnesses:
 
 Coverage:
   - Valid/invalid inputs
-  - Bypass mechanisms (SKIP_HOOKS=1, SKIP_COMMIT_MSG_HOOK=true, BYPASS_HOOK_VALIDATION=true)
+  - Bypass mechanism (the single documented SKIP_HOOKS=1 variable)
   - Error messages and recovery hints
   - Recovery procedures
   - Edge cases
@@ -139,32 +139,17 @@ class TestPreCommitHook:
         assert result.returncode == 0
         assert "\u2705" in result.stdout or "passed" in result.stdout.lower()
 
-    # ── SPEC constraint: orchestration/scripts/ ────────────────────────────────
+    # ── Removed: orchestration/ re-introduction checks ────────────────────────
+    # orchestration/ no longer exists; the re-introduction guard lives in
+    # scripts/validate-spec-constraints.py (CI), not in the commit hook.
 
-    def test_rejects_python_in_orchestration_scripts(self):
-        """Staged .py files under orchestration/scripts/ must be rejected."""
+    def test_orchestration_paths_no_longer_checked_at_commit(self):
+        """The dead orchestration/ checks were removed; staging there is not blocked."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "orchestration/scripts/bad.py", "print('hello')\n")
+            stage_file(tmpdir, "orchestration/scripts/x.py", "print('hello')\n")
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
-        assert result.returncode != 0
-        assert "VIOLATION" in result.stdout or "violation" in result.stdout.lower()
-
-    def test_rejects_shell_in_orchestration_scripts(self):
-        """Staged .sh files under orchestration/scripts/ must be rejected."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            make_git_repo(tmpdir)
-            stage_file(tmpdir, "orchestration/scripts/bad.sh", "#!/bin/bash\necho hi\n")
-            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
-        assert result.returncode != 0
-
-    def test_rejects_cron_in_orchestration_config(self):
-        """Staged .cron files under orchestration/config/ must be rejected."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            make_git_repo(tmpdir)
-            stage_file(tmpdir, "orchestration/config/schedule.cron", "* * * * * /bin/true\n")
-            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
-        assert result.returncode != 0
+        assert result.returncode == 0
 
     def test_allows_renderer_scripts(self):
         """renderer/scripts/ is the allowed build-time path — must not be blocked."""
@@ -174,15 +159,24 @@ class TestPreCommitHook:
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode == 0
 
-    def test_error_message_includes_spec_reference(self):
-        """Violation error must mention SPEC or docs."""
+    def test_protocol_yaml_is_not_validated_at_commit(self):
+        """DELEGATE/HANDBACK file validation was removed: a sparse protocol YAML passes."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "orchestration/scripts/bad.py", "x=1\n")
+            stage_file(tmpdir, "d.yaml", "handoff_type: DELEGATE\ntask_id: x\n")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode == 0
+        assert "DELEGATE" not in result.stdout
+
+    def test_staged_pyc_still_rejected(self):
+        """Bytecode must never be committed (the one surviving integrity sub-check)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            (Path(tmpdir) / "m.pyc").write_bytes(b"\x00\x01bytecode")
+            subprocess.run(["git", "add", "-f", "m.pyc"], cwd=tmpdir, capture_output=True)
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
-        combined = result.stdout + result.stderr
-        assert "SPEC" in combined or "docs" in combined.lower() or "protocol" in combined.lower()
+        assert ".pyc" in result.stdout
 
     # ── Secret detection ───────────────────────────────────────────────────────
 
@@ -190,7 +184,7 @@ class TestPreCommitHook:
         """AWS access key pattern (AKIA…) must be rejected."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "config.py", "AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
+            stage_file(tmpdir, "config.py", "AWS_KEY = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
         combined = result.stdout + result.stderr
@@ -205,7 +199,7 @@ class TestPreCommitHook:
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "settings.py", "api_key: abcdefghijklmnopqrstuvwxyz123456\n")  # pragma: allowlist secret
+            stage_file(tmpdir, "settings.py", "api_key" + ": abcdefghijklmnopqrstuvwxyz123456\n")  # pragma: allowlist secret
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
 
@@ -215,6 +209,92 @@ class TestPreCommitHook:
             make_git_repo(tmpdir)
             stage_file(tmpdir, "config.py", "api_key = 'placeholder'\n")
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode == 0
+
+    def test_allows_short_placeholder_values_unchanged(self):
+        """(kept adjacent to the new scan tests) short values remain unflagged."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "c.py", "client_secret = 'changeme'\n")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode == 0
+
+    @pytest.mark.parametrize("label,content", [
+        ("anthropic", "KEY = '" + "sk-ant-" + "api03-" + "A1b2C3d4E5f6G7h8I9j0K1l2" + "'\n"),
+        ("github-pat", "T = '" + "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8" + "'\n"),
+        ("client-secret", "client_secret = '" + "Zx9Yw8Vu7Ts6Rq5Po4Nm3Lk2" + "'\n"),
+        ("client-secret-colon", "client_secret: " + "Zx9Yw8Vu7Ts6Rq5Po4Nm3Lk2" + "\n"),
+        ("pem-header", "-----BEGIN " + "RSA PRIVATE KEY-----\nMIIB\n"),
+        ("pem-header-bare", "-----BEGIN " + "PRIVATE KEY-----\nMIIB\n"),
+        ("pem-header-openssh", "-----BEGIN " + "OPENSSH PRIVATE KEY-----\nb3Bl\n"),
+    ])
+    def test_rejects_new_secret_patterns(self, label, content):
+        """Anthropic/GitHub tokens, client_secret assignments and PEM private-key headers."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "creds.txt", content)
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode != 0, label
+        assert "creds.txt" in result.stdout
+
+    def test_secret_in_executable_script_is_scanned(self):
+        """Executable shell scripts used to be skipped by the 'executable' file(1) match."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            f = stage_file(tmpdir, "run.sh", "#!/usr/bin/env bash\nK='" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
+            f.chmod(0o755)
+            subprocess.run(["git", "add", "run.sh"], cwd=tmpdir, capture_output=True)
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode != 0
+        assert "run.sh" in result.stdout
+
+    def test_secret_in_renamed_file_is_caught(self):
+        """A pure rename carrying a secret (status R) must still be scanned."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            subprocess.run(["git", "config", "core.hooksPath", "/nonexistent"], cwd=tmpdir, capture_output=True)
+            (Path(tmpdir) / "old.txt").write_text("K = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
+            subprocess.run(["git", "add", "old.txt"], cwd=tmpdir, capture_output=True)
+            subprocess.run(["git", "commit", "-q", "-m", "seed"], cwd=tmpdir, capture_output=True)
+            subprocess.run(["git", "mv", "old.txt", "new.txt"], cwd=tmpdir, capture_output=True)
+            status = subprocess.run(["git", "diff", "--cached", "--name-status"], cwd=tmpdir,
+                                    capture_output=True, text=True).stdout
+            assert status.startswith("R"), status
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode != 0
+        assert "new.txt" in result.stdout
+
+    def test_secret_in_filename_with_spaces_is_caught(self):
+        """Filenames containing spaces are scanned as one file, not word-split."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "my config file.txt", "K = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode != 0
+        assert "my config file.txt" in result.stdout
+
+    def test_clean_filename_with_spaces_passes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "my notes.txt", "hello\n")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode == 0
+
+    def test_git_skip_hooks_alias_no_longer_bypasses(self):
+        """GIT_SKIP_HOOKS and BYPASS_HOOK_VALIDATION were folded into SKIP_HOOKS=1."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "k.py", "K = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={
+                "SKIP_HOOKS": "", "GIT_SKIP_HOOKS": "1", "BYPASS_HOOK_VALIDATION": "true"})
+        assert result.returncode != 0
+
+    def test_skip_hooks_bypasses_a_secret(self):
+        """SKIP_HOOKS=1 is the one documented bypass."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)
+            stage_file(tmpdir, "k.py", "K = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": "1"})
         assert result.returncode == 0
 
     # ── YAML well-formedness ───────────────────────────────────────────────────
@@ -265,7 +345,7 @@ class TestPreCommitHook:
         """On failure, hook must print recovery instructions (SKIP_HOOKS=1)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "orchestration/scripts/bad.py", "x=1\n")
+            stage_file(tmpdir, "k.py", "AWS_KEY = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
         combined = result.stdout + result.stderr
@@ -275,7 +355,7 @@ class TestPreCommitHook:
         """Failure message must include error indicator."""
         with tempfile.TemporaryDirectory() as tmpdir:
             make_git_repo(tmpdir)
-            stage_file(tmpdir, "orchestration/scripts/bad.py", "x=1\n")
+            stage_file(tmpdir, "k.py", "AWS_KEY = '" + "AKIA" + "IOSFODNN7EXAMPLE'\n")  # pragma: allowlist secret
             result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0
         combined = result.stdout + result.stderr
@@ -301,22 +381,33 @@ class TestCommitMsgHook:
         finally:
             Path(tmp_path).unlink()
 
-    # ── Bypass ─────────────────────────────────────────────────────────────────
+    # ── Bypass (single variable: SKIP_HOOKS=1, reason still required) ─────────
 
-    def test_bypass_skip_commit_msg_hook_exits_zero(self):
-        """SKIP_COMMIT_MSG_HOOK=true must bypass all checks and exit 0."""
-        result = self._run_with_msg("x", env_overrides={"SKIP_COMMIT_MSG_HOOK": "true"})
+    BYPASS_MSG = "x\n\nSKIP_HOOKS: emergency rollback of broken release 1.2.3"
+
+    def test_bypass_skip_hooks_with_reason_exits_zero(self):
+        """SKIP_HOOKS=1 skips format checks (here: a 1-char subject) when a reason is given."""
+        result = self._run_with_msg(self.BYPASS_MSG, env_overrides={"SKIP_HOOKS": "1"})
         assert result.returncode == 0
 
-    def test_bypass_skip_commit_msg_hook_prints_skipped(self):
-        """SKIP_COMMIT_MSG_HOOK=true must print SKIPPED message."""
-        result = self._run_with_msg("x", env_overrides={"SKIP_COMMIT_MSG_HOOK": "true"})
+    def test_bypass_skip_hooks_prints_bypass(self):
+        result = self._run_with_msg(self.BYPASS_MSG, env_overrides={"SKIP_HOOKS": "1"})
         combined = result.stdout + result.stderr
-        assert "SKIP" in combined or "skip" in combined.lower()
+        assert "SKIP_HOOKS" in combined and "bypass" in combined.lower()
 
-    def test_bypass_false_does_not_bypass(self):
-        """SKIP_COMMIT_MSG_HOOK=false must NOT bypass."""
-        result = self._run_with_msg("bad", env_overrides={"SKIP_COMMIT_MSG_HOOK": "false"})
+    def test_bypass_skip_hooks_still_requires_reason(self):
+        """Per-check behaviour kept: an undocumented bypass is rejected."""
+        result = self._run_with_msg("x", env_overrides={"SKIP_HOOKS": "1"})
+        assert result.returncode != 0
+        assert "reason" in (result.stdout + result.stderr).lower()
+
+    def test_old_skip_commit_msg_hook_no_longer_bypasses(self):
+        result = self._run_with_msg("x", env_overrides={"SKIP_COMMIT_MSG_HOOK": "true", "SKIP_HOOKS": ""})
+        assert result.returncode != 0
+
+    def test_bypass_empty_does_not_bypass(self):
+        """SKIP_HOOKS='' must NOT bypass."""
+        result = self._run_with_msg("bad", env_overrides={"SKIP_HOOKS": ""})
         assert result.returncode != 0  # "bad" is too short
 
     # ── Valid messages ─────────────────────────────────────────────────────────
@@ -428,37 +519,34 @@ class TestCommitMsgHook:
         result = self._run_with_msg(msg)
         assert result.returncode != 0
 
-    # ── DELEGATE/HANDBACK in commit message ───────────────────────────────────
+    # ── DELEGATE/HANDBACK text in a commit message is not specially validated ──
 
-    def test_commit_with_valid_delegate_block_passes(self):
-        """Commit message containing a valid DELEGATE block must pass."""
-        msg = textwrap.dedent("""\
-            feat: add delegate for testing 2026-05-16-test-delegate
-
-            DELEGATE block:
-            handoff_type: DELEGATE
-            task_id: 2026-05-16-test-delegate
-            agent: engineer
-            scope: Test the system with required scope description
-            plan: Run tests
-            success_criteria: All pass
-        """)
-        result = self._run_with_msg(msg)
-        assert result.returncode == 0
-
-    def test_commit_with_delegate_missing_fields_fails(self):
-        """Commit message with DELEGATE but missing required fields must fail."""
+    def test_commit_with_delegate_block_is_not_validated(self):
+        """The DELEGATE/HANDBACK commit-message validation was removed."""
         msg = textwrap.dedent("""\
             feat: add incomplete delegate
 
             ---
             handoff_type: DELEGATE
-            task_id: 2026-05-16-test
+            task_id: not-a-dated-task
             agent: engineer
             ---
         """)
         result = self._run_with_msg(msg)
+        assert result.returncode == 0
+        assert "DELEGATE block" not in result.stdout
+
+    def test_commit_with_handback_block_is_not_validated(self):
+        msg = "feat: record a handback\n\nhandoff_type: HANDBACK\nstatus: bogus\n"
+        result = self._run_with_msg(msg)
+        assert result.returncode == 0
+        assert "HANDBACK" not in result.stdout
+
+    def test_empty_first_line_does_not_crash_with_unbound_variable(self):
+        """Regression: an empty message used to reference an unset FIRST_LINE_LEN."""
+        result = self._run_with_msg("")
         assert result.returncode != 0
+        assert "unbound variable" not in result.stderr
 
     def test_commit_with_secrets_in_message_fails(self):
         """Commit message containing secret-like patterns must be rejected."""
@@ -479,11 +567,12 @@ class TestCommitMsgHook:
         assert "amend" in combined.lower() or "retry" in combined.lower() or "fix" in combined.lower()
 
     def test_error_message_shows_bypass_option(self):
-        """Error output must mention SKIP_COMMIT_MSG_HOOK bypass."""
+        """Error output must mention the SKIP_HOOKS=1 bypass."""
         result = self._run_with_msg("x")
         assert result.returncode != 0
         combined = result.stdout + result.stderr
-        assert "SKIP_COMMIT_MSG_HOOK" in combined or "bypass" in combined.lower()
+        assert "SKIP_HOOKS=1" in combined
+        assert "SKIP_COMMIT_MSG_HOOK" not in combined
 
     def test_success_message_shows_subject(self):
         """Success output must echo back the subject line."""
@@ -502,8 +591,8 @@ class TestCommitMsgHook:
         assert good.returncode == 0
 
     def test_recovery_bypass_then_fix(self):
-        """SKIP_COMMIT_MSG_HOOK bypass allows commit; subsequent fix passes normally."""
-        bypassed = self._run_with_msg("x", env_overrides={"SKIP_COMMIT_MSG_HOOK": "true"})
+        """SKIP_HOOKS bypass allows commit; subsequent fix passes normally."""
+        bypassed = self._run_with_msg(self.BYPASS_MSG, env_overrides={"SKIP_HOOKS": "1"})
         assert bypassed.returncode == 0
         fixed = self._run_with_msg("fix: proper message after emergency bypass")
         assert fixed.returncode == 0
@@ -659,10 +748,10 @@ class TestPrePushHook:
 
     # ── SPEC compliance ────────────────────────────────────────────────────────
 
-    def test_fails_with_orchestration_scripts_present(self):
-        """SPEC allows executable scripts only under renderer/scripts/ — orchestration/scripts/ must block.
+    def test_orchestration_tree_no_longer_checked(self):
+        """The dead orchestration/ re-introduction checks were removed from pre-push.
 
-        Observed hook behaviour: exit 1, "External scripts found in orchestration/scripts/".
+        The re-introduction guard now lives only in scripts/validate-spec-constraints.py.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             make_minimal_repo_with_docs(tmpdir)
@@ -670,9 +759,15 @@ class TestPrePushHook:
             scripts.mkdir(parents=True)
             (scripts / "bad.py").write_text("x=1\n")
             result = self._run_push_in_repo(tmpdir)
+        assert result.returncode == 0
+        assert "orchestration/scripts" not in result.stdout + result.stderr
+
+    def test_git_skip_hooks_alias_no_longer_bypasses(self):
+        """GIT_SKIP_HOOKS was folded into SKIP_HOOKS=1 and must not bypass any more."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            make_git_repo(tmpdir)  # no docs: the hook must fail unless bypassed
+            result = self._run_push_in_repo(tmpdir, env_overrides={"GIT_SKIP_HOOKS": "1"})
         assert result.returncode != 0
-        combined = result.stdout + result.stderr
-        assert "orchestration/scripts" in combined
 
     # ── Agent YAML validation ──────────────────────────────────────────────────
 
@@ -753,6 +848,49 @@ class TestPrePushHook:
             fixed = self._run_push_in_repo(tmpdir)
         assert fixed.returncode == 0
 
+
+
+class TestPostMergeHook:
+    """post-merge: documentation-drift check watches docs/SPEC.md and src/AGENTS.md."""
+
+    HOOK = GITHOOKS_DIR / "post-merge"
+
+    def _repo_with_change(self, tmpdir, rel_path):
+        make_git_repo(tmpdir)
+        subprocess.run(["git", "config", "core.hooksPath", "/nonexistent"], cwd=tmpdir, capture_output=True)
+        stage_file(tmpdir, "seed.txt", "seed\n")
+        subprocess.run(["git", "commit", "-q", "-m", "seed"], cwd=tmpdir, capture_output=True)
+        base = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmpdir, capture_output=True,
+                              text=True).stdout.strip()
+        stage_file(tmpdir, rel_path, "changed\n")
+        subprocess.run(["git", "commit", "-q", "-m", "change"], cwd=tmpdir, capture_output=True)
+        subprocess.run(["git", "update-ref", "ORIG_HEAD", base], cwd=tmpdir, capture_output=True)
+
+    def test_warns_when_src_agents_md_changes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._repo_with_change(tmpdir, "src/AGENTS.md")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode == 0
+        assert "src/AGENTS.md" in result.stdout
+
+    def test_warns_when_spec_changes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._repo_with_change(tmpdir, "docs/SPEC.md")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert "docs/SPEC.md" in result.stdout
+
+    def test_docs_agents_stub_is_not_watched(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._repo_with_change(tmpdir, "docs/AGENTS.md")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": ""})
+        assert result.returncode == 0
+        assert "docs/AGENTS.md" not in result.stdout
+
+    def test_skip_hooks_skips(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._repo_with_change(tmpdir, "src/AGENTS.md")
+            result = run_hook_in_repo(self.HOOK, tmpdir, env_overrides={"SKIP_HOOKS": "1"})
+        assert "SKIPPED" in result.stdout
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -847,5 +985,5 @@ class TestHookInstallation:
             f"parse_agents_md failed: {parse_result.stderr}"
 
         lines = [l for l in parse_result.stdout.strip().split('\n') if l.strip()]
-        assert len(lines) == 8, \
-            f"Expected 8 agents in src/AGENTS.md, got {len(lines)}"
+        assert len(lines) == 7, \
+            f"Expected 7 agents in src/AGENTS.md, got {len(lines)}"

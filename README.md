@@ -15,7 +15,7 @@ proportional to task complexity — through an elegant, minimal orchestration la
 spawning**:
 
 1. Work is expressed as a DELEGATE task (structured YAML: scope, context, plan, success criteria)
-2. The Orchestrator spawns the right specialist directly (Agent/Task tool) and reads the HANDBACK back as that spawn call's result synchronously, in-context
+2. The Orchestrator spawns the right specialist directly (the harness's sub-agent spawn) and reads the HANDBACK back as that spawn call's result synchronously, in-context
 3. The specialist executes and returns a HANDBACK with results + metrics
 4. The harness session transcript itself — every DELEGATE as a spawn prompt, every HANDBACK as that spawn's result — is the durable audit record
 5. Metrics feed back into model selection and routing for future tasks

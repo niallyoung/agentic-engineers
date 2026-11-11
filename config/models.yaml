@@ -216,8 +216,7 @@ models:
     ids: {claude: claude-fable-5, copilot: claude-fable-5, opencode: claude-fable-5}
 
 # Role -> pinned model + effort + explicit fallback chain.
-# Order is meaningful: it is the order of AGENT_MODEL_ASSIGNMENTS in the generated
-# .githooks/LOCKED_MODELS.sh shim.
+# Order is meaningful: it is the order roles are rendered in generated targets.
 roles:
   engineer:
     model: claude-haiku-5.5
@@ -236,10 +235,6 @@ roles:
     effort: medium
     fallback: [claude-sonnet-5]
   senior-engineer:
-    model: claude-sonnet-5.5
-    effort: high
-    fallback: [claude-sonnet-5]
-  model-engineer:
     model: claude-sonnet-5.5
     effort: high
     fallback: [claude-sonnet-5]
@@ -263,6 +258,13 @@ harnesses:
     resolve_via_cache: true
   codex:
     render: role-tier-map      # unchanged: CODEX_MODEL_BY_ROLE stays in render-codex.py
+
+# Roles that no longer exist. A retired role has no roles.<role> entry and no
+# src/agents file, but its pin_history entries are kept (history is append-only);
+# `check` accepts pin_history entries for a role listed here and rejects any other
+# unknown role.
+retired_roles:
+  - model-engineer
 
 # Append-only audit trail of pin changes. `check` requires every role to have at
 # least one entry and the latest entry per role to equal the current pin.

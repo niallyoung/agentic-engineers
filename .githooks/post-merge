@@ -52,11 +52,11 @@ info() {
 }
 
 # ── 1. DOCUMENTATION DRIFT CHECK ───────────────────────────────────────────────
-# If SPEC.md or AGENTS.md were modified in this merge, warn that agent
+# If docs/SPEC.md or src/AGENTS.md (the real roster; docs/AGENTS.md is a stub) were modified in this merge, warn that agent
 # implementations may need updating.
 
 if git rev-parse ORIG_HEAD >/dev/null 2>&1; then
-  MODIFIED_DOCS=$(git diff ORIG_HEAD HEAD --name-only 2>/dev/null | grep -E 'docs/(SPEC|AGENTS)\.md' || true)
+  MODIFIED_DOCS=$(git diff ORIG_HEAD HEAD --name-only 2>/dev/null | grep -E '^(docs/SPEC\.md|src/AGENTS\.md)$' || true)
   if [ -n "$MODIFIED_DOCS" ]; then
     warn "Core documentation changed in this merge:"
     echo "$MODIFIED_DOCS" | while read -r doc; do

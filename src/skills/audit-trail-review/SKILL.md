@@ -28,7 +28,7 @@ This skill is **READ-ONLY** over the audit trail; findings name suggested fixes.
 
 **Single-Session Constraint (MUST):**
 This skill operates ONLY on the current harness + current session directory, resolved exactly as `scripts/audit_append.py` resolves it:
-- Priority: `AGENTIC_SESSION_ID` > `CLAUDE_CODE_SESSION_ID` > `CLAUDE_SESSION_ID` > `COPILOT_SESSION_ID`
+- Priority: `AGENTIC_SESSION_ID` first, then the harness-specific session variables listed in `scripts/audit_append.py`'s module docstring
 - Path: `~/.agentic-engineers/{harness}/{session-id}/audit/events-YYYY-MM-DD.jsonl`
 
 **Why:** Cross-session/cross-harness aggregation is explicitly out of scope to avoid conflating unrelated work. A session is the atomic unit of operation; mixing sessions hides dependencies and creates false findings.
@@ -166,7 +166,7 @@ These are **secondary** — invoked only on request or as part of a pre-merge au
 ```bash
 # Review the current session's audit trail
 python3 -m agentic_engineers.skills.audit_trail_review [--session-id ID] [--harness HARNESS]
-# If not provided, resolves from env vars: AGENTIC_SESSION_ID > CLAUDE_CODE_SESSION_ID > CLAUDE_SESSION_ID > COPILOT_SESSION_ID, and AGENTIC_HARNESS > CLAUDE_CODE_SESSION_ID > CLAUDE_SESSION_ID > COPILOT_SESSION_ID > OPENAI_API_KEY > 'local'
+# If not provided, resolves exactly as scripts/audit_append.py does: AGENTIC_SESSION_ID / AGENTIC_HARNESS first, then harness-specific env vars and the script's own fallbacks (see its module docstring)
 ```
 
 ### Branch/Campaign Audit (pre-merge)
@@ -263,8 +263,3 @@ Items that are historical and exempt from "slop" findings:
 - LOCKED SPEC sections (unchanged unless by spec-management proposal)
 - Backlog-marked task_ids with an explicit WP-* reference
 - Escalation events (refusal, limit_exceeded) when followed by a corrective re-route within the same session
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in audit report when this meta-skill's ledger reconciliation or campaign procedures need refinement.

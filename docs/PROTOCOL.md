@@ -32,7 +32,7 @@ routing decisions.
 
 The canonical execution model is **direct sub-agent spawn**: the spawning agent
 constructs a DELEGATE block and passes it directly as the prompt of a sub-agent
-spawn (the harness's Agent/Task tool); the HANDBACK returns synchronously as that
+spawn (the harness's sub-agent spawn mechanism); the HANDBACK returns synchronously as that
 spawn call's result, in-context. The harness session transcript itself (every
 DELEGATE as a spawn prompt, every HANDBACK as that spawn's result) is the durable
 audit record — this is what makes a DELEGATE/HANDBACK *count* (`docs/SPEC.md`
@@ -41,7 +41,7 @@ Model](../src/AGENTS.md#direct-sub-agent-spawn-execution-model) for the full flo
 
 A DELEGATE MAY also **continue an existing sub-agent** that already holds the
 relevant context instead of cold-spawning a new one, on harnesses that support it
-(Claude Code via `SendMessage`; Codex via `resume`/`fork`). The message format,
+(per-harness mechanism: [Harness Mechanism Map](guides/harness-setup/README.md#harness-mechanism-map)). The message format,
 its validation, and the HANDBACK contract are identical to a cold spawn;
 continuation adds no delegation-tree node and no depth hop. See [`src/AGENTS.md` >
 Sub-Agent Reuse](../src/AGENTS.md#sub-agent-reuse-agent-continuation).
@@ -139,10 +139,9 @@ effort: high
 `model_used`, `effort_actual`, `children_created`, `children_results`, `flags`,
 `criteria_results`, `error`, `interjections` (operator interjections received
 mid-task, each with `ts`, `source`, `directive`, `disposition`). `skill_feedback` (structured per-skill feedback
-consumed by the `skill-improvement-feedback` pattern) is accepted at runtime as a
+reserved for a future skill-feedback loop) is accepted at runtime as a
 forward-compatible field — see `protocol_validator.py`'s
-`KNOWN_HANDBACK_RUNTIME_FIELDS` and `src/skills/skill-improvement-feedback/SKILL.md`
-for its shape.
+`KNOWN_HANDBACK_RUNTIME_FIELDS` for its shape.
 
 ```yaml
 handoff_type: HANDBACK
@@ -188,42 +187,35 @@ deliberately — no single layer is a complete gate on its own.
 |---|---|---|---|
 | **`protocol-validator` skill** (`src/skills/protocol-validator/scripts/protocol_validator.py`) | Full core + extension field validation against `protocol-core-v1.0.yaml`, <5ms | On demand, by any agent or script that imports it | Any DELEGATE/HANDBACK dict |
 | **`.githooks/pre-commit`** DELEGATE/HANDBACK section | Regex-based core-field presence/format checks (task_id pattern, agent enum, status enum, metrics sub-fields, secret-pattern scan) on staged `.yaml`/`.yml` files that look like a DELEGATE or HANDBACK | `git commit` | Files about to be committed |
-| **PreToolUse hook** (`renderer/scripts/claude-delegate-guard.py`) | Deliberately not a thin wrapper around the validator above (documented in its own docstring) — checks that a live Claude Code Agent-tool spawn targeting one of the eight framework roles carries a well-formed DELEGATE block in its prompt | Every Agent/Task-tool spawn in a Claude Code session | The one path the other two layers cannot see: an in-session spawn that never touches disk |
+| **Harness pre-spawn guard** (where a renderer installs one; see the [Harness Mechanism Map](guides/harness-setup/README.md#harness-mechanism-map)) | Deliberately not a thin wrapper around the validator above — checks that a live in-session spawn targeting one of the seven framework roles carries a well-formed DELEGATE block in its prompt | Every sub-agent spawn in a session of a harness that installs the guard | The one path the other two layers cannot see: an in-session spawn that never touches disk |
 
 ### 3.1 Per-Layer Field Coverage
 
 The three enforcement layers cover different fields and operate at different times; no layer enforces all fields:
 
-| Core Field | `protocol-validator` | `.githooks/pre-commit` | `PreToolUse` hook | Coverage |
+| Core Field | `protocol-validator` | `.githooks/pre-commit` | Pre-spawn guard | Coverage |
 |---|---|---|---|---|
 | `handoff_type` | ✅ | ✅ | ✅ | All three |
 | `task_id` format | ✅ | ✅ | ✅ | All three |
 | `agent` enum | ✅ | ✅ | ✅ | All three |
-| `scope` >=15 words | ✅ | — | ✅ | Skill + PreToolUse |
+| `scope` >=15 words | ✅ | — | ✅ | Skill + guard |
 | `spec_version` | ✅ | — | — | Skill only |
 | `skill` exists | ✅ | — | — | Skill only |
 | `status` enum | ✅ | ✅ | — | Skill + pre-commit |
 | `metrics` sub-fields | ✅ | ✅ | — | Skill + pre-commit |
 | Secret patterns | — | ✅ | — | pre-commit only |
-| `depth` <= 3 (when declared) | — | — | ✅ | PreToolUse only |
-| `ancestry` cycle (when declared) | — | — | ✅ | PreToolUse only |
+| `ancestry` length <= 3; `depth` must equal it (when declared) | — | — | ✅ | Guard only |
+| `ancestry` cycle (when declared) | — | — | ✅ | Guard only |
 
-**Reality:** The `protocol-validator` skill is authoritative for *completeness* (all required fields); `.githooks/pre-commit` is a fast gate for committed files; `PreToolUse` guard is the gate for in-session Agent-tool spawns. An agent may also *self-enforce* its role's `spawn` recursion limits (depth, fan-out) before issuing a DELEGATE to a sub-agent — that is not a validator responsibility.
+**Reality:** The `protocol-validator` skill is authoritative for *completeness* (all required fields); `.githooks/pre-commit` is a fast gate for committed files; the pre-spawn guard, where a harness installs one, is the gate for in-session spawns. An agent may also *self-enforce* its role's `spawn` recursion limits (depth, fan-out) before issuing a DELEGATE to a sub-agent — that is not a validator responsibility.
 
-**Recursion limits are partially enforced.** The `PreToolUse` guard
-(`renderer/scripts/claude-delegate-guard.py`) *does* reject a DELEGATE whose `depth`
-exceeds 3, and *does* reject one whose `agent` already appears in its own `ancestry`
-(a cycle). Two caveats bound that:
-
-- `depth` and `ancestry` are **optional** extension fields. A DELEGATE that omits them
-  is not checked — the guard cannot infer a depth it was not told.
-- The guard sees **one spawn at a time**, so it cannot count concurrent fan-out. The
-  max-fan-out-5 limit is not mechanically enforced anywhere.
+**Recursion limits are partially enforced** on a harness that installs the pre-spawn
+guard. What the guard checks, and what it cannot see, is defined once in [src/AGENTS.md > Recursion Limits](../src/AGENTS.md#recursion-limits).
 
 No layer enforces the *calling* agent's role or fan-out count; those remain the spawning
 agent's own judgment call per [Recursion Limits](../src/AGENTS.md#recursion-limits) in
-`src/AGENTS.md`. The guard is Claude-harness-specific; no other harness has an
-equivalent.
+`src/AGENTS.md`. Which harnesses install a pre-spawn guard is listed in the
+[Harness Mechanism Map](guides/harness-setup/README.md#harness-mechanism-map).
 
 There is no filesystem queue and no `enqueue()` gateway — the durable audit record for
 protocol validity is the harness session transcript itself (every DELEGATE as a spawn
@@ -316,7 +308,7 @@ Limits](../src/AGENTS.md#recursion-limits); this document does not duplicate the
 the multi-agent niche's loudest pain point. The protocol already carries the fields
 needed to guard against it. This section documents a **convention on existing fields**,
 not a wire-format change — `docs/specs/protocol-core-v1.0.yaml` and
-`renderer/scripts/claude-delegate-guard.py` are untouched by it, exactly like the
+any harness pre-spawn guard are untouched by it, exactly like the
 [Recursion Limits](../src/AGENTS.md#recursion-limits) it mirrors.
 
 **The fields:** DELEGATE's `tokens_estimate` (int) and `budget` (USD float) — both
@@ -331,7 +323,7 @@ to schema validation):
    the Cost Target Distribution comparison in [§7](#7-handback-cost-rollup) below).
 2. Before spawning, if the operator has configured a session/task budget ceiling and a
    DELEGATE's `tokens_estimate`/`budget` would exceed it, the Orchestrator MUST NOT
-   spawn. Instead — without ever calling the Agent/Task tool — it synthesizes a HANDBACK
+   spawn. Instead — without ever spawning — it synthesizes a HANDBACK
    directly:
    ```yaml
    handoff_type: HANDBACK
@@ -351,7 +343,7 @@ to schema validation):
    (see [§7](#7-handback-cost-rollup)).
 
 **Enforcement: orchestrator-self + QE review.** Nothing mechanical enforces this — no
-schema change, no `PreToolUse` hook change, no new validator layer in
+schema change, no pre-spawn guard change, no new validator layer in
 [§3](#3-validation--enforcement). Like the recursion/fan-out limits it sits beside, this
 is the spawning agent's own judgment call, checked opportunistically when Quality
 Engineer reviews a session's DELEGATE/HANDBACK trail — not a runtime gate. Stating
@@ -482,8 +474,6 @@ as the rest of §7: it reports, it never gates.
   Guardrail, ACK Protocol
 - [`docs/specs/protocol-core-v1.0.yaml`](specs/protocol-core-v1.0.yaml) — the
   normative schema
-- [`docs/CORE-PROTOCOL-QUICKSTART.md`](CORE-PROTOCOL-QUICKSTART.md) — a 30-minute
-  quickstart covering only the core-field subset
 - [`scripts/handback_rollup.py`](../scripts/handback_rollup.py) — the HANDBACK cost
   rollup script (§7), including its `--events` JSONL mode (§7a)
 - [`scripts/audit_append.py`](../scripts/audit_append.py) — the clause-7 audit event

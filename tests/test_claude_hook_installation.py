@@ -36,6 +36,15 @@ def _settings(dest):
     return json.loads(settings_file.read_text())
 
 
+# Every tool that can hand a prompt to a framework specialist: Task/Agent
+# spawn one, SendMessage resumes one.
+GUARDED_TOOLS = {"Task", "Agent", "SendMessage"}
+
+
+def _is_guard_matcher(matcher):
+    return set(matcher.split("|")) == GUARDED_TOOLS
+
+
 def _our_pretooluse_entries(settings):
     entries = settings.get("hooks", {}).get("PreToolUse", [])
     return [
@@ -76,7 +85,29 @@ class TestFreshInstall:
         settings = _settings(tmp_path)
         entries = _our_pretooluse_entries(settings)
         assert len(entries) == 1
-        assert entries[0]["matcher"] in ("Task|Agent", "Agent|Task")
+        assert _is_guard_matcher(entries[0]["matcher"])
+
+    def test_matcher_covers_sendmessage(self, tmp_path):
+        """SendMessage resumes an existing sub-agent, so it is a delegation
+        channel too. A matcher of only Task|Agent lets a continuation skip
+        the guard entirely."""
+        _render(tmp_path)
+        entries = _our_pretooluse_entries(_settings(tmp_path))
+        assert len(entries) == 1
+        assert set(entries[0]["matcher"].split("|")) == GUARDED_TOOLS
+
+    def test_reinstall_upgrades_a_stale_matcher(self, tmp_path):
+        """An install made before SendMessage was guarded has the old
+        matcher on disk; re-rendering must widen it in place."""
+        _render(tmp_path)
+        settings_file = tmp_path / "settings.json"
+        settings = _settings(tmp_path)
+        _our_pretooluse_entries(settings)[0]["matcher"] = "Task|Agent"
+        settings_file.write_text(json.dumps(settings))
+        _render(tmp_path)
+        entries = _our_pretooluse_entries(_settings(tmp_path))
+        assert len(entries) == 1
+        assert set(entries[0]["matcher"].split("|")) == GUARDED_TOOLS
 
     def test_install_hook_points_at_absolute_installed_path(self, tmp_path):
         _render(tmp_path)
@@ -129,7 +160,7 @@ class TestNonDestructiveMerge:
         entries = settings["hooks"]["PreToolUse"]
         matchers = {e["matcher"] for e in entries}
         assert "Bash" in matchers
-        assert any(m in ("Task|Agent", "Agent|Task") for m in matchers)
+        assert any(_is_guard_matcher(m) for m in matchers)
         assert len(entries) == 2
 
     def test_preserves_foreign_hook_event_names(self, tmp_path):

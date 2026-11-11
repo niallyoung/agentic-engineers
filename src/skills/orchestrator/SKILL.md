@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Direct sub-agent spawn DELEGATE/HANDBACK lifecycle for the entry-point Orchestrator role: constructs a DELEGATE, spawns the target specialist directly via the harness's Agent/Task tool, receives the HANDBACK synchronously as that call's result, and applies the routing decision tree. The harness session transcript is the durable audit record. Never implements; never polls."
+description: "Direct sub-agent spawn DELEGATE/HANDBACK lifecycle for the entry-point Orchestrator role: constructs a DELEGATE, spawns the target specialist directly via the harness's sub-agent spawn mechanism, receives the HANDBACK synchronously as that call's result, and applies the routing decision tree. The harness session transcript is the durable audit record. Never implements; never polls."
 license: Proprietary
 compatibility: agentic-engineers framework v5.10+
 metadata:
@@ -26,8 +26,8 @@ as the sub-agent prompt, receive the HANDBACK as the spawn result.
 1. **Construct** a DELEGATE block from the incoming request or prior HANDBACK output
 2. **Route** — apply the routing decision tree below to pick the target role
 3. **Spawn directly** — pass the DELEGATE block as the target agent's prompt via the
-   harness's Agent/Task tool; fan out up to 5 concurrent spawns for independent work.
-   Before a *cold* spawn, check (e.g. `ListAgents`) for a still-live or recently-completed
+   harness's sub-agent spawn; fan out up to 5 concurrent spawns for independent work.
+   Before a *cold* spawn, check for a still-live or recently-completed
    sub-agent that already holds the context this task needs; if the work builds directly
    on what it just did, continue that agent instead (see **Sub-Agent Reuse** below)
 4. **Receive** the HANDBACK synchronously, in-context, as that spawn call's result — the
@@ -58,12 +58,13 @@ Engineer MUST be a fresh agent), or when the prior context is stale or would ove
 
 A continuation is still a full canonical DELEGATE with a new `task_id`, still returns a
 HANDBACK, does **not** add a depth hop (same node, same `ancestry`), still counts toward
-the max-5 fan-out while in flight, and still emits the clause-7 audit events. On Claude
-Code, continue via `SendMessage` to the agent's id/name; on Codex via `resume`/`fork`;
-OpenCode and Copilot have no first-class primitive, so fall back to a fresh spawn with a
-context-rich DELEGATE. Full rules and the per-harness table: see `src/AGENTS.md` §
-Sub-Agent Reuse (Agent Continuation) — this is a condensed pointer, not a second source
-of truth.
+the max-5 fan-out while in flight, and still emits the clause-7 audit events. Continue
+the sub-agent where the harness supports it; otherwise spawn fresh with a context-rich
+DELEGATE. Full rules: `src/AGENTS.md` § Sub-Agent Reuse (Agent Continuation); the
+per-harness mechanism table is in the framework repository only
+(`docs/guides/harness-setup/README.md` § Harness Mechanism Map; not installed). If you
+cannot tell whether your harness supports continuation, spawn fresh. This is a condensed
+pointer, not a second source of truth.
 
 ## Re-Prioritization
 
@@ -73,7 +74,7 @@ primary item gets handled first and the rest deferred — reprioritize by reorde
 tracking mechanism, standing scheduler agent, or durable queue: `TODO.md` is already the
 framework's sole source of truth for outstanding work, so re-sorting it *is*
 reprioritizing. When the next unit of work is a return to something abandoned-but-live
-rather than a fresh start, continue it via `SendMessage`/`ListAgents` (see **Sub-Agent
+rather than a fresh start, continue it where the harness supports it (see **Sub-Agent
 Reuse** above) instead of cold-spawning — the same reuse convention, applied on the
 return path.
 
@@ -88,8 +89,9 @@ DELEGATE to the spawning parent, inclusive.
 - **Max fan-out: 5** concurrent sub-agent spawns per parent. A 6th independent task
   waits for one of the first 5 to resolve, or is grouped into a consolidating DELEGATE.
 - **Cycle detection:** before spawning, check whether the target role already appears
-  in `ancestry`. If it does, refuse the spawn. No runtime code enforces this today —
-  it is a self-enforced convention (see `src/AGENTS.md` § Recursion Limits).
+  in `ancestry`. If it does, refuse the spawn. This is a self-enforced convention; a
+  harness pre-spawn guard, where installed, checks only the `ancestry` a DELEGATE
+  declares (see `src/AGENTS.md` § Recursion Limits).
 
 When a limit is hit: stop, do not invent a workaround, and return `status: blocked`
 (procedural — resolvable by restructuring the fan-out) or `status: escalate` (a
@@ -99,7 +101,7 @@ genuine cycle or a task that structurally needs more than 3 hops).
 
 Set `tokens_estimate` and `budget` on every DELEGATE issued. Before spawning, check them
 against any operator-configured session/task budget ceiling. If spawning would exceed
-it, do not call the Agent/Task tool at all — synthesize a `status: blocked` HANDBACK
+it, do not spawn at all — synthesize a `status: blocked` HANDBACK
 instead, naming the limit hit (e.g. `error: "budget: estimated 0.35 exceeds limit
 0.20"`), exactly like the recursion/fan-out refusal above. This is a convention on
 existing DELEGATE/HANDBACK fields, not a schema or hook change (see `docs/PROTOCOL.md` §
@@ -172,8 +174,7 @@ this is a condensed pointer, not a second source of truth.
 | `escalate` | Read the embedded `escalation` block; re-delegate at `to_role`, appending own role to `ancestry` |
 
 Convention, not automatic: the Orchestrator MAY additionally spawn `quality-engineer`
-to validate a `success` HANDBACK against its `success_criteria`, and MAY spawn
-`model-engineer` afterward to analyze cost/quality metrics. Neither runs unless this
+to validate a `success` HANDBACK against its `success_criteria`. It runs only when this
 skill's user issues that DELEGATE.
 
 ## Boundaries
@@ -188,8 +189,3 @@ Orchestrator MUST NOT:
 
 No pending DELEGATEs and no outstanding sub-agent spawns awaiting a HANDBACK →
 PAUSE. Does not invent new work. This is reduced autonomy by design.
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in HANDBACK when this skill significantly affects your task.

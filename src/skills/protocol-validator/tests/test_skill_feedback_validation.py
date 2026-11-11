@@ -49,7 +49,7 @@ class TestSkillFeedbackValidation:
         handback = valid_handback_base.copy()
         handback['skill_feedback'] = [
             {
-                'skill_name': 'spec-validator',
+                'skill_name': 'orchestrator',
                 'effectiveness_score': 0.85,
                 'clarity_score': 0.90,
                 'coverage_gaps': ['Scenario A not covered'],
@@ -90,7 +90,7 @@ class TestSkillFeedbackValidation:
         handback = valid_handback_base.copy()
         handback['skill_feedback'] = [
             {
-                'skill_name': 'spec-validator',
+                'skill_name': 'orchestrator',
                 'effectiveness_score': 1.5,  # Out of range: should be 0.0-1.0
             }
         ]
@@ -108,7 +108,7 @@ class TestSkillFeedbackValidation:
         handback = valid_handback_base.copy()
         handback['skill_feedback'] = [
             {
-                'skill_name': 'spec-validator',
+                'skill_name': 'orchestrator',
                 'effectiveness_score': 0.85,
             },
             {

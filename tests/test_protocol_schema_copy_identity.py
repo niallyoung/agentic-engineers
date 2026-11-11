@@ -38,3 +38,15 @@ def test_skill_local_schema_copy_is_byte_identical_to_canonical():
         "cp docs/specs/protocol-core-v1.0.yaml "
         "src/skills/protocol-validator/schema/protocol-core-v1.0.yaml"
     )
+
+
+def test_schema_optional_fields_and_effort_enum():
+    import yaml
+
+    schema = yaml.safe_load(CANONICAL.read_text())
+    assert "spec_version" not in schema["handback"]["required"]
+    assert "spec_version" in schema["handback"]["extensions"]
+    assert "skill" not in schema["delegate"]["required"]
+    assert "skill" in schema["delegate"]["extensions"]
+    assert schema["definitions"]["effort"]["enum"] == ["low", "medium", "high", "max"]
+    assert "model-engineer" not in schema["definitions"]["agent"]["enum"]

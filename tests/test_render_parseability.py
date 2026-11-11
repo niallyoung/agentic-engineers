@@ -237,8 +237,8 @@ class TestCopilotFrontmatterSingleDocument:
         assert agents_dir.is_dir(), "dist/copilot/agents/ does not exist — run make render-all"
 
         agent_files = sorted(agents_dir.glob("*.agent.md"))
-        assert len(agent_files) == 8, (
-            f"expected 8 rendered copilot agents, found {len(agent_files)}: "
+        assert len(agent_files) == 7, (
+            f"expected 7 rendered copilot agents, found {len(agent_files)}: "
             f"{[f.name for f in agent_files]}"
         )
 

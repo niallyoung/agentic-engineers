@@ -72,7 +72,6 @@ definitions:
       - principal-engineer
       - security-engineer
       - quality-engineer
-      - model-engineer
 
   task_id:
     description: Kebab-case identifier, 3-50 chars total.
@@ -311,7 +310,6 @@ handback:
     - status
     - output
     - metrics
-    - spec_version
     - handoff_type
 
   # --- Required core fields (strictly enforced) ---------------------------
@@ -320,10 +318,6 @@ handback:
     task_id:
       $ref: "#/definitions/task_id"
       description: Must match the originating DELEGATE's task_id.
-
-    spec_version:
-      type: string
-      description: Protocol spec version used when the task executed.
 
     handoff_type:
       type: string
@@ -351,6 +345,13 @@ handback:
   # --- Optional extension fields (loosely validated, forward-compatible) ---
   extensions:
 
+    spec_version:
+      type: string
+      description: >
+        Optional protocol spec version used when the task executed. Previously
+        listed as required, but no enforcer checks it and no live HANDBACK sends
+        it; it is now an optional extension, matching the validator.
+
     escalations:
       type: integer
       minimum: 0
@@ -359,7 +360,7 @@ handback:
     model_assessment:
       type: string
       description: >
-        Quality/Model Engineer judgement on whether the assigned model was
+        Quality Engineer judgement on whether the assigned model was
         appropriate (e.g. haiku_suitable | sonnet_would_be_better | opus_required).
 
     confidence:

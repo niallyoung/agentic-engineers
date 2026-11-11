@@ -34,7 +34,7 @@ def valid_delegate():
     """A fully valid DELEGATE."""
     return {
         'task_id': 'feature-x-001',
-        'skill': 'spec-validator',
+        'skill': 'orchestrator',
         'agent': 'senior-engineer',
         'scope': 'Implement feature X with comprehensive testing and documentation across all modules and components for production readiness',
         'success_criteria': [
@@ -154,7 +154,7 @@ class TestDelegateCoreFieIds:
         """Test all valid agent values"""
         valid_agents = [
             'orchestrator', 'engineer', 'senior-engineer', 'lead-engineer',
-            'principal-engineer', 'security-engineer', 'quality-engineer', 'model-engineer'
+            'principal-engineer', 'security-engineer', 'quality-engineer'
         ]
         for agent in valid_agents:
             valid_delegate['agent'] = agent
@@ -431,7 +431,7 @@ class TestBackwardCompatibility:
         # Typical Phase 3 format
         delegate = {
             'task_id': 'implement-auth-001',
-            'skill': 'spec-validator',
+            'skill': 'orchestrator',
             'agent': 'senior-engineer',
             'scope': 'Implement JWT authentication with comprehensive refresh tokens and role-based access control for all API endpoints',
             'success_criteria': [
@@ -460,7 +460,7 @@ class TestBackwardCompatibility:
         """Delegate from future Phase with unknown field should still validate"""
         delegate = {
             'task_id': 'future-task-001',
-            'skill': 'spec-validator',
+            'skill': 'orchestrator',
             'agent': 'engineer',
             'scope': 'Do something meaningful and important in the future with new capabilities and features for system improvement',
             'success_criteria': ['Success criterion'],

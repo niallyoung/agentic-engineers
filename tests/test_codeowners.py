@@ -1,8 +1,7 @@
 """tests/test_codeowners.py - .github/CODEOWNERS must cover the governance-critical paths.
 
-Pin-change approval evidence (the Model-Pin-Approved-By trailer) is unauthenticated text;
-identity binding comes from CODEOWNERS plus GitHub branch protection (GitHub-side, not
-verifiable here). This test only guards the repository half: the file exists, covers
+Governance-critical paths get owner review via CODEOWNERS plus GitHub branch protection
+(GitHub-side, not verifiable here). This test only guards the repository half: the file exists, covers
 every governance path with a pattern that matches a real path, and names one well-formed owner.
 """
 
@@ -15,7 +14,9 @@ CODEOWNERS = REPO_ROOT / ".github" / "CODEOWNERS"
 REQUIRED_PATHS = [
     "/config/models.yaml",
     "/scripts/models.py",
-    "/scripts/check_pin_trailers.py",
+    "/scripts/check_pin_history.py",
+    "/tests/test_pin_policy_fingerprint.py",
+    "/tests/test_models_registry.py",
     "/.githooks/",
     "/.github/workflows/",
     "/docs/SPEC.md",
@@ -25,12 +26,17 @@ REQUIRED_PATHS = [
     "/renderer/validate_agents.py",
     "/Makefile",
     "/tests/test_model_pin_hooks.py",
-    "/tests/test_check_pin_trailers.py",
     "/tests/test_codeowners.py",
     "/.claude/settings.json",
     "/.claude/hooks/session-start.sh",
     "/config/orchestration.yaml",
     "/src/agents/",
+    "/src/AGENTS.md",
+    "/src/skills/",
+    "/docs/specs/protocol-core-v1.0.yaml",
+    "/.agents_verification_sha",
+    "/scripts/audit_append.py",
+    "/.github/CODEOWNERS",
 ]
 HANDLE = re.compile(r"^@[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 

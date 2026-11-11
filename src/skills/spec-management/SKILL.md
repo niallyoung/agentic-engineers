@@ -24,9 +24,8 @@ approval → changelog → audit trail — and names who is authorized to run th
 Only **Principal Engineer**, **Security Engineer**, and **Lead Engineer** may propose or
 approve a SPEC.md change; every other agent treats SPEC.md as read-only.
 
-This is the mirror image of `spec-validator` (which is Python and CI-blocking):
-spec-validator checks that *implementation* complies with the current SPEC.md;
-spec-management governs changes *to* SPEC.md itself.
+It governs changes *to* SPEC.md itself; whether implementation complies with the
+current SPEC.md is a matter for code review and the CI/hook gates.
 
 ## The Protocol
 
@@ -147,11 +146,11 @@ changelog entry for the reverting proposal must reference the change_id it rever
 
 Changing a *value* in `config/models.yaml` — adding a model, repointing a role's pinned
 model, changing effort, or editing a fallback chain — is a **Model Pin Change**, governed by
-the "Model Pin Change" process in the LOCKED "Model Naming & Harness Compatibility" section
+the "Model Pin Change" process in the "Model Naming & Harness Compatibility" section
 of `docs/SPEC.md`, and is OUTSIDE this protocol: no `SPEC-YYYY-NNN` proposal, no peer
 approval chain, no SPEC.md changelog entry. Its audit trail is the registry's `pin_history`
-plus a `Model-Pin-Approved-By:` commit trailer. The carve-out holds only while the change
-satisfies the LOCKED invariants (I1–I7). Anything that alters an invariant (ID format, the
+(its `approval` field records who directed the change; no commit trailer is required). The carve-out holds only while the change
+satisfies the invariants (I1–I7). Anything that alters an invariant (ID format, the
 single-source rule, exact-pin/no-floating-alias, installer ownership of user-chosen models,
 fallback surfacing, validator scope, the Security Engineer's defensive-only scope and fallback
 policy) or adds a model *family* is still a SPEC amendment and
@@ -166,11 +165,5 @@ a script enforcing it at runtime. A prior version of this skill had ~2,900 LOC o
 Python (`spec_manager.py`, `authorizer.py`, `impact_analyzer.py`, `audit_logger.py`,
 etc.) implementing exactly this workflow in code; it was never wired into any
 CI gate or invoked by the runtime protocol validators, so it added maintenance
-surface without adding enforcement. The actual enforcement mechanisms are:
-`spec-validator` (CI-blocking, checks implementation against SPEC.md) and human/agent
-review discipline on every PR that touches `docs/SPEC.md`.
-
-## Self-Improvement
-
-See [skill-improvement-feedback](../skill-improvement-feedback/SKILL.md) for feedback pattern.
-Include `skill_feedback` in HANDBACK when this skill significantly affects your task.
+surface without adding enforcement. The actual enforcement mechanism is
+human/agent review discipline on every PR that touches `docs/SPEC.md`.

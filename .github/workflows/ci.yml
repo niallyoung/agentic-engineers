@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history: the model-pin approval scan walks origin/main..HEAD.
+          # Full history: the advisory pin_history audit walks origin/main..HEAD.
           fetch-depth: 0
 
       - name: Preserve symlinks
@@ -74,16 +74,17 @@ jobs:
           python3 scripts/models.py sync --check
           echo "✅ Model registry is current and consistent"
 
-      - name: Model Pin Approval Scan
-        # Backstop for the commit-msg and pre-push hooks (which `git commit
-        # --no-verify`, a rebase or a merge can bypass): every commit in
-        # origin/main..HEAD, merge commits included, that changes a
-        # roles.<role>.model pin in config/models.yaml must carry a non-empty
-        # Model-Pin-Approved-By trailer (docs/SPEC.md, Model Pin Change). All
-        # logic lives in scripts/check_pin_trailers.py (one scanner shared with
-        # .githooks/pre-push; tests/test_check_pin_trailers.py). Commit messages
-        # are read by python via git, never interpolated with GitHub expressions;
-        # only short SHAs and role names are printed.
+      - name: Model Pin History Audit (advisory)
+        # Advisory audit (never fails the build, including when the scanner cannot run:
+        # exit 2, an environment problem such as missing PyYAML, is turned into a
+        # ::warning::, matching .githooks/pre-push): warns when a commit in
+        # origin/main..HEAD, merge commits included, rewrites existing pin_history
+        # entries in config/models.yaml (an append-only audit record). Pin changes
+        # themselves need no approval; strict registry consistency is the "Model
+        # Registry Check" step. All logic lives in scripts/check_pin_history.py
+        # (shared with .githooks/pre-push; tests/test_check_pin_history.py). Commit
+        # messages are never interpolated with GitHub expressions; only short SHAs
+        # are printed.
         #
         # On a push, github.event.before is the base, so a direct push to the
         # default branch (where origin/main..HEAD is empty) is scanned over the
@@ -100,7 +101,13 @@ jobs:
             echo "::notice::pushed base not present in this clone; scanning origin/main..HEAD instead"
             base=origin/main
           fi
-          python3 scripts/check_pin_trailers.py --base "$base" --head HEAD
+          rc=0
+          python3 scripts/check_pin_history.py --base "$base" --head HEAD || rc=$?
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning::pin_history audit could not run (scanner exit 2: environment problem); skipped"
+          elif [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
 
       # ── Skill/render gates ───────────────────────────────────────────────
 
@@ -114,11 +121,6 @@ jobs:
         run: |
           python renderer/validate_skills.py
           echo "::notice::Run 'python renderer/validate_skills.py --strict' locally to see warnings"
-
-      - name: "Gate 2: Skill template conformance report"
-        # Generate a non-failing annotated report for the PR review audit trail.
-        # The report is emitted as a GitHub step summary for visibility.
-        run: python renderer/validate_skills.py --json | python scripts/format_skill_report.py >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: "Gate 3: Orphaned bytecode check"
         # Folded in from the former validate-sources.yml (2026-08-13 infra
@@ -168,25 +170,6 @@ jobs:
         # Update baselines only via SPEC change + QE sign-off (see docs/REGRESSION-GATE-POLICY.md).
         run: python renderer/scripts/check_test_regression.py
 
-      - name: "Gate 5 (stub): AAIF AGENTS.md v1.0 conformance"
-        # AAIF's public roadmap lists "AGENTS.md v1.0 — first stable behavioral
-        # spec" with planned goose-based validation tooling, but as of this
-        # writing (2026-08-14) agentsmd/agents.md has never cut a release
-        # (github.com/agentsmd/agents.md/releases is empty) and no validator
-        # CLI has shipped — see docs/RENDERING.md "AGENTS.md v1.0 readiness"
-        # for citations. This step is a forward-looking stub only: it probes
-        # for a `goose` binary with an `agents-md validate` subcommand and
-        # runs it against src/AGENTS.md if found, else prints a dated skip
-        # notice. It must NEVER fail the build while the tooling is
-        # unreleased — flip to a hard gate once AAIF ships v1.0 tooling.
-        run: |
-          if command -v goose >/dev/null 2>&1 && goose agents-md validate --help >/dev/null 2>&1; then
-            echo "::notice::goose AGENTS.md validator detected — running against src/AGENTS.md"
-            goose agents-md validate src/AGENTS.md || echo "::warning::AAIF validator reported issues (non-blocking pending v1.0 GA)"
-          else
-            echo "::notice::[2026-08-14] AAIF AGENTS.md v1.0 validation tooling not yet released (no agentsmd/agents.md GitHub release, no goose validator subcommand found). Skipping — see AAIF roadmap at https://aaif.io and docs/RENDERING.md. This step will activate automatically once a 'goose' binary exposing 'agents-md validate' is on PATH."
-          fi
-
       - name: Verify
         run: make verify
 
@@ -204,7 +187,7 @@ jobs:
 
       - name: Create semantic version tag
         id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
@@ -213,7 +196,7 @@ jobs:
           custom_release_rules: "feat:minor:✨ Features,fix:patch:🐛 Bug Fixes,docs:patch:📚 Documentation,chore:patch:🔧 Chores,refactor:patch:♻️ Refactoring,perf:patch:⚡ Performance,security:patch:🔒 Security"
 
       - name: Create GitHub Release
-        uses: ncipollo/release-action@v1.14.0
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5 # v1.14.0
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: ${{ steps.tag_version.outputs.new_tag }}

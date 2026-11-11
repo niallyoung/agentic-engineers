@@ -3,18 +3,17 @@
 #
 # Enforces (staged files only, fast, commit-time-valuable checks):
 #   1. Syntax validation (Python -m py_compile, bash -n, optional shellcheck)
-#   2. Secrets detection (API keys, AWS keys, literal-valued sensitive env vars)
+#   2. Secrets detection (API keys, AWS keys, Anthropic/GitHub tokens, client_secret
+#      assignments, PEM private-key headers, literal-valued sensitive env vars)
 #   3. File permissions (no executable bits on .md/.yaml/.txt/.json/.jsonc)
 #
 # Additional validations:
-#   - SPEC constraints (no external scripts/cron in orchestration/ paths)
 #   - Agent frontmatter consistency (model/effort match src/AGENTS.md)
 #   - YAML/JSON well-formedness
 #   - opencode.jsonc schema validation (when staged)
 #   - No --no-verify / SKIP_HOOKS=1 bypass markers in committed code (warning only)
-#   - Source file integrity (no orphaned bytecode, no missing test sources)
+#   - No staged .pyc bytecode
 #   - Model registry compliance (scripts/models.py check / is-known)
-#   - DELEGATE/HANDBACK protocol validation
 #
 # 2026-08-13 infra consolidation: dropped the former pylint/mypy/contract-
 # validation checks (all three were optional and warn-only — they could never
@@ -22,7 +21,7 @@
 # duplicate secret-detection block. See inline NOTEs at each removal site.
 #
 # Install: git config core.hooksPath .githooks
-# Bypass (emergency only): SKIP_HOOKS=1 git commit
+# Bypass (emergency only): SKIP_HOOKS=1 git commit  (the one documented bypass variable)
 #
 # Performance targets:
 #   - Pre-commit < 3 seconds for typical changes
@@ -31,10 +30,9 @@
 
 set -euo pipefail
 
-# Allow emergency bypass with explicit env var (must be documented in commit msg)
-# Also support GIT_SKIP_HOOKS for consistency with pre-push
-if [ "${SKIP_HOOKS:-}" = "1" ] || [ "${GIT_SKIP_HOOKS:-}" = "1" ]; then
-  echo "⚠️  SKIP_HOOKS=1 or GIT_SKIP_HOOKS=1 set — bypassing pre-commit enforcement (emergency only)"
+# The one documented emergency bypass (document the reason in the commit message).
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "⚠️  SKIP_HOOKS=1 set — bypassing pre-commit enforcement (emergency only)"
   exit 0
 fi
 
@@ -115,39 +113,71 @@ echo "🔍 CHECK 2: Secrets detection..."
 
 SECRETS_ERRORS=0
 
-# Scan staged files for common secret patterns
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+# Scan the STAGED content of every added/copied/modified/renamed file.
+#   - --diff-filter=ACMR: renamed files (R) carry their content into the commit and
+#     must be scanned like any other (ACM missed them).
+#   - -z / read -d '': filenames are NUL-separated, so names with spaces (or other
+#     odd characters) are scanned as one file instead of being word-split into
+#     non-existent paths that silently skip the check.
+#   - Binary files are skipped by content (grep -I), not by file(1) wording: file(1)
+#     reports executable shell scripts as "executable", which used to exempt them.
+SECRET_TMP=$(mktemp)
+# Optional opening quote, single or double. (The old '["\x27]' form never matched a
+# single quote: inside a bracket expression \x27 is four literal characters.)
+Q="[\"']?"
+secret_hit() {   # secret_hit <file> <message>
+  fail "$2 in $1"
+  SECRETS_ERRORS=$((SECRETS_ERRORS + 1))
+}
 
-for f in $STAGED_FILES; do
-  [ -f "$f" ] || continue
-  # Skip binary files
-  if file "$f" 2>/dev/null | grep -qE '(binary|image|executable)'; then continue; fi
+while IFS= read -r -d '' f; do
+  [ -n "$f" ] || continue
+  git show ":$f" > "$SECRET_TMP" 2>/dev/null || continue   # e.g. submodule entry
+  grep -Iq . "$SECRET_TMP" 2>/dev/null || continue         # binary or empty
 
-  # Check for common secret patterns
-  if git show ":$f" 2>/dev/null | grep -qiE '(api_key|secret_key|private_key|password|token)\s*[:=]\s*["\x27]?[A-Za-z0-9/+]{20,}'; then
-    fail "Possible secret detected in $f — review before committing"
-    SECRETS_ERRORS=$((SECRETS_ERRORS + 1))
+  # Generic: credential-ish name assigned a long literal.
+  if grep -qiE "(api_key|secret_key|private_key|password|token)[[:space:]]*[:=][[:space:]]*${Q}[A-Za-z0-9/+]{20,}" "$SECRET_TMP"; then
+    secret_hit "$f" "Possible secret detected (review before committing)"
   fi
 
-  # Check for AWS keys
-  if git show ":$f" 2>/dev/null | grep -qE 'AKIA[0-9A-Z]{16}'; then
-    fail "AWS access key pattern detected in $f"
-    SECRETS_ERRORS=$((SECRETS_ERRORS + 1))
+  # AWS access key IDs.
+  if grep -qE 'AKIA[0-9A-Z]{16}' "$SECRET_TMP"; then
+    secret_hit "$f" "AWS access key pattern detected"
   fi
 
-  # Check for explicit secret markers (env vars assigned an inline literal value).
+  # Anthropic API keys (sk-ant-...) and GitHub tokens (ghp_/gho_/ghu_/ghs_/ghr_,
+  # and fine-grained github_pat_...).
+  if grep -qE 'sk-ant-[A-Za-z0-9_-]{20,}' "$SECRET_TMP"; then
+    secret_hit "$f" "Anthropic API key pattern (sk-ant-) detected"
+  fi
+  if grep -qE '(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})' "$SECRET_TMP"; then
+    secret_hit "$f" "GitHub token pattern detected"
+  fi
+
+  # PEM private-key headers (RSA/EC/DSA/OPENSSH/ENCRYPTED/PKCS#8 ...).
+  if grep -qE -e '-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----' "$SECRET_TMP"; then
+    secret_hit "$f" "PEM private key header detected"
+  fi
+
+  # client_secret assigned a literal (also JSON "client_secret": "..."). A reference
+  # such as `${{ secrets.X }}` or os.environ[...] is the SAFE pattern: not flagged.
+  if grep -vE '(secrets\.|env\.|vars\.|\$\{|environ|getenv|auth_env|setenv|delenv)' "$SECRET_TMP" \
+       | grep -qiE "client_?secret${Q}[[:space:]]*[:=][[:space:]]*${Q}[A-Za-z0-9/_+-]{16,}"; then
+    secret_hit "$f" "client_secret assigned a literal value"
+  fi
+
+  # Explicit secret markers (env vars assigned an inline literal value).
   # NOTE: We only flag an *assignment to a literal* (e.g. GITHUB_TOKEN="ghp_...").
   # A bare reference is the SAFE pattern and must NOT be flagged — e.g.
   # `${{ secrets.GITHUB_TOKEN }}`, `auth_env: GITHUB_TOKEN`, `os.environ["GITHUB_TOKEN"]`,
   # or documentation mentioning the variable name. Matching the bare name produced
   # false positives on safe CI config and on the token-in-gitconfig security docs.
-  if git show ":$f" 2>/dev/null \
-       | grep -vE '(secrets\.|env\.|vars\.|\$\{|environ|getenv|auth_env|setenv|delenv)' \
-       | grep -qE '(OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN|AWS_SECRET[A-Z_]*)[[:space:]]*[:=][[:space:]]*["\x27]?[A-Za-z0-9/_+-]{16,}'; then
-    fail "Sensitive environment variable assigned a literal value in $f — use .env or a secrets manager"
-    SECRETS_ERRORS=$((SECRETS_ERRORS + 1))
+  if grep -vE '(secrets\.|env\.|vars\.|\$\{|environ|getenv|auth_env|setenv|delenv)' "$SECRET_TMP" \
+       | grep -qE "(OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN|AWS_SECRET[A-Z_]*)[[:space:]]*[:=][[:space:]]*${Q}[A-Za-z0-9/_+-]{16,}"; then
+    secret_hit "$f" "Sensitive environment variable assigned a literal value (use .env or a secrets manager)"
   fi
-done
+done < <(git diff --cached --name-only -z --diff-filter=ACMR 2>/dev/null)
+rm -f "$SECRET_TMP"
 
 if [ "$SECRETS_ERRORS" -eq 0 ]; then
   echo "✅ Secrets detection passed"
@@ -192,14 +222,9 @@ fi
 echo ""
 echo "════════════════════════════════════════════════════════════════════════════════"
 echo ""
-# Exemption: renderer/scripts/ is the build-time installation path (allowed)
-if git diff --cached --name-only | grep -qE '^orchestration/scripts/.*\.(py|sh)$'; then
-  fail "VIOLATION: External scripts in orchestration/scripts/ — all work must flow through DELEGATE/HANDBACK protocol (docs/SPEC.md)"
-fi
-
-if git diff --cached --name-only | grep -qE '^orchestration/config/.*\.cron$'; then
-  fail "VIOLATION: Cron files in orchestration/config/ — use DELEGATE/HANDBACK direct sub-agent spawn instead (docs/SPEC.md)"
-fi
+# NOTE (hook cleanup): the orchestration/scripts/ and orchestration/config/*.cron
+# re-introduction checks that used to live here are removed. orchestration/ no
+# longer exists; the re-introduction guard is scripts/validate-spec-constraints.py.
 
 # ─── Section: Agent frontmatter consistency check ───────────────────────────
 # Validate that src/agents/*-agent.md frontmatter model/effort fields
@@ -212,15 +237,19 @@ validate_agent_frontmatter() {
 	local src_agents="$repo_root/src/agents"
 	local errors=0
 	
-	# Check bypass flag
-	if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
-		echo "⚠️  pre-commit: BYPASS_HOOK_VALIDATION=true — skipping frontmatter check" >&2
+	# Source shared lib for extract_fm, parse_agents_md, lookup_agent_metadata.
+	# Prefer the committing repo's copy, fall back to this hook's own repo. Test for
+	# the file first: sourcing a missing file aborts a `set -e` shell on some bash
+	# versions instead of reaching the `||` fallback, which silently killed the hook
+	# (and with it the model registry checks below) in repos without renderer/.
+	local render_lib="$repo_root/renderer/lib/render-lib.sh"
+	[ -f "$render_lib" ] || render_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/renderer/lib/render-lib.sh"
+	if [ ! -f "$render_lib" ]; then
+		echo "⚠️  pre-commit: render-lib.sh not found — skipping frontmatter check" >&2
 		return 0
 	fi
-	
-	# Source shared lib for extract_fm, parse_agents_md, lookup_agent_metadata
 	# shellcheck source=../renderer/lib/render-lib.sh
-	source "$repo_root/renderer/lib/render-lib.sh" 2>/dev/null || {
+	source "$render_lib" 2>/dev/null || {
 		echo "⚠️  pre-commit: could not source render-lib.sh — skipping frontmatter check" >&2
 		return 0
 	}
@@ -292,7 +321,7 @@ REPO_ROOT_HOOK=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 if [ -f "$REPO_ROOT_HOOK/src/AGENTS.md" ] && [ -d "$REPO_ROOT_HOOK/src/agents" ]; then
 	if ! validate_agent_frontmatter "$REPO_ROOT_HOOK"; then
 		echo "" >&2
-		echo "💡 To bypass this check (emergency only): BYPASS_HOOK_VALIDATION=true git commit" >&2
+		echo "💡 To bypass this check (emergency only): SKIP_HOOKS=1 git commit" >&2
 		ERRORS=$((ERRORS + 1))
 	fi
 fi
@@ -338,11 +367,9 @@ fi
 # the full schema validator (scripts/validate_opencode_config.py) and BLOCK the
 # commit on any ERROR finding. Warnings are surfaced but do not block.
 #
-# Bypass: BYPASS_HOOK_VALIDATION=true git commit  (emergency only)
+# Bypass: SKIP_HOOKS=1 git commit  (emergency only; skips the whole hook)
 if git diff --cached --name-only | grep -qE '^opencode\.jsonc$'; then
-  if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
-    warn "BYPASS_HOOK_VALIDATION=true — skipping opencode.jsonc validation"
-  elif [ -f "$REPO_ROOT_HOOK/scripts/validate_opencode_config.py" ] && command -v python3 >/dev/null 2>&1; then
+  if [ -f "$REPO_ROOT_HOOK/scripts/validate_opencode_config.py" ] && command -v python3 >/dev/null 2>&1; then
     echo "🔒 Validating staged opencode.jsonc…"
     # Validate the STAGED content (not the working tree) so amendments are caught.
     staged_tmp="$(mktemp -t opencode.jsonc.staged.XXXXXX)"
@@ -371,108 +398,22 @@ done
 # commented-out block that referenced a version-manager skill deleted well
 # before this repo's current skill roster.)
 
-# ─── Section: Orphaned Bytecode Check ──────────────────────────────────────
-# CRITICAL for file loss prevention: Reject commits with orphaned .pyc files
-# or .pyc without corresponding .py source.
-#
-# Background: Background agents create Python files. If .pyc exists without
-# .py source (or .pyc is newer than .py), pytest can load tests from bytecode
-# cache, masking the missing source files until tests fail later.
-#
-# Prevention: This check ensures:
-#   1. No .pyc files are ever staged for commit (bytecode = gitignore)
-#   2. No test sources from .pyc with missing .py
-#   3. Warn if .pyc newer than .py (indicates stale .py)
-#
+# ─── Section: Bytecode Check ───────────────────────────────────────────────────
+# Reject staged .pyc files (bytecode must never be version controlled).
+# The former timestamp-mismatch and "test without implementation" sub-checks are
+# removed: the first only ever warned, the second could only warn or fail on a
+# file that had just been staged and so always existed.
 
-echo ""
-echo "🔒 Validating source file integrity..."
-
-SOURCE_ERRORS=0
-SOURCE_WARNINGS=0
-
-# Check 1: No .pyc files staged (bytecode should NEVER be committed)
-if git diff --cached --name-only | grep -qE '\.pyc$'; then
-    STAGED_PYC=$(git diff --cached --name-only | grep '\.pyc$' || true)
-    for f in $STAGED_PYC; do
+STAGED_PYC=$(git diff --cached --name-only | grep '\.pyc$' || true)
+if [ -n "$STAGED_PYC" ]; then
+    echo ""
+    while IFS= read -r f; do
         fail "Staged .pyc file detected (bytecode must not be version controlled): $f"
-        fail "  Fix: git reset HEAD $f && echo '*.pyc' >> .gitignore"
-        SOURCE_ERRORS=$((SOURCE_ERRORS + 1))
-    done
+        fail "  Fix: git reset HEAD -- '$f' && echo '*.pyc' >> .gitignore"
+    done <<< "$STAGED_PYC"
 fi
 
-# Check 2: For each .py being staged, check for timestamp mismatch with .pyc
-STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
-for py_file in $STAGED_PY; do
-    [ -f "$py_file" ] || continue
-    
-    dir=$(dirname "$py_file")
-    base=$(basename "$py_file" .py)
-    
-    # Try to find corresponding .pyc in __pycache__
-    if [ -d "$dir/__pycache__" ]; then
-        for pyc in "$dir"/__pycache__/"${base}"*.pyc; do
-        if [ -f "$pyc" ]; then
-            # Compare timestamps (platform-specific)
-            if command -v stat >/dev/null 2>&1; then
-                # Try GNU stat (Linux)
-                py_mtime=$(stat -c %Y "$py_file" 2>/dev/null || true)
-                pyc_mtime=$(stat -c %Y "$pyc" 2>/dev/null || true)
-                
-                # Fall back to BSD stat (macOS) if GNU stat fails
-                if [ -z "$py_mtime" ]; then
-                    py_mtime=$(stat -f %m "$py_file" 2>/dev/null || echo 0)
-                    pyc_mtime=$(stat -f %m "$pyc" 2>/dev/null || echo 0)
-                fi
-                
-                # Check if .pyc is newer than .py (suggests .py not regenerated)
-                if [ "$pyc_mtime" -gt "$py_mtime" ] 2>/dev/null; then
-                    warn "⚠️  Bytecode newer than source (stale .py?): $py_file"
-                    warn "    .pyc file: $pyc"
-                    warn "    Consider: rm -rf $dir/__pycache__ && python3 -m py_compile $py_file"
-                    SOURCE_WARNINGS=$((SOURCE_WARNINGS + 1))
-                fi
-            fi
-        fi
-    done
-   fi
-done
-
-# Check 3: For test files being added, verify source implementation exists
-STAGED_TESTS=$(git diff --cached --name-only --diff-filter=A | grep '_test\.py$' || true)
-for test_file in $STAGED_TESTS; do
-    if [ ! -f "$test_file" ]; then
-        fail "Test file not found on disk (cannot verify implementation): $test_file"
-        SOURCE_ERRORS=$((SOURCE_ERRORS + 1))
-        continue
-    fi
-    
-    # For test files in skills/, verify corresponding implementation is staged
-    if [[ "$test_file" == skills/* ]]; then
-        test_dir=$(dirname "$test_file")
-        test_base=$(basename "$test_file" _test.py)
-        impl_file="$test_dir/${test_base}.py"
-        
-        # Check if implementation file is being added alongside test
-        if [ ! -f "$impl_file" ]; then
-            warn "⚠️  Test file without implementation (may be from orphaned .pyc): $test_file"
-            warn "    Expected implementation: $impl_file"
-            SOURCE_WARNINGS=$((SOURCE_WARNINGS + 1))
-        fi
-    fi
-done
-
-if [ "$SOURCE_ERRORS" -gt 0 ]; then
-    fail "$SOURCE_ERRORS source file integrity issue(s) found"
-fi
-
-if [ "$SOURCE_WARNINGS" -gt 0 ]; then
-    echo "⚠️  $SOURCE_WARNINGS warning(s) in source file integrity check"
-fi
-
-echo "✅ Source file integrity check passed"
-
-# ─── End: Orphaned Bytecode Check ──────────────────────────────────────────────
+# ─── End: Bytecode Check ───────────────────────────────────────────────────────
 
 # ─── Section: Model Registry Enforcement ─────────────────────────────────────────
 # config/models.yaml is the single source of truth for model pins (docs/SPEC.md,
@@ -504,7 +445,7 @@ MODELS_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/models.py"
 MODEL_ERRORS=0
 
 STAGED_MODEL_REL=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD \
-    | grep -E '^(config/models\.yaml|config/FRAMEWORK-MANIFEST\.yaml|src/AGENTS\.md|src/agents/[^/]+-agent\.md|\.githooks/LOCKED_MODELS\.sh|docs/MODELS\.md|\.agents_verification_sha|scripts/models\.py)$' || true)
+    | grep -E '^(config/models\.yaml|config/FRAMEWORK-MANIFEST\.yaml|src/AGENTS\.md|src/agents/[^/]+-agent\.md|docs/MODELS\.md|\.agents_verification_sha|scripts/models\.py)$' || true)
 
 # The model checks run against a snapshot of the INDEX (what is about to be
 # committed), not the working tree, so unstaged edits can neither mask a staged
@@ -582,280 +523,16 @@ fi
 
 # ─── End: Model Registry Enforcement ─────────────────────────────────────────────
 
-# ─── DELEGATE/HANDBACK Protocol Validation ─────────────────────────────────────
-# Validates DELEGATE and HANDBACK YAML files committed to ensure protocol compliance.
-#
-# Canonical authority: docs/specs/protocol-core-v1.0.yaml
-#                      src/skills/protocol-validator/scripts/protocol_validator.py
-#
-# DELEGATE required core fields (canonical schema):
-#   - task_id: kebab-case, 3-50 chars (^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$)
-#   - agent:   hyphenated role name (e.g. senior-engineer, NOT senior_engineer)
-#   - scope:   string, >=15 words
-#   - plan:    non-empty list
-#   - success_criteria: non-empty list
-#   - context: string or array
-#   - skill:   string
-#
-# HANDBACK required core fields (canonical schema):
-#   - task_id: string
-#   - status:  success | failure | partial | blocked | escalate
-#   - output:  any value
-#   - metrics: object with quality (0.0-1.0), tokens (int), cost (float), duration_seconds (float)
-#
-# Discriminator field: handoff_type: DELEGATE | HANDBACK (canonical)
-#   Backward compat: type: DELEGATE | HANDBACK also accepted, but produces a deprecation WARNING.
-#   Files using type: will be validated normally; committer is warned to migrate to handoff_type:.
-#
-# Bypass: BYPASS_HOOK_VALIDATION=true (for emergency) or SKIP_HOOKS=1
-
-# Local message helper for protocol violations. Echoes to stdout (tests assert on
-# stdout, e.g. "status" in result.stdout) and increments PROTOCOL_ERRORS via the
-# explicit counter below — it does NOT touch the global fail()/ERRORS to avoid
-# double-counting; ERRORS is reconciled once at the end of this block.
-pfail() {
-  echo "❌ $1"
-}
-
-echo ""
-echo "🔐 Validating DELEGATE/HANDBACK protocol files..."
-
-PROTOCOL_ERRORS=0
-
-# ── Inline self-test: backward-compat detection for type: vs handoff_type: ──────
-# This test runs every time the hook runs and verifies that:
-#   1. Files using type: DELEGATE are detected (backward compat) and produce a warning
-#   2. Files using handoff_type: DELEGATE are detected and pass through to validation
-#   3. Files with neither field are correctly skipped
-# If this self-test fails the hook aborts immediately before checking real staged files.
-_protocol_selftest() {
-  local old_fmt new_fmt neither_fmt
-  old_fmt=$'task_id: selftest-old\ntype: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one'
-  new_fmt=$'task_id: selftest-new\nhandoff_type: DELEGATE\nagent: engineer\nscope: test scope\nplan:\n  - step one'
-  neither_fmt=$'task_id: selftest-neither\nsome_key: value'
-
-  # Old format (type:) must be detected as a protocol file
-  if ! echo "$old_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
-    echo "❌ protocol selftest FAILED: old format (type:) not detected" >&2
-    return 1
-  fi
-
-  # New format (handoff_type:) must be detected as a protocol file
-  if ! echo "$new_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
-    echo "❌ protocol selftest FAILED: new format (handoff_type:) not detected" >&2
-    return 1
-  fi
-
-  # Neither format must NOT be detected as a protocol file
-  if echo "$neither_fmt" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
-    echo "❌ protocol selftest FAILED: non-protocol file incorrectly detected" >&2
-    return 1
-  fi
-
-  return 0
-}
-
-if ! _protocol_selftest; then
-  echo "❌ pre-commit: DELEGATE/HANDBACK protocol self-test failed — hook is broken, aborting"
-  exit 1
-fi
-
-# Check bypass flag first
-if [ "${BYPASS_HOOK_VALIDATION:-false}" = "true" ]; then
-  echo "⚠️  pre-commit: BYPASS_HOOK_VALIDATION=true — skipping DELEGATE/HANDBACK validation" >&2
-else
-  # Get all staged YAML/YML files
-  STAGED_YAML_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yaml|yml)$' || true)
-
-  # Count of protocol files actually validated, tallied as we go. This used to be
-  # recomputed after the loop by re-running the identical `git show` + grep scan
-  # purely to produce a number; the loop already knows.
-  PROTOCOL_FILE_COUNT=0
-
-  for file in $STAGED_YAML_FILES; do
-    [ -f "$file" ] || continue
-
-    # Get file content from staging area
-    file_content=$(git show ":$file" 2>/dev/null) || continue
-
-    # Skip if not a DELEGATE or HANDBACK file (accept both discriminator forms)
-    if ! echo "$file_content" | grep -qE "^(handoff_type|type):\s*(DELEGATE|HANDBACK)"; then
-      continue
-    fi
-    PROTOCOL_FILE_COUNT=$((PROTOCOL_FILE_COUNT + 1))
-
-    # Detect which discriminator field is used. Warn on deprecated type: form.
-    uses_deprecated_type=false
-    if echo "$file_content" | grep -qE "^type:\s*(DELEGATE|HANDBACK)"; then
-      if ! echo "$file_content" | grep -qE "^handoff_type:\s*"; then
-        uses_deprecated_type=true
-        warn "$file uses deprecated discriminator 'type:' — migrate to 'handoff_type:' (will become an error in next major version)"
-      fi
-    fi
-
-    # Extract the handoff type value from whichever discriminator is present
-    # Use awk for portable field extraction (avoids macOS sed \s issue)
-    if echo "$file_content" | grep -qE "^handoff_type:[[:space:]]*"; then
-      handoff_type=$(echo "$file_content" | awk '/^handoff_type:/{print $2; exit}')
-    else
-      handoff_type=$(echo "$file_content" | awk '/^type:/{print $2; exit}')
-    fi
-
-    case "$handoff_type" in
-      DELEGATE)
-        # Validate DELEGATE protocol (canonical schema: docs/specs/protocol-core-v1.0.yaml)
-        task_id=$(echo "$file_content" | awk '/^task_id:/{print $2; exit}' || true)
-        agent=$(echo "$file_content" | awk '/^agent:/{print $2; exit}' || true)
-        plan=$(echo "$file_content" | grep "^plan:" | head -1 || true)
-        scope=$(echo "$file_content" | awk '/^scope:/{print $2; exit}' || true)
-        success_criteria=$(echo "$file_content" | grep "^success_criteria:" | head -1 || true)
-
-        # Check for secret patterns
-        if echo "$file_content" | grep -qiE "^\s*(password|api_key|secret|token|credential):\s*"; then
-          pfail "🔓 SECURITY: DELEGATE file $file contains secret field(s) — remove before committing"
-          pfail "   → Use context/notes to reference secrets, never hardcode"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check task_id (canonical: kebab-case, 3-50 chars, ^[a-z0-9][a-z0-9\-]{1,48}[a-z0-9]$)
-        if [ -z "$task_id" ]; then
-          pfail "DELEGATE $file: missing required field 'task_id'"
-          pfail "   → Format: kebab-case, 3-50 chars (e.g., my-task-123 or 2026-05-16-impl-feature)"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        elif ! echo "$task_id" | grep -qE '^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$'; then
-          pfail "DELEGATE $file: invalid task_id format '$task_id'"
-          pfail "   → Must be: kebab-case, 3-50 chars (e.g., my-task-123)"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check agent validity (canonical: hyphenated names, per VALID_AGENTS in protocol_validator.py)
-        if [ -z "$agent" ]; then
-          pfail "DELEGATE $file: missing required field 'agent'"
-          pfail "   → Valid agents: engineer, senior-engineer, lead-engineer, principal-engineer,"
-          pfail "                   security-engineer, quality-engineer, model-engineer, orchestrator"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        elif ! echo "$agent" | grep -qE '^(orchestrator|engineer|senior-engineer|lead-engineer|principal-engineer|security-engineer|quality-engineer|model-engineer)$'; then
-          pfail "DELEGATE $file: invalid agent '$agent'"
-          pfail "   → Valid agents: engineer, senior-engineer, lead-engineer, principal-engineer,"
-          pfail "                   security-engineer, quality-engineer, model-engineer, orchestrator"
-          pfail "   → Note: use hyphens not underscores (senior-engineer, not senior_engineer)"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check plan presence (must be a non-empty list)
-        if [ -z "$plan" ]; then
-          pfail "DELEGATE $file: missing required field 'plan'"
-          pfail "   → plan must be a non-empty list (>= 2 items)"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check success_criteria presence
-        if [ -z "$success_criteria" ]; then
-          pfail "DELEGATE $file: missing required field 'success_criteria'"
-          pfail "   → success_criteria must be a non-empty list"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-        ;;
-
-      HANDBACK)
-        # Validate HANDBACK protocol (canonical schema: docs/specs/protocol-core-v1.0.yaml)
-        task_id=$(echo "$file_content" | awk '/^task_id:/{print $2; exit}' || true)
-        status=$(echo "$file_content" | awk '/^status:/{print $2; exit}' || true)
-        # metrics: is a block key — check for its presence and required sub-fields
-        metrics_block=$(echo "$file_content" | grep "^metrics:" | head -1 || true)
-        metrics_quality=$(echo "$file_content" | awk '/^[[:space:]]+quality:/{print $2; exit}' || true)
-        metrics_tokens=$(echo "$file_content" | awk '/^[[:space:]]+tokens:/{print $2; exit}' || true)
-        metrics_cost=$(echo "$file_content" | awk '/^[[:space:]]+cost:/{print $2; exit}' || true)
-        metrics_duration=$(echo "$file_content" | awk '/^[[:space:]]+duration_seconds:/{print $2; exit}' || true)
-
-        # Check for secret patterns
-        if echo "$file_content" | grep -qiE "^\s*(password|api_key|secret|token|credential):\s*"; then
-          pfail "🔓 SECURITY: HANDBACK file $file contains secret field(s) — remove before committing"
-          pfail "   → Use output/flags fields to reference, never hardcode"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check task_id
-        if [ -z "$task_id" ]; then
-          pfail "HANDBACK $file: missing required field 'task_id'"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check status validity (canonical: success|failure|partial|blocked|escalate)
-        if [ -z "$status" ]; then
-          pfail "HANDBACK $file: missing required field 'status'"
-          pfail "   → Valid statuses: success, failure, partial, blocked, escalate"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        elif ! echo "$status" | grep -qE '^(success|failure|partial|blocked|escalate)$'; then
-          pfail "HANDBACK $file: invalid status '$status'"
-          pfail "   → Valid statuses: success, failure, partial, blocked, escalate"
-          pfail "   → Note: 'complete' and 'failed' are NOT valid (use 'success' and 'failure')"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        fi
-
-        # Check metrics block (canonical: nested object with quality, tokens, cost, duration_seconds)
-        if [ -z "$metrics_block" ]; then
-          pfail "HANDBACK $file: missing required field 'metrics'"
-          pfail "   → metrics must be an object with: quality (0.0-1.0), tokens (int),"
-          pfail "     cost (float), duration_seconds (float)"
-          pfail "   → Example:"
-          pfail "     metrics:"
-          pfail "       quality: 0.92"
-          pfail "       tokens: 5000"
-          pfail "       cost: 0.09"
-          pfail "       duration_seconds: 42"
-          PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-        else
-          # Check required sub-fields within metrics
-          if [ -z "$metrics_quality" ]; then
-            pfail "HANDBACK $file: missing required field 'metrics.quality'"
-            pfail "   → Must be a float 0.0–1.0"
-            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-          fi
-          if [ -z "$metrics_tokens" ]; then
-            pfail "HANDBACK $file: missing required field 'metrics.tokens'"
-            pfail "   → Must be a non-negative integer"
-            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-          fi
-          if [ -z "$metrics_cost" ]; then
-            pfail "HANDBACK $file: missing required field 'metrics.cost'"
-            pfail "   → Must be a non-negative float (USD)"
-            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-          fi
-          if [ -z "$metrics_duration" ]; then
-            pfail "HANDBACK $file: missing required field 'metrics.duration_seconds'"
-            pfail "   → Must be a non-negative float (wall-clock seconds)"
-            PROTOCOL_ERRORS=$((PROTOCOL_ERRORS + 1))
-          fi
-        fi
-        ;;
-    esac
-  done
-
-  if [ "$PROTOCOL_ERRORS" -gt 0 ]; then
-    echo ""
-    echo "❌ pre-commit: $PROTOCOL_ERRORS DELEGATE/HANDBACK validation error(s) found"
-    echo "   Canonical schema: docs/specs/protocol-core-v1.0.yaml"
-    echo "   Emergency bypass (document reason in commit msg):"
-    echo "   → BYPASS_HOOK_VALIDATION=true git commit (bypasses only DELEGATE/HANDBACK validation)"
-    echo "   → SKIP_HOOKS=1 git commit (bypasses all checks)"
-    ERRORS=$((ERRORS + PROTOCOL_ERRORS))
-  else
-    # Report when DELEGATE/HANDBACK files were validated successfully, using the
-    # tally kept by the validation loop above.
-    if [ "${PROTOCOL_FILE_COUNT:-0}" -gt 0 ]; then
-      echo "✅ DELEGATE/HANDBACK validation passed ($PROTOCOL_FILE_COUNT protocol file(s) validated)"
-    fi
-  fi
-fi
-
-# ─── End: DELEGATE/HANDBACK Protocol Validation ────────────────────────────────
-
+# NOTE (hook cleanup): the DELEGATE/HANDBACK protocol-file validation that used to
+# live here is removed. Dispatch is a direct sub-agent spawn and the harness
+# transcript is the audit record, so no protocol YAML is ever committed (zero
+# tracked DELEGATE/HANDBACK files); the section could only ever be a no-op.
+# Schema validation lives in src/skills/protocol-validator/.
 
 if [ "$ERRORS" -gt 0 ]; then
   echo ""
   echo "❌ pre-commit: $ERRORS violation(s) found. Fix issues and re-commit."
-  echo "   Emergency bypass: SKIP_HOOKS=1 git commit OR GIT_SKIP_HOOKS=1 git commit"
+  echo "   Emergency bypass: SKIP_HOOKS=1 git commit"
   echo "   (document reason in commit message)"
   exit 1
 fi

@@ -1,9 +1,10 @@
-# Governance-critical paths: pin-change approval evidence is unauthenticated text, so
-# identity binding is by required owner review (enable branch protection on the default
+# Governance-critical paths get owner review (enable branch protection on the default
 # branch with "Require review from Code Owners"; that setting is GitHub-side).
 /config/models.yaml @niallyoung
 /scripts/models.py @niallyoung
-/scripts/check_pin_trailers.py @niallyoung
+/scripts/check_pin_history.py @niallyoung
+/tests/test_pin_policy_fingerprint.py @niallyoung
+/tests/test_models_registry.py @niallyoung
 /.githooks/ @niallyoung
 /.github/workflows/ @niallyoung
 /docs/SPEC.md @niallyoung
@@ -13,9 +14,14 @@
 /renderer/validate_agents.py @niallyoung
 /Makefile @niallyoung
 /tests/test_model_pin_hooks.py @niallyoung
-/tests/test_check_pin_trailers.py @niallyoung
 /tests/test_codeowners.py @niallyoung
 /.claude/settings.json @niallyoung
 /.claude/hooks/session-start.sh @niallyoung
 /config/orchestration.yaml @niallyoung
 /src/agents/ @niallyoung
+/src/AGENTS.md @niallyoung
+/src/skills/ @niallyoung
+/docs/specs/protocol-core-v1.0.yaml @niallyoung
+/.agents_verification_sha @niallyoung
+/scripts/audit_append.py @niallyoung
+/.github/CODEOWNERS @niallyoung

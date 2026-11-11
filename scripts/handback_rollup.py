@@ -87,12 +87,11 @@ import yaml
 # that test should be updated to assert its absence, and this script's distribution
 # comparison should be skipped rather than inventing a target (see docstring above).
 COST_TARGET_DISTRIBUTION: Dict[str, float] = {
-    "orchestrator": 55.0,
-    "engineer": 18.0,
+    "orchestrator": 56.0,
+    "engineer": 20.0,
     "senior-engineer": 8.0,
     "quality-engineer": 8.0,
     "lead-engineer": 3.0,
-    "model-engineer": 3.0,
     "principal-engineer": 3.0,
     "security-engineer": 2.0,
 }

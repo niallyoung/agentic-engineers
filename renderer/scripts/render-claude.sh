@@ -114,7 +114,10 @@ def remove_model():
 def inject_hook(hook_path, hook_name):
 	command = "python3 %s" % hook_path
 	entry = {
-		"matcher": "Task|Agent",
+		# Task/Agent spawn a sub-agent; SendMessage resumes one. All three can
+		# deliver a DELEGATE, so all three go through the guard. Keep in sync
+		# with SPAWN_TOOLS/CONTINUE_TOOLS in claude-delegate-guard.py.
+		"matcher": "Task|Agent|SendMessage",
 		"hooks": [
 			{"type": "command", "command": command, "timeout": 10}
 		],
@@ -352,7 +355,6 @@ auditability, and the DELEGATE/HANDBACK coordination layer.
 | `@quality-engineer` | Post-implementation validation |
 | `@principal-engineer` | Cross-service architecture, hard debugging |
 | `@security-engineer` | Security audits, threat modelling |
-| `@model-engineer` | Cost/quality optimisation recommendations |
 
 ## Canonical DELEGATE/HANDBACK schema
 
@@ -664,9 +666,16 @@ PY
 		role_val=$(extract_fm "$src_file" "role")
 		[ -n "$role_val" ] || role_val="$name"
 
-		# All agents inherit all tools (no tool restrictions). Behavioral constraints
-		# are enforced via the DELEGATE/HANDBACK protocol and system prompt, not via
-		# tool allow-lists.
+		# Tool permissions. A leaf role (source frontmatter `tools: []`) is denied the
+		# sub-agent spawn tools, so the leaf rule in src/AGENTS.md is enforced by Claude
+		# Code rather than by prompt alone. Other roles inherit the default tool set;
+		# their spawn authority is a documented convention (src/AGENTS.md, Tools-Frontmatter
+		# Permission Model). The denial is written only when the source declares the key.
+		tools_list=$(extract_fm_list "$src_file" "tools")
+		deny_line=""
+		if [ -z "$tools_list" ] && grep -q '^tools:' "$src_file"; then
+			deny_line="disallowedTools: Agent, Task, SendMessage"
+		fi
 		{
 			echo "---"
 			echo "name: $name"
@@ -676,6 +685,7 @@ PY
 			[ -n "$accepts_list" ] && echo "accepts: [$accepts_list]"
 			[ -n "$returns_list" ] && echo "returns: [$returns_list]"
 			echo "role: $role_val"
+			[ -n "$deny_line" ] && echo "$deny_line"
 			echo "---"
 			echo
 			render_claude_agent_body "$src_file"

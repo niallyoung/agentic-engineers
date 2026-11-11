@@ -138,8 +138,8 @@ class TestHooksIntegration:
         # Check for SPEC enforcement
         assert "SPEC" in content or "spec" in content, \
             "pre-commit hook should enforce SPEC compliance"
-        assert "orchestration/scripts" in content, \
-            "pre-commit hook should check for external scripts"
+        assert "models.py" in content, \
+            "pre-commit hook should run the model registry check"
 
     def test_commit_msg_hook_validates_format(self):
         """Verify commit-msg hook validates message format"""

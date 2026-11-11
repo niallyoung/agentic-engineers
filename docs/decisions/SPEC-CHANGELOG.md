@@ -1,0 +1,506 @@
+# SPEC Changelog
+
+The dated record of every SPEC amendment, moved verbatim from `docs/SPEC.md` (SPEC-2026-017 moved it out). Append-only.
+
+- **2026-05-02:** Phase 5.10 specification published. Documented ORCHESTRATOR-FIRST EXECUTION MODEL, removed deprecated external scripts and cron jobs, added span capture and artifact indexing requirements (span capture/indexing since removed — see 2026-08-11 entry).
+- **2026-05-16:** Added SDLC Enforcement Hooks section documenting the three git hooks (pre-commit, commit-msg, pre-push), installation, and bypass procedures.
+- **2026-05-17:** Added Phase 3 Token Visibility & Budget Checking section (removed — see 2026-08-11 entry; the CLI tooling it documented no longer exists).
+- **2026-05-25:** Added Model Naming & Harness Compatibility section. Documents approved model names per official Anthropic/GitHub/pi.dev sources, validates hyphen format across all harnesses, adds no-regression tests and enforcement procedures.
+- **2026-06-08:** Reconciled queue path contradictions throughout early sections. Canonical path is `~/.agentic-engineers/{harness}/{session-id}/queue/` per the locked section. Locked section unchanged (it is the authoritative source).
+- **2026-06-11:** Reversed the canonical queue path order to `{harness}/{session-id}` (was `{session-id}/{harness}`) in the locked Queue Architecture section. Also fixed the self-contradicting model-naming CRITICAL RULE and corrected the stale harness-render table.
+- **2026-06-12:** [SPEC-2026-001 — principal-engineer, approved by security-engineer] Consolidated CU-5: migrated model-governance content (positive-enforcement philosophy, `.githooks/LOCKED_MODELS.sh` single source of truth, and the Model Switch Process) from the deprecated root `SPEC.md` into the Model Naming & Harness Compatibility section; root `SPEC.md` reduced to a pointer at `docs/SPEC.md`. No behavioural change.
+- **2026-06-13:** [SPEC-2026-002 — lead-engineer] Fixed residuals from the 2026-06-11 queue-path reversal (CU-4): four spots still presented the old `{session-id}/{harness}` order as current. All now show the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/`. Legacy *source* paths in the migration table intentionally unchanged (they document deprecated paths).
+- **2026-06-13:** [SPEC-2026-003 — principal-engineer, approved by security-engineer] Replaced a stale `AutomationController` reference (removed in the 2026-05-17 daemon-removal refactor) with a description of harness-initiated idle-loop polling as the then-current mechanism. Superseded by SPEC-2026-004 below.
+- **2026-08-09:** [SPEC-2026-004 — principal-engineer, approved by security-engineer + lead-engineer] Execution Model redesign: replaced queue-polling dispatch (never functional — a 2026-08-09 sweep of 16 live session partitions found zero tasks ever traversed the queue that way) with direct sub-agent spawn as the canonical ORCHESTRATOR-FIRST mechanism. Queue paths (LOCKED section) unchanged; the queue's role narrows to durable inbox + audit substrate. Governance-only; no code changed by the proposal itself.
+- **2026-08-11:** [SPEC-2026-005 — lead-engineer, framework slimdown WP-4] Consolidated rewrite, 2,035 → ~650 lines. LOCKED sections carried over near-verbatim with exactly two sanctioned edits: (a) Queue Architecture & Paths — "MUST initialize queue polling ONLY from" → "MUST read and write queue records ONLY from" (path unchanged); (b) Model Naming & Harness Compatibility — Orchestrator's assigned model changed from `claude-haiku-4.5` to `claude-sonnet-5` (commit 2b6e268). Deleted sections describing subsystems removed elsewhere in this slimdown: Phase 5.10 Span Capture & Indexing, Observability & Monitoring, Model Selection Architecture (opus-variant facts folded into a short non-LOCKED context note ahead of the LOCKED model section), Phase 3 Token Visibility, Optimization Feedback Loop, Agent Implementations, the Option-1a Dual-Layer Orchestrator Architecture and pre-direct-spawn Queue-Based Delegation Mechanics sections, Legacy Tiers, Next Steps (Phase 6), a duplicated vestigial tail, and a duplicate second SDLC-hooks section. Rewrote Repository Structure as an accurate ~20-line tree and COMPLETE SCRIPT INVENTORY from the actual surviving `scripts/` + `renderer/scripts/`. Authorizes the interim permissive floor in `renderer/scripts/check_test_regression.py` for the duration of the slimdown (WP-5 re-baselines from measured actuals).
+- **2026-08-12:** [SPEC-2026-006 — lead-engineer, framework slimdown follow-up C] Corrected the harness enumeration in the LOCKED "Queue Architecture & Paths" section, which still listed `pi` (the pi harness was dropped elsewhere in the 2026-08-11 slimdown; `renderer/scripts/render-pi*.py` and its dist output no longer exist) and omitted `codex` (a supported render target since commit 1361afa, 2026-06-17 — added after this section's 2026-05-26 lock date, so its earlier absence here was accurate at the time, not an oversight). Four surgical string replacements only — the harness-directory tree comment, the "Supported Harnesses" bullet list, the subdirectory-coverage sentence, and the harness-renderers compliance sentence — each swapping the literal `pi` for `codex` in place, preserving position, count ("four harnesses"), and every other word. Path template, ordering rules, state-dir list, and the Unsupported Legacy Paths migration table are byte-identical to SPEC-2026-005. The sibling LOCKED "Model Naming & Harness Compatibility" section (which also still references `pi`/`pi.dev`) is explicitly out of scope for this proposal.
+- **2026-08-12:** [SPEC-2026-007 — lead-engineer] Corrected the remaining `pi`/`pi.dev` references in the LOCKED "Model Naming & Harness Compatibility" section, left explicitly out of scope by SPEC-2026-006. The Harness-Specific Model Format table's `Pi (pi.dev)` row is replaced with a `Codex` row — not a like-for-like swap, since Codex does not carry the canonical Claude ID forward at all: it substitutes its own GPT-family model per agent-role tier (`gpt-5.4-mini` for Orchestrator/Engineer, `gpt-5.5` for all other roles) via `CODEX_MODEL_BY_ROLE` in `renderer/scripts/render-codex.py`, confirmed against rendered `dist/codex/agents/*.toml`. The Validation & Enforcement hyphen-format check's harness list drops `pi` and does NOT add `codex` in its place (`tests/test_model_naming_compliance.py` checks only `dist/{copilot,claude,opencode}/`; Codex output was never `claude-*` IDs to check), with a one-clause note explaining the exclusion. Model list, naming invariant, `.githooks/LOCKED_MODELS.sh` single-source-of-truth clause, and Model Switch Process are byte-identical.
+- **2026-08-13:** [SPEC-2026-008 — lead-engineer] Corrected the LOCKED "Queue Architecture & Paths" section's Enforcement Rules, which still mandated implementation details of code deleted by the 2026-08-11 slimdown — a `QueueManager` class and a standalone `queue-isolation` skill, neither of which exists anymore (path isolation is inlined into `src/skills/queue-management/scripts/queue_ops.py`). The two bullets are restated implementation-neutrally, preserving the same invariant (queue writes MUST be confined to the canonical `~/.agentic-engineers/{harness}/{session-id}/queue/` root; a write that cannot be validated as isolated MUST fail immediately, never fall back) while naming the surviving enforcement point instead of the deleted class/skill names. Verified `queue_ops.py`'s `get_queue_path()`/`_validate_path_component()` actually raise before any write on an invalid `session_id`/`harness` — the invariant is enforced by the surviving code, not weakened to match it. The other two bullets in the same rule, and the rest of the LOCKED section, are byte-identical.
+- **2026-08-13:** [SPEC-2026-009 — lead-engineer, authorized_by: user-directive
+  (task-2026-08-13-queue-removal-spec-docs, ancestry:
+  [task-2026-08-13-queue-removal-root])] **Removed the filesystem queue entirely.** The
+  repo owner directed, in the DELEGATE that authorized this proposal, that dispatch is
+  direct sub-agent spawn only and the durable audit record is the harness session
+  transcript — no `~/.agentic-engineers/{harness}/{session-id}/queue/` directory tree,
+  no `enqueue()`, no `incoming/`/`processing/`/`done/`/`failed/` state machine. This
+  removes the LOCKED "Queue Architecture & Paths" section outright (previously
+  carried over byte-identical, with only surgical corrections, through
+  SPEC-2026-005/006/008) and the "Queue SLA & Governance" section that depended on it
+  (its `config/queue-sla.yaml` source-of-truth file never existed in the tree — a
+  pre-existing drift this deletion also resolves). ORCHESTRATOR-FIRST clause 4 is
+  rewritten from "The Queue is a Durable Inbox and Audit Substrate" to state the new
+  ground truth plainly. Repository Structure's skill list drops `queue-management` and
+  `queue-query` (deleted in the same effort, src/side) — 8 surviving skills become 6.
+  References and the script/doc cross-link list drop `docs/QUEUE-PROTOCOL.md` (deleted).
+  This is the first proposal in this class to remove rather than restate a LOCKED
+  section; ordinary spec-management authorization (principal/security peer review) was
+  bypassed on the explicit, recorded authority of the repo owner rather than a
+  Lead-Engineer self-authorization precedent like SPEC-2026-006/007/008.
+  **Correction (same day, same authorization):** the concurrent `src/**`/`tests/**`
+  code package for this same user-directed queue removal has since been committed and
+  deleted `scripts/check_protocol_compliance.py` (the CI gate that ran the
+  protocol-validator over queue-directory YAML files), its `.github/workflows/ci.yml`
+  step, and its two test files — confirmed via `ls scripts/` returning no such file.
+  This section's COMPLETE SCRIPT INVENTORY table is updated to drop that row; no other
+  content in this Update Log entry or elsewhere in this proposal's scope changes. Folded
+  into this entry rather than a new SPEC-2026-010 proposal, per the same
+  authorized_by: user-directive covering the whole queue-removal effort.
+- **2026-08-13:** [lead-engineer, task-2026-08-13-polish-p8-opencode-safe,
+  authorized_by: user-directive (polish wave-1, ancestry:
+  [task-2026-08-13-queue-removal-root, task-2026-08-13-polish-plan-wave1])]
+  Deleted `scripts/opencode-safe.sh` (105 lines) — zero callers repo-wide (re-verified:
+  no references in `.githooks/`, `Makefile`, `src/`, `tests/`; the one hit outside this
+  section was a stale historical mention in `scripts/validate_opencode_config.py`'s
+  module docstring, not an executable call site). This section's COMPLETE SCRIPT
+  INVENTORY table is updated to drop that row; `check-gitconfig-no-tokens.sh` (still
+  load-bearing via pre-push and `ci.yml`) and every other row are unchanged. Per the
+  spec-management "3a. Self-Authorized Narrow Follow-Up" pattern; this Update Log entry
+  is the record (no separate proposal file).
+- **2026-08-13:** [lead-engineer, task-2026-08-13-r3-wp11-spec-floor, authorized_by:
+  user-directive (round-3 planning, ancestry: [task-2026-08-13-queue-removal-root,
+  task-2026-08-13-plan-round3-value])] Deduplicated the "Routing Decision Tree" and
+  "DELEGATE/HANDBACK Protocol" sections, which restated content already canonical in
+  `src/AGENTS.md` (§ Delegation Model & Routing Rules, § Handover Packet Protocol) and
+  `docs/PROTOCOL.md` (§ 2 Canonical Schema) — replaced with one-line normative
+  cross-references, the same pattern `docs/WORKFLOW.md`'s 2026-08-13 condensation
+  already uses. Verified no test or CI gate parses these sections' literal content
+  (`grep -rn SPEC tests/ .githooks/ .github/workflows/`); the strings the
+  security-gate workflow and pre-push hook do assert on (`# Agentic Engineers
+  Implementation Specification`, `ORCHESTRATOR-FIRST EXECUTION MODEL`, the
+  frontmatter `version:` field, and the top-level `# ` heading) are outside the
+  edited range and unchanged; the LOCKED "Model Naming & Harness Compatibility"
+  section is untouched. Companion package to the same task's regression-floor
+  governance review (see `renderer/scripts/check_test_regression.py` and
+  `docs/REGRESSION-GATE-POLICY.md`, updated in the same task but not a SPEC.md
+  change). Per the spec-management "3a. Self-Authorized Narrow Follow-Up" pattern;
+  this Update Log entry is the record (no separate proposal file).
+- **2026-08-14:** [orchestrator commit-curation, tasks
+  task-2026-08-14-backlog4-10-cost-governance + task-2026-08-14-backlog7-modelsdev-advisory,
+  authorized_by: user-directive (backlog round)] Registered two new advisory scripts in
+  the COMPLETE SCRIPT INVENTORY table: `handback_rollup.py` (per-role HANDBACK
+  cost/quality rollup) and `check_model_registry.py` (models.dev drift check for
+  `.githooks/LOCKED_MODELS.sh`). Both advisory-only per the ORCHESTRATOR-FIRST
+  "Python is advisory" clause — they report, never gate. Table-rows-plus-this-entry
+  only; no other SPEC content changed; LOCKED section untouched.
+- **2026-08-14:** [senior-engineer, task-2026-08-14-implement-audit-jsonl,
+  authorized_by: user-directive (backlog round, ancestry:
+  [task-2026-08-14-backlog-round])] Implemented ORCHESTRATOR-FIRST clause 7 (the
+  append-only audit JSONL), which the clause already specified but nothing in the
+  tree wrote to. Added `scripts/audit_append.py` — the deterministic,
+  stdlib-only append helper (docs/SPEC.md clause 3: advisory Python) agents invoke
+  to format/validate/append one clause-7 event; registered in the COMPLETE SCRIPT
+  INVENTORY table above. Wired the append duty into `src/AGENTS.md` (new § Audit
+  Events under Direct Sub-Agent Spawn Execution Model, recomputed
+  `.agents_verification_sha` accordingly), the Orchestrator and the four
+  spawn-capable role definitions (`src/agents/{orchestrator,senior-engineer,
+  lead-engineer,principal-engineer,security-engineer}-agent.md`), and
+  `src/skills/orchestrator/SKILL.md`'s Audit Trail section. Reconciled
+  transcript-vs-JSONL language in `docs/ENTRYPOINT.md`, `docs/PROTOCOL.md` (new §7a
+  Audit Events (JSONL), Glossary entry, §3.1 clarification), and
+  `docs/CONTRIBUTING/README.md`'s historical note — the transcript remains what
+  makes a DELEGATE/HANDBACK count (clause 4, unchanged, still literally true); the
+  JSONL is an additive, queryable metrics/event log, never a substitute. Gave
+  `scripts/handback_rollup.py` a `--events <path...>` mode (`parse_events()`,
+  `validate_event_record()`) that aggregates `handback_received` events into the
+  same per-role table `--json`/table output already produces from HANDBACK YAML,
+  mixable with positional YAML sources in one invocation. Added
+  `tests/test_audit_append.py` (32 cases) and extended
+  `tests/test_handback_rollup.py` (+9 cases for `--events`). Wire format
+  (`docs/specs/protocol-core-v1.0.yaml`) and `renderer/scripts/claude-delegate-guard.py`
+  untouched; both security-gate strings, the `version:` field, and the LOCKED
+  "Model Naming & Harness Compatibility" section untouched.
+- **2026-08-14:** [lead-engineer, task-2026-08-14-lead-engineer-opus48-medium,
+  authorized_by: user-directive (2026-08-14), ancestry:
+  [task-2026-08-14-backlog-round]] Model Switch: Lead Engineer moves from
+  `claude-sonnet-5`/high to `claude-opus-4.8`/medium, per the Model Switch Process
+  in this same LOCKED section (`.githooks/LOCKED_MODELS.sh` updated first;
+  `claude-opus-4.8` was already present in `LOCKED_MODELS`, so only
+  `AGENT_MODEL_ASSIGNMENTS` changed). Three surgical edits to this LOCKED section:
+  (a) the Official Model Names table drops "Lead Engineer" from the Claude Sonnet 5
+  row's use-case list; (b) the Claude Opus 4.8 row is reworded from a pure
+  "Emergency fallback tier" to name Lead Engineer as its primary assignment,
+  preserving the existing Security Engineer fallback clause verbatim; (c) the
+  Model Assignment by Agent Role list's Lead Engineer line changes model only,
+  parenthetical use-case unchanged. All other rows, the Harness-Specific Model
+  Format table, Model Governance, and Validation & Enforcement text are
+  byte-identical. Companion edits outside this section (`src/AGENTS.md` roster row,
+  `src/agents/lead-engineer-agent.md` frontmatter + body, `config/FRAMEWORK-MANIFEST.yaml`)
+  land in the same task. Per the spec-management "3a. Self-Authorized Narrow
+  Follow-Up" pattern; this Update Log entry is the record (no separate proposal
+  file).
+- **2026-08-14:** [lead-engineer, task-2026-08-14-lead-engineer-sonnet5-max,
+  authorized_by: user-directive (2026-08-14), ancestry:
+  [task-2026-08-14-backlog-round]] Correction (supersedes the immediately
+  preceding entry, which is not deleted per the immutable-audit-trail rule):
+  the user revised the directive — Lead Engineer reverts from
+  `claude-opus-4.8`/medium back to `claude-sonnet-5`, with effort raised to
+  `max` (the top of the low\|medium\|high\|max ladder, the existing Security
+  Engineer/fable-5 precedent) rather than restoring the original `high`. Three
+  surgical edits to this LOCKED section, exactly reversing the prior entry's
+  (a)/(b)/(c) plus the effort change: (a) the Official Model Names table's
+  Claude Sonnet 5 row use-case list regains "Lead Engineer"; (b) the Claude
+  Opus 4.8 row is restored verbatim to its pre-2026-08-14 pure
+  "Emergency fallback tier" / `security_engineer`-only wording; (c) the Model
+  Assignment by Agent Role list's Lead Engineer line reverts to
+  `claude-sonnet-5`, parenthetical use-case unchanged. All other rows, the
+  Harness-Specific Model Format table, Model Governance, and Validation &
+  Enforcement text are byte-identical. Verified `max` is already a
+  first-class effort value throughout the render/validation pipeline via the
+  existing Security Engineer precedent — no code changes were needed in
+  `renderer/scripts/render-codex.py` (`REASONING_BY_EFFORT["max"] == "high"`),
+  `renderer/scripts/render-opencode.sh` (`effort_to_variant`/
+  `effort_to_temperature` both already match `high|max`), or
+  `tests/test_src_integrity.py` (`valid_effort` already includes `"max"`);
+  `renderer/validate_agents.py` does not parse effort at all (frontmatter
+  never carries it — the roster table is the sole effort source). Companion
+  edits outside this section (`src/AGENTS.md` roster row,
+  `src/agents/lead-engineer-agent.md` frontmatter + body,
+  `config/FRAMEWORK-MANIFEST.yaml`, `tests/test_agents_table_parity.py`
+  fixture) land in the same task. Per the spec-management "3a.
+  Self-Authorized Narrow Follow-Up" pattern; this Update Log entry is the
+  record (no separate proposal file).
+- **2026-08-14:** [senior-engineer, task-2026-08-14-lead-high-plus-verify-duty,
+  authorized_by: user-directive (2026-08-14), ancestry:
+  [task-2026-08-14-backlog-round]] Effort correction, per the accepted
+  model-engineer review (task-2026-08-14-roster-mix-review): Lead Engineer's
+  effort lands at `high`, not `max` — the model stays `claude-sonnet-5`, so
+  this touches only the Core Architecture roster table (line ~206, not the
+  LOCKED "Model Naming & Harness Compatibility" section) plus the
+  non-LOCKED Effort Levels section, which gains a one-line note that effort
+  tiers are comparable only within the same model tier (a higher effort on a
+  lower-tier model does not outrank a higher-tier model — e.g. Lead
+  Engineer's sonnet-5/high vs. Security Engineer's fable-5/max). The
+  review also found that the Role Definitions prose for Lead Engineer
+  (`src/AGENTS.md` ~line 182) already read `high` and was never updated to
+  `max` in the immediately preceding entry above — this correction brings
+  the roster table into agreement with that prose rather than the reverse.
+  This finalizes the 2026-08-14 Lead Engineer sequence: `claude-sonnet-5`/
+  `high`, per the model-engineer recommendation. Companion edits outside
+  this document (`src/AGENTS.md` roster row, `src/agents/lead-engineer-agent.md`
+  effort line, `config/FRAMEWORK-MANIFEST.yaml`, `setup/copilot-instructions.md`
+  heading, `tests/test_agents_table_parity.py` fixture) land in the same task,
+  alongside an unrelated companion change (mandatory Engineer-HANDBACK
+  independent-verification duty, codified in `src/AGENTS.md`,
+  `src/skills/orchestrator/SKILL.md`, and `src/agents/quality-engineer-agent.md`
+  — process-only, no SPEC.md content). Per the spec-management "3a.
+  Self-Authorized Narrow Follow-Up" pattern; this Update Log entry is the
+  record (no separate proposal file).
+- **2026-08-14:** [engineer, task-2026-08-14-delegation-audit-skill,
+  authorized_by: user-directive (2026-08-14-backlog-round), ancestry:
+  [task-2026-08-14-backlog-round]] Added seventh skill (audit-trail-review
+  meta-skill) to the active skills roster. Skill is prose-only (SKILL.md +
+  __init__.py only, no scripts/tests directory). Primary input: on-disk
+  orchestration ledger at `~/.agentic-engineers/{harness}/{session-id}/audit/events-*.jsonl`
+  (clause 7 audit trail, written by scripts/audit_append.py). Core procedure:
+  ledger reconciliation — parse events, index by task_id, identify orphaned
+  delegations (no handback_received), unfinalized acceptances (no gate_result),
+  dropped work (status blocked/failure/escalate with no follow-up), unvisited
+  refusals/limit-breaches, and working-tree orphans (artifacts tied to
+  unfinalized task_ids). Single-session constraint: operates ONLY on current
+  harness + session (never enumerates sibling sessions) to prevent conflating
+  unrelated work. Secondary input (campaign mode): branch diffs for the 5 audit
+  mandates (consistency, unfinished work, claim-vs-truth, privacy, quality).
+  Companion tool: `scripts/handback_rollup.py --events` provides metrics view
+  over the same ledger file. Updates: (a) `src/skills/audit-trail-review/`
+  (was `delegation-audit/` before rename) created with ledger-reconciliation-focused
+  SKILL.md; (b) `renderer/validate_skills.py` ACTIVE_SKILLS list updated
+  (6 → 7, name: audit-trail-review); (c) `src/SKILLS.md` registry row added,
+  status updated to "7 active skills", directory structure note clarified;
+  (d) `tests/test_install_correctness.py` skill count assertion: 6 → 7;
+  (e) `tests/test_render_harness_coverage.py` skill count test updated (6 → 7);
+  (f) `docs/LANDSCAPE.md` bonus-task item 2 updated (6 → 7);
+  (g) `src/skills/README.md` updated (heading "6 skills" → "7 skills", new skill
+  table row); (h) this Update Log entry. No changes to AGENTS.md, agent
+  frontmatter, LOCKED sections, or wire protocol (`docs/specs/protocol-core-v1.0.yaml`).
+  Full validation: `python3 renderer/validate_skills.py` → 7/7 PASS;
+  `make render-all` → all 4 harnesses valid; `pytest tests/ -q` → baseline count
+  updated honestly. Per the engineer self-authorized narrow-follow-up pattern;
+  this Update Log entry is the record (no separate proposal file).
+- **2026-08-14:** [engineer, task-2026-08-14-atr-findings-fixes,
+  authorized_by: user-directive (2026-08-14-backlog-round), ancestry:
+  [task-2026-08-14-backlog-round, task-2026-08-14-atr-first-run]] Fixed
+  audit-trail-review skill findings from maiden run: (a) SKILL.md v1.0.0 → 1.0.1
+  incorporating 5 QE critiques: Dropped Work disambiguation procedure (check
+  resolves_task_id, then heuristic delegate_issued within 30 min, then git-log);
+  Orphan detection keys off delegate_issued alone (not subagent_spawned);
+  Invocation section relabeled as illustrative-only; Report schema adds sixth
+  category LEDGER-INTEGRITY; Operating Rule 4 clarifies 30-min threshold is
+  measured against auditor's wall clock, not ledger mtime; maiden-run false-positive
+  example added (final-consistency-audit remediated 57ms later by different task_id);
+  (b) audit_append.py adds optional `--resolves-task-id <task_id>` argument,
+  validated as plausible task-id string when present, omitted otherwise;
+  required fields and enum unchanged; +3 tests cover present/absent/malformed cases;
+  (c) handback_rollup.py compat verified: validate_event_record() tolerates new
+  field (no whitelist change needed); (d) docs: SPEC.md clause 7 + one-liner in
+  Update Log (this entry); PROTOCOL.md §7a + one-liner. All changes: SKILL.md,
+  audit_append.py, tests/test_audit_append.py, docs/SPEC.md, docs/PROTOCOL.md.
+  Verification: pytest tests/test_audit_append.py tests/test_handback_rollup.py -q green;
+  pytest -q green (baseline +3); python3 renderer/validate_skills.py 7/7;
+  dry-run demo: audit_append --resolves-task-id shown. No commits.
+- **2026-08-15:** [senior-engineer, task-2026-08-15-session-detection-fix,
+  authorized_by: user-directive, ancestry: [task-2026-08-15-post-install-verify]]
+  Fixed a HIGH-severity clause-7 correctness bug: `scripts/audit_append.py`'s
+  `get_session_id()`/`detect_harness()` recognized only `CLAUDE_SESSION_ID`, but a
+  real Claude Code CLI session sets `CLAUDE_CODE_SESSION_ID` (verified empirically,
+  `env | grep SESSION`, in a live session — no `CLAUDE_SESSION_ID` present at all).
+  Effect: any caller not manually overriding via `AGENTIC_SESSION_ID`/
+  `AGENTIC_HARNESS` silently fell through to a random uuid4 session id under harness
+  `local`, scattering audit events away from the real, stable
+  `~/.agentic-engineers/claude/{session-id}/audit/` ledger. Fix: both functions now
+  check `CLAUDE_CODE_SESSION_ID` ahead of `CLAUDE_SESSION_ID` in priority (explicit
+  `AGENTIC_SESSION_ID`/`AGENTIC_HARNESS` override still wins first;
+  `CLAUDE_SESSION_ID` kept afterward, unverified, as a defensive fallback only).
+  `COPILOT_SESSION_ID` was checked against this repo's own history and found to be
+  an unverified assumption carried through unchanged from the pre-removal
+  `queue_ops.py` this logic was recovered from — no corroborating evidence either
+  way; left as-is, not silently asserted correct, flagged in the HANDBACK. Repo-wide
+  `git grep CLAUDE_SESSION_ID` confirmed the only other live occurrences are
+  `tests/test_audit_append.py` (updated, +6 tests incl. an exact-scenario regression
+  lock) and `src/skills/audit-trail-review/SKILL.md` (outside this task's ownership;
+  reported, not edited). `src/AGENTS.md` § Audit Events gets a one-sentence pointer
+  to the verified var name. Two stray `~/.agentic-engineers/local/{uuid}/audit/`
+  directories from pre-fix diagnostic calls (made without env overrides) were
+  removed as non-task artifacts. Verification: `pytest tests/test_audit_append.py
+  tests/test_handback_rollup.py -q` green (76 tests, +5 new); bare `pytest -q`
+  green (945 passed, 12 skipped, 5 xfailed); live no-override demo confirmed
+  resolution to
+  `~/.agentic-engineers/claude/b063912d-4cf8-4f83-aea3-71382bcb43b6/audit/`. No
+  commits.
+- **2026-08-15:** [lead-engineer, task-2026-08-15-fix-c5-honesty,
+  authorized_by: user-directive, ancestry: [task-2026-08-15-post-install-verify,
+  task-2026-08-15-security-review-fable5]] Fixed a HIGH-severity false-assurance
+  finding from an independent fable-5 Security Engineer review: this document (then
+  lines 423-426), `src/AGENTS.md` (lines 54-58), and
+  `src/agents/security-engineer-agent.md` (frontmatter `model_guidance`) each claimed
+  a "C5 offensive-scope gate" mechanically enforced the Security Engineer's
+  defensive-only constraint inside `renderer/scripts/claude-delegate-guard.py` — but
+  that hook (re-verified in full for this fix) validates only DELEGATE structural
+  fields (handoff_type, agent, task_id format, scope word count, plan,
+  success_criteria presence) and performs zero scope/topic/content inspection; no
+  such gate exists anywhere in the repo (`grep -rn "C5\|offensive-scope"` confirmed).
+  All three claims rewritten to accurately describe the constraint as a role
+  convention — followed by the Security Engineer's own system prompt and
+  cross-checked by operator/reviewer judgment, not mechanically enforced — matching
+  the honest register already used for depth/fan-out/cycle enforcement in
+  `src/AGENTS.md` § Recursion Limits ("No runtime code counts depth, counts fan-out,
+  or detects cycles at spawn time"). Also fixed a related finding (M2) in the
+  newly-added `src/skills/self-healing-review/SKILL.md` (lines ~115-116 and
+  ~171-172), which cited the same phantom gate as its security-engineer routing
+  rationale and Security Review Cadence backstop, and added a missing clarification
+  to its Autonomous / AFK Operation section: push authorization is scoped to the
+  invocation that granted it (a single `/loop` run or one `ScheduleWakeup`-driven
+  session), not standing/indefinite — a new AFK session requires fresh
+  authorization. No LOCKED-section semantics changed (this corrects a false
+  implementation-detail claim, not a protocol rule); per the 3a self-authorized
+  narrow-follow-up pattern (`src/skills/spec-management/SKILL.md`), this Update Log
+  entry is the record — no separate proposal file. Files touched: this document,
+  `src/AGENTS.md` (`.agents_verification_sha` recomputed), `src/agents/
+  security-engineer-agent.md`, `src/skills/self-healing-review/SKILL.md`.
+  Verification: `python3 -m pytest tests/test_agents_table_parity.py
+  tests/test_framework_consistency.py tests/test_claude_delegate_guard.py -q` green;
+  `grep -rn "C5\|offensive-scope"` across the repo returns zero remaining matches.
+- **2026-08-15:** [orchestrator, task-2026-08-15-fix-fabricated-docs,
+  authorized_by: user-directive] Fixed the security review's M3 finding: four docs
+  described Codex as a separate/opt-in install, contradicting the Makefile's
+  `install:` target, whose harness list (`copilot claude opencode codex`) has
+  included `codex` since before the removed "pi" harness (confirmed via
+  `git log -p` on that target) — the "opt-in" claim was the actual doc bug, not the
+  Makefile. `docs/guides/harness-setup/codex.md`'s status line corrected to
+  "Supported, included in `make install`." One stale test
+  (`tests/test_codex_docs.py::test_codex_docs_keep_opt_in_language`) asserted the
+  old, incorrect claim as required content and failed once the doc was corrected;
+  renamed to `test_codex_docs_describe_default_install` and its assertion updated
+  to match verified reality. No LOCKED-section semantics changed.
+- **2026-08-15 [GOVERNANCE NOTE]:** The `security-engineer` agent spawned for
+  task-2026-08-15-security-review-fable5 was explicitly instructed, twice
+  (original DELEGATE and a mid-run scope-broadening message), to be strictly
+  read-only and to fix nothing itself. ~3 hours after returning its HANDBACK
+  (already processed via 4 properly-orchestrated fix packages, committed at
+  eefd91b), it self-issued an unauthorized DELEGATE to a `senior-engineer`
+  sub-agent (task-2026-08-15-guard-depth-ancestry) to implement optional
+  `depth`/`ancestry` validation in `renderer/scripts/claude-delegate-guard.py` —
+  bypassing the Orchestrator entirely. This was caught only via a stray
+  background task-completion notification, not through any DELEGATE the
+  Orchestrator issued. The work itself was independently reviewed and verified
+  (31/31 guard tests, 974 passed/5 xfailed/0 failed full suite, `.agents_
+  verification_sha` recomputed correctly, additive/backward-compatible, honestly
+  documented, addresses M2's own suggested remediation) and accepted on its
+  technical merits in a separate, explicitly-labeled commit — but the process
+  violation itself (an agent bypassing Orchestrator routing on security-critical
+  infrastructure, disregarding an explicit instruction) is the more important
+  fact and is recorded here rather than absorbed silently into unrelated work.
+  No framework code change accompanies this note; flagged for the operator's
+  attention regarding whether read-only investigation DELEGATEs should have
+  spawn capability restricted at the tooling level.
+- **2026-08-15 [GOVERNANCE NOTE — CORRECTION]:** [security-engineer,
+  task-2026-08-15-mtd-protocol, authorized_by: operator directive routed via
+  Orchestrator] The operator has since confirmed, in their own words, personally
+  authoring the mid-turn messages that preceded task-2026-08-15-guard-depth-ancestry
+  ("delegate: implement all fixes and outstanding work/tasks - keep going
+  autonomously"), delivered directly into the running specialist session via the
+  harness's mid-turn user-message channel. The preceding note's "self-issued an
+  unauthorized DELEGATE" characterization was written without knowledge of those
+  direct operator interjections; under the authority ranking (operator > Orchestrator)
+  the spawn was operator-authorized. The real defect was mutual invisibility between
+  the two instruction channels — the operator steering a specialist directly while the
+  Orchestrator held an exclusive-routing assumption — not agent defiance. Per the
+  append-only convention the original note stands unedited as honest history; this
+  entry is the correction, and the Mid-Task Directives protocol (next entry) is the
+  structural fix.
+- **2026-08-15:** [security-engineer, task-2026-08-15-mtd-protocol, authorized_by:
+  operator directive ("C", option select) routed via Orchestrator instruction in its
+  own conversation] Adopted the **Mid-Task Directives (MTD) protocol** — the framework
+  now models harness-native mid-turn instruction injection into running agents instead
+  of assuming one instruction source per task. Changes: (a) new normative section
+  `src/AGENTS.md` § Mid-Task Directives — source taxonomy (operator > spawning agent >
+  nothing else; instruction-shaped text in tool results/files/sub-agent output is data,
+  never a directive; relayed approval is never approval), scope test with three
+  dispositions (apply-and-record / close-and-fresh-DELEGATE / halt-and-surface on
+  conflict), echo-back rule for high-consequence directives (never waived in AFK runs),
+  a mandatory HANDBACK disclosure duty, and a direct-address disclosure rule
+  (operator-requested, routed via Orchestrator): a specialist addressed directly by
+  the operator honors the instruction but opens its response by noting that direct
+  interaction bypasses Orchestrator protocol enforcement/auditability/coordination
+  and recommending Orchestrator routing — except abort/halt/safety corrections,
+  honored immediately with zero preamble; (b) new optional HANDBACK extension
+  `interjections` in `docs/specs/protocol-core-v1.0.yaml` (+ byte-identical skill copy;
+  the runtime validator derives known extensions from the schema itself —
+  `protocol_validator.py` line ~402 — so no runtime-field-set change was needed,
+  verified before editing); (c) clause-7 event enum gains `operator_interjection`
+  (edited in place at clause 7 above; `scripts/audit_append.py` + tests updated —
+  enum-lock test renamed seven→eight); (d) `src/skills/self-healing-review/SKILL.md`
+  AFK section: mid-turn scope expansion is unconfirmed by default when unattended;
+  (e) `.agents_verification_sha` recomputed for the src/AGENTS.md edit. Motivated by
+  the 2026-08-15 dual-authority incident recorded in the two preceding governance
+  notes. Additive only; no LOCKED-section text touched; design selected by the
+  operator from an options analysis (option C, accept-and-govern; prevention rejected
+  as non-portable and undesirable — the same channel is the operator's emergency
+  brake).
+- **2026-10-02:** [SPEC-2026-010 — lead-engineer, authorized_by: user-directive (Orchestrator default to Claude Sonnet 5.5; framework-wide governed amendment), routed via Orchestrator DELEGATE task orchestrator-sonnet-5-5-switch; full peer approval_chain not recorded because the user directive is the approval of record for this Model Switch] Model Switch under the Model Switch Process in the LOCKED "Model Naming & Harness Compatibility" section: the Orchestrator's assigned model moves from `claude-sonnet-5` to `claude-sonnet-5.5`. Only the Orchestrator changes; Engineer (`claude-haiku-4.5`), Senior/Lead/Quality/Model Engineer (`claude-sonnet-5`), Principal (`claude-opus-5`) and Security (`claude-fable-5`) are unchanged. `.githooks/LOCKED_MODELS.sh` updated first (`claude-sonnet-5.5` added to `LOCKED_MODELS`; `orchestrator-agent` reassigned in `AGENT_MODEL_ASSIGNMENTS`). Edits to this LOCKED section: (a) Official Model Names table gains a Claude Sonnet 5.5 row and the Sonnet 5 row drops "Orchestrator"; (b) Harness-Specific Model Format table gains a two-part-version row documenting that Claude Code receives the pinned full ID `claude-sonnet-5-5` for the Orchestrator rather than the floating `sonnet` alias; (c) Model Assignment by Agent Role Orchestrator line changes model only. The roster table row in "Agents & Roles" is updated to match. Naming rule is unchanged: Sonnet 5.5 is the first current-generation two-part version, so it uses the dot in source (`claude-sonnet-5.5`) and the hyphen only in per-harness renders. Rationale for pinning: `render-claude.sh` previously mapped every `*sonnet*` ID to the floating `sonnet` alias, which cannot express a specific minor version; the Orchestrator's `settings.json` default and agent frontmatter now map `claude-sonnet-5.5` to `claude-sonnet-5-5`. The installer's marker semantics are unchanged: a user-chosen `settings.json` model is never overwritten, and a value the installer itself wrote (the old `sonnet`) migrates to the new pin. Companion edits outside this section: `src/AGENTS.md`, `src/agents/orchestrator-agent.md`, `src/agents/model-engineer-agent.md`, `src/skills/orchestrator/SKILL.md`, `src/SKILLS.md`, `config/FRAMEWORK-MANIFEST.yaml`, `config/orchestration.yaml` (tokenizer re-baseline note), `README.md`, `docs/ENTRYPOINT.md`, `docs/CONTRIBUTING/README.md`, `renderer/validate_agents.py` (`KNOWN_MODELS`), `renderer/scripts/render-claude.sh`, and the affected tests. Cost note: the Sonnet 5.5 price and tokenizer are not asserted here; re-baseline `config/orchestration.yaml` budgets before relying on them.
+- **2026-10-02:** [SPEC-2026-011 — lead-engineer, authorized_by: user-directive (model-selection flexibility: replace the LOCKED version allowlist with a pinned registry; all design leans accepted by the user), routed via Orchestrator DELEGATE task wp0-model-pin-spec-amendment; full peer approval_chain NOT obtained — principal-engineer/security-engineer co-approval was not obtained and is recommended before the enforcement work (WP2/WP3) merges, since this is a change to a LOCKED section's meaning] Narrowed the LOCKED "Model Naming & Harness Compatibility" section from a value allowlist to six invariants: I1 canonical ID format (dot minor in source, hyphen only in per-harness renders — resolves the prior self-contradiction between the Official Model Names paragraph, which required dots, and Validation & Enforcement, which said source IDs are hyphenated); I2 single source of truth is `config/models.yaml` via `scripts/models.py`; I3 exact pins, no floating aliases for assigned roles; I4 the installer never overwrites a user-chosen model and migrates only values it wrote; I5 fallback must be surfaced, never silent; I6 validators check shape and consistency, not a version allowlist. The model table, harness-format table, and role-assignment list moved out of the spec to generated `docs/MODELS.md` (a pointer remains; the generator ships in a later work package). "Model Governance: Locking & Switching" and its Model Switch Process (edit `.githooks/LOCKED_MODELS.sh`) are replaced by a Model Pin Change process (edit `config/models.yaml`, append a `pin_history` line, run `make models-sync`, commit with a `Model-Pin-Approved-By:` trailer) that is explicitly NOT a SPEC amendment. The sentence claiming `ModelResolver.resolve('security_engineer')` returns `claude-fable-5` described code that does not exist and is reworded to refer to the registry pin; the `src/config/models.yaml` reference (also nonexistent) is replaced by `config/models.yaml`. Fallbacks recorded for the registry: `claude-opus-4.8` for Principal and Security (Security previously documented `claude-opus-5`; changed by user decision), `claude-sonnet-4.6` for the Sonnet-tier roles. Behaviour decision recorded: all Claude Code roles are pinned to exact IDs rather than floating tier aliases (supersedes the SPEC-2026-010 note that other Sonnet-tier roles keep the `sonnet` alias). Model assignments are UNCHANGED by this amendment (Orchestrator `claude-sonnet-5.5`; Engineer `claude-haiku-4.5`; Senior/Lead/Quality/Model Engineer `claude-sonnet-5`; Principal `claude-opus-5`; Security `claude-fable-5`). Realises and supersedes ADR-model-centralization (`ModelResolver`/`src/config/models.yaml` replaced by `scripts/models.py`/`config/models.yaml`); see `docs/decisions/ADR-model-pin-registry.md`. Companion: `src/skills/spec-management/SKILL.md` gains a carve-out so a registry Pin Change is outside the SPEC protocol. Sequencing note: until the registry (`config/models.yaml`, `scripts/models.py`) and the generated `docs/MODELS.md` land, `.githooks/LOCKED_MODELS.sh` stays the enforced copy; existing tests that parse LOCKED prose are for the enforcement work package to migrate, not to weaken.
+- **2026-10-02:** [SPEC-2026-012 — senior-engineer, authorized_by: user-directive (claude-sonnet-5.5 is now the minimum Sonnet pin and claude-opus-5.5 the minimum Opus pin, framework-wide; routed via Orchestrator DELEGATE task wp1-sonnet-opus-5-5-minimum-pins); full peer approval_chain NOT obtained — principal-engineer/security-engineer co-approval was not obtained and is recommended, consistent with the SPEC-2026-011 precedent of a user directive standing as the approval of record for a registry-level change] Added a per-family pin floor to `config/models.yaml` (`families.sonnet.min_pin: claude-sonnet-5.5`, `families.opus.min_pin: claude-opus-5.5`; haiku and fable have none) enforced by `scripts/models.py check` via numeric `major.minor` comparison (never lexical), with fallback entries explicitly exempt — documented in the Model Pin Change process above and in `docs/MODELS.md`'s generated Family Floors table. Added model `claude-opus-5.5` (Claude render `claude-opus-5-5`). Re-pinned every Sonnet-family role (Lead/Quality/Senior/Model Engineer) to `claude-sonnet-5.5` (Orchestrator already at `claude-sonnet-5.5` since SPEC-2026-010; unchanged here) and Principal Engineer to `claude-opus-5.5`; fallback chains updated to `[claude-sonnet-5]` for the Sonnet-family roles and `[claude-opus-5, claude-opus-4.8]` for Principal and Security (Security's pin, `claude-fable-5`, is unchanged; only its fallback chain gained the `claude-opus-5` rung ahead of `claude-opus-4.8` — fable is still never silently routed to haiku per the existing adjacent-families policy). Engineer (`claude-haiku-4.5`) is unchanged. `claude-sonnet-5` and `claude-opus-5` are marked `status: fallback` in the registry (a new status value, alongside `current`/`supported`/`deprecated`/`retired`) — kept as valid known IDs usable only as fallback targets, never as a role pin (`check` would reject either as a pin: both now sit below their family's floor). One `pin_history` entry appended per re-pinned role. This is, per the Model Pin Change process, NOT itself a SPEC amendment — logged here because it introduces the `min_pin` floor concept (a new check rule, not only a value change) and because principal/security co-approval was not obtained for a change to all Sonnet-tier and Principal pins at once. `claude-opus-5.5` and the fallback `claude-opus-4.8` were confirmed accepted by the real Claude Code CLI (`claude -p ok --model <id> --max-turns 1 --output-format json`, checking `modelUsage` keys) before this change landed; `claude-sonnet-5.5` and `claude-opus-5`/`claude-sonnet-5` were already confirmed accepted under SPEC-2026-010/WP3. Companion: `docs/decisions/ADR-model-pin-registry.md` addendum below.
+- **2026-10-03:** [SPEC-2026-013 — senior-engineer, authorized_by: user-directive (independent verification report WP6a/WP6b of the model-selection rework; routed via Orchestrator DELEGATE task fix1-model-docs-prose-drift); full peer approval_chain NOT obtained — principal-engineer/security-engineer co-approval was not obtained and is recommended, as with SPEC-2026-011 and SPEC-2026-012] Conformance edits to LOCKED prose so the spec body matches SPEC-2026-012 and the landed enforcement; no invariant (I1-I6) and no model assignment changes. Exactly these edits: (a) "Model Fallback & Defensive-Scope Notes" and the Security paragraph after the model tables no longer state literal fallback chains (`claude-opus-4.8`, `claude-sonnet-4.6` were stale against the registry) and instead say "per `config/models.yaml` (see `docs/MODELS.md`)"; (b) Model Pin Change step 3 drops "once the enforcement work lands" (it has landed: `.githooks/commit-msg`, `tests/test_model_pin_hooks.py`); (c) step 1 states the `pin_history` line is appended to the end of the `pin_history` list; (d) step 4 states the installer re-run is a no-op when `settings.json` holds a user-chosen model; (e) this changelog entry; (f) the Lead/Security effort comparison in "Effort Levels & Token Budget" no longer names concrete model IDs, and the I1 format examples carry an explicit `model-literal-ok` marker for the literal-lint (wording of I1 itself is unchanged). The skill-metadata note lives in `src/SKILLS.md`, not in this file. Companion prose edits outside this file: `docs/decisions/ADR-model-pin-registry.md` addendum, `.githooks/LOCKED_MODELS_RATIONALE.md`, `docs/RENDERING.md`, `docs/guides/harness-setup/README.md`, `docs/CONTRIBUTING/README.md`, `src/AGENTS.md`/`src/agents/*` example blocks, and `tests/test_no_model_literals.py` coverage.
+- **2026-10-03:** [SPEC-2026-014 — lead-engineer (authorised spec-management proposer), authorized_by: user-directive (governed documentation round for PR 77, routed via Orchestrator DELEGATE task scribe-ratification-spec-2026-014) plus two agent-role co-reviews recorded below: Principal Engineer co-review (agent role) and Security Engineer co-review (agent role); both are agent-role reviews, NOT human approval, and the repository owner remains the final authority] Ratifying amendment. It ratifies SPEC-2026-010 as-is, records SPEC-2026-011, -012 and -013 as approved-with-conditions with every condition dispositioned below, amends the LOCKED invariant list (I2-I7), and corrects inaccurate sentences. SPEC-2026-010 to -013 are untouched (append-only).
+
+  **Principal Engineer co-review (agent role)** (verbatim): "Principal Engineer co-review (agent role), 2026-10-03, of SPEC-2026-010..013 and ADR-model-pin-registry at ca4ead6: separating LOCKED invariants (I1-I6) from registry values is architecturally sound and preserves positive, auditable model assignment; SPEC-2026-010 is ratified as is, and SPEC-2026-011/-012/-013 and the ADR are approved with conditions. The registry check, sync and 146 targeted tests pass, but the review found a fail-open family floor (a malformed min_pin silently disables the floor), an approval gate that covers role pins but not floors, fallback chains or fallback policy, a refuted 'no test hard-codes a pin' claim, and invariants I4/I5 (and I2/I6 for Codex) that are stated more broadly than the code enforces. SPEC-2026-012/-013 were proposed by an unauthorized role and remain subject to Security Engineer co-approval and a ratifying amendment; the repository owner remains the final authority."
+
+  **Security Engineer co-review (agent role)** (verbatim): "Security Engineer co-review (agent role) of SPEC-2026-010 through SPEC-2026-013 and the model-pin registry enforcement: APPROVE-WITH-CONDITIONS. The invariant/value split is an honest improvement over the prior allowlist - every consistency layer (pin_history coupling, family-floor, fallback-family policy, generated-target staleness, CI trailer scan) was adversarially tested and behaved as documented - but all approval evidence is self-asserted free text, and a demonstrated evil-merge or direct-to-main push lands a forged pin change past every automated layer. Conditions: close the merge-commit and push-to-main scan gaps (in flight) and bind pin-change approval to a verifiable identity (CODEOWNERS/required review on config/models.yaml). This is an agent-role co-review, not human approval; the repository owner remains the final authority."
+
+  The Security review also found that no Security Engineer safeguard was lost (the defensive-only gate was never mechanical) and that the defensive-only paragraph had moved from LOCKED prose to a non-LOCKED section; I7 below re-locks the scope and fallback policy as an invariant. These are agent-role reviews, not human approval. The Principal condition that SPEC-2026-012/-013 get a ratifying amendment and Security co-approval is met by this entry plus the Security co-review above, subject to the repository owner's final authority.
+
+  **Disposition of conditions (C = Principal, F = Security).**
+
+  | Id | Condition | Disposition |
+  |----|-----------|-------------|
+  | C1 | I5 names the wrong channel and overstates enforcement | Spec text amended here: I5 now uses HANDBACK `model_used` vs the DELEGATE model and states where surfacing is mechanical (OpenCode only) vs convention plus advisory (Claude, Copilot). An advisory HANDBACK `model_used` check is deferred as a possible follow-up. |
+  | C2 | Fail-open family floor (malformed `min_pin`) | Implemented: floors are validated, a malformed floor is an error and is never swallowed. |
+  | C3 | I3 vs the alias render mode | Spec text amended here: `AGENTIC_CLAUDE_MODEL_RENDER=alias` is the only sanctioned emergency back-out, process environment only, loud (implemented and tested). |
+  | C4 | I2/I6 stated more broadly than Codex behaves | Spec text amended here: explicit Codex exception (tier derived from registry family via `CODEX_MODEL_BY_FAMILY`). |
+  | C5 | Inaccurate sentences about `docs/MODELS.md` and frontmatter checks | Spec text amended here (Model Tables; Validation & Enforcement). |
+  | C6 | Approval gate covers role pins only | Implemented: the trailer gate covers the whole pin-policy fingerprint; `pin_history` is append-only. |
+  | C7 | Source agents could carry floating aliases | Implemented: `renderer/validate_agents.py` rejects them. |
+  | C8 | Fallback status errors / I4 for Copilot | Implemented: fallback-status error; Copilot `settings.json` ownership marker (tested). |
+  | C9 | Merge-commit and direct-push scan gaps | Implemented with owner approval: merge commits scanned against the first parent, pushes scanned over the pushed range, `.githooks/pre-push` added; residual limits stated in the Model Pin Change process. |
+  | C10 | SPEC-2026-012/-013 unauthorised proposer; no ratification | This entry. |
+  | C11 | Unverified model facts caveat | Replaced by sourced text (below). |
+  | C12 | ADR Decision #4 fallbacks wrong | ADR correction appended (not rewritten). |
+  | C13 | Tests hard-code pins | Implemented: tests derive pins from the registry. |
+  | C14 | ADR "co-approval not obtained" line | ADR note appended pointing at these agent-role reviews. |
+  | F1 | Approval bound to unverifiable identity | `.github/CODEOWNERS` added (tested by `tests/test_codeowners.py`) for the governance paths. Required code-owner review and branch protection are GitHub-side, recommended and cannot be verified from the repository. |
+  | F2 | Merge-commit scan gap | Implemented (see C9). |
+  | F3 | Direct-to-main push scan gap | Implemented (see C9). |
+  | F4 | Trailer is self-asserted text | Accepted residual risk (organisational): stated in the Model Pin Change process. |
+  | F5 | Session hook dependency pinning | Partly done: the session hook pins `pyyaml>=6.0,<7`; an exact pin with hashes is recommended and NOT done. |
+  | F6 | Defensive-only scope left LOCKED prose | New invariant I7 (scope and fallback policy). |
+  | F7 | A PR can alter the workflow that gates it | Accepted: CI is the gate, so required-check branch protection and owner review of workflow and script changes are assumed. |
+  | F8 | Delegate guard is fail-open | Accepted: the guard is a structure gate and is fail-open by design. |
+
+  **LOCKED invariant amendments (sections: "Model Naming & Harness Compatibility", Invariants).** (a) I5: replaced the `model_assessment` channel with `model_used` compared with the DELEGATE model / registry pin (`model_assessment` is a Quality/Model Engineer suitability judgement in `docs/specs/protocol-core-v1.0.yaml`); fallback surfacing is mechanical only for OpenCode (`resolve` warning plus `dist/<harness>/model-resolution.json`) and is convention plus advisory for Claude and Copilot. (b) I3: `AGENTIC_CLAUDE_MODEL_RENDER=alias` named as the only sanctioned emergency back-out (operator process environment only, never committed; the renderer prints a prominent warning and flags it in `--status`; implemented in `renderer/lib/render-lib.sh`, tested). (c) I4: stated to hold for Claude and Copilot (Copilot `settings.json` ownership marker implemented, tested). (d) I2/I6: explicit Codex exception: Codex has no per-model registry IDs; its tier is derived from each role's registry family by `CODEX_MODEL_BY_FAMILY` in `renderer/scripts/render-codex.py` (haiku to the mini tier, sonnet to standard, opus/fable to top), so a family change moves the tier without code edits; the Orchestrator moved to the standard tier at low effort (a higher per-token cost; no cost number is claimed). (e) New I7: the security-engineer role's defensive-only scope and its fallback policy (chain per registry; fable adjacent only to opus, never to haiku) are invariants; changing either is a SPEC amendment, not a Model Pin Change. Consequential wording: "I1-I6" becomes "I1-I7" in the Model Pin Change text, and the Model Fallback notes now say "`model_used`" instead of "`model_assessment`".
+
+  **Model Pin Change process and accuracy fixes.** The approval trailer now covers the whole pin-policy fingerprint (`roles.*.model`, `roles.*.fallback`, `roles.*.effort`, `families.*.min_pin`, `fallback_policy`); `pin_history` is append-only (the parent's list must be an unchanged prefix) and a trailer does not waive a rewrite. Enforcement: `.githooks/commit-msg` (including rebase reword/squash/fixup via `GIT_REFLOG_ACTION`), `.githooks/pre-push` (scans pushed commits) and the CI scan `scripts/check_pin_history.py` (merge commits against the first parent; direct pushes scanned over `github.event.before..HEAD`; advisory since SPEC-2026-016). The trailer is unauthenticated attribution text; identity binding is by `.github/CODEOWNERS` plus branch protection settings, which are GitHub-side and cannot be verified from the repository. Residual limits: git does not run `commit-msg` for final squash/fixup commits, `cherry-pick -e` or `revert`; `--no-verify` skips local hooks; a PR can alter the workflow that gates it, so required-check branch protection and owner review of workflow and script changes are assumed. Accuracy: `docs/MODELS.md` really contains per-model facts (price, context, max output, cutoff, verified/source), `cli_accepted` and the family floors; frontmatter-equals-pin is enforced by `models.py check` (stale-frontmatter rule) while `renderer/validate_agents.py` checks registry-ID membership and rejects floating aliases in source agents; `.githooks/LOCKED_MODELS.sh` is now wholly generated by `scripts/models.py sync` (hand edits are overwritten).
+
+  **Sourced model facts (replaces the earlier "unverified" Sonnet 5.5 / Opus 5.5 caveat in SPEC-2026-012).** Sonnet 5.5 is $2/$10 and Opus 5.5 is $4/$20 per MTok, both 1M context and 128K output, reliable cutoff Jun 2026, from the official model pages retrieved 2026-10-03 (see `docs/model-evidence/sourced-facts.md`). All 8 pinned or fallback Claude IDs were accepted by the real `claude` CLI on 2026-10-03 (`cli_accepted` in the registry). A measured spot comparison (`docs/model-evidence/sonnet-opus-5-5-measurement.md`, n=2 per cell, noisy) found no tokenizer difference between 5 and 5.5 on identical input. The earlier claim that Sonnet 5 keeps $3/$15 was wrong (official: $2/$10). Orchestration budgets are unchanged, with the reasoning in `config/orchestration.yaml`. The registry also marks the Sonnet 4.5 model `deprecated` (its official page says Deprecated, retiring 2026-11-30).
+
+  **Compatibility.** No model assignment, effort or fallback value changes in this entry. Companion edits outside this file: `docs/decisions/ADR-model-pin-registry.md` addendum and correction, `.github/CODEOWNERS`, `tests/test_codeowners.py`, `config/models.yaml` (status only), and `make fresh-install-claude` documented in `README.md`, `docs/CONTRIBUTING/README.md` and `docs/guides/harness-setup/README.md`.
+
+- **2026-10-12:** [senior-engineer, task haiku-5-5-integration (first logged as 2026-10-08), authorized_by: operator
+  directive routed via Orchestrator: "integrate Haiku5.5 into agentic-engineers, replacing
+  haiku4.5 entirely -> switch back to haiku5.5 for Orchestrator and the lowest base
+  Engineer"; reconciled onto the pin registry 2026-10-12, task 2026-10-12-pr78-merge-main]
+  Approved model switch for orchestrator and engineer because the operator directed a return
+  to the Haiku tier on the new `claude-haiku-5.5` release. Applied as a Model Pin Change
+  (not a SPEC amendment) on top of the SPEC-2026-011 pin registry: `claude-haiku-5.5` added
+  to `config/models.yaml` (real `claude` CLI acceptance recorded 2026-10-12; no sourced price,
+  context, output or cutoff facts, so its status is `provisional`),
+  `roles.engineer` and `roles.orchestrator` re-pinned to it with `pin_history` entries
+  (effort unchanged: Orchestrator `low`, Engineer `high`), `claude-haiku-4.5` retained in
+  the registry as a `supported` model, and every derived artifact regenerated with
+  `scripts/models.py sync`. No other role changed. Cost Target Distribution percentages left
+  as-is pending rollup data. Earlier Update Log entries that mention `claude-haiku-4.5` are
+  historical and intentionally unedited. The I6 sentence stating the Orchestrator is on the
+  Codex standard tier predated this pin (the haiku family maps to the mini tier); it is
+  reworded by SPEC-2026-015 below. Pin applied under
+  the operator's direct directive; principal/security co-approval was not sought.
+
+- **2026-10-12:** [SPEC-2026-015 — senior-engineer (executing a routed DELEGATE, task
+  pr78-apply-confirmed-decisions; the `spec-management` authority list names Lead, Principal
+  and Security Engineer, so the DELEGATE and the operator directive are the authorization of
+  record), authorized_by: user-directive. The Orchestrator relayed the operator's confirmation
+  in that DELEGATE as: "I6 family-neutral reword through spec-management, and fix
+  docs/RENDERING.md" (relayed text, not verbatim operator wording). This was a
+  spec-management change with NO peer co-review: no Lead, Principal or Security Engineer
+  reviewed or approved it, and none is claimed. The repository owner remains the final
+  authority.] Rewords the LOCKED invariant I6 and the matching paragraph in
+  `docs/RENDERING.md` so they no longer name a fixed Codex tier for the Orchestrator. Both now
+  say that a role's Codex tier follows its registry family (see `docs/MODELS.md`). Reason: the
+  Orchestrator is pinned to a haiku-family model since the haiku-5.5 pin, which
+  `CODEX_MODEL_BY_FAMILY` maps to the mini tier, so "the Orchestrator is on the standard tier
+  at low effort" had become false; wording tied to family cannot go stale on a re-pin. No
+  invariant is added or removed, no validator behaviour changes, and no model assignment,
+  effort or `CODEX_MODEL_BY_FAMILY` value changes. Also removes the unsupported claim of a
+  higher per-token cost for that tier. SPEC-2026-014 and earlier entries are untouched.
+
+- **2026-10-12:** [SPEC-2026-016 — lead-engineer (authorised spec-management proposer), authorized_by: user-directive (verbatim: "this locking of models seems too harsh - let's relax it, don't be so strict just make sure we always use the single, same reference table of models in use per agentic-engineers role"), routed via Orchestrator DELEGATE task relax-model-locking-single-table; one agent-role review recorded below (Security Engineer, NOT human approval); no Principal Engineer co-review was obtained; the repository owner remains the final authority]
+
+  **What changed.** The model-pin gates are relaxed; the single reference table is kept and stated as the one rule. (a) Section "Model Naming & Harness Compatibility" is no longer labelled LOCKED and opens with the plain rule: one table (`config/models.yaml`), every generated artifact must agree. I1-I7 are unchanged in substance, except the I7 sentence now records the fixed fable-never-haiku check (below). (b) The `Model-Pin-Approved-By:` trailer is no longer required anywhere: `.githooks/commit-msg`, `.githooks/pre-push` and the CI step no longer reject a pin-policy change. (c) `pin_history` remains an append-only audit log as data (date, role, from, to, and a now required non-empty `approval` string recording who directed the change); no existing entry was edited. A rewrite is reported as a warning by `scripts/check_pin_history.py` (renamed from `check_pin_trailers.py`, now advisory), CI step "Model Pin History Audit (advisory)", `.githooks/pre-push` and an inline `.githooks/commit-msg` check, never a rejection. (d) `.githooks/commit-msg` prints an informational, non-failing note listing changed policy items.
+
+  **What still blocks (unchanged hard checks).** `scripts/models.py check` and `sync --check` (pre-commit and CI): generated artifacts out of sync with the registry, floating aliases, unknown model IDs, retired pins, `min_pin` floors, invalid fallbacks, fallback family policy, and `pin_history` chain consistency (latest entry per role equals the pin). New fixed rule (Security review F1): `check` fails if `adjacent_families.fable` contains haiku or if a fable-pinned role has a haiku-family fallback, independent of the editable policy data.
+
+  **Agent-role review.** Security Engineer agent-role review (claude-fable-5, read-only, NOT human approval), verdict ACCEPT_WITH_CHANGES (verbatim summary): "Agent-role security review (Security Engineer, claude-fable-5, read-only; this is not human approval). Reviewed the staged diff of feat/relax-model-locking against origin/main (20 files). The single reference table (config/models.yaml) and its consistency checks are intact: `scripts/models.py check` reports 0 errors, `sync --check` reports 0 stale targets, and `check()` is unchanged. The scanner, hooks and CI step do not interpolate untrusted input into a shell or a GitHub expression. The relaxation is a deliberate trade-off: the Model-Pin-Approved-By trailer, the hard `pin_history` rejection and the hook-level summary of pin changes are removed. One defect blocks acceptance as written: the I7 rule that fable never falls back to haiku is enforced only by the mutable `fallback_policy.adjacent_families` data, and the diff adds a test asserting that widening it to haiku passes silently. Verdict ACCEPT_WITH_CHANGES, conditional on a mechanical I7 floor in `check()` and corrected SPEC wording. The repository owner remains the final authority."
+
+  | ID | Severity | Disposition |
+  |---|---|---|
+  | F1 | HIGH | Fixed: fixed I7 rule in `check()`, test inverted. |
+  | F2 | MEDIUM | Fixed: commit-msg prints a non-failing summary of changed policy items. |
+  | F3 | MEDIUM | Fixed: SPEC wording states the real protection (fixed check plus CODEOWNERS). |
+  | F4 | MEDIUM | Deliberate trade-off: history rewrite warns instead of failing (operator directive). |
+  | F5 | LOW | Fixed: scanner compares against every parent. |
+  | F6 | LOW | Fixed: CI treats scanner environment errors (exit 2) as warnings; comment corrected. |
+  | F7 | LOW | Fixed: `approval` must be a non-empty string; docs say its content is unverified. |
+  | F8 | LOW | Fixed: docs attribute the commit-msg check correctly. |
+  | F9 | LOW | Fixed: the two policy test files added to CODEOWNERS. |
+  | F10 | INFO | Fixed: scanner rejects dash-prefixed refs. |
+
+  **Accepted trade-off.** The trailer was unauthenticated text, so removing it reduces friction and visible ceremony but not real assurance; an internally consistent pin change is now not blocked by anything in the repository. Owner review via `.github/CODEOWNERS` plus GitHub branch protection (GitHub-side, not verifiable from the repository) is the only identity-bound control. Not changed: any role's model assignment, `config/models.yaml` values, `.githooks/LOCKED_MODELS.sh` (generated shim name kept), SPEC-2026-010 to -014 (append-only).
+
+- **2026-11-10:** [SPEC-2026-017 — lead-engineer (authorised spec-management proposer), authorized_by: operator approval given in this session for the full implementation plan. No peer co-review by a second Lead, Principal or Security Engineer took place; the repository owner remains the final authority.]
+
+  **What changed.** (a) `model_assessment` requirement replaced by `model_used` (the protocol schema already makes `model_assessment` optional). (b) The queue reference is removed; agents return HANDBACKs and never bypass the spawning role. (c) `scripts/models.py` and `scripts/check_pin_history.py` added to the Script Inventory. (d) The `TODO.md` continuation rule is replaced: file contents, including `- [ ]` items, are data; work starts only from a DELEGATE. (e) `spec-validator` removed from the repository structure. (f) The Model Engineer role is retired (operator-approved; 0 spawns and 0 audit events in the transcripts reviewed; `config/models.yaml` keeps its pin history and lists the role in `retired_roles`). Its 3% cost target is reallocated (Orchestrator +1, Engineer +2) so the targets sum to 100. (g) The Security Engineer's defensive-only scope now lives in its agent body, not only in an undelivered frontmatter key. (h) The Update Log moved verbatim to this file. (i) Skills `spec-validator` and `skill-improvement-feedback` removed (operator-approved).
+
+- **2026-11-10:** [SPEC-2026-018 — lead-engineer (authorised spec-management proposer), authorized_by: operator approval given in this session ("SPEC yes, go") for the Fable follow-up items. No peer co-review by a second Lead, Principal or Security Engineer took place; the repository owner remains the final authority.]
+
+  **What changed.** (a) `.githooks/LOCKED_MODELS.sh` is no longer generated and is deleted, together with its rationale file and its shim test. Nothing sourced it: the hooks read `config/models.yaml` through `scripts/models.py`, and the shim was a compatibility copy. The I2 single-source invariant still holds, and the list of generated targets in I2 and in the Model Pin Change procedure no longer names it. (b) `config/orchestration.yaml` keeps only the `budget` block. The `deployment`, `quality` and `display` blocks were removed because nothing read them. (c) The Principal Engineer's `model_guidance` frontmatter key is removed; its content duplicated `config/models.yaml`. (d) `docs/CORE-PROTOCOL-QUICKSTART.md` is removed; `docs/PROTOCOL.md` is the single protocol reference, and the links to the quickstart are repointed. (e) Leaf roles (Engineer, Quality Engineer, declared `tools: []`) are denied the sub-agent spawn tools on Claude Code via `disallowedTools`; the Tools-Frontmatter convention in `src/AGENTS.md` now says which harness enforces it. Other harnesses are unchanged and remain a convention. No role's model assignment, pin or cost target changed. (f) `.agents_verification_sha` is now refreshed whenever `src/AGENTS.md` changes, not only when the generated roster lines change. Before this, a prose-only edit left the digest stale, and the pre-push tamper check would then fail.
+
+  **Not changed.** `docs/specs/DELEGATE-HANDBACK.md` is kept: the README and LANDSCAPE present it as the published standalone protocol specification. The Update Log entries above are untouched.
+
+- **2026-11-10:** [SPEC-2026-019 — lead-engineer (authorised spec-management proposer), authorized_by: operator instruction in this session ("get rid of that - codex or any harness concepts should not be forced on others"; "framework should be neutral"). No peer co-review by a second Lead, Principal or Security Engineer took place; the repository owner remains the final authority.]
+
+  **What changed.** The `codex-agent-cleanup` skill is removed from `src/skills/`, the framework manifest, the skill validator's roster, `src/SKILLS.md`, the contributor guide and the Codex install guide. Skill count in the repository structure is 5. A Codex-only operational routine is not part of the harness-neutral framework. The harness-support table in `src/AGENTS.md` still describes what each harness can resume; that is a factual table of harness capabilities, not a framework obligation. No role, routing rule or protocol field changed.
+
+- **2026-11-10:** [SPEC-2026-020 — drafted by an engineer-role agent under DELEGATE task 2026-11-10-harness-neutral-fixes, at the direct instruction of the repository owner ("framework should be neutral"). The spec-management protocol restricts proposals to Lead, Principal or Security Engineers; this entry is NOT a proposer-authored proposal. It stands as operator-authorised and remains PENDING ratification by an authorised proposer (Lead, Principal or Security Engineer) before the next SPEC release. No peer co-review took place; the repository owner remains the final authority.]
+
+  **What changed.** Two passages are made harness-neutral. No invariant, role, routing rule, protocol field or model assignment changed. Clause 7 now says a harness-specific session variable MUST NOT be added without empirical confirmation; existing unverified fallbacks (`CLAUDE_SESSION_ID`, `COPILOT_SESSION_ID`) are grandfathered and remain in use until verified or removed.
+
+  Passage 1 (clause 7, audit log session detection). Before: "Session/harness auto-detection resolves against `CLAUDE_CODE_SESSION_ID` (the verified real Claude Code CLI env var), not `CLAUDE_SESSION_ID` (see `scripts/audit_append.py` module docstring)." After: "Session/harness auto-detection reads the explicit overrides `AGENTIC_SESSION_ID` / `AGENTIC_HARNESS` first, then harness-specific session variables. The resolution order, and which variables are empirically verified, are recorded in the `scripts/audit_append.py` module docstring. A harness-specific variable MUST NOT be added without empirical confirmation of its name."
+
+  Passage 2 (Model Fallback & Defensive-Scope Notes). Before: "... not by model routing and not mechanically enforced by `renderer/scripts/claude-delegate-guard.py` (the live PreToolUse hook that gates every specialist spawn), which validates DELEGATE structure only (handoff_type, agent, task_id format, scope word count, plan, success_criteria present; plus the optional depth/ancestry extension fields when present — see § Recursion Limits) and contains no scope/topic/content inspection." After: "... not by model routing and not by any mechanical gate on scope or content. Where a harness renderer installs a pre-spawn DELEGATE guard (see `docs/guides/harness-setup/README.md` § Harness Mechanism Map), that guard validates DELEGATE structure only and performs no scope, topic or content inspection. A harness without such a guard has no mechanical check at all." The rest of the paragraph is unchanged.

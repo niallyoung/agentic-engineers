@@ -44,7 +44,6 @@ EXPECTED_ROLES = {
     "quality-engineer",
     "principal-engineer",
     "security-engineer",
-    "model-engineer",
 }
 
 # Harnesses that render one markdown file per agent into dist/<h>/agents/.
@@ -81,16 +80,18 @@ def _render_all(render_all):
     yield
 
 
-def test_source_has_exactly_8_user_skills():
+def test_source_has_exactly_5_user_skills():
     # 8 -> 6 in the queue-removal work (task-2026-08-13-queue-removal-code):
     # queue-management and queue-query were deleted along with the
     # filesystem queue now that dispatch is a direct sub-agent spawn.
     # audit-trail-review meta-skill added (task-2026-08-14-delegation-audit-skill).
     # 6 -> 7 skills. self-healing-review meta-skill added
     # (task-2026-08-15-self-healing-skill). 7 -> 8 skills.
+    # spec-validator and skill-improvement-feedback removed (2026-11-10). 8 -> 6 skills.
+    # codex-agent-cleanup removed (2026-11-10, harness-neutral framework). 6 -> 5 skills.
     names = _source_skill_names()
-    assert len(names) == 8, (
-        f"Expected 8 user-facing skills in src/skills/, found {len(names)}: "
+    assert len(names) == 5, (
+        f"Expected 5 user-facing skills in src/skills/, found {len(names)}: "
         f"{sorted(names)}"
     )
 

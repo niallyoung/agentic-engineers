@@ -57,7 +57,7 @@ name: example-skill
 description: An example skill for testing
 roles:
   - engineer
-  - model-engineer
+  - quality-engineer
 ---
 """
 
@@ -858,7 +858,6 @@ def test_path_safety_outside_repo(temp_repo):
 @pytest.mark.parametrize("role", [
     "engineer",
     "orchestrator",
-    "model-engineer",
     "quality-engineer",
     "lead-engineer",
     "principal-engineer",
@@ -914,10 +913,6 @@ metadata:
   model: claude-sonnet-5
   effort: low
 ---
-
-## Self-Improvement
-
-None yet.
 """)
     if not prose_only:
         (skill_dir / "scripts").mkdir()
@@ -982,14 +977,6 @@ metadata:
         result = audit_skill_compliance("no-effort", temp_repo["skills_dir"])
         assert not result.passed
         assert any("metadata.effort" in e for e in result.errors)
-
-    def test_missing_self_improvement_section_is_warning_not_error(self, temp_repo):
-        _write_compliant_skill(temp_repo["skills_dir"], "no-self-improve")
-        skill_md = temp_repo["skills_dir"] / "no-self-improve" / "SKILL.md"
-        skill_md.write_text(skill_md.read_text().replace("## Self-Improvement\n\nNone yet.\n", ""))
-        result = audit_skill_compliance("no-self-improve", temp_repo["skills_dir"])
-        assert result.passed  # warnings don't fail
-        assert any("Self-Improvement" in w for w in result.warnings)
 
     def test_run_compliance_audit_covers_requested_names(self, temp_repo):
         _write_compliant_skill(temp_repo["skills_dir"], "skill-a")

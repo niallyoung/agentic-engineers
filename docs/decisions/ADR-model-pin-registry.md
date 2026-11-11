@@ -42,8 +42,8 @@ Separate invariants (stay in the spec) from values (one registry file).
    for an assigned role.
 4. **Fallbacks.** `claude-opus-4.8` for Principal and Security; `claude-sonnet-4.6` for the
    Sonnet-tier roles. Use is always surfaced, never silent.
-5. **Approval.** A `Model-Pin-Approved-By:` commit trailer plus a `pin_history` line
-   suffices for a role pin change. It is not a SPEC amendment. The `spec-management` skill
+5. **Approval.** *(Superseded by the addendum below, SPEC-2026-015.)* A `Model-Pin-Approved-By:` commit trailer plus a `pin_history` line
+   sufficed for a role pin change. It is not a SPEC amendment. The `spec-management` skill
    carries a carve-out.
 6. **Per-user override file** (`~/.agentic-engineers/models.local.yaml`) is deferred.
 7. **Tables** live in `docs/MODELS.md`, a new generated top-level doc.
@@ -148,3 +148,22 @@ the fallbacks are `claude-sonnet-5` for the Sonnet roles and `claude-opus-5` the
 **Note on the Status line.** The "co-approval was not obtained" sentence in Status was true at
 decision time. It is superseded by the 2026-10-03 agent-role co-reviews above (agent-role, not
 human approval; the owner remains the final authority).
+
+## Addendum 2026-10-12: relaxed gates, one table (SPEC-2026-015)
+
+Operator directive (verbatim): "this locking of models seems too harsh - let's relax it,
+don't be so strict just make sure we always use the single, same reference table of models
+in use per agentic-engineers role".
+
+Decision 5 (Approval) is superseded. The `Model-Pin-Approved-By:` trailer, its commit-msg,
+pre-push and CI gates, and the "LOCKED" framing of the invariants are removed. What stays
+is the single reference table (`config/models.yaml`) and every check that keeps the rest of
+the repository in agreement with it: registry membership, no floating aliases, family
+floors, fallback policy, `pin_history` chain consistency, and `sync --check`. `pin_history`
+remains the audit trail as data (date, role, from, to, and the free-text `approval` field
+recording who directed the change); history rewrites now produce a warning from
+`scripts/check_pin_history.py` instead of a rejection. Rationale: the trailer was
+unauthenticated text, so the gate added friction without adding assurance. Trade-off,
+accepted by the operator: nothing in the repository now stops a pin change that is
+internally consistent; owner review via `.github/CODEOWNERS` and branch protection is the
+only identity-bound control.
